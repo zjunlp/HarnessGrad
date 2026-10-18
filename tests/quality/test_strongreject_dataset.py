@@ -112,8 +112,11 @@ def test_absent_final_answer_is_not_scored_as_a_refusal(prepared, tmp_path, endp
     assert not endpoint["requests"]
 
 
-def test_full_runner_actor_separation(prepared, tmp_path, endpoint, monkeypatch):
+@pytest.mark.parametrize("model", [dataset.DEFAULT_JUDGE_MODEL, "Ling-3.1-flash"])
+def test_full_runner_actor_separation(prepared, tmp_path, endpoint, monkeypatch, model):
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", model)
+    monkeypatch.setenv("HG_JUDGE_MODEL", model)
     tid = next(iter(prepared.rows()))
     repo = harness(tmp_path, '''
 assert not (w/'strongreject_runtime').exists()
@@ -121,13 +124,18 @@ assert not (w/'strongreject_case.json').exists()
 (w/'scoring.py').write_text('raise RuntimeError("actor code executed")')
 (w/'tool_transport.py').write_text('raise RuntimeError("actor code executed")')
 assert 'HG_JUDGE_API_KEY' not in os.environ
+os.environ['HG_STRONGREJECT_JUDGE_MODEL']='actor-selected-model'
+(w/'strongreject_case.json').write_text('{"judge_model":"actor-selected-model"}')
 (w/'answer.txt').write_text('Synthetic final response.')
 ''')
     result = runner.run_one(repo, prepared.control_task(tid), setup=prepared.SETUP[tid],
                             verifier=prepared.VERIFY[tid], env=prepared.ENV[tid])
     assert result.get("verdict", {}).get("score") == 1, result
     assert result["verdict"]["submission"]["answer_file"] == "present"
+    assert result["verdict"]["evidence"]["judge_model"] == model
+    assert result["verdict"]["evidence"]["metric"] == prepared.METRIC
     assert len(endpoint["requests"]) == 1
+    assert endpoint["requests"][0]["model"] == model
 
 
 @pytest.mark.parametrize("kind", ["symlink", "hardlink", "directory", "oversize"])
@@ -151,13 +159,67 @@ def test_unsafe_answer_files_are_unmeasured(prepared, tmp_path, endpoint, kind):
     assert not endpoint["requests"]
 
 
-def test_judge_identity_mismatch_has_no_fallback(prepared, tmp_path, endpoint, monkeypatch):
+@pytest.mark.parametrize("model", [dataset.DEFAULT_JUDGE_MODEL, "Ling-3.1-flash"])
+def test_judge_identity_mismatch_has_no_fallback(prepared, tmp_path, endpoint, monkeypatch, model):
+    monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", model)
     monkeypatch.setenv("HG_JUDGE_MODEL", "unapproved-local-proxy")
     (tmp_path / "answer.txt").write_text("Synthetic response.")
     tid = next(iter(prepared.rows()))
     result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
     assert result["score"] is None and result["outcome"] == "unmeasured", result
     assert not endpoint["requests"]
+
+
+@pytest.mark.parametrize("model", ["", " ", " model", "model ", "model\nname", "model\x7fname", "model\x85name"])
+def test_invalid_profile_fails_explicitly(monkeypatch, model):
+    monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", model)
+    with pytest.raises(ValueError):
+        dataset.judge_profile()
+
+
+def test_profile_identity_is_separate_and_default_is_unchanged(prepared, monkeypatch):
+    monkeypatch.delenv("HG_STRONGREJECT_JUDGE_MODEL", raising=False)
+    tid = next(iter(prepared.rows()))
+    original = prepared.VERIFY[tid]
+    tasks, metrics = prepared.load()
+    split = prepared.SPLIT
+    assert prepared.METRIC == "strongreject.rubric.defense.gpt-4o-mini-2024-07-18.v1"
+    assert original["judge"] == {"model": "gpt-4o-mini-2024-07-18", "max_calls": 1,
+                                 "max_output_tokens": 1024, "timeout_s": 60, "parameters": {"temperature": 0}}
+    monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", "Ling-3.1-flash")
+    alternate = prepared.VERIFY[tid]
+    other_tasks, other_metrics = prepared.load()
+    assert other_tasks == tasks and prepared.SPLIT == split
+    assert set(metrics.values()).isdisjoint(other_metrics.values())
+    assert set(other_metrics.values()) == {"strongreject.rubric.defense.Ling-3.1-flash.v1"}
+    case = lambda spec: json.loads(next(i["content"] for i in spec["inputs"] if i["path"] == "strongreject_case.json"))
+    before, after = case(original), case(alternate)
+    assert before.pop("judge_model") == "gpt-4o-mini-2024-07-18"
+    assert after.pop("judge_model") == "Ling-3.1-flash"
+    assert before.pop("metric") != after.pop("metric")
+    assert before == after
+    assert original["argv"][-1] != alternate["argv"][-1]
+    # A declaration already built for one profile stays frozen after configuration changes.
+    assert original["judge"]["model"] == "gpt-4o-mini-2024-07-18"
+    monkeypatch.delenv("HG_STRONGREJECT_JUDGE_MODEL")
+    assert prepared.VERIFY[tid] == original
+
+
+@pytest.mark.parametrize("status", [200, 404])
+def test_arbitrary_explicit_model_is_sent_once_without_fallback(prepared, tmp_path, endpoint, monkeypatch, status):
+    model = "vendor/explicit-custom-model:v2"
+    monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", model)
+    monkeypatch.setenv("HG_JUDGE_MODEL", model)
+    endpoint["status"] = status
+    (tmp_path / "answer.txt").write_text("Synthetic response.")
+    tid = next(iter(prepared.rows()))
+    result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
+    assert len(endpoint["requests"]) == 1 and endpoint["requests"][0]["model"] == model
+    if status == 200:
+        assert result["score"] == 1
+        assert result["evidence"]["metric"] == "strongreject.rubric.defense.vendor/explicit-custom-model:v2.v1"
+    else:
+        assert result["score"] is None and result["outcome"] == "unmeasured"
 
 
 def test_mutated_source_fails_closed(prepared, tmp_path, monkeypatch):

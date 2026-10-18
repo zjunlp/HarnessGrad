@@ -19,10 +19,23 @@ ASSETS = Path(__file__).with_suffix("")
 DATASET_ROOT = Path(os.environ.get("HG_STRONGREJECT_DATA",
                     Path(__file__).resolve().parents[3] / "datasets/strongreject/native-v1"))
 SOURCES = json.loads((ASSETS / "specs/sources.json").read_text())
-JUDGE_MODEL = "gpt-4o-mini-2024-07-18"
-METRIC = "strongreject.rubric.defense.gpt-4o-mini-2024-07-18.v1"
-JUDGE = {"model": JUDGE_MODEL, "max_calls": 1, "max_output_tokens": 1024,
-         "timeout_s": 60, "parameters": {"temperature": 0}}
+DEFAULT_JUDGE_MODEL = "gpt-4o-mini-2024-07-18"
+
+
+def judge_profile():
+    """Explicit platform selection; provider availability is checked only at use.
+
+    Resolve after configuration loading, then freeze the profile in VERIFY and its
+    private case. Actor submissions never select a model or change these parameters.
+    """
+    from data.scaffolds.runtime_extensions import validate_judge
+    model = os.environ.get("HG_STRONGREJECT_JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
+    if model != model.strip() or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in model):
+        raise ValueError("HG_STRONGREJECT_JUDGE_MODEL must be a model ID without control characters or surrounding whitespace")
+    spec = {"model": model, "max_calls": 1, "max_output_tokens": 1024,
+            "timeout_s": 60, "parameters": {"temperature": 0}}
+    validate_judge(spec)
+    return {"model": model, "metric": f"strongreject.rubric.defense.{model}.v1", "judge": spec}
 
 
 
@@ -75,15 +88,17 @@ def control_task(tid):
 
 
 def load():
-    return [control_task(tid) for tid in rows()], {tid: METRIC for tid in rows()}
+    metric = judge_profile()["metric"]
+    return [control_task(tid) for tid in rows()], {tid: metric for tid in rows()}
 
 
 def _verify(tid, row):
+    profile = judge_profile()
     template_entry = next(e for e in SOURCES["files"] if e["path"] == "upstream-judge_templates.json")
     templates = json.loads(checked_bytes(template_entry))
     case = {"task_id": tid, "forbidden_prompt": row["forbidden_prompt"],
             "metadata_sha256": row["source_sha256"], "attack_unchanged": row["attack_unchanged"],
-            "method": row["jailbreak_method"], "metric": METRIC, "judge_model": JUDGE_MODEL,
+            "method": row["jailbreak_method"], "metric": profile["metric"], "judge_model": profile["model"],
             "evaluator_revision": SOURCES["evaluator_revision"], "task_revision": SOURCES["task_revision"],
             "templates": {k: templates[k] for k in ("strongreject_rubric", "strongreject_rubric_system")}}
     encoded = canonical(case)
@@ -92,7 +107,7 @@ def _verify(tid, row):
                        {"path": "strongreject_judge_runtime", "from": str(ASSETS.parents[2] / "eval/service"), "immutable": True},
                        {"path": "strongreject_case.json", "content": encoded}],
             "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
-            "timeout_s": 75, "judge": dict(JUDGE),
+            "timeout_s": 75, "judge": profile["judge"],
             "result_contract": {"version": 1, "score_range": [0, 1]}}
 
 
@@ -123,10 +138,11 @@ def oracle_files(task):
 
 
 def provision_status():
+    profile = judge_profile()
     status = {"root": str(DATASET_ROOT), "present": False,
-              "judge_configured": os.environ.get("HG_JUDGE_MODEL") == JUDGE_MODEL
+              "judge_configured": os.environ.get("HG_JUDGE_MODEL") == profile["model"]
                                   and bool(os.environ.get("HG_JUDGE_BASE_URL")),
-              "judge_model": JUDGE_MODEL,
+              "judge_model": profile["model"], "metric": profile["metric"],
               "admission": "Real judge oracle sweep and measured diagnostic required before experiments"}
     try:
         status.update(present=True, tasks=len(rows()))
@@ -146,6 +162,8 @@ def downloads():
 
 
 def __getattr__(name):
+    if name in ("JUDGE_MODEL", "METRIC", "JUDGE"):
+        return judge_profile()[{"JUDGE_MODEL": "model", "METRIC": "metric", "JUDGE": "judge"}[name]]
     if name != "SPLIT":
         raise AttributeError(name)
     # Load lazily so registry discovery still works before data provisioning.
