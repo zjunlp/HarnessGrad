@@ -122,3 +122,12 @@ to the pinned official checkout and `NLTK_DATA` to the locked English sentence
 resources to enable the official comparisons. Missing reference source skips
 those comparisons; it does not establish equivalence. No real-model diagnostic
 or benchmark performance claim follows from these controls.
+
+A bounded API connectivity smoke also exercised the normal SDK and `./mab`
+client in the actual sandbox: it retained both full material chunks of
+`conflict_resolution-r0000` and submitted the first four of its 100 questions.
+The trusted record and verifier correctly reported `incomplete_episode` with no
+score. This fixed diagnostic selection is not an official training split or a
+completed benchmark episode. The remaining API evaluation is unvalidated;
+complete-episode scoring is covered separately by the released-data controls.
+Keep smoke harnesses, API receipts and sealed records outside the repository.
