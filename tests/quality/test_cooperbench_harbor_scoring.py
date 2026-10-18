@@ -23,6 +23,24 @@ def test_vendored_harbor_scorer_is_exact_pinned_source():
     protocol.read_checked(ASSETS / 'vendor/harbor-test.sh', protocol.HARBOR_SCORER_SHA256)
 
 
+def test_relocation_preserves_official_test_diff_filter(tmp_path):
+    official = (ASSETS / 'vendor/harbor-test.sh').read_text()
+    adapted = protocol.adapt_scorer(official)
+    with pytest.raises(ValueError, match='pinned source variants'):
+        protocol.adapt_scorer(official + '\n# unknown source\n')
+    function = lambda source: 'filter_test_files() {\n' + source.split('filter_test_files() {\n', 1)[1].split('\n}\n', 1)[0] + '\n}\n'
+    assert function(adapted) == function(official)
+    paths = ['tests/helpers.py', 'pkg/tests/utils.py', 'pkg/test/helper.py',
+             'pkg/test_parser.py', 'pkg/parser_test.py', 'pkg/tests.py', 'pkg/core.py']
+    patch = ''.join(f'diff --git a/{path} b/{path}\n+candidate change\n' for path in paths)
+    outputs = []
+    for i, source in enumerate((official, adapted)):
+        target = tmp_path / f'patch-{i}'; target.write_text(patch)
+        subprocess.run(['bash', '-c', function(source) + 'filter_test_files "$1"', 'filter', str(target)], check=True)
+        outputs.append(target.read_text())
+    assert outputs == ['diff --git a/pkg/core.py b/pkg/core.py\n+candidate change\n'] * 2
+
+
 def test_offline_conversion_preserves_editable_builds_and_test_commands(monkeypatch):
     source = '#!/bin/bash\nset -e\npip install -e .\npip install pytest\npython -m pytest tests/test_a.py -v\n'
     monkeypatch.setattr(protocol, 'recipe', lambda group: {
@@ -54,6 +72,7 @@ def test_official_filter_merge_and_both_feature_rule(tmp_path, mode, expected):
         (repo / 'tests/test_a.py').write_text('assert True\n'); patch_a = git(repo, 'diff'); git(repo, 'checkout', '--', '.')
     for name, patch in [('agent1', patch_a), ('agent2', patch_b)]:
         folder = tmp_path / 'shared' / name; folder.mkdir(parents=True)
+        (folder / 'logs').mkdir(); (folder / 'logs/actor.log').write_text(name)
         (folder / 'agent.done').touch()
         if mode != 'missing': (folder / 'agent.patch').write_text(patch)
     tests = tmp_path / 'private/tests'; tests.mkdir(parents=True)
@@ -69,6 +88,8 @@ if [ "$1" = tests1.patch ]; then grep -q 'A=1' a.py; else grep -q 'B=1' b.py; fi
     proc = subprocess.run(['bash', str(script)], capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, proc.stderr
     assert int((tmp_path / 'logs/verifier/reward.txt').read_text()) == expected
+    for name in ('agent1', 'agent2'):
+        assert (tmp_path / 'logs/agent' / name / 'actor.log').read_text() == name
 
 
 def test_all_30_pinned_recipes_preserve_shell_and_test_commands(tmp_path):

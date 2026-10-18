@@ -7,6 +7,9 @@ SOURCE_SHA256 = 'f2af4c7d721987e008e01a03a1f69500a448f7c273cc2bd91e6e093f09c6a8e
 HARBOR_REVISION = '3e9f14a7c1033896cc600d27de69d6948bcb3410'
 HARBOR_ADAPTER_SHA256 = 'dc6adef8c5a04babc86573587c4a7538d89ef3497432a399cb5b464b4ca079fc'
 HARBOR_SCORER_SHA256 = '4c410f101b130a35df3a59c376a8972026ee5ba4031a704639a5149eebbd60b2'
+# The only scorer variant emitted by the pinned Harbor adapter appends the
+# released DSPy 8563 test fix; other task fixes modify patch inputs only.
+HARBOR_DSPY8563_SCORER_SHA256 = 'e51659997587ddaad371f1bdbd925df49dfb4a65f84c5307dbbc44bf52fdb719'
 METRIC = 'cooperbench.harbor.merged_pair_success.v1'
 
 
@@ -23,8 +26,16 @@ def read_checked(path, expected):
 
 def adapt_scorer(source):
     """Keep Harbor merge/filter/test code; move writable mounts into the quota."""
-    for old, new in [('/logs/', '/workspace/logs/'), ('/shared/', '/workspace/shared/'),
-                     ('/patches', '/workspace/patches'), ('/tests/', '/workspace/private/tests/'),
+    if sha(source.encode()) not in {HARBOR_SCORER_SHA256, HARBOR_DSPY8563_SCORER_SHA256}:
+        raise ValueError('Harbor scorer differs from the pinned source variants')
+    # Match reviewed mount paths, never path fragments inside the official
+    # Python diff filter or the per-agent relative logs directory.
+    for old, new in [('/logs/verifier', '/workspace/logs/verifier'),
+                     ('/logs/agent/', '/workspace/logs/agent/'),
+                     ('/shared/', '/workspace/shared/'), ('/patches', '/workspace/patches'),
+                     ('/tests/tests1.patch', '/workspace/private/tests/tests1.patch'),
+                     ('/tests/tests2.patch', '/workspace/private/tests/tests2.patch'),
+                     ('/tests/testfix.patch', '/workspace/private/tests/testfix.patch'),
                      ('/usr/local/bin/runner.sh', '/workspace/private/runner.sh')]:
         source = source.replace(old, new)
     return source
