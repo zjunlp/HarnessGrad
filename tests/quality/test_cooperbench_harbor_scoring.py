@@ -282,3 +282,32 @@ def test_build_requirements_support_python310_and_nested_project(tmp_path, monke
     exec(helper, {})
     assert calls == [[sys.executable, '-m', 'pip', 'install', dependency] for dependency in
                      ('tomli==2.2.1', 'setuptools>=62.4', 'poetry-core==2.1.3')]
+
+
+def test_preparation_resolves_dynamic_editable_backend_dependencies(tmp_path):
+    """Real backend hooks run in each baseline project, before offline builds."""
+    import json
+    import os
+    import sys
+    source = '#!/bin/bash\n'
+    from unittest.mock import patch
+    with patch.object(protocol, 'prepare_recipe', return_value=('', source)), patch.object(protocol, 'recipe', return_value={'family': 'python'}):
+        _, install, _ = protocol.image_recipe('sha256:' + 'a' * 64, source, 'fixture')
+    code = install.split("python3 - <<'BUILD_REQUIREMENTS'\n", 1)[1].split('\nBUILD_REQUIREMENTS', 1)[0]
+    fake_modules = tmp_path / 'fake_modules'; fake_modules.mkdir()
+    # Capture dependency installation without any package index or download.
+    (fake_modules / 'pip.py').write_text("import json,os,sys\nwith open(os.environ['PIP_CAPTURE'],'a') as f: f.write(json.dumps(sys.argv[1:])+'\\n')\n")
+    for name, required in [('.', 'root-editable==1.2.3'), ('llama-index-core', 'core-editable==4.5.6')]:
+        project = tmp_path / name; (project / 'backend').mkdir(parents=True)
+        (project / 'pyproject.toml').write_text('[build-system]\nrequires=["static-backend==7.8.9"]\nbuild-backend="local_backend"\nbackend-path=["backend"]\n')
+        (project / 'backend/local_backend.py').write_text(
+            'from pathlib import Path\ndef get_requires_for_build_editable(settings):\n'
+            '    assert settings is None\n'
+            f'    assert Path.cwd() == Path({str(project)!r})\n'
+            f'    return [{required!r}]\n')
+    capture = tmp_path / 'installs.jsonl'
+    subprocess.run([sys.executable, '-c', code], cwd=tmp_path, check=True,
+                   env={**os.environ, 'PYTHONPATH': str(fake_modules), 'PIP_CAPTURE': str(capture)})
+    assert [json.loads(line) for line in capture.read_text().splitlines()] == [
+        ['install', 'static-backend==7.8.9'], ['install', 'root-editable==1.2.3'],
+        ['install', 'static-backend==7.8.9'], ['install', 'core-editable==4.5.6']]

@@ -99,7 +99,7 @@ def image_recipe(base_id, source, group, runtime_python_image=None):
         # Native builds need their build backend after the candidate patch too.
         # pip's temporary build-isolation environments are not a runtime cache.
         install += '''python3 - <<'BUILD_REQUIREMENTS'
-import pathlib, subprocess, sys
+import json, pathlib, subprocess, sys
 try:
     import tomllib
 except ModuleNotFoundError:
@@ -107,8 +107,25 @@ except ModuleNotFoundError:
     import tomli as tomllib
 for path in (pathlib.Path('pyproject.toml'), pathlib.Path('llama-index-core/pyproject.toml')):
     if path.exists():
-        requires = tomllib.loads(path.read_text()).get('build-system', {}).get('requires', [])
+        build = tomllib.loads(path.read_text()).get('build-system', {})
+        requires = build.get('requires', [])
         if requires: subprocess.run([sys.executable, '-m', 'pip', 'install', *requires], check=True)
+        if build.get('build-backend'):
+            # PEP 660 allows additional editable-build requirements beyond the
+            # static PEP 518 list (for example hatchling's editables package).
+            # Query the public baseline in its project directory; keep backend
+            # imports isolated between the repository and nested core project.
+            hook = """import importlib, json, pathlib, subprocess, sys
+build = json.loads(sys.argv[1])
+sys.path[:0] = [str(pathlib.Path(p).resolve()) for p in build.get('backend-path', [])]
+name, _, object_path = build['build-backend'].partition(':')
+backend = importlib.import_module(name)
+for part in object_path.split('.') if object_path else []: backend = getattr(backend, part)
+get_requires = getattr(backend, 'get_requires_for_build_editable', None)
+requires = get_requires(None) if get_requires else []
+if requires: subprocess.run([sys.executable, '-m', 'pip', 'install', *requires], check=True)
+"""
+            subprocess.run([sys.executable, '-c', hook, json.dumps(build)], cwd=path.parent, check=True)
 BUILD_REQUIREMENTS
 rm -rf /workspace/repo/.venv
 '''
