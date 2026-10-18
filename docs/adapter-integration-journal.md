@@ -5849,3 +5849,15 @@ no real judge call or oracle sweep has been run. The adapter remains unpublished
 (`KIND="fixture"`) pending demand/surface classification; see
 [the adapter README](../data/datasets/strongreject/README.md) for the protocol,
 control semantics and remaining admission requirement.
+
+### MemoryAgentBench: native local-primary adapter, publication pending
+
+Added 41 released episodes / 3,271 questions using ordered private input delivery,
+platform-sealed records and an immutable scorer. The 105 judge-dependent episodes
+remain explicitly excluded. Incomplete episodes are unmeasured; completed wrong
+answers use official scoring. Official primary-score comparisons and a full data
+preparation replay pass, alongside sandbox and hostile-import controls. The adapter
+remains unpublished (`KIND="fixture"`) pending the first memory-demand registration
+rule; no taxonomy exception or existing dataset reclassification was introduced.
+See [the adapter README](../data/datasets/memoryagentbench/README.md) for preparation,
+per-source reporting and validation limits. No real-model experiment was run.

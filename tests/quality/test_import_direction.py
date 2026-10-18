@@ -36,6 +36,14 @@ EXCEPTIONS = {
         "Explicit dataset control uses the platform execution path, never the actor API.",
     ("data-eval", "data/datasets/strongreject/control.py", "eval.verification.verifier"):
         "Explicit dataset control exercises the trusted judge wrapper in its real sandbox.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.run.runner"):
+        "Dataset control exercises the real actor and verifier namespaces.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.run.tool_relay"):
+        "Local control owns the selected relay lifecycle and sealed episode.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.service.tool_transport"):
+        "Local control traverses the same ordered wire protocol as the actor.",
+    ("data-eval", "data/datasets/memoryagentbench/relay.py", "eval.service.tool_transport"):
+        "Private episode server reuses the platform's bounded transport.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.runner"):
         "The dataset-local control validates SETUP -> oracle harness -> VERIFY, as ALFWorld does.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.tool_relay"):

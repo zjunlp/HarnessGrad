@@ -1,0 +1,8 @@
+# Preparation and official differential tests only; runtime scoring uses stdlib.
+nltk==3.10.3
+regex==2026.9.29
+tiktoken==0.14.0
+pyarrow==23.0.1
+rouge-score==0.1.2
+editdistance==0.8.1
+numpy==2.5.4
