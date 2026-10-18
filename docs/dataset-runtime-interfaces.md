@@ -328,7 +328,19 @@ VERIFY[task_id] = {
 测试中的双 worker 和评分器是平台控制 fixture；
 CooperBench 适配器负责固定真实镜像、数据版本、官方 scorer 与 oracle/noop 对照。
 
-## 8. 兼容性与验证
+## 8. 按选中任务加载声明
+
+`registry.load_tasks(name, *, task_ids=None)` 返回任务列表及普通 `dict` 类型的
+SETUP、VERIFY；`registry.load_envs(name, *, task_ids=None)` 返回普通环境 `dict`。
+不传 `task_ids` 时保留全量加载和验证。显式传入时拒绝未知或重复 ID，只读取选中任务的
+SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会因读取未选中任务的运行时或模型配置而阻断运行。
+此接口不改变适配器 `load()` 自身的公开任务清单加载行为。
+
+标准 driver 先应用 `--side`、`--tasks`，再完成 diagnostic / pilot 选择，最后以
+`task_ids=side_ids` 调用这两个接口并执行运行时预检。惰性适配器应把私有数据、运行时及模型依赖的
+检查放在选中声明的取值路径，避免模块导入或遍历键时提前解析全部值。
+
+## 9. 兼容性与验证
 
 兼容原则：旧声明保持旧评分、模型路由、预算和聚合；新增能力显式启用。
 生命周期增加自动清理及可选诊断字段；专用 judge 配置只增加独立配置项。

@@ -132,8 +132,8 @@ def stubbed_driver(monkeypatch, tmp_path, context):
     monkeypatch.setattr(driver.datasets, "load_split", lambda *a: (
         [dict(task_id=SELECTED[0])], {}, None))
     monkeypatch.setattr(driver.datasets, "oracle_source", lambda *a: ("synthetic", 0))
-    monkeypatch.setattr(driver.datasets, "load_tasks", lambda *a: ([], {}, {}))
-    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a: {})
+    monkeypatch.setattr(driver.datasets, "load_tasks", lambda *a, **kwargs: ([], {}, {}))
+    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a, **kwargs: {})
     monkeypatch.setattr(driver, "_warn_missing_overlay", lambda *a: None)
     monkeypatch.setattr(driver, "_check_env_kinds", lambda *a: None)
     monkeypatch.setattr(driver, "_resolve_envs", lambda envs: (envs, None))

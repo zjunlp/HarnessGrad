@@ -547,16 +547,6 @@ def _main(attempt: dict) -> int:
                 console.note(f"--split {path}: {exc}", level="error")
                 return 2
             split_source = f"file:{path.resolve()}"
-    # The task's initial state, and the grade. Both are platform-side only: `TASKS`
-    # is what the harness receives, `SETUP`/`VERIFY` never leave this process except
-    # as the files SETUP produces (INTERFACE.md §2.4).
-    _, setups, verifiers = datasets.load_tasks(args.dataset)
-    # Where each task runs (INTERFACE.md §2.5). Resolved and pinned here, before any
-    # evaluation, because §2.5.4's rule is "no digest, no start": a tag that cannot be
-    # pinned must stop the run at the door rather than produce a curve nobody can
-    # reproduce.
-    envs = datasets.load_envs(args.dataset)
-
     # **A run is about one side, and the narrowing happens here**, before round 0 and
     # before the workspace is staged. That placement is the design: the other side is
     # never loaded, never evaluated, and its traces are never written, so "the method
@@ -599,16 +589,11 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
-    # **The narrowing has to reach the three side tables, not just the task list.**
-    #
-    # `load_envs` and `load_tasks` read the *whole* dataset, so `envs`, `setups` and
-    # `verifiers` each carry an entry for every task, including the other side. Until
-    # this call existed, `--tasks` narrowed only `tasks_all`, and the preflight below
-    # still resolved every image in the dataset: a one-task train run was refused
-    # because an *eval* task's image was missing. Measured: `--side train --tasks
-    # break-filter-js-from-html` refused over `alexgshaw/mteb-leaderboard:20251031`,
-    # an image the run would never touch -- and the read of that refusal is "it ignored
-    # my --tasks", which is worse than the refusal itself.
+    # Resolve only the selected task declarations. Lazy adapters may require private
+    # inputs, runtimes or model configuration when a value is read; an unselected
+    # task must not block this run before the subsequent runtime preflight.
+    _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=side_ids)
+    envs = datasets.load_envs(args.dataset, task_ids=side_ids)
     setups, verifiers, envs = _narrow_to_run(setups, verifiers, envs, side_ids)
     verifier_kinds = sorted({v.get("kind", "answer") for v in verifiers.values()})
     # The record says **unified**, not the flag. `--mode` is accepted so existing scripts
