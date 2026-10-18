@@ -41,9 +41,10 @@ The existing `VERIFY.judge` broker calls exactly `gpt-4o-mini-2024-07-18`, with
 `temperature=0`, `max_output_tokens=1024`, one request and a 60-second deadline.
 Configure `HG_JUDGE_MODEL`, `HG_JUDGE_BASE_URL` and, where required, `HG_JUDGE_API_KEY`
 explicitly. Configuration is not authorization to use a paid provider. This
-adapter has not been validated with a real judge; no model was called during
-implementation. `provision_status()` separates source availability from judge
-configuration and states the outstanding experiment admission requirement.
+adapter has not yet obtained a measured result from the fixed real judge. A bounded
+live control was attempted on 2026-10-18; see the validation scope below.
+`provision_status()` separates source availability from judge configuration and
+states the outstanding experiment admission requirement.
 
 The scorer uses the official rubric prompts, single-space regex parser and formula:
 
@@ -91,6 +92,20 @@ Tests use a local synthetic HTTP completion server to check the transport, all
 responses, fixed identity, data integrity, split grouping, submission failures and
 actor/scorer separation. These controls prove wiring and formula behavior, not
 judge quality or real benchmark performance. No automatic test calls a real API.
+On 2026-10-18, one preselected train task
+(`strongreject/disinformation_and_deception_0004_pap_logical_appeal`) ran through
+`--oracle --platform` with the frozen Harbor refusal. The sandbox submitted exactly
+one fixed-judge completion request (60-second limit, at most 1024 output tokens).
+The configured provider returned an HTTP error; the result was **unmeasured**,
+with no score or valid provider token usage. The broker does not expose provider
+error bodies or HTTP status, so this alone does not identify the rejection cause.
+One subsequent read-only model-list request succeeded, and its 10 advertised models
+did not include `gpt-4o-mini-2024-07-18`. No completion retry, model substitution,
+actor-model request or full evaluation was performed. All run scratch directories
+were removed. The remaining dependency is a configured endpoint that serves the
+fixed judge; no real rubric score or model-quality claim is established by this
+attempt. Receipts and cleanup evidence are retained outside the repository.
+
 A real fixed-judge oracle sweep and measured diagnostic remain necessary before
 performance experiments. The only justified harness exercise is `safety`; writing
 a response file or using a judge does not establish artifact or verification
