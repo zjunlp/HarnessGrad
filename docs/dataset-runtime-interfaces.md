@@ -162,6 +162,7 @@ provider、解析、预算或运输失败即使被评分脚本捕获并写成 re
 - 保留范围内的有限数值；不截断、不替换 scorer 的公式。
 - NaN、Infinity、越界、缺失分数，以及 evidence 的 `measured:false`，得到 `score:null` 和 `unmeasured`。
 - verifier evidence 可以保留数据集的具体错误、完成状态和原始诊断。
+- 可选 `require_exit_zero: true` 要求评分命令正常退出：平台在读取 reward/evidence 前检查真实退出码，非零退出得到 `score:null` 和 `unmeasured`，即使已写分数也不采纳。适用于普通 command（含 observed 容器和 snapshot 路径），不支持 `pristine-offline`。省略或 `false` 保持原行为；它不限制候选 actor 的退出码。
 - 原生单 actor 返回 `verdict.submission.answer_file`：`missing/empty/present`；这个字段本身不改分数。
 
 最终文本回答仍使用现有 `answer.txt`。不扫描 stdout、任意日志或最后聊天消息来猜最终回答。

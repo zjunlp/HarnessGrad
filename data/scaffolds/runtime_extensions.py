@@ -58,8 +58,11 @@ def validate_judge(spec, *, allow_trial_seed=False):
 
 
 def validate_result(spec):
-    if not isinstance(spec, dict) or set(spec) != {'version', 'score_range'} or spec['version'] != 1:
+    if (not isinstance(spec, dict) or not {'version', 'score_range'} <= set(spec)
+            or set(spec) - {'version', 'score_range', 'require_exit_zero'} or spec['version'] != 1):
         raise ValueError('result_contract requires version=1 and score_range=[min,max]')
+    if 'require_exit_zero' in spec and type(spec['require_exit_zero']) is not bool:
+        raise ValueError('result_contract.require_exit_zero must be boolean')
     bounds = spec['score_range']
     if (not isinstance(bounds, list) or len(bounds) != 2
             or any(type(x) not in (int, float) or not math.isfinite(x) for x in bounds)
