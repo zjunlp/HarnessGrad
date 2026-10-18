@@ -5875,3 +5875,13 @@ control exercise actual tools and scoring through deterministic local HTTP;
 these validate integration, not model performance. Full production simulator/judge
 and repeated-trial benchmark runs remain unmeasured. Setup and limits are in
 [data/datasets/tau3_bench/README.md](../data/datasets/tau3_bench/README.md).
+
+### CooperBench: fixed-peer coding and isolated pair scoring
+
+Added all 652 released pair identities with grouped splits, two independent
+candidate workers, mailbox communication and patch-only export to the pinned
+Harbor scorer. Offline preparation recipes cover all 30 base tasks. Real Click
+oracle/noop controls pass with resource observation and complete cleanup; the
+other 29 runtimes remain unvalidated. The fixed platform roles do not establish
+candidate delegation. See [the adapter README](../data/datasets/cooperbench/README.md)
+for preparation, metric identity and validation scope.
