@@ -10,10 +10,10 @@
 | 数据集 | 接入方式 | 公共接口的适用范围 |
 | --- | --- | --- |
 | KUMO | 使用 `files + tool_relay + command` 声明 | 已使用公共 relay 的停止、清理和运行回执；未声明 `record` 或 `model`。官方答案评分不依赖交互记录封存，查询预算及答案文件协议保持不变 |
-| MemoryAgentBench | 原生 relay 的 `record`；按需使用 `result_contract` | 客户端使用现有逐行 JSON 传输；服务写可信 episode，verifier 读取封存记录。本地评分子集不需要 judge |
-| StrongREJECT | `VERIFY.judge` 或现有只读 runtime 投影；`result_contract` | 提供单一固定模型的文本评分通道。官方 finetuned 模型的权重、依赖与 scorer 由 adapter 提供 |
-| τ³ | 原生 relay 的 `record`、`model`；`judge`；`trial_protocol` | 服务私有状态、用户模拟器调用、评分调用和完整重复试验报告可以分开接线。官方业务 API、模拟器状态机和 scorer 仍由 adapter 实现 |
-| CooperBench | `SETUP.workers` 固定协作 peer；组合 command verifier | 同一候选 Harness 在独立原生沙箱或 `observed-v1` Docker 容器运行；邮箱、模型通道、产物收集、实际资源观测和独立容器 verifier 共用平台接口 |
+| [MemoryAgentBench](../data/datasets/memoryagentbench/README.md) | 原生 relay 的 `record`、只读 scorer 投影及 `result_contract` | 客户端使用逐行 JSON 传输；服务写可信 episode，verifier 读取封存记录。当前本地主指标子集不使用 judge |
+| [StrongREJECT](../data/datasets/strongreject/README.md) | `VERIFY.judge`、只读 scorer 投影及 `result_contract` | 当前实现固定模型的官方 rubric 评分；独立的 finetuned evaluator 尚未实现 |
+| [τ³](../data/datasets/tau3_bench/README.md) | relay 的 `record`、绑定 trial seed 的 `model`；按任务启用 `judge`；`trial_protocol` | 适配器接入官方业务 API、用户模拟器和 ALL scorer；平台提供私有模型通道、记录封存和完整重复试验报告 |
+| [CooperBench](../data/datasets/cooperbench/README.md) | `SETUP.workers` 固定协作 peer；组合 command verifier | 同一候选 Harness 在独立 `observed-v1` Docker 容器运行；邮箱、模型通道、产物收集、实际资源观测和独立容器 verifier 共用平台接口 |
 
 `workers` 支持固定 peer 执行，不提供 leader、任务认领或动态委派协议。
 CooperBench 适配器负责对齐官方消息、产物和环境协议。
@@ -352,7 +352,8 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 双 worker 消息与产物，以及旧入口回归。
 
 接口测试位于 `tests/quality/test_shared_dataset_runtime.py`、
-`tests/quality/test_shared_judge_trials_workers.py` 和 `tests/quality/test_observed_workers.py`。
+`tests/quality/test_shared_judge_trials_workers.py`、`tests/quality/test_observed_workers.py`
+和 `tests/quality/test_registry_selection.py`。
 Docker 控制需要本地镜像和可用 daemon；测试运行方式见 [测试说明](test-suite.md)。
 一次性测试日志与验证记录保存在仓库外。基线失败和跳过项不算通过；
 平台控制测试不代替真实数据集的接入验证。

@@ -176,7 +176,8 @@ def test_public_input_checked_before_materialization(synthetic):
 def test_registered_interaction_and_adapter_split(synthetic):
     from tools.dataset_classes import classify, ACT_VERBS
     row = classify('kumo')
-    assert ACT_VERBS == ('do', 'call')
+    # Other adapters may add action verbs; KUMO must retain its existing route.
+    assert {'do', 'call'} <= set(ACT_VERBS)
     assert row['interaction'] == 'closed_loop'
     assert row['tasks'] == row['train'] + row['eval'] == 1
     assert synthetic['task_id'] in kumo.SPLIT['train'] + kumo.SPLIT['eval']
