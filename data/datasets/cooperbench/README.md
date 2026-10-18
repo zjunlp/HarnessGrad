@@ -39,6 +39,13 @@ Image preparation is explicit and per group; it never pulls the full image
 collection. It verifies the repository base SHA and official runner bytes,
 records the imported image ID, registry digests, complete `pip freeze`, build
 recipe and transformed runner hashes, and creates a local immutable image ID.
+If the task image's Python lacks `tarfile.data_filter`, import a compatible
+Python 3.12 image explicitly and pass `--runtime-python-image sha256:...`.
+Preparation copies its runtime to `/opt/hg-python`, checks safe extraction in the
+final image, and records the auxiliary image ID, executable, prefix and library
+path. The official language toolchain is retained. For Debian 12 task images,
+Python `3.12.13-slim-bookworm` is the compatible preparation source; use an exact
+local image ID after importing and verifying the registry manifest.
 
 Preparation recipes cover all **30 groups**, with pinned runner hashes and exact
 installation ranges in `recipes.json`:
@@ -52,7 +59,8 @@ installation ranges in `recipes.json`:
 
 The official reset, patch application, test commands and cleanup remain intact.
 `/patches` and Harbor's other writable mounts move under `/workspace` to retain
-the platform's filesystem limits. `--build-network host` is available **only for
+the platform's filesystem limits. Native compilation scratch also stays inside
+this quota, under `/workspace/.test-tmp`, rather than the small system `/tmp`. `--build-network host` is available **only for
 preparation**, for hosts whose download proxy listens on loopback; measurement
 always has no network. A stale published image whose runner/base does not match
 is refused. Rebuild the pinned task Dockerfile and supply its explicit local ID
@@ -61,16 +69,26 @@ with `--source-image` in that case; the prepared identity remains recorded.
 Preparation records the measured seed size/inode count. Each runtime receives
 2 CPUs and 512 PIDs, at least a 2 GiB/200,000 inode workspace, with bounded
 headroom based on that seed. Preparation refuses requirements beyond the reviewed
-16 GiB/2 million inode envelope. Memory covers the workspace quota plus 2 GiB
+16 GiB/2 million inode envelope, except the pinned Typst recipe: its measured
+6.63 GiB seed needs a 20.89 GiB workspace, within an explicit 24 GiB envelope. Memory covers the workspace quota plus 2 GiB
 (minimum 4 GiB). Worker and verifier deadlines are 1800 seconds. These resource
 settings are explicit adapter settings; a larger environment needs separate
 configuration and validation.
 
-Only the released **Click task2956 pair f1-2** has currently passed real Docker
-oracle/noop controls. All 30 recipe transformations have source-drift and shell
+The released **Click task2956 and Go chi task26, pair f1-2** have passed real
+Docker oracle/noop controls. React Hook Form task85 passes runtime isolation,
+but its released oracle fails the original repository's Husky/TypeScript
+pre-commit check, so Harbor's agent merge produces an empty patch. This is an
+upstream oracle/merge blocker; neither hooks nor official tests are bypassed. All 30 recipe transformations have source-drift and shell
 syntax checks; the other images/toolchains are **not yet validated**. Preparing
 an image does not mark it validated. `provision_status()` lists prepared and
 unprepared groups without dropping any of the 652 pair identities.
+
+A small Click communication check also passed with Ling-3.1-flash: two model
+requests, mailbox exchange and patch submission through a temporary fixed
+HTTP-to-HTTPS bridge. The provider key stayed on the host and workers received
+temporary tokens. This checks the API/communication path, not model coding
+performance.
 
 ## Controls and validation
 

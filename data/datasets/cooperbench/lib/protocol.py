@@ -70,7 +70,7 @@ def prepare_recipe(source, group):
     return block, adapted.replace('/patches/', '/workspace/patches/')
 
 
-def image_recipe(base_id, source, group):
+def image_recipe(base_id, source, group, runtime_python_image=None):
     """Build-time dependencies and cache relocation; no test/solver execution."""
     block, adapted = prepare_recipe(source, group)
     spec = recipe(group)
@@ -78,6 +78,10 @@ def image_recipe(base_id, source, group):
               'RUN git config --system user.email eval@cooperbench.local && '
               'git config --system user.name "CooperBench Eval" && '
               'git config --system safe.directory /workspace/repo\n')
+    if runtime_python_image:
+        common = (f'FROM {runtime_python_image} AS helper_python\n' + common +
+                  'COPY --from=helper_python /usr/local /opt/hg-python\n'
+                  'ENV LD_LIBRARY_PATH=/opt/hg-python/lib\n')
     install = '#!/bin/bash\nset -e\ncd /workspace/repo\n'
     if spec['family'] == 'python':
         install += block + '\n'
@@ -93,8 +97,7 @@ BUILD_REQUIREMENTS
 rm -rf /workspace/repo/.venv
 '''
     if spec['family'] == 'node':
-        install += ('export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}"\napt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=30 update\napt-get install -y --only-upgrade python3.11 python3.11-minimal libpython3.11-stdlib libpython3.11-minimal\n'
-                    'rm -rf /var/lib/apt/lists/*\nnpm install --global pnpm@8\npnpm --version\n')
+        install += 'npm install --global pnpm@8\npnpm --version\n'
         common += 'ENV npm_config_offline=true npm_config_cache=/workspace/.npm\n'
     if spec['family'] == 'go':
         install += 'go mod download\nmkdir -p /workspace/.gomodcache\nif [ -d /go/pkg/mod ]; then cp -a /go/pkg/mod/. /workspace/.gomodcache/; fi\n'

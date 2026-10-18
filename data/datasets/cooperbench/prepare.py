@@ -84,7 +84,7 @@ def prepare(root, source, harbor):
                       'manifest_sha256': sha((prepared / 'manifest.json').read_bytes())}))
 
 
-def prepare_image(root, source, group, pull, build_network="bridge", source_image=None):
+def prepare_image(root, source, group, pull, build_network="bridge", source_image=None, runtime_python_image=None):
     manifest = json.loads((root / 'prepared-v1/manifest.json').read_text())
     row = next(r for r in manifest['tasks'] if r['group'] == group)
     runner = read_checked(source / 'dataset' / group / 'runner.sh', row['runner_sha256'])
@@ -111,7 +111,8 @@ for parent, dirs, files in os.walk('/workspace'):
         workspace_inodes += 1
 print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse','HEAD']).strip(),
  'pip_freeze': read([sys.executable,'-m','pip','freeze','--all']) or '',
- 'python_version': sys.version,
+ 'python_version': sys.version, 'python_prefix': sys.prefix,
+ 'python_executable': sys.executable, 'python_library_path': os.environ.get('LD_LIBRARY_PATH'),
  'toolchain_versions': {tool: read([tool, 'version' if tool == 'go' else '--version']) for tool in ('git', 'go', 'node', 'pnpm', 'cargo', 'rustc') if shutil.which(tool)},
  'workspace_bytes': workspace_bytes, 'workspace_inodes': workspace_inodes,
  'runner_sha256': hashlib.sha256(open('/usr/local/bin/runner.sh','rb').read()).hexdigest()}))
@@ -120,13 +121,16 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
                                   python, image_id, '-c', inspect_code))
     if identity['base_commit'] != row['base_commit'] or identity['runner_sha256'] != row['runner_sha256']:
         raise ValueError('official image base/runner differs from the pinned task source; rebuild the pinned source Dockerfile and import that image explicitly')
+    helper_image_id = None
+    if runtime_python_image:
+        helper_image_id = json.loads(command('docker', 'image', 'inspect', runtime_python_image))[0]['Id']
     runtimes = root / 'runtimes'
     target = runtimes / group.replace('/', '-')
     target.mkdir(parents=True, exist_ok=True)
     if (target / 'runtime.json').exists():
         raise FileExistsError('runtime already prepared; preserve it and use a fresh root for changes')
     (target / 'runner.sh').write_text(adapted)
-    dockerfile, preparation, adapted = image_recipe(image_id, runner, group)
+    dockerfile, preparation, adapted = image_recipe(image_id, runner, group, runtime_python_image=helper_image_id)
     (target / 'prepare-dependencies.sh').write_text(preparation)
     (target / 'Dockerfile').write_text(dockerfile)
     tag = 'hg-cooperbench-' + group.replace('/', '-').replace('_', '-') + '-runtime'
@@ -135,6 +139,8 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
                     '--build-arg', 'HTTPS_PROXY', '--build-arg', 'HTTP_PROXY', '--build-arg', 'NO_PROXY',
                     '--force-rm', '--memory=8g', '--cpu-quota=200000', '-t', tag, str(target)], check=True)
     digest = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
+    if helper_image_id:
+        python = '/opt/hg-python/bin/python3'
     command('docker', 'run', '--rm', '--network=none', '--entrypoint', python, digest,
             '-c', "import tarfile; assert hasattr(tarfile, 'data_filter'), 'runtime Python needs tarfile.data_filter'")
     identity = json.loads(command('docker', 'run', '--rm', '--network=none', '--entrypoint',
@@ -143,10 +149,13 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
     # Keep bounded headroom for two patch/test passes and native build output.
     workspace_bytes = max(2 << 30, ((3 * identity['workspace_bytes'] + (1 << 30) + 4095) // 4096) * 4096)
     inodes = max(200000, identity['workspace_inodes'] * 3 + 16384)
-    if workspace_bytes > 16 << 30 or inodes > 2000000:
-        raise ValueError('measured seed exceeds reviewed 16 GiB/2M inode resource envelope; configure and validate a bounded larger runtime explicitly')
+    workspace_limit_gib = recipe(group).get('workspace_limit_gib', 16)
+    if workspace_bytes > workspace_limit_gib << 30 or inodes > 2000000:
+        raise ValueError(f'measured seed {identity["workspace_bytes"]} bytes/{identity["workspace_inodes"]} inodes requires '
+                         f'{workspace_bytes} workspace bytes/{inodes} inodes, exceeding the reviewed '
+                         f'{workspace_limit_gib} GiB/2M inode envelope')
     runtime = {'group': group, 'image': digest, 'source_image': image_id, 'python': python,
-               'source_repo_digests': imported.get('RepoDigests', []), 'identity': identity,
+               'source_repo_digests': imported.get('RepoDigests', []), 'runtime_python_image': helper_image_id, 'identity': identity,
                'recipe': recipe(group), 'runner_sha256': sha(adapted.encode()),
                'dockerfile_sha256': sha(dockerfile.encode()),
                'dependencies_sha256': sha(identity['pip_freeze'].encode()),
@@ -165,12 +174,13 @@ def main():
     parser.add_argument('--harbor-root', type=Path)
     parser.add_argument('--image-group', help='Prepare only this explicit repository/task group')
     parser.add_argument('--source-image', help='Explicit local image ID rebuilt from the pinned source Dockerfile if the published tag is stale')
+    parser.add_argument('--runtime-python-image', help='Explicit local compatible Python image for the isolated helper when the task image lacks safe tar extraction; copied to /opt/hg-python without replacing the official toolchain')
     parser.add_argument('--build-network', choices=['bridge', 'host', 'none'], default='bridge',
                         help='Preparation only; host can reach a loopback download proxy. Measurement always has no network.')
     parser.add_argument('--pull', action='store_true', help='Download only the selected official image')
     args = parser.parse_args()
     if args.image_group:
-        prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image)
+        prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image, args.runtime_python_image)
     elif args.harbor_root:
         prepare(args.root, args.source_root, args.harbor_root)
     else:

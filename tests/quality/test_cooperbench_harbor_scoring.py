@@ -204,3 +204,16 @@ def test_go_preparation_accepts_no_external_modules(tmp_path, monkeypatch):
     import os
     subprocess.run(['bash', '-c', script], check=True, env={**os.environ, 'PATH': str(binary) + ':' + os.environ['PATH']})
     assert (workspace / '.gomodcache').is_dir()
+
+
+def test_auxiliary_python_preserves_official_toolchain(monkeypatch):
+    source = "#!/bin/bash\npnpm test tests/example.test.tsx\n"
+    monkeypatch.setattr(protocol, 'recipe', lambda group: {
+        'runner_sha256': protocol.sha(source.encode()), 'family': 'node',
+        'mode': 'node', 'install_lines': None})
+    dockerfile, install, runner = protocol.image_recipe('task-image', source, 'fixture', 'sha256:helper')
+    assert dockerfile.startswith('FROM sha256:helper AS helper_python\nFROM task-image\n')
+    assert 'COPY --from=helper_python /usr/local /opt/hg-python' in dockerfile
+    assert 'ENV LD_LIBRARY_PATH=/opt/hg-python/lib' in dockerfile
+    assert 'apt-get' not in install
+    assert runner == source
