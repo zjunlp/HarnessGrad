@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | KUMO | 使用 `files + tool_relay + command` 声明 | 已使用公共 relay 的停止、清理和运行回执；未声明 `record` 或 `model`。官方答案评分不依赖交互记录封存，查询预算及答案文件协议保持不变 |
 | [MemoryAgentBench](../data/datasets/memoryagentbench/README.md) | 原生 relay 的 `record`、只读 scorer 投影及 `result_contract` | 客户端使用逐行 JSON 传输；服务写可信 episode，verifier 读取封存记录。当前本地主指标子集不使用 judge |
-| [StrongREJECT](../data/datasets/strongreject/README.md) | `VERIFY.judge`、只读 scorer 投影及 `result_contract` | 当前实现固定模型的官方 rubric 评分；独立的 finetuned evaluator 尚未实现 |
+| [StrongREJECT](../data/datasets/strongreject/README.md) | `VERIFY.judge`、只读 scorer 投影及 `result_contract` | 官方 rubric 的 judge 可显式配置，模型进入评分标识并在 verifier 中固定；独立的 finetuned evaluator 尚未实现 |
 | [τ³](../data/datasets/tau3_bench/README.md) | relay 的 `record`、绑定 trial seed 的 `model`；按任务启用 `judge`；`trial_protocol` | 适配器接入官方业务 API、用户模拟器和 ALL scorer；平台提供私有模型通道、记录封存和完整重复试验报告 |
 | [CooperBench](../data/datasets/cooperbench/README.md) | `SETUP.workers` 固定协作 peer；组合 command verifier | 同一候选 Harness 在独立 `observed-v1` Docker 容器运行；邮箱、模型通道、产物收集、实际资源观测和独立容器 verifier 共用平台接口 |
 
