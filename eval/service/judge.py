@@ -28,12 +28,20 @@ from data.scaffolds.runtime_extensions import validate_judge as validate
 
 
 class Judge:
-    def __init__(self, spec, *, role="judge"):
-        validate(spec)
+    def __init__(self, spec, *, role="judge", trial_seed=None):
+        validate(spec, allow_trial_seed=role == "environment")
         self.spec = dict(spec)
         if role not in ("judge", "environment"):
             raise JudgeUnavailable("unsupported model role")
         self.role = role
+        if spec.get('seed_source') == 'trial':
+            try:
+                if type(trial_seed) not in (str, int):
+                    raise ValueError('missing or noninteger trial seed')
+                seed = int(trial_seed)
+            except ValueError as exc:
+                raise JudgeUnavailable('environment trial seed must be an explicit integer') from exc
+            self.spec['parameters'] = {**spec.get('parameters', {}), 'seed': seed}
         cfg = getattr(current(), role)
         if cfg.model != spec['model'] or not cfg.base_url:
             raise JudgeUnavailable(f'HG_{"JUDGE" if role == "judge" else "ENV"}_MODEL/BASE_URL must match the declared model')

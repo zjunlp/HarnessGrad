@@ -67,7 +67,7 @@
   },
   "setup_extensions": {
     "tool_relay.record": "Optional {path, max_bytes?}. Service writes HG_RELAY_RECORD_PATH JSON; HG_RELAY_CONTEXT_PATH supplies task/run/trial/input binding. Native sandboxed command verification only.",
-    "tool_relay.model": "Optional environment-role model broker with the same bounded completion declaration as judge. Service receives HG_ENV_MODEL_SOCKET, not model credentials.",
+    "tool_relay.model": "Optional environment-role model broker with the same bounded completion declaration as judge. Optional seed_source=trial binds parameters.seed to the platform run_seed and cannot combine with a static parameters.seed. Service receives HG_ENV_MODEL_SOCKET, not model credentials.",
     "workers": "Optional fixed-peer list: id, goal, files, env, artifacts, timeout_s. Each executes the same candidate harness with isolated files/state and a mailbox. Native files or explicit exec backend=observed-v1, with kernel resource observation, per-peer model/mailbox sockets and bounded artifact export."
   },
   "env": {

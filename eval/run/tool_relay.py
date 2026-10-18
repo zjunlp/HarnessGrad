@@ -250,7 +250,8 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
                          "HG_RELAY_RECORD_PATH": str(directory / "episode.json")}
         if decl.get("model") is not None:
             from eval.service.judge import Judge
-            model = Judge(decl["model"], role="environment").__enter__()
+            model = Judge(decl["model"], role="environment",
+                          trial_seed=(context or {}).get("seed")).__enter__()
             child_env = {k: v for k, v in (child_env or os.environ).items()
                          if not k.startswith(("HG_AGENT_", "HG_METHOD_", "HG_JUDGE_", "HG_ENV_"))}
             child_env["HG_ENV_MODEL_SOCKET"] = str(model.path)

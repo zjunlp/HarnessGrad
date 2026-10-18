@@ -17,9 +17,11 @@ def validate_record(spec) -> None:
         raise ValueError("tool_relay.record.max_bytes must be a positive integer")
 
 
-def validate_judge(spec):
-    if not isinstance(spec, dict) or set(spec) - {
-            'model', 'max_calls', 'max_output_tokens', 'timeout_s', 'parameters', 'tools', 'tool_choice'}:
+def validate_judge(spec, *, allow_trial_seed=False):
+    fields = {'model', 'max_calls', 'max_output_tokens', 'timeout_s', 'parameters', 'tools', 'tool_choice'}
+    if allow_trial_seed:
+        fields.add('seed_source')
+    if not isinstance(spec, dict) or set(spec) - fields:
         raise ValueError('judge must declare model, max_calls, max_output_tokens, timeout_s and optional parameters')
     if not isinstance(spec.get('model'), str) or not spec['model'].strip():
         raise ValueError('judge.model must be nonempty')
@@ -41,6 +43,9 @@ def validate_judge(spec):
     params = spec.get('parameters', {})
     if not isinstance(params, dict) or set(params) - {'temperature', 'top_p', 'seed'}:
         raise ValueError('judge parameters support temperature, top_p and seed only')
+    if 'seed_source' in spec:
+        if spec['seed_source'] != 'trial' or 'seed' in params:
+            raise ValueError('environment seed_source must be trial and cannot combine with parameters.seed')
     for key, value in params.items():
         if type(value) not in (int, float) or not math.isfinite(value):
             raise ValueError('judge parameters must be finite numbers')

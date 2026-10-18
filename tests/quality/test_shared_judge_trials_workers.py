@@ -215,3 +215,94 @@ def test_failed_worker_retains_peer_evidence_and_cleanup(tmp_path,monkeypatch):
     assert result['worker_group']['workers']['b']['exit_code']==0
     assert (Path(result['worker_group']['archive'])/'workers.json').is_file()
     assert result['runtime_services']['workers']['cleanup']['complete']
+
+
+@pytest.mark.parametrize('seed', [None, '', '1.5', 1.5, True])
+def test_environment_trial_seed_requires_an_explicit_integer(seed):
+    from eval.service.judge import Judge, JudgeUnavailable
+    spec = {**judge_spec()['judge'], 'seed_source': 'trial'}
+    with pytest.raises(JudgeUnavailable, match='explicit integer'):
+        Judge(spec, role='environment', trial_seed=seed)
+
+
+def test_trial_seed_option_is_environment_only_and_excludes_static_seed():
+    from data.scaffolds.registry import _check_setup
+    from data.scaffolds.runtime_extensions import validate_judge
+    spec = {**judge_spec()['judge'], 'seed_source': 'trial'}
+    with pytest.raises(ValueError):
+        validate_judge(spec)
+    validate_judge(spec, allow_trial_seed=True)
+    _check_setup({'tool_relay': {'model': spec}}, 'seeded-task', 'fixture')
+    with pytest.raises(ValueError, match='cannot combine'):
+        validate_judge({**spec, 'parameters': {'seed': 1}}, allow_trial_seed=True)
+    with pytest.raises(ValueError, match='must be trial'):
+        validate_judge({**spec, 'seed_source': 'actor'}, allow_trial_seed=True)
+
+
+@pytest.mark.parametrize('trial_seed', ['13', '29'])
+def test_relay_model_receives_trial_seed_without_recording(tmp_path, endpoint, monkeypatch, trial_seed):
+    import os
+    for suffix in ('BASE_URL', 'MODEL', 'API_KEY'):
+        monkeypatch.setenv('HG_ENV_' + suffix, os.environ['HG_JUDGE_' + suffix])
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    program = tmp_path / 'environment.py'
+    program.write_text(f'''import argparse,json,os,signal,sys,threading
+from pathlib import Path
+sys.path.insert(0, {str(TRANSPORT.parent)!r})
+from tool_transport import Relay,call
+p=argparse.ArgumentParser()
+p.add_argument('--socket');p.add_argument('--receipt');p.add_argument('--game')
+a=p.parse_args();done=threading.Event()
+signal.signal(signal.SIGTERM,lambda *_:done.set())
+def handle(op,args):
+    assert 'HG_ENV_API_KEY' not in os.environ
+    return call(os.environ['HG_ENV_MODEL_SOCKET'],'complete',
+                {{'messages':[{{'role':'user','content':'ok'}}]}})
+with Relay(a.socket,handle) as service:
+    done.wait(10)
+Path(a.receipt).write_text(json.dumps(service.receipt))
+''')
+    spec = {**judge_spec()['judge'], 'seed_source': 'trial'}
+    repo = harness(tmp_path, '''from transport import call
+reply=call('/run/harnessgrad-tool/tool.sock','ask',{})
+(w/'answer.txt').write_text(reply['content'])
+''')
+    result = runner.run_one(repo, {'task_id': 'seeded-environment'}, run_seed=trial_seed,
+        setup={'files': [{'path': 'transport.py', 'from': str(TRANSPORT)}],
+               'tool_relay': {'program': str(program), 'content': '{}', 'model': spec}},
+        verifier={'kind': 'answer', 'expected': 'safe fixture score'})
+    assert result['verdict']['passed'], result
+    report = result['runtime_services']['tool_relay']
+    assert report['recording'] is None
+    assert report['model']['configuration']['parameters']['seed'] == int(trial_seed)
+    assert endpoint[0][0]['seed'] == int(trial_seed)
+    assert 'seed' not in spec['parameters']
+    assert report['cleanup']['complete']
+
+
+def test_environment_static_seed_is_unchanged_by_trial_seed(endpoint, monkeypatch):
+    import os
+    from eval.service.judge import Judge
+    from eval.service.tool_transport import call
+    for suffix in ('BASE_URL', 'MODEL', 'API_KEY'):
+        monkeypatch.setenv('HG_ENV_' + suffix, os.environ['HG_JUDGE_' + suffix])
+    spec = {**judge_spec()['judge'], 'parameters': {'seed': 7}}
+    with Judge(spec, role='environment', trial_seed='99') as broker:
+        call(broker.path, 'complete', {'messages': [{'role': 'user', 'content': 'ok'}]})
+    assert endpoint[0][0]['seed'] == 7
+
+
+def test_trial_seeded_environment_does_not_reuse_measurement_cache(tmp_path, monkeypatch):
+    calls = []
+    def fake(*args, **kwargs):
+        calls.append(kwargs)
+        return {'verdict': {'score': 1, 'passed': True, 'scorer_isolation_class': 'actor-workdir'},
+                'exit_code': 0, 'trace': '', 'stderr': ''}
+    monkeypatch.setattr(runner, 'run_one', fake)
+    cache = {}
+    for seed in ('13', '29'):
+        runner._evaluate(tmp_path, [{'task_id': 't'}], {}, cache=cache, run_seed=seed,
+            setups={'t': {'tool_relay': {'model': {**judge_spec()['judge'], 'seed_source': 'trial'}}}})
+    assert [row['run_seed'] for row in calls] == ['13', '29']
+    assert all(row.get('trial_id') for row in calls)
+    assert cache == {}

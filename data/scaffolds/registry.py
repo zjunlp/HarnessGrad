@@ -641,7 +641,7 @@ def _check_setup(spec, tid: str, name: str) -> None:
         validate_record(spec["tool_relay"]["record"])
     if (spec.get("tool_relay") or {}).get("model") is not None:
         from data.scaffolds.runtime_extensions import validate_judge
-        validate_judge(spec["tool_relay"]["model"])
+        validate_judge(spec["tool_relay"]["model"], allow_trial_seed=True)
     if "workers" in spec:
         from data.scaffolds.runtime_extensions import validate_workers
         validate_workers(spec["workers"])

@@ -145,6 +145,12 @@ provider、解析、预算或运输失败即使被评分脚本捕获并写成 re
 通过 broker 固定环境模型。服务仍负责官方 user simulator 逻辑和 trial seed 的使用。
 环境调用记录位于 `runtime_services.tool_relay.model`，用量也进入现有 `env_usage`。
 
+环境模型可额外声明 `seed_source="trial"`，由平台将本次 `run_one.run_seed` 转成整数，
+固定为 provider 请求的 `parameters.seed`；不能同时声明静态 `parameters.seed`。
+缺失或非整数 seed 会拒绝启动。该选项仅适用于 `tool_relay.model`，无需同时启用 `record`，
+服务和 actor 都不能通过请求覆盖它。回执中的 configuration 保存实际使用的 seed。
+未声明该选项时沿用静态 sampling 参数；该选项不改变候选 harness 的模型采样策略。
+
 旧容器 `services.needs_model` 及 HG_ENV 行为不变。`VERIFY.judge` 要求同时声明 `result_contract`，
 仅支持 `sandbox=True` 的原生 files command verifier；
 不能将其配置直接移植到 container-state、专用 native_runtime 或 pristine-offline scorer。
@@ -192,8 +198,9 @@ relay 可从 context 读取它。旧 service 的 seed 派生方式不变。
 纯聚合入口 `eval.run.repeated_trials.aggregate(..., groups=...)` 可额外生成分域结果，group 映射必须覆盖全部任务。
 
 现有 `run_reward/per_task/per_task_trials` 含义不变；它们不是新的可靠性报告。
-声明 `trial_protocol`、`judge`、`result_contract`、`tool_relay.record` 或 `workers` 时，
-该任务不读写旧 measurement cache。仅声明 `tool_relay.model` 不触发此规则。
+声明 `trial_protocol`、`judge`、`result_contract`、`tool_relay.record`、`workers`
+或 `tool_relay.model.seed_source="trial"` 时，该任务不读写旧 measurement cache。
+未绑定 trial seed 的 `tool_relay.model` 不单独触发此规则。
 未启用上述选项的数据集沿用原 cache 行为。
 
 ## 7. CooperBench 的固定 peer 执行接口

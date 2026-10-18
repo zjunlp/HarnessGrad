@@ -222,7 +222,9 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     # absence of a declaration, not a separate code path invented for old datasets.
     env_spec = env or {"kind": "files"}
     is_exec = env_spec.get("kind") == "exec"
-    record_spec = ((setup or {}).get("tool_relay") or {}).get("record")
+    relay_decl = (setup or {}).get("tool_relay") or {}
+    record_spec = relay_decl.get("record")
+    model_trial_seed = (relay_decl.get("model") or {}).get("seed_source") == "trial"
     if record_spec is not None:
         try:
             tool_relay_mod.validate_record(record_spec)
@@ -526,7 +528,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 tool_relay = tool_relay_mod.start(setup, **({"context": {
                     "task_id": task["task_id"], "run_id": run_id or "direct",
                     "trial_id": trial_id or "trial-1", "seed": run_seed}}
-                    if record_spec is not None else {}))
+                    if record_spec is not None or model_trial_seed else {}))
             except RuntimeError as exc:
                 return _invalid(task, exc, stage="tool relay", service=None)
 
@@ -1131,6 +1133,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         spec = (verifiers or {}).get(tid) or {}
         relay = ((setups or {}).get(tid) or {}).get("tool_relay") or {}
         return bool(trial_protocol or spec.get("judge") or spec.get("result_contract") or relay.get("record")
+                    or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
     def measurement_key(task):
