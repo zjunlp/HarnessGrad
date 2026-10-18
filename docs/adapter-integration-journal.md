@@ -5837,3 +5837,36 @@ No API calls were made for this layout change.
 - Conda validation: **60 passed**, including the optional pinned-data comparisons over all 10 conversations and 1,986 questions. LoCoMo dataset lint and `git diff --check` pass. No model calls.
 
 - API connectivity check after cleanup: Conda + standard `driver.py` + unchanged `loop`, one full conv-26 transcript with only its first three questions, one trial, jobs=1, rounds=0. Six successful calls to the configured `Ling-3.1-flash` API; driver exited 0, all three answers and per-question records saved, task/curve/manual-summary scores agree. The temporary loopback HTTP-to-HTTPS bridge was needed by the existing HTTP-only native model route; no platform code was changed. Test artifacts are outside Git at `datasets/locomo/audit-20261018/api-cleanup-01/`. The test is not comparable to a full benchmark, and does not establish direct HTTPS support. Runner temporary files, bridge and work root cleaned; source data hash unchanged.
+
+## MemoryAgentBench native local-primary adapter — 2026-10-18
+
+The adapter retains the upstream ordered material-then-question protocol and
+local primary metrics for 41 released episodes / 3,271 questions. The 105 episodes
+/ 400 questions requiring an official model judge are explicitly excluded, with
+original IDs preserved. Source and scorer pins, preparation and control commands
+are documented in [the adapter README](../data/datasets/memoryagentbench/README.md).
+
+Selected inputs live in a private JSON relay. The existing `record` interface
+seals the episode after actor termination; verifier-only gold and an immutable
+scorer directory prevent actor-generated packages from replacing scoring code.
+`result_contract` keeps incomplete episodes and infrastructure failures
+unmeasured. Completed wrong-answer controls score zero; a true noop is an
+incomplete episode, never a fabricated zero. Per-source reporting weights
+questions and retains missing selected coverage separately from platform means.
+No shared runner, relay, verifier, schema or taxonomy rule changes were needed.
+
+Validation: all 3,271 released gold answers score 1 through the pinned official
+scorer, with no differential mismatch; rebuilding all 146 released episodes
+reproduces all 294 prepared artifact hashes and 6,792 ordered chunks. The focused
+suite passes 366 tests and 38 subtests, including real sandbox controls, hostile
+package/entrypoint injection, symlink refusal, primary-metric non-gold comparisons
+and Unicode edit-distance differentials. One existing host-publication inventory
+check is excluded because five unrelated adapters cannot import without their
+local data/dependencies. Logs and control receipts remain outside the repository.
+No real-model experiment or benchmark performance measurement was run.
+
+Publication uses the existing `KIND = "fixture"` switch while registration of the
+first memory-demand dataset is decided. Explicit adapter loading and `run_one`
+controls work; published inventory, aggregate policy and the memory taxonomy row
+must be registered together. The minimum-members rule is unchanged, and LoCoMo
+has not been reclassified to manufacture a second member.

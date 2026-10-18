@@ -32,6 +32,14 @@ ALLOWED_EVAL_CONFIG_EDGES = {
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.run.runner"):
+        "Dataset control exercises the real actor and verifier namespaces.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.run.tool_relay"):
+        "Local control owns the selected relay lifecycle and sealed episode.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.service.tool_transport"):
+        "Local control traverses the same ordered wire protocol as the actor.",
+    ("data-eval", "data/datasets/memoryagentbench/relay.py", "eval.service.tool_transport"):
+        "Private episode server reuses the platform's bounded transport.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.runner"):
         "The dataset-local control validates SETUP -> oracle harness -> VERIFY, as ALFWorld does.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.tool_relay"):
