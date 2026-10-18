@@ -34,7 +34,7 @@ inference script or paper score. No study/eval split is declared here.
 The adapter follows ScienceWorld's file-path loading pattern for private helper
 files (`importlib.util.spec_from_file_location`). `locomo.py` remains an ordinary
 module; no `__path__` override or package-style private imports are needed.
-The manual report and diagnostic use the same loader. The original platform
+The manual report uses the same loader. The original platform
 import-boundary test is unchanged; dataset inventory additions remain.
 
 ## Run locally
@@ -54,24 +54,6 @@ HG_AGENT_BACKEND=mock python data/datasets/locomo/control.py --task-id locomo/co
 HG_AGENT_BACKEND=mock python data/datasets/locomo/control.py --task-id locomo/conv-26 --noop --platform
 LOCOMO_AUDIT_DATA="$HG_LOCOMO_DATA/raw/locomo10.json" python -m pytest -q tests/quality/test_locomo_dataset.py tests/quality/test_locomo_harbor_scoring.py
 ```
-
-The optional single-conversation local-model diagnostic is separate from driver
-production admission. It selects one complete conversation by task-ID hash before
-execution, runs the unchanged `base_harness/loop` through `run_one(sandbox=True)`,
-and preserves receipts in a **fresh** output directory:
-
-```sh
-python tools/locomo_diagnostic.py --env-file /absolute/path/to/local-model.env --output /absolute/path/to/fresh-diagnostic
-```
-
-The selected file must supply `HG_AGENT_BACKEND=openai`, `HG_AGENT_BASE_URL`,
-`HG_AGENT_MODEL`, `HG_AGENT_API_KEY` (a placeholder if the server needs no key).
-Use the local server's plain HTTP base URL, for example
-`http://127.0.0.1:8002/v1`. The existing private Unix socket route carries requests
-to that endpoint while network remains `none`. HTTPS endpoints are unsupported
-on this branch. The diagnostic limits
-steps, token output and runtime, records model/configuration/harness identity and
-cleanup, and labels its result as non-production and non-comparable to a full run.
 
 ## Results and manual aggregation
 
@@ -98,7 +80,18 @@ batch flow does not call the LoCoMo summary, create `dataset_reports`, or attach
 
 ## Validation
 
-Current validation is recorded in `specs/validation-20261017.json` and
-`docs/adapter-integration-journal.md`. It covers Conda execution, pinned Harbor
+The dated validation record in `specs/validation-20261017.json` describes the
+implementation tested on 2026-10-17, including the diagnostic script that was later
+removed. Its source hashes are historical, not a manifest of the current tree.
+See `docs/adapter-integration-journal.md` for subsequent validation. The record
+covers Conda execution, pinned Harbor
 input/scorer comparisons, standard task verdict evidence and manual aggregation.
-Real local-model inference and a full model benchmark have not been validated.
+A bounded API connectivity check on 2026-10-18 used Conda, the standard driver,
+`loop`, one complete conversation and its first three questions. All three answers,
+per-question verdicts, saved traces and the manual summary were verified. Six API
+calls completed successfully. Because the native model route accepts HTTP only,
+the check used a temporary loopback HTTP bridge to the configured HTTPS provider;
+the bridge and temporary workspace were closed and removed afterward. This is a
+three-question connectivity check, not a benchmark score or validation of direct
+HTTPS support. Real local-model inference and a full model benchmark remain
+unvalidated.

@@ -5761,3 +5761,12 @@ no stray branches. Only `main` was pushed, as instructed.
 - Conda validation: **150 passed, 38 subtests passed, 1 failed, 23 deselected**. The failure is the all-dataset controls inventory: runtime discovery omits five unrelated unprovisioned/unimportable adapters; reproduced on the AIME-only base without LoCoMo. Deselections are one all-adapter import inventory and 22 dataset controls; LoCoMo controls ran separately. Released-data Harbor differential was enabled.
 - Actual sandboxed conv-26 controls: 199 questions, oracle/noop measured scores 1/0; every per-question record retained. Manual report function and CLI agree. Python/SDK/scorer imports pass inside the sandbox; temporary work root cleaned. Zero model calls. [Current validation](../data/datasets/locomo/specs/validation-20261017.json) binds source hashes and local evidence.
 - No real local-model run, target-host validation, full-model benchmark, staged production admission or study/eval split is claimed. Formal evaluation follows existing platform checks.
+
+
+## LoCoMo auxiliary-code cleanup — 2026-10-18
+
+- Remove the standalone `tools/locomo_diagnostic.py` entry point and its README instructions. Remove the adapter constant used only by that script and the unused test import. Standard driver execution, controls, scoring and manual reporting are unchanged.
+- Keep the 2026-10-17 validation receipt as historical evidence; the README now states that its hashes describe the earlier tree.
+- Conda validation: **60 passed**, including the optional pinned-data comparisons over all 10 conversations and 1,986 questions. LoCoMo dataset lint and `git diff --check` pass. No model calls.
+
+- API connectivity check after cleanup: Conda + standard `driver.py` + unchanged `loop`, one full conv-26 transcript with only its first three questions, one trial, jobs=1, rounds=0. Six successful calls to the configured `Ling-3.1-flash` API; driver exited 0, all three answers and per-question records saved, task/curve/manual-summary scores agree. The temporary loopback HTTP-to-HTTPS bridge was needed by the existing HTTP-only native model route; no platform code was changed. Test artifacts are outside Git at `datasets/locomo/audit-20261018/api-cleanup-01/`. The test is not comparable to a full benchmark, and does not establish direct HTTPS support. Runner temporary files, bridge and work root cleaned; source data hash unchanged.

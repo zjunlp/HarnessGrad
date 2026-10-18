@@ -1,5 +1,4 @@
 """Native adapter/verifier boundaries on synthetic conversations; no live model."""
-import hashlib
 import json
 import os
 from pathlib import Path

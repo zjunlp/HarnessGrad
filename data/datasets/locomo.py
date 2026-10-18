@@ -26,7 +26,6 @@ DATASET_ROOT = Path(os.environ.get("HG_LOCOMO_DATA", Path(__file__).resolve().pa
 DATA_FILE = DATASET_ROOT / "raw" / "locomo10.json"
 SOURCE_COMMIT = "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376"
 DATA_SHA256 = "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
-HARBOR_COMMIT = "3e9f14a7c1033896cc600d27de69d6948bcb3410"
 METRIC = "locomo.harbor.question_micro_mean.v1"
 DEFAULT_ENV = {"kind": "files", "network": "none", "agent_timeout_s": 1800,
                "verify_timeout_s": 120}
