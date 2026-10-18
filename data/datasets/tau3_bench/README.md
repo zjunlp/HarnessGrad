@@ -85,4 +85,10 @@ separately as unmeasured. Controls use a deterministic local HTTP response throu
 the official user simulator to validate execution and scoring without inference.
 They are not model-performance evidence, a completed 375-task evaluation, or
 proof that every released gold trajectory passes the model-based criteria.
-A production simulator/judge pilot and the full three-trial evaluation remain to run.
+A bounded live API control on 2026-10-18 covered the preselected train tasks
+`airline/8` and `retail/24`, one trial each, using Ling-3.1-flash for the user and
+NL judge. Three requests succeeded (1,409 input / 977 output tokens), with no retries
+or cleanup errors. Official scores were 1 and 0; the latter remained a valid
+negative because the fixed control did not complete the task's conversation.
+This validates `run_one` with real model services. It is not a candidate-harness
+pilot through the driver, a full-base evaluation, or a complete pass^k result.
