@@ -111,3 +111,79 @@ def test_nested_runner_timeout_is_unmeasured_even_if_harbor_writes_zero(tmp_path
     assert check.main() == 3
     assert not (tmp_path / 'verifier/reward.txt').exists()
     assert json.loads((tmp_path / 'verifier/evidence.json').read_text())['measured'] is False
+
+
+@pytest.mark.parametrize('failed_worker', [True, False])
+def test_worker_completion_required_even_when_official_patch_score_passes(tmp_path, monkeypatch, failed_worker):
+    """Real sandbox peers; pinned Harbor scorer on a synthetic two-feature Git repo.
+
+    Only verifier placement is replaced: its official shell still executes. This
+    exercises exit/artifact handling without needing a released Docker image.
+    """
+    import json
+    import shutil
+    from eval.run import cooperative, runner
+    from test_shared_dataset_runtime import harness
+
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    scoring = tmp_path / 'scoring'; scoring.mkdir()
+    repo = scoring / 'repo'; repo.mkdir()
+    git(repo, 'init', '-q')
+    git(repo, 'config', 'user.email', 'control@example.test')
+    git(repo, 'config', 'user.name', 'control')
+    for name in ('a', 'b'):
+        (repo / (name + '.py')).write_text(name.upper() + '=0\n')
+    git(repo, 'add', '.'); git(repo, 'commit', '-qm', 'base')
+    patches = {}
+    for name in ('a', 'b'):
+        (repo / (name + '.py')).write_text(name.upper() + '=1\n')
+        patches[name] = git(repo, 'diff') if failed_worker else ''
+        git(repo, 'checkout', '--', '.')
+    private = scoring / 'private'; (private / 'tests').mkdir(parents=True)
+    for name in ('tests1.patch', 'tests2.patch'):
+        (private / 'tests' / name).write_text('fixture')
+    (private / 'runner.sh').write_text('''#!/bin/bash
+set -e
+git apply "PATCHROOT/$2"
+if [ "$1" = tests1.patch ]; then grep -q 'A=1' a.py; else grep -q 'B=1' b.py; fi
+'''.replace('PATCHROOT', str(scoring / 'patches')))
+    source = protocol.read_checked(ASSETS / 'vendor/harbor-test.sh', protocol.HARBOR_SCORER_SHA256)
+    script = scoring / 'test.sh'
+    script.write_text(protocol.adapt_scorer(source).replace('/workspace', str(scoring)))
+    official_scores = []
+
+    def verify(work, *args, **kwargs):
+        for name, agent in [('a', 'agent1'), ('b', 'agent2')]:
+            target = scoring / 'shared' / agent; target.mkdir(parents=True)
+            shutil.copyfile(work / 'workers' / name / 'agent.patch', target / 'agent.patch')
+            (target / 'agent.done').touch()
+        proc = subprocess.run(['bash', str(script)], capture_output=True, text=True, timeout=30)
+        assert proc.returncode == 0, proc.stderr
+        score = int((scoring / 'logs/verifier/reward.txt').read_text())
+        official_scores.append(score)
+        return {'kind': 'command', 'score': score, 'passed': bool(score)}
+
+    monkeypatch.setattr(cooperative, '_verify', verify)
+    candidate = harness(tmp_path, f'''import json,sys
+me=json.loads(Path(a.task).read_text())['worker_id']
+(w/'agent.patch').write_text({patches!r}[me])
+sys.exit(1 if {failed_worker!r} and me=='a' else 0)
+''')
+    workers = [{'id': name, 'goal': 'synthetic feature', 'artifacts': ['agent.patch'],
+                'env': {'kind': 'files', 'network': 'none'}} for name in ('a', 'b')]
+    result = runner.run_one(candidate, {'task_id': 'pair-exit-control'}, setup={'workers': workers},
+                           verifier={'kind': 'command', 'argv': ['unused']},
+                           recordings_root=tmp_path / 'archives')
+    assert official_scores == [1 if failed_worker else 0]
+    assert result['worker_group']['workers']['a']['exit_code'] == (1 if failed_worker else 0)
+    assert result['worker_group']['workers']['b']['exit_code'] == 0
+    verdict = result['verdict']
+    if failed_worker:
+        assert verdict['score'] is None and verdict['outcome'] == 'unmeasured'
+        assert not verdict['passed'] and 'worker a failed: exit code 1' in verdict['unmeasured']
+    else:
+        assert verdict['score'] == 0 and not verdict['passed']
+        assert 'unmeasured' not in verdict
+    archive = Path(result['worker_group']['archive'])
+    assert (archive / 'workers/a/agent.patch').read_text() == patches['a']
+    assert result['runtime_services']['workers']['cleanup']['complete']

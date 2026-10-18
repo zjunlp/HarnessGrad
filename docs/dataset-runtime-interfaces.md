@@ -244,6 +244,9 @@ actor 停止后收集声明产物，每个 worker 总计最多 16 MiB，拒绝�
 `worker_group` 结果及 verdict 中保留分 worker 信息；所有 worker 有完整 usage 时才生成合计，
 缺失 usage 保留为未知。模拟器和 judge 不混入 worker usage。
 指定 `recordings_root` 时保存产物和组记录。运行超时、provider 故障与启动失败不能伪装成普通零分。
+此固定 peer 协议要求所有 worker 以 0 退出；非零或缺失退出码使组结果成为 `unmeasured`，
+即使留下的 patch 通过组合评分。正常退出后的错误或空 patch 仍按评分器结果计分。
+这不改变未声明 `SETUP.workers` 的单 actor 产物评分语义。
 
 ### 7.1 Docker worker 与组合 verifier
 

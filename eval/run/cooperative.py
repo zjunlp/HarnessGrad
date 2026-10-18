@@ -129,6 +129,11 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
                 ending=process_outcome(r.get('exit_code'),r.get('stderr'),wrapper=True)
                 if ending in ('stopped_by_signal','relayed_signal','timeout'):
                     failure=failure or ending
+                # A worker group requires every peer to finish successfully. A
+                # valid-looking leftover patch cannot make a failed peer complete.
+                # Keep the legacy single-actor artifact scoring policy unchanged.
+                if r.get('exit_code') != 0:
+                    failure=failure or f"exit code {r.get('exit_code')}"
                 if failure:
                     verdict.update(passed=False,score=None,outcome='unmeasured',
                                    unmeasured=f'worker {name} failed: {failure}')
