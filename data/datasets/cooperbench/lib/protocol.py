@@ -119,6 +119,16 @@ fi
         common += 'ENV CARGO_HOME=/workspace/.cargo CARGO_NET_OFFLINE=true\n'
         if group.startswith('openai_tiktoken'):
             common += 'ENV RUSTUP_HOME=/opt/hg-rustup PATH=/opt/hg-cargo-bin:$PATH\n'
+            # Public baseline tokenizer assets are runtime dependencies. Fetch
+            # every released encoding before measurement, without reading any
+            # selected tests or applying reference/candidate patches.
+            install += '''TIKTOKEN_CACHE_DIR=/workspace/.tiktoken-cache python3 - <<'TOKENIZER_ASSETS'
+import tiktoken
+for name in tiktoken.list_encoding_names():
+    tiktoken.get_encoding(name)
+TOKENIZER_ASSETS
+'''
+            common += 'ENV TIKTOKEN_CACHE_DIR=/workspace/.tiktoken-cache\n'
     # The runtime interpreter must be available to UID 65534, independently of
     # whether the upstream image is Python, Alpine Go, Node or Rust.
     common += 'COPY prepare-dependencies.sh /opt/hg-prepare-dependencies.sh\nRUN bash /opt/hg-prepare-dependencies.sh\n'

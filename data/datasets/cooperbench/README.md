@@ -57,6 +57,10 @@ installation ranges in `recipes.json`:
 | React Hook Form | 2 | Preserve cached node_modules and the test command; preinstall pnpm 8 so the runner uses it directly without npx downloading it. |
 | Typst/Rust | 1 | Preserve Cargo build/test; relocate writable registry/git caches, retain compiled target output, and set offline Cargo mode. |
 
+For tiktoken, preparation loads every public baseline encoding through its own
+hash-checking loader. `TIKTOKEN_CACHE_DIR` points both workers and the verifier
+to that image-bound cache inside the workspace quota.
+
 The official reset, patch application, test commands and cleanup remain intact.
 `/patches` and Harbor's other writable mounts move under `/workspace` to retain
 the platform's filesystem limits. Native compilation scratch also stays inside
