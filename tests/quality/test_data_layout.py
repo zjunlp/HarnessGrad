@@ -21,22 +21,26 @@ SCAFFOLDS = DATA / "scaffolds"
 # Independent, reviewed inventory: do not derive this expectation from discovery.
 EXPECTED_DATASETS = (
     "agentdojo", "aime", "alfworld", "api_bank", "appworld", "bfcl_v3",
-    "bird_minidev", "chessbench_puzzles", "ds1000", "fever", "gaia",
+    "bird_minidev", "chessbench_puzzles", "cooperbench", "ds1000", "fever", "gaia",
     "gsm8k", "hotpotqa", "jericho", "kumo", "livecodebench", "locomo", "musique", "nestful",
     "physicsquestions", "reasoning_gym", "scienceworld", "sotuqa",
     "sportsunderstanding", "spreadsheetbench", "strategyqa", "tau2_bench",
-    "tau_bench", "terminal_bench", "triviaqa", "twowikimultihopqa",
+    "tau3_bench", "tau_bench", "terminal_bench", "triviaqa", "twowikimultihopqa",
 )
+# Implemented adapters withheld from publication pending their admission gates.
+# Keep this independent from filesystem discovery and from top-level fixtures.
+EXPECTED_UNPUBLISHED_ADAPTERS = ("memoryagentbench", "strongreject")
+REVIEWED_ADAPTERS = EXPECTED_DATASETS + EXPECTED_UNPUBLISHED_ADAPTERS
 FIXTURES = (
     "demo.py", "probe_set.py", "broken_service.py", "verify_demo.py",
     "verify_exec.py", "verify_service.py",
 )
-# Existing published-adapter assets must be moved, rather than simply deleted.
+# Reviewed adapter assets stay beside their published or unpublished declarations.
 # pinchbench is not a published adapter and is deliberately not classified here.
 EXPECTED_ASSET_DIRS = (
-    "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "ds1000",
-    "gaia", "jericho", "kumo", "livecodebench", "locomo", "nestful", "reasoning_gym",
-    "scienceworld", "spreadsheetbench", "tau_bench",
+    "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "cooperbench", "ds1000",
+    "gaia", "jericho", "kumo", "livecodebench", "locomo", "memoryagentbench", "nestful", "reasoning_gym",
+    "scienceworld", "spreadsheetbench", "strongreject", "tau3_bench", "tau_bench",
 )
 
 
@@ -50,10 +54,10 @@ def _source(path):
     return text, ast.parse(text, filename=_relative(path))
 
 
-def _kind(path):
+def _kind(path, *, require_declaration=False):
     """Read declarations for every adapter, including AgentDojo, without imports."""
     _, tree = _source(path)
-    kind = "fixture"
+    kind = None if require_declaration else "fixture"
     for node in tree.body:
         targets = (node.targets if isinstance(node, ast.Assign) else
                    [node.target] if isinstance(node, ast.AnnAssign) else [])
@@ -84,19 +88,22 @@ def test_scaffolds_contain_shared_code_and_no_adapters():
         if not path.is_file():
             errors.append(f"Missing shared scaffold: {_relative(path)}")
     for path in sorted(SCAFFOLDS.rglob("*.py")):
-        if path.stem in EXPECTED_DATASETS or _kind(path) == "dataset":
+        if path.stem in REVIEWED_ADAPTERS or _kind(path) == "dataset":
             errors.append(f"Dataset adapter inside scaffolds: {_relative(path)}")
-    for name in EXPECTED_DATASETS:
+    for name in REVIEWED_ADAPTERS:
         if (SCAFFOLDS / name).exists():
             errors.append(f"Adapter assets inside scaffolds: data/scaffolds/{name}/")
     _check(errors)
 
 
-def test_all_30_adapters_live_in_datasets():
+def test_reviewed_published_and_unpublished_adapters_live_in_datasets():
     errors = []
     if not DATASETS.is_dir():
         errors.append("Missing adapter directory: data/datasets/")
-    expected = {f"{name}.py" for name in EXPECTED_DATASETS}
+    assert not set(EXPECTED_DATASETS) & set(EXPECTED_UNPUBLISHED_ADAPTERS)
+    expected_kinds = {**{f"{name}.py": "dataset" for name in EXPECTED_DATASETS},
+                      **{f"{name}.py": "fixture" for name in EXPECTED_UNPUBLISHED_ADAPTERS}}
+    expected = set(expected_kinds)
     actual = {path.name for path in DATASETS.glob("*.py")
               if path.name != "__init__.py"}
     for name in sorted(expected - actual):
@@ -105,12 +112,13 @@ def test_all_30_adapters_live_in_datasets():
         errors.append(f"Unexpected adapter/module: data/datasets/{name}")
     for name in sorted(expected & actual):
         path = DATASETS / name
-        if _kind(path) != "dataset":
-            errors.append(f"{_relative(path)} must declare KIND = 'dataset'")
+        expected_kind = expected_kinds[name]
+        if _kind(path, require_declaration=True) != expected_kind:
+            errors.append(f"{_relative(path)} must declare KIND = {expected_kind!r}")
     _check(errors)
 
 
-def test_registry_publishes_exactly_the_30_adapters_without_loading_them(monkeypatch):
+def test_registry_publishes_exactly_the_reviewed_datasets_without_loading_adapters(monkeypatch):
     path = SCAFFOLDS / "registry.py"
     assert path.is_file(), f"Missing registry: {_relative(path)}"
     errors = []
@@ -158,12 +166,12 @@ def test_fixtures_stay_at_the_data_top_level():
 def test_flat_paths_and_migration_shims_are_gone():
     old = [DATA / name for name in
            ("qa", "registry.py", "command_control.py", "command_oracle_harness")]
-    old.extend(DATA / f"{name}.py" for name in EXPECTED_DATASETS)
+    old.extend(DATA / f"{name}.py" for name in REVIEWED_ADAPTERS)
     _check([f"Legacy path/shim must be removed: {_relative(path)}"
             for path in old if path.exists() or path.is_symlink()])
 
 
-def test_adapter_imports_only_use_scaffolds_stdlib_or_third_party():
+def test_adapter_imports_do_not_cross_dataset_boundaries():
     """An adapter may reach `data.scaffolds.*`; it may not reach another adapter.
 
     Deliberately narrower than "any import whose root is a local name", which is what
@@ -176,10 +184,11 @@ def test_adapter_imports_only_use_scaffolds_stdlib_or_third_party():
     adapter, so it tested the wrong thing.
 
     What this pins is the boundary the split exists to create: no adapter imports
-    another adapter, and an adapter's only `data.*` dependency is `data.scaffolds.*`.
+    another adapter. Shared `data.scaffolds.*` and `data.runtimes.*` plus an
+    adapter's own private modules under `data.datasets.<name>.*` are permitted.
     """
     errors = []
-    for name in EXPECTED_DATASETS:
+    for name in REVIEWED_ADAPTERS:
         path = DATASETS / f"{name}.py"
         if not path.is_file():
             errors.append(f"Cannot check adapter imports: missing {_relative(path)}")
@@ -203,6 +212,9 @@ def test_adapter_imports_only_use_scaffolds_stdlib_or_third_party():
                 statement = ast.get_source_segment(text, node)
                 if target.startswith("data.datasets."):
                     other = target.split(".")[2]
+                    if other == name:
+                        # Dataset-private helpers are part of this adapter, not a sibling.
+                        continue
                     errors.append(
                         f"{_relative(path)}:{node.lineno}: {statement} "
                         f"[forbidden dependency: adapter {name!r} imports adapter {other!r}]")
@@ -221,7 +233,7 @@ def test_adapter_asset_directories_move_beside_their_adapters():
     for name in EXPECTED_ASSET_DIRS:
         if not (DATASETS / name).is_dir():
             errors.append(f"Missing relocated adapter assets: data/datasets/{name}/")
-    for name in EXPECTED_DATASETS:
+    for name in REVIEWED_ADAPTERS:
         path = DATA / name
         if path.exists() or path.is_symlink():
             errors.append(f"Orphaned top-level adapter assets: {_relative(path)}/; "

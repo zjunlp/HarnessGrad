@@ -235,6 +235,49 @@
       "surface": "planning_and_search"
     },
     {
+      "dataset": "cooperbench",
+      "demand": "artifact",
+      "surface": "code_generation",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "upstream-node-oracle-merge",
+          "family": "official-scorer-execution",
+          "status": "external",
+          "observed": "React Hook Form task85 passes runtime isolation, but its released oracle fails the original Husky/TypeScript pre-commit check and Harbor's agent merge produces an empty patch. This remains an upstream oracle/merge failure; hooks and official tests are not bypassed.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/cooperbench/README.md",
+              "locator": "upstream oracle/merge blocker"
+            }
+          ],
+          "next_action": "Resolve and record the pinned upstream oracle/merge failure without weakening the original hooks or scorer. Revalidate the affected released control before treating that task's oracle path as reachable."
+        },
+        {
+          "id": "runtime-group-coverage",
+          "family": "measurement-coverage",
+          "status": "runtime",
+          "observed": "All 30 group preparation recipes have source-drift and shell syntax checks. Real Docker oracle/noop controls cover Click task2956 and Go chi task26 pair f1-2; the other images/toolchains are not yet validated, and some preparations remain pending. A two-request Click model communication check is not model coding-performance or complete 652-pair evidence.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/cooperbench/README.md",
+              "locator": "the other images/toolchains are **not yet validated**"
+            }
+          ],
+          "next_action": "Complete pending group preparation and validate official scoring plus lifecycle controls for each runtime family. Keep all 652 pair identities and explicit preparation status; record separately authorized candidate-harness coverage without inferring full benchmark readiness from recipe checks or prepared images."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "ds1000",
       "demand": "artifact",
@@ -644,6 +687,35 @@
       "historical_runs": [],
       "shared_blockers": [],
       "surface": "tool_dialogue"
+    },
+    {
+      "dataset": "tau3_bench",
+      "demand": "tool_use",
+      "surface": "tool_dialogue",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "reliability"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "bounded-controls-not-full-evaluation",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "The pinned tau3 v1.0.1 text half-duplex adapter retains all 375 base tasks across four domains; banking uses BM25 and voice/full-duplex is outside its scope. Official scorer and deterministic controls are implemented. Bounded live controls used airline/8 and retail/24 once each, with three successful Ling-3.1-flash requests and valid official scores 1 and 0. They exercise run_one with real user and NL judge services, not a candidate-harness driver pilot, full-base evaluation or complete pass^k result.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/tau3_bench/README.md",
+              "locator": "pilot through the driver, a full-base evaluation, or a complete pass^k result."
+            }
+          ],
+          "next_action": "Validate a separately authorized bounded candidate-harness driver diagnostic with explicit model roles and recorded source, trial, usage and cleanup identity. Report complete required three-trial manifests before publishing pass^k; retain missing/provider/scorer outcomes as unmeasured. Do not infer full-base, voice/full-duplex or production authorization from the live controls."
+        }
+      ],
+      "historical_runs": []
     },
     {
       "blockers": [],
