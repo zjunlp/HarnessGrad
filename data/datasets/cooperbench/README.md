@@ -18,6 +18,11 @@ split. It is an adapter split, not an official heldout designation; the official
 flash subset is development material. All pair IDs remain in the inventory even
 when a machine has imported only one runtime. A missing runtime fails explicitly.
 
+Prepared inputs must use the corrected scorer manifest `3accea49615abcc01f65d366e5717fe27d39626bd59e3f8c331297fc60d5b072`.
+Roots prepared with the earlier mount relocation must be prepared again in a
+fresh directory. Preserve their inputs and receipts; copy verified runtime
+metadata to reuse the same immutable images without rebuilding them.
+
 ## Preparation
 
 Use Python 3.12 and external directories. `HG_COOPERBENCH_DATA` overrides the
