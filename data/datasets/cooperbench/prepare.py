@@ -7,6 +7,7 @@ import json
 from itertools import combinations
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -167,6 +168,58 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
     print(json.dumps(runtime))
 
 
+def prepare_mirror_runtime(root, group, base_runtime, assets):
+    """Derive a fresh immutable runtime without resolving dependencies again."""
+    if group != 'dottxt_ai_outlines_task/task1706':
+        raise ValueError('HF mirror dependency recipe is reviewed only for Outlines task1706')
+    manifest = json.loads((root / 'prepared-v1/manifest.json').read_text())
+    row = next(r for r in manifest['tasks'] if r['group'] == group)
+    raw = (base_runtime / 'runtime.json').read_bytes()
+    runtime = json.loads(raw)
+    if (runtime['group'] != group or runtime['identity']['base_commit'] != row['base_commit']
+            or runtime.get('hf_mirror')):
+        raise ValueError('base runtime group/base/mirror identity mismatch')
+    for name, field in [('runner.sh', 'runner_sha256'), ('Dockerfile', 'dockerfile_sha256'),
+                        ('requirements.freeze.txt', 'dependencies_sha256'),
+                        ('prepare-dependencies.sh', 'preparation_sha256')]:
+        read_checked(base_runtime / name, runtime[field])
+    imported = json.loads(command('docker', 'image', 'inspect', runtime['image']))[0]
+    if imported['Id'] != runtime['image']:
+        raise ValueError('base runtime must identify an immutable local image')
+    target = root / 'runtimes' / group.replace('/', '-')
+    target.mkdir(parents=True, exist_ok=False)
+    for name in ('runner.sh', 'Dockerfile', 'requirements.freeze.txt', 'prepare-dependencies.sh'):
+        shutil.copyfile(base_runtime / name, target / name)
+    (target / 'base-runtime.json').write_bytes(raw)
+    source = Path(__file__).resolve().parent / 'hf_mirror/build.py'
+    spec = importlib.util.spec_from_file_location('cooperbench_hf_mirror_build', source)
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    identity = build.stage(assets, target / 'hf-mirror', runtime['image'], runtime['python'])
+    assets_manifest = json.loads((assets / 'manifest.json').read_text())
+    files = [item for row in assets_manifest['repos'].values() for item in row['files'].values()]
+    # Hub keeps one blob plus small snapshot refs/metadata per public file.
+    cache_bytes = sum(item['size'] for item in files) + (1 << 20)
+    seed_bytes = runtime['identity']['workspace_bytes'] + cache_bytes
+    workspace_bytes = max(2 << 30, ((3 * seed_bytes + (1 << 30) + 4095) // 4096) * 4096)
+    inodes = max(200000, (runtime['identity']['workspace_inodes'] + 4 * len(files) + 64) * 3 + 16384)
+    if workspace_bytes > recipe(group).get('workspace_limit_gib', 16) << 30 or inodes > 2000000:
+        raise ValueError('HF cache exceeds the reviewed workspace envelope')
+    runtime['resources'].update(workspace_bytes=workspace_bytes, workspace_inodes=inodes,
+                                memory_mb=max(4096, workspace_bytes // (1 << 20) + 2048))
+    identity['cache_bound_bytes'] = cache_bytes
+    tag = 'hg-cooperbench-outlines-task1706-hf-runtime'
+    subprocess.run(['env', 'DOCKER_BUILDKIT=0', 'docker', 'build', '--network=none', '--pull=false',
+                    '--force-rm', '--memory=2g', '--cpu-quota=100000', '-t', tag,
+                    str(target / 'hf-mirror')], check=True)
+    runtime['image'] = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
+    runtime['python'] = identity['runtime_python']
+    runtime['hf_mirror'] = {**identity, 'base_runtime_sha256': sha(raw)}
+    runtime['validation'] = 'HF mirror prepared; real oracle/noop controls are still required for this image'
+    write_json(target / 'runtime.json', runtime)
+    print(json.dumps(runtime))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, required=True)
@@ -175,11 +228,19 @@ def main():
     parser.add_argument('--image-group', help='Prepare only this explicit repository/task group')
     parser.add_argument('--source-image', help='Explicit local image ID rebuilt from the pinned source Dockerfile if the published tag is stale')
     parser.add_argument('--runtime-python-image', help='Explicit local compatible Python image for the isolated helper when the task image lacks safe tar extraction; copied to /opt/hg-python without replacing the official toolchain')
+    parser.add_argument('--hf-mirror-assets', type=Path, help='Verified public dependency assets for the reviewed Outlines task1706 runtime')
+    parser.add_argument('--base-runtime', type=Path, help='Existing prepared runtime to derive into a fresh runtime directory without rebuilding dependencies; requires --hf-mirror-assets')
     parser.add_argument('--build-network', choices=['bridge', 'host', 'none'], default='bridge',
                         help='Preparation only; host can reach a loopback download proxy. Measurement always has no network.')
     parser.add_argument('--pull', action='store_true', help='Download only the selected official image')
     args = parser.parse_args()
-    if args.image_group:
+    if args.hf_mirror_assets or args.base_runtime:
+        if not (args.image_group and args.hf_mirror_assets and args.base_runtime):
+            parser.error('--image-group, --hf-mirror-assets and --base-runtime are required together')
+        if args.pull or args.source_image or args.runtime_python_image:
+            parser.error('mirror derivation reuses an existing runtime; image import options are not applicable')
+        prepare_mirror_runtime(args.root, args.image_group, args.base_runtime, args.hf_mirror_assets)
+    elif args.image_group:
         prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image, args.runtime_python_image)
     elif args.harbor_root:
         prepare(args.root, args.source_root, args.harbor_root)

@@ -66,6 +66,26 @@ For tiktoken, preparation loads every public baseline encoding through its own
 hash-checking loader. `TIKTOKEN_CACHE_DIR` points both workers and the verifier
 to that image-bound cache inside the workspace quota.
 
+For Outlines task1706, its public model loaders need Hub metadata as well as
+weights. The [fixed HF dependency mirror](hf_mirror/README.md) supplies both from
+verified immutable assets over container-local HTTP. Prepare those assets with
+`python data/datasets/cooperbench/hf_mirror/prepare.py --root /your/hf-assets`,
+then derive a runtime into a fresh data root containing the same prepared inputs:
+
+```sh
+python data/datasets/cooperbench/prepare.py \
+  --root /your/fresh/cooperbench --source-root /your/sources/CooperBench \
+  --image-group dottxt_ai_outlines_task/task1706 \
+  --base-runtime /your/previous/cooperbench/runtimes/dottxt_ai_outlines_task-task1706 \
+  --hf-mirror-assets /your/hf-assets
+```
+
+Derivation preserves the base image, dependency freeze and preparation identity;
+it adds a read-only mirror layer and selects its isolated interpreter wrapper.
+The cache byte count enters the same workspace/memory formula. Scoring requires
+matching mirror health before and after the official runner and a zero verifier
+exit status; service failure stays unmeasured even if a reward file remains.
+
 The official reset, patch application, test commands and cleanup remain intact.
 `/patches` and Harbor's other writable mounts move under `/workspace` to retain
 the platform's filesystem limits. Native compilation scratch also stays inside

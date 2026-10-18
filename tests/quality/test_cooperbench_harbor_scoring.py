@@ -311,3 +311,40 @@ def test_preparation_resolves_dynamic_editable_backend_dependencies(tmp_path):
     assert [json.loads(line) for line in capture.read_text().splitlines()] == [
         ['install', 'static-backend==7.8.9'], ['install', 'root-editable==1.2.3'],
         ['install', 'static-backend==7.8.9'], ['install', 'core-editable==4.5.6']]
+
+
+def test_mirror_derivation_preserves_base_runtime_and_records_verified_layer(tmp_path, monkeypatch):
+    import json
+    from test_cooperbench_hf_mirror import fixture_assets
+    spec = importlib.util.spec_from_file_location('cooperbench_prepare_test', ASSETS / 'prepare.py')
+    preparation = importlib.util.module_from_spec(spec); spec.loader.exec_module(preparation)
+    group = 'dottxt_ai_outlines_task/task1706'
+    base = tmp_path / 'base'; base.mkdir()
+    config = {'group': group, 'image': 'sha256:' + 'a' * 64, 'python': '/usr/local/bin/python3',
+              'identity': {'base_commit': 'base', 'workspace_bytes': 1234, 'workspace_inodes': 5},
+              'resources': {'workspace_bytes': 2 << 30, 'workspace_inodes': 200000, 'memory_mb': 4096}}
+    for name, field in [('runner.sh', 'runner_sha256'), ('Dockerfile', 'dockerfile_sha256'),
+                        ('requirements.freeze.txt', 'dependencies_sha256'),
+                        ('prepare-dependencies.sh', 'preparation_sha256')]:
+        (base / name).write_text('original ' + name)
+        config[field] = protocol.sha((base / name).read_bytes())
+    original = json.dumps(config).encode(); (base / 'runtime.json').write_bytes(original)
+    root = tmp_path / 'derived'; (root / 'prepared-v1').mkdir(parents=True)
+    (root / 'prepared-v1/manifest.json').write_text(json.dumps({'tasks': [{'group': group, 'base_commit': 'base'}]}))
+    assets = tmp_path / 'assets'; assets.mkdir(); fixture_assets(assets)
+    monkeypatch.setattr(preparation, 'command', lambda *args: json.dumps([{'Id': config['image'] if args[-1] == config['image'] else 'sha256:' + 'b' * 64}]))
+    builds = []
+    monkeypatch.setattr(preparation.subprocess, 'run', lambda argv, **kwargs: builds.append(argv))
+    preparation.prepare_mirror_runtime(root, group, base, assets)
+    result = json.loads((root / 'runtimes' / group.replace('/', '-') / 'runtime.json').read_text())
+    assert (base / 'runtime.json').read_bytes() == original
+    assert result['image'] == 'sha256:' + 'b' * 64 and result['python'] == '/opt/hg-hf/python'
+    assert result['dependencies_sha256'] == config['dependencies_sha256']
+    assert result['hf_mirror']['base_image'] == config['image']
+    assert result['hf_mirror']['base_runtime_sha256'] == protocol.sha(original)
+    assert len(builds) == 1 and '--network=none' in builds[0]
+    with pytest.raises(FileExistsError):
+        preparation.prepare_mirror_runtime(root, group, base, assets)
+    (base / 'runner.sh').write_text('changed')
+    with pytest.raises(ValueError, match='source digest mismatch'):
+        preparation.prepare_mirror_runtime(root, group, base, assets)
