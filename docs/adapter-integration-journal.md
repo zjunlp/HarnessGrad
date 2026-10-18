@@ -5902,3 +5902,20 @@ older task images, and a measured Typst resource envelope. Per-group oracle/noop
 validation continues; the adapter README records the current scope and upstream
 blockers. MemoryAgentBench and StrongREJECT classification/publication remain
 pending author confirmation.
+
+### Offline CooperBench dependencies and command completion — 2026-10-19
+
+CooperBench preparation now resolves editable backend dependencies from the public
+baseline and preserves Harbor's test-file filtering when relocating writable paths.
+The corrected prepared manifest keeps all 652 pair identities; every released oracle
+patch has identical filtered bytes before and after the scorer correction.
+A dataset-local, immutable Hub mirror supports pinned Outlines model dependencies
+without runtime internet access; it preserves the original loaders and test commands.
+
+`result_contract.require_exit_zero` optionally rejects a failed scorer before reading
+its reward or evidence. CooperBench enables it so a dependency service failure cannot
+publish a stale score. Other adapters retain their default interpretation. Controls
+cover root-helper startup isolation, service loss and an undeletable residual reward;
+real dependency resolution and CPU model loading also passed. Per-group official
+control outcomes and remaining blockers are maintained in the adapter README and
+registry; detailed receipts and cleanup records remain outside Git.
