@@ -25,18 +25,20 @@ def stage(assets, output, base_image, python):
         required.update((row['info_blob'], row['tree_blob']))
         required.update(item['sha256'] for item in row['files'].values())
     for name in sorted(required): shutil.copyfile(assets / 'blobs' / name, blobs / name)
-    for name in ('server.py', 'launcher.py'): shutil.copyfile(source / name, output / name)
+    for name in ('server.py', 'launcher.py', 'python'): shutil.copyfile(source / name, output / name)
+    (output / 'python').write_text((source / 'python').read_text().replace('@REAL_PYTHON@', python))
     config = {'python': python, 'manifest_sha256': sha}
     (output / 'config.json').write_text(json.dumps(config, sort_keys=True) + '\n')
     (output / 'Dockerfile').write_text(
         f'FROM {base_image}\nUSER 0:0\n'
         'COPY assets /opt/hg-hf/assets\n'
-        'COPY server.py launcher.py config.json /opt/hg-hf/\n'
-        'RUN chmod -R a+rX /opt/hg-hf && chmod 0555 /opt/hg-hf/launcher.py\n')
+        'COPY server.py launcher.py python config.json /opt/hg-hf/\n'
+        f'RUN {python} -I -S -c \"import sys; assert sys.version_info >= (3, 10)\" && '
+        'chmod -R a+rX /opt/hg-hf && chmod 0555 /opt/hg-hf/python\n')
     identity = {'base_image': base_image, 'manifest_sha256': sha, 'real_python': python,
-                'runtime_python': '/opt/hg-hf/launcher.py',
+                'runtime_python': '/opt/hg-hf/python',
                 'source_sha256': {name: hashlib.sha256((output / name).read_bytes()).hexdigest()
-                                  for name in ('server.py', 'launcher.py', 'config.json', 'Dockerfile')}}
+                                  for name in ('server.py', 'launcher.py', 'python', 'config.json', 'Dockerfile')}}
     (output / 'mirror-build.json').write_text(json.dumps(identity, sort_keys=True, indent=2) + '\n')
     return identity
 

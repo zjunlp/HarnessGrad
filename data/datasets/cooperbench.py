@@ -121,7 +121,7 @@ def _verify(tid, row):
     return {'kind': 'command', 'argv': [config.get('python', '/usr/local/bin/python3'), 'check.py'], 'inputs': inputs,
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
             'timeout_s': 1800, 'container_runtime': runtime_spec(row),
-            'result_contract': {'version': 1, 'score_range': [0, 1]}}
+            'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
 
 
 class _Tasks(Mapping):

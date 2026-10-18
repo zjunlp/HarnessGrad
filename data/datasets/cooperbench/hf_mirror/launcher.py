@@ -1,4 +1,3 @@
-#!/usr/local/bin/python3
 """Dedicated runtime interpreter: launch the immutable mirror only at container idle."""
 from __future__ import annotations
 import hashlib
