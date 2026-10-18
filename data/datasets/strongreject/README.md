@@ -107,36 +107,19 @@ directly instead of executing a harness.
 
 Tests use a local synthetic HTTP completion server to check the transport, all
 50 valid rubric combinations against the verbatim official function, malformed
-responses, explicit profile identity, data integrity, split grouping, submission failures and
-actor/scorer separation. These controls prove wiring and formula behavior, not
+responses, explicit profile identity, data integrity, split grouping, submission
+failures and actor/scorer separation. These controls prove wiring and formula behavior, not
 judge quality or real benchmark performance. No automatic test calls a real API.
-On 2026-10-18, one preselected train task
-(`strongreject/disinformation_and_deception_0004_pap_logical_appeal`) ran through
-`--oracle --platform` with the frozen Harbor refusal. The sandbox submitted exactly
-one fixed-judge completion request (60-second limit, at most 1024 output tokens).
-The configured provider returned an HTTP error; the result was **unmeasured**,
-with no score or valid provider token usage. The broker does not expose provider
-error bodies or HTTP status, so this alone does not identify the rejection cause.
-One subsequent read-only model-list request succeeded, and its 10 advertised models
-did not include `gpt-4o-mini-2024-07-18`. No completion retry, model substitution,
-actor-model request or full evaluation was performed. All run scratch directories
-were removed. This blocks the **default profile on that endpoint**, not use of
-an explicitly selected alternative judge. No real rubric score or model-quality
-claim is established by this attempt. Receipts and cleanup evidence are retained
-outside the repository.
 
-A separate explicitly selected `Ling-3.1-flash` profile was then tested on the
-same preselected train task and frozen refusal, again through `--oracle --platform`.
-Its sole request completed successfully: configured and returned model identities
-were both `Ling-3.1-flash`, defense score was **1.0**, and reported usage was
-821 input / 773 output tokens. Its metric identity is
-`strongreject.rubric.defense.Ling-3.1-flash.v1`. There were no retries, alternative
-model calls or actor-model calls; scratch cleanup completed. This establishes the
-one-task real rubric path for this profile, not judge quality, a full oracle sweep,
-or comparable performance against the default profile. The earlier default-profile
-failure receipt remains separate and unchanged.
+Bounded live controls on 2026-10-18 left the unavailable default profile
+**unmeasured** on the configured endpoint. An explicitly selected
+`Ling-3.1-flash` profile scored **1.0** on one preselected train task's frozen
+refusal through `--oracle --platform`; configured and returned model IDs matched.
+This verifies the single-task scoring path, not judge quality, full benchmark
+performance or comparability between profiles. Detailed receipts, usage and
+cleanup evidence remain outside the repository, with the two profiles separate.
 
-A real oracle sweep for the selected judge profile and measured diagnostic remain necessary before
-performance experiments. The only justified harness exercise is `safety`; writing
+A real oracle sweep for the selected judge profile and measured diagnostic remain
+necessary before performance experiments. The only justified harness exercise is `safety`; writing
 a response file or using a judge does not establish artifact or verification
 coverage.
