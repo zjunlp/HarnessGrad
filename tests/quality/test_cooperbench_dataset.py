@@ -71,3 +71,19 @@ def test_missing_runtime_is_not_silently_filtered(prepared, monkeypatch, tmp_pat
     assert len(tasks) == len(gold) == 1
     with pytest.raises(FileNotFoundError):
         dataset.runtime(prepared)
+
+
+def test_prepared_manifest_and_selected_runtime_load():
+    if not (dataset.DATASET_ROOT / 'prepared-v1/manifest.json').exists():
+        pytest.skip('prepared CooperBench inputs needed for manifest integration check')
+    rows = dataset.roster()  # Validate the adapter's fixed manifest, without mocks.
+    assert len(rows) == 652
+    selected = next((tid for tid, row in rows.items() if
+                     (dataset.DATASET_ROOT / 'runtimes' / row['group'].replace('/', '-') / 'runtime.json').exists()), None)
+    if selected is None:
+        pytest.skip('one prepared runtime needed for selected loading')
+    tasks, setups, verifiers = registry.load_tasks('cooperbench', task_ids=[selected])
+    assert [task['task_id'] for task in tasks] == [selected]
+    assert len(setups[selected]['workers']) == 2
+    case = next(item['content'] for item in verifiers[selected]['inputs'] if item['path'] == 'private/case.json')
+    assert json.loads(case)['provenance']['manifest_sha256'] == dataset.MANIFEST_SHA256
