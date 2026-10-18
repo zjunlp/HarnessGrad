@@ -217,3 +217,35 @@ def test_auxiliary_python_preserves_official_toolchain(monkeypatch):
     assert 'ENV LD_LIBRARY_PATH=/opt/hg-python/lib' in dockerfile
     assert 'apt-get' not in install
     assert runner == source
+
+
+def test_build_requirements_support_python310_and_nested_project(tmp_path, monkeypatch):
+    import builtins
+    import sys
+    import tomllib
+
+    source = '#!/bin/bash\npip install -e .\n'
+    monkeypatch.setattr(protocol, 'recipe', lambda group: {
+        'runner_sha256': protocol.sha(source.encode()), 'family': 'python',
+        'mode': 'editable-venv', 'install_lines': [1, 2]})
+    _, install, _ = protocol.image_recipe('base', source, 'fixture')
+    helper = install.split("<<'BUILD_REQUIREMENTS'\n", 1)[1].split('\nBUILD_REQUIREMENTS', 1)[0]
+    (tmp_path / 'pyproject.toml').write_text('[build-system]\nrequires = ["setuptools>=62.4"]\n')
+    nested = tmp_path / 'llama-index-core'; nested.mkdir()
+    (nested / 'pyproject.toml').write_text('[build-system]\nrequires = ["poetry-core==2.1.3"]\n')
+    monkeypatch.chdir(tmp_path)
+    calls = []
+    monkeypatch.setattr(subprocess, 'run', lambda argv, **kwargs: calls.append(argv))
+    original_import = builtins.__import__
+
+    def python310_import(name, *args, **kwargs):
+        if name == 'tomllib':
+            raise ModuleNotFoundError(name)
+        if name == 'tomli':
+            return tomllib
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, '__import__', python310_import)
+    exec(helper, {})
+    assert calls == [[sys.executable, '-m', 'pip', 'install', dependency] for dependency in
+                     ('tomli==2.2.1', 'setuptools>=62.4', 'poetry-core==2.1.3')]

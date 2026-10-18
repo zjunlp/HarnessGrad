@@ -88,7 +88,12 @@ def image_recipe(base_id, source, group, runtime_python_image=None):
         # Native builds need their build backend after the candidate patch too.
         # pip's temporary build-isolation environments are not a runtime cache.
         install += '''python3 - <<'BUILD_REQUIREMENTS'
-import pathlib, subprocess, sys, tomllib
+import pathlib, subprocess, sys
+try:
+    import tomllib
+except ModuleNotFoundError:
+    subprocess.run([sys.executable, '-m', 'pip', 'install', 'tomli==2.2.1'], check=True)
+    import tomli as tomllib
 for path in (pathlib.Path('pyproject.toml'), pathlib.Path('llama-index-core/pyproject.toml')):
     if path.exists():
         requires = tomllib.loads(path.read_text()).get('build-system', {}).get('requires', [])
