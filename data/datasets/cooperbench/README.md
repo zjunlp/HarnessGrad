@@ -104,14 +104,9 @@ headroom based on that seed. Preparation refuses requirements beyond the reviewe
 settings are explicit adapter settings; a larger environment needs separate
 configuration and validation.
 
-The released **Click task2956 and Go chi task26, pair f1-2** have passed real
-Docker oracle/noop controls. React Hook Form task85 passes runtime isolation,
-but its released oracle fails the original repository's Husky/TypeScript
-pre-commit check, so Harbor's agent merge produces an empty patch. This is an
-upstream oracle/merge blocker; neither hooks nor official tests are bypassed. All 30 recipe transformations have source-drift and shell
-syntax checks; the other images/toolchains are **not yet validated**. Preparing
-an image does not mark it validated. `provision_status()` lists prepared and
-unprepared groups without dropping any of the 652 pair identities.
+All 30 recipe transformations have source-drift and shell syntax checks.
+`provision_status()` reports prepared and unprepared groups without dropping any
+of the 652 pair identities. Preparation alone does not establish validation.
 
 A small Click communication check also passed with Ling-3.1-flash: two model
 requests, mailbox exchange and patch submission through a temporary fixed
@@ -120,6 +115,46 @@ temporary tokens. This checks the API/communication path, not model coding
 performance.
 
 ## Controls and validation
+
+Real Docker oracle/noop controls passed (1/0) for the representative **f1-2 pair
+in 23 of 30 groups**, including both candidate workers, private-input isolation,
+artifact submission, official scoring and cleanup:
+
+| Project | Passed task IDs |
+| --- | --- |
+| Click | 2068, 2800, 2956 |
+| Jinja | 1465, 1559, 1621 |
+| Go chi | 26, 27, 56 |
+| Pillow | 25, 68, 290 |
+| dirty-equals | 43 |
+| React Hook Form | 153 |
+| Typst | 6554 |
+| tiktoken | 0 |
+| DSPy | 8394, 8635 |
+| Hugging Face datasets | 3997, 6252 |
+| LlamaIndex | 17070, 17244 |
+| Outlines | 1706, with the fixed public HF mirror |
+
+The remaining seven groups have explicit limits:
+
+- React Hook Form 85 has an **upstream oracle/merge blocker**: its released patch
+  fails the original Husky/TypeScript pre-commit check, producing an empty merge.
+- DSPy 8563's pinned Harbor test-fix append conflicts with its second test patch;
+  the conflict also reproduces in the original image.
+- DSPy 8587's local LiteLLM service misses the official 10-second readiness check
+  at the official 2 CPUs; its timeout and resource limit remain unchanged.
+- LlamaIndex 18813 reaches tests after the editable-backend dependency fix, but
+  its public W3C PDF request is unavailable under the required network isolation.
+- Outlines 1655's image imports, but its locked `uv sync` dependency request
+  times out. Outlines 1371 and datasets 7309 retain partial image downloads after
+  their bounded provisioning attempts; no scoring controls ran for those three.
+
+These controls cover environment reachability, not all 652 pairs or candidate
+coding quality. Earlier receipts remain preserved. The corrected scorer's
+migration checked all 652 input identities and all 30 distinct oracle patch
+contents: only scorer mount relocation changed, and official filtered oracle
+patches remained identical. Fresh Click oracle/noop and an adversarial
+`tests/helpers.py` patch control verify the corrected filter end to end.
 
 ```sh
 python data/datasets/cooperbench/control.py --oracle --platform \

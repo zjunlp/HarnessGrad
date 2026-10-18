@@ -247,10 +247,10 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "upstream-node-oracle-merge",
+          "id": "upstream-oracle-and-test-patches",
           "family": "official-scorer-execution",
           "status": "external",
-          "observed": "React Hook Form task85 passes runtime isolation, but its released oracle fails the original Husky/TypeScript pre-commit check and Harbor's agent merge produces an empty patch. This remains an upstream oracle/merge failure; hooks and official tests are not bypassed.",
+          "observed": "React Hook Form task85's released oracle fails the original Husky/TypeScript pre-commit hook. DSPy task8563's pinned Harbor test-fix append conflicts with its second test patch; the conflict also reproduces in the original image.",
           "evidence": [
             {
               "kind": "repository",
@@ -258,13 +258,13 @@
               "locator": "upstream oracle/merge blocker"
             }
           ],
-          "next_action": "Resolve and record the pinned upstream oracle/merge failure without weakening the original hooks or scorer. Revalidate the affected released control before treating that task's oracle path as reachable."
+          "next_action": "Resolve the pinned upstream patch/merge defects without bypassing hooks, changing official tests or weakening the scorer; then revalidate the affected controls."
         },
         {
-          "id": "runtime-group-coverage",
-          "family": "measurement-coverage",
+          "id": "offline-runtime-dependencies",
+          "family": "scorer-dependency-network",
           "status": "runtime",
-          "observed": "All 30 group preparation recipes have source-drift and shell syntax checks. Real controls have exercised Python, Go, Node and Rust runtimes. Some task groups still await preparation or validation; runtime-family coverage does not establish complete 652-pair coverage. The bounded model communication check is not model coding-performance evidence.",
+          "observed": "DSPy task8587's LiteLLM service misses the official 10-second readiness check at the official 2 CPUs. LlamaIndex task18813 reaches official tests after the editable-backend fix, but its public W3C PDF request needs unavailable external HTTPS under network isolation.",
           "evidence": [
             {
               "kind": "repository",
@@ -272,7 +272,35 @@
               "locator": "## Controls and validation"
             }
           ],
-          "next_action": "Complete preparation and official scoring plus lifecycle controls for the remaining task groups. Keep all 652 pair identities and explicit preparation status; record separately authorized candidate-harness coverage without inferring full benchmark readiness from runtime-family controls, recipe checks or prepared images."
+          "next_action": "Establish the original service/dependency paths within the existing test deadlines and isolation contract; do not substitute fixtures or raise resources to force a passing score."
+        },
+        {
+          "id": "remaining-runtime-provisioning",
+          "family": "scorer-dependency-network",
+          "status": "external",
+          "observed": "Outlines task1655's source image imported, but its locked uv dependency metadata request exhausted three transport retries. Outlines task1371 and datasets task7309 retain partial image downloads after bounded provisioning attempts. These three groups have no scoring controls.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/cooperbench/README.md",
+              "locator": "## Controls and validation"
+            }
+          ],
+          "next_action": "Resume verified partial downloads or locked dependency preparation under a separately bounded provisioning attempt, preserving old receipts; run oracle/noop controls only after preparation succeeds."
+        },
+        {
+          "id": "runtime-group-coverage",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "All 30 recipe transformations pass pinned source/shell checks. Real two-worker oracle/noop controls pass 1/0 for f1-2 in 23 groups, including Outlines task1706 with the verified local HF mirror. Seven groups retain the explicit blockers above. This is not coverage of all 652 pairs or model coding performance; the separate API smoke checks communication only.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/cooperbench/README.md",
+              "locator": "## Controls and validation"
+            }
+          ],
+          "next_action": "Keep all 652 pair identities and explicit preparation status. Address remaining blockers and separately authorize broader candidate-harness evaluation before claiming complete benchmark coverage."
         }
       ],
       "historical_runs": []
