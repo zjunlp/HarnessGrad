@@ -44,6 +44,14 @@ EXCEPTIONS = {
         "Local control traverses the same ordered wire protocol as the actor.",
     ("data-eval", "data/datasets/memoryagentbench/relay.py", "eval.service.tool_transport"):
         "Private episode server reuses the platform's bounded transport.",
+    ("data-eval", "data/datasets/tau3_bench/control.py", "eval.run.runner"):
+        "Dataset control validates real sandbox execution against the official scorer.",
+    ("data-eval", "data/datasets/tau3_bench/control.py", "eval.run.tool_relay"):
+        "Manual control uses the same private relay and record sealing as the runner.",
+    ("data-eval", "data/datasets/tau3_bench/control.py", "eval.service.tool_transport"):
+        "Control sends business actions over the shared transport.",
+    ("data-eval", "data/datasets/tau3_bench/relay.py", "eval.service.tool_transport"):
+        "Private environment server reuses the platform transport and model capability.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.runner"):
         "The dataset-local control validates SETUP -> oracle harness -> VERIFY, as ALFWorld does.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.tool_relay"):
@@ -259,7 +267,7 @@ class ImportDirectionTests(unittest.TestCase):
 
     def test_publication_preserves_the_ordered_30_adapter_names(self):
         from data.scaffolds import registry
-        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'musique', 'nestful', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'tau2_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
+        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'musique', 'nestful', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'tau2_bench', 'tau3_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
         self.assertEqual(registry.published(), expected)
         for name in expected:
             module = registry.importlib.import_module(registry.module_name(name))

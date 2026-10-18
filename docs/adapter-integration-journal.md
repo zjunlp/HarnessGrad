@@ -5861,3 +5861,17 @@ remains unpublished (`KIND="fixture"`) pending the first memory-demand registrat
 rule; no taxonomy exception or existing dataset reclassification was introduced.
 See [the adapter README](../data/datasets/memoryagentbench/README.md) for preparation,
 per-source reporting and validation limits. No real-model experiment was run.
+
+## τ³ text base integration
+
+`tau3_bench` pins official v1.0.1 (`fc0055dc`) and all 375 four-domain base tasks.
+Private business state and the official user simulator run behind the native relay;
+sealed episodes feed the official ALL scorer, retaining NL criteria and checking
+judge response coverage. Complete three-trial pass^k uses official seed derivation;
+per-domain reporting is provided by `tools/tau3_report.py`.
+Source and verifier code use immutable projections, including adversarial preseed
+controls. The released airline/8 action control and the no-business-action stop
+control exercise actual tools and scoring through deterministic local HTTP;
+these validate integration, not model performance. Full production simulator/judge
+and repeated-trial benchmark runs remain unmeasured. Setup and limits are in
+[data/datasets/tau3_bench/README.md](../data/datasets/tau3_bench/README.md).

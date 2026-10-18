@@ -186,6 +186,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "spreadsheetbench": ("context", "tools", "control", "verification"),
     "strategyqa": ("context", "verification"),
     "tau_bench": ("context", "tools", "control", "memory", "recovery"),
+    "tau3_bench": ("context", "tools", "control", "reliability"),
     "terminal_bench": ("context", "tools", "control", "recovery", "verification"),
     "triviaqa": ("context",),
     "gaia": ("context", "tools", "control"),
@@ -221,8 +222,8 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
     "delegation": "no adapter requires the harness to split work across sub-agents or route "
                   "between models; tau2_bench needs an independent user simulator, which the "
                   "platform supplies rather than the harness",
-    "reliability": "no adapter is built so that consistency across trials is what is scored; "
-                   "the platform takes repeated trials, but no task is constructed for pass^k",
+    "reliability": "one adapter (tau3_bench) reports complete-manifest pass^k; "
+                   "a second independent demand is still below the coverage floor",
     "cost": "every run is costed, but no task is budget-bounded, so spending less changes the "
             "ledger rather than the score",
     "safety": "one adapter (agentdojo), and it carries the adversary as a condition flag on an "
@@ -264,6 +265,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "spreadsheetbench": ("artifact", "spreadsheet"),
     "strategyqa": ("reasoning", "reasoning"),
     "tau_bench": ("tool_use", "tool_dialogue"),
+    "tau3_bench": ("tool_use", "tool_dialogue"),
     "terminal_bench": ("environment", "terminal"),
     "triviaqa": ("evidence", "information_seeking"),
     "gaia": ("evidence", "information_seeking"),
@@ -327,6 +329,7 @@ EXPECTED_INTERACTION = {
     "spreadsheetbench": "single_shot",
     "strategyqa": "single_shot",
     "tau_bench": "closed_loop",
+    "tau3_bench": "closed_loop",
     "terminal_bench": "closed_loop",
     "appworld": "closed_loop",
     "triviaqa": "single_shot",

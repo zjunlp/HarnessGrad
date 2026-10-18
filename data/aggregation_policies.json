@@ -29,6 +29,7 @@
   "spreadsheetbench": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "strategyqa": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "tau2_bench": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
+  "tau3_bench": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "tau_bench": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "terminal_bench": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "triviaqa": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},

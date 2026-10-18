@@ -143,7 +143,7 @@ def test_before_after_all_numbers_and_verdicts_are_identical(adapters):
     assert actual == expected
     # Keep the original migration receipt immutable. Later registrations have no
     # pre-migration result, but still participate in the same declared run mean.
-    added_since_baseline = {"aime", "kumo", "locomo"}
+    added_since_baseline = {"aime", "kumo", "locomo", "tau3_bench"}
     assert set(actual["run_means"]) | added_since_baseline == set(
         _published_sources(ROOT / "data" / "datasets"))
     for name in added_since_baseline:

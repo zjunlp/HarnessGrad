@@ -407,7 +407,7 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
         "agentdojo", "alfworld", "appworld", "gaia", "jericho", "scienceworld",
-        "tau_bench", "terminal_bench"}
+        "tau3_bench", "tau_bench", "terminal_bench"}
 
 
 def test_the_filters_select_what_they_say(classified):
@@ -416,7 +416,7 @@ def test_the_filters_select_what_they_say(classified):
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
         "agentdojo", "alfworld", "appworld", "gaia", "jericho", "scienceworld",
-        "tau_bench", "terminal_bench"}
+        "tau3_bench", "tau_bench", "terminal_bench"}
 
 
 def test_the_demand_surface_and_adversarial_filters_select_what_they_say(classified):
