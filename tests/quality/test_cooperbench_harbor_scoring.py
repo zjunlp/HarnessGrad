@@ -55,7 +55,7 @@ def test_offline_conversion_preserves_editable_builds_and_test_commands(monkeypa
         protocol.prepare_recipe(source + '# changed', 'fixture')
 
 
-@pytest.mark.parametrize('mode,expected', [('both', 1), ('one_wrong', 0), ('missing', 0), ('invalid', 0), ('test_only', 0), ('union', 1)])
+@pytest.mark.parametrize('mode,expected', [('both', 1), ('one_wrong', 0), ('missing', 0), ('invalid', 0), ('test_only', 0), ('helper_injection', 1), ('union', 1)])
 def test_official_filter_merge_and_both_feature_rule(tmp_path, mode, expected):
     repo = tmp_path / 'repo'; repo.mkdir()
     git(repo, 'init', '-q'); git(repo, 'config', 'user.email', 'control@example.test'); git(repo, 'config', 'user.name', 'control')
@@ -66,6 +66,13 @@ def test_official_filter_merge_and_both_feature_rule(tmp_path, mode, expected):
     (repo / 'b.py').write_text('B=1\n'); patch_b = git(repo, 'diff'); git(repo, 'checkout', '--', '.')
     if mode == 'union':
         (repo / 'a.py').write_text('B=1\n'); patch_b = git(repo, 'diff'); git(repo, 'checkout', '--', '.')
+    if mode == 'helper_injection':
+        # This deliberately unapplicable test hunk must disappear before Git
+        # applies the valid implementation patch; the old broad relocation
+        # accidentally changed the official '/tests/' filtering predicate.
+        patch_a += ('diff --git a/tests/helpers.py b/tests/helpers.py\n'
+                    '--- a/tests/helpers.py\n+++ b/tests/helpers.py\n'
+                    '@@ -1 +1 @@\n-never-present\n+candidate-injection\n')
     if mode == 'one_wrong': patch_b = ''
     if mode == 'invalid': patch_a = 'invalid diff\n'
     if mode == 'test_only':
