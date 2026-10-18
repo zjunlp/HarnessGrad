@@ -91,7 +91,8 @@ def test_all_30_pinned_recipes_preserve_shell_and_test_commands(tmp_path):
         assert 'CARGO_NET_OFFLINE=true' in dockerfile if recipe['family'] == 'rust' else True
 
 
-def test_nested_runner_timeout_is_unmeasured_even_if_harbor_writes_zero(tmp_path, monkeypatch):
+@pytest.mark.parametrize('exit_code', [124, 137])
+def test_nested_runner_timeout_is_unmeasured_even_if_harbor_writes_zero(tmp_path, monkeypatch, capsys, exit_code):
     import json
     from types import SimpleNamespace
     spec = importlib.util.spec_from_file_location('cooperbench_verify_test', ASSETS / 'verify/check.py')
@@ -107,12 +108,16 @@ def test_nested_runner_timeout_is_unmeasured_even_if_harbor_writes_zero(tmp_path
         out = tmp_path / 'logs/verifier'; out.mkdir(parents=True)
         (out / 'reward.txt').write_text('0')
         (out / 'reward.json').write_text('{"reward":0}')
-        (out / 'test-output.txt').write_text('=== Feature 1 tests (exit=124) ===\n')
+        (out / 'test-output.txt').write_text('verbose output\n' * 5000 + f'=== Feature 1 tests (exit={exit_code}) ===\n')
         return SimpleNamespace(returncode=0, stderr='')
     monkeypatch.setattr(check.subprocess, 'run', scorer)
     assert check.main() == 3
     assert not (tmp_path / 'verifier/reward.txt').exists()
     assert json.loads((tmp_path / 'verifier/evidence.json').read_text())['measured'] is False
+    stderr = capsys.readouterr().err
+    assert len(stderr) < 4800
+    # The platform retains only the final 800 stderr characters on this path.
+    assert f'feature runner timeout/infrastructure failure: [{exit_code}]' in stderr[-800:]
 
 
 @pytest.mark.parametrize('failed_worker', [True, False])

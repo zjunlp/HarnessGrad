@@ -63,6 +63,12 @@ def main():
         (output / 'reward.txt').write_text(str(reward))
     except Exception as exc:
         evidence['error'] = f'{type(exc).__name__}: {exc}'
+        # A missing reward intentionally becomes unmeasured. The native verifier
+        # may return before loading evidence.json in that case, so retain a
+        # bounded diagnostic on stderr as well, with the reason at the end.
+        if evidence.get('test_output_tail'):
+            print(evidence['test_output_tail'][-4000:], file=sys.stderr)
+        print('CooperBench verifier error: ' + evidence['error'][-700:], file=sys.stderr)
     (output / 'evidence.json').write_text(json.dumps(evidence))
     return 0 if evidence['measured'] else 3
 
