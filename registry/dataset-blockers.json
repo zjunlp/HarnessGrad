@@ -264,15 +264,15 @@
           "id": "runtime-group-coverage",
           "family": "measurement-coverage",
           "status": "runtime",
-          "observed": "All 30 group preparation recipes have source-drift and shell syntax checks. Real Docker oracle/noop controls cover Click task2956 and Go chi task26 pair f1-2; the other images/toolchains are not yet validated, and some preparations remain pending. A two-request Click model communication check is not model coding-performance or complete 652-pair evidence.",
+          "observed": "All 30 group preparation recipes have source-drift and shell syntax checks. Real controls have exercised Python, Go, Node and Rust runtimes. Some task groups still await preparation or validation; runtime-family coverage does not establish complete 652-pair coverage. The bounded model communication check is not model coding-performance evidence.",
           "evidence": [
             {
               "kind": "repository",
               "path": "data/datasets/cooperbench/README.md",
-              "locator": "the other images/toolchains are **not yet validated**"
+              "locator": "## Controls and validation"
             }
           ],
-          "next_action": "Complete pending group preparation and validate official scoring plus lifecycle controls for each runtime family. Keep all 652 pair identities and explicit preparation status; record separately authorized candidate-harness coverage without inferring full benchmark readiness from recipe checks or prepared images."
+          "next_action": "Complete preparation and official scoring plus lifecycle controls for the remaining task groups. Keep all 652 pair identities and explicit preparation status; record separately authorized candidate-harness coverage without inferring full benchmark readiness from runtime-family controls, recipe checks or prepared images."
         }
       ],
       "historical_runs": []
