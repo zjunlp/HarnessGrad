@@ -2,6 +2,7 @@
 """Run the pinned Harbor merged-pair scorer in a fresh, isolated runtime."""
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 import shutil
@@ -39,7 +40,12 @@ def main():
                         raise ValueError('worker artifact identity mismatch')
                 shutil.copyfile(patch, shared / 'agent.patch')
             (shared / 'agent.done').touch()
-        proc = subprocess.run(['bash', 'private/test.sh'], text=True, capture_output=True, timeout=1700)
+        # Native builds can exceed the small system /tmp mount. Keep their
+        # scratch inside the already admitted, bounded workspace instead.
+        scratch = root / '.test-tmp'
+        scratch.mkdir(exist_ok=True)
+        proc = subprocess.run(['bash', 'private/test.sh'], text=True, capture_output=True, timeout=1700,
+                              env={**os.environ, 'TMPDIR': str(scratch)})
         evidence['scorer_exit_code'] = proc.returncode
         if proc.returncode:
             raise RuntimeError(f'Harbor scorer failed: {proc.stderr[-4000:]}')

@@ -102,6 +102,8 @@ def test_nested_runner_timeout_is_unmeasured_even_if_harbor_writes_zero(tmp_path
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(check.subprocess, 'check_output', lambda *args, **kwargs: 'base\n')
     def scorer(*args, **kwargs):
+        assert kwargs['env']['TMPDIR'] == str(tmp_path / '.test-tmp')
+        assert (tmp_path / '.test-tmp').is_dir()
         out = tmp_path / 'logs/verifier'; out.mkdir(parents=True)
         (out / 'reward.txt').write_text('0')
         (out / 'reward.json').write_text('{"reward":0}')
@@ -187,3 +189,18 @@ sys.exit(1 if {failed_worker!r} and me=='a' else 0)
     archive = Path(result['worker_group']['archive'])
     assert (archive / 'workers/a/agent.patch').read_text() == patches['a']
     assert result['runtime_services']['workers']['cleanup']['complete']
+
+def test_go_preparation_accepts_no_external_modules(tmp_path, monkeypatch):
+    source = "#!/bin/bash\ngo test ./...\n"
+    monkeypatch.setattr(protocol, 'recipe', lambda group: {
+        'runner_sha256': protocol.sha(source.encode()), 'family': 'go',
+        'mode': 'go', 'install_lines': None})
+    _, install, _ = protocol.image_recipe('base', source, 'fixture')
+    workspace = tmp_path / 'workspace'
+    (workspace / 'repo').mkdir(parents=True)
+    binary = tmp_path / 'bin'; binary.mkdir()
+    go = binary / 'go'; go.write_text('#!/bin/sh\nexit 0\n'); go.chmod(0o755)
+    script = install.replace('/workspace', str(workspace)).replace('/go/pkg/mod', str(tmp_path / 'absent-cache'))
+    import os
+    subprocess.run(['bash', '-c', script], check=True, env={**os.environ, 'PATH': str(binary) + ':' + os.environ['PATH']})
+    assert (workspace / '.gomodcache').is_dir()

@@ -97,7 +97,8 @@ def prepare_image(root, source, group, pull, build_network="bridge", source_imag
     python = command('docker', 'run', '--rm', '--network=none', '--entrypoint', 'sh',
                      image_id, '-c', 'command -v python3')
     inspect_code = """import json, subprocess, hashlib, os, sys, tarfile, shutil
-assert hasattr(tarfile, 'data_filter'), 'runtime Python needs tarfile.data_filter'
+# The base interpreter may be upgraded by the preparation recipe.
+
 def read(argv):
     p = subprocess.run(argv, text=True, capture_output=True)
     return p.stdout if p.returncode == 0 else None
@@ -111,7 +112,7 @@ for parent, dirs, files in os.walk('/workspace'):
 print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse','HEAD']).strip(),
  'pip_freeze': read([sys.executable,'-m','pip','freeze','--all']) or '',
  'python_version': sys.version,
- 'toolchain_versions': {tool: read([tool, '--version']) for tool in ('git', 'go', 'node', 'pnpm', 'cargo', 'rustc') if shutil.which(tool)},
+ 'toolchain_versions': {tool: read([tool, 'version' if tool == 'go' else '--version']) for tool in ('git', 'go', 'node', 'pnpm', 'cargo', 'rustc') if shutil.which(tool)},
  'workspace_bytes': workspace_bytes, 'workspace_inodes': workspace_inodes,
  'runner_sha256': hashlib.sha256(open('/usr/local/bin/runner.sh','rb').read()).hexdigest()}))
 """
@@ -134,6 +135,8 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
                     '--build-arg', 'HTTPS_PROXY', '--build-arg', 'HTTP_PROXY', '--build-arg', 'NO_PROXY',
                     '--force-rm', '--memory=8g', '--cpu-quota=200000', '-t', tag, str(target)], check=True)
     digest = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
+    command('docker', 'run', '--rm', '--network=none', '--entrypoint', python, digest,
+            '-c', "import tarfile; assert hasattr(tarfile, 'data_filter'), 'runtime Python needs tarfile.data_filter'")
     identity = json.loads(command('docker', 'run', '--rm', '--network=none', '--entrypoint',
                                   python, digest, '-c', inspect_code))
     (target / 'requirements.freeze.txt').write_text(identity['pip_freeze'])

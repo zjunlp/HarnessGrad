@@ -93,10 +93,11 @@ BUILD_REQUIREMENTS
 rm -rf /workspace/repo/.venv
 '''
     if spec['family'] == 'node':
-        install += 'npm install --global pnpm@8\npnpm --version\n'
+        install += ('export http_proxy="${HTTP_PROXY:-}" https_proxy="${HTTPS_PROXY:-}"\napt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=30 update\napt-get install -y --only-upgrade python3.11 python3.11-minimal libpython3.11-stdlib libpython3.11-minimal\n'
+                    'rm -rf /var/lib/apt/lists/*\nnpm install --global pnpm@8\npnpm --version\n')
         common += 'ENV npm_config_offline=true npm_config_cache=/workspace/.npm\n'
     if spec['family'] == 'go':
-        install += 'go mod download\nmkdir -p /workspace/.gomodcache\ncp -a /go/pkg/mod/. /workspace/.gomodcache/\n'
+        install += 'go mod download\nmkdir -p /workspace/.gomodcache\nif [ -d /go/pkg/mod ]; then cp -a /go/pkg/mod/. /workspace/.gomodcache/; fi\n'
         common += ('ENV GOMODCACHE=/workspace/.gomodcache GOCACHE=/workspace/.gocache '
                    'GOPATH=/workspace/.gopath GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local\n')
     if spec['family'] == 'rust' or group.startswith('openai_tiktoken'):
