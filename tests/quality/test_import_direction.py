@@ -32,6 +32,10 @@ ALLOWED_EVAL_CONFIG_EDGES = {
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
+    ("data-eval", "data/datasets/strongreject/control.py", "eval.run.runner"):
+        "Explicit dataset control uses the platform execution path, never the actor API.",
+    ("data-eval", "data/datasets/strongreject/control.py", "eval.verification.verifier"):
+        "Explicit dataset control exercises the trusted judge wrapper in its real sandbox.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.runner"):
         "The dataset-local control validates SETUP -> oracle harness -> VERIFY, as ALFWorld does.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.tool_relay"):
