@@ -5837,3 +5837,15 @@ No API calls were made for this layout change.
 - Conda validation: **60 passed**, including the optional pinned-data comparisons over all 10 conversations and 1,986 questions. LoCoMo dataset lint and `git diff --check` pass. No model calls.
 
 - API connectivity check after cleanup: Conda + standard `driver.py` + unchanged `loop`, one full conv-26 transcript with only its first three questions, one trial, jobs=1, rounds=0. Six successful calls to the configured `Ling-3.1-flash` API; driver exited 0, all three answers and per-question records saved, task/curve/manual-summary scores agree. The temporary loopback HTTP-to-HTTPS bridge was needed by the existing HTTP-only native model route; no platform code was changed. Test artifacts are outside Git at `datasets/locomo/audit-20261018/api-cleanup-01/`. The test is not comparable to a full benchmark, and does not establish direct HTTPS support. Runner temporary files, bridge and work root cleaned; source data hash unchanged.
+
+### StrongREJECT: fixed rubric adapter, publication pending
+
+Added the real 150-task frozen Harbor pool with source hashes, original-request
+split grouping, official rubric parsing/formula, bounded fixed judge configuration
+and isolated scoring through the existing public interfaces. The five unchanged
+PAP attacks are retained and marked. Missing submissions and judge failures stay
+unmeasured. Data preparation and synthetic platform controls are implemented;
+no real judge call or oracle sweep has been run. The adapter remains unpublished
+(`KIND="fixture"`) pending demand/surface classification; see
+[the adapter README](../data/datasets/strongreject/README.md) for the protocol,
+control semantics and remaining admission requirement.
