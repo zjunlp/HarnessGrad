@@ -50,10 +50,9 @@ and lacks corresponding books).
 Protocol `kumo.query50.v1` follows Harbor's limit of **50 accepted action queries**,
 including repeated actions. Invalid actions do not spend that budget. This differs
 from upstream VanillaAgent's limit of 50 model turns; scores are not directly
-comparable across those protocols. Additional transport budgets are optional operator policy under
-`HG_EVAL_LIMITS.datasets.kumo.relay`: `max_calls`, `deadline_s`, and
-`max_line_bytes`. No extra call/frame/deadline cap is added by this adapter when
-unset; an explicitly exhausted limit remains an unmeasured transport failure.
+comparable across those protocols. The adapter declares no extra transport
+call/frame/deadline cap. Explicit limits in `SETUP.tool_relay` remain enforced;
+exhaustion is an unmeasured transport failure.
 Local `show` and `submit` commands
 do not consume service calls. The adapter declares a deterministic hash split
 using the existing platform rule (3,515 train / 1,775 eval). This is an adapter policy,
@@ -132,6 +131,5 @@ implementation. Control entry points remain dataset-local; no KUMO-specific API
 diagnostic tool or repository-local validation logs are required.
 
 Resource policy is separate from `kumo.query50.v1`: the task inherits Harbor's
-900-second actor and 120-second verifier deadlines, overridable by the explicit
-`task` policy. The former 600/30-second deadlines and 256-call ceiling are removed.
+900-second actor and 120-second verifier deadlines in `ENV`. The former 600/30-second deadlines and 256-call ceiling are removed.
 Private case isolation, accepted-query counting and final-answer scoring are unchanged.

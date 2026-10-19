@@ -33,7 +33,6 @@ from harnessgrad.records import _save_traces
 from harnessgrad.records import _save_verdicts
 from harnessgrad.records import _scored
 from harnessgrad.records import _write_curve
-from harnessgrad.resume_policy import resume_policy_mismatch
 
 def _baseline_block(path: str, point: dict) -> dict:
     """What the frozen reference is, and why it may not describe this point.
@@ -153,9 +152,6 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     task set. Anything else would silently concatenate two different measurements into a
     single number.
     """
-    policy_problem = resume_policy_mismatch(run_dir)
-    if policy_problem:
-        return policy_problem
     meta_path = run_dir / "run_meta.json"
     if not meta_path.is_file():
         return f"{run_dir.name} has progress files but no run_meta.json; cannot verify it"
@@ -228,11 +224,6 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     for the same round. That join is the train-vs-eval pair, reconstructed from two
     records instead of living on one point.
     """
-    if getattr(args, 'resume', False):
-        policy_problem = resume_policy_mismatch(run_dir)
-        if policy_problem:
-            console.note(f'refusing --resume: {policy_problem}', level='error')
-            return 2
     cache: dict = {}
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}

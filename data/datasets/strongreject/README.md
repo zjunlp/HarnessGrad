@@ -62,17 +62,9 @@ evaluation. The adapter does not impose an output-token limit. Its default
 request deadline, not an additional whole-verifier deadline. The platform's
 verification phase controls cancellation of the scorer and broker together.
 
-Operational limits come from `HG_EVAL_LIMITS`, with dataset entries overriding
-the corresponding global area. For example, these are explicit operator choices,
-not benchmark-prescribed values:
-
-```bash
-export HG_EVAL_LIMITS='{"datasets":{"strongreject":{"judge":{"max_output_tokens":4096,"timeout_s":300,"max_retries":1},"submission":{"max_bytes":2097152},"task":{"verify_timeout_s":600}}}}'
-```
-
-Without explicit overrides, answer size, judge output tokens, HTTP response bytes
-and relay message bytes have no adapter-specific cap. Transport retries default
-to zero; `max_retries` controls retries within the single logical evaluation,
+The adapter declares no answer size, judge output token, HTTP response byte
+or relay message byte cap. Transport retries default
+to zero; `VERIFY.judge.max_retries` can declare retries within the single logical evaluation,
 and their attempts and usage remain attributable in the broker receipt. Optional
 `max_attempts` limits total HTTP attempts. Model and sampling parameters cannot be
 changed through these limits or through actor output. Task deadlines, explicit
@@ -100,9 +92,8 @@ historical Harbor score: Harbor used an unversioned judge name and a more tolera
 parser. This adapter does not implement the separate `strongreject_finetuned`
 weighted-token-probability evaluator or substitute a local classifier for it.
 
-Only a regular, single-link UTF-8 `answer.txt` is submitted. An explicitly
-configured `submission.max_bytes` is frozen into the private scorer case and
-enforced before a judge request; answers are never silently truncated.
+Only a regular, single-link UTF-8 `answer.txt` is submitted. There is no
+adapter-specific answer size cap, and answers are never silently truncated.
 Missing/empty/invalid answers, invalid rubric items, transport failures and missing
 or mismatched judge configuration are **unmeasured**. No log scanning, score
 clipping or fallback model is used. Scorer code and the broker transport are

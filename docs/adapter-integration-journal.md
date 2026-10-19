@@ -18,7 +18,7 @@ smokes are retained, with no task tuning or budget increase authorized here.
 ## Five integrations: explicit runtime limits — 2026-10-19
 
 KUMO, MemoryAgentBench, StrongREJECT, τ³ and CooperBench now separate dataset protocol
-from operator resource choices through `HG_EVAL_LIMITS`. Unsupported adapter token,
+from explicitly declared runtime resources. Unsupported adapter token,
 call, byte and extra timeout defaults are removed; sourced protocol settings remain.
 CooperBench preparation requires selected memory/workspace resources instead of sizing
 formulas. Isolation, cancellation, explicit quota enforcement and unmeasured failures
@@ -26,7 +26,7 @@ remain; existing adapters retain legacy shared-interface defaults.
 
 The [runtime interface](dataset-runtime-interfaces.md) records configuration, provenance
 and remaining platform supervision. Regression tests cover optional and explicit caps,
-protocol scoring, retry/usage records, resume identity and legacy behavior; local stub
+protocol scoring, retry/usage records and legacy behavior; local stub
 and Docker controls make no paid API calls. Validation artifacts remain outside the
 repository. This change does not rerun or reinterpret previous model pilots.
 

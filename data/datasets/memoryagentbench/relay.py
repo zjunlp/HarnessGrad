@@ -15,11 +15,8 @@ from eval.service.tool_transport import Relay
 
 
 class Session:
-    def __init__(self, payload, *, max_answer_bytes=None):
+    def __init__(self, payload):
         self.payload = validate_service(payload)
-        if max_answer_bytes is not None and (type(max_answer_bytes) is not int or max_answer_bytes <= 0):
-            raise ValueError("submission.max_bytes must be a positive integer or null")
-        self.max_answer_bytes = max_answer_bytes
         self.episode = Episode(payload['episode_id'], payload['chunks'], payload['questions'])
         self.rejected = 0
 
@@ -29,10 +26,8 @@ class Session:
         try:
             if op not in expected or set(args) != expected[op]:
                 raise ProtocolError('invalid_operation', 'only next, ack and submit are allowed')
-            if op == 'submit' and (not isinstance(args['answer'], str)
-                                  or (self.max_answer_bytes is not None
-                                      and len(args['answer'].encode()) > self.max_answer_bytes)):
-                raise ProtocolError('invalid_argument', 'answer must be text within the configured submission budget')
+            if op == 'submit' and not isinstance(args['answer'], str):
+                raise ProtocolError('invalid_argument', 'answer must be text')
             return getattr(self.episode, op)(**args)
         except ProtocolError as exc:
             self.rejected += 1
@@ -53,10 +48,7 @@ def main():
     parser.add_argument('--deadline-s', type=float)
     args = parser.parse_args()
     payload = json.loads(args.episode.read_text())
-    submission = {}
-    if set(payload) == {'episode', 'submission'}:
-        payload, submission = payload['episode'], payload['submission']
-    session = Session(payload, max_answer_bytes=submission.get('max_bytes'))
+    session = Session(payload)
     done = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: done.set())

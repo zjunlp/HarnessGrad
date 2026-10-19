@@ -404,12 +404,9 @@ def test_preparation_restores_tracked_lock_without_changing_resolved_dependencie
 def test_preparation_requires_explicit_capacity_before_docker(tmp_path, monkeypatch):
     spec = importlib.util.spec_from_file_location('cooperbench_resource_prepare_test', ASSETS / 'prepare.py')
     preparation = importlib.util.module_from_spec(spec); spec.loader.exec_module(preparation)
-    monkeypatch.setattr(preparation, 'limits', lambda name, area: {})
     monkeypatch.setattr(preparation, 'command', lambda *a: pytest.fail('Docker must not run without allocation'))
     with pytest.raises(ValueError, match='workspace_bytes, workspace_inodes, memory_mb'):
         preparation.prepare_image(tmp_path, tmp_path, 'repo/task1', False)
-    assert preparation.build_resource_args({}) == []
-    assert preparation.build_resource_args({'cpus': 1.5, 'memory_mb': 6144}) == ['--memory=6144m', '--cpu-quota=150000']
     # Explicit allocations above all former hard envelopes are accepted unchanged.
     resources = {'workspace_bytes': 32 << 30, 'workspace_inodes': 3000000, 'memory_mb': 65536}
     base = tmp_path / 'base'; base.mkdir()
@@ -421,7 +418,17 @@ def test_preparation_requires_explicit_capacity_before_docker(tmp_path, monkeypa
     preparation.require_seed_capacity(actual, seed)
     with pytest.raises(ValueError, match='measured seed/cache'):
         preparation.require_seed_capacity(actual, seed, cache_bytes=3 << 30)
-    monkeypatch.setattr(preparation, 'limits', lambda name, area: resources)
-    assert preparation.selected_resources()[0] == resources
-    monkeypatch.setattr(preparation, 'limits', lambda name, area: {'memory_mb': 131072})
-    assert preparation.selected_resources(base)[0] == {**resources, 'memory_mb': 131072}
+    resource_file = tmp_path / 'resources.json'
+    resource_file.write_text(json.dumps({**resources, 'memory_mb': 131072}))
+    actual, origin = preparation.selected_resources(base, resource_file)
+    assert actual == {**resources, 'memory_mb': 131072}
+    assert origin == {'resources_sha256': preparation.sha(resource_file.read_bytes())}
+    # A file is a complete selection, never a partial override of another source.
+    resource_file.write_text(json.dumps({'memory_mb': 131072}))
+    with pytest.raises(ValueError, match='workspace_bytes, workspace_inodes'):
+        preparation.selected_resources(base, resource_file)
+    for invalid in ({**resources, 'workspace_bytes': 3}, {**resources, 'cpus': None},
+                    {**resources, 'pids': -1}, {**resources, 'unexpected': 1}):
+        resource_file.write_text(json.dumps(invalid))
+        with pytest.raises(ValueError):
+            preparation.selected_resources(resources_file=resource_file)

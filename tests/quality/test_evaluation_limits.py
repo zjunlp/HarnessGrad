@@ -1,36 +1,10 @@
-"""Operator policy is explicit, recorded, and does not erase protocol checks."""
+"""Optional runtime limits preserve explicit enforcement and integrity checks."""
 import json
 from pathlib import Path
 import pytest
 
-from harnessgrad.config import current, dump, load
-from harnessgrad.config.limits import limits
 from eval.service.tool_transport import Relay, call, ToolTransportError
 from eval.run.tool_relay import ToolRelay
-
-
-def test_policy_scope_null_and_snapshot(monkeypatch):
-    policy = {'judge': {'timeout_s': 200, 'max_output_tokens': 20000},
-              'datasets': {'strongreject': {'judge': {'max_output_tokens': None}}}}
-    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps(policy))
-    assert limits('strongreject', 'judge') == {'timeout_s': 200, 'max_output_tokens': None}
-    assert limits('memoryagentbench', 'judge')['max_output_tokens'] == 20000
-    assert dump()['runtime']['evaluation_limits'] == policy
-    copy = limits('strongreject', 'judge')
-    copy['timeout_s'] = 1
-    assert limits('strongreject', 'judge')['timeout_s'] == 200
-    monkeypatch.setenv('HG_EVAL_LIMITS', '')
-    assert current().runtime.evaluation_limits is None
-
-
-@pytest.mark.parametrize('raw', ['[]', '{"unknown":{}}', '{"judge":{"timeout_s":false}}',
-    '{"judge":{"max_retries":-1}}', '{"judge":{"timeout_s":NaN}}',
-    '{"judge":{"max_output_tokens":0}}', '{"judge":{},"judge":{}}',
-    '{"container":{"workspace_bytes":3}}', '{"container":{"cpus":null}}',
-    '{"container":{"memory_mb":null}}', '{"datasets":{"x":{"judge":{"typo":1}}}}'])
-def test_bad_policy_rejected_before_run(raw):
-    with pytest.raises(ValueError):
-        load({'HG_EVAL_LIMITS': raw})
 
 
 def test_optional_transport_does_not_add_old_caps(tmp_path):

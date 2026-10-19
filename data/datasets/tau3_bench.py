@@ -11,7 +11,6 @@ import json
 import os
 from pathlib import Path
 import random
-from harnessgrad.config.limits import limits
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
@@ -79,8 +78,7 @@ def model_spec(role, tools=None):
     # the whole assertion list. HTTP retry attempts are a separate budget.
     spec = {'model': model, 'max_calls': None if role == 'environment' else 1,
             'max_output_tokens': None, 'timeout_s': None, 'max_retries': 0, 'max_attempts': None,
-            'response_max_bytes': None, 'max_line_bytes': None, 'parameters': {'temperature': 0},
-            **limits('tau3_bench', role)}
+            'response_max_bytes': None, 'max_line_bytes': None, 'parameters': {'temperature': 0}}
     if role == 'environment':
         spec['seed_source'] = 'trial'
     if tools:
@@ -101,10 +99,8 @@ def _setup(tid, row):
                            'content': json.dumps({'case': str(DATASET_ROOT / row['path'] / 'private.json'),
                                                  'sha256': row['private_sha256'], 'bundle': str(DATASET_ROOT / 'bundle'),
                                                  'user_model': model['model']}),
-                           'record': {'path': 'trusted_episode', 'max_bytes': None,
-                                      **limits('tau3_bench', 'record')}, 'model': model,
-                           'max_calls': None, 'deadline_s': None, 'max_line_bytes': None,
-                           **limits('tau3_bench', 'relay')}}
+                           'record': {'path': 'trusted_episode', 'max_bytes': None}, 'model': model,
+                           'max_calls': None, 'deadline_s': None, 'max_line_bytes': None}}
 
 
 def _verify(tid, row):
@@ -132,7 +128,7 @@ class _Tasks(Mapping):
 
 SETUP = _Tasks(_setup)
 VERIFY = _Tasks(_verify)
-ENV = _Tasks(lambda tid, row: {**DEFAULT_ENV, **limits('tau3_bench', 'task')})
+ENV = _Tasks(lambda tid, row: dict(DEFAULT_ENV))
 
 
 def downloads():

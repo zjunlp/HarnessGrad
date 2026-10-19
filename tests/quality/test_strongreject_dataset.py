@@ -12,11 +12,6 @@ from eval.verification.verifier import _verify
 from test_shared_dataset_runtime import harness
 
 
-@pytest.fixture(autouse=True)
-def isolated_limits(monkeypatch):
-    monkeypatch.delenv('HG_EVAL_LIMITS', raising=False)
-
-
 @pytest.fixture
 def prepared():
     if not dataset.provision_status()["present"]:
@@ -305,43 +300,14 @@ def test_default_has_no_answer_or_judge_token_cap(prepared, tmp_path, endpoint):
     assert result['judge']['usage']['completion_tokens'] == 1503
 
 
-def test_explicit_budgets_are_frozen_and_sent(prepared, tmp_path, endpoint, monkeypatch):
-    policy = {'judge': {'max_output_tokens': 2048, 'timeout_s': 40},
-              'datasets': {'strongreject': {
-                  'judge': {'max_output_tokens': 3072, 'max_retries': 1, 'response_max_bytes': 65536},
-                  'task': {'agent_timeout_s': 25, 'verify_timeout_s': 15},
-                  'submission': {'max_bytes': 64}}}}
-    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps(policy))
+def test_declared_judge_budget_reaches_broker(prepared, tmp_path, endpoint):
     tid = next(iter(prepared.rows()))
     spec = prepared.VERIFY[tid]
-    env = prepared.ENV[tid]
-    assert env == {'kind': 'files', 'network': 'none', 'agent_timeout_s': 25, 'verify_timeout_s': 15}
-    assert spec['judge']['timeout_s'] == 40
-    assert spec['judge']['max_retries'] == 1
-    assert spec['judge']['response_max_bytes'] == 65536
-    private_case = json.loads(next(i['content'] for i in spec['inputs'] if i['path'] == 'strongreject_case.json'))
-    assert private_case['submission_limits'] == {'max_bytes': 64}
-    monkeypatch.setenv('HG_EVAL_LIMITS', '{}')
-    assert prepared.VERIFY[tid]['argv'][-1] != spec['argv'][-1]
+    spec['judge'].update(max_output_tokens=3072, timeout_s=40, max_retries=1,
+                         response_max_bytes=65536)
+    assert prepared.VERIFY[tid]['judge']['max_output_tokens'] is None
     (tmp_path / 'answer.txt').write_text('Synthetic answer.')
-    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15, env=env)
+    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15)
     assert result['score'] == 1, result
     assert endpoint['requests'][0]['max_tokens'] == 3072
     assert result['judge']['configuration']['max_output_tokens'] == 3072
-
-
-@pytest.mark.parametrize('answer_bytes,measured', [(16, True), (17, False)])
-def test_explicit_submission_budget_boundary(prepared, tmp_path, endpoint, monkeypatch, answer_bytes, measured):
-    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'datasets': {'strongreject': {'submission': {'max_bytes': 16}}}}))
-    tid = next(iter(prepared.rows()))
-    spec = prepared.VERIFY[tid]
-    # An actor-side environment change cannot alter the frozen private case.
-    monkeypatch.setenv('HG_EVAL_LIMITS', '{}')
-    (tmp_path / 'answer.txt').write_text('x' * answer_bytes)
-    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15)
-    assert len(endpoint['requests']) == int(measured)
-    if measured:
-        assert result['score'] == 1, result
-    else:
-        assert result['score'] is None and result['outcome'] == 'unmeasured', result
-        assert 'configured submission byte limit' in result['evidence']['error']

@@ -37,9 +37,6 @@ from harnessgrad.config.areas import (
 
 def _parse(raw: str | None, default: Any, kind: str) -> Any:
     """One raw environment value, as the point-of-use read would have produced it."""
-    if kind == "limits":
-        from harnessgrad.config.limits import parse
-        return parse(raw)
     if kind == "int":
         # `int(os.environ.get("HG_X", "0"))`: an empty or non-numeric value raises,
         # exactly as it did at the point of use.

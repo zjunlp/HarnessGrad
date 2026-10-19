@@ -7,44 +7,14 @@
 
 ## 0. 数据集协议与运行资源策略
 
-五个接入使用 `HG_EVAL_LIMITS` 声明显式运行策略，取值为 JSON 对象。
-它是平台配置，不能由候选提交修改；解析结果进入 `config.runtime.evaluation_limits`，
-有效的 SETUP/ENV/VERIFY 声明进入运行快照，模型和 mailbox 回执另存实际限额。
-续跑前核对原 policy，变化时拒绝且不覆盖旧快照；可缓存任务的 key 也绑定显式 policy。
-
-```json
-{
-  "judge": {"timeout_s": 300, "max_retries": 2},
-  "datasets": {
-    "tau3_bench": {"environment": {"max_output_tokens": 8192}},
-    "cooperbench": {"cooperative": {"max_messages": 10000}}
-  }
-}
-```
-
-以上仅展示配置形式，不是推荐预算。顶层 area 是全局策略；
-`datasets.<dataset>.<area>` 按字段覆盖。未设置不添加新的适配器限额。
-可选数值用 `null` 清除局部管理上限；`max_retries` 必须为非负整数。
-容器 CPU、内存及工作区配额必须为正数，不接受 null；`pids` 可以为 null。
-时间和 CPU 可为正有限小数，其余配额为正整数；未知 area、字段及重复 JSON key 均拒绝。
-
-| area | 字段 |
-| --- | --- |
-| `task` | `agent_timeout_s`, `verify_timeout_s` |
-| `judge`, `environment` | `max_calls`, `max_output_tokens`, `timeout_s`, `max_retries`, `max_attempts`, `response_max_bytes`, `max_line_bytes` |
-| `relay` | `max_calls`, `deadline_s`, `max_line_bytes` |
-| `record`, `submission` | `max_bytes` |
-| `cooperative` | `max_messages`, `max_message_bytes`, `max_calls`, `max_line_bytes` |
-| `model_route` | `max_connections`, `request_max_bytes`, `response_max_bytes`, `header_timeout_s` |
-| `container` | `cpus`, `memory_mb`, `pids`, `workspace_bytes`, `workspace_inodes` |
-| `preparation` | `cpus`, `memory_mb` |
-
-各 area 只作用于使用该能力的适配器。例如 `container/preparation/cooperative/model_route` 用于
-CooperBench，`environment` 用于 τ³；它们不是给任意旧数据集自动施加新策略的开关。
+运行限制直接声明在已有 `SETUP / ENV / VERIFY` 字段中，任务阶段仍受 driver 参数约束。
+没有额外的全局环境变量或数据集覆盖层。适配器不再为无来源的上限指定固定数字，
+而是显式使用可选 `None`；声明有限上限时，公共运行层仍执行校验、取消和清理。
+有效声明进入现有运行快照，模型、relay、worker 和容器回执保留实际限制。
 
 - MemoryAgentBench 保留官方分块、摘要/LongMem 默认 judge 输出 `4096/10` 和每题 `3/1` 次逻辑评分；
-  `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` 优先于策略中的输出覆盖，正整数不再有 16384 上界。
-  未配置输出覆盖（包括 null）仍取官方输出值，不移除官方默认；显式 `max_calls` 与官方逻辑上界取较小值。
+  已有 `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` 可显式覆盖输出预算，正整数不再有 16384 上界。
+  未设置时仍取官方输出值，不移除官方默认。
 - StrongREJECT 默认不声明输出 token 上限，保留有 Harbor 来源的单请求 300 秒；
   评分公式及单次逻辑 rubric 调用不变，额外答案大小和 75 秒评分限额已移除。
 - τ³ 保留官方 200 steps、10 errors、三次 trial 和 NL judge 一次逻辑评估；
@@ -52,9 +22,10 @@ CooperBench，`environment` 用于 τ³；它们不是给任意旧数据集自�
 - KUMO 保留 Harbor 50 次有效 action 查询以及 900/120 秒 actor/verifier 时限；
   256 次总服务调用及 660 秒 relay 限额已移除。
 - CooperBench 保留 Harbor 2 CPU、1800 秒 worker/verifier 时限；无额外 1700 秒内层限时。
-  工作区/内存必须从明确选定的已有 runtime 元数据或 `container` 策略取得，
+  工作区/内存来自准备阶段明确选定并写入 runtime 元数据的资源，
   不再由 3 倍 seed 等经验公式生成、不设 16/24 GiB 或 200 万 inode 的固定准入上限。
-  新准备可用 `--base-runtime` 明确复用资源；既有 metadata 不会被改写。
+  新准备通过 `--resources` JSON 文件选定完整资源配置，或用 `--base-runtime` 复用已有资源；
+  既有 metadata 不会被改写。
 
 `None` 不代表任务永不终止：driver 的显式 phase 限制、已有平台 `phase_timeout`
 默认 3600 秒、进程组取消与清理仍生效。容器仍需要明确工作区/内存资源，
@@ -63,7 +34,7 @@ CooperBench，`environment` 用于 τ³；它们不是给任意旧数据集自�
 `base_harness/loop` 原有的模型输出/步数默认未修改。
 
 共享接口兼容方式：旧调用省略参数仍使用原有 transport/frame/record 默认；
-这五个接入显式使用可选 `None` 并接受运行策略。显式配置的上限仍真实执行，
+这五个接入显式使用可选 `None`。显式配置的上限仍真实执行，
 超限和传输/评分故障不会伪装成有效零分。
 
 `max_calls` 限逻辑 `complete` 调用；`max_retries` 限同一调用的额外 HTTP 尝试，
@@ -323,12 +294,12 @@ messages = call(socket, "receive", {})
 每条消息 64 KiB、组内 4096 条消息、每个 mailbox 8192 次调用、8 MiB 传输帧。
 显式声明 `mailbox` 可分别设置 `max_message_bytes/max_messages/max_calls/max_line_bytes`；
 值为 null 或在该声明内省略字段时不添加对应上限。CooperBench 默认显式使用 null，
-可用 `HG_EVAL_LIMITS.cooperative` 覆盖。实际限额及传输回执进入组记录，超限不能伪装成有效评分。
+需要有限上限时直接在该声明中指定。实际限额及传输回执进入组记录，超限不能伪装成有效评分。
 支持 2–8 个固定 peer；ID 必须唯一并匹配 `[a-z][a-z0-9_-]{0,31}`。
 每个 worker 声明 1–32 个安全相对产物路径；不提供动态 spawn、leader 或 task claim。
 
 actor 停止后收集声明产物；worker 的 `artifact_max_bytes` 省略时保留旧的 16 MiB 总量，
-显式 null 不增加大小上限，正整数按总量执行。CooperBench 使用 `submission.max_bytes`（默认 null）。
+显式 null 不增加大小上限，正整数按总量执行。CooperBench 显式声明 null。
 始终拒绝路径逃逸、symlink、hardlink、FIFO。
 缺失文件有显式状态。组合 verifier 从 `workers/<id>/<artifact>` 读取提交，
 从只读 `worker_record/workers.json` 读取退出状态、消息顺序、产物 hash 和用量记录。
@@ -409,7 +380,7 @@ VERIFY[task_id] = {
   `POST <base-path>/chat/completions` 操作，支持流式响应。不开放 bridge 或通用代理。
   worker 的 `model_route` 支持 `max_connections/request_max_bytes/response_max_bytes/header_timeout_s`。
   旧调用省略声明保留 16 连接、16 MiB 请求、64 MiB 响应和 30 秒 header 等待默认；
-  CooperBench 显式设为 null，并可通过同名 policy area 覆盖。外层阶段取消和已声明的请求时限仍生效，
+  CooperBench 显式设为 null；有限上限通过 worker 声明设置。外层阶段取消和已声明的请求时限仍生效，
   不改变调用方的 token 参数。
   模型连接/HTTP 错误及非授权操作进入无效运行记录。没有 judge/environment 密钥传给 worker。
 - **停止和产物**：宿主执行超时后直接 kill 整个容器；正常退出后终止其 actor UID 的剩余进程，
@@ -420,7 +391,7 @@ VERIFY[task_id] = {
   不传候选代码、其 HOME、进程、模型 socket 或邮箱。官方合并和测试仍写在 adapter 的 scorer 中。
   scorer 的相对路径以 workdir 为根；例如 `reward_file="/verifier/reward.txt"` 对应
   在 scorer 中写 `verifier/reward.txt`。只导出 reward/evidence；`VERIFY.result_max_bytes` 省略时保留旧的 4 MiB 总量，
-  null 不添加上限，正整数仍执行总量校验。CooperBench 使用 `record.max_bytes`（默认 null）。
+  null 不添加上限，正整数仍执行总量校验。CooperBench 显式声明 null。
   worker 的 stdout/stderr 和 trace 采用限量保留并记录截断；持续读取剩余日志，
   不因超出日志保留量终止 actor 或判测量失败。若 trace 被截断，worker usage 为未知，
   不把保留下来的中途累计值当成最终总量。

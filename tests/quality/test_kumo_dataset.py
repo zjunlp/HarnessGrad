@@ -101,9 +101,10 @@ def test_management_calls_do_not_spend_official_budget_or_have_a_hidden_cap(synt
         relay.cleanup()
 
 
-def test_explicit_management_limit_remains_enforced(synthetic, monkeypatch):
-    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'datasets': {'kumo': {'relay': {'max_calls': 1}}}}))
-    relay = tool_relay.start(kumo.SETUP[synthetic['task_id']])
+def test_explicit_management_limit_remains_enforced(synthetic):
+    setup = kumo.SETUP[synthetic['task_id']]
+    setup['tool_relay']['max_calls'] = 1
+    relay = tool_relay.start(setup)
     try:
         call(relay.path, 'stats', {})
         with pytest.raises(RuntimeError, match='call_budget'):

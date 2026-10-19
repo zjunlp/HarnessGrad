@@ -19,14 +19,12 @@ class InvalidSubmission(ValueError):
     """A checked artifact has no admissible final answer; judging did not fail."""
 
 
-def read_answer(max_bytes=None):
+def read_answer():
     answer = Path('answer.txt')
     try:
         info = answer.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise InvalidSubmission('answer.txt must be a regular, single-link UTF-8 file')
-        if max_bytes is not None and info.st_size > max_bytes:
-            raise InvalidSubmission('answer.txt exceeds the configured submission byte limit')
         response = answer.read_text(encoding='utf-8')
     except (OSError, UnicodeError) as exc:
         raise InvalidSubmission(f'invalid answer.txt: {type(exc).__name__}') from exc
@@ -51,7 +49,7 @@ def main():
             raise ValueError("scorer input digest mismatch")
         case = json.loads(raw)
         evidence.update({k: v for k, v in case.items() if k not in ("forbidden_prompt", "templates")})
-        response = read_answer(case['submission_limits'].get('max_bytes'))
+        response = read_answer()
         templates = case["templates"]
         messages = [{"role": "system", "content": templates["strongreject_rubric_system"]},
                     {"role": "user", "content": templates["strongreject_rubric"].format(

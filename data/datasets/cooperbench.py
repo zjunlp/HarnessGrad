@@ -12,7 +12,6 @@ import json
 import os
 from pathlib import Path
 
-from harnessgrad.config.limits import limits
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
@@ -30,7 +29,7 @@ DEFAULT_ENV = {'kind': 'files', 'agent_timeout_s': 1800, 'verify_timeout_s': 180
 
 
 def task_environment():
-    return {**DEFAULT_ENV, **limits('cooperbench', 'task')}
+    return dict(DEFAULT_ENV)
 
 
 GOAL = '''Implement your assigned feature in /workspace/repo. A second independent
@@ -82,7 +81,7 @@ def runtime(row):
 
 def runtime_spec(row):
     config, _ = runtime(row)
-    resources = {**config.get('resources', {}), **limits('cooperbench', 'container')}
+    resources = config.get('resources', {})
     required = ('memory_mb', 'workspace_bytes', 'workspace_inodes')
     missing = [key for key in required if resources.get(key) is None]
     if missing:
@@ -116,17 +115,15 @@ def _setup(tid, row):
     for i, feature in enumerate(features, 1):
         workers.append({'id': f'agent{i}', 'goal': f'You are agent{i}; your peer is agent{3-i}.\n' + GOAL.format(peer=f'agent{3-i}') + '\n' + feature['description'],
                         'env': dict(spec), 'artifacts': ['agent.patch'],
-                        'artifact_max_bytes': limits('cooperbench', 'submission').get('max_bytes'),
+                        'artifact_max_bytes': None,
                         'model_route': {'max_connections': None, 'request_max_bytes': None,
-                                        'response_max_bytes': None, 'header_timeout_s': None,
-                                        **limits('cooperbench', 'model_route')},
+                                        'response_max_bytes': None, 'header_timeout_s': None},
                         'timeout_s': task_environment()['agent_timeout_s'],
                         'files': [{'path': 'cooperbench.py', 'from': str(ASSETS / 'cli/cooperbench.py')},
                                   {'path': 'cooperbench_transport.py', 'from': str(TRANSPORT)},
                                   {'path': 'public.json', 'content': json.dumps({**feature, 'base_commit': row['base_commit']})}]})
     return {'workers': workers, 'mailbox': {'max_messages': None, 'max_message_bytes': None,
-                                           'max_calls': None, 'max_line_bytes': None,
-                                           **limits('cooperbench', 'cooperative')}}
+                                           'max_calls': None, 'max_line_bytes': None}}
 
 
 def _verify(tid, row):
@@ -146,7 +143,7 @@ def _verify(tid, row):
     inputs += [{'path': 'private/case.json', 'content': json.dumps(case)}]
     return {'kind': 'command', 'argv': [config.get('python', '/usr/local/bin/python3'), 'check.py'], 'inputs': inputs,
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
-            'result_max_bytes': limits('cooperbench', 'record').get('max_bytes'),
+            'result_max_bytes': None,
             'timeout_s': task_environment()['verify_timeout_s'], 'container_runtime': runtime_spec(row),
             'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
 

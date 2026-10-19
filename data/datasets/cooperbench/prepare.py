@@ -4,15 +4,13 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import math
 from itertools import combinations
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harnessgrad.config.limits import limits
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from protocol import (SOURCE_REVISION, HARBOR_REVISION, HARBOR_ADAPTER_SHA256,
@@ -28,24 +26,38 @@ def write_json(path, data):
     path.write_text(json.dumps(data, sort_keys=True, indent=2) + '\n')
 
 
-def selected_resources(base_runtime=None):
-    """Require an explicit allocation; measured seed sizes do not select budgets."""
-    resources = {}
-    origin = {'configuration': 'HG_EVAL_LIMITS/cooperbench.container'}
-    if base_runtime is not None:
+def selected_resources(base_runtime=None, resources_file=None):
+    """Read one complete allocation, without global or per-dataset overrides."""
+    if resources_file is not None:
+        raw = resources_file.read_bytes()
+        resources = json.loads(raw)
+        origin = {'resources_sha256': sha(raw)}
+    elif base_runtime is not None:
         raw = (base_runtime / 'runtime.json').read_bytes()
-        resources.update(json.loads(raw).get('resources', {}))
-        origin['base_runtime_sha256'] = sha(raw)
-    resources.update(limits('cooperbench', 'container'))
+        resources = json.loads(raw).get('resources', {})
+        origin = {'base_runtime_sha256': sha(raw)}
+    else:
+        resources, origin = {}, {}
+    allowed = {'workspace_bytes', 'workspace_inodes', 'memory_mb', 'cpus', 'pids'}
+    if not isinstance(resources, dict) or set(resources) - allowed:
+        raise ValueError('CooperBench resources must contain only ' + ', '.join(sorted(allowed)))
     required = ('workspace_bytes', 'workspace_inodes', 'memory_mb')
     missing = [key for key in required if resources.get(key) is None]
     if missing:
         raise ValueError('CooperBench preparation requires explicit resources: ' + ', '.join(missing)
-                         + '; set HG_EVAL_LIMITS container policy or select --base-runtime')
+                         + '; provide --resources JSON or select --base-runtime')
     for key in required:
-        value = resources[key]
-        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        if type(resources[key]) is not int or resources[key] <= 0:
             raise ValueError('CooperBench resource must be a positive integer: ' + key)
+    if resources['workspace_bytes'] % 4096:
+        raise ValueError('workspace_bytes must be page aligned')
+    cpu = resources.get('cpus', 2)
+    if (type(cpu) not in (int, float) or not math.isfinite(cpu)
+            or cpu < 0.01 or cpu * 1000 != int(cpu * 1000)):
+        raise ValueError('cpus must be at least 0.01 in whole millicores')
+    pids = resources.get('pids')
+    if pids is not None and (type(pids) is not int or pids <= 0):
+        raise ValueError('pids must be positive or null')
     return resources, origin
 
 
@@ -56,15 +68,6 @@ def require_seed_capacity(resources, identity, cache_bytes=0):
         if used > resources[key]:
             raise ValueError(f'CooperBench measured seed/cache needs {used} {key}; '
                              f'explicit allocation is {resources[key]}')
-
-
-def build_resource_args(policy):
-    args = []
-    if policy.get('memory_mb') is not None:
-        args.append('--memory=' + str(policy['memory_mb']) + 'm')
-    if policy.get('cpus') is not None:
-        args.append('--cpu-quota=' + str(int(policy['cpus'] * 100000)))
-    return args
 
 
 def prepare(root, source, harbor):
@@ -127,9 +130,8 @@ def prepare(root, source, harbor):
                       'manifest_sha256': sha((prepared / 'manifest.json').read_bytes())}))
 
 
-def prepare_image(root, source, group, pull, build_network="bridge", source_image=None, runtime_python_image=None, base_runtime=None):
-    resources, resource_selection = selected_resources(base_runtime)
-    preparation_limits = limits('cooperbench', 'preparation')
+def prepare_image(root, source, group, pull, build_network="bridge", source_image=None, runtime_python_image=None, base_runtime=None, resources_file=None):
+    resources, resource_selection = selected_resources(base_runtime, resources_file)
     manifest = json.loads((root / 'prepared-v1/manifest.json').read_text())
     row = next(r for r in manifest['tasks'] if r['group'] == group)
     runner = read_checked(source / 'dataset' / group / 'runner.sh', row['runner_sha256'])
@@ -185,7 +187,7 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
     network = build_network
     subprocess.run(['env', 'DOCKER_BUILDKIT=0', 'docker', 'build', '--network=' + network, '--pull=false',
                     '--build-arg', 'HTTPS_PROXY', '--build-arg', 'HTTP_PROXY', '--build-arg', 'NO_PROXY',
-                    '--force-rm', *build_resource_args(preparation_limits), '-t', tag, str(target)], check=True)
+                    '--force-rm', '-t', tag, str(target)], check=True)
     digest = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
     if helper_image_id:
         python = '/opt/hg-python/bin/python3'
@@ -202,16 +204,14 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
                'dependencies_sha256': sha(identity['pip_freeze'].encode()),
                'preparation_sha256': sha(preparation.encode()),
                'resources': resources, 'resource_selection': resource_selection,
-               'preparation_limits': preparation_limits,
                'validation': 'prepared; real oracle/noop controls are still required for this image'}
     write_json(target / 'runtime.json', runtime)
     print(json.dumps(runtime))
 
 
-def prepare_mirror_runtime(root, group, base_runtime, assets, kind="hf_mirror"):
+def prepare_mirror_runtime(root, group, base_runtime, assets, kind="hf_mirror", resources_file=None):
     """Derive a fresh immutable runtime without resolving dependencies again."""
-    resources, resource_selection = selected_resources(base_runtime)
-    preparation_limits = limits('cooperbench', 'preparation')
+    resources, resource_selection = selected_resources(base_runtime, resources_file)
     supported = {'hf_mirror': 'dottxt_ai_outlines_task/task1706',
                  'https_asset_mirror': 'llama_index_task/task18813'}
     if kind not in supported or group != supported[kind]:
@@ -255,10 +255,10 @@ def prepare_mirror_runtime(root, group, base_runtime, assets, kind="hf_mirror"):
     require_seed_capacity(resources, runtime['identity'])
     runtime['resources'] = resources
     runtime['resource_selection'] = resource_selection
-    runtime['preparation_limits'] = preparation_limits
+    runtime.pop('preparation_limits', None)
     tag = 'hg-cooperbench-' + group.replace('/', '-') + '-' + kind.replace('_', '-')
     subprocess.run(['env', 'DOCKER_BUILDKIT=0', 'docker', 'build', '--network=none', '--pull=false',
-                    '--force-rm', *build_resource_args(preparation_limits), '-t', tag,
+                    '--force-rm', '-t', tag,
                     str(context)], check=True)
     runtime['image'] = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
     runtime['python'] = identity['runtime_python']
@@ -279,6 +279,7 @@ def main():
     mirrors = parser.add_mutually_exclusive_group()
     mirrors.add_argument('--https-asset-mirror-assets', type=Path, help='Verified fixed HTTPS dependency assets for the reviewed LlamaIndex task18813 runtime')
     mirrors.add_argument('--hf-mirror-assets', type=Path, help='Verified public dependency assets for the reviewed Outlines task1706 runtime')
+    parser.add_argument('--resources', type=Path, help='JSON file with a complete memory/workspace allocation; otherwise reuse --base-runtime resources')
     parser.add_argument('--base-runtime', type=Path, help='Explicitly reuse recorded resource budgets; with mirror assets, also derive from its immutable image without rebuilding dependencies')
     parser.add_argument('--build-network', choices=['bridge', 'host', 'none'], default='bridge',
                         help='Preparation only; host can reach a loopback download proxy. Measurement always has no network.')
@@ -291,11 +292,11 @@ def main():
         if args.pull or args.source_image or args.runtime_python_image:
             parser.error('mirror derivation reuses an existing runtime; image import options are not applicable')
         prepare_mirror_runtime(args.root, args.image_group, args.base_runtime, assets,
-                               'hf_mirror' if args.hf_mirror_assets else 'https_asset_mirror')
+                               'hf_mirror' if args.hf_mirror_assets else 'https_asset_mirror', args.resources)
     elif args.image_group:
-        prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image, args.runtime_python_image, args.base_runtime)
-    elif args.base_runtime:
-        parser.error('--base-runtime requires --image-group')
+        prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image, args.runtime_python_image, args.base_runtime, args.resources)
+    elif args.base_runtime or args.resources:
+        parser.error('--base-runtime/--resources requires --image-group')
     elif args.harbor_root:
         prepare(args.root, args.source_root, args.harbor_root)
     else:

@@ -89,32 +89,29 @@ def test_prepared_manifest_and_selected_runtime_load():
     assert json.loads(case)['provenance']['manifest_sha256'] == dataset.MANIFEST_SHA256
 
 
-def test_runtime_resources_are_explicit_and_policy_overrides_metadata(monkeypatch):
+def test_runtime_resources_come_from_explicit_metadata(monkeypatch):
     resources = {'workspace_bytes': 32 << 30, 'workspace_inodes': 3000000, 'memory_mb': 65536}
     config = {'image': 'sha256:' + '1' * 64, 'resources': resources}
     monkeypatch.setattr(dataset, 'runtime', lambda row: (config, None))
-    monkeypatch.setattr(dataset, 'limits', lambda name, area: {})
     spec = dataset.runtime_spec({})
     assert spec['cpus'] == 2 and spec['pids'] is None
     assert spec['filesystems']['/workspace'] == {'bytes': 32 << 30, 'inodes': 3000000}
     assert spec['memory_mb'] == 65536 and spec['network'] == 'none'
-    monkeypatch.setattr(dataset, 'limits', lambda name, area: {'cpus': 3, 'pids': 123, 'memory_mb': 8192})
+    config['resources'].update(cpus=3, pids=123, memory_mb=8192)
     spec = dataset.runtime_spec({})
     assert (spec['cpus'], spec['pids'], spec['memory_mb']) == (3, 123, 8192)
     config['resources'] = {}
-    with pytest.raises(ValueError, match='workspace_bytes, workspace_inodes'):
+    with pytest.raises(ValueError, match='memory_mb, workspace_bytes, workspace_inodes'):
         dataset.runtime_spec({})
 
 
-def test_worker_budget_comes_from_task_policy(prepared, monkeypatch):
+def test_worker_declarations_keep_sourced_deadlines_without_extra_mailbox_caps(prepared, monkeypatch):
     monkeypatch.setattr(dataset, 'task_file', lambda row, rel: json.dumps([
         {'feature_id': '1', 'description': 'one'}, {'feature_id': '2', 'description': 'two'}]))
-    monkeypatch.setattr(dataset, 'limits', lambda name, area: (
-        {'agent_timeout_s': 2345, 'verify_timeout_s': 3456} if area == 'task' else {'max_messages': 12345}))
-    assert dataset.ENV[prepared['task_id']]['verify_timeout_s'] == 3456
+    assert dataset.ENV[prepared['task_id']]['verify_timeout_s'] == 1800
     setup = dataset.SETUP[prepared['task_id']]
-    assert all(worker['timeout_s'] == 2345 for worker in setup['workers'])
-    assert setup['mailbox'] == {'max_messages': 12345, 'max_message_bytes': None,
+    assert all(worker['timeout_s'] == 1800 for worker in setup['workers'])
+    assert setup['mailbox'] == {'max_messages': None, 'max_message_bytes': None,
                                 'max_calls': None, 'max_line_bytes': None}
 
 

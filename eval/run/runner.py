@@ -1174,17 +1174,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
-    from harnessgrad.config import current as current_config
-    evaluation_limits = current_config().runtime.evaluation_limits
-    policy_suffix = (":limits:" + hashlib.sha256(json.dumps(
-        evaluation_limits, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        if evaluation_limits else "")
-
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
-        # Cached datasets without a result contract (including KUMO) still depend
-        # on operator limits. Preserve legacy keys only when no policy is set.
-        key += policy_suffix
         # A changed scorer declaration must not reuse another runtime's score.
         bundle = ((verifiers or {}).get(task["task_id"]) or {}).get("scorer_bundle")
         if bundle is not None:

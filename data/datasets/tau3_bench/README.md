@@ -62,11 +62,9 @@ for the broker or enclosing phase to finish instead of imposing a separate 60-se
 The official NL evaluator makes one logical judge call for all assertions; optional HTTP
 retries are counted separately and do not create additional logical judgments.
 
-Use `HG_EVAL_LIMITS` to configure the `task`, `relay`, `record`, `environment` and `judge`
-areas globally or under `datasets.tau3_bench`. These settings can bound calls, attempts,
-tokens, time and payload size; omitted values add no adapter limit. Retries default to
-zero and may be configured explicitly. Resolved model limits and actual usage are recorded
-by the broker. This does not claim parity with Harbor's GPT-5.2 reasoning-effort profile.
+Optional limits remain available through the existing `SETUP / ENV / VERIFY`
+interfaces, with no global override layer. Retries default to zero. Declared model
+limits and actual usage are recorded by the broker. This does not claim parity with Harbor's GPT-5.2 reasoning-effort profile.
 
 The official base seed 300 generates three trial seeds: **626729, 373753, 361454**.
 `trial_protocol` requires `trials=3`, `ks=[1,2,3]`; every trial starts a fresh private

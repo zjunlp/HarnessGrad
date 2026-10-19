@@ -13,7 +13,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from harnessgrad.config.limits import limits
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -84,8 +83,7 @@ def _setup(tid, row):
                                                   "sha256": row["private_sha256"]}),
                            "filename": "case-spec.json",
                            "budget": 50,
-                           "max_calls": None, "deadline_s": None, "max_line_bytes": None,
-                           **limits('kumo', 'relay')}}
+                           "max_calls": None, "deadline_s": None, "max_line_bytes": None}}
 
 
 def _verify(tid, row):
@@ -117,7 +115,7 @@ class _Tasks(Mapping):
 
 SETUP = _Tasks(_setup)
 VERIFY = _Tasks(_verify)
-ENV = _Tasks(lambda tid, row: {**DEFAULT_ENV, **limits('kumo', 'task')})
+ENV = _Tasks(lambda tid, row: dict(DEFAULT_ENV))
 
 
 def oracle_files(task):

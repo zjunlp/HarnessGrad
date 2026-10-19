@@ -44,13 +44,14 @@ python data/datasets/cooperbench/prepare.py \
 Select workspace byte/inode and memory budgets explicitly before image preparation.
 `--base-runtime` reuses the `resources` from a chosen runtime directory; without
 mirror assets it reuses only those allocations, not its image or dependencies.
-Alternatively, set `HG_EVAL_LIMITS` JSON with those fields in
-`datasets.cooperbench.container` (or global `container`). Container policy overrides
-selected base resources. Missing `workspace_bytes`, `workspace_inodes` or
-`memory_mb` fails before Docker preparation. Choose build/cache headroom for the
-actual workload; preparation records seed usage and refuses a seed that cannot fit.
-`datasets.cooperbench.preparation` may set build `cpus` and `memory_mb`; otherwise
-preparation adds no CPU/memory throttle.
+Alternatively, pass `--resources /path/to/resources.json` with a complete JSON
+object containing `workspace_bytes`, `workspace_inodes` and `memory_mb`;
+`cpus` and `pids` are optional. Workspace bytes must be page aligned. Choose values
+for the workload and available machine resources. If both options are provided,
+the JSON file selects the entire allocation; fields are not merged with the base.
+Missing required resources fail before Docker preparation. Preparation records
+the selected file hash and resource values, measures seed usage, and refuses a
+seed that cannot fit. Image builds add no CPU/memory throttle.
 
 Image preparation is explicit and per group; it never pulls the full image
 collection. It verifies the repository base SHA and official runner bytes,
@@ -121,15 +122,15 @@ with `--source-image` in that case; the prepared identity remains recorded.
 Preparation records measured seed size/inode count and the explicitly selected
 resource budgets. It does not multiply seed sizes, infer memory from workspace,
 or impose adapter-specific byte/inode/PID ceilings. Runtime allocations come
-from the prepared metadata, with explicit `HG_EVAL_LIMITS` container overrides;
+from the prepared metadata;
 missing memory or workspace budgets fail clearly. PIDs are uncapped unless set
-in metadata or run policy. Harbor's pinned task template supplies the default
-2 CPUs; its adapter supplies 1800-second worker and verifier deadlines. Explicit
-`task` policy may override these deadlines. The platform owns the verifier
+in metadata. Harbor's pinned task template supplies the default
+2 CPUs; its adapter declares 1800-second worker and verifier deadlines. The platform owns the verifier
 lifecycle; there is no additional 1700-second adapter timeout. Original per-project
 test commands and their upstream timeouts remain intact.
 
-Mailbox budgets come from the platform's `cooperative` run policy. Network
+The adapter declares no extra mailbox cap; optional finite bounds remain available
+in `SETUP.mailbox`. Network
 isolation, observed resource enforcement, sender/peer binding, artifact identity
 checks and mirror lifecycle health checks remain mandatory. Mirror readiness and
 HTTP health timeouts are service lifecycle checks, not additional scoring budgets.

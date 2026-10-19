@@ -78,7 +78,7 @@ transport failures as unmeasured. A genuinely idle control is incomplete;
 completed wrong or empty answers are scored by the official formulas. Empty
 recommendations may score nonzero under upstream nearest-movie matching.
 
-Runtime budgets come from the explicit run resource policy described below.
+Runtime limits use the existing declarations and driver phase settings described below.
 Native mount isolation keeps relay state private; actor networking uses
 the platform default and this adapter does not claim egress isolation.
 
@@ -106,8 +106,8 @@ LongMemEval question-type/abstention prompts. Summary sampling is temperature
 0.1, top-p 0.9, seed 42, maximum 4,096 output tokens; QA uses temperature 0 and
 maximum 10 output tokens. The successful scoring call budget is exactly three
 times the selected question count for summary, once for QA. Model fallbacks are
-not used. Retry and timeout policy comes from the run configuration; retries
-default to zero.
+not used. The adapter declares no judge request timeout and defaults to zero
+retries; the broker supports explicit limits through `VERIFY.judge`.
 
 Configure `HG_JUDGE_BASE_URL` and `HG_JUDGE_API_KEY` for the judge service.
 Model selection is `HG_MAB_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the source's official
@@ -121,9 +121,7 @@ is frozen in the verifier and its evidence. A nondefault model changes
 the recorded judge profile/identity; such scores do not establish equivalence to
 the official default-model results. If a provider needs more output tokens,
 `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` explicitly selects a positive integer;
-it applies to both sources and changes the profile/identity. It takes precedence
-over `HG_EVAL_LIMITS` judge `max_output_tokens`. With neither override, the
-official output limits remain. There is no automatic budget increase. Model,
+it applies to both sources and changes the profile/identity. Without this setting, the official output limits remain. There is no automatic budget increase. Model,
 output budget, sampling, prompt/source hashes and
 response-admission rules enter the profile. The platform separately records the
 endpoint hash, request/response hashes, returned model and token usage. Source
@@ -194,20 +192,11 @@ and 400 judge questions passed inventory/metadata validation without API calls.
 
 ### Run resource limits
 
-`HG_EVAL_LIMITS` supplies global area settings and per-dataset overrides under
-`datasets.memoryagentbench`. Supported areas used here are `task`
-(`agent_timeout_s`, `verify_timeout_s`), `relay` (`max_calls`, `deadline_s`,
-`max_line_bytes`), `record` (`max_bytes`), `submission` (`max_bytes`), and `judge`
-(`max_calls`, `max_output_tokens`, `timeout_s`, `max_retries`, `max_attempts`,
-`response_max_bytes`, `max_line_bytes`). Without an explicit setting,
-this adapter adds no task deadline, relay call/frame cap, recording cap, answer
+This adapter adds no task deadline, relay call/frame cap, recording cap, answer
 size cap, or judge request deadline. Task execution still follows the driver's
-phase policy. Official scoring output defaults and successful call structure
-remain as described above. An explicit judge `max_calls` can tighten the
-official successful-call upper bound; a larger value or null does not relax it.
-
-Explicit answer limits are enforced by the private relay and bound into the
-trusted service input; the actor cannot change them. Answers and request IDs
+phase settings. Optional finite limits can be declared directly in the existing
+`SETUP / ENV / VERIFY` interfaces. Official scoring output defaults and successful
+call structure remain as described above. Answers and request IDs
 have no dataset-specific size ceiling. UTF-8 decoding, ordered access,
 idempotent request IDs, private records and complete-episode scoring remain
 required. A resource limit or service failure produces an unmeasured result,

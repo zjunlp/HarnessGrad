@@ -242,10 +242,6 @@ class RuntimeConfig:
         "HG_REGISTRY_MIRRORS", None,
         "Comma-separated package-registry mirrors used when building overlays.",
         kind="opt")
-    evaluation_limits: dict | None = _var(
-        "HG_EVAL_LIMITS", None,
-        "Explicit evaluation resource policy as JSON; global areas and optional datasets overrides. "
-        "Unset adds no limits to opted-in adapters; recorded in the configuration snapshot.", kind="limits")
 
 
 @dataclass(frozen=True)

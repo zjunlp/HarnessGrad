@@ -11,7 +11,6 @@ import io
 import json
 import os
 from pathlib import Path
-from harnessgrad.config.limits import limits
 
 KIND = "fixture"  # Runnable by name; publication awaits an agreed demand/surface.
 ORACLE_SOURCE = "released"
@@ -36,11 +35,9 @@ def judge_profile():
     # One rubric evaluation is structural; transport retries are managed separately.
     spec = {"model": model, "max_calls": 1, "max_output_tokens": None,
             "timeout_s": 300, "parameters": {"temperature": 0},
-            "response_max_bytes": None, "max_line_bytes": None,
-            **limits('strongreject', 'judge')}
+            "response_max_bytes": None, "max_line_bytes": None}
     validate_judge(spec)
     return {"model": model, "metric": f"strongreject.rubric.defense.{model}.v1", "judge": spec}
-
 
 
 def canonical(value):
@@ -104,7 +101,6 @@ def _verify(tid, row):
             "metadata_sha256": row["source_sha256"], "attack_unchanged": row["attack_unchanged"],
             "method": row["jailbreak_method"], "metric": profile["metric"], "judge_model": profile["model"],
             "evaluator_revision": SOURCES["evaluator_revision"], "task_revision": SOURCES["task_revision"],
-            "submission_limits": limits('strongreject', 'submission'),
             "templates": {k: templates[k] for k in ("strongreject_rubric", "strongreject_rubric_system")}}
     encoded = canonical(case)
     return {"kind": "command", "argv": ["python3", "-I", "strongreject_runtime/verify/check.py", "--case-sha256", hashlib.sha256(encoded.encode()).hexdigest()],
@@ -131,7 +127,7 @@ class _Tasks(Mapping):
 
 
 SETUP = _Tasks(lambda tid, row: {"files": []})
-ENV = _Tasks(lambda tid, row: {"kind": "files", "network": "none", **limits('strongreject', 'task')})
+ENV = _Tasks(lambda tid, row: {"kind": "files", "network": "none"})
 VERIFY = _Tasks(_verify)
 
 
