@@ -116,7 +116,10 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
  'python_executable': sys.executable, 'python_library_path': os.environ.get('LD_LIBRARY_PATH'),
  'toolchain_versions': {tool: read([tool, 'version' if tool == 'go' else '--version']) for tool in ('git', 'go', 'node', 'pnpm', 'cargo', 'rustc') if shutil.which(tool)},
  'workspace_bytes': workspace_bytes, 'workspace_inodes': workspace_inodes,
- 'runner_sha256': hashlib.sha256(open('/usr/local/bin/runner.sh','rb').read()).hexdigest()}))
+ 'runner_sha256': hashlib.sha256(open('/usr/local/bin/runner.sh','rb').read()).hexdigest(),
+ 'dependency_lock_snapshots': {name: hashlib.sha256(open('/opt/hg-cooperbench-locks/' + name, 'rb').read()).hexdigest()
+                              for name in ('input.lock', 'baseline.lock', 'resolved.lock')
+                              if os.path.isfile('/opt/hg-cooperbench-locks/' + name)}}))
 """
     identity = json.loads(command('docker', 'run', '--rm', '--network=none', '--entrypoint',
                                   python, image_id, '-c', inspect_code))

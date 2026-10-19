@@ -95,6 +95,15 @@ def image_recipe(base_id, source, group, runtime_python_image=None):
                   'ENV LD_LIBRARY_PATH=/opt/hg-python/lib\n')
     install = '#!/bin/bash\nset -e\ncd /workspace/repo\n'
     if spec['family'] == 'python':
+        # uv sync can rewrite a tracked lock even with the official command.
+        # Preserve its dependency evidence outside the candidate repository and
+        # restore the committed input so harness diffs contain candidate edits.
+        install += '''if git ls-files --error-unmatch -- uv.lock >/dev/null 2>&1; then
+  mkdir -p /opt/hg-cooperbench-locks
+  cp uv.lock /opt/hg-cooperbench-locks/input.lock
+  git show HEAD:uv.lock > /opt/hg-cooperbench-locks/baseline.lock
+fi
+'''
         install += block + '\n'
         # Native builds need their build backend after the candidate patch too.
         # pip's temporary build-isolation environments are not a runtime cache.
@@ -128,6 +137,10 @@ if requires: subprocess.run([sys.executable, '-m', 'pip', 'install', *requires],
             subprocess.run([sys.executable, '-c', hook, json.dumps(build)], cwd=path.parent, check=True)
 BUILD_REQUIREMENTS
 rm -rf /workspace/repo/.venv
+if [ -f /opt/hg-cooperbench-locks/baseline.lock ]; then
+  cp uv.lock /opt/hg-cooperbench-locks/resolved.lock
+  cp /opt/hg-cooperbench-locks/baseline.lock uv.lock
+fi
 '''
     if spec['family'] == 'node':
         install += 'npm install --global pnpm@8\npnpm --version\n'

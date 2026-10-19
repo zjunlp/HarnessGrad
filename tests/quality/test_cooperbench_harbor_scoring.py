@@ -367,3 +367,35 @@ def test_mirror_derivation_preserves_base_runtime_and_records_verified_layer(tmp
     (base / 'runner.sh').write_text('changed')
     with pytest.raises(ValueError, match='source digest mismatch'):
         preparation.prepare_mirror_runtime(root, group, base, assets, kind)
+
+
+@pytest.mark.parametrize('tracked', [True, False])
+def test_preparation_restores_tracked_lock_without_changing_resolved_dependencies(tmp_path, tracked):
+    """A candidate's first Git diff must exclude preparation-only lock changes."""
+    from unittest.mock import patch
+    repo = tmp_path / 'repo'; repo.mkdir()
+    subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+    subprocess.run(['git', '-C', str(repo), 'config', 'user.email', 'fixture@example.test'], check=True)
+    subprocess.run(['git', '-C', str(repo), 'config', 'user.name', 'Fixture'], check=True)
+    (repo / 'uv.lock').write_text('committed lock\n')
+    (repo / 'source.py').write_text('baseline\n')
+    subprocess.run(['git', '-C', str(repo), 'add', 'source.py', *(['uv.lock'] if tracked else [])], check=True)
+    subprocess.run(['git', '-C', str(repo), 'commit', '-qm', 'baseline'], check=True)
+    # The dependency operation's effects must survive; only its source-tree
+    # lock rewrite is restored. No package installation or network is needed.
+    block = "printf 'resolved lock\\n' > uv.lock\nprintf 'installed dependency\\n' > installed.txt\n"
+    with patch.object(protocol, 'prepare_recipe', return_value=(block, 'runner')), patch.object(protocol, 'recipe', return_value={'family': 'python'}):
+        _, install, _ = protocol.image_recipe('sha256:' + 'a' * 64, 'runner', 'fixture')
+    snapshots = tmp_path / 'snapshots'
+    install = install.replace('/workspace/repo', str(repo)).replace('/opt/hg-cooperbench-locks', str(snapshots))
+    subprocess.run(['bash', '-c', install], check=True)
+    assert (repo / 'installed.txt').read_text() == 'installed dependency\n'
+    assert subprocess.check_output(['git', '-C', str(repo), 'diff'], text=True) == ''
+    if tracked:
+        assert (repo / 'uv.lock').read_text() == 'committed lock\n'
+        assert (snapshots / 'baseline.lock').read_text() == 'committed lock\n'
+        assert (snapshots / 'input.lock').read_text() == 'committed lock\n'
+        assert (snapshots / 'resolved.lock').read_text() == 'resolved lock\n'
+    else:
+        assert (repo / 'uv.lock').read_text() == 'resolved lock\n'
+        assert not snapshots.exists()
