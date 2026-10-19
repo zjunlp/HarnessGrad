@@ -242,6 +242,10 @@ class RuntimeConfig:
         "HG_REGISTRY_MIRRORS", None,
         "Comma-separated package-registry mirrors used when building overlays.",
         kind="opt")
+    evaluation_limits: dict | None = _var(
+        "HG_EVAL_LIMITS", None,
+        "Explicit evaluation resource policy as JSON; global areas and optional datasets overrides. "
+        "Unset adds no limits to opted-in adapters; recorded in the configuration snapshot.", kind="limits")
 
 
 @dataclass(frozen=True)
@@ -305,7 +309,7 @@ class JudgeConfig:
     tau3_model: str | None = _var(
         "HG_TAU3_JUDGE_MODEL", None, "Tau3 judge override; otherwise global model; no implicit default.", kind="opt")
     memoryagentbench_max_output_tokens: int | None = _var(
-        "HG_MAB_JUDGE_MAX_OUTPUT_TOKENS", None, "MemoryAgentBench judge output limit override (1–16384); otherwise source official default.", kind="int_opt")
+        "HG_MAB_JUDGE_MAX_OUTPUT_TOKENS", None, "Positive MemoryAgentBench judge output limit override; otherwise source official default.", kind="int_opt")
 
     def resolve_model(self, dataset: str, *, default: str | None = None) -> str:
         """Select once on the host, then freeze the result in VERIFY.judge."""

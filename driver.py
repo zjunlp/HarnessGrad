@@ -74,6 +74,7 @@ from harnessgrad.methods import PlatformTampered, _check_method_entrypoint
 from harnessgrad.records import (
     _cost_of, _curve_point, _require_untampered, _save_round_state, _save_traces,
     _save_verdicts, _scored, _write_curve, _write_run_meta, test_rate_fields)
+from harnessgrad.resume_policy import resume_policy_mismatch
 
 
 # --------------------------------------------------- improver capability ---
@@ -269,6 +270,9 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
     same `harness_sha` the curve already carries. The caller asserts that, because a
     different address would mean the saved state is not the state the score belongs to.
     """
+    policy_problem = resume_policy_mismatch(run_dir)
+    if policy_problem:
+        raise ResumeRefused(policy_problem)
     curve_path = run_dir / "curve.jsonl"
     if not curve_path.is_file():
         raise ResumeRefused(f"{run_dir.name} has no curve.jsonl; there is nothing to continue")
@@ -824,6 +828,13 @@ def _main(attempt: dict) -> int:
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
         + (f"-{secrets.token_hex(8)}" if staged else ""))
     run_dir = Path(args.runs_root) / run_id
+    # Check the previous snapshot before any metadata writer can replace it.
+    # This covers both train and eval, including already-complete runs.
+    if args.resume:
+        policy_problem = resume_policy_mismatch(run_dir)
+        if policy_problem:
+            console.note(f"refusing --resume: {policy_problem}", level="error")
+            return 2
     try:
         if staged:
             run_dir = diagnostic_policy.reserve_run_directory(Path(args.runs_root), run_id)

@@ -668,6 +668,11 @@ def _check_setup(spec, tid: str, name: str) -> None:
         validate_workers(spec["workers"])
         for worker in spec["workers"]:
             _check_setup({"files": worker.get("files", [])}, tid, name)
+    if 'mailbox' in spec:
+        from data.scaffolds.runtime_extensions import validate_mailbox
+        if 'workers' not in spec:
+            raise ValueError('mailbox requires workers')
+        validate_mailbox(spec['mailbox'])
     if "runtime_prompt" in spec and (
             not isinstance(spec["runtime_prompt"], str)
             or not spec["runtime_prompt"].strip()):
@@ -698,6 +703,12 @@ def _check_verifier(spec, tid: str, name: str) -> None:
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
     from data.scaffolds.scorer_isolation import declared_class
     declared_class(spec)
+    if "result_max_bytes" in spec:
+        limit = spec["result_max_bytes"]
+        if "container_runtime" not in spec:
+            raise ValueError("result_max_bytes requires container_runtime")
+        if limit is not None and (type(limit) is not int or limit <= 0):
+            raise ValueError("result_max_bytes must be positive or null")
     if "container_runtime" in spec:
         from data.scaffolds.runtime_extensions import validate_container_runtime
         validate_container_runtime(spec["container_runtime"])

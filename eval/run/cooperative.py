@@ -15,17 +15,30 @@ import threading
 
 from eval.service.tool_transport import Relay
 from eval.verification.verifier import _verify
-from data.scaffolds.runtime_extensions import validate_workers
+from data.scaffolds.runtime_extensions import validate_workers, validate_mailbox
+
+
+def _worker_usage(result):
+    """A retained trace prefix cannot establish the worker's final usage total."""
+    from eval.observe.tracing import _last_usage
+    container = (result.get('runtime_services') or {}).get('container') or {}
+    trace_log = (container.get('log_files') or {}).get('trace.jsonl') or {}
+    if trace_log.get('truncated'):
+        return None
+    return _last_usage(result.get('trace', ''))
 
 
 def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
         sandbox, run_id, run_seed, trial_id, recordings_root):
     from eval.run import runner
-    from eval.observe.tracing import _materialize, _last_usage, process_outcome
+    from eval.observe.tracing import _materialize, process_outcome
     from eval.policy.runtime_policy import phase_timeout
     workers=setup['workers']
     try:
         validate_workers(workers)
+        mailbox = setup.get('mailbox', {'max_messages': 4096, 'max_message_bytes': 65536,
+                                       'max_calls': 8192, 'max_line_bytes': 8 * 1024 * 1024})
+        validate_mailbox(mailbox)
         if not sandbox or setup.get('tool_relay') or (env or {}).get('kind','files')!='files':
             raise ValueError('workers require sandboxed files without an additional parent tool_relay')
         if (verifier or {}).get('kind')!='command':
@@ -45,7 +58,8 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
     lock=threading.Lock();boxes={w['id']:[] for w in workers};events=[];relays=[]
     outcomes={};cleanup_errors=[]
     result=None
-    max_messages=4096
+    max_messages=mailbox.get('max_messages')
+    max_message_bytes=mailbox.get('max_message_bytes')
     def handler(sender):
         def handle(op,args):
             with lock:
@@ -53,9 +67,12 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
                     messages=boxes[sender][:];boxes[sender].clear();return messages
                 if op!='send' or set(args)!={'to','message'} or args['to'] not in boxes:
                     raise ValueError('worker mailbox accepts send(to,message) and receive()')
-                if not isinstance(args['message'],str) or len(args['message'].encode())>65536:
-                    raise ValueError('worker message must be text <= 65536 bytes')
-                if len(events)>=max_messages:raise ValueError('worker message limit reached')
+                if not isinstance(args['message'],str):
+                    raise ValueError('worker message must be text')
+                if max_message_bytes is not None and len(args['message'].encode()) > max_message_bytes:
+                    raise ValueError('worker message byte limit reached')
+                if max_messages is not None and len(events)>=max_messages:
+                    raise ValueError('worker message limit reached')
                 event={'from':sender,'to':args['to'],'message':args['message'],'sequence':len(events)}
                 events.append(event);boxes[args['to']].append(event);return {'sequence':event['sequence']}
         return handle
@@ -68,7 +85,8 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
             code=private/'candidate'
             shutil.copytree(repo,code,symlinks=True,ignore=shutil.ignore_patterns('.git','.state','__pycache__'))
             channel=root/(w['id']+'.sock')
-            relay=Relay(channel,handler(w['id']),max_calls=8192).start();relays.append(relay)
+            relay=Relay(channel,handler(w['id']),max_calls=mailbox.get('max_calls'),
+                        max_line_bytes=mailbox.get('max_line_bytes')).start();relays.append(relay)
             plans.append((w,private,code,channel))
         def execute(plan):
             w,private,code,channel=plan
@@ -83,7 +101,8 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
                 sandbox=True,setup={'files':w.get('files',[])},verifier={'kind':'answer','expected':''},
                 env=w.get('env',{'kind':'files'}),run_id=run_id,run_seed=run_seed,
                 trial_id=trial_id, _worker={'id':w['id'],'socket':channel,'root':private,
-                                          'artifacts':w['artifacts']})
+                                          'artifacts':w['artifacts'],
+                                          'artifact_max_bytes':w.get('artifact_max_bytes', 16 << 20)})
         with ThreadPoolExecutor(max_workers=len(workers),thread_name_prefix='hg-worker') as pool:
             futures=[pool.submit(execute,p) for p in plans]
             for w, future in zip(workers, futures):
@@ -94,15 +113,22 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
         for relay in relays:relay.stop()
         summary={'schema':'harnessgrad.worker-group.v1','task_id':task['task_id'],
                  'run_id':run_id,'trial_id':trial_id,'events':events,
+                 'mailbox_limits': mailbox,
+                 'mailbox_transport': {w['id']: dict(r.receipt) for w, r in zip(workers, relays)},
                  'workers':{name:{'exit_code':r.get('exit_code'),'stderr':r.get('stderr'),
-                     'usage':_last_usage(r.get('trace','')), 'invalid':r.get('invalid'),
+                     'usage':_worker_usage(r), 'invalid':r.get('invalid'),
                      'runtime_services': r.get('runtime_services'),
                      'artifacts':{p:{k:v for k,v in a.items() if k!='base64'}
                                   for p,a in r.get('artifacts',{}).items()}}
                             for name,r in outcomes.items()}}
         failed={name:r.get('invalid') for name,r in outcomes.items() if r.get('invalid')}
+        transport_failed = any(r.receipt.get('refused') or r.receipt.get('errors') for r in relays)
         if failed:
             result=runner._invalid(task,json.dumps(failed),stage='worker execution',service=None)
+            result['worker_group'] = summary
+        elif transport_failed:
+            result=runner._invalid(task,'worker mailbox resource limit or transport failure',
+                                   stage='worker mailbox',service=None)
             result['worker_group'] = summary
         else:
             combined=root/'verify';combined.mkdir()

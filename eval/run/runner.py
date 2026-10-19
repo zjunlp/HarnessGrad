@@ -717,7 +717,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         if worker is not None:
             from eval.run.artifacts import collect
             try:
-                worker_artifacts = {"artifacts": collect(workdir, worker["artifacts"])}
+                worker_artifacts = {"artifacts": collect(workdir, worker["artifacts"],
+                    max_bytes=worker.get("artifact_max_bytes", 16 << 20))}
             except (ValueError, OSError) as exc:
                 return _invalid(task, exc, stage="worker artifacts", service=None)
         return {**worker_artifacts, "task_id": task["task_id"], "answer": answer,
@@ -1173,8 +1174,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
+    from harnessgrad.config import current as current_config
+    evaluation_limits = current_config().runtime.evaluation_limits
+    policy_suffix = (":limits:" + hashlib.sha256(json.dumps(
+        evaluation_limits, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if evaluation_limits else "")
+
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
+        # Cached datasets without a result contract (including KUMO) still depend
+        # on operator limits. Preserve legacy keys only when no policy is set.
+        key += policy_suffix
         # A changed scorer declaration must not reuse another runtime's score.
         bundle = ((verifiers or {}).get(task["task_id"]) or {}).get("scorer_bundle")
         if bundle is not None:

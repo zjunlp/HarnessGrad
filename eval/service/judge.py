@@ -2,7 +2,8 @@
 
 The scorer uses tool_transport.call('/run/harnessgrad-tool/tool.sock', 'complete',
 {'messages': [...]}); model, sampling parameters and limits belong to VERIFY.judge.
-No streaming, fallback, retries, redirects or caller-selected models/tools.
+No streaming, model fallback, redirects or caller-selected models/tools.
+Optional retries apply only to transport failures, never to invalid model output.
 """
 from __future__ import annotations
 
@@ -57,6 +58,7 @@ class Judge:
         self.url = cfg.base_url.rstrip('/') + '/chat/completions'
         self.key = cfg.api_key
         self.calls = []
+        self.attempts = []
         self.faults = []
         self.directory = None
         self.relay = None
@@ -70,13 +72,15 @@ class Judge:
         try:
             # The transport ceiling is deliberately separate: requests rejected by the
             # handler still have an attributable, persistent failure record.
-            self.relay = Relay(self.path, self._call, max_calls=self.spec['max_calls']).start()
+            self.relay = Relay(self.path, self._call, max_calls=self.spec.get('max_calls'),
+                               max_line_bytes=self.spec.get('max_line_bytes', 8 * 1024 * 1024)).start()
             return self
         except BaseException:
             self.close()
             raise
 
     def _call(self, op, args):
+        record = None
         try:
             if op != 'complete' or set(args) != {'messages'}:
                 raise JudgeUnavailable('judge accepts only complete(messages)')
@@ -93,35 +97,22 @@ class Judge:
                 if (message.get('role') == 'tool' or message.get('tool_calls')) and not self.spec.get('tools'):
                     raise JudgeUnavailable('tool messages require declared model tools')
             body = {**self.spec.get('parameters', {}), 'model': self.spec['model'],
-                    'messages': messages, 'max_tokens': self.spec['max_output_tokens'], 'stream': False}
+                    'messages': messages, 'stream': False}
+            if self.spec.get('max_output_tokens') is not None:
+                body['max_tokens'] = self.spec['max_output_tokens']
             if self.spec.get('tools'):
                 body['tools'] = self.spec['tools']
                 body['tool_choice'] = self.spec.get('tool_choice', 'auto')
             data = json.dumps(body, allow_nan=False).encode()
             record = {'request_sha256': hashlib.sha256(data).hexdigest(), 'status': 'pending'}
             self.calls.append(record)
-            headers = {'Content-Type': 'application/json'}
-            if self.key:
-                headers['Authorization'] = 'Bearer ' + self.key
-            request = json.dumps({'url': self.url, 'body': data.decode(), 'headers': headers,
-                                  'timeout': self.spec['timeout_s']}).encode()
-            with self.lock:
-                if self.closed:
-                    raise JudgeUnavailable('model broker is closing')
-                proc = self.proc = subprocess.Popen(
-                    [sys.executable, '-I', str(Path(__file__).with_name('judge_request.py'))],
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            try:
-                raw, error = proc.communicate(request, timeout=self.spec['timeout_s'])
-            except subprocess.TimeoutExpired:
-                proc.kill(); proc.communicate()
-                raise JudgeUnavailable('model request deadline exceeded') from None
-            finally:
-                with self.lock:
-                    self.proc = None
-            if proc.returncode:
-                raise JudgeUnavailable('model request failed: ' + error.decode(errors='replace')[:80])
+            raw, attempt = self._request(data, record)
             result = json.loads(raw)
+            usage = result.get('usage')
+            if isinstance(usage, dict) and all(type(usage.get(k)) is int and usage[k] >= 0
+                                              for k in ('prompt_tokens', 'completion_tokens')):
+                attempt.update(usage_known=True, usage={k: usage[k] for k in
+                                                       ('prompt_tokens', 'completion_tokens')})
             message = result['choices'][0]['message']
             content = message.get('content')
             tool_calls = message.get('tool_calls')
@@ -139,9 +130,60 @@ class Judge:
             # Do not expose provider response bodies, URLs or credentials in errors.
             reason = str(exc) if isinstance(exc, JudgeUnavailable) else type(exc).__name__
             self.faults.append(reason)
-            if self.calls and self.calls[-1]['status'] == 'pending':
-                self.calls[-1].update(status='error', error=reason)
+            if record is not None and record['status'] == 'pending':
+                record.update(status='error', error=reason)
             raise JudgeUnavailable(reason) from None
+
+    def _request(self, data, record):
+        headers = {'Content-Type': 'application/json'}
+        if self.key:
+            headers['Authorization'] = 'Bearer ' + self.key
+        request = json.dumps({'url': self.url, 'body': data.decode(), 'headers': headers,
+                              'timeout': self.spec.get('timeout_s'),
+                              'response_max_bytes': self.spec.get('response_max_bytes', 8 * 1024 * 1024)}).encode()
+        record['attempts'] = []
+        for retry in range(self.spec.get('max_retries', 0) + 1):
+            with self.lock:
+                if self.closed:
+                    raise JudgeUnavailable('model broker is closing')
+                cap = self.spec.get('max_attempts')
+                if cap is not None and len(self.attempts) >= cap:
+                    raise JudgeUnavailable('model request attempt budget exceeded')
+                attempt = {'index': len(self.attempts) + 1, 'status': 'pending',
+                           'usage_known': False, 'usage': None}
+                self.attempts.append(attempt)
+                record['attempts'].append(attempt)
+                try:
+                    proc = self.proc = subprocess.Popen(
+                        [sys.executable, '-I', str(Path(__file__).with_name('judge_request.py'))],
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except OSError as exc:
+                    attempt.update(status='error', error_type=type(exc).__name__, retryable=False)
+                    raise JudgeUnavailable('model request process could not start') from None
+            failure = None
+            try:
+                raw, error = proc.communicate(request, timeout=self.spec.get('timeout_s'))
+                if proc.returncode:
+                    try:
+                        failure = json.loads(error)
+                    except (ValueError, UnicodeDecodeError):
+                        failure = {'error_type': 'RequestProcessError', 'retryable': False}
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.communicate()
+                failure = {'error_type': 'TimeoutError', 'retryable': True}
+            finally:
+                with self.lock:
+                    self.proc = None
+            if failure is None:
+                attempt['status'] = 'ok'
+                return raw, attempt
+            attempt.update(status='error', **failure)
+            if self.closed:
+                raise JudgeUnavailable('model broker is closing')
+            if not failure.get('retryable') or retry == self.spec.get('max_retries', 0):
+                raise JudgeUnavailable('model request failed: ' + failure['error_type'])
+        raise AssertionError('unreachable request retry state')
 
     def report(self):
         transport = dict(self.relay.receipt) if self.relay else {}
@@ -149,9 +191,10 @@ class Judge:
         if transport.get('refused') or transport.get('errors'):
             failures.append('judge transport rejected or failed a request')
         return {'schema': 'harnessgrad.judge.v1', 'role': self.role,
-                'configuration': self.spec, 'endpoint_sha256': hashlib.sha256(self.url.encode()).hexdigest(), 'calls': self.calls, 'faults': failures,
+                'configuration': self.spec, 'endpoint_sha256': hashlib.sha256(self.url.encode()).hexdigest(), 'calls': self.calls, 'attempts': self.attempts, 'faults': failures,
                 'transport': transport,
-                'usage': {k: sum(c.get('usage', {}).get(k, 0) for c in self.calls)
+                'usage_complete': all(a['usage_known'] for a in self.attempts),
+                'usage': {k: sum((a.get('usage') or {}).get(k, 0) for a in self.attempts)
                           for k in ('prompt_tokens', 'completion_tokens')}}
 
     def close(self):
@@ -159,6 +202,7 @@ class Judge:
             self.closed = True
             if self.proc is not None and self.proc.poll() is None:
                 self.proc.kill()
+                self.proc.wait()
         if self.relay:
             self.relay.stop()
         if self.directory:

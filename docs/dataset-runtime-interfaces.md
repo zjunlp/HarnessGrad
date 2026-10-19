@@ -1,9 +1,76 @@
 # 五个数据集接入使用的公共运行接口
 
-本文描述当前仓库已合入的公共运行接口及其适用范围。
+本文描述当前仓库的公共运行接口及其适用范围。
 数据集适配器通过声明启用所需能力；接口可用不代表相应数据集已完成接入或验证。
 字段校验见 [runtime_extensions.py](../data/scaffolds/runtime_extensions.py)，
 执行入口见 [runner.py](../eval/run/runner.py) 和 [verifier.py](../eval/verification/verifier.py)。
+
+## 0. 数据集协议与运行资源策略
+
+五个接入使用 `HG_EVAL_LIMITS` 声明显式运行策略，取值为 JSON 对象。
+它是平台配置，不能由候选提交修改；解析结果进入 `config.runtime.evaluation_limits`，
+有效的 SETUP/ENV/VERIFY 声明进入运行快照，模型和 mailbox 回执另存实际限额。
+续跑前核对原 policy，变化时拒绝且不覆盖旧快照；可缓存任务的 key 也绑定显式 policy。
+
+```json
+{
+  "judge": {"timeout_s": 300, "max_retries": 2},
+  "datasets": {
+    "tau3_bench": {"environment": {"max_output_tokens": 8192}},
+    "cooperbench": {"cooperative": {"max_messages": 10000}}
+  }
+}
+```
+
+以上仅展示配置形式，不是推荐预算。顶层 area 是全局策略；
+`datasets.<dataset>.<area>` 按字段覆盖。未设置不添加新的适配器限额。
+可选数值用 `null` 清除局部管理上限；`max_retries` 必须为非负整数。
+容器 CPU、内存及工作区配额必须为正数，不接受 null；`pids` 可以为 null。
+时间和 CPU 可为正有限小数，其余配额为正整数；未知 area、字段及重复 JSON key 均拒绝。
+
+| area | 字段 |
+| --- | --- |
+| `task` | `agent_timeout_s`, `verify_timeout_s` |
+| `judge`, `environment` | `max_calls`, `max_output_tokens`, `timeout_s`, `max_retries`, `max_attempts`, `response_max_bytes`, `max_line_bytes` |
+| `relay` | `max_calls`, `deadline_s`, `max_line_bytes` |
+| `record`, `submission` | `max_bytes` |
+| `cooperative` | `max_messages`, `max_message_bytes`, `max_calls`, `max_line_bytes` |
+| `model_route` | `max_connections`, `request_max_bytes`, `response_max_bytes`, `header_timeout_s` |
+| `container` | `cpus`, `memory_mb`, `pids`, `workspace_bytes`, `workspace_inodes` |
+| `preparation` | `cpus`, `memory_mb` |
+
+各 area 只作用于使用该能力的适配器。例如 `container/preparation/cooperative/model_route` 用于
+CooperBench，`environment` 用于 τ³；它们不是给任意旧数据集自动施加新策略的开关。
+
+- MemoryAgentBench 保留官方分块、摘要/LongMem 默认 judge 输出 `4096/10` 和每题 `3/1` 次逻辑评分；
+  `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` 优先于策略中的输出覆盖，正整数不再有 16384 上界。
+  未配置输出覆盖（包括 null）仍取官方输出值，不移除官方默认；显式 `max_calls` 与官方逻辑上界取较小值。
+- StrongREJECT 默认不声明输出 token 上限，保留有 Harbor 来源的单请求 300 秒；
+  评分公式及单次逻辑 rubric 调用不变，额外答案大小和 75 秒评分限额已移除。
+- τ³ 保留官方 200 steps、10 errors、三次 trial 和 NL judge 一次逻辑评估；
+  不再自行加入 4096-token、60 秒或 200 次模型调用的额外限制。
+- KUMO 保留 Harbor 50 次有效 action 查询以及 900/120 秒 actor/verifier 时限；
+  256 次总服务调用及 660 秒 relay 限额已移除。
+- CooperBench 保留 Harbor 2 CPU、1800 秒 worker/verifier 时限；无额外 1700 秒内层限时。
+  工作区/内存必须从明确选定的已有 runtime 元数据或 `container` 策略取得，
+  不再由 3 倍 seed 等经验公式生成、不设 16/24 GiB 或 200 万 inode 的固定准入上限。
+  新准备可用 `--base-runtime` 明确复用资源；既有 metadata 不会被改写。
+
+`None` 不代表任务永不终止：driver 的显式 phase 限制、已有平台 `phase_timeout`
+默认 3600 秒、进程组取消与清理仍生效。容器仍需要明确工作区/内存资源，
+宿主或 provider 的限制也仍可能存在。沙箱隔离、固定工具、私有输入、评分完整性不放宽。
+启动探测、退出回收及管理工具的 I/O 防护属于平台生命周期机制，不是数据集评测预算。
+`base_harness/loop` 原有的模型输出/步数默认未修改。
+
+共享接口兼容方式：旧调用省略参数仍使用原有 transport/frame/record 默认；
+这五个接入显式使用可选 `None` 并接受运行策略。显式配置的上限仍真实执行，
+超限和传输/评分故障不会伪装成有效零分。
+
+`max_calls` 限逻辑 `complete` 调用；`max_retries` 限同一调用的额外 HTTP 尝试，
+`max_attempts` 可限所有 HTTP 尝试总量。仅 429、5xx、连接错误和请求超时可以重试，
+不重试模型输出解析错误、不隐式切换模型。默认 0 次重试是兼容行为，可以显式改变。
+回执分别记录 `calls/attempts`；请求失败且无法取得 usage 时标明未知，
+`usage_complete=false`，不把未知成本算成零；成功恢复的瞬时请求错误不污染最终评分。
 
 ## 1. 各数据集使用什么
 
@@ -11,7 +78,7 @@
 | --- | --- | --- |
 | KUMO | 使用 `files + tool_relay + command` 声明 | 已使用公共 relay 的停止、清理和运行回执；未声明 `record` 或 `model`。官方答案评分不依赖交互记录封存，查询预算及答案文件协议保持不变 |
 | [MemoryAgentBench](../data/datasets/memoryagentbench/README.md) | 原生 relay 的 `record`、只读 scorer 投影、`result_contract` 及按来源启用的 `VERIFY.judge` | 服务写可信 episode；verifier 读取封存记录，以本地指标或固定提示词的摘要/问答裁判评分，显式记录模型与协议身份 |
-| [StrongREJECT](../data/datasets/strongreject/README.md) | `VERIFY.judge`、只读 scorer 投影及 `result_contract` | 官方 rubric 的 judge 可显式配置，模型进入评分标识并在 verifier 中固定；独立的 finetuned evaluator 尚未实现 |
+| [StrongREJECT](../data/datasets/strongreject/README.md) | `VERIFY.judge`、只读 scorer 投影及 `result_contract` | 官方 rubric 的 judge 可显式配置，模型进入评分标识并在 verifier 中固定 |
 | [τ³](../data/datasets/tau3_bench/README.md) | relay 的 `record`、绑定 trial seed 的 `model`；按任务启用 `judge`；`trial_protocol` | 适配器接入官方业务 API、用户模拟器和 ALL scorer；平台提供私有模型通道、记录封存和完整重复试验报告 |
 | [CooperBench](../data/datasets/cooperbench/README.md) | `SETUP.workers` 固定协作 peer；组合 command verifier | 同一候选 Harness 在独立 `observed-v1` Docker 容器运行；邮箱、模型通道、产物收集、实际资源观测和独立容器 verifier 共用平台接口 |
 
@@ -33,7 +100,7 @@ SETUP[task_id] = {
 ```
 
 既有 `program/python/content/content_path/content_flag/filename/budget/deadline_s/max_calls` 参数不变。
-`record.path` 是一个相对顶层目录名；`max_bytes` 默认 32 MiB，限制服务提交的 JSON 字节数。
+`record.path` 是一个相对顶层目录名；省略 `max_bytes` 保留旧默认 32 MiB。显式 `null` 不加记录大小上限；正整数仍执行大小校验。文件类型、链接、JSON 和绑定校验始终保留。
 
 启用 `record` 后，可信服务进程得到：
 
@@ -87,7 +154,7 @@ runner 在正常、异常及提前返回路径中停止、清理 relay；启动�
 
 现有 progress 记录会保留该信息。relay 私有目录删除失败保留原任务结果，
 通过 `cleanup` 报告错误；不能据此认定运行已完整清理。
-旧数据集的运输拒绝和评分语义未重定义。KUMO 超过原总调用限制时的处理仍按现有协议执行。
+旧数据集未启用新可选配置时保持原默认。KUMO 的 50 次有效查询预算保留；额外运输配额改为显式运行配置。
 
 ## 4. verifier judge 与环境模拟器的模型通道
 
@@ -115,7 +182,7 @@ VERIFY[task_id] = {
 当前专属项为 `HG_MAB_JUDGE_MODEL`、`HG_STRONGREJECT_JUDGE_MODEL` 和
 `HG_TAU3_JUDGE_MODEL`，均纳入 `harnessgrad.config` 的声明、展示与配置快照。
 服务使用可信 verifier 声明中固定的最终 model，不再要求它等于全局默认值；
-实际模型和预算写入 `verdict.judge.configuration`。运行中不切换模型或自动重试。
+实际模型和预算写入 `verdict.judge.configuration`。运行中不切换模型；可显式配置瞬时请求错误的重试次数，模型输出格式错误不重试。
 endpoint/key 仍使用共享的 `HG_JUDGE_BASE_URL/API_KEY`；未增加数据集专属凭据。
 环境模拟器仍要求 `HG_ENV_MODEL` 与其声明一致。
 secret 只进入平台 broker；不会进入 actor 或 verifier 的环境，也不写入回执。
@@ -128,16 +195,16 @@ import os
 from judge_transport import call
 response = call(os.environ["HG_JUDGE_SOCKET"], "complete", {
     "messages": [{"role": "user", "content": rubric_prompt}]
-})
+}, timeout_s=None, max_line_bytes=None)
 text = response["content"]
 ```
 
 支持 OpenAI-compatible `/chat/completions`、非流式文本消息，以及预先声明的 function tools。
-模型、`max_tokens`、sampling 参数由平台声明固定，调用者只提交 messages。
+模型、可选 `max_tokens` 和 sampling 参数由平台声明固定，调用者只提交 messages。`max_output_tokens=null` 时不向 API 发送 `max_tokens`。
 支持的 sampling 参数为 `temperature/top_p/seed`。环境模拟器可在 model 声明中固定 `tools` 和 `tool_choice`（auto/none/required）；请求支持 assistant/tool 消息，响应的完整 message 保留 tool_calls。调用者不能临时替换工具定义。服务必须返回有效 completion 和 token usage。
-每次请求由独立可信子进程执行，`timeout_s` 限制单次请求总时长；
+每次请求由独立可信子进程执行；非 null 的 `timeout_s` 限制单次请求总时长；
 整个评分阶段还受 verifier 超时限制，评分结束会关闭 broker 和在途请求。
-不追随重定向、不读取 ambient proxy、不自动重试。
+不追随重定向、不读取 ambient proxy。`max_retries` 默认 0 以保持旧行为，可配置有界重试；`max_attempts` 可另限总 HTTP 尝试次数。
 
 judge 启动于 actor 结束后；评分沙箱 `network=none`，只得到受控 Unix socket。
 provider、解析、预算或运输失败即使被评分脚本捕获并写成 reward，也会标记 `unmeasured`。
@@ -252,12 +319,17 @@ call(socket, "send", {"to": "b", "message": "..."})
 messages = call(socket, "receive", {})
 ```
 
-发送者身份绑定到独立 socket；不能冒充另一个 worker。message 最多 64 KiB，单组最多 4096 条消息，
-每个 mailbox 的运输调用上限 8192。这些是运行时固定上限，适配器需确认与数据集协议兼容。
+发送者身份绑定到独立 socket；不能冒充另一个 worker。省略 `SETUP.mailbox` 时保留旧默认：
+每条消息 64 KiB、组内 4096 条消息、每个 mailbox 8192 次调用、8 MiB 传输帧。
+显式声明 `mailbox` 可分别设置 `max_message_bytes/max_messages/max_calls/max_line_bytes`；
+值为 null 或在该声明内省略字段时不添加对应上限。CooperBench 默认显式使用 null，
+可用 `HG_EVAL_LIMITS.cooperative` 覆盖。实际限额及传输回执进入组记录，超限不能伪装成有效评分。
 支持 2–8 个固定 peer；ID 必须唯一并匹配 `[a-z][a-z0-9_-]{0,31}`。
 每个 worker 声明 1–32 个安全相对产物路径；不提供动态 spawn、leader 或 task claim。
 
-actor 停止后收集声明产物，每个 worker 总计最多 16 MiB，拒绝路径逃逸、symlink、hardlink、FIFO。
+actor 停止后收集声明产物；worker 的 `artifact_max_bytes` 省略时保留旧的 16 MiB 总量，
+显式 null 不增加大小上限，正整数按总量执行。CooperBench 使用 `submission.max_bytes`（默认 null）。
+始终拒绝路径逃逸、symlink、hardlink、FIFO。
 缺失文件有显式状态。组合 verifier 从 `workers/<id>/<artifact>` 读取提交，
 从只读 `worker_record/workers.json` 读取退出状态、消息顺序、产物 hash 和用量记录。
 官方 patch 过滤、合并和测试规则由 CooperBench verifier 保留。
@@ -307,7 +379,8 @@ VERIFY[task_id] = {
 ```
 
 上例资源值只是配置示例。适配器应根据固定镜像和官方协议选择并保存实际值。
-`filesystems` 必须恰好声明 workdir，`bytes` 为正的 4096 字节倍数，`inodes` 为正整数。
+`filesystems` 必须声明 workdir，可额外声明 `/tmp`、`/dev`、`/dev/shm`；
+`bytes` 为正的 4096 字节倍数，`inodes` 为正整数。
 
 - **镜像与初始化**：只使用已导入的 digest，不在运行时 pull/build。镜像需要可供非 root
   用户使用的 Python（可信 helper 使用 stdlib；镜像归档提取需要 `tarfile` 的 data filter）、
@@ -323,8 +396,10 @@ VERIFY[task_id] = {
   镜像工具链应放在非 root 用户可访问的位置。
 - **实际限制**：宿主读取 cgroup v2 的 CPU、memory、swap 和 PID 限制；可信 helper 读取
   mountinfo/statvfs 与网络接口，核对完整可写文件存储清单。根目录只读，swap=0，
-  无网络附件。workdir 的 byte/inode 限制来自上述声明；平台另外固定 `/tmp` 为
-  64 MiB/16384 inodes，`/dev` 与 `/dev/shm` 各 8 MiB/512 inodes。这些都进入 admission receipt。
+  无网络附件。byte/inode 限制来自上述声明。省略系统目录配额时保留旧默认：
+  `/tmp` 为 64 MiB/16384 inodes，`/dev` 与 `/dev/shm` 各 8 MiB/512 inodes。
+  CooperBench 对这三个系统目录显式复用选定的工作区 byte/inode 配额；整体仍受显式 memory 配额约束。
+  实际限制都进入 admission receipt。
   proc/devpts/mqueue 和掩蔽字符设备单独留有清单，不把它们伪称为普通文件存储。
 - actor 与 scorer 都以 UID 65534、无 effective capabilities、`no-new-privileges` 执行；
   启动前读取这些状态。只有可信 helper 可以初始化和终止 actor；候选代码不能修改它。
@@ -332,16 +407,23 @@ VERIFY[task_id] = {
   和容器 loopback 使用 `HG_AGENT_BASE_URL` 指定的端点；该 worker 通道仅支持 HTTP，
   不支持直接配置 HTTPS。宿主固定目的 endpoint 和唯一
   `POST <base-path>/chat/completions` 操作，支持流式响应。不开放 bridge 或通用代理。
-  每条模型通道最多 16 个连接、16 MiB 请求、64 MiB 响应；不改变调用方的 token 参数。
+  worker 的 `model_route` 支持 `max_connections/request_max_bytes/response_max_bytes/header_timeout_s`。
+  旧调用省略声明保留 16 连接、16 MiB 请求、64 MiB 响应和 30 秒 header 等待默认；
+  CooperBench 显式设为 null，并可通过同名 policy area 覆盖。外层阶段取消和已声明的请求时限仍生效，
+  不改变调用方的 token 参数。
   模型连接/HTTP 错误及非授权操作进入无效运行记录。没有 judge/environment 密钥传给 worker。
 - **停止和产物**：宿主执行超时后直接 kill 整个容器；正常退出后终止其 actor UID 的剩余进程，
-  包括脱离原进程组的子进程。确认静止后由可信 helper 读取声明产物；延续 16 MiB 总量、无 symlink/hardlink/FIFO 的规则。
+  包括脱离原进程组的子进程。确认静止后由可信 helper 读取声明产物；按 `artifact_max_bytes` 执行总量校验，始终拒绝 symlink/hardlink/FIFO。
   OOM、超时、导出和清理错误不产生普通分数。没有 `docker commit` 或可写宿主 workspace。
 - **独立 verifier**：先完成所有 worker 的导出/清理，再启动全新的受观测容器。
   传入外层 `SETUP.files`、`VERIFY.inputs`、`workers/<id>/<artifact>` 和只读的 `worker_record/workers.json`；
   不传候选代码、其 HOME、进程、模型 socket 或邮箱。官方合并和测试仍写在 adapter 的 scorer 中。
   scorer 的相对路径以 workdir 为根；例如 `reward_file="/verifier/reward.txt"` 对应
-  在 scorer 中写 `verifier/reward.txt`。只导出 reward/evidence（合计最多 4 MiB）。
+  在 scorer 中写 `verifier/reward.txt`。只导出 reward/evidence；`VERIFY.result_max_bytes` 省略时保留旧的 4 MiB 总量，
+  null 不添加上限，正整数仍执行总量校验。CooperBench 使用 `record.max_bytes`（默认 null）。
+  worker 的 stdout/stderr 和 trace 采用限量保留并记录截断；持续读取剩余日志，
+  不因超出日志保留量终止 actor 或判测量失败。若 trace 被截断，worker usage 为未知，
+  不把保留下来的中途累计值当成最终总量。
   `container_runtime` 需配 `result_contract`，不能同时声明 judge/native_runtime/pristine-offline。
 - **回执**：每个 worker 的 `runtime_services.container` 保存 binding、kernel observation、
   admission、实际镜像 ID、通道清单、执行时间和 cleanup；组合 scorer 保存于

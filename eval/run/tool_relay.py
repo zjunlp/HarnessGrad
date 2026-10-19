@@ -150,8 +150,8 @@ class ToolRelay:
             if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                 raise RuntimeError("relay recording must be a private regular file")
             limit = self.record_spec.get("max_bytes", 32 * 1024 * 1024)
-            raw = stream.read(limit + 1)
-        if len(raw) > limit:
+            raw = stream.read() if limit is None else stream.read(limit + 1)
+        if limit is not None and len(raw) > limit:
             raise RuntimeError("relay recording exceeds max_bytes")
         payload = json.loads(raw)
         if not isinstance(payload, dict):
@@ -235,7 +235,7 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
         # is what the first migrated dataset uses, and a second dataset states its own.
         argv += [decl.get("content_flag", "--game"), str(payload)]
         for flag, key in (("--budget", "budget"), ("--deadline-s", "deadline_s"),
-                          ("--max-calls", "max_calls")):
+                          ("--max-calls", "max_calls"), ("--max-line-bytes", "max_line_bytes")):
             if decl.get(key) is not None:
                 argv += [flag, str(decl[key])]
 

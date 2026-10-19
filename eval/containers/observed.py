@@ -32,8 +32,12 @@ def digest(obj):
     return hashlib.sha256(json.dumps(obj, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def bounded(argv, *, timeout=60, limit=32 << 20, output_path=None):
-    """Bound both Docker CLI output and wall time, including failed exports."""
+def bounded(argv, *, timeout=60, limit=32 << 20, output_path=None, truncate=False):
+    """Bound CLI retention; actor logs are drained and truncated, never killed.
+
+    Structured exports retain strict limits when declared. None disables the
+    stdout export limit without changing the timeout or stderr diagnostics cap.
+    """
     sink = open(output_path, "xb") if output_path is not None else None
     try:
         p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -41,23 +45,26 @@ def bounded(argv, *, timeout=60, limit=32 << 20, output_path=None):
         if sink is not None: sink.close()
         raise
     outputs = [bytearray(), bytearray()]
+    counts = [0, 0]
     overflow = threading.Event()
     io_errors = []
-    def read(pipe, dst, cap):
-        count = 0
+    def read(pipe, dst, cap, index):
         try:
             with pipe:
                 while chunk := pipe.read(65536):
-                    count += len(chunk)
-                    if count > cap:
-                        overflow.set(); p.kill(); break
+                    before = counts[index]
+                    counts[index] += len(chunk)
+                    if cap is not None and counts[index] > cap:
+                        if not truncate:
+                            overflow.set(); p.kill(); break
+                        chunk = chunk[:max(0, cap - before)]
                     if dst is outputs[0] and sink is not None: sink.write(chunk)
                     else: dst.extend(chunk)
         except (OSError, ValueError) as exc:
             io_errors.append(str(exc))
             p.kill()
-    threads = [threading.Thread(target=read, args=(pipe, dst, cap), daemon=True)
-               for pipe, dst, cap in zip((p.stdout, p.stderr), outputs, (limit, 1 << 20))]
+    threads = [threading.Thread(target=read, args=(pipe, dst, cap, index), daemon=True)
+               for index, (pipe, dst, cap) in enumerate(zip((p.stdout, p.stderr), outputs, (limit, 1 << 20)))]
     for t in threads: t.start()
     try:
         p.wait(timeout=timeout)
@@ -69,7 +76,10 @@ def bounded(argv, *, timeout=60, limit=32 << 20, output_path=None):
     if io_errors: raise RuntimeError('container output collection failed: ' + '; '.join(io_errors))
     if overflow.is_set():
         raise RuntimeError('container output exceeds platform byte limit')
-    return subprocess.CompletedProcess(argv, p.returncode, bytes(outputs[0]), bytes(outputs[1]))
+    result = subprocess.CompletedProcess(argv, p.returncode, bytes(outputs[0]), bytes(outputs[1]))
+    result.output_retention = {name: {'source_bytes': count, 'bytes': len(data), 'truncated': count > len(data)}
+        for name, count, data in zip(('stdout', 'stderr'), counts, outputs)}
+    return result
 
 
 def checked(*args, timeout=60, limit=32 << 20, output_path=None):
@@ -83,6 +93,35 @@ def inspect(name):
     return json.loads(checked('inspect', name))[0]
 
 
+def observe_pids(cgroup, *, root=Path('/sys/fs/cgroup')):
+    """Read local and inherited PID ceilings; None means all observed levels say max.
+
+    A parent limit still constrains a container whose own pids.max is max. Keep
+    the raw hierarchy in the receipt rather than claiming that disabling the
+    container-specific limit removes the host's resource policy.
+    """
+    cgroup, root = Path(cgroup), Path(root)
+    if not cgroup.is_relative_to(root):
+        raise RuntimeError('container cgroup is outside the cgroup root')
+    limits = []
+    evidence = {}
+    current = cgroup
+    while True:
+        path = current / 'pids.max'
+        # The unified root has no pids.max on ordinary cgroup-v2 hosts.
+        if current != root or path.exists():
+            raw = path.read_text().strip()
+            evidence[str(current)] = raw
+            if raw != 'max':
+                if not raw.isdecimal() or not 0 < int(raw) <= 2**63 - 1:
+                    raise RuntimeError('invalid kernel pids.max')
+                limits.append(int(raw))
+        if current == root:
+            break
+        current = current.parent
+    return min(limits) if limits else None, evidence
+
+
 def observe(name, binding, policy, *, supervisor, python, expected_mounts):
     """Kernel reads are collected before actor launch; never accept adapter facts."""
     info = inspect(name)
@@ -94,6 +133,7 @@ def observe(name, binding, policy, *, supervisor, python, expected_mounts):
     cg = Path('/sys/fs/cgroup') / unified[0].lstrip('/')
     raw = {key: (cg / key).read_text().strip() for key in
            ('cpu.max', 'memory.max', 'memory.swap.max', 'pids.max')}
+    pids, pids_hierarchy = observe_pids(cg)
     quota, period = map(int, raw['cpu.max'].split())
     if quota * 1000 % period:
         raise RuntimeError('kernel CPU quota is not whole millicores')
@@ -125,13 +165,13 @@ def observe(name, binding, policy, *, supervisor, python, expected_mounts):
     root = next(row for row in mounts if row['path'] == '/')
     facts = {'binding': binding, 'resources': {
         'cpu_millis': quota * 1000 // period, 'memory_bytes': int(raw['memory.max']),
-        'swap_bytes': int(raw['memory.swap.max']), 'pids': int(raw['pids.max']),
+        'swap_bytes': int(raw['memory.swap.max']), 'pids': pids,
         'timeout_ms': supervisor['timeout_ms']},
         'resource_backend': 'cgroup-v2', 'timeout_backend': 'host-supervisor',
         'network': info['HostConfig']['NetworkMode'], 'attachments': attachments,
         'read_only_root': not root['writable'], 'filesystems': writable}
     evidence = {'container_id': info['Id'], 'image_id': info['Image'], 'pid': pid,
-                'cgroup': str(cg), 'cgroup_values': raw, 'kernel': kernel,
+                'cgroup': str(cg), 'cgroup_values': raw, 'pids_hierarchy': pids_hierarchy, 'kernel': kernel,
                 'supervisor': supervisor, 'special_mounts': special, 'readonly_binds': expected_mounts}
     facts['evidence_sha256'] = digest(evidence)
     receipt = admit_runtime(binding, policy, facts)
@@ -180,7 +220,8 @@ class Runtime:
             argv = ['create', '--pull=never', '--name', self.name, '--network=none', '--read-only',
                     '--cpus', str(self.spec.get('cpus', 2)), '--memory', str(self.policy['resources']['memory_bytes']),
                     '--memory-swap', str(self.policy['resources']['memory_bytes']),
-                    '--pids-limit', str(self.policy['resources']['pids']), '--cap-drop=ALL',
+                    # Explicit -1 also overrides a Docker daemon default PID cap.
+                    '--pids-limit', str(self.policy['resources']['pids'] or -1), '--cap-drop=ALL',
                     '--cap-add=CHOWN', '--cap-add=KILL', '--cap-add=DAC_OVERRIDE', '--security-opt=no-new-privileges',
                     '--user=0:0', '--entrypoint=' + self.python]
             for path, limits in self.filesystems.items():
@@ -229,7 +270,8 @@ class Runtime:
         started = time.monotonic()
         try:
             try:
-                proc = bounded(command, timeout=self.timeout_s, limit=8 << 20)
+                proc = bounded(command, timeout=self.timeout_s, limit=8 << 20, truncate=True)
+                self.receipt['console_logs'] = proc.output_retention
             except subprocess.TimeoutExpired:
                 # Do not wait for an in-container helper when actor PIDs may be
                 # exhausted. Kill the whole container at the host deadline.
@@ -256,10 +298,11 @@ class Runtime:
         checked('exec', self.name, self.python, '-I', '-S', RUNTIME + '/helper.py',
                 'clear', self.workdir, json.dumps(paths))
 
-    def collect(self, paths, *, max_bytes=16 << 20):
+    def collect(self, paths, *, max_bytes=16 << 20, truncate=False):
         return json.loads(checked('exec', self.name, self.python, '-I', '-S',
-            RUNTIME + '/helper.py', 'collect', self.workdir, json.dumps(paths), str(max_bytes),
-            limit=2 * max_bytes + 65536))
+            RUNTIME + '/helper.py', 'collect', self.workdir, json.dumps(paths), json.dumps(max_bytes),
+            *(['truncate'] if truncate else []),
+            limit=None if max_bytes is None else 2 * max_bytes + 65536))
 
     def close(self):
         errors = []

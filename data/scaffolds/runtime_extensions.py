@@ -13,23 +13,28 @@ def validate_record(spec) -> None:
             or path in ("", ".", "..") or Path(path).is_absolute()):
         raise ValueError("tool_relay.record.path must be one relative directory name")
     limit = spec.get("max_bytes", 32 * 1024 * 1024)
-    if type(limit) is not int or limit <= 0:
+    if limit is not None and (type(limit) is not int or limit <= 0):
         raise ValueError("tool_relay.record.max_bytes must be a positive integer")
 
 
 def validate_judge(spec, *, allow_trial_seed=False):
-    fields = {'model', 'max_calls', 'max_output_tokens', 'timeout_s', 'parameters', 'tools', 'tool_choice'}
+    fields = {'model', 'max_calls', 'max_output_tokens', 'timeout_s', 'parameters', 'tools', 'tool_choice',
+              'max_retries', 'max_attempts', 'response_max_bytes', 'max_line_bytes'}
     if allow_trial_seed:
         fields.add('seed_source')
     if not isinstance(spec, dict) or set(spec) - fields:
         raise ValueError('judge must declare model, max_calls, max_output_tokens, timeout_s and optional parameters')
     if not isinstance(spec.get('model'), str) or not spec['model'].strip():
         raise ValueError('judge.model must be nonempty')
-    for key in ('max_calls', 'max_output_tokens'):
-        if type(spec.get(key)) is not int or spec[key] <= 0:
-            raise ValueError(f'judge.{key} must be a positive integer')
+    for key in ('max_calls', 'max_output_tokens', 'max_attempts', 'response_max_bytes', 'max_line_bytes'):
+        value = spec.get(key)
+        if value is not None and (type(value) is not int or value <= 0):
+            raise ValueError(f'judge.{key} must be a positive integer or null')
+    retries = spec.get('max_retries', 0)
+    if type(retries) is not int or retries < 0:
+        raise ValueError('judge.max_retries must be a nonnegative integer')
     timeout = spec.get('timeout_s')
-    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+    if timeout is not None and (type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0):
         raise ValueError('judge.timeout_s must be positive and finite')
     tools = spec.get('tools', [])
     if not isinstance(tools, list) or any(not isinstance(t, dict) or t.get('type') != 'function'
@@ -83,14 +88,23 @@ def validate_trials(spec):
     if not isinstance(seeds,list) or len(seeds)!=n or any(type(x) not in (str,int) for x in seeds):
         raise ValueError('trial_protocol.seeds must declare one string/integer seed per trial')
 
+
+def validate_mailbox(spec):
+    allowed = {'max_messages', 'max_message_bytes', 'max_calls', 'max_line_bytes'}
+    if not isinstance(spec, dict) or set(spec) - allowed:
+        raise ValueError('mailbox supports explicit message, byte, call and frame limits')
+    for value in spec.values():
+        if value is not None and (type(value) is not int or value <= 0):
+            raise ValueError('mailbox limits must be positive integers or null')
+
 def validate_workers(workers):
     import re
     if not isinstance(workers,list) or not 2<=len(workers)<=8:
         raise ValueError('workers must contain 2 to 8 fixed peers')
     names=set()
     for w in workers:
-        if not isinstance(w,dict) or set(w)-{'id','goal','files','env','artifacts','timeout_s'}:
-            raise ValueError('worker supports id, goal, files, env, artifacts, timeout_s')
+        if not isinstance(w,dict) or set(w)-{'id','goal','files','env','artifacts','artifact_max_bytes','model_route','timeout_s'}:
+            raise ValueError('worker supports id, goal, files, env, artifacts, artifact_max_bytes, model_route, timeout_s')
         name=w.get('id')
         if not isinstance(name,str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,31}',name) or name in names:
             raise ValueError('workers require unique simple IDs')
@@ -101,8 +115,21 @@ def validate_workers(workers):
             raise ValueError('worker env must be an object')
         if w.get('env', {}).get('backend') == 'observed-v1':
             validate_container_runtime(w['env'])
-        if 'timeout_s' in w and (type(w['timeout_s']) not in (int, float) or not math.isfinite(w['timeout_s']) or w['timeout_s'] <= 0):
+        if w.get('timeout_s') is not None and (type(w['timeout_s']) not in (int, float) or not math.isfinite(w['timeout_s']) or w['timeout_s'] <= 0):
             raise ValueError('worker timeout must be positive and finite')
+        limit = w.get('artifact_max_bytes', 16 << 20)
+        if limit is not None and (type(limit) is not int or limit <= 0):
+            raise ValueError('worker artifact_max_bytes must be positive or null')
+        route = w.get('model_route', {})
+        route_fields = {'max_connections', 'request_max_bytes', 'response_max_bytes', 'header_timeout_s'}
+        if not isinstance(route, dict) or set(route) - route_fields:
+            raise ValueError('worker model_route has unsupported limits')
+        for key, value in route.items():
+            if value is None:
+                continue
+            types = (int, float) if key == 'header_timeout_s' else (int,)
+            if type(value) not in types or not math.isfinite(value) or value <= 0:
+                raise ValueError('worker model_route limits must be positive and finite or null')
         paths=w.get('artifacts')
         if not isinstance(paths,list) or not paths or len(paths)>32:
             raise ValueError('workers require 1 to 32 artifact paths')
@@ -137,20 +164,22 @@ def validate_container_runtime(spec):
                                or '..' in PurePosixPath(source).parts or source == '/'):
         raise ValueError('image_workspace must be an absolute image directory other than /')
     fs = spec.get('filesystems')
-    if not isinstance(fs, dict) or set(fs) != {work}:
-        raise ValueError('filesystems must declare bytes and inodes for workdir; system scratch is platform-owned')
+    if not isinstance(fs, dict) or work not in fs or set(fs) - {work, '/tmp', '/dev', '/dev/shm'}:
+        raise ValueError('filesystems must declare workdir and optionally /tmp, /dev, /dev/shm quotas')
     for row in fs.values():
         if (not isinstance(row, dict) or set(row) != {'bytes', 'inodes'}
                 or any(type(v) is not int or v <= 0 for v in row.values())
                 or row['bytes'] % 4096):
             raise ValueError('filesystem needs positive bytes (page aligned) and inodes')
     cpu = spec.get('cpus', 2)
-    if type(cpu) not in (int, float) or not 0.01 <= cpu <= 112 or cpu * 1000 != int(cpu * 1000):
+    if type(cpu) not in (int, float) or not math.isfinite(cpu) or cpu < 0.01 or cpu * 1000 != int(cpu * 1000):
         raise ValueError('cpus must be positive in whole millicores')
     for key, default in [('memory_mb', 4096), ('pids', 1024)]:
+        if key == 'pids' and key in spec and spec[key] is None:
+            continue
         if type(spec.get(key, default)) is not int or spec.get(key, default) <= 0:
             raise ValueError(key + ' must be positive')
     for key in ('agent_timeout_s', 'verify_timeout_s'):
-        if key in spec and (type(spec[key]) not in (int, float) or not math.isfinite(spec[key]) or spec[key] <= 0):
+        if spec.get(key) is not None and (type(spec[key]) not in (int, float) or not math.isfinite(spec[key]) or spec[key] <= 0):
             raise ValueError(key + ' must be positive and finite')
     return work
