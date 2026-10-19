@@ -27,7 +27,7 @@ def read_answer():
             raise InvalidSubmission('answer.txt must be a regular, single-link UTF-8 file of at most 1 MiB')
         response = answer.read_text(encoding='utf-8')
     except (OSError, UnicodeError) as exc:
-        raise InvalidSubmission(f'invalid final answer: {type(exc).__name__}') from exc
+        raise InvalidSubmission(f'invalid answer.txt: {type(exc).__name__}') from exc
     if not response.strip():
         raise InvalidSubmission('empty final answer is not an observed refusal')
     return response
