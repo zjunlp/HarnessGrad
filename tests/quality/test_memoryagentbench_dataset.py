@@ -60,7 +60,8 @@ def test_setup_only_stages_selected_private_episode(prepared):
         assert Path(entry['from']).is_file()
         assert 'gold' not in entry['path'] and 'questions' not in entry['path']
     assert 'Berlin' not in dataset.load()[0][0]['goal']
-    assert verify['result_contract'] == {'version': 1, 'score_range': [0, 1]}
+    assert verify['result_contract'] == {'version': 1, 'score_range': [0, 1],
+                                        'require_exit_zero': True}
     assert dataset.ENV[tid]['kind'] == 'files'
 
 
@@ -127,6 +128,58 @@ def test_verifier_rejects_cross_task_or_modified_seal(prepared):
             wrong['payload']['seal']['status'] = 'complete'
         with pytest.raises(ValueError):
             module.verify(gold, wrong, task_id=tid, input_sha256=service['input_sha256'], relay_sha256=relay_sha)
+
+
+def test_nonzero_checker_completion_rejects_its_real_reward(prepared, tmp_path, monkeypatch):
+    """Fault injection after the real checker has scored a sealed episode."""
+    original = dataset._verify
+
+    def interrupted(row):
+        spec = original(row)
+        wrapper = ("from pathlib import Path\nimport subprocess, sys\n"
+                   f"result = subprocess.run({spec['argv']!r}, check=False)\n"
+                   "assert result.returncode == 0\n"
+                   "reward = Path('verifier/reward.txt').read_text().strip()\n"
+                   "assert float(reward) == 1\n"
+                   "print('completed scorer left reward=' + reward, flush=True)\n"
+                   "sys.exit(78)\n")
+        spec['inputs'].append({'path': 'fail-after-scoring.py', 'content': wrapper})
+        spec['argv'] = ['python3', '-I', 'fail-after-scoring.py']
+        return spec
+
+    monkeypatch.setattr(dataset, 'VERIFY', dataset._TaskMapping(interrupted))
+    work = tmp_path / 'failed-checker'
+    work.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))
+    result = control.run('oracle', True, prepared[0], work)
+    verdict = result['detail']['verdict']
+    assert result['score'] is None and verdict.get('score') is None, result
+    assert verdict['exit_code'] == 78 and verdict['outcome'] == 'unmeasured'
+    assert 'completed scorer left reward=1' in verdict['detail']
+
+
+@pytest.mark.parametrize('fault,reason', [('missing-record', 'FileNotFoundError'),
+                                        ('invalid-episode', 'gold identity')])
+def test_checker_input_failure_stays_unmeasured_with_reason(prepared, tmp_path, monkeypatch, fault, reason):
+    original = dataset._verify
+
+    def damaged(row):
+        spec = original(row)
+        if fault == 'missing-record':
+            spec['argv'] += ['--record', 'missing-record.json']
+        else:
+            spec['argv'][spec['argv'].index('--task-id') + 1] = 'invalid-episode'
+        return spec
+
+    monkeypatch.setattr(dataset, 'VERIFY', dataset._TaskMapping(damaged))
+    work = tmp_path / fault
+    work.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))
+    result = control.run('oracle', True, prepared[0], work)
+    verdict = result['detail']['verdict']
+    assert result['score'] is None and verdict['score'] is None
+    assert verdict['exit_code'] == 3 and verdict['outcome'] == 'unmeasured'
+    assert 'scorer_error:' in verdict['detail'] and reason in verdict['detail']
 
 
 def test_unmeasured_episode_is_retained_in_source_report(prepared, tmp_path):

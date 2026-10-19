@@ -91,7 +91,8 @@ def _verify(row):
             {"path": "mab_verify/entity2id.json", "from": str(PREPARED_ROOT / "entity2id.json")},
             {"path": "mab_scorer", "from": str(ASSETS), "immutable": True}],
         "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
-        "result_contract": {"version": 1, "score_range": [0, 1]}, "timeout_s": 900}
+        "result_contract": {"version": 1, "score_range": [0, 1],
+                            "require_exit_zero": True}, "timeout_s": 900}
 
 
 def _env(row):

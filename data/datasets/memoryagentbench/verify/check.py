@@ -82,7 +82,12 @@ def main():
     if evidence['measured']:
         reward.write_text(str(evidence['result']['score']) + '\n')
         return 0
-    return 3
+    # An incomplete episode is a completed adjudication with no numeric score.
+    # Keep its coverage evidence available under the strict exit contract.
+    if evidence.get('reason') == 'scorer_error':
+        print(('scorer_error: ' + evidence['detail'])[:1000], file=sys.stderr)
+        return 3
+    return 0
 
 
 if __name__ == '__main__':
