@@ -26,13 +26,11 @@ def main():
     if args.operation == 'ack':
         payload = {'chunk_id': args.chunk_id, 'request_id': args.request_id}
     elif args.operation == 'submit':
-        with args.answer_file.open('rb') as stream:
-            raw = stream.read(65537)
-        if len(raw) > 65536:
-            parser.error('answer exceeds 65536 UTF-8 bytes')
+        raw = args.answer_file.read_bytes()
         payload = {'question_id': args.question_id, 'request_id': args.request_id,
                    'answer': raw.decode('utf-8')}
-    result = call('/run/harnessgrad-tool/tool.sock', args.operation, payload)
+    result = call('/run/harnessgrad-tool/tool.sock', args.operation, payload,
+                  timeout_s=None, max_line_bytes=None)
     if 'text' in result:
         raw = result.pop('text').encode('utf-8')
         digest = hashlib.sha256(raw).hexdigest()

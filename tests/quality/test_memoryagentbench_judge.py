@@ -217,6 +217,14 @@ def test_output_budget_override_is_explicit_and_identity_bound():
     assert larger['output_budget_override'] is True
     assert larger['identity'] != default['identity']
     assert judge.profile(judge.LONGMEM, max_output_tokens=10) == default
-    for invalid in (0, -1, 16385, True, '512', 1.5):
+    for invalid in (0, -1, True, '512', 1.5):
         with pytest.raises(judge.JudgeError):
             judge.profile(judge.LONGMEM, max_output_tokens=invalid)
+
+
+def test_output_override_has_no_adapter_ceiling():
+    selected = judge.profile(judge.SUMMARY, max_output_tokens=65536)
+    assert selected['max_output_tokens'] == 65536
+    assert selected['output_budget_override']
+    assert selected == judge.profile(judge.SUMMARY, selected['model'], max_output_tokens=65536)
+    assert selected['identity'] != judge.profile(judge.SUMMARY)['identity']

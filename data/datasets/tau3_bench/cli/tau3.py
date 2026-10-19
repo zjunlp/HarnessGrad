@@ -21,7 +21,8 @@ def main():
         {'tool_name': args.payload, 'arguments': json.loads(args.arguments)} if args.operation == 'call' else {})
     if args.operation == 'calls':
         payload = {'tool_calls_json': args.payload}
-    print(json.dumps(call('/run/harnessgrad-tool/tool.sock', args.operation, payload), ensure_ascii=False))
+    print(json.dumps(call('/run/harnessgrad-tool/tool.sock', args.operation, payload,
+                          timeout_s=None, max_line_bytes=None), ensure_ascii=False))
 
 if __name__ == '__main__':
     main()

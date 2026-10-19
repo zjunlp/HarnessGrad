@@ -23,7 +23,8 @@ def main():
         sys.path.insert(0, "/run/harnessgrad-tool")
         from tool_transport import call
         result = call("/run/harnessgrad-tool/tool.sock", args.command,
-                      {"action": args.action} if args.command == "do" else {})
+                      {"action": args.action} if args.command == "do" else {},
+                      timeout_s=None, max_line_bytes=None)
         print(json.dumps(result, ensure_ascii=False))
 
 

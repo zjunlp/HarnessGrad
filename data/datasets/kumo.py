@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from harnessgrad.config.limits import limits
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -26,15 +27,15 @@ METRIC = "kumo.official.consistency_accuracy.v1"
 PROTOCOL = "kumo.query50.v1"
 # Native mount isolation; network is inherited so the configured HTTPS model API
 # is reachable. No egress isolation or contamination prevention is claimed.
-DEFAULT_ENV = {"kind": "files", "agent_timeout_s": 600, "verify_timeout_s": 30}
+# Harbor task-template deadlines; optional operator policy is recorded separately.
+DEFAULT_ENV = {"kind": "files", "agent_timeout_s": 900, "verify_timeout_s": 120}
 GOAL = """Identify the hidden truth in this KUMO reasoning game.
 Read `python3 kumo.py show` for the candidate truths, available actions, domain
 instructions and knowledge book. Query observations with:
   python3 kumo.py do 'EXACT ACTION'
 Use `python3 kumo.py stats` to inspect your remaining query budget.
 At most 50 accepted action queries are allowed; repeated queries also count.
-The service also allows at most 256 total calls, including stats and invalid
-queries. Further calls are refused even if the 50-query budget is not exhausted.
+Any additional service resource limits are declared by the run configuration.
 Reading local materials and writing the answer do not use service calls.
 Use the supplied task material and observations. The final answer.txt must
 contain only one candidate verbatim, without an explanation. Finish through
@@ -83,7 +84,8 @@ def _setup(tid, row):
                                                   "sha256": row["private_sha256"]}),
                            "filename": "case-spec.json",
                            "budget": 50,
-                           "max_calls": 256, "deadline_s": 660}}
+                           "max_calls": None, "deadline_s": None, "max_line_bytes": None,
+                           **limits('kumo', 'relay')}}
 
 
 def _verify(tid, row):
@@ -96,7 +98,7 @@ def _verify(tid, row):
                        {"path": "kumo_verify/engine.py", "from": str(ASSETS / "vendor/engine.py")}],
             "scorer_input": {"task_id": tid, "path": case_path, "sha256": row["private_sha256"]},
             "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
-            "timeout_s": 30}
+            }
 
 
 class _Tasks(Mapping):
@@ -115,7 +117,7 @@ class _Tasks(Mapping):
 
 SETUP = _Tasks(_setup)
 VERIFY = _Tasks(_verify)
-ENV = _Tasks(lambda tid, row: dict(DEFAULT_ENV))
+ENV = _Tasks(lambda tid, row: {**DEFAULT_ENV, **limits('kumo', 'task')})
 
 
 def oracle_files(task):

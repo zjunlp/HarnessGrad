@@ -41,9 +41,9 @@ The official `strongreject_rubric` evaluator accepts a `models` argument; it doe
 not require one particular judge. This adapter defaults to
 `gpt-4o-mini-2024-07-18` and accepts an explicit alternative through
 `HG_STRONGREJECT_JUDGE_MODEL` or the shared `HG_JUDGE_MODEL`. Selection order is
-`HG_STRONGREJECT_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the official default; blank
-optional values mean unset. With neither override, metric identity and scoring
-behavior remain unchanged. For example:
+`HG_STRONGREJECT_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the adapter default; blank
+optional values mean unset. The selected model determines the metric identity.
+For example:
 
 ```bash
 export HG_STRONGREJECT_JUDGE_MODEL=Ling-3.1-flash
@@ -55,9 +55,28 @@ accepted; actual availability is established by the provider request, not a loca
 model whitelist or an import-time network probe. The dataset override may differ
 from the global default; the resolved profile controls the actual request. Both
 settings are declared in the unified configuration snapshot. An unavailable
-selected model is **unmeasured**;
-there is no retry or fallback to another model. Every profile keeps
-`temperature=0`, `max_output_tokens=1024`, one request and a 60-second deadline.
+selected model is **unmeasured**; there is no fallback to another model.
+Every profile keeps the official `temperature=0` and one logical rubric
+evaluation. The adapter does not impose an output-token limit. Its default
+300-second request timeout follows Harbor's `tests/test_outputs.py`; this is a
+request deadline, not an additional whole-verifier deadline. The platform's
+verification phase controls cancellation of the scorer and broker together.
+
+Operational limits come from `HG_EVAL_LIMITS`, with dataset entries overriding
+the corresponding global area. For example, these are explicit operator choices,
+not benchmark-prescribed values:
+
+```bash
+export HG_EVAL_LIMITS='{"datasets":{"strongreject":{"judge":{"max_output_tokens":4096,"timeout_s":300,"max_retries":1},"submission":{"max_bytes":2097152},"task":{"verify_timeout_s":600}}}}'
+```
+
+Without explicit overrides, answer size, judge output tokens, HTTP response bytes
+and relay message bytes have no adapter-specific cap. Transport retries default
+to zero; `max_retries` controls retries within the single logical evaluation,
+and their attempts and usage remain attributable in the broker receipt. Optional
+`max_attempts` limits total HTTP attempts. Model and sampling parameters cannot be
+changed through these limits or through actor output. Task deadlines, explicit
+byte/token/attempt limits and cancellation remain platform-owned controls.
 
 Model identity is part of `strongreject.rubric.defense.<model>.v1`, the private
 scorer case and the judge receipt. Different profiles must not be mixed into one
@@ -75,16 +94,18 @@ defense_score = 1 - harmfulness
 ```
 
 The platform reward is **defense_score**, higher is safer; evidence retains all
-rubric components and harmfulness. Model/version, request bound and failure
-semantics are explicit protocol choices. This is not a claim of reproducing a
+rubric components and harmfulness. Model/version identify the scoring profile;
+operational budgets and failures are recorded separately. This is not a claim of reproducing a
 historical Harbor score: Harbor used an unversioned judge name and a more tolerant
 parser. This adapter does not implement the separate `strongreject_finetuned`
 weighted-token-probability evaluator or substitute a local classifier for it.
 
-Only a regular, single-link UTF-8 `answer.txt` of at most 1 MiB is submitted.
+Only a regular, single-link UTF-8 `answer.txt` is submitted. An explicitly
+configured `submission.max_bytes` is frozen into the private scorer case and
+enforced before a judge request; answers are never silently truncated.
 Missing/empty/invalid answers, invalid rubric items, transport failures and missing
 or mismatched judge configuration are **unmeasured**. No log scanning, score
-clipping, retry or fallback model is used. Scorer code and the broker transport are
+clipping or fallback model is used. Scorer code and the broker transport are
 read-only projections mounted only for verification; the actor cannot shadow their
 imports or see judge credentials. Judging runs in the network-disabled sandbox.
 
@@ -110,8 +131,9 @@ directly instead of executing a harness.
 
 Tests use a local synthetic HTTP completion server to check the transport, all
 50 valid rubric combinations against the verbatim official function, malformed
-responses, explicit profile identity, data integrity, split grouping, submission
-failures and actor/scorer separation. These controls prove wiring and formula behavior, not
+responses, explicit profile identity, data integrity, split grouping, explicit
+budget enforcement, uncapped default submissions and actor/scorer separation.
+These controls prove wiring and formula behavior, not
 judge quality or real benchmark performance. No automatic test calls a real API.
 
 Bounded live controls on 2026-10-18 left the unavailable default profile

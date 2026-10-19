@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import random
+from harnessgrad.config.limits import limits
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
@@ -24,7 +25,7 @@ METRIC = 'tau3.v1.0.1.ALL.binary'
 _rng = random.Random(300)
 TRIAL_PROTOCOL = {'version': 1, 'metric': 'pass^k', 'trials': 3, 'ks': [1, 2, 3],
                   'seeds': [_rng.randint(0, 1000000) for _ in range(3)]}
-DEFAULT_ENV = {'kind': 'files', 'network': 'none', 'agent_timeout_s': 1800, 'verify_timeout_s': 180}
+DEFAULT_ENV = {'kind': 'files', 'network': 'none'}
 TRANSPORT = Path(__file__).resolve().parents[2] / 'eval/service/tool_transport.py'
 GOAL = '''Help the customer complete their service request while following the domain policy.
 Read `python3 tau3.py show` for the policy and business-tool schemas. Start with
@@ -74,8 +75,12 @@ def model_spec(role, tools=None):
     model = cfg.environment.model if role == 'environment' else cfg.judge.resolve_model('tau3_bench')
     if not model:
         raise ValueError(f'configure explicit HG_{"ENV" if role == "environment" else "JUDGE"}_MODEL')
-    spec = {'model': model, 'max_calls': 200 if role == 'environment' else 1,
-            'max_output_tokens': 4096, 'timeout_s': 60, 'parameters': {'temperature': 0}}
+    # Official evaluator_nl_assertions.evaluate_nl_assertions generates once for
+    # the whole assertion list. HTTP retry attempts are a separate budget.
+    spec = {'model': model, 'max_calls': None if role == 'environment' else 1,
+            'max_output_tokens': None, 'timeout_s': None, 'max_retries': 0, 'max_attempts': None,
+            'response_max_bytes': None, 'max_line_bytes': None, 'parameters': {'temperature': 0},
+            **limits('tau3_bench', role)}
     if role == 'environment':
         spec['seed_source'] = 'trial'
     if tools:
@@ -96,8 +101,10 @@ def _setup(tid, row):
                            'content': json.dumps({'case': str(DATASET_ROOT / row['path'] / 'private.json'),
                                                  'sha256': row['private_sha256'], 'bundle': str(DATASET_ROOT / 'bundle'),
                                                  'user_model': model['model']}),
-                           'record': {'path': 'trusted_episode'}, 'model': model,
-                           'max_calls': 1024, 'deadline_s': 1900}}
+                           'record': {'path': 'trusted_episode', 'max_bytes': None,
+                                      **limits('tau3_bench', 'record')}, 'model': model,
+                           'max_calls': None, 'deadline_s': None, 'max_line_bytes': None,
+                           **limits('tau3_bench', 'relay')}}
 
 
 def _verify(tid, row):
@@ -110,7 +117,7 @@ def _verify(tid, row):
                                        '--case-sha256', row['private_sha256']],
               'inputs': inputs, 'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
               'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
-              'trial_protocol': dict(TRIAL_PROTOCOL), 'timeout_s': 180}
+              'trial_protocol': dict(TRIAL_PROTOCOL)}
     if row['needs_judge']:
         result['judge'] = model_spec('judge')
     return result
@@ -125,7 +132,7 @@ class _Tasks(Mapping):
 
 SETUP = _Tasks(_setup)
 VERIFY = _Tasks(_verify)
-ENV = _Tasks(lambda tid, row: dict(DEFAULT_ENV))
+ENV = _Tasks(lambda tid, row: {**DEFAULT_ENV, **limits('tau3_bench', 'task')})
 
 
 def downloads():

@@ -78,10 +78,8 @@ transport failures as unmeasured. A genuinely idle control is incomplete;
 completed wrong or empty answers are scored by the official formulas. Empty
 recommendations may score nonzero under upstream nearest-movie matching.
 
-The service allows 4,096 calls, 65,536 UTF-8 bytes per answer and 256 bytes per
-request ID. Actor timeout is four hours, relay deadline includes one minute of
-shutdown margin, verifier timeout is 15 minutes. These are adapter resource
-limits. Native mount isolation keeps relay state private; actor networking uses
+Runtime budgets come from the explicit run resource policy described below.
+Native mount isolation keeps relay state private; actor networking uses
 the platform default and this adapter does not claim egress isolation.
 
 Local primary metrics are official `exact_match`, `substring_exact_match`, and
@@ -106,10 +104,10 @@ only the scorer receives the judge socket, after the actor has finished.
 `specs/judge-prompts.json` freezes the official book-summary prompts and all
 LongMemEval question-type/abstention prompts. Summary sampling is temperature
 0.1, top-p 0.9, seed 42, maximum 4,096 output tokens; QA uses temperature 0 and
-maximum 10 output tokens. Each request has a 60-second deadline. The call budget
-is exactly three times the selected question count for summary, once for QA.
-There are no automatic retries or model fallbacks; the episode's 15-minute
-verifier deadline still applies.
+maximum 10 output tokens. The successful scoring call budget is exactly three
+times the selected question count for summary, once for QA. Model fallbacks are
+not used. Retry and timeout policy comes from the run configuration; retries
+default to zero.
 
 Configure `HG_JUDGE_BASE_URL` and `HG_JUDGE_API_KEY` for the judge service.
 Model selection is `HG_MAB_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the source's official
@@ -122,9 +120,10 @@ appear in `--show-config`/configuration snapshots; the final per-source profile
 is frozen in the verifier and its evidence. A nondefault model changes
 the recorded judge profile/identity; such scores do not establish equivalence to
 the official default-model results. If a provider needs more output tokens,
-`HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` explicitly selects an integer from 1 to 16,384;
-it applies to both sources and changes the profile/identity. Leaving it unset
-retains the official limits. There is no automatic budget increase. Model,
+`HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` explicitly selects a positive integer;
+it applies to both sources and changes the profile/identity. It takes precedence
+over `HG_EVAL_LIMITS` judge `max_output_tokens`. With neither override, the
+official output limits remain. There is no automatic budget increase. Model,
 output budget, sampling, prompt/source hashes and
 response-admission rules enter the profile. The platform separately records the
 endpoint hash, request/response hashes, returned model and token usage. Source
@@ -192,3 +191,25 @@ calls. Total: ten API calls, no full evaluation. These validate transport and
 scoring, not judge equivalence or benchmark performance. Full 60-question QA
 protocol/aggregation is tested with a local HTTP stub; all 146 prepared episodes
 and 400 judge questions passed inventory/metadata validation without API calls.
+
+### Run resource limits
+
+`HG_EVAL_LIMITS` supplies global area settings and per-dataset overrides under
+`datasets.memoryagentbench`. Supported areas used here are `task`
+(`agent_timeout_s`, `verify_timeout_s`), `relay` (`max_calls`, `deadline_s`,
+`max_line_bytes`), `record` (`max_bytes`), `submission` (`max_bytes`), and `judge`
+(`max_calls`, `max_output_tokens`, `timeout_s`, `max_retries`, `max_attempts`,
+`response_max_bytes`, `max_line_bytes`). Without an explicit setting,
+this adapter adds no task deadline, relay call/frame cap, recording cap, answer
+size cap, or judge request deadline. Task execution still follows the driver's
+phase policy. Official scoring output defaults and successful call structure
+remain as described above. An explicit judge `max_calls` can tighten the
+official successful-call upper bound; a larger value or null does not relax it.
+
+Explicit answer limits are enforced by the private relay and bound into the
+trusted service input; the actor cannot change them. Answers and request IDs
+have no dataset-specific size ceiling. UTF-8 decoding, ordered access,
+idempotent request IDs, private records and complete-episode scoring remain
+required. A resource limit or service failure produces an unmeasured result,
+not an ordinary zero score. The official 4,096-token material chunking policy
+is unchanged.

@@ -12,6 +12,8 @@ import json
 import os
 from pathlib import Path
 
+from harnessgrad.config.limits import limits
+
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
 OFFICIAL_EVAL = None
@@ -23,7 +25,14 @@ MANIFEST_SHA256 = '3accea49615abcc01f65d366e5717fe27d39626bd59e3f8c331297fc60d5b
 REVISION = '63b9d44d9f39a02fccf5bf0052db48a917a011fd'
 HARBOR_REVISION = '3e9f14a7c1033896cc600d27de69d6948bcb3410'
 METRIC = 'cooperbench.harbor.merged_pair_success.v1'
+# Pinned Harbor adapter agent/verifier budgets; explicit run policy may override.
 DEFAULT_ENV = {'kind': 'files', 'agent_timeout_s': 1800, 'verify_timeout_s': 1800}
+
+
+def task_environment():
+    return {**DEFAULT_ENV, **limits('cooperbench', 'task')}
+
+
 GOAL = '''Implement your assigned feature in /workspace/repo. A second independent
 peer implements another feature against the same base. Coordinate using:
   python3 /workspace/cooperbench.py send_message {peer} 'message'
@@ -35,8 +44,8 @@ When done run `python3 /workspace/cooperbench.py submit` to export agent.patch.
 Only that patch is collected; text answers and unsubmitted repository changes
 are not graded. The verifier filters test-file diffs, merges both patches using
 Harbor naive/union rules, then runs both private feature test suites. Reward is
-1 only if both pass. Communication is optional; the fixed platform bound is
-4096 messages per pair, 64 KiB each, 8192 mailbox calls per worker.
+1 only if both pass. Communication is optional. Mailbox resource limits are
+selected by the platform run configuration; limit failures are reported explicitly.
 '''
 
 
@@ -73,12 +82,22 @@ def runtime(row):
 
 def runtime_spec(row):
     config, _ = runtime(row)
+    resources = {**config.get('resources', {}), **limits('cooperbench', 'container')}
+    required = ('memory_mb', 'workspace_bytes', 'workspace_inodes')
+    missing = [key for key in required if resources.get(key) is None]
+    if missing:
+        raise ValueError('CooperBench runtime requires explicit resources: ' + ', '.join(missing))
     return {'kind': 'exec', 'backend': 'observed-v1', 'image': config['image'],
             'python': config.get('python', '/usr/local/bin/python3'), 'workdir': '/workspace',
-            'image_workspace': '/workspace', 'network': 'none', 'cpus': 2,
-            'memory_mb': config.get('resources', {}).get('memory_mb', 4096), 'pids': 512,
-            'filesystems': {'/workspace': {'bytes': config.get('resources', {}).get('workspace_bytes', 2 << 30),
-                                          'inodes': config.get('resources', {}).get('workspace_inodes', 200000)}}}
+            'image_workspace': '/workspace', 'network': 'none',
+            # Pinned Harbor task-template CPU allocation, unless explicitly overridden.
+            'cpus': resources.get('cpus', 2), 'memory_mb': resources['memory_mb'],
+            'pids': resources.get('pids'),
+            # Scratch has the same explicitly selected capacity as the workspace;
+            # all tmpfs consumption also remains subject to the memory cgroup.
+            'filesystems': {path: {'bytes': resources['workspace_bytes'],
+                                   'inodes': resources['workspace_inodes']}
+                            for path in ('/workspace', '/tmp', '/dev', '/dev/shm')}}
 
 
 def control_task(task_id):
@@ -96,11 +115,18 @@ def _setup(tid, row):
     workers = []
     for i, feature in enumerate(features, 1):
         workers.append({'id': f'agent{i}', 'goal': f'You are agent{i}; your peer is agent{3-i}.\n' + GOAL.format(peer=f'agent{3-i}') + '\n' + feature['description'],
-                        'env': dict(spec), 'artifacts': ['agent.patch'], 'timeout_s': 1800,
+                        'env': dict(spec), 'artifacts': ['agent.patch'],
+                        'artifact_max_bytes': limits('cooperbench', 'submission').get('max_bytes'),
+                        'model_route': {'max_connections': None, 'request_max_bytes': None,
+                                        'response_max_bytes': None, 'header_timeout_s': None,
+                                        **limits('cooperbench', 'model_route')},
+                        'timeout_s': task_environment()['agent_timeout_s'],
                         'files': [{'path': 'cooperbench.py', 'from': str(ASSETS / 'cli/cooperbench.py')},
                                   {'path': 'cooperbench_transport.py', 'from': str(TRANSPORT)},
                                   {'path': 'public.json', 'content': json.dumps({**feature, 'base_commit': row['base_commit']})}]})
-    return {'workers': workers}
+    return {'workers': workers, 'mailbox': {'max_messages': None, 'max_message_bytes': None,
+                                           'max_calls': None, 'max_line_bytes': None,
+                                           **limits('cooperbench', 'cooperative')}}
 
 
 def _verify(tid, row):
@@ -120,7 +146,8 @@ def _verify(tid, row):
     inputs += [{'path': 'private/case.json', 'content': json.dumps(case)}]
     return {'kind': 'command', 'argv': [config.get('python', '/usr/local/bin/python3'), 'check.py'], 'inputs': inputs,
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
-            'timeout_s': 1800, 'container_runtime': runtime_spec(row),
+            'result_max_bytes': limits('cooperbench', 'record').get('max_bytes'),
+            'timeout_s': task_environment()['verify_timeout_s'], 'container_runtime': runtime_spec(row),
             'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
 
 
@@ -138,7 +165,7 @@ class _Tasks(Mapping):
         return self.build(task_id, roster()[task_id])
 
 
-ENV = _Tasks(lambda tid, row: dict(DEFAULT_ENV))
+ENV = _Tasks(lambda tid, row: task_environment())
 SETUP = _Tasks(_setup)
 VERIFY = _Tasks(_verify)
 

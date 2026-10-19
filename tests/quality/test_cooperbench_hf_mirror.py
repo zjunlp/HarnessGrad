@@ -434,3 +434,25 @@ def test_verifier_mirror_identity_gate_preserves_valid_score_or_withholds_reward
     assert reward.exists() is not changed
     assert len(calls) == 2
     assert (tmp_path / 'logs/verifier/reward.txt').read_text() == '1'
+
+
+def test_public_asset_total_budget_is_optional_and_explicit(tmp_path, monkeypatch):
+    mod = module('prepare')
+    revision = 'a' * 40
+    # Exercise a payload beyond the removed 350 MB ceiling without downloading it.
+    tree = [{'path': 'model.bin', 'type': 'file', 'size': 400_000_000, 'oid': 'b' * 40}]
+    monkeypatch.setattr(mod, 'SOURCES', {'owner/model': (revision, None)})
+    def metadata(path):
+        value = tree if '/tree/' in path else {'sha': revision}
+        return json.dumps(value).encode(), value
+    monkeypatch.setattr(mod, 'metadata', metadata)
+    class ReachedHead(Exception): pass
+    class Head:
+        def open(self, *args, **kwargs): raise ReachedHead
+    monkeypatch.setattr(mod.urllib.request, 'build_opener', lambda *args: Head())
+    with pytest.raises(ReachedHead):
+        mod.prepare(tmp_path / 'uncapped')
+    with pytest.raises(ReachedHead):
+        mod.prepare(tmp_path / 'explicit-larger', max_total_bytes=500_000_000)
+    with pytest.raises(ValueError, match='explicit dependency byte budget'):
+        mod.prepare(tmp_path / 'explicit-smaller', max_total_bytes=300_000_000)

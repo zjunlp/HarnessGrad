@@ -12,6 +12,11 @@ from eval.verification.verifier import _verify
 from test_shared_dataset_runtime import harness
 
 
+@pytest.fixture(autouse=True)
+def isolated_limits(monkeypatch):
+    monkeypatch.delenv('HG_EVAL_LIMITS', raising=False)
+
+
 @pytest.fixture
 def prepared():
     if not dataset.provision_status()["present"]:
@@ -21,7 +26,8 @@ def prepared():
 
 @pytest.fixture
 def endpoint(monkeypatch):
-    state = {"reply": "1.b 1\n2.b 1\n3.b 1", "requests": [], "status": 200}
+    state = {"reply": "1.b 1\n2.b 1\n3.b 1", "requests": [], "status": 200,
+             "completion_tokens": 3}
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass
@@ -31,7 +37,7 @@ def endpoint(monkeypatch):
             state["requests"].append(request)
             body = json.dumps({"model": dataset.JUDGE_MODEL,
                                "choices": [{"message": {"content": state["reply"]}}],
-                               "usage": {"prompt_tokens": 7, "completion_tokens": 3}}).encode()
+                               "usage": {"prompt_tokens": 7, "completion_tokens": state['completion_tokens']}}).encode()
             self.send_response(state["status"])
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -141,7 +147,7 @@ os.environ['HG_STRONGREJECT_JUDGE_MODEL']='actor-selected-model'
     assert endpoint["requests"][0]["model"] == model
 
 
-@pytest.mark.parametrize("kind", ["symlink", "hardlink", "directory", "oversize"])
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "directory"])
 def test_unsafe_answer_files_are_unmeasured(prepared, tmp_path, endpoint, kind):
     import os
     answer = tmp_path / "answer.txt"
@@ -153,9 +159,6 @@ def test_unsafe_answer_files_are_unmeasured(prepared, tmp_path, endpoint, kind):
         os.link(target, answer)
     elif kind == "directory":
         answer.mkdir()
-    else:
-        with answer.open("wb") as output:
-            output.truncate(1024 * 1024 + 1)
     tid = next(iter(prepared.rows()))
     result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
     assert result["score"] is None and result["outcome"] == "unmeasured", result
@@ -189,7 +192,8 @@ def test_profile_identity_is_separate_and_default_is_unchanged(prepared, monkeyp
     split = prepared.SPLIT
     assert prepared.METRIC == "strongreject.rubric.defense.gpt-4o-mini-2024-07-18.v1"
     assert original["judge"] == {"model": "gpt-4o-mini-2024-07-18", "max_calls": 1,
-                                 "max_output_tokens": 1024, "timeout_s": 60, "parameters": {"temperature": 0}}
+                                 "max_output_tokens": None, "timeout_s": 300, "parameters": {"temperature": 0},
+                                 "response_max_bytes": None, "max_line_bytes": None}
     monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", "Ling-3.1-flash")
     alternate = prepared.VERIFY[tid]
     other_tasks, other_metrics = prepared.load()
@@ -282,3 +286,62 @@ def test_default_or_global_judge_without_dataset_override(prepared, tmp_path, en
     assert result['score'] == 1, result
     assert endpoint['requests'][0]['model'] == expected
     assert expected in result['evidence']['metric']
+
+
+def test_default_has_no_answer_or_judge_token_cap(prepared, tmp_path, endpoint):
+    tid = next(iter(prepared.rows()))
+    answer = 'Synthetic answer. ' * 70000
+    assert len(answer.encode()) > 1024 * 1024
+    (tmp_path / 'answer.txt').write_text(answer)
+    endpoint.update(reply='Synthetic explanation. ' * 1500 + '\n1.b 1\n2.b 1\n3.b 1',
+                    completion_tokens=1503)
+    spec = prepared.VERIFY[tid]
+    assert 'timeout_s' not in spec and 'verify_timeout_s' not in prepared.ENV[tid]
+    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15)
+    assert result['score'] == 1, result
+    request = endpoint['requests'][0]
+    assert 'max_tokens' not in request
+    assert answer in request['messages'][1]['content']
+    assert result['judge']['usage']['completion_tokens'] == 1503
+
+
+def test_explicit_budgets_are_frozen_and_sent(prepared, tmp_path, endpoint, monkeypatch):
+    policy = {'judge': {'max_output_tokens': 2048, 'timeout_s': 40},
+              'datasets': {'strongreject': {
+                  'judge': {'max_output_tokens': 3072, 'max_retries': 1, 'response_max_bytes': 65536},
+                  'task': {'agent_timeout_s': 25, 'verify_timeout_s': 15},
+                  'submission': {'max_bytes': 64}}}}
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps(policy))
+    tid = next(iter(prepared.rows()))
+    spec = prepared.VERIFY[tid]
+    env = prepared.ENV[tid]
+    assert env == {'kind': 'files', 'network': 'none', 'agent_timeout_s': 25, 'verify_timeout_s': 15}
+    assert spec['judge']['timeout_s'] == 40
+    assert spec['judge']['max_retries'] == 1
+    assert spec['judge']['response_max_bytes'] == 65536
+    private_case = json.loads(next(i['content'] for i in spec['inputs'] if i['path'] == 'strongreject_case.json'))
+    assert private_case['submission_limits'] == {'max_bytes': 64}
+    monkeypatch.setenv('HG_EVAL_LIMITS', '{}')
+    assert prepared.VERIFY[tid]['argv'][-1] != spec['argv'][-1]
+    (tmp_path / 'answer.txt').write_text('Synthetic answer.')
+    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15, env=env)
+    assert result['score'] == 1, result
+    assert endpoint['requests'][0]['max_tokens'] == 3072
+    assert result['judge']['configuration']['max_output_tokens'] == 3072
+
+
+@pytest.mark.parametrize('answer_bytes,measured', [(16, True), (17, False)])
+def test_explicit_submission_budget_boundary(prepared, tmp_path, endpoint, monkeypatch, answer_bytes, measured):
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'datasets': {'strongreject': {'submission': {'max_bytes': 16}}}}))
+    tid = next(iter(prepared.rows()))
+    spec = prepared.VERIFY[tid]
+    # An actor-side environment change cannot alter the frozen private case.
+    monkeypatch.setenv('HG_EVAL_LIMITS', '{}')
+    (tmp_path / 'answer.txt').write_text('x' * answer_bytes)
+    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15)
+    assert len(endpoint['requests']) == int(measured)
+    if measured:
+        assert result['score'] == 1, result
+    else:
+        assert result['score'] is None and result['outcome'] == 'unmeasured', result
+        assert 'configured submission byte limit' in result['evidence']['error']

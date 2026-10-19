@@ -210,3 +210,50 @@ def test_model_priority_reaches_actual_requests_and_profile(judge_pool, judge_se
     assert result['detail']['verdict']['judge']['configuration']['model'] == expected
     monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'later-change')
     assert spec['judge']['model'] == expected
+
+
+def test_generic_judge_limits_reach_broker_and_specific_override_wins(
+        judge_pool, judge_server, tmp_path, monkeypatch):
+    tid = judge_pool(judge.LONGMEM, 2)
+    monkeypatch.delenv('HG_MAB_JUDGE_MAX_OUTPUT_TOKENS', raising=False)
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'judge': {'max_output_tokens': 32768},
+        'datasets': {'memoryagentbench': {'judge': {'max_output_tokens': 512,
+            'timeout_s': 2, 'max_retries': 1, 'max_attempts': 4}}}}))
+    spec = dataset.VERIFY[tid]['judge']
+    assert spec['max_output_tokens'] == 512
+    assert spec['max_calls'] == 2
+    assert spec['max_retries'] == 1
+    assert spec['max_attempts'] == 4
+    assert spec['timeout_s'] == 2
+    assert spec['max_line_bytes'] is None and spec['response_max_bytes'] is None
+    result = run_control(tmp_path, monkeypatch, tid, 'oracle')
+    assert result['score'] == 1, result
+    assert len(judge_server['requests']) == 2
+    assert all(request['max_tokens'] == 512 for request in judge_server['requests'])
+    assert result['evidence']['judge'] == judge.profile(judge.LONGMEM, 'fixture-judge', max_output_tokens=512)
+    monkeypatch.setenv('HG_MAB_JUDGE_MAX_OUTPUT_TOKENS', '65536')
+    spec = dataset.VERIFY[tid]
+    assert spec['judge']['max_output_tokens'] == 65536
+    assert spec['argv'][spec['argv'].index('--judge-max-output-tokens') + 1] == '65536'
+
+
+@pytest.mark.parametrize('source,count,protocol_calls', [(judge.SUMMARY, 2, 6), (judge.LONGMEM, 3, 3)])
+@pytest.mark.parametrize('requested', [None, 1, 100])
+def test_explicit_judge_calls_can_only_tighten_protocol(judge_pool, monkeypatch,
+                                                       source, count, protocol_calls, requested):
+    tid = judge_pool(source, count)
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'datasets': {'memoryagentbench': {
+        'judge': {'max_calls': requested}}}}))
+    assert dataset.VERIFY[tid]['judge']['max_calls'] == (
+        protocol_calls if requested is None else min(protocol_calls, requested))
+
+
+def test_tighter_judge_calls_exhaustion_is_unmeasured(judge_pool, judge_server, tmp_path, monkeypatch):
+    tid = judge_pool(judge.LONGMEM, 2)
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'judge': {'max_calls': 1}}))
+    result = run_control(tmp_path, monkeypatch, tid, 'oracle')
+    assert len(judge_server['requests']) == 1
+    assert result['score'] is None
+    verdict = result['detail']['verdict']
+    assert verdict['outcome'] == 'unmeasured'
+    assert verdict['judge']['configuration']['max_calls'] == 1

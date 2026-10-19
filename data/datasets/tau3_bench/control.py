@@ -97,11 +97,12 @@ def run(oracle, platform, work, *, attack=False):
     materialize(dataset, task, work)
     relay = tool_relay.start(setup, context={'task_id': tid, 'run_id': 'control', 'trial_id': 'trial-1', 'seed': seed})
     try:
-        call(relay.path, 'start', {})
+        call(relay.path, 'start', {}, timeout_s=None, max_line_bytes=None)
         if oracle:
             for action in actions:
-                call(relay.path, 'call', {'tool_name': action['name'], 'arguments': action['arguments']})
-        call(relay.path, 'say', {'message': '###STOP###'})
+                call(relay.path, 'call', {'tool_name': action['name'], 'arguments': action['arguments']},
+                     timeout_s=None, max_line_bytes=None)
+        call(relay.path, 'say', {'message': '###STOP###'}, timeout_s=None, max_line_bytes=None)
         relay.stop()
         if relay.fault(): raise RuntimeError(relay.fault())
         record = relay.recording_input()

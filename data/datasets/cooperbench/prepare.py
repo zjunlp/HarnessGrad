@@ -11,6 +11,9 @@ import shutil
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.config.limits import limits
+
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from protocol import (SOURCE_REVISION, HARBOR_REVISION, HARBOR_ADAPTER_SHA256,
                       HARBOR_SCORER_SHA256, sha, read_checked, adapt_scorer, prepare_recipe, image_recipe, recipe)
@@ -23,6 +26,45 @@ def command(*argv):
 def write_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, sort_keys=True, indent=2) + '\n')
+
+
+def selected_resources(base_runtime=None):
+    """Require an explicit allocation; measured seed sizes do not select budgets."""
+    resources = {}
+    origin = {'configuration': 'HG_EVAL_LIMITS/cooperbench.container'}
+    if base_runtime is not None:
+        raw = (base_runtime / 'runtime.json').read_bytes()
+        resources.update(json.loads(raw).get('resources', {}))
+        origin['base_runtime_sha256'] = sha(raw)
+    resources.update(limits('cooperbench', 'container'))
+    required = ('workspace_bytes', 'workspace_inodes', 'memory_mb')
+    missing = [key for key in required if resources.get(key) is None]
+    if missing:
+        raise ValueError('CooperBench preparation requires explicit resources: ' + ', '.join(missing)
+                         + '; set HG_EVAL_LIMITS container policy or select --base-runtime')
+    for key in required:
+        value = resources[key]
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError('CooperBench resource must be a positive integer: ' + key)
+    return resources, origin
+
+
+def require_seed_capacity(resources, identity, cache_bytes=0):
+    """The known seed/payload must fit; users choose extra build/cache headroom."""
+    for key, used in [('workspace_bytes', identity['workspace_bytes'] + cache_bytes),
+                      ('workspace_inodes', identity['workspace_inodes'])]:
+        if used > resources[key]:
+            raise ValueError(f'CooperBench measured seed/cache needs {used} {key}; '
+                             f'explicit allocation is {resources[key]}')
+
+
+def build_resource_args(policy):
+    args = []
+    if policy.get('memory_mb') is not None:
+        args.append('--memory=' + str(policy['memory_mb']) + 'm')
+    if policy.get('cpus') is not None:
+        args.append('--cpu-quota=' + str(int(policy['cpus'] * 100000)))
+    return args
 
 
 def prepare(root, source, harbor):
@@ -85,7 +127,9 @@ def prepare(root, source, harbor):
                       'manifest_sha256': sha((prepared / 'manifest.json').read_bytes())}))
 
 
-def prepare_image(root, source, group, pull, build_network="bridge", source_image=None, runtime_python_image=None):
+def prepare_image(root, source, group, pull, build_network="bridge", source_image=None, runtime_python_image=None, base_runtime=None):
+    resources, resource_selection = selected_resources(base_runtime)
+    preparation_limits = limits('cooperbench', 'preparation')
     manifest = json.loads((root / 'prepared-v1/manifest.json').read_text())
     row = next(r for r in manifest['tasks'] if r['group'] == group)
     runner = read_checked(source / 'dataset' / group / 'runner.sh', row['runner_sha256'])
@@ -141,7 +185,7 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
     network = build_network
     subprocess.run(['env', 'DOCKER_BUILDKIT=0', 'docker', 'build', '--network=' + network, '--pull=false',
                     '--build-arg', 'HTTPS_PROXY', '--build-arg', 'HTTP_PROXY', '--build-arg', 'NO_PROXY',
-                    '--force-rm', '--memory=8g', '--cpu-quota=200000', '-t', tag, str(target)], check=True)
+                    '--force-rm', *build_resource_args(preparation_limits), '-t', tag, str(target)], check=True)
     digest = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
     if helper_image_id:
         python = '/opt/hg-python/bin/python3'
@@ -150,22 +194,15 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
     identity = json.loads(command('docker', 'run', '--rm', '--network=none', '--entrypoint',
                                   python, digest, '-c', inspect_code))
     (target / 'requirements.freeze.txt').write_text(identity['pip_freeze'])
-    # Keep bounded headroom for two patch/test passes and native build output.
-    workspace_bytes = max(2 << 30, ((3 * identity['workspace_bytes'] + (1 << 30) + 4095) // 4096) * 4096)
-    inodes = max(200000, identity['workspace_inodes'] * 3 + 16384)
-    workspace_limit_gib = recipe(group).get('workspace_limit_gib', 16)
-    if workspace_bytes > workspace_limit_gib << 30 or inodes > 2000000:
-        raise ValueError(f'measured seed {identity["workspace_bytes"]} bytes/{identity["workspace_inodes"]} inodes requires '
-                         f'{workspace_bytes} workspace bytes/{inodes} inodes, exceeding the reviewed '
-                         f'{workspace_limit_gib} GiB/2M inode envelope')
+    require_seed_capacity(resources, identity)
     runtime = {'group': group, 'image': digest, 'source_image': image_id, 'python': python,
                'source_repo_digests': imported.get('RepoDigests', []), 'runtime_python_image': helper_image_id, 'identity': identity,
                'recipe': recipe(group), 'runner_sha256': sha(adapted.encode()),
                'dockerfile_sha256': sha(dockerfile.encode()),
                'dependencies_sha256': sha(identity['pip_freeze'].encode()),
                'preparation_sha256': sha(preparation.encode()),
-               'resources': {'workspace_bytes': workspace_bytes, 'workspace_inodes': inodes,
-                             'memory_mb': max(4096, workspace_bytes // (1 << 20) + 2048)},
+               'resources': resources, 'resource_selection': resource_selection,
+               'preparation_limits': preparation_limits,
                'validation': 'prepared; real oracle/noop controls are still required for this image'}
     write_json(target / 'runtime.json', runtime)
     print(json.dumps(runtime))
@@ -173,6 +210,8 @@ print(json.dumps({'base_commit': read(['git','-C','/workspace/repo','rev-parse',
 
 def prepare_mirror_runtime(root, group, base_runtime, assets, kind="hf_mirror"):
     """Derive a fresh immutable runtime without resolving dependencies again."""
+    resources, resource_selection = selected_resources(base_runtime)
+    preparation_limits = limits('cooperbench', 'preparation')
     supported = {'hf_mirror': 'dottxt_ai_outlines_task/task1706',
                  'https_asset_mirror': 'llama_index_task/task18813'}
     if kind not in supported or group != supported[kind]:
@@ -205,21 +244,21 @@ def prepare_mirror_runtime(root, group, base_runtime, assets, kind="hf_mirror"):
     if kind == 'hf_mirror':
         assets_manifest = json.loads((assets / 'manifest.json').read_text())
         files = [item for row in assets_manifest['repos'].values() for item in row['files'].values()]
-        # Hub keeps one blob plus small snapshot refs/metadata per public file.
-        cache_bytes = sum(item['size'] for item in files) + (1 << 20)
-        seed_bytes = runtime['identity']['workspace_bytes'] + cache_bytes
-        workspace_bytes = max(2 << 30, ((3 * seed_bytes + (1 << 30) + 4095) // 4096) * 4096)
-        inodes = max(200000, (runtime['identity']['workspace_inodes'] + 4 * len(files) + 64) * 3 + 16384)
-        if workspace_bytes > recipe(group).get('workspace_limit_gib', 16) << 30 or inodes > 2000000:
-            raise ValueError('HF cache exceeds the reviewed workspace envelope')
-        runtime['resources'].update(workspace_bytes=workspace_bytes, workspace_inodes=inodes,
-                                    memory_mb=max(4096, workspace_bytes // (1 << 20) + 2048))
-        identity['cache_bound_bytes'] = cache_bytes
+        # Exact public payload size is a known lower bound, not an automatic
+        # allocation formula. Cache metadata and build headroom remain explicit.
+        cache_bytes = sum(item['size'] for item in files)
+        require_seed_capacity(resources, runtime['identity'], cache_bytes)
+        identity['cache_payload_bytes'] = cache_bytes
+        identity['cache_bound_bytes'] = resources['workspace_bytes']
     elif identity['cache_bound_bytes'] != 0:
         raise ValueError('fixed HTTPS asset mirror must not add a writable download cache')
+    require_seed_capacity(resources, runtime['identity'])
+    runtime['resources'] = resources
+    runtime['resource_selection'] = resource_selection
+    runtime['preparation_limits'] = preparation_limits
     tag = 'hg-cooperbench-' + group.replace('/', '-') + '-' + kind.replace('_', '-')
     subprocess.run(['env', 'DOCKER_BUILDKIT=0', 'docker', 'build', '--network=none', '--pull=false',
-                    '--force-rm', '--memory=2g', '--cpu-quota=100000', '-t', tag,
+                    '--force-rm', *build_resource_args(preparation_limits), '-t', tag,
                     str(context)], check=True)
     runtime['image'] = json.loads(command('docker', 'image', 'inspect', tag))[0]['Id']
     runtime['python'] = identity['runtime_python']
@@ -240,13 +279,13 @@ def main():
     mirrors = parser.add_mutually_exclusive_group()
     mirrors.add_argument('--https-asset-mirror-assets', type=Path, help='Verified fixed HTTPS dependency assets for the reviewed LlamaIndex task18813 runtime')
     mirrors.add_argument('--hf-mirror-assets', type=Path, help='Verified public dependency assets for the reviewed Outlines task1706 runtime')
-    parser.add_argument('--base-runtime', type=Path, help='Existing prepared runtime to derive into a fresh runtime directory without rebuilding dependencies; requires one mirror asset option')
+    parser.add_argument('--base-runtime', type=Path, help='Explicitly reuse recorded resource budgets; with mirror assets, also derive from its immutable image without rebuilding dependencies')
     parser.add_argument('--build-network', choices=['bridge', 'host', 'none'], default='bridge',
                         help='Preparation only; host can reach a loopback download proxy. Measurement always has no network.')
     parser.add_argument('--pull', action='store_true', help='Download only the selected official image')
     args = parser.parse_args()
     assets = args.hf_mirror_assets or args.https_asset_mirror_assets
-    if assets or args.base_runtime:
+    if assets:
         if not (args.image_group and assets and args.base_runtime):
             parser.error('--image-group, one mirror asset option and --base-runtime are required together')
         if args.pull or args.source_image or args.runtime_python_image:
@@ -254,7 +293,9 @@ def main():
         prepare_mirror_runtime(args.root, args.image_group, args.base_runtime, assets,
                                'hf_mirror' if args.hf_mirror_assets else 'https_asset_mirror')
     elif args.image_group:
-        prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image, args.runtime_python_image)
+        prepare_image(args.root, args.source_root, args.image_group, args.pull, args.build_network, args.source_image, args.runtime_python_image, args.base_runtime)
+    elif args.base_runtime:
+        parser.error('--base-runtime requires --image-group')
     elif args.harbor_root:
         prepare(args.root, args.source_root, args.harbor_root)
     else:

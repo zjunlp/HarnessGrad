@@ -10,7 +10,8 @@ def install(role, transport):
     def generate(model, messages, tools=None, tool_choice=None, call_name=None, **kwargs):
         validate_message_history(messages)
         response = transport(os.environ['HG_ENV_MODEL_SOCKET' if role == 'environment' else 'HG_JUDGE_SOCKET'],
-                             'complete', {'messages': to_litellm_messages(messages)})
+                             'complete', {'messages': to_litellm_messages(messages)},
+                             timeout_s=None, max_line_bytes=None)
         message = response['message']
         if role == 'judge':
             parsed = json.loads(message.get('content'))

@@ -249,7 +249,6 @@
     "family": "rust",
     "install_lines": null,
     "mode": "rust",
-    "runner_sha256": "658e90e0f0b052ceefd81a8513e4bae4f48e3ff0020d85a832b89b52746c13ca",
-    "workspace_limit_gib": 24
+    "runner_sha256": "658e90e0f0b052ceefd81a8513e4bae4f48e3ff0020d85a832b89b52746c13ca"
   }
 }

@@ -53,10 +53,20 @@ There is no implicit provider/model, so tasks requiring NL scoring need one of
 those model settings. The override is in the unified configuration snapshot and
 the resolved model is fixed in the verifier receipt. It does not change the user
 simulator's `HG_ENV_MODEL`.
-The platform broker fixes temperature 0, at most 4096 output tokens per call and
-60 seconds per call; the user has at most 200 calls, and the NL judge one.
-This bounded local profile is recorded and does not claim parity with Harbor's
-GPT-5.2 reasoning-effort profile. Actor model strategy remains the candidate harness's.
+The platform broker fixes temperature 0; actor model strategy remains the candidate
+harness's. Runtime limits are optional management settings, separate from the official
+200-step, 10-tool-error episode protocol. The adapter adds no output-token, request-time,
+environment-call, relay-call, frame-size or recording-size cap. Actor and verifier phase
+timeouts inherit the driver unless explicitly configured. Private transport clients wait
+for the broker or enclosing phase to finish instead of imposing a separate 60-second cap.
+The official NL evaluator makes one logical judge call for all assertions; optional HTTP
+retries are counted separately and do not create additional logical judgments.
+
+Use `HG_EVAL_LIMITS` to configure the `task`, `relay`, `record`, `environment` and `judge`
+areas globally or under `datasets.tau3_bench`. These settings can bound calls, attempts,
+tokens, time and payload size; omitted values add no adapter limit. Retries default to
+zero and may be configured explicitly. Resolved model limits and actual usage are recorded
+by the broker. This does not claim parity with Harbor's GPT-5.2 reasoning-effort profile.
 
 The official base seed 300 generates three trial seeds: **626729, 373753, 361454**.
 `trial_protocol` requires `trials=3`, `ks=[1,2,3]`; every trial starts a fresh private

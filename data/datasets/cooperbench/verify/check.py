@@ -64,7 +64,7 @@ def main():
         # scratch inside the already admitted, bounded workspace instead.
         scratch = root / '.test-tmp'
         scratch.mkdir(exist_ok=True)
-        proc = subprocess.run(['bash', 'private/test.sh'], text=True, capture_output=True, timeout=1700,
+        proc = subprocess.run(['bash', 'private/test.sh'], text=True, capture_output=True,
                               env={**os.environ, 'TMPDIR': str(scratch)})
         evidence['scorer_exit_code'] = proc.returncode
         if proc.returncode:

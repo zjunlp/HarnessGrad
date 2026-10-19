@@ -71,8 +71,9 @@ def main():
     parser.add_argument('--case-spec', type=Path, required=True)
     parser.add_argument('--socket', type=Path, required=True)
     parser.add_argument('--receipt', type=Path, required=True)
-    parser.add_argument('--deadline-s', type=float, default=1900)
-    parser.add_argument('--max-calls', type=int, default=1024)
+    parser.add_argument('--deadline-s', type=float)
+    parser.add_argument('--max-calls', type=int)
+    parser.add_argument('--max-line-bytes', type=int)
     args = parser.parse_args()
     spec = json.loads(args.case_spec.read_text())
     raw = Path(spec['case']).read_bytes()
@@ -93,7 +94,8 @@ def main():
     stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())
-    with Relay(args.socket, service.handle, max_calls=args.max_calls, deadline_s=args.deadline_s) as relay:
+    with Relay(args.socket, service.handle, max_calls=args.max_calls,
+               deadline_s=args.deadline_s, max_line_bytes=args.max_line_bytes) as relay:
         clean = stop.wait(args.deadline_s)
         # Wait for any current simulator/tool operation before sealing. The platform
         # bounds graceful exit; an unfinished call cannot create an accepted episode.

@@ -92,7 +92,8 @@ def main():
             transport = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(transport)
             def complete(messages):
-                return transport.call(os.environ['HG_JUDGE_SOCKET'], 'complete', {'messages': messages})['content']
+                return transport.call(os.environ['HG_JUDGE_SOCKET'], 'complete', {'messages': messages},
+                                      timeout_s=None, max_line_bytes=None)['content']
         evidence = verify(gold, record, task_id=args.task_id, input_sha256=args.input_sha256,
                           relay_sha256=args.relay_sha256, entity2id=mapping,
                           judge_profile=selected, complete=complete)

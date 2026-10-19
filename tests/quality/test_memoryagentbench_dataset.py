@@ -83,7 +83,7 @@ def test_protocol_rejections_are_not_transport_failures(prepared):
     assert session.handle('ack', {'chunk_id': 'chunk:0', 'request_id': 'r'})['accepted']
     assert session.handle('ack', {'chunk_id': 'chunk:1', 'request_id': 'r'})['error'] == 'request_conflict'
     assert session.handle('submit', {'question_id': 'q', 'answer': 'x' * 65537,
-                                     'request_id': 's'})['error'] == 'invalid_argument'
+                                     'request_id': 's'})['error'] == 'wrong_phase'
     assert session.record()['seal']['acked_chunk_ids'] == ['chunk:0']
 
 
@@ -304,3 +304,86 @@ def test_actor_scorer_symlink_fails_closed(prepared, tmp_path, monkeypatch):
     assert result['score'] is None, result
     assert 'symlink' in json.dumps(result['detail']).lower(), result
     assert result['detail']['runtime_services']['tool_relay']['cleanup']['complete']
+
+
+def test_run_limits_are_explicit_and_submission_is_bound(prepared, monkeypatch):
+    tid, service, _ = prepared
+    monkeypatch.setattr(dataset, 'limits', lambda name, area: {})
+    setup = dataset.SETUP[tid]
+    assert json.loads(setup['tool_relay']['content']) == service
+    assert setup['tool_relay']['max_calls'] is None
+    assert setup['tool_relay']['max_line_bytes'] is None
+    assert setup['tool_relay']['record']['max_bytes'] is None
+    assert dataset.ENV[tid] == {'kind': 'files'}
+    assert 'timeout_s' not in dataset.VERIFY[tid]
+    configured = {'task': {'agent_timeout_s': 77, 'verify_timeout_s': 88},
+                  'relay': {'max_calls': 99, 'max_line_bytes': 200000},
+                  'record': {'max_bytes': 300000}, 'submission': {'max_bytes': 123}}
+    monkeypatch.setattr(dataset, 'limits', lambda name, area: configured.get(area, {}))
+    setup = dataset.SETUP[tid]
+    envelope = json.loads(setup['tool_relay']['content'])
+    assert envelope == {'episode': service, 'submission': {'max_bytes': 123}}
+    assert setup['tool_relay']['max_calls'] == 99
+    assert setup['tool_relay']['record']['max_bytes'] == 300000
+    verify = dataset.VERIFY[tid]
+    assert verify['timeout_s'] == 88
+    assert dataset.ENV[tid]['agent_timeout_s'] == 77
+    digest = verify['argv'][verify['argv'].index('--relay-sha256') + 1]
+    assert digest == hashlib.sha256(setup['tool_relay']['content'].encode()).hexdigest()
+
+
+def test_large_utf8_answer_and_request_id_survive_cli_and_seal(prepared, tmp_path, monkeypatch, capsys):
+    import runpy
+    import types
+    _, service, _ = prepared
+    session = Session(service)
+    for i in range(2):
+        session.handle('next', {})
+        assert session.handle('ack', {'chunk_id': f'chunk:{i}', 'request_id': f'a{i}'})['accepted']
+    qid = session.handle('next', {})['question_id']
+    answer = '证据🙂' * 12000
+    request_id = 'r' * 1024
+    answer_file = tmp_path / 'answer.txt'
+    answer_file.write_text(answer)
+    def call(socket, op, args, **kwargs):
+        assert kwargs == {'timeout_s': None, 'max_line_bytes': None}
+        return session.handle(op, args)
+    monkeypatch.setitem(sys.modules, 'mab_transport', types.SimpleNamespace(call=call))
+    monkeypatch.setattr(sys, 'argv', ['mab', 'submit', '--question-id', qid,
+        '--request-id', request_id, '--answer-file', str(answer_file)])
+    with pytest.raises(SystemExit) as end:
+        runpy.run_path(str(dataset.ASSETS / 'cli/mab'), run_name='__main__')
+    assert end.value.code == 0
+    assert json.loads(capsys.readouterr().out)['accepted']
+    args = {'question_id': qid, 'answer': answer, 'request_id': request_id}
+    assert session.handle('submit', args)['accepted']
+    assert session.handle('submit', {**args, 'answer': 'changed'})['error'] == 'request_conflict'
+    assert session.record()['seal']['answers'][0]['answer'] == answer
+
+
+def test_explicit_submission_budget_rejects_without_advancing(prepared):
+    _, service, _ = prepared
+    session = Session(service, max_answer_bytes=3)
+    for i in range(2):
+        session.handle('next', {})
+        session.handle('ack', {'chunk_id': f'chunk:{i}', 'request_id': f'a{i}'})
+    qid = session.handle('next', {})['question_id']
+    args = {'question_id': qid, 'answer': '🙂', 'request_id': 's'}
+    assert session.handle('submit', args)['error'] == 'invalid_argument'
+    assert session.handle('next', {})['question_id'] == qid
+    assert session.handle('submit', {**args, 'answer': '中'})['accepted']
+
+
+def test_submission_budget_applies_in_real_private_relay(prepared, tmp_path, monkeypatch):
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'datasets': {'memoryagentbench': {
+        'submission': {'max_bytes': 3}}}}))
+    work = tmp_path / 'limited-control'
+    work.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))
+    result = control.run('oracle', True, prepared[0], work)
+    assert result['score'] is None
+    assert result['evidence']['reason'] == 'incomplete_episode'
+    assert result['evidence']['result']['coverage']['submitted'] == 0
+    relay = result['detail']['runtime_services']['tool_relay']
+    assert relay['receipt']['protocol_rejections'] == 1
+    assert relay['cleanup'] == {'complete': True, 'errors': []}

@@ -88,6 +88,32 @@ def test_budget_survives_reconnects_and_receipt_is_private(synthetic, relays):
         assert relay.cleanup() is None  # original interface
 
 
+def test_management_calls_do_not_spend_official_budget_or_have_a_hidden_cap(synthetic):
+    relay = tool_relay.start(kumo.SETUP[synthetic['task_id']])
+    try:
+        for _ in range(270):
+            assert call(relay.path, 'stats', {})['queries_used'] == 0
+        assert call(relay.path, 'do', {'action': 'probe'})['step'] == 1
+        relay.stop()
+        assert relay.fault() is None
+        assert relay.receipt['transport']['limits']['max_calls'] is None
+    finally:
+        relay.cleanup()
+
+
+def test_explicit_management_limit_remains_enforced(synthetic, monkeypatch):
+    monkeypatch.setenv('HG_EVAL_LIMITS', json.dumps({'datasets': {'kumo': {'relay': {'max_calls': 1}}}}))
+    relay = tool_relay.start(kumo.SETUP[synthetic['task_id']])
+    try:
+        call(relay.path, 'stats', {})
+        with pytest.raises(RuntimeError, match='call_budget'):
+            call(relay.path, 'stats', {})
+        relay.stop()
+        assert relay.fault() is not None
+    finally:
+        relay.cleanup()
+
+
 @pytest.mark.parametrize('oracle,expected', [(True, 1.0), (False, 0.0)])
 def test_official_score_needs_no_query_recording(synthetic, tmp_path, oracle, expected):
     work = tmp_path / 'task'

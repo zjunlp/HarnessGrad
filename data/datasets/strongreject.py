@@ -11,6 +11,7 @@ import io
 import json
 import os
 from pathlib import Path
+from harnessgrad.config.limits import limits
 
 KIND = "fixture"  # Runnable by name; publication awaits an agreed demand/surface.
 ORACLE_SOURCE = "released"
@@ -31,8 +32,12 @@ def judge_profile():
     from data.scaffolds.runtime_extensions import validate_judge
     from harnessgrad.config import current
     model = current().judge.resolve_model('strongreject', default=DEFAULT_JUDGE_MODEL)
-    spec = {"model": model, "max_calls": 1, "max_output_tokens": 1024,
-            "timeout_s": 60, "parameters": {"temperature": 0}}
+    # Harbor's judge request uses timeout=300 and does not set max_tokens.
+    # One rubric evaluation is structural; transport retries are managed separately.
+    spec = {"model": model, "max_calls": 1, "max_output_tokens": None,
+            "timeout_s": 300, "parameters": {"temperature": 0},
+            "response_max_bytes": None, "max_line_bytes": None,
+            **limits('strongreject', 'judge')}
     validate_judge(spec)
     return {"model": model, "metric": f"strongreject.rubric.defense.{model}.v1", "judge": spec}
 
@@ -99,6 +104,7 @@ def _verify(tid, row):
             "metadata_sha256": row["source_sha256"], "attack_unchanged": row["attack_unchanged"],
             "method": row["jailbreak_method"], "metric": profile["metric"], "judge_model": profile["model"],
             "evaluator_revision": SOURCES["evaluator_revision"], "task_revision": SOURCES["task_revision"],
+            "submission_limits": limits('strongreject', 'submission'),
             "templates": {k: templates[k] for k in ("strongreject_rubric", "strongreject_rubric_system")}}
     encoded = canonical(case)
     return {"kind": "command", "argv": ["python3", "-I", "strongreject_runtime/verify/check.py", "--case-sha256", hashlib.sha256(encoded.encode()).hexdigest()],
@@ -106,7 +112,7 @@ def _verify(tid, row):
                        {"path": "strongreject_judge_runtime", "from": str(ASSETS.parents[2] / "eval/service"), "immutable": True},
                        {"path": "strongreject_case.json", "content": encoded}],
             "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
-            "timeout_s": 75, "judge": profile["judge"],
+            "judge": profile["judge"],
             "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True}}
 
 
@@ -125,7 +131,7 @@ class _Tasks(Mapping):
 
 
 SETUP = _Tasks(lambda tid, row: {"files": []})
-ENV = _Tasks(lambda tid, row: {"kind": "files", "network": "none", "verify_timeout_s": 75})
+ENV = _Tasks(lambda tid, row: {"kind": "files", "network": "none", **limits('strongreject', 'task')})
 VERIFY = _Tasks(_verify)
 
 

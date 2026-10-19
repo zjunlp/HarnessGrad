@@ -17,6 +17,8 @@ import json
 import os
 from pathlib import Path
 
+from harnessgrad.config.limits import limits
+
 # Real released benchmark adapter. Publication awaits the memory taxonomy policy;
 # explicit registry.load/run_one remain available for adapter controls.
 KIND = "fixture"
@@ -59,7 +61,11 @@ def load():
 
 def _service_content(row):
     from data.datasets.memoryagentbench.lib.storage import load_service
-    return json.dumps(load_service(PREPARED_ROOT, row["task_id"]), sort_keys=True, ensure_ascii=False)
+    payload = load_service(PREPARED_ROOT, row["task_id"])
+    submission = limits("memoryagentbench", "submission")
+    if submission.get("max_bytes") is not None:
+        payload = {"episode": payload, "submission": submission}
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False)
 
 
 def _setup(row):
@@ -69,8 +75,10 @@ def _setup(row):
     ], "tool_relay": {
         "program": str(ASSETS / "relay.py"), "content_flag": "--episode",
         "content": _service_content(row), "filename": "episode-input.json",
-        "max_calls": 4096, "deadline_s": 14460,
-        "record": {"path": "trusted_episode", "max_bytes": 32 * 1024 * 1024},
+        "max_calls": None, "deadline_s": None, "max_line_bytes": None,
+        **limits("memoryagentbench", "relay"),
+        "record": {"path": "trusted_episode", "max_bytes": None,
+                   **limits("memoryagentbench", "record")},
     }}
 
 
@@ -91,17 +99,31 @@ def _verify(row):
             {"path": "mab_scorer", "from": str(ASSETS), "immutable": True}],
         "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
         "result_contract": {"version": 1, "score_range": [0, 1],
-                            "require_exit_zero": True}, "timeout_s": 900}
+                            "require_exit_zero": True}}
+    task_limits = limits("memoryagentbench", "task")
+    if task_limits.get("verify_timeout_s") is not None:
+        result["timeout_s"] = task_limits["verify_timeout_s"]
     from data.datasets.memoryagentbench.lib.scoring import JUDGE_SOURCES
     if row['source'] in JUDGE_SOURCES:
         from data.datasets.memoryagentbench.lib.judge import profile
         from harnessgrad.config import current
         cfg = current().judge
         model = cfg.resolve_model('memoryagentbench', default=profile(row['source'])['model'])
-        selected = profile(row['source'], model,
-                           max_output_tokens=cfg.memoryagentbench_max_output_tokens)
+        judge_limits = limits('memoryagentbench', 'judge')
+        output_tokens = cfg.memoryagentbench_max_output_tokens
+        if output_tokens is None:
+            output_tokens = judge_limits.get('max_output_tokens')
+        selected = profile(row['source'], model, max_output_tokens=output_tokens)
         result['judge'] = {key: selected[key] for key in ('model', 'max_output_tokens', 'parameters')}
-        result['judge'].update(max_calls=row['question_count'] * selected['calls_per_question'], timeout_s=60)
+        protocol_calls = row['question_count'] * selected['calls_per_question']
+        configured_calls = judge_limits.get('max_calls')
+        max_calls = protocol_calls if configured_calls is None else min(protocol_calls, configured_calls)
+        result['judge'].update(max_calls=max_calls,
+                               timeout_s=judge_limits.get('timeout_s'),
+                               max_retries=judge_limits.get('max_retries', 0),
+                               max_attempts=judge_limits.get('max_attempts'),
+                               response_max_bytes=judge_limits.get('response_max_bytes'),
+                               max_line_bytes=judge_limits.get('max_line_bytes'))
         result['argv'] += ['--judge-model', selected['model'],
                            '--judge-max-output-tokens', str(selected['max_output_tokens'])]
         result['inputs'].append({'path': 'mab_judge_transport.py',
@@ -110,7 +132,8 @@ def _verify(row):
 
 
 def _env(row):
-    return {"kind": "files", "agent_timeout_s": 14400, "verify_timeout_s": 900}
+    return {"kind": "files", **{key: value for key, value in
+            limits("memoryagentbench", "task").items() if value is not None}}
 
 
 class _TaskMapping(Mapping):

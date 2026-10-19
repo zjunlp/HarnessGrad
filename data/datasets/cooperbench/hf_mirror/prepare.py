@@ -15,7 +15,6 @@ SOURCES = {
         {'TinyMistral-248M-v2-Instruct.Q4_K_M.gguf'}),
 }
 ORIGIN = 'https://huggingface.co'
-MAX_TOTAL = 350_000_000
 
 
 def digest(raw):
@@ -36,10 +35,13 @@ def metadata(path):
     return raw, json.loads(raw)
 
 
-def prepare(root):
+def prepare(root, max_total_bytes=None):
+    if max_total_bytes is not None and (type(max_total_bytes) is not int or max_total_bytes <= 0):
+        raise ValueError('max_total_bytes must be a positive integer or None')
     root.mkdir(parents=True, exist_ok=False)
     blobs = root / 'blobs'; blobs.mkdir()
-    manifest = {'version': 1, 'origin': ORIGIN, 'repos': {}, 'total_bytes': 0}
+    manifest = {'version': 1, 'origin': ORIGIN, 'repos': {}, 'total_bytes': 0,
+                'preparation_limits': {'max_total_bytes': max_total_bytes}}
     for repo, (revision, wanted) in SOURCES.items():
         info_raw, info = metadata(f'/api/models/{repo}/revision/{revision}')
         tree_raw, tree = metadata(f'/api/models/{repo}/tree/{revision}?recursive=true&expand=false')
@@ -57,8 +59,10 @@ def prepare(root):
             if name.startswith('/') or '..' in Path(name).parts:
                 raise ValueError('unsafe public path')
             size = entry['size']
-            if type(size) is not int or size < 0 or manifest['total_bytes'] + size > MAX_TOTAL:
-                raise ValueError('fixed dependency byte budget exceeded')
+            if type(size) is not int or size < 0:
+                raise ValueError('invalid public dependency size')
+            if max_total_bytes is not None and manifest['total_bytes'] + size > max_total_bytes:
+                raise ValueError('explicit dependency byte budget exceeded')
             path = f'/{repo}/resolve/{revision}/{urllib.parse.quote(name)}'
             # Capture the Hub HEAD fact at the initial endpoint: the linked ETag
             # is the LFS object identity, not the CDN's multipart ETag.
@@ -125,7 +129,8 @@ def prepare(root):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--max-total-bytes', type=int, help='Optional total public asset download budget; no adapter default cap')
     args = parser.parse_args()
-    result = prepare(args.root)
+    result = prepare(args.root, args.max_total_bytes)
     print(json.dumps({'repos': list(result['repos']), 'bytes': result['total_bytes'],
                       'manifest_sha256': digest((args.root / 'manifest.json').read_bytes())}))

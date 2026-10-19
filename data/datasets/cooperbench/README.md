@@ -37,8 +37,20 @@ python data/datasets/cooperbench/prepare.py \
   --harbor-root /your/sources/harbor
 python data/datasets/cooperbench/prepare.py \
   --root "$HG_COOPERBENCH_DATA" --source-root /your/sources/CooperBench \
-  --image-group pallets_click_task/task2956 --pull
+  --image-group pallets_click_task/task2956 --pull \
+  --base-runtime /your/selected-resource-runtime
 ```
+
+Select workspace byte/inode and memory budgets explicitly before image preparation.
+`--base-runtime` reuses the `resources` from a chosen runtime directory; without
+mirror assets it reuses only those allocations, not its image or dependencies.
+Alternatively, set `HG_EVAL_LIMITS` JSON with those fields in
+`datasets.cooperbench.container` (or global `container`). Container policy overrides
+selected base resources. Missing `workspace_bytes`, `workspace_inodes` or
+`memory_mb` fails before Docker preparation. Choose build/cache headroom for the
+actual workload; preparation records seed usage and refuses a seed that cannot fit.
+`datasets.cooperbench.preparation` may set build `cpus` and `memory_mb`; otherwise
+preparation adds no CPU/memory throttle.
 
 Image preparation is explicit and per group; it never pulls the full image
 collection. It verifies the repository base SHA and official runner bytes,
@@ -92,7 +104,8 @@ cannot forward requests or access the internet.
 
 Derivation preserves the base image, dependency freeze and preparation identity;
 it adds a read-only mirror layer and selects its isolated interpreter wrapper.
-The cache byte count enters the same workspace/memory formula. Scoring requires
+The known public cache payload must fit the selected workspace allocation;
+cache metadata and compilation headroom must also be budgeted by the operator. Scoring requires
 matching mirror health before and after the official runner and a zero verifier
 exit status; service failure stays unmeasured even if a reward file remains.
 
@@ -105,14 +118,24 @@ always has no network. A stale published image whose runner/base does not match
 is refused. Rebuild the pinned task Dockerfile and supply its explicit local ID
 with `--source-image` in that case; the prepared identity remains recorded.
 
-Preparation records the measured seed size/inode count. Each runtime receives
-2 CPUs and 512 PIDs, at least a 2 GiB/200,000 inode workspace, with bounded
-headroom based on that seed. Preparation refuses requirements beyond the reviewed
-16 GiB/2 million inode envelope, except the pinned Typst recipe: its measured
-6.63 GiB seed needs a 20.89 GiB workspace, within an explicit 24 GiB envelope. Memory covers the workspace quota plus 2 GiB
-(minimum 4 GiB). Worker and verifier deadlines are 1800 seconds. These resource
-settings are explicit adapter settings; a larger environment needs separate
-configuration and validation.
+Preparation records measured seed size/inode count and the explicitly selected
+resource budgets. It does not multiply seed sizes, infer memory from workspace,
+or impose adapter-specific byte/inode/PID ceilings. Runtime allocations come
+from the prepared metadata, with explicit `HG_EVAL_LIMITS` container overrides;
+missing memory or workspace budgets fail clearly. PIDs are uncapped unless set
+in metadata or run policy. Harbor's pinned task template supplies the default
+2 CPUs; its adapter supplies 1800-second worker and verifier deadlines. Explicit
+`task` policy may override these deadlines. The platform owns the verifier
+lifecycle; there is no additional 1700-second adapter timeout. Original per-project
+test commands and their upstream timeouts remain intact.
+
+Mailbox budgets come from the platform's `cooperative` run policy. Network
+isolation, observed resource enforcement, sender/peer binding, artifact identity
+checks and mirror lifecycle health checks remain mandatory. Mirror readiness and
+HTTP health timeouts are service lifecycle checks, not additional scoring budgets.
+The public HF asset preparation tool accepts optional `--max-total-bytes`; it
+has no implicit total download ceiling. Exact source sizes/hashes, metadata
+framing checks and finite transport recovery remain enforced.
 
 All 30 recipe transformations have source-drift and shell syntax checks.
 `provision_status()` reports prepared and unprepared groups without dropping any

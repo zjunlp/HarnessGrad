@@ -40,8 +40,8 @@ def profile(source, model=None, *, max_output_tokens=None):
     if model is not None and (not isinstance(model, str) or not model.strip()):
         raise JudgeError("judge model must be a nonempty string")
     default_tokens = 4096 if source == SUMMARY else 10
-    if max_output_tokens is not None and (type(max_output_tokens) is not int or not 1 <= max_output_tokens <= 16384):
-        raise JudgeError("judge output budget must be an integer in [1, 16384]")
+    if max_output_tokens is not None and (type(max_output_tokens) is not int or max_output_tokens <= 0):
+        raise JudgeError("judge output budget must be a positive integer")
     prompts = _prompts()
     result = {
         "schema": "hg-mab-judge-profile-v1", "source": source,

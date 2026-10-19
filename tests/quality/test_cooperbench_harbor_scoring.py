@@ -399,3 +399,29 @@ def test_preparation_restores_tracked_lock_without_changing_resolved_dependencie
     else:
         assert (repo / 'uv.lock').read_text() == 'resolved lock\n'
         assert not snapshots.exists()
+
+
+def test_preparation_requires_explicit_capacity_before_docker(tmp_path, monkeypatch):
+    spec = importlib.util.spec_from_file_location('cooperbench_resource_prepare_test', ASSETS / 'prepare.py')
+    preparation = importlib.util.module_from_spec(spec); spec.loader.exec_module(preparation)
+    monkeypatch.setattr(preparation, 'limits', lambda name, area: {})
+    monkeypatch.setattr(preparation, 'command', lambda *a: pytest.fail('Docker must not run without allocation'))
+    with pytest.raises(ValueError, match='workspace_bytes, workspace_inodes, memory_mb'):
+        preparation.prepare_image(tmp_path, tmp_path, 'repo/task1', False)
+    assert preparation.build_resource_args({}) == []
+    assert preparation.build_resource_args({'cpus': 1.5, 'memory_mb': 6144}) == ['--memory=6144m', '--cpu-quota=150000']
+    # Explicit allocations above all former hard envelopes are accepted unchanged.
+    resources = {'workspace_bytes': 32 << 30, 'workspace_inodes': 3000000, 'memory_mb': 65536}
+    base = tmp_path / 'base'; base.mkdir()
+    import json
+    (base / 'runtime.json').write_text(json.dumps({'resources': resources}))
+    actual, source = preparation.selected_resources(base)
+    assert actual == resources and source['base_runtime_sha256']
+    seed = {'workspace_bytes': 30 << 30, 'workspace_inodes': 2500000}
+    preparation.require_seed_capacity(actual, seed)
+    with pytest.raises(ValueError, match='measured seed/cache'):
+        preparation.require_seed_capacity(actual, seed, cache_bytes=3 << 30)
+    monkeypatch.setattr(preparation, 'limits', lambda name, area: resources)
+    assert preparation.selected_resources()[0] == resources
+    monkeypatch.setattr(preparation, 'limits', lambda name, area: {'memory_mb': 131072})
+    assert preparation.selected_resources(base)[0] == {**resources, 'memory_mb': 131072}

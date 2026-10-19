@@ -18,6 +18,7 @@ from data.scaffolds.command_control import materialize
 from eval.run import tool_relay
 from eval.run.runner import run_one
 from eval.verification.verifier import _verify
+from eval.policy.runtime_policy import phase_timeout
 from eval.service.tool_transport import call
 
 DEFAULT_TASK = 'mab-' + dataset.REVISION + '-conflict_resolution-r0000'
@@ -91,7 +92,7 @@ def run(mode, platform, task_id, work, *, recordings_root=None, actor_preload=No
             projection = relay.recording_input()
             shutil.copytree(projection['from'], work / projection['path'])
             verifier = dataset.VERIFY[task_id]
-            verdict = _verify(work, verifier, '', sandbox=True, timeout_s=verifier['timeout_s'])
+            verdict = _verify(work, verifier, '', sandbox=True, timeout_s=phase_timeout(verifier.get('timeout_s'), dataset.ENV[task_id].get('verify_timeout_s')))
             evidence = verdict.get('evidence') or {}
             score = verdict.get('score')
             receipt = {'verdict': verdict, 'evidence': evidence}

@@ -9,7 +9,7 @@ from cooperbench_transport import call as transport_call
 
 
 def call(op, args):
-    return transport_call('/run/harnessgrad-tool/tool.sock', op, args)
+    return transport_call('/run/harnessgrad-tool/tool.sock', op, args, timeout_s=None, max_line_bytes=None)
 
 
 def main():

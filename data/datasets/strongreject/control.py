@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from data.datasets import strongreject
 from eval.run.runner import run_one
 from eval.verification.verifier import _verify
+from eval.policy.runtime_policy import phase_timeout
 
 
 def run(task_id, oracle, platform, work):
@@ -40,7 +41,9 @@ def run(task_id, oracle, platform, work):
     else:
         for name, value in files.items():
             (work / name).write_text(value)
-        verdict = _verify(work, strongreject.VERIFY[task_id], "", sandbox=True, timeout_s=75)
+        env = strongreject.ENV[task_id]
+        verdict = _verify(work, strongreject.VERIFY[task_id], "", sandbox=True,
+                          env=env, timeout_s=phase_timeout(env.get('verify_timeout_s')))
     score = verdict.get("score")
     evidence = verdict.get("evidence", {})
     submission_error = str(evidence.get("error", "")) if isinstance(evidence, dict) else ""
