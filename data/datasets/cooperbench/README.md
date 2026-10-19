@@ -80,6 +80,16 @@ python data/datasets/cooperbench/prepare.py \
   --hf-mirror-assets /your/hf-assets
 ```
 
+For LlamaIndex task18813, the [fixed HTTPS asset mirror](https_asset_mirror/README.md)
+supplies the original W3C PDF bytes through a local TLS proxy. The unmodified
+clients retain certificate and hostname verification against a dedicated local CA;
+this reproduces the resource, not W3C's public certificate chain. Prepare assets
+with `python data/datasets/cooperbench/https_asset_mirror/prepare.py --root /your/w3c-assets`,
+then use the same derivation command with `--image-group llama_index_task/task18813`,
+its prepared base runtime, and `--https-asset-mirror-assets /your/w3c-assets` in
+place of the HF option. Only the exact fixed public URL is served; the service
+cannot forward requests or access the internet.
+
 Derivation preserves the base image, dependency freeze and preparation identity;
 it adds a read-only mirror layer and selects its isolated interpreter wrapper.
 The cache byte count enters the same workspace/memory formula. Scoring requires
@@ -117,7 +127,7 @@ performance.
 ## Controls and validation
 
 Real Docker oracle/noop controls passed (1/0) for the representative **f1-2 pair
-in 23 of 30 groups**, including both candidate workers, private-input isolation,
+in 25 of 30 groups**, including both candidate workers, private-input isolation,
 artifact submission, official scoring and cleanup:
 
 | Project | Passed task IDs |
@@ -132,22 +142,24 @@ artifact submission, official scoring and cleanup:
 | tiktoken | 0 |
 | DSPy | 8394, 8635 |
 | Hugging Face datasets | 3997, 6252 |
-| LlamaIndex | 17070, 17244 |
-| Outlines | 1706, with the fixed public HF mirror |
+| LlamaIndex | 17070, 17244, 18813 (fixed W3C PDF mirror) |
+| Outlines | 1371; 1706 with the fixed public HF mirror |
 
-The remaining seven groups have explicit limits:
+The remaining five groups have explicit limits:
 
 - React Hook Form 85 has an **upstream oracle/merge blocker**: its released patch
   fails the original Husky/TypeScript pre-commit check, producing an empty merge.
 - DSPy 8563's pinned Harbor test-fix append conflicts with its second test patch;
   the conflict also reproduces in the original image.
 - DSPy 8587's local LiteLLM service misses the official 10-second readiness check
-  at the official 2 CPUs; its timeout and resource limit remain unchanged.
-- LlamaIndex 18813 reaches tests after the editable-backend dependency fix, but
-  its public W3C PDF request is unavailable under the required network isolation.
-- Outlines 1655's image imports, but its locked `uv sync` dependency request
-  times out. Outlines 1371 and datasets 7309 retain partial image downloads after
-  their bounded provisioning attempts; no scoring controls ran for those three.
+  at the official 2 CPUs. Follow-up profiling found millisecond DNS failures;
+  removing the optional remote cost-map lookup still missed the deadline. Its
+  timeout and resource limit remain unchanged.
+- Outlines 1655's image imports. A fresh attempt passed the earlier metadata
+  request failure but exhausted its 1,200-second preparation budget while
+  downloading the original locked dependencies; no scoring control ran.
+- Datasets 7309 retains a verified partial image download after a bounded attempt;
+  no runtime or scoring control is available yet.
 
 These controls cover environment reachability, not all 652 pairs or candidate
 coding quality. Earlier receipts remain preserved. The corrected scorer's

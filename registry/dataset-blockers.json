@@ -264,7 +264,7 @@
           "id": "offline-runtime-dependencies",
           "family": "scorer-dependency-network",
           "status": "runtime",
-          "observed": "DSPy task8587's LiteLLM service misses the official 10-second readiness check at the official 2 CPUs. LlamaIndex task18813 reaches official tests after the editable-backend fix, but its public W3C PDF request needs unavailable external HTTPS under network isolation.",
+          "observed": "DSPy task8587's LiteLLM service misses the official 10-second readiness check at the official 2 CPUs. Follow-up profiling found fast DNS failures; the package-native local cost-map mode still missed the deadline. LlamaIndex task18813 is now closed by fixed original PDF bytes served through an isolated local TLS mirror, with official oracle/noop controls passing 1/0.",
           "evidence": [
             {
               "kind": "repository",
@@ -278,7 +278,7 @@
           "id": "remaining-runtime-provisioning",
           "family": "scorer-dependency-network",
           "status": "external",
-          "observed": "Outlines task1655's source image imported, but its locked uv dependency metadata request exhausted three transport retries. Outlines task1371 and datasets task7309 retain partial image downloads after bounded provisioning attempts. These three groups have no scoring controls.",
+          "observed": "Outlines task1655 passed its earlier metadata transport failure but exhausted a fresh 1,200-second preparation budget downloading its original locked dependencies. Outlines task1371 completed verified import and preparation, then passed official oracle/noop controls 1/0. Datasets task7309 retains a partial image download after a bounded attempt. Outlines task1655 and datasets task7309 still have no scoring controls.",
           "evidence": [
             {
               "kind": "repository",
@@ -292,7 +292,7 @@
           "id": "runtime-group-coverage",
           "family": "measurement-coverage",
           "status": "measurement",
-          "observed": "All 30 recipe transformations pass pinned source/shell checks. Real two-worker oracle/noop controls pass 1/0 for f1-2 in 23 groups, including Outlines task1706 with the verified local HF mirror. Seven groups retain the explicit blockers above. This is not coverage of all 652 pairs or model coding performance; the separate API smoke checks communication only.",
+          "observed": "All 30 recipe transformations pass pinned source/shell checks. Real two-worker oracle/noop controls pass 1/0 for f1-2 in 25 groups, including newly prepared Outlines task1371, Outlines task1706 with the verified local HF mirror and LlamaIndex task18813 with the fixed W3C PDF TLS mirror. Five groups retain the explicit blockers above. This is not coverage of all 652 pairs or model coding performance; the separate API smoke checks communication only.",
           "evidence": [
             {
               "kind": "repository",
