@@ -1,6 +1,6 @@
-"""MemoryAgentBench local-primary subset: 41 episodes / 3,271 questions.
+"""MemoryAgentBench: all 146 episodes / 3,671 questions.
 
-105 judge-dependent episodes / 400 questions are explicitly excluded.
+400 questions use verifier-only model judging; the other 3,271 score locally.
 One ordered material sequence and its questions form each interactive task.
 
 Provision using ``python -m data.datasets.memoryagentbench.prepare``; set HG_MAB_DATA or
@@ -21,7 +21,7 @@ from pathlib import Path
 # explicit registry.load/run_one remain available for adapter controls.
 KIND = "fixture"
 ORACLE_SOURCE = "released"
-ORACLE_COVERAGE = "3,271 local-primary questions; model-judge controls are not executed"
+ORACLE_COVERAGE = "Released answers; model-judge controls require explicit judge configuration"
 OFFICIAL_EVAL = None
 ASSETS = Path(__file__).resolve().parent / "memoryagentbench"
 # Keep dataset-private imports available beside the registry's flat declaration.
@@ -36,8 +36,7 @@ REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
 def _rows():
     from data.datasets.memoryagentbench.lib.storage import load_pool
     pool = load_pool(PREPARED_ROOT)
-    from data.datasets.memoryagentbench.lib.scoring import JUDGE_SOURCES
-    return {row["task_id"]: row for row in pool["tasks"] if row["source"] not in JUDGE_SOURCES}
+    return {row["task_id"]: row for row in pool["tasks"]}
 
 
 def _instruction(row):
@@ -81,7 +80,7 @@ def _verify(row):
     manifest = load_manifest(PREPARED_ROOT)
     gold_path = f"gold/{row['task_id']}.json"
     digest = hashlib.sha256(_service_content(row).encode()).hexdigest()
-    return {"kind": "command", "argv": [
+    result = {"kind": "command", "argv": [
         "python3", "-I", "mab_scorer/verify/check.py", "--gold", "mab_verify/gold.json",
         "--task-id", row["task_id"], "--input-sha256", row["input_sha256"],
         "--relay-sha256", digest, "--gold-sha256", manifest["artifacts"][gold_path],
@@ -93,6 +92,19 @@ def _verify(row):
         "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
         "result_contract": {"version": 1, "score_range": [0, 1],
                             "require_exit_zero": True}, "timeout_s": 900}
+    from data.datasets.memoryagentbench.lib.scoring import JUDGE_SOURCES
+    if row['source'] in JUDGE_SOURCES:
+        from data.datasets.memoryagentbench.lib.judge import profile
+        budget = os.environ.get('HG_MAB_JUDGE_MAX_OUTPUT_TOKENS')
+        selected = profile(row['source'], os.environ.get('HG_MAB_JUDGE_MODEL'),
+                           max_output_tokens=int(budget) if budget is not None else None)
+        result['judge'] = {key: selected[key] for key in ('model', 'max_output_tokens', 'parameters')}
+        result['judge'].update(max_calls=row['question_count'] * selected['calls_per_question'], timeout_s=60)
+        result['argv'] += ['--judge-model', selected['model'],
+                           '--judge-max-output-tokens', str(selected['max_output_tokens'])]
+        result['inputs'].append({'path': 'mab_judge_transport.py',
+            'from': str(ASSETS.parents[2] / 'eval/service/tool_transport.py')})
+    return result
 
 
 def _env(row):
@@ -126,11 +138,8 @@ def reporting_manifest(task_ids):
 
 
 def excluded_tasks():
-    """Every provisioned but ineligible episode, retaining original identity."""
-    from data.datasets.memoryagentbench.lib.storage import load_pool
-    from data.datasets.memoryagentbench.lib.scoring import JUDGE_SOURCES
-    return [{**row, "reason": "official_model_judge_required"}
-            for row in load_pool(PREPARED_ROOT)["tasks"] if row["source"] in JUDGE_SOURCES]
+    """All provisioned sources now have a scoring path."""
+    return []
 
 
 def provision_status():
@@ -153,7 +162,7 @@ def downloads():
              "version": REVISION, "dst": "raw", "files": list(pins["files"]),
              "sha256": {name: item["sha256"] for name, item in pins["files"].items()},
              "size": str(sum(item["bytes"] for item in pins["files"].values())) + " bytes",
-             "note": "Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers only local-primary sources; judge sources excluded. No study/eval division."},
+             "note": "Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers local and model-judge primary scoring. No study/eval division."},
             {"kind": "http", "name": "MemoryAgentBench English sentence tables archive",
              "version": resources["nltk_data_revision"], "dst": "resources/downloads/punkt_tab.zip",
              "url": resources["nltk_archive_url"], "sha256": resources["nltk_archive_sha256"],

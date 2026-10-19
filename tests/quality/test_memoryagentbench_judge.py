@@ -207,3 +207,16 @@ def test_summary_exact_official_prompts_and_formula(official, tmp_path, fluency,
     assert result["score"] == expected["averaged_metrics"]["gpt-4-f1"]
     for name, value in result["judge"]["details"].items():
         assert value == expected["data"][0]["gpt-4-scores"][name]
+
+
+def test_output_budget_override_is_explicit_and_identity_bound():
+    default = judge.profile(judge.LONGMEM)
+    larger = judge.profile(judge.LONGMEM, max_output_tokens=512)
+    assert larger['max_output_tokens'] == 512
+    assert larger['official_default_max_output_tokens'] == 10
+    assert larger['output_budget_override'] is True
+    assert larger['identity'] != default['identity']
+    assert judge.profile(judge.LONGMEM, max_output_tokens=10) == default
+    for invalid in (0, -1, 16385, True, '512', 1.5):
+        with pytest.raises(judge.JudgeError):
+            judge.profile(judge.LONGMEM, max_output_tokens=invalid)

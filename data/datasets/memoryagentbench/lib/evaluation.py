@@ -1,4 +1,4 @@
-"""Offline scoring of a seal obtained directly from a trusted Episode controller.
+"""Scoring of a seal obtained directly from a trusted Episode controller.
 
 The checksum catches corruption; it does not authenticate a harness-provided
 file. The verifier obtains this record from the platform-sealed relay output.
@@ -8,7 +8,7 @@ from collections.abc import Mapping
 import hashlib
 import json
 
-from .scoring import PRIMARY_METRICS, score_question
+from .scoring import JUDGE_SOURCES, PRIMARY_METRICS, score_question
 
 
 def _check_seal(record, expected_episode_id):
@@ -54,12 +54,13 @@ def _check_seal(record, expected_episode_id):
         raise ValueError("seal answers disagree with submitted question IDs")
 
 
-def score_episode(source, seal, gold_by_id, *, expected_episode_id, entity2id=None):
+def score_episode(source, seal, gold_by_id, *, expected_episode_id, entity2id=None, judge_metadata_by_id=None,
+                  judge_profile=None, complete=None):
     """Score a complete episode, preserving unmeasured outcomes and exceptions.
 
     Gold is supplied separately, keyed by stable adapter question IDs. The mean
     is over this episode's questions only, not an official benchmark-wide mean.
-    Incomplete episodes receive no partial numeric score in this offline core.
+    Incomplete episodes receive no partial numeric score in this scoring core.
     """
     _check_seal(seal, expected_episode_id)
     question_ids = seal["expected"]["question_ids"]
@@ -78,9 +79,19 @@ def score_episode(source, seal, gold_by_id, *, expected_episode_id, entity2id=No
     }
     if seal["status"] != "complete":
         return dict(result, status="unmeasured", reason="incomplete_episode")
+    if source in JUDGE_SOURCES and complete is not None:
+        if (not isinstance(judge_metadata_by_id, Mapping)
+                or set(judge_metadata_by_id) != set(question_ids) or judge_profile is None):
+            raise ValueError('judge metadata/profile must cover the selected episode')
+        result['judge'] = judge_profile
     for item in seal["answers"]:
-        score = score_question(source, item["answer"], gold_by_id[item["question_id"]],
-                               entity2id=entity2id)
+        if source in JUDGE_SOURCES and complete is not None:
+            from .judge import score_question as judge_question
+            score = judge_question(source, item['answer'], gold_by_id[item['question_id']],
+                                   judge_metadata_by_id[item['question_id']], complete, judge_profile)
+        else:
+            score = score_question(source, item["answer"], gold_by_id[item["question_id"]],
+                                   entity2id=entity2id)
         result["questions"].append(dict(score, question_id=item["question_id"]))
     measured = sum(item["status"] == "measured" for item in result["questions"])
     result["coverage"].update(measured=measured, unmeasured=total - measured)

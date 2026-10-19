@@ -14,9 +14,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from data.datasets import memoryagentbench as dataset
 from data.datasets.memoryagentbench.lib.scoring import _movie_name, _validate
 from data.datasets.memoryagentbench.lib.storage import load_gold, load_entity2id
-from data.scaffolds.command_control import materialize, run_check
+from data.scaffolds.command_control import materialize
 from eval.run import tool_relay
 from eval.run.runner import run_one
+from eval.verification.verifier import _verify
 from eval.service.tool_transport import call
 
 DEFAULT_TASK = 'mab-' + dataset.REVISION + '-conflict_resolution-r0000'
@@ -89,10 +90,11 @@ def run(mode, platform, task_id, work, *, recordings_root=None, actor_preload=No
                 raise RuntimeError(relay.fault())
             projection = relay.recording_input()
             shutil.copytree(projection['from'], work / projection['path'])
-            score, _ = run_check(dataset, task, work)
-            evidence = json.loads((work / 'verifier/evidence.json').read_text())
-            score = score if evidence['measured'] else None
-            receipt = {'evidence': evidence}
+            verifier = dataset.VERIFY[task_id]
+            verdict = _verify(work, verifier, '', sandbox=True, timeout_s=verifier['timeout_s'])
+            evidence = verdict.get('evidence') or {}
+            score = verdict.get('score')
+            receipt = {'verdict': verdict, 'evidence': evidence}
         finally:
             relay.cleanup()
         receipt['cleanup'] = {'complete': not relay.cleanup_errors, 'errors': relay.cleanup_errors}

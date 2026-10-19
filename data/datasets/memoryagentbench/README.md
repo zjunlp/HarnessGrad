@@ -1,7 +1,8 @@
 # MemoryAgentBench
 
-The native adapter offers the **local-primary subset: 41 episodes, 3,271 questions,
-20 sources** of the fixed 146-episode, 3,671-question release. Each task receives
+The native adapter offers the complete fixed release: **146 episodes, 3,671
+questions, 22 sources**. Local primary metrics cover 41 episodes / 3,271 questions;
+the two model-judge paths cover the remaining 105 episodes / 400 questions. Each task receives
 material chunks in order, then answers questions in order. Answers are final once
 accepted. The harness chooses its own storage, retrieval and context strategy.
 
@@ -46,10 +47,9 @@ python data/datasets/memoryagentbench/prepare.py \
 
 Preparation refuses an existing output, verifies all raw and resource hashes,
 and checks every prepared chunk/query sequence against the frozen official
-comparison. Repeat `--task-id` to prepare only selected episodes. `excluded_tasks()`
-lists the provisioned episodes omitted from the runnable pool:
-`infbench_sum_eng_shots2` and literal `longmemeval_s*` (105 episodes / 400 questions)
-require the official model judge. No local overlap metric replaces those scores.
+comparison. Repeat `--task-id` to prepare only selected episodes. Every prepared
+episode is included in the runnable pool; `excluded_tasks()` returns an empty list.
+The two judge sources require explicit provider configuration at scoring time.
 
 ## Runtime and scoring
 
@@ -84,13 +84,54 @@ shutdown margin, verifier timeout is 15 minutes. These are adapter resource
 limits. Native mount isolation keeps relay state private; actor networking uses
 the platform default and this adapter does not claim egress isolation.
 
-Primary metrics are official `exact_match`, `substring_exact_match`, and
+Local primary metrics are official `exact_match`, `substring_exact_match`, and
 `recsys_recall@5`. ROUGE and other diagnostics remain available through
 `lib/scoring.py::local_metrics`, but are not needed to publish these primary
 columns. The standard-library edit-distance implementation is differentially
 checked against upstream `editdistance.eval`. The verifier fixes
 `PYTHONHASHSEED=0` because upstream breaks equal-distance movie ties using set
 iteration; compare scores only under the same tie-breaking protocol.
+
+### Model judges
+
+Both paths use the existing verifier-only `VERIFY.judge` capability. No shared
+platform interface changes are needed. Gold and judge metadata remain private;
+only the scorer receives the judge socket, after the actor has finished.
+
+| Source | Coverage | Primary score | Default judge | Calls per question |
+| --- | --- | --- | --- | --- |
+| `infbench_sum_eng_shots2` | 100 episodes / 100 questions | `gpt-4-f1`: fluency × F1(recall, precision) | `gpt-4o-2024-05-13` | 3 |
+| literal `longmemeval_s*` | 5 episodes / 300 questions | `Accuracy` | `gpt-4o` | 1 |
+
+`specs/judge-prompts.json` freezes the official book-summary prompts and all
+LongMemEval question-type/abstention prompts. Summary sampling is temperature
+0.1, top-p 0.9, seed 42, maximum 4,096 output tokens; QA uses temperature 0 and
+maximum 10 output tokens. Each request has a 60-second deadline. The call budget
+is exactly three times the selected question count for summary, once for QA.
+There are no automatic retries or model fallbacks; the episode's 15-minute
+verifier deadline still applies.
+
+Configure `HG_JUDGE_BASE_URL`, `HG_JUDGE_API_KEY` and `HG_JUDGE_MODEL` explicitly.
+By default, run the two sources separately with their respective official model.
+To use another available model, also set `HG_MAB_JUDGE_MODEL` to the same value
+as `HG_JUDGE_MODEL`. An explicit override applies to both sources and changes
+the recorded judge profile/identity; such scores do not establish equivalence to
+the official default-model results. If a provider needs more output tokens,
+`HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` explicitly selects an integer from 1 to 16,384;
+it applies to both sources and changes the profile/identity. Leaving it unset
+retains the official limits. There is no automatic budget increase. Model,
+output budget, sampling, prompt/source hashes and
+response-admission rules enter the profile. The platform separately records the
+endpoint hash, request/response hashes, returned model and token usage. Source
+reports reject mixed judge profiles, including per-question mismatches.
+
+The official valid-response prompts, parsing and formulas are preserved. Stricter
+failure admission prevents empty/malformed decisions, nonbinary fluency and
+out-of-range counts from becoming ordinary scores. QA requires a yes/no word
+before applying the official `yes` substring rule. Provider or parsing failure
+makes the entire episode unmeasured; the adapter does not reproduce upstream
+batch code that silently drops failed summary items from the denominator.
+An incomplete episode issues no judge requests.
 
 Platform reward is the question mean **within an episode**, then a mean over
 measured episodes. `aggregate()` / `python -m data.datasets.memoryagentbench.report`
@@ -113,7 +154,12 @@ python tools/dataset_lint.py --dataset memoryagentbench
 The default control uses a released Conflict Resolution episode. Oracle scores
 1; completed wrong answers score 0; noop reports `incomplete_episode` with no
 score. `--output` preserves a receipt and, for platform controls, the sealed
-record outside the temporary work directory. All controls make zero model calls.
+record outside the temporary work directory. These default local-source controls
+make zero model calls. Selecting a judge-source task calls its configured judge
+for oracle/wrong/empty controls; noop still makes no requests. Reference-answer
+controls test scoring plumbing and do not guarantee a model judge will award 1.
+The CLI checks the expected oracle=1/wrong=0 values and retains any discrepancy
+in the receipt; it never adjusts the returned score.
 
 `tests/quality/test_memoryagentbench_*.py` covers input preparation, official
 scorer differential tests, ordering and retries, selected-input privacy, trusted
@@ -128,6 +174,16 @@ client in the actual sandbox: it retained both full material chunks of
 `conflict_resolution-r0000` and submitted the first four of its 100 questions.
 The trusted record and verifier correctly reported `incomplete_episode` with no
 score. This fixed diagnostic selection is not an official training split or a
-completed benchmark episode. The remaining API evaluation is unvalidated;
-complete-episode scoring is covered separately by the released-data controls.
+completed benchmark episode. This actor-side smoke is separate from judge validation; complete-episode
+scoring is covered by released-data controls.
 Keep smoke harnesses, API receipts and sealed records outside the repository.
+
+The two judge paths were also checked with bounded released-data API controls:
+one complete summary episode (reference/wrong, six calls) and one selected QA
+question (reference/wrong). With explicit `Ling-3.1-flash`, summary scored 1/0;
+QA returned no scoring text at the default 10-token limit, correctly remaining
+unmeasured. A separately declared 512-token QA diagnostic scored 1/0 in two more
+calls. Total: ten API calls, no full evaluation. These validate transport and
+scoring, not judge equivalence or benchmark performance. Full 60-question QA
+protocol/aggregation is tested with a local HTTP stub; all 146 prepared episodes
+and 400 judge questions passed inventory/metadata validation without API calls.

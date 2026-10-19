@@ -5,7 +5,6 @@ from pathlib import Path
 
 from .lib.reporting import summarize
 from .lib.storage import load_pool
-from .lib.scoring import JUDGE_SOURCES
 
 
 def main():
@@ -15,7 +14,7 @@ def main():
     parser.add_argument('--evidence', action='append', type=Path, default=[])
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
-    rows = [row for row in load_pool(args.prepared_root)['tasks'] if row['source'] not in JUDGE_SOURCES]
+    rows = load_pool(args.prepared_root)['tasks']
     if args.task_id:
         if len(set(args.task_id)) != len(args.task_id) or set(args.task_id) - {r['task_id'] for r in rows}:
             parser.error('selected task IDs must be known and unique')

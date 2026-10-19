@@ -2,7 +2,7 @@
 from collections import defaultdict
 import math
 
-from .scoring import PRIMARY_METRICS
+from .scoring import PRIMARY_METRICS, JUDGE_SOURCES
 from .storage import question_id
 
 
@@ -45,6 +45,17 @@ def summarize(records, selected):
                                                    measured=count, unmeasured=0)
                 or not isinstance(questions, list) or len(questions) != count):
             raise ValueError('incomplete or inconsistent measured episode')
+        if source in JUDGE_SOURCES:
+            from .judge import profile
+            declared = evidence.get('judge')
+            if (not isinstance(declared, dict) or not isinstance(declared.get('model'), str)
+                    or declared != profile(source, declared['model'],
+                                           max_output_tokens=declared.get('max_output_tokens'))
+                    or result.get('judge') != declared):
+                raise ValueError('invalid judge profile')
+            if 'judge' in group and group['judge'] != declared:
+                raise ValueError('mixed judge profiles within one source')
+            group['judge'] = declared
         scores = []
         for index, item in enumerate(questions):
             if (not isinstance(item, dict) or item.get('question_id') != question_id(tid, index)
@@ -52,6 +63,8 @@ def summarize(records, selected):
                     or type(item.get('score')) not in (int, float)
                     or not math.isfinite(item['score']) or not 0 <= item['score'] <= 1):
                 raise ValueError('invalid question metric or ordering')
+            if source in JUDGE_SOURCES and item.get('judge', {}).get('profile') != group['judge']:
+                raise ValueError('question judge profile mismatch')
             scores.append(float(item['score']))
         score = result.get('score')
         if (type(score) not in (int, float) or not math.isfinite(score)

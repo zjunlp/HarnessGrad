@@ -263,17 +263,15 @@ assert not any(m in sys.modules for m in ('numpy', 'nltk', 'rouge_score', 'pyarr
                    env=environment, check=True)
 
 
-def test_judge_sources_are_explicitly_excluded(monkeypatch):
+def test_all_prepared_sources_have_scoring_paths(monkeypatch):
     rows = []
     for index, source in enumerate(('factconsolidation_sh_6k', *sorted(scoring.JUDGE_SOURCES))):
         rows.append({'task_id': str(index), 'source': source})
     monkeypatch.setattr(storage, 'load_pool', lambda root: {'tasks': rows})
     dataset._rows.cache_clear()
     try:
-        assert set(dataset._rows()) == {'0'}
-        excluded = dataset.excluded_tasks()
-        assert {row['task_id'] for row in excluded} == {'1', '2'}
-        assert all(row['reason'] == 'official_model_judge_required' for row in excluded)
+        assert set(dataset._rows()) == {'0', '1', '2'}
+        assert dataset.excluded_tasks() == []
     finally:
         dataset._rows.cache_clear()
 

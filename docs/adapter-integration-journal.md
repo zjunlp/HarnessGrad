@@ -5942,3 +5942,20 @@ scores. Different protocol seeds, task selections or declarations are refused.
 The interface guide describes the persistence paths and compatibility behavior.
 Focused regression, official τ³ controls with a local model stub, and independent
 reviews cover these changes; no full benchmark or new external API run was made.
+
+
+### MemoryAgentBench model-judge scoring paths — 2026-10-19
+
+Enabled all 146 released episodes / 3,671 questions by adding the pinned official
+summary fluency/recall/precision and LongMemEval question-type judges. The existing
+verifier-only broker carries model calls; no shared runtime API changes are needed.
+Selected metadata, protocol identity, explicit model/output-budget overrides and
+full-denominator reporting bind each result. Failed or malformed judge calls leave
+the entire episode unmeasured, and mixed profiles cannot share a source mean.
+
+Validation passed 413 dataset tests, 24 shared-runtime tests and dataset lint,
+including official prompt/formula comparisons, native sandbox controls, complete
+60-question stub episodes, later-question failures and all released judge metadata. Ten bounded API calls exercised reference/wrong controls: summary 1/0;
+QA empty responses at the official 10-token limit were preserved as unmeasured,
+and an explicitly distinct 512-token protocol produced 1/0. Detailed receipts and
+cleanup records remain outside Git. Publication/classification status is unchanged.

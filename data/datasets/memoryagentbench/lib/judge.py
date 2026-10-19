@@ -32,13 +32,16 @@ def _prompts():
     return json.loads(raw)
 
 
-def profile(source, model=None):
-    """Return the exact default protocol or an explicitly identified model override."""
+def profile(source, model=None, *, max_output_tokens=None):
+    """Return the default protocol or explicitly identified model/output-budget overrides."""
     if source not in (SUMMARY, LONGMEM):
         raise JudgeError("unsupported judge source")
     default = "gpt-4o-2024-05-13" if source == SUMMARY else "gpt-4o"
     if model is not None and (not isinstance(model, str) or not model.strip()):
         raise JudgeError("judge model must be a nonempty string")
+    default_tokens = 4096 if source == SUMMARY else 10
+    if max_output_tokens is not None and (type(max_output_tokens) is not int or not 1 <= max_output_tokens <= 16384):
+        raise JudgeError("judge output budget must be an integer in [1, 16384]")
     prompts = _prompts()
     result = {
         "schema": "hg-mab-judge-profile-v1", "source": source,
@@ -49,7 +52,9 @@ def profile(source, model=None):
         "official_default_model": default,
         "model_override": model is not None and model != default,
         "metric": "gpt-4-f1" if source == SUMMARY else "Accuracy",
-        "max_output_tokens": 4096 if source == SUMMARY else 10,
+        "max_output_tokens": default_tokens if max_output_tokens is None else max_output_tokens,
+        "official_default_max_output_tokens": default_tokens,
+        "output_budget_override": max_output_tokens is not None and max_output_tokens != default_tokens,
         "parameters": ({"temperature": 0.1, "top_p": 0.9, "seed": 42}
                        if source == SUMMARY else {"temperature": 0}),
         "omitted_api_defaults": {"n": 1, "stop": None},
@@ -91,7 +96,7 @@ def _answer_input(answers):
 
 
 def _check_profile(source, value):
-    if not isinstance(value, dict) or value != profile(source, value.get("model")):
+    if not isinstance(value, dict) or value != profile(source, value.get("model"), max_output_tokens=value.get("max_output_tokens")):
         raise JudgeError("judge profile does not match the fixed protocol")
 
 

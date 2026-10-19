@@ -28,10 +28,10 @@ def read_pinned(path, digest):
     return json.loads(raw)
 
 
-def verify(gold, record, *, task_id, input_sha256, relay_sha256, entity2id=None):
+def verify(gold, record, *, task_id, input_sha256, relay_sha256, entity2id=None, judge_profile=None, complete=None):
     if (gold.get('schema') != 'hg-mab-gold-v1' or gold.get('task_id') != task_id
             or gold.get('episode_id') != task_id or gold.get('input_sha256') != input_sha256
-            or gold.get('source') not in PRIMARY_METRICS or gold['source'] in JUDGE_SOURCES):
+            or gold.get('source') not in PRIMARY_METRICS):
         raise ValueError('gold identity or eligible source mismatch')
     binding = record.get('binding', {})
     payload = record.get('payload', {})
@@ -42,7 +42,9 @@ def verify(gold, record, *, task_id, input_sha256, relay_sha256, entity2id=None)
             or payload.get('task_id') != task_id or payload.get('input_sha256') != input_sha256):
         raise ValueError('trusted episode identity mismatch')
     result = score_episode(gold['source'], payload['seal'], gold['gold_by_id'],
-                           expected_episode_id=task_id, entity2id=entity2id)
+                           expected_episode_id=task_id, entity2id=entity2id,
+                           judge_metadata_by_id=gold.get('judge_metadata_by_id'),
+                           judge_profile=judge_profile, complete=complete)
     evidence = {'schema': 'hg-mab-verifier-v1', 'task_id': task_id,
                 'source': gold['source'], 'metric': PRIMARY_METRICS[gold['source']],
                 'measured': result['status'] == 'measured', 'result': result,
@@ -50,6 +52,8 @@ def verify(gold, record, *, task_id, input_sha256, relay_sha256, entity2id=None)
                     'upstream_revision': UPSTREAM_REVISION,
                     'upstream_scorer_sha256': UPSTREAM_SCORER_SHA256,
                     'primary_only': True, 'python_hash_seed': os.environ.get('PYTHONHASHSEED')}}
+    if 'judge' in result:
+        evidence['judge'] = result['judge']
     if not evidence['measured']:
         evidence['reason'] = result['reason']
     return evidence
@@ -59,6 +63,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('gold', 'task-id', 'input-sha256', 'relay-sha256', 'gold-sha256', 'entity2id-sha256'):
         parser.add_argument('--' + name, required=True)
+    parser.add_argument('--judge-model')
+    parser.add_argument('--judge-max-output-tokens', type=int)
     parser.add_argument('--record', default='trusted_episode/episode.json')
     parser.add_argument('--reward-file', default='verifier/reward.txt')
     parser.add_argument('--evidence-file', default='verifier/evidence.json')
@@ -71,8 +77,25 @@ def main():
         gold = read_pinned(args.gold, args.gold_sha256)
         mapping = read_pinned(Path(args.gold).with_name('entity2id.json'), args.entity2id_sha256)
         record = json.loads(Path(args.record).read_text())
+        selected = None
+        complete = None
+        if gold['source'] in JUDGE_SOURCES:
+            from lib.judge import profile
+            if not args.judge_model:
+                raise ValueError('judge source requires its declared model')
+            selected = profile(gold['source'], args.judge_model, max_output_tokens=args.judge_max_output_tokens)
+            # Verifier-only projected transport; the candidate cannot import or
+            # call this socket during its actor phase.
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                'mab_judge_transport', Path('mab_judge_transport.py').resolve())
+            transport = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(transport)
+            def complete(messages):
+                return transport.call(os.environ['HG_JUDGE_SOCKET'], 'complete', {'messages': messages})['content']
         evidence = verify(gold, record, task_id=args.task_id, input_sha256=args.input_sha256,
-                          relay_sha256=args.relay_sha256, entity2id=mapping)
+                          relay_sha256=args.relay_sha256, entity2id=mapping,
+                          judge_profile=selected, complete=complete)
         evidence['artifacts'].update(gold_sha256=args.gold_sha256,
                                      entity2id_sha256=args.entity2id_sha256)
     except Exception as exc:
