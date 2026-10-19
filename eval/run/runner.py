@@ -1007,7 +1007,8 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              recordings_root: Path | None = None,
              round_no: int = 0, trials: int = 1, jobs: int = 1,
              progress_dir: Path | None = None,
-             diagnostic_authorization: Authorization | None = None) -> dict:
+             diagnostic_authorization: Authorization | None = None,
+             persist_trial_report: bool = True) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1024,6 +1025,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                          envs=envs, run_id=run_id, run_seed=run_seed,
                          recordings_root=recordings_root, round_no=round_no,
                          trials=trials, jobs=jobs, progress_dir=progress_dir,
+                         persist_trial_report=persist_trial_report,
                          diagnostic_authorization=diagnostic_authorization)
         if diagnostic_authorization is not None:
             result["enforcement"] = diagnostic_authorization.record()
@@ -1126,7 +1128,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               progress_dir: Path | None = None,
               recordings_root: Path | None = None,
               trials: int = 1, jobs: int = 1,
-              diagnostic_authorization: Authorization | None = None) -> dict:
+              diagnostic_authorization: Authorization | None = None,
+              persist_trial_report: bool = True) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1424,6 +1427,13 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             if stopped is not None:
                 unmeasured = stopped
 
+        if trial_protocol and progress_dir is not None:
+            repeated_trials.save_task(
+                repeated_trials.report_root(progress_dir, round_no, harness_sha),
+                repeated_trials.plan([task], trial_protocol, run_id=run_id,
+                                     round_no=round_no, harness_sha=harness_sha),
+                trial_rows[tid])
+
         if unmeasured is not None:
             # Not cached, and deliberately: the cache key names the harness, and the reason
             # this task failed was not the harness, so caching it would carry a dataset bug
@@ -1678,8 +1688,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         report["round"] = round_no
         report["harness_sha"] = harness_sha
         repeated = {"repeated_trials": report}
-        if progress_dir is not None:
-            report_root = Path(progress_dir) / "protocols" / f"round-{round_no}" / hashlib.sha256(harness_sha.encode()).hexdigest()[:16]
+        if progress_dir is not None and persist_trial_report:
+            report_root = repeated_trials.report_root(progress_dir, round_no, harness_sha)
             repeated_trials.persist(report_root, report)
     return {**repeated, "per_task": per_task, "per_task_std": per_task_std, "score_std": score_std,
             "scorer_isolation_class": scorer_isolation_class,
