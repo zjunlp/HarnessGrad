@@ -33,14 +33,14 @@ from harnessgrad import config                                       # noqa: E40
 # ------------------------------------------------------------- the surface ---
 
 def test_the_surface_has_exactly_the_declared_variables():
-    """38 `HG_*` variables, plus the improver registry's named secret.
+    """Declared `HG_*` variables, plus the improver registry's named secret.
 
     The count is not the point -- the declaration is. This test makes a *new* variable
     impossible to add silently: it would have to be counted here, next to the table a
     reader uses to answer "what does this platform read?".
     """
     hg_names = [name for name in config.ENV_NAMES if name.startswith("HG_")]
-    assert len(hg_names) == 41, hg_names
+    assert len(hg_names) == 45, hg_names
     assert len(config.ENV_NAMES) == len(set(config.ENV_NAMES))
     # The three credentials the repository's rule names. `DEEPSEEK_API_KEY` is the
     # default improver registry entry's `api_key_env`, so it is declared beside it.
@@ -210,3 +210,37 @@ def test_the_migrated_modules_read_the_snapshot_not_the_raw_environment(monkeypa
     config.reset()
     from eval.containers import harness_runtime
     assert harness_runtime.overlays_root() == Path("/tmp/hg-overlays-test")
+
+
+@pytest.mark.parametrize('dataset,variable', [
+    ('memoryagentbench', 'HG_MAB_JUDGE_MODEL'),
+    ('strongreject', 'HG_STRONGREJECT_JUDGE_MODEL'),
+    ('tau3_bench', 'HG_TAU3_JUDGE_MODEL'),
+])
+def test_judge_model_precedence_and_empty_overrides(dataset, variable):
+    for env, expected in [({}, 'official'), ({'HG_JUDGE_MODEL': 'global'}, 'global'),
+                          ({variable: 'specific'}, 'specific'),
+                          ({variable: 'specific', 'HG_JUDGE_MODEL': 'global'}, 'specific'),
+                          ({variable: '', 'HG_JUDGE_MODEL': 'global'}, 'global')]:
+        cfg = config.load(env)
+        assert cfg.judge.resolve_model(dataset, default='official') == expected
+    with pytest.raises(ValueError, match='configure a judge model'):
+        config.load({}).judge.resolve_model(dataset)
+    with pytest.raises(ValueError, match='model ID'):
+        config.load({variable: ' invalid '}).judge.resolve_model(dataset)
+
+
+def test_judge_overrides_are_described_recorded_and_snapshot_watched(monkeypatch):
+    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'first-model')
+    first = config.current()
+    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'second-model')
+    monkeypatch.setenv('HG_MAB_JUDGE_MAX_OUTPUT_TOKENS', '512')
+    second = config.current()
+    assert first.judge.memoryagentbench_model == 'first-model'
+    assert second.judge.memoryagentbench_model == 'second-model'
+    assert second.judge.memoryagentbench_max_output_tokens == 512
+    recorded = config.dump(second)['judge']
+    assert recorded['memoryagentbench_model'] == 'second-model'
+    assert recorded['memoryagentbench_max_output_tokens'] == 512
+    assert 'HG_MAB_JUDGE_MAX_OUTPUT_TOKENS' in {r['variable'] for r in config.describe()}
+    assert config.load({'HG_MAB_JUDGE_MAX_OUTPUT_TOKENS': ''}).judge.memoryagentbench_max_output_tokens is None

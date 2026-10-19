@@ -43,8 +43,13 @@ class Judge:
                 raise JudgeUnavailable('environment trial seed must be an explicit integer') from exc
             self.spec['parameters'] = {**spec.get('parameters', {}), 'seed': seed}
         cfg = getattr(current(), role)
-        if cfg.model != spec['model'] or not cfg.base_url:
-            raise JudgeUnavailable(f'HG_{"JUDGE" if role == "judge" else "ENV"}_MODEL/BASE_URL must match the declared model')
+        if not cfg.base_url:
+            raise JudgeUnavailable(f'HG_{"JUDGE" if role == "judge" else "ENV"}_BASE_URL must be configured')
+        # Judge model precedence is resolved by the trusted dataset adapter.
+        # The frozen declaration controls both calls and evidence; the global
+        # model is a default, not a second equality constraint on overrides.
+        if role == 'environment' and cfg.model != spec['model']:
+            raise JudgeUnavailable('HG_ENV_MODEL must match the declared model')
         parsed = urlsplit(cfg.base_url)
         if (parsed.scheme not in ('http', 'https') or not parsed.hostname
                 or parsed.username or parsed.password or parsed.query or parsed.fragment):

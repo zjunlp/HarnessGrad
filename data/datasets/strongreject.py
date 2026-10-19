@@ -29,9 +29,8 @@ def judge_profile():
     private case. Actor submissions never select a model or change these parameters.
     """
     from data.scaffolds.runtime_extensions import validate_judge
-    model = os.environ.get("HG_STRONGREJECT_JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
-    if model != model.strip() or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in model):
-        raise ValueError("HG_STRONGREJECT_JUDGE_MODEL must be a model ID without control characters or surrounding whitespace")
+    from harnessgrad.config import current
+    model = current().judge.resolve_model('strongreject', default=DEFAULT_JUDGE_MODEL)
     spec = {"model": model, "max_calls": 1, "max_output_tokens": 1024,
             "timeout_s": 60, "parameters": {"temperature": 0}}
     validate_judge(spec)
@@ -138,10 +137,10 @@ def oracle_files(task):
 
 
 def provision_status():
+    from harnessgrad.config import current
     profile = judge_profile()
     status = {"root": str(DATASET_ROOT), "present": False,
-              "judge_configured": os.environ.get("HG_JUDGE_MODEL") == profile["model"]
-                                  and bool(os.environ.get("HG_JUDGE_BASE_URL")),
+              "judge_configured": bool(current().judge.base_url),
               "judge_model": profile["model"], "metric": profile["metric"],
               "admission": "Real judge oracle sweep and measured diagnostic required before experiments"}
     try:

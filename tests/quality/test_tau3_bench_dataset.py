@@ -211,3 +211,22 @@ def test_real_nl_http_partial_assertion_list_is_unmeasured(official, monkeypatch
                 assert len(endpoint.requests) == 1
     finally:
         nl.generate = old
+
+
+@pytest.mark.parametrize('global_model,specific,expected', [
+    ('global-judge', None, 'global-judge'), ('global-judge', 'specific-judge', 'specific-judge'),
+    (None, 'specific-judge', 'specific-judge'), (None, None, None),
+])
+def test_judge_priority_is_independent_of_environment(monkeypatch, global_model, specific, expected):
+    for key, value in [('HG_JUDGE_MODEL', global_model), ('HG_TAU3_JUDGE_MODEL', specific)]:
+        if value is None:
+            monkeypatch.delenv(key, raising=False)
+        else:
+            monkeypatch.setenv(key, value)
+    monkeypatch.setenv('HG_ENV_MODEL', 'user-model')
+    assert dataset.model_spec('environment')['model'] == 'user-model'
+    if expected is None:
+        with pytest.raises(ValueError, match='configure a judge model'):
+            dataset.model_spec('judge')
+    else:
+        assert dataset.model_spec('judge')['model'] == expected

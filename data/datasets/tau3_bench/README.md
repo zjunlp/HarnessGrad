@@ -47,7 +47,12 @@ imports from reading ambient credential files.
 ## Model roles and trials
 
 Configure explicit `HG_ENV_MODEL/BASE_URL/API_KEY` for the simulator and
-`HG_JUDGE_MODEL/BASE_URL/API_KEY` for NL scoring. There is no implicit provider/model.
+`HG_JUDGE_BASE_URL/API_KEY` for NL scoring. The judge model is selected from
+`HG_TAU3_JUDGE_MODEL` first, then `HG_JUDGE_MODEL`; blank values mean unset.
+There is no implicit provider/model, so tasks requiring NL scoring need one of
+those model settings. The override is in the unified configuration snapshot and
+the resolved model is fixed in the verifier receipt. It does not change the user
+simulator's `HG_ENV_MODEL`.
 The platform broker fixes temperature 0, at most 4096 output tokens per call and
 60 seconds per call; the user has at most 200 calls, and the NL judge one.
 This bounded local profile is recorded and does not claim parity with Harbor's

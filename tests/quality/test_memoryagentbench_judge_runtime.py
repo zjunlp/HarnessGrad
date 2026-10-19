@@ -186,3 +186,27 @@ def test_output_budget_override_reaches_broker_and_evidence(judge_pool, judge_se
     assert result['evidence']['judge'] == selected
     report = summarize([result['evidence']], [dataset._rows()[tid]])
     assert report['sources'][judge.LONGMEM]['judge'] == selected
+
+
+@pytest.mark.parametrize('source', [judge.SUMMARY, judge.LONGMEM])
+@pytest.mark.parametrize('selection', ['official', 'global', 'specific'])
+def test_model_priority_reaches_actual_requests_and_profile(judge_pool, judge_server, tmp_path,
+                                                           monkeypatch, source, selection):
+    tid = judge_pool(source)
+    monkeypatch.delenv('HG_MAB_JUDGE_MODEL', raising=False)
+    monkeypatch.delenv('HG_JUDGE_MODEL', raising=False)
+    expected = judge.profile(source)['model']
+    if selection != 'official':
+        monkeypatch.setenv('HG_JUDGE_MODEL', 'global-model')
+        expected = 'global-model'
+    if selection == 'specific':
+        monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'specific-model')
+        expected = 'specific-model'
+    spec = dataset.VERIFY[tid]
+    result = run_control(tmp_path, monkeypatch, tid, 'oracle')
+    assert result['score'] == 1, result
+    assert all(r['model'] == expected for r in judge_server['requests'])
+    assert result['evidence']['judge']['model'] == expected
+    assert result['detail']['verdict']['judge']['configuration']['model'] == expected
+    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'later-change')
+    assert spec['judge']['model'] == expected

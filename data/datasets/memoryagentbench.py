@@ -95,9 +95,11 @@ def _verify(row):
     from data.datasets.memoryagentbench.lib.scoring import JUDGE_SOURCES
     if row['source'] in JUDGE_SOURCES:
         from data.datasets.memoryagentbench.lib.judge import profile
-        budget = os.environ.get('HG_MAB_JUDGE_MAX_OUTPUT_TOKENS')
-        selected = profile(row['source'], os.environ.get('HG_MAB_JUDGE_MODEL'),
-                           max_output_tokens=int(budget) if budget is not None else None)
+        from harnessgrad.config import current
+        cfg = current().judge
+        model = cfg.resolve_model('memoryagentbench', default=profile(row['source'])['model'])
+        selected = profile(row['source'], model,
+                           max_output_tokens=cfg.memoryagentbench_max_output_tokens)
         result['judge'] = {key: selected[key] for key in ('model', 'max_output_tokens', 'parameters')}
         result['judge'].update(max_calls=row['question_count'] * selected['calls_per_question'], timeout_s=60)
         result['argv'] += ['--judge-model', selected['model'],

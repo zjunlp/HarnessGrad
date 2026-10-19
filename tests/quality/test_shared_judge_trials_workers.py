@@ -67,10 +67,10 @@ def test_judge_failure_or_budget_exhaustion_cannot_be_hidden_by_scorer(tmp_path,
     assert len(endpoint)==1
 
 
-def test_judge_requires_explicit_matching_config(tmp_path,monkeypatch):
-    monkeypatch.delenv('HG_JUDGE_MODEL',raising=False)
+def test_judge_requires_explicit_endpoint(tmp_path,monkeypatch):
+    monkeypatch.delenv('HG_JUDGE_BASE_URL',raising=False)
     result=_verify(tmp_path,judge_spec(),'',sandbox=True,timeout_s=1)
-    assert result['score'] is None and 'HG_JUDGE_MODEL' in result['unmeasured']
+    assert result['score'] is None and 'HG_JUDGE_BASE_URL' in result['unmeasured']
 
 
 PROTOCOL={'version':1,'metric':'pass^k','trials':3,'ks':[1,2,3],'seeds':[10,20,30]}
@@ -306,3 +306,24 @@ def test_trial_seeded_environment_does_not_reuse_measurement_cache(tmp_path, mon
     assert [row['run_seed'] for row in calls] == ['13', '29']
     assert all(row.get('trial_id') for row in calls)
     assert cache == {}
+
+
+@pytest.mark.parametrize('global_model', [None, 'different-global-default'])
+def test_judge_uses_frozen_declaration_not_global_default(tmp_path, endpoint, monkeypatch, global_model):
+    if global_model is None:
+        monkeypatch.delenv('HG_JUDGE_MODEL')
+    else:
+        monkeypatch.setenv('HG_JUDGE_MODEL', global_model)
+    result = _verify(tmp_path, judge_spec(), '', sandbox=True, timeout_s=10)
+    assert result['score'] == 1, result
+    assert endpoint[0][0]['model'] == 'fixture-model'
+    assert result['judge']['configuration']['model'] == 'fixture-model'
+
+
+def test_environment_model_mismatch_is_still_rejected(endpoint, monkeypatch):
+    from eval.service.judge import Judge, JudgeUnavailable
+    import os
+    monkeypatch.setenv('HG_ENV_BASE_URL', os.environ['HG_JUDGE_BASE_URL'])
+    monkeypatch.setenv('HG_ENV_MODEL', 'different-environment-model')
+    with pytest.raises(JudgeUnavailable, match='HG_ENV_MODEL must match'):
+        Judge(judge_spec()['judge'], role='environment')

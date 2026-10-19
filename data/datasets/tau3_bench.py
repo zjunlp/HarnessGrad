@@ -67,7 +67,11 @@ def load():
 
 
 def model_spec(role, tools=None):
-    model = os.environ.get('HG_ENV_MODEL' if role == 'environment' else 'HG_JUDGE_MODEL')
+    from harnessgrad.config import current
+    if role not in ('environment', 'judge'):
+        raise ValueError('unsupported model role')
+    cfg = current()
+    model = cfg.environment.model if role == 'environment' else cfg.judge.resolve_model('tau3_bench')
     if not model:
         raise ValueError(f'configure explicit HG_{"ENV" if role == "environment" else "JUDGE"}_MODEL')
     spec = {'model': model, 'max_calls': 200 if role == 'environment' else 1,

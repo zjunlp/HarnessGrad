@@ -72,7 +72,7 @@ def test_no_private_inputs_or_oracle_in_actor_setup(prepared):
 
 
 def test_provision_does_not_claim_live_judge_validation(prepared, monkeypatch):
-    monkeypatch.delenv("HG_JUDGE_MODEL", raising=False)
+    monkeypatch.delenv("HG_JUDGE_BASE_URL", raising=False)
     state = prepared.provision_status()
     assert state["present"] and not state["judge_configured"]
     assert "required" in state["admission"]
@@ -163,17 +163,18 @@ def test_unsafe_answer_files_are_unmeasured(prepared, tmp_path, endpoint, kind):
 
 
 @pytest.mark.parametrize("model", [dataset.DEFAULT_JUDGE_MODEL, "Ling-3.1-flash"])
-def test_judge_identity_mismatch_has_no_fallback(prepared, tmp_path, endpoint, monkeypatch, model):
+def test_dataset_judge_overrides_global_default(prepared, tmp_path, endpoint, monkeypatch, model):
     monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", model)
-    monkeypatch.setenv("HG_JUDGE_MODEL", "unapproved-local-proxy")
+    monkeypatch.setenv("HG_JUDGE_MODEL", "different-global-default")
     (tmp_path / "answer.txt").write_text("Synthetic response.")
     tid = next(iter(prepared.rows()))
     result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
-    assert result["score"] is None and result["outcome"] == "unmeasured", result
-    assert not endpoint["requests"]
+    assert result['score'] == 1, result
+    assert endpoint['requests'][0]['model'] == model
+    assert result['judge']['configuration']['model'] == model
 
 
-@pytest.mark.parametrize("model", ["", " ", " model", "model ", "model\nname", "model\x7fname", "model\x85name"])
+@pytest.mark.parametrize("model", [" ", " model", "model ", "model\nname", "model\x7fname", "model\x85name"])
 def test_invalid_profile_fails_explicitly(monkeypatch, model):
     monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", model)
     with pytest.raises(ValueError):
@@ -266,3 +267,18 @@ def test_control_entrypoint_with_synthetic_judge(prepared, tmp_path, endpoint, p
     assert result.returncode == 0, result.stdout + result.stderr
     assert ("reward 1" if oracle else "CONTROL UNMEASURED") in result.stdout
     assert len(endpoint["requests"]) == int(oracle)
+
+
+@pytest.mark.parametrize('global_model', [None, 'global-only-model'])
+def test_default_or_global_judge_without_dataset_override(prepared, tmp_path, endpoint, monkeypatch, global_model):
+    monkeypatch.delenv('HG_STRONGREJECT_JUDGE_MODEL', raising=False)
+    if global_model is None:
+        monkeypatch.delenv('HG_JUDGE_MODEL', raising=False)
+    else:
+        monkeypatch.setenv('HG_JUDGE_MODEL', global_model)
+    expected = global_model or prepared.DEFAULT_JUDGE_MODEL
+    (tmp_path / 'answer.txt').write_text('Synthetic response.')
+    result = _verify(tmp_path, prepared.VERIFY[next(iter(prepared.rows()))], '', sandbox=True, timeout_s=15)
+    assert result['score'] == 1, result
+    assert endpoint['requests'][0]['model'] == expected
+    assert expected in result['evidence']['metric']

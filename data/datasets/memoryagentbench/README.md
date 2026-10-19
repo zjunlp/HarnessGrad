@@ -111,10 +111,15 @@ is exactly three times the selected question count for summary, once for QA.
 There are no automatic retries or model fallbacks; the episode's 15-minute
 verifier deadline still applies.
 
-Configure `HG_JUDGE_BASE_URL`, `HG_JUDGE_API_KEY` and `HG_JUDGE_MODEL` explicitly.
-By default, run the two sources separately with their respective official model.
-To use another available model, also set `HG_MAB_JUDGE_MODEL` to the same value
-as `HG_JUDGE_MODEL`. An explicit override applies to both sources and changes
+Configure `HG_JUDGE_BASE_URL` and `HG_JUDGE_API_KEY` for the judge service.
+Model selection is `HG_MAB_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the source's official
+default. Blank optional settings mean unset. Set only `HG_JUDGE_MODEL` to share
+one model across datasets, or use `HG_MAB_JUDGE_MODEL` to override it here; the two
+values need not match. With neither set, summary and QA retain their different
+official models. The endpoint must serve whichever model is selected.
+Model and output overrides are declared in the unified configuration layer and
+appear in `--show-config`/configuration snapshots; the final per-source profile
+is frozen in the verifier and its evidence. A nondefault model changes
 the recorded judge profile/identity; such scores do not establish equivalence to
 the official default-model results. If a provider needs more output tokens,
 `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` explicitly selects an integer from 1 to 16,384;

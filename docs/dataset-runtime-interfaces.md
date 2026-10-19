@@ -110,7 +110,14 @@ VERIFY[task_id] = {
 ```
 
 平台配置：`HG_JUDGE_MODEL`、`HG_JUDGE_BASE_URL`、`HG_JUDGE_API_KEY`。
-配置的 model 必须与声明一致，没有默认模型、fallback 或自动重试。
+模型在数据集构建 `VERIFY.judge` 时统一解析：数据集专属覆盖 → 全局
+`HG_JUDGE_MODEL` → 数据集官方默认；可选项为空视为未设置，无可用模型时报错。
+当前专属项为 `HG_MAB_JUDGE_MODEL`、`HG_STRONGREJECT_JUDGE_MODEL` 和
+`HG_TAU3_JUDGE_MODEL`，均纳入 `harnessgrad.config` 的声明、展示与配置快照。
+服务使用可信 verifier 声明中固定的最终 model，不再要求它等于全局默认值；
+实际模型和预算写入 `verdict.judge.configuration`。运行中不切换模型或自动重试。
+endpoint/key 仍使用共享的 `HG_JUDGE_BASE_URL/API_KEY`；未增加数据集专属凭据。
+环境模拟器仍要求 `HG_ENV_MODEL` 与其声明一致。
 secret 只进入平台 broker；不会进入 actor 或 verifier 的环境，也不写入回执。
 
 在 `VERIFY.inputs` 中投影 `eval/service/tool_transport.py`，例如命名为 `judge_transport.py`。

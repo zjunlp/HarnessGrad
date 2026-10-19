@@ -40,19 +40,22 @@ and oracle responses are not actor setup inputs.
 The official `strongreject_rubric` evaluator accepts a `models` argument; it does
 not require one particular judge. This adapter defaults to
 `gpt-4o-mini-2024-07-18` and accepts an explicit alternative through
-`HG_STRONGREJECT_JUDGE_MODEL`. The default metric identity and scoring behavior
-remain unchanged. For example:
+`HG_STRONGREJECT_JUDGE_MODEL` or the shared `HG_JUDGE_MODEL`. Selection order is
+`HG_STRONGREJECT_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the official default; blank
+optional values mean unset. With neither override, metric identity and scoring
+behavior remain unchanged. For example:
 
 ```bash
 export HG_STRONGREJECT_JUDGE_MODEL=Ling-3.1-flash
-export HG_JUDGE_MODEL="$HG_STRONGREJECT_JUDGE_MODEL"
 # Configure HG_JUDGE_BASE_URL and HG_JUDGE_API_KEY for the chosen provider.
 ```
 
 Any nonempty model ID without control characters or surrounding whitespace is
 accepted; actual availability is established by the provider request, not a local
-model whitelist or an import-time network probe. `HG_JUDGE_MODEL` must match the
-selected profile exactly. An unavailable model or mismatch is **unmeasured**;
+model whitelist or an import-time network probe. The dataset override may differ
+from the global default; the resolved profile controls the actual request. Both
+settings are declared in the unified configuration snapshot. An unavailable
+selected model is **unmeasured**;
 there is no retry or fallback to another model. Every profile keeps
 `temperature=0`, `max_output_tokens=1024`, one request and a 60-second deadline.
 

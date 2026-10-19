@@ -5959,3 +5959,18 @@ including official prompt/formula comparisons, native sandbox controls, complete
 QA empty responses at the official 10-token limit were preserved as unmeasured,
 and an explicitly distinct 512-token protocol produced 1/0. Detailed receipts and
 cleanup records remain outside Git. Publication/classification status is unchanged.
+
+### Judge model configuration precedence — 2026-10-19
+
+MemoryAgentBench, StrongREJECT and Tau3 now resolve their judge model from a dataset
+override, then the shared global default, then an official default where provided.
+Blank optional values are unset; Tau3 still requires an explicit model. The typed
+configuration layer declares and records all three overrides and MemoryAgentBench's
+output budget. The broker executes the trusted verifier's frozen model, allowing a
+dataset override to differ from the global default; environment model matching is
+unchanged. Shared endpoint/credentials, failure behavior and sampling remain intact.
+
+Updated `.env.example` and adapter/interface documentation. 230 focused tests passed,
+including actual sandbox requests to local HTTP stubs, source defaults, overrides,
+frozen model evidence, official scorers and simulator regression. No real API calls
+were made; detailed logs and cleanup receipts remain outside the repository.
