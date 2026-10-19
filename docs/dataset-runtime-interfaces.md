@@ -163,6 +163,7 @@ provider、解析、预算或运输失败即使被评分脚本捕获并写成 re
 - NaN、Infinity、越界、缺失分数，以及 evidence 的 `measured:false`，得到 `score:null` 和 `unmeasured`。
 - verifier evidence 可以保留数据集的具体错误、完成状态和原始诊断。
 - 可选 `require_exit_zero: true` 要求评分命令正常退出：平台在读取 reward/evidence 前检查真实退出码，非零退出得到 `score:null` 和 `unmeasured`，即使已写分数也不采纳。适用于普通 command（含 observed 容器和 snapshot 路径），不支持 `pristine-offline`。省略或 `false` 保持原行为；它不限制候选 actor 的退出码。
+- adapter 的正常不完整判定可返回 exit 0、`measured:false` 且不写 reward，以保留覆盖率证据；评分器异常应非零退出并提供简短 stderr 原因。
 - 原生单 actor 返回 `verdict.submission.answer_file`：`missing/empty/present`；这个字段本身不改分数。
 
 最终文本回答仍使用现有 `answer.txt`。不扫描 stdout、任意日志或最后聊天消息来猜最终回答。
@@ -191,12 +192,24 @@ relay 可从 context 读取它。旧 service 的 seed 派生方式不变。
 `<progress_dir>/protocols/round-<N>/<report-key>/repeated-trials.json`
 
 其中 `report-key = sha256(harness_sha.encode()).hexdigest()[:16]`，不是直接截取 `harness_sha`。
-报告以独占创建方式写入；重复使用同一目录会拒绝覆盖已有报告。
+报告原子发布且不覆盖已有内容；断点续跑可复用内容完全相同的报告，不同内容会被拒绝。
 
 包括完整 manifest、manifest hash、实际结果、missing、invalid 和完整性状态。
 仅全部计划试验都有有效二元分数时发布 `C(s,k)/C(n,k)` 的 per-task 和 task-weighted mean。
 缺失、无效或非二元结果不补零、不缩分母、不发布不完整指标。
 纯聚合入口 `eval.run.repeated_trials.aggregate(..., groups=...)` 可额外生成分域结果，group 映射必须覆盖全部任务。
+
+eval 断点续跑还会保存 `<progress_dir>/protocols/round-0/resume-plan.json`，
+绑定原始完整任务清单、协议、run/round/harness 和任务、评分器、运行环境声明的摘要。
+实际逐 trial 结果保存在对应 `report-key/tasks/<sha256(task_id)>.json`。
+续跑只跳过 progress 与逐 trial 记录一致且已完整测量的任务；不从平均分推导试验结果。
+缺少原始计划或试验记录、trial seed/任务集/harness/声明变化、记录与 progress 不符时拒绝续跑。
+任务启动前保存进行中标记，试验记录与 progress 完整写入后才清除；
+若任务在 trial 之间或写入过程中被打断，续跑会拒绝遗留标记，不重测已执行的试验。
+该协议用显式 trial seeds 替代外层随机 run seed，因此外层 seed 的重新生成不阻止恢复。
+评分器有效判分与 actor 普通非零退出分别记录；恢复保留分数及 harness 失败记录。
+剩余任务完成后按原始完整 manifest 重新聚合；全部任务已完成时也可只用原记录重建报告。
+这些规则仅适用于声明 `trial_protocol` 的任务，未声明时沿用原 eval 续跑流程。
 
 现有 `run_reward/per_task/per_task_trials` 含义不变；它们不是新的可靠性报告。
 声明 `trial_protocol`、`judge`、`result_contract`、`tool_relay.record`、`workers`

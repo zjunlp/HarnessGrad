@@ -5919,3 +5919,26 @@ cover root-helper startup isolation, service loss and an undeletable residual re
 real dependency resolution and CPU model loading also passed. Per-group official
 control outcomes and remaining blockers are maintained in the adapter README and
 registry; detailed receipts and cleanup records remain outside Git.
+
+### Dataset follow-up and interrupted trial evidence — 2026-10-19
+
+LlamaIndex task18813 now uses the exact public W3C PDF through a dataset-local
+TLS mirror, retaining the original loader, tests and network isolation. A dedicated
+local CA preserves client certificate/hostname checks; it does not reproduce the
+public certificate chain. Official two-worker oracle/noop controls pass 1/0, with
+complete cleanup. CooperBench's README and registry retain the remaining groups'
+preparation and upstream limits; detailed receipts stay outside Git.
+
+MemoryAgentBench, StrongREJECT and τ³ now opt into successful scorer completion.
+Normal incomplete submissions keep their unmeasured coverage evidence; a failed
+scorer cannot publish a leftover reward. Taxonomy and publication decisions for
+the two fixture adapters remain pending author confirmation.
+
+Eval resume for explicit repeated-trial protocols retains the original full
+manifest and actual per-task trial evidence, rather than rebuilding trials from
+mean scores. Interrupted tasks cannot silently be measured again; complete task
+records can be reused, including ordinary actor failures with valid official
+scores. Different protocol seeds, task selections or declarations are refused.
+The interface guide describes the persistence paths and compatibility behavior.
+Focused regression, official τ³ controls with a local model stub, and independent
+reviews cover these changes; no full benchmark or new external API run was made.
