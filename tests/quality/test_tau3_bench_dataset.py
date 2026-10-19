@@ -27,6 +27,7 @@ def test_all_four_domains_manifest_and_private_material(monkeypatch):
         assert setup['tool_relay']['record']['path'] == 'trusted_episode'
         assert not any('private' in str(f) or 'runtime' in f['path'] for f in setup['files'])
         assert verifier['trial_protocol']['trials'] == 3
+        assert verifier['result_contract']['require_exit_zero'] is True
         assert ('judge' in verifier) == row['needs_judge']
     assert sum(r['needs_judge'] for r in rows.values()) == 113
 
@@ -68,6 +69,36 @@ def test_actor_cannot_reconfigure_or_export_episode(official, tmp_path):
     service = relay.Service({}, State())
     for operation in ('configure_run', 'reset', 'record_termination', 'episode', 'score'):
         assert service.handle(operation, {})['error'] == 'unsupported_operation_or_fields'
+
+
+@pytest.mark.parametrize('failed_process', [False, True])
+def test_incomplete_episode_preserves_evidence_but_failed_scorer_cannot_publish(tmp_path, failed_process):
+    from eval.verification.verifier import _verify
+    tid = 'tau3_bench/airline/8'
+    row = dataset.roster()[tid]
+    spec = dataset.VERIFY[tid]
+    if failed_process:
+        spec['argv'] = ['python3', '-I', '-c',
+            "from pathlib import Path; import sys; "
+            "Path('verifier/reward.txt').write_text('1'); "
+            "Path('verifier/evidence.json').write_text('{\"measured\":true}'); sys.exit(3)"]
+    else:
+        # Platform-injected control envelope; no actor may supply this input in a run.
+        sealed = {'schema': 'harnessgrad.interaction-record.v1',
+                  'binding': {'task_id': tid, 'seed': '123'},
+                  'payload': {'task_id': '8', 'domain': 'airline', 'seed': 123,
+                              'case_sha256': row['private_sha256'],
+                              'termination_reason': None, 'messages': []}}
+        spec['inputs'].append({'path': 'trusted_episode/episode.json', 'content': json.dumps(sealed)})
+    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=30)
+    assert result['score'] is None and result['outcome'] == 'unmeasured', result
+    if failed_process:
+        assert result['exit_code'] == 3 and 'evidence' not in result
+        assert (tmp_path / 'verifier/reward.txt').read_text() == '1'
+    else:
+        assert result['evidence']['measured'] is False
+        assert result['evidence']['error'] == 'IncompleteConversation'
+        assert result['evidence']['detail'] == 'incomplete_conversation_without_stop_signal'
 
 
 def test_actor_preseeded_verifier_packages_are_hidden(tmp_path):

@@ -3,6 +3,10 @@ from copy import deepcopy
 from collections import Counter
 
 
+class IncompleteConversation(ValueError):
+    """Validly inspected episode without the required termination signal."""
+
+
 def score(config, episode):
     from tau2.data_model.tasks import Task
     from tau2.data_model.simulation import SimulationRun, TerminationReason
@@ -17,7 +21,7 @@ def score(config, episode):
         raise RuntimeError('private runtime failed: ' + episode['failure'])
     termination = episode.get('termination_reason')
     if termination is None:
-        raise ValueError('incomplete_conversation_without_stop_signal')
+        raise IncompleteConversation('incomplete_conversation_without_stop_signal')
     messages = to_tau2_messages(deepcopy(episode['messages']))
     for index, message in enumerate(messages):
         message.turn_idx = index

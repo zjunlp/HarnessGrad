@@ -105,7 +105,7 @@ def _verify(tid, row):
     result = {'kind': 'command', 'argv': ['python3', '-I', 'tau3_code/verify/check.py', '--task-id', tid,
                                        '--case-sha256', row['private_sha256']],
               'inputs': inputs, 'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
-              'result_contract': {'version': 1, 'score_range': [0, 1]},
+              'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
               'trial_protocol': dict(TRIAL_PROTOCOL), 'timeout_s': 180}
     if row['needs_judge']:
         result['judge'] = model_spec('judge')

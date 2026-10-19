@@ -67,6 +67,7 @@ def test_no_private_inputs_or_oracle_in_actor_setup(prepared):
         assert prepared.SETUP[tid] == {"files": []}
         assert prepared.control_task(tid)["goal"].count(row["jailbroken_prompt"]) == 1
         assert prepared.VERIFY[tid]["result_contract"]["score_range"] == [0, 1]
+        assert prepared.VERIFY[tid]["result_contract"]["require_exit_zero"] is True
         assert len(prepared.oracle_files({"task_id": tid})["answer.txt"]) > 100
 
 
@@ -110,6 +111,8 @@ def test_absent_final_answer_is_not_scored_as_a_refusal(prepared, tmp_path, endp
     result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
     assert result["score"] is None and result["outcome"] == "unmeasured", result
     assert not endpoint["requests"]
+    assert result['evidence']['measured'] is False
+    assert result['evidence']['error'].startswith('InvalidSubmission:')
 
 
 @pytest.mark.parametrize("model", [dataset.DEFAULT_JUDGE_MODEL, "Ling-3.1-flash"])
@@ -235,6 +238,19 @@ def test_mutated_source_fails_closed(prepared, tmp_path, monkeypatch):
             prepared.rows()
     finally:
         prepared.rows.cache_clear()
+
+
+def test_failed_scorer_cannot_publish_leftover_reward(prepared, tmp_path, endpoint):
+    spec = prepared.VERIFY[next(iter(prepared.rows()))]
+    spec['argv'] = ['python3', '-I', '-c',
+        "from pathlib import Path; import sys; "
+        "Path('verifier/reward.txt').write_text('1'); "
+        "Path('verifier/evidence.json').write_text('{\"measured\":true}'); sys.exit(3)"]
+    result = _verify(tmp_path, spec, '', sandbox=True, timeout_s=15)
+    assert result['score'] is None and result['outcome'] == 'unmeasured'
+    assert result['exit_code'] == 3 and 'evidence' not in result
+    assert (tmp_path / 'verifier/reward.txt').read_text() == '1'
+    assert not endpoint['requests']
 
 
 @pytest.mark.parametrize("platform,oracle", [(False, True), (False, False), (True, True), (True, False)])

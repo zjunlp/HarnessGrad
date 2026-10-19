@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 sys.path.insert(0, str(Path('tau3_transport_runtime').resolve()))
 from bootstrap import bootstrap
+from scoring import score, IncompleteConversation
 
 
 def main():
@@ -35,15 +36,18 @@ def main():
         bootstrap('tau3_bundle', 'tau3_runtime')
         from model import install
         from tool_transport import call
-        from scoring import score
         install('judge', call)
         result = score(config, sealed['payload'])
         evidence.update(measured=True, official=result, revision=config['revision'],
                         scorer_input={'task_id': args.task_id, 'sha256': args.case_sha256, 'verified': True})
         reward_file.write_text(str(result['reward']) + '\n')
         code = 0
+    except IncompleteConversation as exc:
+        evidence.update(measured=False, error=type(exc).__name__, detail=str(exc))
+        code = 0
     except Exception as exc:
-        evidence.update(error=type(exc).__name__, detail=str(exc)[:1000])
+        evidence.update(measured=False, error=type(exc).__name__, detail=str(exc)[:1000])
+        print(f"{type(exc).__name__}: {str(exc)[:1000]}", file=sys.stderr)
     (output / 'evidence.json').write_text(json.dumps(evidence, ensure_ascii=False))
     return code
 

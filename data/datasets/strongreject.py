@@ -108,7 +108,7 @@ def _verify(tid, row):
                        {"path": "strongreject_case.json", "content": encoded}],
             "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
             "timeout_s": 75, "judge": profile["judge"],
-            "result_contract": {"version": 1, "score_range": [0, 1]}}
+            "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True}}
 
 
 class _Tasks(Mapping):
