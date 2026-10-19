@@ -313,12 +313,13 @@ def test_preparation_resolves_dynamic_editable_backend_dependencies(tmp_path):
         ['install', 'static-backend==7.8.9'], ['install', 'core-editable==4.5.6']]
 
 
-def test_mirror_derivation_preserves_base_runtime_and_records_verified_layer(tmp_path, monkeypatch):
+@pytest.mark.parametrize("kind,group", [("hf_mirror", "dottxt_ai_outlines_task/task1706"),
+    ("https_asset_mirror", "llama_index_task/task18813")])
+def test_mirror_derivation_preserves_base_runtime_and_records_verified_layer(tmp_path, monkeypatch, kind, group):
     import json
     from test_cooperbench_hf_mirror import fixture_assets
     spec = importlib.util.spec_from_file_location('cooperbench_prepare_test', ASSETS / 'prepare.py')
     preparation = importlib.util.module_from_spec(spec); spec.loader.exec_module(preparation)
-    group = 'dottxt_ai_outlines_task/task1706'
     base = tmp_path / 'base'; base.mkdir()
     config = {'group': group, 'image': 'sha256:' + 'a' * 64, 'python': '/usr/local/bin/python3',
               'identity': {'base_commit': 'base', 'workspace_bytes': 1234, 'workspace_inodes': 5},
@@ -331,20 +332,38 @@ def test_mirror_derivation_preserves_base_runtime_and_records_verified_layer(tmp
     original = json.dumps(config).encode(); (base / 'runtime.json').write_bytes(original)
     root = tmp_path / 'derived'; (root / 'prepared-v1').mkdir(parents=True)
     (root / 'prepared-v1/manifest.json').write_text(json.dumps({'tasks': [{'group': group, 'base_commit': 'base'}]}))
-    assets = tmp_path / 'assets'; assets.mkdir(); fixture_assets(assets)
+    if kind == 'hf_mirror':
+        assets = tmp_path / 'assets'; assets.mkdir(); fixture_assets(assets)
+    else:
+        import os
+        path = os.environ.get('HG_COOPERBENCH_HTTPS_TEST_ASSETS')
+        if not path:
+            pytest.skip('requires explicitly prepared public HTTPS assets')
+        assets = Path(path)
     monkeypatch.setattr(preparation, 'command', lambda *args: json.dumps([{'Id': config['image'] if args[-1] == config['image'] else 'sha256:' + 'b' * 64}]))
     builds = []
     monkeypatch.setattr(preparation.subprocess, 'run', lambda argv, **kwargs: builds.append(argv))
-    preparation.prepare_mirror_runtime(root, group, base, assets)
+    preparation.prepare_mirror_runtime(root, group, base, assets, kind)
     result = json.loads((root / 'runtimes' / group.replace('/', '-') / 'runtime.json').read_text())
     assert (base / 'runtime.json').read_bytes() == original
     assert result['image'] == 'sha256:' + 'b' * 64 and result['python'] == '/opt/hg-hf/python'
     assert result['dependencies_sha256'] == config['dependencies_sha256']
-    assert result['hf_mirror']['base_image'] == config['image']
-    assert result['hf_mirror']['base_runtime_sha256'] == protocol.sha(original)
+    assert result[kind]['base_image'] == config['image']
+    assert result[kind]['base_runtime_sha256'] == protocol.sha(original)
     assert len(builds) == 1 and '--network=none' in builds[0]
+    if kind == 'https_asset_mirror':
+        assert result['resources'] == config['resources']
+        assert result[kind]['cache_bound_bytes'] == 0
+        assert (root / 'runtimes' / group.replace('/', '-') / 'https-asset-mirror/assets/server.key').stat().st_mode & 0o777 == 0o400
+    for existing in ('hf_mirror', 'https_asset_mirror'):
+        (base / 'runtime.json').write_text(json.dumps({**config, existing: {'present': True}}))
+        with pytest.raises(ValueError, match='mirror identity mismatch'):
+            preparation.prepare_mirror_runtime(root, group, base, assets, kind)
+    (base / 'runtime.json').write_bytes(original)
+    with pytest.raises(ValueError, match='not reviewed'):
+        preparation.prepare_mirror_runtime(root, 'unreviewed/task1', base, assets, kind)
     with pytest.raises(FileExistsError):
-        preparation.prepare_mirror_runtime(root, group, base, assets)
+        preparation.prepare_mirror_runtime(root, group, base, assets, kind)
     (base / 'runner.sh').write_text('changed')
     with pytest.raises(ValueError, match='source digest mismatch'):
-        preparation.prepare_mirror_runtime(root, group, base, assets)
+        preparation.prepare_mirror_runtime(root, group, base, assets, kind)
