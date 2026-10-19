@@ -1328,6 +1328,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # One task, `trials` times. See `evaluate` for why one is not enough.
         measured: list[dict] = []
         unmeasured: dict | None = None
+        trial_marker = None
+        if trial_protocol and progress_dir is not None:
+            trial_marker = repeated_trials.start_task(
+                repeated_trials.report_root(progress_dir, round_no, harness_sha),
+                repeated_trials.plan([task], trial_protocol, run_id=run_id,
+                                     round_no=round_no, harness_sha=harness_sha))
         for trial in range(trials):
             with progress_mod.task_progress(tid, round_no=round_no, index=task_index,
                                             total=len(tasks)) as held:
@@ -1442,6 +1448,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                             diagnostic=result, enforcement=enforcement)
             return {"task_id": tid, "invalid": unmeasured}
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
+        if trial_marker is not None:
+            trial_marker.unlink()
         return {"task_id": tid, "measured": measured}
 
     outcomes = _in_parallel(tasks, _measure, jobs)

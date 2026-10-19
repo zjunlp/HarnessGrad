@@ -21,7 +21,8 @@ def session(tmp_path, monkeypatch):
     args = SimpleNamespace(resume=False, from_run='train', from_round=0, trials=3,
                            jobs=1, sandbox=False, dataset='fixture', mode='A')
     state = SimpleNamespace(run=run, tasks=tasks, args=args, verifiers=verifiers,
-                            calls=[], results=[], sha='harness-a', interrupt=None)
+                            calls=[], results=[], sha='harness-a', interrupt=None,
+                            interrupt_trial=None, actor_exit=0)
     monkeypatch.setenv('HARNESSGRAD_SEED', '0')
     monkeypatch.setattr(eval_side, 'commit_state', lambda *a: state.sha)
     monkeypatch.setattr(eval_side, '_identity', lambda *a, **kw: {})
@@ -33,14 +34,20 @@ def session(tmp_path, monkeypatch):
     monkeypatch.setattr(eval_side.console, 'results', lambda *a, **kw: None)
 
     def actor(repo, task, **kwargs):
-        if task['task_id'] == state.interrupt:
-            raise KeyboardInterrupt('controlled interruption between tasks')
+        if (task['task_id'], kwargs['run_seed']) == state.interrupt_trial:
+            raise KeyboardInterrupt('controlled interruption within a task')
         state.calls.append((task['task_id'], kwargs['trial_id'], kwargs['run_seed']))
         score = int(task['task_id'] == 'b')
-        return {'task_id': task['task_id'], 'answer': '', 'trace': '', 'exit_code': 0,
+        return {'task_id': task['task_id'], 'answer': '', 'trace': '', 'exit_code': state.actor_exit,
                 'stderr': '', 'env_usage': {}, 'verdict': {'kind': 'command', 'score': score,
                                                         'passed': bool(score)}}
     monkeypatch.setattr(runner, 'run_one', actor)
+    original_start = repeated_trials.start_task
+    def start(root, plan):
+        if plan['manifest'][0]['task_id'] == state.interrupt:
+            raise KeyboardInterrupt('controlled interruption before next task starts')
+        return original_start(root, plan)
+    monkeypatch.setattr(repeated_trials, 'start_task', start)
 
     def execute():
         return eval_side._run_eval_side(work=work, man={}, run_id='run', run_dir=run,
@@ -135,4 +142,54 @@ def test_different_published_report_is_never_overwritten(session):
 def test_legacy_completed_progress_without_original_trial_plan_is_refused(session):
     interrupted(session)
     (session.run / 'protocols/round-0/resume-plan.json').unlink()
+    assert session.execute() == 2 and len(session.calls) == 3
+
+
+def test_midtrial_interruption_never_remeasures_completed_calls(session):
+    session.interrupt_trial = ('a', '20')
+    with pytest.raises(KeyboardInterrupt):
+        session.execute()
+    assert len(session.calls) == 1
+    marker = next((session.root / 'in-flight').glob('*.json'))
+    assert len(json.loads(marker.read_text())['manifest']) == 3
+    session.args.resume = True
+    session.interrupt_trial = None
+    assert session.execute() == 2 and len(session.calls) == 1
+    assert not (session.root / 'repeated-trials.json').exists()
+
+
+def test_resume_outer_seed_change_does_not_replace_explicit_trial_seeds(session, monkeypatch):
+    interrupted(session)
+    monkeypatch.setenv('HARNESSGRAD_SEED', 'new-driver-generated-seed')
+    assert session.execute() == 0
+    assert [c[2] for c in session.calls] == ['10', '20', '30'] * 2
+    assert session.results[-1]['repeated_trials']['complete']
+
+
+def test_resume_keeps_valid_scorer_result_when_actor_exited_nonzero(session):
+    session.actor_exit = 1
+    assert session.execute() == 0
+    assert session.results[-1]['repeated_trials']['complete']
+    session.args.resume = True
+    assert session.execute() == 0 and len(session.calls) == 6
+    result = session.results[-1]
+    assert result['per_task'] == {'a': 0, 'b': 1}
+    assert result['repeated_trials']['metrics'] == {'1': .5, '2': .5, '3': .5}
+    assert set(result['harness_failed']) == {'a', 'b'}
+
+
+def test_completion_window_before_marker_removal_fails_closed(session, monkeypatch):
+    from pathlib import Path
+    unlink = Path.unlink
+    def crash(path, *args, **kwargs):
+        if path.parent.name == 'in-flight':
+            raise KeyboardInterrupt('task evidence written; marker not yet cleared')
+        return unlink(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'unlink', crash)
+    with pytest.raises(KeyboardInterrupt):
+        session.execute()
+    assert len(session.calls) == 3
+    assert eval_side._progress_results(session.run)
+    monkeypatch.setattr(Path, 'unlink', unlink)
+    session.args.resume = True
     assert session.execute() == 2 and len(session.calls) == 3

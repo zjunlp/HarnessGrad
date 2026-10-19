@@ -87,7 +87,7 @@ def persist(root, report):
     immutable_json(root/'repeated-trials.json', report)
 
 
-def immutable_json(path, value):
+def immutable_json(path, value, *, reuse=True):
     """Publish complete JSON atomically; a resume may reuse, never replace, evidence."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,7 +98,7 @@ def immutable_json(path, value):
         try:
             os.link(temporary, path)
         except FileExistsError:
-            if json.loads(path.read_text()) != value:
+            if not reuse or json.loads(path.read_text()) != value:
                 raise ValueError(f'repeated-trial evidence already exists with different content: {path}')
     finally:
         os.unlink(temporary)
@@ -124,8 +124,21 @@ def save_task(root, task_plan, rows):
     immutable_json(Path(root) / 'tasks' / (hashlib.sha256(task_id.encode()).hexdigest() + '.json'), report)
 
 
+def start_task(root, task_plan):
+    """Record intent before the first call: a partial task must never be remeasured."""
+    task_id = task_plan['manifest'][0]['task_id']
+    name = hashlib.sha256(task_id.encode()).hexdigest() + '.json'
+    if (Path(root) / 'tasks' / name).exists():
+        raise ValueError('repeated-trial task already has persisted evidence')
+    marker = Path(root) / 'in-flight' / name
+    immutable_json(marker, task_plan, reuse=False)
+    return marker
+
+
 def resume_rows(root, full_plan, prior):
     """Require actual complete per-trial evidence for every skipped progress task."""
+    if any((Path(root) / 'in-flight').glob('*.json')):
+        raise ValueError('resume refuses an interrupted in-flight trial task; use a fresh run')
     rows = []
     expected_tasks = {p['task_id'] for p in full_plan['manifest']}
     if set(prior) - expected_tasks:
@@ -153,8 +166,7 @@ def resume_rows(root, full_plan, prior):
         if not checked['complete']:
             raise ValueError('resume task has incomplete or unmeasured trial evidence')
         scores = [row['score'] for row in checked['results']]
-        if (progress.get('process_outcome') != 'completed'
-                or progress.get('n_trials') != len(scores)
+        if (progress.get('n_trials') != len(scores)
                 or progress.get('trial_scores') != scores
                 or progress.get('score') != sum(scores) / len(scores)):
             raise ValueError('resume progress differs from its measured trial evidence')

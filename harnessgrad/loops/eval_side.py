@@ -251,7 +251,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                         'sandbox': args.sandbox, 'jobs': args.jobs,
                         'models': {k: os.environ.get(k) for k in (
                             'HG_AGENT_BACKEND', 'HG_AGENT_MODEL', 'HG_AGENT_BASE_URL',
-                            'HG_ENV_BASE_URL', 'HG_JUDGE_BASE_URL', 'HARNESSGRAD_SEED')}}
+                            'HG_ENV_BASE_URL', 'HG_JUDGE_BASE_URL')}}
+        # The explicit protocol replaces the outer run seed for every trial;
+        # HARNESSGRAD_SEED is also excluded from the actor environment.
         trial_plan['declarations_sha256'] = hashlib.sha256(json.dumps(
             declarations, sort_keys=True, default=str).encode()).hexdigest()
         plan_path = run_dir / 'protocols/round-0/resume-plan.json'
@@ -311,6 +313,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
             return 2
         scores = {tid: [r['score'] for r in report['results'] if r['task_id'] == tid]
                   for tid in report['per_task']}
+        # A normally completed scorer may measure an artifact left by a nonzero
+        # actor. Keep that score and the separate harness_failed attribution.
+        res['per_task'] = {tid: sum(values) / len(values) for tid, values in scores.items()}
         res['per_task_trials'] = scores
         res['per_task_std'] = {tid: statistics.pstdev(values) for tid, values in scores.items()}
         res['score_std'] = statistics.pstdev([
