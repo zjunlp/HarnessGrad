@@ -239,6 +239,10 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     protocol = repeated_trials.protocol_for(tasks, verifiers or {}, args.trials)
     trial_plan = None
     old_trial_rows = []
+    plan_path = run_dir / 'protocols/round-0/resume-plan.json'
+    if getattr(args, 'resume', False) and plan_path.exists() and protocol is None:
+        console.note('refusing repeated-trial resume: the original trial protocol was removed', level='error')
+        return 2
     if protocol:
         trial_plan = repeated_trials.plan(tasks, protocol, run_id=run_id,
                                          round_no=0, harness_sha=sha)
@@ -256,7 +260,6 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         # HARNESSGRAD_SEED is also excluded from the actor environment.
         trial_plan['declarations_sha256'] = hashlib.sha256(json.dumps(
             declarations, sort_keys=True, default=str).encode()).hexdigest()
-        plan_path = run_dir / 'protocols/round-0/resume-plan.json'
         try:
             if getattr(args, 'resume', False) and not plan_path.is_file():
                 raise ValueError('repeated-trial resume requires its original full manifest')

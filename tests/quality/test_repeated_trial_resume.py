@@ -105,7 +105,7 @@ def test_all_tasks_completed_resume_reuses_evidence_and_existing_report(session,
         assert path.read_bytes() == before
 
 
-@pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration'])
+@pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration', 'removed_protocol'])
 def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(session, change):
     interrupted(session)
     path = next((session.root / 'tasks').glob('*.json'))
@@ -120,6 +120,9 @@ def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(sessi
     elif change == 'protocol':
         for verifier in session.verifiers.values():
             verifier['trial_protocol']['seeds'][0] += 1
+    elif change == 'removed_protocol':
+        for verifier in session.verifiers.values():
+            verifier.pop('trial_protocol')
     elif change == 'selection':
         session.tasks = session.tasks[:1]
     else:
