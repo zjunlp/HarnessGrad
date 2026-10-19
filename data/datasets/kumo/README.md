@@ -76,11 +76,12 @@ The relay enforces the 50-query budget in host memory. After actor exit, the
 standard command verifier scores only the final answer against the pinned private
 case using the official predicate. It neither consumes nor trusts actor-produced
 query recordings. No trusted episode is exported through a new runner field.
-Relay startup/transport failures use the existing unmeasured path. Shared runner and
-relay code are unchanged from before KUMO integration. This retains the existing
-lifecycle limitations: the runner does not remove relay staging directories, startup
-failures can leave staging, and explicit `cleanup()` ignores deletion errors. These
-are shared platform issues, not fixed or claimed as resolved by this adapter.
+Relay startup/transport failures use the shared unmeasured path. The current shared
+runner stops the relay process group, removes its staging directory and returns
+transport and cleanup evidence in `runtime_services.tool_relay`. Cleanup errors
+are recorded. KUMO does not enable the optional `record` or `model` declarations;
+answer scoring and the query budget remain independent of sealed interaction records.
+See [the shared runtime interface](../../../docs/dataset-runtime-interfaces.md).
 
 Run with the native filesystem sandbox (the default); privacy is not promised
 for an explicitly unsandboxed run. Network is inherited to support a configured
@@ -101,8 +102,8 @@ python3 tools/run_tests.py --dataset kumo --with-registry --jobs 8
 Controls use the mock backend and require scores 1/0. Tests cover vendored scorer
 identity/differential behavior, full provisioned audit, cross-connection budgets,
 private data isolation, scoring independent of forged recordings, and source mismatch
-rejection. Test fixtures clean their own relay staging; that is not evidence of
-automatic cleanup by the runner.
+rejection. Shared runtime controls separately cover ordinary relay lifecycle,
+cleanup receipts and adapters that do not request interaction-record sealing.
 
 The control entry point and its scripted `oracle_harness/` live beside the adapter's
 CLI and verifier, following ALFWorld/Jericho. The platform oracle makes one real
@@ -113,57 +114,18 @@ There is no KUMO-specific API diagnostic command. Real model runs use the existi
 platform runner/driver and base harness. Historical diagnostic artifacts are retained
 outside the repository; they are integration evidence, not aggregate benchmark results.
 
-## Recorded real API smoke
+## Recorded real API checks
 
-At commit `b8899205`, on 2026-10-17, the user-authorized `.env` API trial on the preselected train task
-`CookingEnv/42` completed with **score 0**, 12 model calls, three action queries,
-42,300 input / 1,141 output tokens, and 163.102 seconds. The actor exited normally,
-the official verifier measured the answer, and both relay and work root were cleaned.
-The wrong answer was retained without a score-based rerun. Evidence lives outside git
-at `datasets/kumo/diagnostic-20261017-02`; the preceding zero-attempt configuration
-failure is also retained. See the integration journal and `validation.json` for scope.
+Two user-authorized checks on the preselected train task `CookingEnv/42` are
+retained outside Git. The 2026-10-17 check at `b8899205` completed with score 0,
+12 model calls and three action queries. After the dataset-local controls revision,
+the 2026-10-18 `Ling-3.1-flash` check submitted `Stewing`, received official score 1,
+and completed seven model calls and six queries. The earlier incomplete attempt
+is retained separately. These are historical single-task integration checks under
+their recorded revisions, not aggregate benchmark results or fresh runs of the
+current shared lifecycle implementation.
 
-## Minimal integration revision — 2026-10-18 (historical: `5ab95cab`)
-
-The former shared hash fields, trusted-recording injection, result fields, global
-relay admission changes, classifier fallback and download-summary rendering have
-been removed. KUMO uses the existing `files`, `tool_relay` and `command` contracts.
-The only shared runtime changes retained are relay process/directory cleanup on
-success and failure, with cleanup failures propagated. Control orchestration lives
-in `tools/kumo_control.py`; only the relay's shared-transport import needs a new
-file-specific dependency exception.
-
-The 2026-10-17 API result and `validation.json` are historical evidence for the
-previous implementation; this revision is validated with controls and regression
-tests, with no new API calls. See `validation-minimal-20261018.json`.
-
-
-## Shared runtime restored — 2026-10-18
-
-This supersedes the retained lifecycle changes described in the preceding revision.
-`eval/run/runner.py` and `eval/run/tool_relay.py` are restored byte-for-byte to
-`89626402` (before KUMO). There are no shared execution/interface behavior changes
-from this integration. Existing datasets keep their original cleanup and exception
-behavior. KUMO inherits the lifecycle limitations documented above. The earlier
-`validation-minimal-20261018.json` describes `5ab95cab`, not this revision. No new
-API run was made. Current checks are in `validation-compatible-20261018.json`.
-
-
-## Dataset-local controls — 2026-10-18
-
-The control entry point is now `data/datasets/kumo/control.py`, with its own
-`oracle_harness/`, matching existing interactive datasets. The former
-`tools/kumo_control.py` and `tools/kumo_diagnostic.py` entry points are removed.
-The dependency guard names the control's three exact execution imports, as it does
-for other dataset-local controls. This changes no shared execution interfaces.
-
-After shared runtime restoration at `02c93b5f`, the user-requested real test with
-`Ling-3.1-flash` completed CookingEnv/42: answer `Stewing`, official score 1,
-7 model calls, 6 queries, 18,594 input / 1,477 output tokens, 20.938 seconds.
-One action parse error recovered. Evidence remains at workspace
-`datasets/kumo/diagnostic-restored-20261018T015854683418Z/assessment.json`.
-The prior `Ling-3.0-flash` test is also retained; it exercised queries but did not
-submit an answer and is not counted as a complete answer-submission test.
-The external validation launcher cleaned each run's temporary root after checking
-for surviving processes; this does not change the baseline runner's cleanup behavior.
-No additional API requests are needed for this layout change.
+KUMO and the shared runtime interfaces are now merged upstream. The temporary
+shared-runtime rollback used during the earlier review is no longer the current
+implementation. Control entry points remain dataset-local; no KUMO-specific API
+diagnostic tool or repository-local validation logs are required.
