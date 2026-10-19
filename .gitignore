@@ -24,7 +24,7 @@ eggs/
 .eggs/
 /lib/
 lib64/
-parts/
+/parts/
 /sdist/
 var/
 wheels/
@@ -287,6 +287,7 @@ harnessgrad_work/
 # publish it, and a public page cannot be hidden by accident. INTERFACE.md, at the
 # repository root, is the contract and is public.
 /docs/*
+!/docs/resume-design.md
 !/docs/writing_a_harness.md
 !/docs/dataset-onboarding.md
 !/docs/local-model-endpoints.md
@@ -424,3 +425,10 @@ tests/fixtures/hg_*/
 # source path, commit and digest for each. 1.8 MB of text, no payloads.
 !tests/fixtures/hg_migration_site/
 !tests/fixtures/hg_migration_site/**
+# `docs/experiment_noise.md` is cited by **six** modules -- `data/datasets/alfworld.py`,
+# `data/datasets/reasoning_gym.py`, `harnessgrad/records.py`, `harnessgrad/loops/mode_a.py`,
+# `harnessgrad/store/schema.py` and a quality test -- and it was never committed, so every
+# clone had six dangling references to a note that existed only in one working tree. It is
+# the measurement behind "a move this small is noise", which is the rule those modules apply
+# to every published number; a reader cannot check that rule without it.
+!/docs/experiment_noise.md

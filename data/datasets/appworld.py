@@ -1,15 +1,30 @@
 """AppWorld 0.1.3 as a service-backed tool dialogue dataset.
 
 The encrypted 0.1.0 release declares four files: ``train`` (90), ``dev`` (57),
-``test_normal`` (168), and ``test_challenge`` (417).  The adapter uses the release's
-own declaration (``SPLIT_SOURCE = "declared"``), places train and dev on the study
-side, and scores the two test files on the eval side.  ``dev`` is included with train
-because the release calls both non-test files development material; this is stated here
-rather than silently dropping 57 released tasks.
+``test_normal`` (168), and ``test_challenge`` (417), 732 tasks in total.  The adapter
+uses that declaration (``SPLIT_SOURCE = "declared"``) and can express the three-way
+protocol every dataset is measured on:
+
+  * **study** on the official ``train`` split.  ``HG_APPWORLD_STUDY_IDS`` names a file of
+    task ids, and the study side becomes exactly those ids, in file order.
+  * **score every checkpoint** on the official ``dev`` split.  ``HG_APPWORLD_POOL=dev``
+    makes dev the eval side, so ``--side eval --from-run`` measures a stored harness state
+    on dev without touching the exam.
+  * **one final exam** on the official test splits.  ``HG_APPWORLD_POOL=test`` (the
+    default) is ``test_normal`` plus ``test_challenge``: 585 tasks that the study side
+    never contains.
+
+``HG_APPWORLD_POOL`` also accepts one test file alone.  It refuses ``train``, because a
+score computed on the training split measures the material the method was shown.  With
+neither knob set the adapter keeps the two-way behaviour it has always had -- study on
+train+dev (147), exam on both test files (585) -- because the release calls both non-test
+files development material, and 57 released tasks should not vanish from a study side by
+default.  ``HG_APPWORLD_POOL=dev`` narrows that default study side to train (90): dev
+cannot be both the material a method studies and the split its checkpoints are scored on.
 
 The paper-era build (Trivedi et al., ACL 2024, arXiv 2407.18901v2) reported
-105/60/168/417 tasks, totaling 750. The pinned release has 18 fewer train/dev
-tasks; both test split counts match the paper.
+105/60/168/417 tasks, totaling 750. The pinned release has 18 fewer train and dev tasks
+(105 against 90, 60 against 57); both test split counts match the paper.
 
 AppWorld's environment server is a sidecar service.  The task container only gets the
 small ``aw`` client; the service owns the world and writes its API-call log through the
@@ -43,8 +58,24 @@ UNPACKED = SRC_DIR / "unpacked"
 POOL = DATASET_ROOT / "pool.jsonl"
 TASKS_IN_RELEASE = 732
 SPLIT_SIZES = {"train": 90, "dev": 57, "test_normal": 168, "test_challenge": 417}
+TEST_SPLITS = ("test_normal", "test_challenge")
 PAPER_SPLITS = {"train": 105, "dev": 60, "test_normal": 168, "test_challenge": 417}
 SPLIT_SOURCE = "declared"
+
+#: **Which official split the eval side measures.** `test` is the union of the two test
+#: files and is the final exam; `dev` scores every checkpoint; `test_normal` and
+#: `test_challenge` score one test file each. `train` is absent on purpose: it is study
+#: material, and a score on it measures what the method was shown.
+EVAL_POOLS = ("dev", "test_normal", "test_challenge", "test")
+_EVAL_POOL = (os.environ.get("HG_APPWORLD_POOL") or "test").strip()
+
+#: **A study set, named by a file of task ids.** When it is set the study side is exactly
+#: those ids in file order, rather than the release's declared train+dev. The ids are read
+#: from a file rather than sampled here because a draw made at import is a draw nobody can
+#: reproduce; the file can be one id per line or a comma-separated line, as the release's
+#: own split files are newline-separated and ALFWorld's study file is a CSV.
+_STUDY_FILE = (os.environ.get("HG_APPWORLD_STUDY_IDS") or "").strip()
+
 ORACLE_SOURCE = "released"
 ORACLE_VALIDATED_BY = (
     "AppWorld's released ground_truth/evaluation.py, executed by appworld.evaluator.TestTracker"
@@ -192,11 +223,97 @@ ORACLE_COVERAGE = (
 )
 
 _ROWS = {row["task_id"]: row for row in _pool()}
-SPLIT = {
-    "train": [row["task_id"] for row in _ROWS.values() if row["split"] in {"train", "dev"}],
-    "eval": [row["task_id"] for row in _ROWS.values() if row["split"] in {"test_normal", "test_challenge"}],
-}
-OFFICIAL_EVAL = [row["task_id"] for row in _ROWS.values() if row["split"] in {"test_normal", "test_challenge"}]
+_ALL = [row["task_id"] for row in _ROWS.values()]
+
+
+def _study_ids() -> list[str]:
+    """The study-side ids named by `HG_APPWORLD_STUDY_IDS`, in file order.
+
+    A repeated id is refused rather than deduplicated: the study score is a mean over the
+    study tasks, so a duplicated line would weight one task twice and quietly move the
+    number that selects a checkpoint. Set-based validation downstream would not notice,
+    because the id is a member either way.
+    """
+    if not _STUDY_FILE:
+        return []
+    text = Path(_STUDY_FILE).read_text(encoding="utf-8")
+    ids = [chunk for line in text.splitlines()
+           for chunk in line.replace(",", " ").split()]
+    repeats = sorted({task_id for task_id in ids if ids.count(task_id) > 1})
+    if repeats:
+        raise ValueError(
+            f"HG_APPWORLD_STUDY_IDS={_STUDY_FILE} names {len(repeats)} task id(s) more "
+            f"than once ({', '.join(repeats[:5])}); a repeated id would be measured once "
+            "and counted twice in the study score")
+    return ids
+
+
+def _sides() -> tuple[list[str], list[str]]:
+    """`(study ids, eval ids)` for this run's two knobs.
+
+    Both knobs are refused rather than repaired. A study side that silently dropped the
+    ids it could not find, or an eval side that silently fell back to the default pool,
+    would change what a score means without changing anything a reader can see.
+    """
+    if _EVAL_POOL == "train":
+        raise ValueError(
+            "HG_APPWORLD_POOL=train would measure the training split, which is the "
+            "material the study set is drawn from; a score on it is not an evaluation. "
+            "The eval pool is one of " + " / ".join(EVAL_POOLS))
+    if _EVAL_POOL not in EVAL_POOLS:
+        raise ValueError(
+            f"HG_APPWORLD_POOL={_EVAL_POOL!r} is not an official split; the eval pool "
+            "is one of " + " / ".join(EVAL_POOLS))
+    pool = TEST_SPLITS if _EVAL_POOL == "test" else (_EVAL_POOL,)
+    eval_ids = [task_id for task_id, row in _ROWS.items() if row["split"] in pool]
+    if _STUDY_FILE:
+        study_ids = _study_ids()
+        if not study_ids:
+            raise ValueError(
+                f"HG_APPWORLD_STUDY_IDS={_STUDY_FILE} names no task ids; an empty study "
+                "file would leave the study side empty")
+        unknown = [task_id for task_id in study_ids if task_id not in _ROWS]
+        if unknown:
+            raise ValueError(
+                f"{len(unknown)} of {len(study_ids)} task ids in {_STUDY_FILE} are not "
+                f"in the release (first: {unknown[:3]})")
+        return study_ids, eval_ids
+    # The release calls train and dev both development material, so the two-way default
+    # studies on both. `pool=dev` turns that sentence into the checkpoint protocol: dev
+    # moves to the eval side and the study side is the official train split alone.
+    declared_study = {task_id for task_id, row in _ROWS.items()
+                      if row["split"] in {"train", "dev"}}
+    eval_set = set(eval_ids)
+    return [task_id for task_id in _ALL
+            if task_id in declared_study and task_id not in eval_set], eval_ids
+
+
+#: The sides this run measures. A bad knob is reported by `load()` rather than raised
+#: here: `published()` hides a module that will not import, and a dataset that vanished
+#: from the chooser would say nothing about the environment variable or file that broke
+#: it.
+try:
+    _STUDY_IDS, _EVAL_IDS = _sides()
+    _LOAD_ERROR: str | None = None
+except Exception as _exc:  # noqa: BLE001 - reported by load(), which is where it bites
+    _STUDY_IDS, _EVAL_IDS = [], []
+    _LOAD_ERROR = f"{type(_exc).__name__}: {_exc}"
+
+#: The tasks this run can see: the study side and the eval pool, and nothing else. With
+#: neither knob set these are every task in the release, in the order this adapter has
+#: always loaded them.
+_RUN_IDS = [task_id for task_id in _ALL
+            if task_id in set(_STUDY_IDS) | set(_EVAL_IDS)]
+
+SPLIT = {"train": list(_STUDY_IDS), "eval": list(_EVAL_IDS)}
+
+#: The benchmark's own evaluation set, within this run's pool. Under the default
+#: `pool=test` that is both test files. `pool=test_normal` declares the 168 tasks of that
+#: file, and `pool=dev` declares nothing, because no task of the set the published
+#: numbers are computed on is in a dev pool; `--side eval --split official` then refuses
+#: on an empty side rather than inventing one.
+OFFICIAL_EVAL = [task_id for task_id in _EVAL_IDS
+                 if _ROWS[task_id]["split"] in TEST_SPLITS]
 
 
 def _goal(row: dict) -> str:
@@ -251,7 +368,10 @@ def _setup(task_id: str) -> dict:
 
 
 def load():
-    tasks = [{"task_id": row["task_id"], "goal": _goal(row), "inputs": []} for row in _ROWS.values()]
+    if _LOAD_ERROR is not None:
+        raise ValueError(f"appworld: {_LOAD_ERROR}")
+    tasks = [{"task_id": task_id, "goal": _goal(_ROWS[task_id]), "inputs": []}
+             for task_id in _RUN_IDS]
     return tasks, {task["task_id"]: "AppWorld TestTracker.success" for task in tasks}
 
 
@@ -266,9 +386,13 @@ def reporting_manifest(task_ids: list[str]) -> list[dict]:
 
 
 ASSETS = Path(__file__).parent / "appworld"
+
+#: Keyed by `_RUN_IDS`, not `_ROWS`: the platform refuses a declared
+#: SETUP/VERIFY/ENV entry for a task `load()` did not return, so a narrowed
+#: pool has to narrow all three with it.
 SETUP = {
     task_id: _setup(task_id)
-    for task_id in _ROWS
+    for task_id in _RUN_IDS
 }
 VERIFY = {
     task_id: {
@@ -294,7 +418,7 @@ VERIFY = {
         "image": VERIFIER_IMAGE,
         "timeout_s": 900,
     }
-    for task_id in _ROWS
+    for task_id in _RUN_IDS
 }
 
 DEFAULT_ENV = {
@@ -330,7 +454,7 @@ DEFAULT_ENV = {
     "agent_timeout_s": 900,
     "verify_timeout_s": 900,
 }
-ENV = {task_id: DEFAULT_ENV for task_id in _ROWS}
+ENV = {task_id: DEFAULT_ENV for task_id in _RUN_IDS}
 
 
 def downloads() -> list[dict]:
@@ -359,8 +483,10 @@ def provision_status() -> dict:
 
 
 __all__ = [
-    "KIND", "DATASET_ROOT", "TASKS_IN_RELEASE", "SPLIT_SIZES", "SPLIT_SOURCE",
+    "KIND", "DATASET_ROOT", "TASKS_IN_RELEASE", "SPLIT_SIZES", "TEST_SPLITS",
+    "EVAL_POOLS", "SPLIT_SOURCE",
     "OFFICIAL_EVAL", "ORACLE_SOURCE", "ORACLE_VALIDATED_BY", "ORACLE_COVERAGE",
     "bundle_zip", "task_ids", "split_ids", "prepare", "load", "downloads",
-    "provision_status", "oracle_files", "reporting_manifest", "SETUP", "VERIFY", "ENV", "DEFAULT_ENV", "SPLIT",
+    "provision_status", "oracle_files", "reporting_manifest", "SETUP", "VERIFY", "ENV",
+    "DEFAULT_ENV", "SPLIT",
 ]

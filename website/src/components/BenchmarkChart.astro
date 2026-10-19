@@ -1,0 +1,28 @@
+---
+/**
+ * Inline a generated SVG chart so the page's filters can also hide its lines.
+ *
+ * An `<img>` would be simpler, but a filter that only hides table rows while the chart keeps
+ * drawing every method is worse than no filter: the reader sees two answers to the same
+ * question. Reading the file and inlining it keeps the SVG's own `data-method` groups
+ * addressable by the filter script.
+ */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+interface Props {
+  slug: string;
+  pool: string;
+  alt: string;
+}
+
+const { slug, pool, alt } = Astro.props;
+const path = resolve("public", "results", slug, `${pool}.svg`);
+let svg = "";
+try {
+  svg = readFileSync(path, "utf8");
+} catch {
+  svg = "";
+}
+---
+{svg ? (<div class="hg-chart" data-chart-pool={pool} aria-label={alt} set:html={svg} />) : null}

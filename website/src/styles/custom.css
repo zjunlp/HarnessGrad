@@ -345,3 +345,123 @@ site-search button {
 }
 
 
+
+/* ---- collapsible left sidebar ------------------------------------------------
+   The page is laid out from three variables: `--sl-sidebar-width` reserves the left column,
+   `--sl-content-inline-start` is the padding the content skips, and `--__toc-width` sizes the
+   "On this page" column (it falls back to the sidebar width). All three are entangled, so the
+   collapse is written per breakpoint:
+
+     * below 72rem Starlight has no right-hand table-of-contents column -- it renders a pill in
+       the content header instead -- so nothing may reserve space on the right;
+     * from 72rem up the column exists and must keep its width, or the panel squeezes to one
+       character per line.
+
+   Hiding the pane and zeroing the widths without this split leaves the reading column off to
+   the left with a gap the size of the missing panel. */
+@media (min-width: 50rem) {
+  html.hg-sidebar-off {
+    --sl-sidebar-width: 0rem;
+    --sl-content-inline-start: 0rem;
+  }
+  html.hg-sidebar-off .sidebar-pane {
+    display: none;
+  }
+  /* Starlight sets `auto 0` through [data-has-sidebar][data-has-toc] .main-pane, so an
+     equally-ranked selector loses; matching those two attributes keeps this rule later and
+     therefore winning. */
+  html.hg-sidebar-off[data-has-sidebar] .main-pane {
+    --sl-content-margin-inline: auto;
+  }
+}
+
+@media (min-width: 50rem) and (max-width: 71.999rem) {
+  html.hg-sidebar-off[data-has-sidebar] .main-pane {
+    width: 100%;
+  }
+}
+
+@media (min-width: 72rem) {
+  html.hg-sidebar-off {
+    --__toc-width: 18.75rem;
+  }
+  html.hg-sidebar-off .right-sidebar-panel .sl-container {
+    width: calc(var(--__toc-width) - 2 * var(--sl-sidebar-pad-x));
+  }
+}
+
+.hg-sidebar-toggle {
+  position: fixed;
+  z-index: calc(var(--sl-z-index-menu) + 1);
+  top: 50%;
+  transform: translateY(-50%);
+  left: calc(var(--sl-sidebar-width) - 0.85rem);
+  width: 0.9rem;
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--sl-color-hairline);
+  border-left: none;
+  border-radius: 0 0.45rem 0.45rem 0;
+  background: var(--sl-color-gray-7, #1b1b1f);
+  color: var(--sl-color-gray-3);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.hg-sidebar-toggle:hover,
+.hg-sidebar-toggle:focus-visible {
+  color: var(--sl-color-white);
+  border-color: var(--sl-color-gray-4);
+  outline: none;
+}
+
+html.hg-sidebar-off .hg-sidebar-toggle {
+  left: 0;
+  border-left: 1px solid var(--sl-color-hairline);
+  border-radius: 0 0.45rem 0.45rem 0;
+}
+
+@media (max-width: 49.999rem) {
+  .hg-sidebar-toggle {
+    display: none;
+  }
+}
+
+/* A splash page has no sidebar to collapse, so it gets no handle. */
+html[data-has-hero] .hg-sidebar-toggle {
+  display: none;
+}
+
+
+/* The table-of-contents panel sizes its inner container from `--sl-sidebar-width` too, so a
+   zero-width sidebar would squeeze "On this page" into one character per line. Pinning it to the
+   width the panel already has keeps the column identical in both states. */
+@media (min-width: 50rem) {
+  html.hg-sidebar-off .right-sidebar-panel .sl-container {
+    width: calc(var(--__toc-width) - 2 * var(--sl-sidebar-pad-x));
+  }
+}
+
+/* With the sidebar gone the reading column should sit centred in the space that is left, not
+   hug the left edge. Starlight sets `auto 0` (left margin flexible, right fixed) for the
+   sidebar+toc layout, which is what pulls the text to the left once the sidebar is collapsed. */
+@media (min-width: 50rem) {
+  html.hg-sidebar-off .main-pane {
+    --sl-content-margin-inline: auto;
+  }
+}
+
+/* The variable above is only read by one rule; another rule on the inner container sets
+   `margin-inline: 0`, which is what keeps the text hugging the left edge below 72rem (where
+   Starlight drops the table-of-contents column). Centring the container itself is what makes the
+   reading column sit in the middle of the freed space at every width. */
+@media (min-width: 50rem) {
+  html.hg-sidebar-off .main-pane .sl-container {
+    margin-inline: auto !important;
+  }
+}

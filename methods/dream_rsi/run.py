@@ -17,7 +17,8 @@ is solely about average replay score on that history (p.6), not future online qu
 
 What this implementation actually compares
 -----------------------------------------
-`version_row()` uses each round's studied score, harness tokens / 1000 as a cost proxy, and
+`version_row()` uses each round's studied score, its position in the evaluation sequence as
+the request count `N`, and
 `n_trials` as a denominator proxy. Those substitutions change the objective; they do not
 follow from removing replay. The existing defaults b1=0.001 and b2=0.0 are port choices;
 the paper gives no numerical values for its nonnegative coefficients (p.6, Eq. (1)).
@@ -107,29 +108,32 @@ def config() -> dict:
             "kilo_tokens": 1000.0}
 
 
-def version_row(point: dict, cfg: dict) -> dict:
-    """One round's proxy `V`, and the three numbers it came from.
+def version_row(point: dict, cfg: dict, requests: int = 1) -> dict:
+    """One round's proxy `V`, and the numbers it came from.
 
-    `quality` is the studied side's score. `cost` is the harness's own token spend in
-    kilo-tokens -- `None` unless a positive numeric token count was reported. With no
-    usable cost the proxy becomes `V = quality` and `cost_source` says so. Both this
-    fallback and using `n_trials` for k differ from Dream-RSI/papers/Dream-RSI.pdf:
-    p.6, Eq. (1), where N counts requests and k counts completed replay decision rounds.
+    **`N` is a request count, as Eq. (1) says.** The earlier version of this port priced
+    `harness_tokens / 1000` instead, which put `N` in the thousands: with `beta1 = 0.001`
+    the cost term reached ~8.5 while `quality` is at most 1, so the argmax followed *cost*
+    rather than quality and the method kept whatever was cheapest. Measured on the
+    2026-10-17 run: `quality 0.53, cost_kilo_tokens 8530, v = -8.000045`. Tokens are still
+    recorded (`cost_kilo_tokens`) so a reader can price the same policy differently.
+
+    `k` is `n_trials` here where the paper counts completed replay decision rounds; the
+    replay tree is absent (see `method.json` deviations), so this remains a proxy.
     """
     quality = protocol.studied_score(point)
     cost = (point.get("cost") or {})
     tokens = cost.get("harness_tokens")
     k = int(point.get("n_trials") or 1)
-    row = {"round": point.get("round"), "quality": quality,
-           "cost_kilo_tokens": None, "k": k, "v": quality, "cost_source": "not reported"}
+    row = {"round": point.get("round"), "quality": quality, "n_requests": requests,
+           "cost_kilo_tokens": None, "k": k, "v": quality,
+           "cost_source": "request_count"}
     if quality is None:
         return row
     if isinstance(tokens, (int, float)) and tokens > 0:
-        kilo = float(tokens) / cfg["kilo_tokens"]
-        row["cost_kilo_tokens"] = round(kilo, 4)
-        row["cost_source"] = "harness_tokens"
-        row["v"] = round(quality - cfg["b1"] * kilo
-                         + cfg["b2"] * kilo / max(1, k), 6)
+        row["cost_kilo_tokens"] = round(float(tokens) / cfg["kilo_tokens"], 4)
+    row["v"] = round(quality - cfg["b1"] * requests
+                     + cfg["b2"] * requests / max(1, k), 6)
     return row
 
 
@@ -143,7 +147,8 @@ def select(history: list[dict], cfg: dict | None = None) -> dict:
     fallback behavior, rounding and earliest-round tie breaking remain unchanged.
     """
     cfg = cfg or config()
-    rows = [version_row(p, cfg) for p in history]
+    # The evaluation sequence is the request count the paper prices: round 0 is request 1.
+    rows = [version_row(p, cfg, requests=index + 1) for index, p in enumerate(history)]
     scored = [r for r in rows if r["v"] is not None]
     incumbent = next((r for r in reversed(scored)
                       if r["round"] == (history[-1].get("round") if history else None)),

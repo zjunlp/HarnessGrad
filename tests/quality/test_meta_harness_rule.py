@@ -279,6 +279,45 @@ def test_main_reports_a_real_edit_as_changed(tmp_path, monkeypatch):
     assert got["stdout"]["hypothesis"] == "make it print more"
 
 
+def test_a_generation_does_not_end_the_search(tmp_path, monkeypatch):
+    """**一代 ≠ 整个搜索。**
+
+    The platform's `--rounds` counts measured states, so a three-candidate generation costs
+    three of them; if the batch submission also ended the run (`stop=True`), the method got
+    exactly one generation and never saw the frontier its own measurements updated. Measured
+    on 2026-10-17: that was the entire study for `meta_harness` -- three candidates, one
+    call, no feedback. `stop=False` is what lets the next call start the next generation.
+    """
+    history = [_training(0, {"t01": 0.0})]
+    base = _harness(tmp_path, history)
+    got = _invoke(MH, _request(base, tmp_path / "ws", tmp_path / "traj.json", history),
+                  monkeypatch, {"files": [{"path": "agent.py", "find": "print('hello')",
+                                           "replace": "print('hello world')"}],
+                                "hypothesis": "one more generation"})
+    assert got["stdout"]["changed"] is True
+    assert got["stdout"].get("stop") is False, (
+        "a batch submission must not end the study; the next call is the next generation")
+
+
+def test_the_generation_index_is_on_the_record(tmp_path, monkeypatch):
+    """代次与轮次是两种单位,记录里两个都要有。"""
+    import editor
+
+    history = [_training(0, {"t01": 0.0})]
+    base = _harness(tmp_path, history)
+    captured: dict = {}
+    real_report = editor.report
+
+    def spy(req, **kw):
+        captured.update(kw)
+        return real_report(req, **kw)
+
+    monkeypatch.setattr(MH.editor, "report", spy, raising=False)
+    _invoke(MH, _request(base, tmp_path / "ws", tmp_path / "traj.json", history),
+            monkeypatch, {"no_change": "nothing left"})
+    assert captured["method_reported"].get("meta_harness_generation") == 1
+
+
 def test_a_method_that_declines_keeps_its_budget(tmp_path, monkeypatch):
     """拒绝 ≠ 结束。`stop=False`,否则一次"没什么可改"会终结整条轨迹
     (INTERFACE.md 的 `stop` 一节)。"""
@@ -422,3 +461,35 @@ def test_design_fallback_survives_a_no_change_implementation(tmp_path, monkeypat
     assert len(calls) == 1 and output["changed"] is False
     record = steps[0]["method_reported"]["meta_harness_design"]
     assert record["mode"] == "single_fallback" and record["fallback_reason"]
+
+
+def test_a_batch_of_candidates_is_one_generation_not_three(tmp_path, monkeypatch):
+    """**修一个既存缺陷**：`generation_of` 曾按 `round` 去重，于是一次"设计 3 个候选"的调用
+    把代数推进 3 格。
+
+    实测：`rsi10-20261018T062351Z-meta_harness-train` 的 r1–r3 是一次设计 + 三次实现
+    （`steps_in_submission = 3`、`step_index = 0/1/2`），却被记成第 2、3、4 代 —— 记录里
+    四次设计，实际只有两次。红检：把 `step_index` 判断去掉，这条立刻失败。
+    """
+    import editor
+
+    history = [_training(0, {"t01": 0.0})]
+    # 一代 3 个候选：同一批提交，三行只有 step_index 不同。
+    for index in range(3):
+        row = _training(index + 1, {"t01": float(index) / 3.0})
+        row["steps_in_submission"] = 3
+        row["step_index"] = index
+        history.append(row)
+    base = _harness(tmp_path, history)
+    captured: dict = {}
+    real_report = editor.report
+
+    def spy(req, **kw):
+        captured.update(kw)
+        return real_report(req, **kw)
+
+    monkeypatch.setattr(MH.editor, "report", spy, raising=False)
+    _invoke(MH, _request(base, tmp_path / "ws", tmp_path / "traj.json", history),
+            monkeypatch, {"no_change": "nothing left"})
+    assert captured["method_reported"].get("meta_harness_generation") == 2, (
+        "一代三个候选只算一代，所以这一次调用是第 2 代")

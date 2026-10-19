@@ -1,8 +1,9 @@
 """Dream-RSI 的本地代理选择规则及其证据边界。
 
 依据: 本机 PDF 是 **v1**（2026-09-14），Dream-RSI/papers/Dream-RSI.pdf §3, p.5–6,
-Eq. (1)。论文比较同一固定历史上的平均回放分数; 这里比较已记录的各轮代理值。旧有数值
-断言保留,但不能把它们解读成回放、质量或下一候选的不退化保证。
+Eq. (1)。论文比较同一固定历史上的平均回放分数; 这里比较已记录的各轮代理值。
+**旧代理把 N 当成千 token 数(成本项 ~8.5 vs 质量 ≤1),已按原文改为请求数**; 相关断言随之改写,
+但不能把它们解读成回放、质量或下一候选的不退化保证。
 
 **v1 → v2（arXiv:2609.14858v2, 2026-10-06）把附录 B.2 p.19 的 AUC 目标提为正文
 Eq. (1)**（归一化 hypervolume 减 λ 并行惩罚），并把 M 定为 4。本端口实现的是被 v2
@@ -59,26 +60,29 @@ def test_v_is_quality_minus_cost_plus_the_parallelism_term():
     assert row["k"] == 2
 
 
-def test_the_default_makes_cost_a_tie_breaker_not_the_objective():
-    """保留已有代理默认值的数值检查; 论文 p.6 Eq. (1) 未指定 beta 数值。
+def test_the_default_makes_the_request_count_a_tie_breaker_not_the_objective():
+    """质量主导，请求数是平票裁决 —— 这是 Eq. (1) 的原意，也是旧代理做不到的。
 
-    本例只检验这些输入,不证明代价项对所有输入都只是平局裁决。
+    旧代理把 `harness_tokens / 1000` 当 N：β1=0.001 时成本项可达 ~8.5，而质量项上限是 1，
+    于是 argmax 跟着成本走。实测（2026-10-17）：`quality 0.53, cost_kilo=8530, v=-8.000045`。
     """
     cfg = DR.config()
-    assert cfg["b1"] * 100 <= 0.2, "100 kilo-token 的惩罚不该超过质量区间的五分之一"
-    cheap = DR.version_row(_point(0, 0.4, 5000), cfg)["v"]
-    pricey = DR.version_row(_point(1, 0.5, 50000), cfg)["v"]
-    assert pricey > cheap, "质量 +0.1 应当压过 10 倍成本"
-    same_a = DR.version_row(_point(0, 0.5, 10000), cfg)["v"]
-    same_b = DR.version_row(_point(1, 0.5, 20000), cfg)["v"]
-    assert same_a > same_b, "同分时成本必须能打破平票"
+    cheap = DR.version_row(_point(0, 0.4, 5000), cfg, requests=1)["v"]
+    pricey = DR.version_row(_point(1, 0.5, 50000), cfg, requests=2)["v"]
+    assert pricey > cheap, "质量 +0.1 必须压过任何请求数/成本差异"
+    same_a = DR.version_row(_point(0, 0.5, 10000), cfg, requests=1)["v"]
+    same_b = DR.version_row(_point(1, 0.5, 20000), cfg, requests=2)["v"]
+    assert same_a > same_b, "同分时请求数（成本代理）必须能打破平票"
 
 
 def test_an_unreported_cost_is_not_a_zero_cost():
-    """没报告不是 0:喂 0.0 会让"从未生效的成本规则"看起来像"通过了成本规则"。"""
-    row = DR.version_row(_point(0, 0.5, None), DR.config())
-    assert row["v"] == 0.5 and row["cost_kilo_tokens"] is None
-    assert row["cost_source"] == "not reported"
+    """没报告不是 0：token 仍要如实记录为 None，而不是变成"零成本通过"。"""
+    row = DR.version_row(_point(0, 0.5, None), DR.config(), requests=1)
+    assert row["cost_kilo_tokens"] is None
+    # The priced quantity is the request count, so V still has a value -- but the record
+    # must not claim the harness spent nothing.
+    assert row["v"] == 0.499 and row["cost_source"] == "request_count"
+    assert row["n_requests"] == 1
 
 
 def test_the_exam_side_never_enters_the_comparison():
@@ -326,9 +330,12 @@ def test_each_deviation_keeps_the_direction_the_audit_assigned():
 
 
 @pytest.mark.parametrize("history, selected, incumbent", [
-    # A higher proxy can have lower quality: the check is not quality monotonicity.
-    ([_point(0, 0.8, 1000), _point(1, 0.9, 5000000)], 0, 1),
-    # Missing cost changes the objective on one row.
+    # Quality leads. A five-million-token round no longer loses to a small quality gain,
+    # because N prices *requests* (Eq. 1); the previous proxy priced kilo-tokens and this
+    # case used to assert the opposite, which is exactly the bug that made the argmax follow
+    # cost (2026-10-17: quality 0.53, cost_kilo 8530, v = -8.000045).
+    ([_point(0, 0.8, 1000), _point(1, 0.9, 5000000)], 1, 1),
+    # Same quality: the later request costs more, so the earlier row wins.
     ([_point(0, 0.5, None), _point(1, 0.5, 1000)], 0, 1),
     # Existing fallback compares to the last scored row, not the unscored current one.
     ([_point(0, 0.5, 1000), _point(1, None, 1000)], 0, 0),

@@ -19,8 +19,8 @@
   },
   {
    "id": "execution_cost",
-   "what": "Request count N is replaced by harness_tokens / 1000, and the coefficient that prices it remains unpublished.",
-   "why": "v1 counts revealed non-root nodes, representing generation–evaluation requests, with fixed beta1,beta2 >= 0 and unspecified numerical values. config() keeps b1=0.001 and b2=0.0, not published defaults, and accepts float overrides without sign or finiteness validation; the former port value 0.05 is not a paper baseline. version_row() uses total harness_tokens, and when tokens are absent, nonnumeric or <=0 it omits both cost terms and uses quality alone. v2 replaces the linear penalty with the area under the quality–cost frontier over its budget sweep, so the port's term stands in for an area rather than for a coefficient, and v2 publishes no value for lambda either. Neither a token/request conversion nor mixed cost-availability comparison is justified by either version; ranking effects are unknown.",
+   "what": "The priced quantity N is the request count (Eq. 1), not kilo-tokens; beta1/beta2 stay unspecified (neither paper version publishes a value) and kilo-tokens are still recorded",
+   "why": "v1 Eq. (1) prices a request count. An earlier version of this port priced harness_tokens/1000 with beta1=0.001, which made the cost term ~8.5 against a quality term bounded by 1, so the argmax followed cost rather than quality (measured 2026-10-17: quality 0.53, cost_kilo 8530, v = -8.000045). N is now the round's position in the evaluation sequence. beta1/beta2 are still values neither paper version publishes; k remains n_trials. N is now the round's position in the evaluation sequence; the remaining open question is the same one both paper versions leave: the coefficient values are unspecified.",
    "direction": "weaker",
    "source": "arXiv:2609.14858v2 §3 Replay objective Eq. (1); Dream-RSI/papers/Dream-RSI.pdf p.6, §3 Replay objective Eq. (1); p.7, §4 discovery cost in agent calls"
   },

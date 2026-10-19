@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { ArrowLeftRight, Info } from "lucide-react";
 import { PageContainer } from "@/components/layout/app-shell";
 import { PageHeader, Section } from "@/components/common/section";

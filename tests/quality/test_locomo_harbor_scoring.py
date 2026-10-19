@@ -76,7 +76,7 @@ def test_source_pin():
     assert source["harbor"]["commit"] == "3e9f14a7c1033896cc600d27de69d6948bcb3410"
     assert source["data"]["commit"] == "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376"
     assert source["data"]["sha256"] == "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
-    assert source["dependency"] == {"nltk": "3.9.2", "nltk_corpora_required": False}
+    assert source["dependency"] == {"nltk": "3.10.3", "nltk_corpora_required": False}
 
 
 @pytest.mark.parametrize("relative", ["adapter.py", "metric.py", "task-template/tests/verifier.py", "task-template/instruction.md", "LICENSE", "parity_experiment.json"])

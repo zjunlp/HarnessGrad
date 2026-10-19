@@ -177,3 +177,152 @@ def test_the_cost_record_carries_the_cache_read_count():
     assert cost["method_generation_tokens"] == 11118
     assert cost["method_cache_read_tokens"] == 61056
     assert cost["method_spend_source"] == "cli_reported"
+
+
+# ------------------------------------------------ 端点通道也要 cache 拆分 ---
+
+class _Details:
+    def __init__(self, cached):
+        self.cached_tokens = cached
+
+
+class _UsageOpenAI:
+    """OpenAI 形状：prompt_tokens 含缓存，明细里给 cached_tokens。"""
+    def __init__(self, prompt, completion, cached):
+        self.prompt_tokens, self.completion_tokens = prompt, completion
+        self.prompt_tokens_details = _Details(cached)
+
+
+class _UsageDeepSeek:
+    """DeepSeek 原生形状：prompt_cache_hit_tokens。"""
+    def __init__(self, prompt, completion, hit):
+        self.prompt_tokens, self.completion_tokens = prompt, completion
+        self.prompt_cache_hit_tokens = hit
+
+
+def test_an_endpoint_reply_reports_its_cache_split():
+    """**用户指出的缺口**：端点调用只记了 prompt/completion，cache read 丢了。
+
+    而且两个通道必须是**互斥**口径：CLI 的 `inputTokens` 已减去 cache，端点这边也要
+    把 cached 从 prompt 里减出去，否则混合方法的两行加不起来。
+    """
+    editor._record_usage(_UsageOpenAI(prompt=1000, completion=50, cached=800), "m")
+    assert editor.spend_source() == "endpoint"
+    assert editor.spent_tokens() == 250          # (1000-800) + 50
+    assert editor.cache_read_tokens() == 800
+
+
+def test_the_deepseek_native_field_is_also_read():
+    editor._record_usage(_UsageDeepSeek(prompt=500, completion=20, hit=300), "m")
+    assert editor.spent_tokens() == 220
+    assert editor.cache_read_tokens() == 300
+
+
+def test_a_provider_without_a_cache_split_reports_zero_not_unknown():
+    """端点报了 usage 但没给拆分：cache_read 只能是 0，不能是 None —— 前者是"没命中"，
+    后者是"没人说"。"""
+    editor._record_usage(_UsageOpenAI(prompt=100, completion=10, cached=0), "m")
+    assert editor.cache_read_tokens() == 0
+    assert editor.spent_tokens() == 110
+
+
+def test_a_mixed_run_adds_both_channels_without_double_counting(monkeypatch, tmp_path):
+    """端点（设计阶段）+ CLI（实现阶段）混在一个进程里时，两边都要进账且不重复。"""
+    editor._record_usage(_UsageOpenAI(prompt=1000, completion=100, cached=600), "m")
+    assert editor.spent_tokens() == 500
+    assert editor.cache_read_tokens() == 600
+
+    transcript = DASH + '{"input_tokens": 200, "output_tokens": 20, "cache_read_tokens": 900}'
+    base = tmp_path / "base"; base.mkdir()
+    parent = tmp_path / "parent"; parent.mkdir()
+
+    def fake_propose(req, parent_path, **kwargs):
+        return {"candidate": str(pathlib.Path(req["workspace"]) / "candidate"),
+                "files": [], "changed": [], "exit_code": 0, "seconds": 1.0,
+                "note": "no change", "transcript": transcript, "reported": {}}
+
+    sys.path.insert(0, str(ROOT / "methods"))
+    import cli_improver
+    monkeypatch.setattr(cli_improver, "propose", fake_propose)
+    editor._ask_cli("do something", base, parent, {"name": "dsh"})
+
+    assert editor.spent_tokens() == 500 + 220       # 端点的 (400+100) + CLI 的 (200+20)
+    assert editor.cache_read_tokens() == 600 + 900  # 两边都算进来
+
+
+def test_a_batched_step_records_the_split_it_used_to_drop():
+    """**修一个既存缺陷**：批量路径把 input/output/calls/cache 全写死成 `None`。
+
+    实测（2026-10-18，九方法批次）：**每一个方法的每一个曲线点**都是
+    `method_generation_input: null` / `method_output: null` / `method_calls: null` /
+    `method_spend_source: null`，包括 provider 已经报了 usage 的轮次 —— 因为九个方法全都
+    走 `report_many`。同一份记录的单候选路径（`report`）是读的，于是平台的两半对同一次调用
+    给出不同答案。红检：把这三行改回 `None`，这条立刻失败。
+    """
+    editor._SPENT.update(input=1200, output=300, calls=2, model="deepseek-flash",
+                         cache_read=800, source="endpoint")
+    step = editor._step_payload(harness_dir=ROOT / "methods" / "noop", label="x",
+                                edit_kind="none", changed=False, tokens_now=1500,
+                                method_reported=None)
+    cost = step["claimed_cost"]
+    assert cost["method_input_tokens"] == 1200
+    assert cost["method_output_tokens"] == 300
+    assert cost["method_model_calls"] == 2
+    assert cost["method_model"] == "deepseek-flash"
+    assert cost["method_cache_read_tokens"] == 800
+    assert cost["method_spend_source"] == "endpoint"
+
+
+def test_a_step_says_why_its_split_is_null_when_nobody_counted():
+    """`null` 必须可解释：CLI improver 的数没人拿到，和"免费"是两件事。"""
+    editor._SPENT["source"] = "cli_unreported"
+    step = editor._step_payload(harness_dir=ROOT / "methods" / "noop", label="x",
+                                edit_kind="none", changed=False, tokens_now=None,
+                                method_reported=None)
+    cost = step["claimed_cost"]
+    assert cost["method_input_tokens"] is None and cost["method_output_tokens"] is None
+    assert cost["method_spend_source"] == "cli_unreported", (
+        "null 的钱数没有理由码，读者无法区分'没人数'和'没花钱'")
+
+
+def test_a_multi_step_batch_does_not_give_every_step_the_same_improver_run():
+    """一个进程只有一个 `_LAST_IMPROVER`；把它写进 k 个 step 就是说它跑了 k 次。
+
+    `improver_run_scope: "call"` 是这条的可见化：批次级别的账只记一次，并说明它是调用级的。
+    """
+    editor._LAST_IMPROVER.update({"exit_code": 0, "seconds": 12.0, "files_changed": 1,
+                                  "prompt_chars": 2400, "spend_reported": False})
+    step = editor._step_payload(harness_dir=ROOT / "methods" / "noop", label="x",
+                                edit_kind="none", changed=False, tokens_now=None,
+                                method_reported=None, improver=None)
+    assert "improver_run" not in step["method_reported"]
+    envelope = editor._batch_reported([{"method_reported": {}}, {"method_reported": {}}],
+                                      [step, step])
+    assert envelope["improver_run"]["seconds"] == 12.0
+    assert envelope["improver_run_scope"] == "call"
+
+
+def test_a_one_step_submission_can_attribute_the_improver_run_exactly():
+    """k=1 没有歧义：这一次调用买的就是这一个候选。"""
+    editor._LAST_IMPROVER.update({"exit_code": 0, "seconds": 3.0, "files_changed": 1,
+                                  "prompt_chars": 100, "spend_reported": False})
+    step = editor._step_payload(harness_dir=ROOT / "methods" / "noop", label="x",
+                                edit_kind="none", changed=False, tokens_now=None,
+                                method_reported=None, improver=editor.improver_run())
+    assert step["method_reported"]["improver_run"]["seconds"] == 3.0
+
+
+def test_report_many_puts_the_split_on_the_wire(tmp_path, capsys):
+    """端到端：平台读的是 stdout，所以信封里的 step 必须带着拆分。"""
+    editor._SPENT.update(input=900, output=100, calls=1, model="m",
+                         cache_read=400, source="endpoint")
+    step = {"harness_dir": ROOT / "methods" / "noop", "changed": False, "label": "x",
+            "edit_kind": "none", "method_reported": {"a": 1}, "hypothesis": "h"}
+    editor.report_many({"trajectory_out": str(tmp_path / "t.json")}, method="noop",
+                       steps=[step, dict(step)], acceptance_rule="t")
+    envelope = json.loads(capsys.readouterr().out)
+    written = json.loads((tmp_path / "t.json").read_text())
+    for payload in written["steps"]:
+        assert payload["claimed_cost"]["method_input_tokens"] == 900
+        assert payload["claimed_cost"]["method_spend_source"] == "endpoint"
+    assert envelope["steps"] == 2

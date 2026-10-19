@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" role="img" aria-label="Score by checkpoint round on valid_unseen">
+<rect width="760" height="380" fill="#ffffff"/>
+<line x1="56" y1="336.0" x2="570" y2="336.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="48" y="340.0" font-size="11" fill="#6b7280" text-anchor="end">0.34</text>
+<line x1="56" y1="258.0" x2="570" y2="258.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="48" y="262.0" font-size="11" fill="#6b7280" text-anchor="end">0.51</text>
+<line x1="56" y1="180.0" x2="570" y2="180.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="48" y="184.0" font-size="11" fill="#6b7280" text-anchor="end">0.67</text>
+<line x1="56" y1="102.0" x2="570" y2="102.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="48" y="106.0" font-size="11" fill="#6b7280" text-anchor="end">0.84</text>
+<line x1="56" y1="24.0" x2="570" y2="24.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="48" y="28.0" font-size="11" fill="#6b7280" text-anchor="end">1.00</text>
+<text x="56.0" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r0</text>
+<text x="107.4" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r1</text>
+<text x="158.8" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r2</text>
+<text x="210.2" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r3</text>
+<text x="261.6" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r4</text>
+<text x="313.0" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r5</text>
+<text x="364.4" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r6</text>
+<text x="415.8" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r7</text>
+<text x="467.2" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r8</text>
+<text x="518.6" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r9</text>
+<text x="570.0" y="354" font-size="11" fill="#6b7280" text-anchor="middle">r10</text>
+<line x1="56" y1="307.6" x2="570" y2="307.6" stroke="#111827" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="566" y="302.6" font-size="11" fill="#111827" text-anchor="end">H0 (round 0) 0.403</text>
+<g data-method-line="sica_ci">
+<path d="M56.0,307.6 L107.4,38.2 L158.8,73.6 L210.2,24.0 L261.6,24.0 L313.0,24.0 L364.4,24.0 L415.8,24.0 L467.2,24.0 L518.6,24.0 L570.0,24.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#1f77b4"/>
+<circle cx="107.4" cy="38.2" r="2.8" fill="#1f77b4"/>
+<circle cx="158.8" cy="73.6" r="2.8" fill="#1f77b4"/>
+<circle cx="210.2" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="261.6" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="313.0" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="364.4" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="415.8" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="467.2" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="518.6" cy="24.0" r="2.8" fill="#1f77b4"/>
+<circle cx="570.0" cy="24.0" r="2.8" fill="#1f77b4"/>
+<line x1="586" y1="38" x2="608" y2="38" stroke="#1f77b4" stroke-width="2"/>
+<text x="614" y="42" font-size="11" fill="#111827">sica_ci</text>
+</g>
+<g data-method-line="ahe">
+<path d="M56.0,307.6 L107.4,27.5 L158.8,24.0 L210.2,24.0" fill="none" stroke="#d62728" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#d62728"/>
+<circle cx="107.4" cy="27.5" r="2.8" fill="#d62728"/>
+<circle cx="158.8" cy="24.0" r="2.8" fill="#d62728"/>
+<circle cx="210.2" cy="24.0" r="2.8" fill="#d62728"/>
+<line x1="586" y1="56" x2="608" y2="56" stroke="#d62728" stroke-width="2"/>
+<text x="614" y="60" font-size="11" fill="#111827">ahe</text>
+</g>
+<g data-method-line="dgm">
+<path d="M56.0,307.6 L107.4,94.9 L158.8,98.5 L210.2,41.7 L261.6,34.6 L313.0,31.1" fill="none" stroke="#2ca02c" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#2ca02c"/>
+<circle cx="107.4" cy="94.9" r="2.8" fill="#2ca02c"/>
+<circle cx="158.8" cy="98.5" r="2.8" fill="#2ca02c"/>
+<circle cx="210.2" cy="41.7" r="2.8" fill="#2ca02c"/>
+<circle cx="261.6" cy="34.6" r="2.8" fill="#2ca02c"/>
+<circle cx="313.0" cy="31.1" r="2.8" fill="#2ca02c"/>
+<line x1="586" y1="74" x2="608" y2="74" stroke="#2ca02c" stroke-width="2"/>
+<text x="614" y="78" font-size="11" fill="#111827">dgm</text>
+</g>
+<g data-method-line="harnessx">
+<path d="M56.0,307.6 L107.4,219.0 L158.8,165.8 L210.2,52.4 L261.6,38.2 L313.0,38.2 L364.4,24.0 L415.8,24.0 L467.2,24.0 L518.6,24.0 L570.0,24.0" fill="none" stroke="#9467bd" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#9467bd"/>
+<circle cx="107.4" cy="219.0" r="2.8" fill="#9467bd"/>
+<circle cx="158.8" cy="165.8" r="2.8" fill="#9467bd"/>
+<circle cx="210.2" cy="52.4" r="2.8" fill="#9467bd"/>
+<circle cx="261.6" cy="38.2" r="2.8" fill="#9467bd"/>
+<circle cx="313.0" cy="38.2" r="2.8" fill="#9467bd"/>
+<circle cx="364.4" cy="24.0" r="2.8" fill="#9467bd"/>
+<circle cx="415.8" cy="24.0" r="2.8" fill="#9467bd"/>
+<circle cx="467.2" cy="24.0" r="2.8" fill="#9467bd"/>
+<circle cx="518.6" cy="24.0" r="2.8" fill="#9467bd"/>
+<circle cx="570.0" cy="24.0" r="2.8" fill="#9467bd"/>
+<line x1="586" y1="92" x2="608" y2="92" stroke="#9467bd" stroke-width="2"/>
+<text x="614" y="96" font-size="11" fill="#111827">harnessx</text>
+</g>
+<g data-method-line="hyperagents">
+<path d="M56.0,307.6 L107.4,172.9 L158.8,24.0 L210.2,24.0" fill="none" stroke="#ff7f0e" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#ff7f0e"/>
+<circle cx="107.4" cy="172.9" r="2.8" fill="#ff7f0e"/>
+<circle cx="158.8" cy="24.0" r="2.8" fill="#ff7f0e"/>
+<circle cx="210.2" cy="24.0" r="2.8" fill="#ff7f0e"/>
+<line x1="586" y1="110" x2="608" y2="110" stroke="#ff7f0e" stroke-width="2"/>
+<text x="614" y="114" font-size="11" fill="#111827">hyperagents</text>
+</g>
+<g data-method-line="tthe">
+<path d="M56.0,307.6 L107.4,233.2 L158.8,201.3 L210.2,204.8 L261.6,222.5 L313.0,176.5 L364.4,158.7 L415.8,87.8 L467.2,130.4 L518.6,66.5 L570.0,55.9" fill="none" stroke="#17becf" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#17becf"/>
+<circle cx="107.4" cy="233.2" r="2.8" fill="#17becf"/>
+<circle cx="158.8" cy="201.3" r="2.8" fill="#17becf"/>
+<circle cx="210.2" cy="204.8" r="2.8" fill="#17becf"/>
+<circle cx="261.6" cy="222.5" r="2.8" fill="#17becf"/>
+<circle cx="313.0" cy="176.5" r="2.8" fill="#17becf"/>
+<circle cx="364.4" cy="158.7" r="2.8" fill="#17becf"/>
+<circle cx="415.8" cy="87.8" r="2.8" fill="#17becf"/>
+<circle cx="467.2" cy="130.4" r="2.8" fill="#17becf"/>
+<circle cx="518.6" cy="66.5" r="2.8" fill="#17becf"/>
+<circle cx="570.0" cy="55.9" r="2.8" fill="#17becf"/>
+<line x1="586" y1="128" x2="608" y2="128" stroke="#17becf" stroke-width="2"/>
+<text x="614" y="132" font-size="11" fill="#111827">tthe</text>
+</g>
+<g data-method-line="dream_rsi">
+<path d="M56.0,307.6 L364.4,24.0" fill="none" stroke="#8c564b" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#8c564b"/>
+<circle cx="364.4" cy="24.0" r="2.8" fill="#8c564b"/>
+<line x1="586" y1="146" x2="608" y2="146" stroke="#8c564b" stroke-width="2"/>
+<text x="614" y="150" font-size="11" fill="#111827">dream_rsi</text>
+</g>
+<g data-method-line="meta_harness">
+<path d="M56.0,307.6 L467.2,240.3" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#1f77b4"/>
+<circle cx="467.2" cy="240.3" r="2.8" fill="#1f77b4"/>
+<line x1="586" y1="164" x2="608" y2="164" stroke="#1f77b4" stroke-width="2"/>
+<text x="614" y="168" font-size="11" fill="#111827">meta_harness</text>
+</g>
+<text x="313" y="374" font-size="11" fill="#374151" text-anchor="middle">checkpoint round</text>
+</svg>

@@ -29,12 +29,14 @@ Two defects are fixed structurally here rather than in each method
 """
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import shutil
 import stat
 import sys
 import tempfile
+import time
 from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -992,7 +994,43 @@ def reset_spent() -> None:
     -- the two-stage loops that ask a proposer and then a critic -- and for tests, which
     share an interpreter and would otherwise read each other's numbers.
     """
-    _SPENT.update(input=0, output=0, calls=0, model=None, source=None)
+    # `cache_read` resets with the rest: a per-phase window that kept the previous phase's
+    # cache reads would report a split that belongs to a different call.
+    _SPENT.update(input=0, output=0, calls=0, model=None, source=None, cache_read=0)
+
+
+def _cached_prompt_tokens(usage) -> int:
+    """Prompt tokens the provider says it served from cache, in any of the shapes it uses.
+
+    Three spellings exist in the wild and a client sees different ones depending on how it
+    parses the body: OpenAI's `prompt_tokens_details.cached_tokens`, DeepSeek's native
+    `prompt_cache_hit_tokens`, and whatever the SDK left in `model_extra`. Reading all
+    three is the difference between an endpoint row that can be compared with a CLI row and
+    one that silently reports zero cache hits.
+    """
+    def as_int(value) -> int:
+        return int(value) if isinstance(value, int) and not isinstance(value, bool) else 0
+
+    details = getattr(usage, "prompt_tokens_details", None)
+    if details is not None:
+        cached = getattr(details, "cached_tokens", None)
+        if isinstance(cached, int) and not isinstance(cached, bool):
+            return cached
+        if isinstance(details, dict):
+            cached = details.get("cached_tokens")
+            if isinstance(cached, int) and not isinstance(cached, bool):
+                return cached
+    for name in ("prompt_cache_hit_tokens", "cache_read_tokens", "cached_tokens"):
+        cached = getattr(usage, name, None)
+        if isinstance(cached, int) and not isinstance(cached, bool):
+            return cached
+    extra = getattr(usage, "model_extra", None) or {}
+    if isinstance(extra, dict):
+        for name in ("prompt_cache_hit_tokens", "cache_read_tokens", "cached_tokens"):
+            cached = extra.get(name)
+            if isinstance(cached, int) and not isinstance(cached, bool):
+                return cached
+    return 0
 
 
 def _record_usage(usage, model: str | None) -> None:
@@ -1006,7 +1044,16 @@ def _record_usage(usage, model: str | None) -> None:
     _SPENT["model"] = getattr(usage, "model", None) or model or _SPENT["model"]
     if usage is None:
         return
-    _SPENT["input"] += int(getattr(usage, "prompt_tokens", 0) or 0)
+    prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
+    cached = _cached_prompt_tokens(usage)
+    # **Cache reads are reported here too, and subtracted from the input count.** The
+    # provider gives a single `prompt_tokens` that includes whatever it served from its
+    # cache, while the CLI channel reports the two *disjoint* (its `inputTokens` already
+    # excludes cache reads). Keeping one convention is what makes a mixed method's two
+    # rows add up: input is the tokens that were actually priced as fresh, cache_read is
+    # the cheap remainder, and neither contains the other.
+    _SPENT["input"] += max(0, prompt - cached)
+    _SPENT["cache_read"] += cached
     _SPENT["output"] += int(getattr(usage, "completion_tokens", 0) or 0)
 
 
@@ -1333,6 +1380,56 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
             "artifacts": artifacts}
 
 
+#: One counter for endpoint call records, so two calls in the same second cannot collide.
+_CALL_SEQ = itertools.count(1)
+
+
+def _record_endpoint_call(prompt: str, system: str, reply: str, model: str,
+                          resp: object) -> None:
+    """Keep one endpoint conversation on disk, in the run's own `method_logs` tree.
+
+    **The CLI transcript already keeps its reasoning; this is the other half.** When a
+    method's proposal goes through the chat endpoint instead of the CLI improver -- an
+    `endpoint_only=True` design call, or a run with no CLI improver at all -- the prompt
+    and the reply existed only in memory. Measured on 2026-10-17: `meta_harness`'s design
+    step and six of `dream_rsi`'s nine rounds were endpoint calls, so the only surviving
+    evidence of *why* those harnesses were proposed was the parsed edit itself.
+
+    The directory comes from `HG_CALL_LOG_DIR`, which the driver sets per round. Without
+    it (a method invoked by hand) nothing is written: guessing a path would scatter files
+    somewhere nobody looks.
+
+    Never raises. A record that fails must not turn a measured call into a failed one.
+    """
+    directory = os.environ.get("HG_CALL_LOG_DIR")
+    if not directory:
+        return
+    usage = getattr(resp, "usage", None)
+    try:
+        dest = Path(directory) / "endpoint"
+        dest.mkdir(parents=True, exist_ok=True)
+        record = {
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "model": model,
+            "system": system,
+            "prompt": prompt,
+            "reply": reply,
+            "prompt_chars": len(prompt),
+            "reply_chars": len(reply),
+            "usage": None if usage is None else {
+                "input": getattr(usage, "prompt_tokens", None),
+                "output": getattr(usage, "completion_tokens", None),
+                "cached": ((getattr(usage, "prompt_tokens_details", None) or None)
+                           and getattr(usage.prompt_tokens_details, "cached_tokens", None)),
+            },
+        }
+        name = (f"{time.strftime('%H%M%S', time.gmtime())}-{os.getpid()}-"
+                f"{next(_CALL_SEQ):04d}.json")
+        (dest / name).write_text(json.dumps(record, ensure_ascii=False, indent=1))
+    except (OSError, TypeError, ValueError):
+        return
+
+
 def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         skill: bool = True, parent: Path | None = None,
         endpoint_only: bool = False) -> dict:
@@ -1423,6 +1520,7 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         # still a call the method paid for, and a parse failure is exactly when someone
         # asks what the round cost.
         _record_usage(getattr(resp, "usage", None), getattr(resp, "model", None) or model)
+        _record_endpoint_call(prompt, system, last, getattr(resp, "model", None) or model, resp)
         # Debug affordance: `HG_METHOD_DUMP=<path>` writes the raw reply out. A model
         # reply that will not parse is the hardest failure to diagnose from the
         # outside -- the platform only ever sees "unparseable" and 200 characters of
@@ -1671,15 +1769,42 @@ def report(req: dict, *, method: str, harness_dir: Path, changed: bool,
 
 
 
+#: "Attach whatever this process last saw", for callers that cannot be wrong about it.
+#:
+#: `report` is such a caller: one process is one method call, so the improver run recorded
+#: at the end of it *is* the one that produced this candidate. `report_many` is not, and the
+#: difference is the whole reason this sentinel exists -- see `_step_payload`.
+_PROCESS_IMPROVER = object()
+
+
 def _step_payload(*, harness_dir, label, edit_kind, changed, tokens_now,
-                  method_reported, incumbent_round=None) -> dict:
+                  method_reported, incumbent_round=None,
+                  improver=_PROCESS_IMPROVER) -> dict:
     """One step of a trajectory, built the same way however many of them there are.
 
     `incumbent_round` is the **selection** half of a rule: `score` on a curve point is the
     *candidate's* measurement, so a method that decides "keep the state from round 3" has to
     say so, or the record shows only what it tried and never what it kept. Omitted by
     default, which means "this candidate becomes the base for my next step".
+
+    **The spend split comes from the process, and it used to be hard-coded to `None` here.**
+    That was not a neutral omission, because this function is the *batch* path and every
+    batched method goes through it: measured 2026-10-18 on the nine-method batch, every
+    curve point of every method recorded `method_generation_input: null`,
+    `method_output: null`, `method_calls: null` and `method_spend_source: null` -- including
+    the rounds where the improver's provider had reported a usage block. The single-candidate
+    path (`report`) did read it, so the two halves of one platform disagreed about the same
+    call, and `records._cost_fields` had nothing to read. The same three lines as `report`
+    now, from the same place.
+
+    `improver` is separate because *attribution* is a different question from *measurement*.
+    `_LAST_IMPROVER` is one process-level slot holding the last CLI run, so a batch of k
+    steps cannot say which step that run produced -- and filling all k in says it produced
+    all k, which is false for a batch whose earlier candidates came from endpoint calls. So
+    a k>1 batch passes `None` and the account is recorded once at the envelope, marked
+    call-scoped. A one-step submission is unambiguous and passes the run itself.
     """
+    spend_now = spent()
     step = {
         "harness_dir": str(harness_dir),
         "label": label or ("edit" if changed else "no change"),
@@ -1690,27 +1815,41 @@ def _step_payload(*, harness_dir, label, edit_kind, changed, tokens_now,
         # ~24 KB of harness sources in and ~200 tokens out, so a rising improver cost is a
         # source-reading cost, not a thinking cost.
         "claimed_cost": {"generation_tokens": tokens_now,
-                         "method_input_tokens": None, "method_output_tokens": None,
-                         "method_model_calls": None, "method_model": None,
-                         "method_spend_source": None},
-        "method_reported": {"score": None, **_reported_with_improver(method_reported)},
+                         "method_input_tokens": spend_now["input"] or None,
+                         "method_output_tokens": spend_now["output"] or None,
+                         "method_model_calls": spend_now["calls"] or None,
+                         "method_model": spend_now["model"],
+                         # Null tokens above mean "nobody counted" only if this says so;
+                         # without it a reader cannot tell a free round from an invisible
+                         # one. It is also what makes the nulls above *provable* rather
+                         # than a gap in the record.
+                         "method_spend_source": spend_source(),
+                         "method_cache_read_tokens": cache_read_tokens()},
+        "method_reported": {"score": None,
+                            **_reported_with_improver(method_reported,
+                                                      improver=improver)},
     }
     if incumbent_round is not None:
         step["incumbent_round"] = int(incumbent_round)
     return step
 
 
-def _reported_with_improver(method_reported: dict | None) -> dict:
+def _reported_with_improver(method_reported: dict | None,
+                            improver=_PROCESS_IMPROVER) -> dict:
     """The method's own report plus the improver's account of itself, under its own key.
 
     Kept apart rather than merged so a method's keys cannot collide with the improver's,
     and omitted entirely for endpoint improvers -- an empty block would say "the improver
     reported nothing", which is not the same as "there was no CLI improver".
+
+    `improver=None` means **do not attach**: the caller cannot attribute the process's last
+    CLI run to this record (see `_step_payload`). Passing the run explicitly is how a caller
+    that *can* attribute it says so.
     """
     merged = dict(method_reported or {})
-    run = improver_run()
+    run = improver_run() if improver is _PROCESS_IMPROVER else improver
     if run:
-        merged["improver_run"] = run
+        merged["improver_run"] = dict(run)
     return merged
 
 
@@ -1723,8 +1862,13 @@ def _batch_reported(steps: list[dict], payloads: list[dict]) -> dict:
         per_step = [e.get("method_reported") or {} for e in steps]
         if any(per_step):
             envelope["per_step"] = per_step
-        if improver_run():
-            envelope["improver_run"] = improver_run()
+        run = improver_run()
+        if run:
+            envelope["improver_run"] = run
+            # **Not per step, and the record says so.** One CLI run bought this batch as a
+            # whole; a reader who found it inside `per_step[i]` would be entitled to count
+            # it k times, and nothing on the record said not to.
+            envelope["improver_run_scope"] = "call"
     return envelope
 
 
@@ -1773,7 +1917,11 @@ def report_many(req: dict, *, method: str, steps: list[dict],
             harness_dir=entry["harness_dir"], label=entry.get("label") or "",
             edit_kind=entry.get("edit_kind"), changed=changed,
             tokens_now=tokens, method_reported=entry.get("method_reported"),
-            incumbent_round=entry.get("incumbent_round")))
+            incumbent_round=entry.get("incumbent_round"),
+            # One step, one candidate: the process's last CLI run *is* the run that
+            # produced it, so it is attributable. k>1 is not, and `_step_payload` records
+            # why the account then lives on the envelope instead.
+            improver=improver_run() if len(steps) == 1 else None))
 
     trajectory = {
         "steps": payloads,

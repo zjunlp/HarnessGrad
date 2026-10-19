@@ -44,7 +44,8 @@ from eval.policy.unobserved_diagnostic import Authorization
 
 def _refuse_unobserved_policies(task: dict, env: dict | None,
                                verifier: dict | None, *, run_id: str = "",
-                               diagnostic_authorization: Authorization | None = None) -> dict | None:
+                               diagnostic_authorization: Authorization | None = None,
+                               observation: dict | None = None) -> dict | None:
     """Refuse a declared policy when, and only when, this process does not apply it.
 
     Phase deadlines and native files network isolation are applied by the platform
@@ -54,6 +55,12 @@ def _refuse_unobserved_policies(task: dict, env: dict | None,
     adapter observations and cached verdicts are not a substitute for that observer.
     An operator may authorize one explicitly unmeasured diagnostic attempt. That
     permission is never treated as backend observation or production admission.
+
+    `observation` is that backend observation, when the caller has one: a receipt from
+    `eval.service.container_observation` for *this* environment, whose `ok` is True and whose
+    `covers` names the policy fields it measured back from Docker and from the kernel. It
+    admits only the fields it actually covers and only when every declared field is covered;
+    anything left over is still refused. Omitting it keeps today's behaviour exactly.
     """
     env_spec = env or {}
     fields = {"env." + key for key in (
@@ -79,6 +86,14 @@ def _refuse_unobserved_policies(task: dict, env: dict | None,
         fields.add("verifier.artifact_policy")
     if not fields:
         return None
+    covered = set()
+    if observation is not None and observation.get("ok") is True:
+        covered = set(observation.get("covers") or ()) & fields
+    remaining = fields - covered
+    if observation is not None and observation.get("ok") is True and not remaining:
+        # Every declared bound was read back from the backend and the kernel. That is the
+        # observation this refusal exists to demand, so there is nothing left to refuse.
+        return None
     if diagnostic_authorization is not None:
         # Still refuse every ordinary run, pilot, unbound task/run and cached
         # measurement. Only the bound one-task diagnostic may attempt execution;
@@ -86,12 +101,18 @@ def _refuse_unobserved_policies(task: dict, env: dict | None,
         diagnostic_authorization.require_scope(run_id, [task["task_id"]])
         return None
     result = _invalid(task, "backend_observation_unavailable", stage="admission", service=None)
-    result["invalid"]["receipt"] = {
+    receipt = {
         "schema": "harnessgrad.runner-policy-refusal.v1", "stage": "admission",
         "status": "blocked", "reason": "backend_observation_unavailable",
         "measured": False, "production_authorized": False, "observation": "unknown",
-        "policy_fields": sorted(fields),
+        "policy_fields": sorted(remaining if covered else fields),
     }
+    if observation is not None:
+        # Keep the failed observation with the refusal: "we looked and it did not match" is a
+        # different finding from "nobody looked", and only one of them is worth retrying.
+        receipt["observation"] = "failed" if not observation.get("ok") else "partial"
+        receipt["observation_receipt"] = observation
+    result["invalid"]["receipt"] = receipt
     return result
 
 
@@ -165,18 +186,29 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             run_id: str = "", run_seed: str = "",
             recordings_root: Path | None = None,
             diagnostic_authorization: Authorization | None = None,
-            trial_id: str | None = None, _worker: dict | None = None) -> dict:
+            trial_id: str | None = None,
+            observation: dict | None = None,
+            _worker: dict | None = None) -> dict:
     if diagnostic_authorization is not None:
         diagnostic_authorization.require_scope(run_id, [task["task_id"]])
     refusal = _refuse_unobserved_policies(
         task, env, verifier, run_id=run_id,
-        diagnostic_authorization=diagnostic_authorization)
+        diagnostic_authorization=diagnostic_authorization, observation=observation)
+    # **Both branches of this merge are kept, and neither is optional.** Ours is the admission
+    # receipt (`appworld-observe`): a container observation that admits only the policy fields
+    # it actually measured back. Theirs is the cooperative/worker execution path (`workers` in
+    # a setup) and its runtime receipt. Resolving by dropping either would have silently
+    # removed a capability -- one an AppWorld run needs to be admitted at all, the other a
+    # multi-peer evaluation that only a dataset declaring `workers` can reach.
     if (setup or {}).get("workers") is not None and refusal is None:
         from eval.run.cooperative import run
-        return run(repo, task, setup=setup, verifier=verifier, env=env,
-                   timeout_s=timeout_s, verify_timeout_s=verify_timeout_s, sandbox=sandbox,
-                   run_id=run_id, run_seed=run_seed, trial_id=trial_id,
-                   recordings_root=recordings_root)
+        cooperative = run(repo, task, setup=setup, verifier=verifier, env=env,
+                          timeout_s=timeout_s, verify_timeout_s=verify_timeout_s,
+                          sandbox=sandbox, run_id=run_id, run_seed=run_seed,
+                          trial_id=trial_id, recordings_root=recordings_root)
+        if observation is not None:
+            cooperative.setdefault("env_observation", observation)
+        return cooperative
     runtime_receipt = {}
     result = refusal if refusal is not None else _run_one(
         repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
@@ -184,6 +216,8 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         runtime_receipt=runtime_receipt, worker=_worker)
     if runtime_receipt:
         result["runtime_services"] = runtime_receipt
+    if observation is not None and refusal is None:
+        result.setdefault("env_observation", observation)
     if result.get("verdict") is not None:
         result["verdict"].setdefault("scorer_isolation_class", "unknown")
     if diagnostic_authorization is not None:

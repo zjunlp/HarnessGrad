@@ -495,13 +495,25 @@ def _write_progress(progress_dir, round_no: int, tid: str,
         # is what lets a reader tell a crash-driven zero from a completion-driven one.
         last_exit = measured[-1].get("exit_code") if measured else None
         last_stderr = measured[-1].get("stderr") if measured else None
+        # **A substring is not a key.** The trace is JSONL, and a *step* record can carry the
+        # text `wall_clock_s` in its command output or its own stats -- matching on the
+        # substring then parses that record and indexes a key it does not have. Measured on
+        # `dream_rsi` (2026-10-17, round 10): `KeyError: 'wall_clock_s'` killed a nine-round
+        # run, and the launcher skipped its exam because a failed train returns before it.
+        # So: parse, then *check the shape*, and treat anything unexpected as "no wall clock"
+        # rather than as a reason to lose the run.
         wall = None
         for line in str((measured[-1] if measured else {}).get("trace") or "").splitlines():
-            if '"wall_clock_s"' in line:
-                try:
-                    wall = json.loads(line)["wall_clock_s"].get("total")
-                except (ValueError, AttributeError):
-                    pass
+            if '"wall_clock_s"' not in line:
+                continue
+            try:
+                record = json.loads(line)
+            except ValueError:
+                continue
+            value = record.get("wall_clock_s") if isinstance(record, dict) else None
+            if isinstance(value, dict):
+                wall = value.get("total")
+                break
         task_file(dest, f"{tid}.json").write_text(json.dumps({
             "task_id": tid, "round": round_no,
             **({"runtime_services": [r.get("runtime_services") for r in measured]}

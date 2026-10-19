@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zjunlp/HarnessGrad/contrib/submission.schema.json",
+  "title": "HarnessGrad result submission",
+  "description": "One measured result, published on a benchmark page only after the platform's validity gate passes. Path: contrib/results/<dataset>/<method>/<variant>.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "config",
+    "credit",
+    "dataset",
+    "improver",
+    "method",
+    "platform",
+    "runs",
+    "schema",
+    "task_agent",
+    "variant"
+  ],
+  "properties": {
+    "schema": {
+      "const": "harnessgrad.submission.v1"
+    },
+    "dataset": {
+      "type": "string",
+      "description": "A benchmark slug that already has a page on the site, e.g. alfworld.",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "paper": {
+          "type": "string",
+          "format": "uri"
+        },
+        "code": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "variant": {
+      "type": "string",
+      "description": "What distinguishes this row from another row of the same method, e.g. greedy-local-9b.",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "content_sha": {
+          "type": "string",
+          "description": "The platform content sha recorded in run_meta.json. Required for a verified row."
+        }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "run_id",
+          "harness_sha",
+          "round",
+          "score",
+          "n_tasks",
+          "n_invalid",
+          "per_task"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "harness_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{7,40}$"
+          },
+          "round": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "n_tasks": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "n_invalid": {
+            "const": 0,
+            "description": "A published point has no unmeasured tasks."
+          },
+          "n_harness_failed": {
+            "type": "integer",
+            "const": 0
+          },
+          "per_task": {
+            "type": "string",
+            "description": "Repository-relative path to the per-task verdicts this score was computed from."
+          }
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "study_ids",
+        "rounds",
+        "trials",
+        "sampling",
+        "model",
+        "temperature"
+      ],
+      "properties": {
+        "study_ids": {
+          "type": "string",
+          "description": "File naming the study task ids."
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "jobs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "slots": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sampling": {
+          "type": "string"
+        },
+        "trials": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "trajectories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location"
+      ],
+      "properties": {
+        "location": {
+          "type": "string",
+          "format": "uri"
+        },
+        "format": {
+          "type": "string"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Set by a maintainer after the archive was downloaded and replayed."
+        },
+        "mirrored": {
+          "type": "boolean",
+          "description": "Set by a maintainer once the archive exists in the project's HuggingFace dataset."
+        }
+      }
+    },
+    "credit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "affiliation",
+        "submitted",
+        "acknowledge_in_report"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affiliation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "link": {
+          "type": "string",
+          "format": "uri"
+        },
+        "submitted": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "dataset",
+              "method"
+            ],
+            "properties": {
+              "dataset": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "acknowledge_in_report": {
+          "type": "boolean",
+          "description": "true: the technical report may name you with this name and affiliation."
+        },
+        "contact": {
+          "type": "string",
+          "description": "Optional and never published: an email, or a WeChat id for direct questions."
+        }
+      }
+    },
+    "task_agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What was improved and who was deciding inside it. Two stacks are never ranked against each other.",
+      "required": [
+        "base_harness",
+        "model"
+      ],
+      "properties": {
+        "base_harness": {
+          "type": "string",
+          "description": "e.g. loop@0.2.0"
+        },
+        "model": {
+          "type": "string",
+          "description": "The agent model, e.g. qwen3.5-9b-local or gpt-4o-mini."
+        },
+        "decoding": {
+          "type": "string",
+          "description": "e.g. greedy (temperature=0), or temperature=0.7 top_p=0.9"
+        },
+        "sandbox": {
+          "type": "string",
+          "description": "Optional: the runtime the harness ran in."
+        }
+      }
+    },
+    "improver": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What did the improving. A different improver model or improver harness is a different measurement.",
+      "required": [
+        "method",
+        "harness"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "The RSI method name and version, e.g. dream_rsi@0.2.1"
+        },
+        "model": {
+          "type": "string",
+          "description": "The model the improver itself used, e.g. deepseek-flash."
+        },
+        "harness": {
+          "type": "string",
+          "description": "The harness the improver ran under, e.g. dsh (headless profile) or codex."
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

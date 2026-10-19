@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { PageContainer } from "@/components/layout/app-shell";
 import { Section } from "@/components/common/section";
 import { ChartSkeleton, DetailSkeleton, ErrorState } from "@/components/common/states";

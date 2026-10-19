@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { Link, Navigate, Route, Routes } from "react-router";
 import { AppShell, PageContainer } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/common/states";
 import { ExperimentsPage } from "@/pages/experiments";

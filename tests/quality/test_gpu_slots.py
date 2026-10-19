@@ -148,3 +148,37 @@ def test_a_point_records_the_budget_it_was_measured_under(tmp_path):
     assert with_budget["jobs"] == 6 and with_budget["gpu_budget"] == 40
     without = _identity(man, "abc", "A", jobs=6, trials=1)
     assert "gpu_budget" not in without, "没有预算就不要写一个假的数字"
+
+
+def test_the_driver_arms_the_budget_without_a_budget_profile(tmp_path):
+    """**实测过的回归**：`slots.configure()` 曾被放在 `if budget_profile_source:` 里，
+    所以没传 `--budget-profile` 的 run —— 也就是我们每一个 run —— 收到了 `--gpu-budget`
+    却把它执行到空处：槽位目录根本没被创建，九方法批次会给端点 216 路并发而不是 40。"""
+    slots_dir = tmp_path / "slots"
+    argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+            "--dataset", "demo", "--sampling", "all", "--rounds", "1", "--jobs", "2",
+            "--gpu-budget", "3", "--gpu-budget-dir", str(slots_dir),
+            "--run-id", "budget-armed", "--runs-root", str(tmp_path / "runs"),
+            "--work-root", str(tmp_path / "work"),
+            "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/noop/run.py'}"]
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=600,
+                          env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+    assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+    assert (slots_dir / "capacity").read_text().strip() == "3", (
+        "驱动没有配置预算：槽位目录不存在，`--gpu-budget` 等于没写")
+
+
+def test_a_point_records_no_budget_when_none_was_armed(tmp_path):
+    """没有预算的 run 不能在点上写一个假的容量。"""
+    argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+            "--dataset", "demo", "--sampling", "all", "--rounds", "1", "--jobs", "1",
+            "--run-id", "no-budget", "--runs-root", str(tmp_path / "runs"),
+            "--work-root", str(tmp_path / "work"),
+            "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/noop/run.py'}"]
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=600,
+                          env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+    assert proc.returncode == 0, proc.stderr[-600:]
+    points = [json.loads(l) for l in
+              (tmp_path / "runs" / "no-budget" / "curve.jsonl").read_text().splitlines()
+              if l.strip()]
+    assert points and all("gpu_budget" not in p["identity"] for p in points)

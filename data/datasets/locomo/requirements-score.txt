@@ -1,2 +1,3 @@
 # PorterStemmer needs no downloaded corpus or model.
-nltk==3.9.2
+# 3.10.3 is the first release that clears the 3.9.x advisory cluster; only PorterStemmer is used.
+nltk==3.10.3

@@ -1,0 +1,72 @@
+---
+title: LoCoMo
+description: What LoCoMo measures, its 10 conversations and 1,986 questions, the two places our adapter's metric differs from the platform's average, and why no score is published here.
+---
+
+**No score is published here yet.** LoCoMo is the one benchmark in this repository whose *data* is
+pinned and verified but whose *measurement* has not been run, and the difference matters enough to
+say plainly on the page rather than in a commit message.
+
+## What it measures
+
+LoCoMo is a long-context conversational-memory benchmark: ten conversations, each with a long
+multi-session transcript and a list of questions that require remembering something said earlier.
+Questions are grouped into five categories (single-hop, multi-hop, temporal, open-domain
+knowledge, and adversarial/refusal), and the harness answers them from the transcript.
+
+| property | value |
+| --- | --- |
+| conversations | **10** (one task each) |
+| questions | **1,986** across the five categories |
+| input | the whole conversation plus every question, supplied up front |
+| harness output | `answers.json`, mapping question index → short answer |
+| scoring | Harbor's full-precision token F1 (categories 1–4) plus a refusal/option check (category 5) |
+
+The pinned data is `snap-research/locomo@3eb6f2c` → `data/locomo10.json`, **2,805,274 bytes**,
+sha256 `79fa87e9…98ff4`, and that hash is verified when the run starts, so a run that measured a
+different file fails instead of producing a number.
+
+## Two things a reader has to know about the number
+
+1. **There is no study/eval split.** `OFFICIAL_EVAL` is `None` and no split is declared: all ten
+   conversations are visible to any harness. So LoCoMo can be *measured*, but the three-way
+   protocol this platform runs (study → choose a round on a dev pool → measure once on a held-out
+   pool) has nothing to hold out. Any method evaluated here must say so.
+2. **The metric name is not the platform's average.** The adapter's metric is
+   `locomo.harbor.question_micro_mean.v1` — every question weighted equally. The platform's curve
+   averages the per-conversation rewards, and the conversations have different question counts, so
+   the two numbers differ. The official figure comes from the adapter's own `report.py` over
+   verifier evidence; both numbers have to be shown side by side, never one as the other.
+
+## Why there is no result yet
+
+The data is provisioned and verified, and `dataset_lint --dataset locomo` is `ok`. What has not
+happened is a single measured run: the checklist validation and the scorer comparison against the
+vendored Harbor implementation were exercised on fixture rows, not on the real file. A one-task
+smoke is therefore the next step, and until it exists this page carries no table.
+
+A noop and an oracle control come before any method, because on a static-context benchmark a
+harness that answers nothing and a harness that answers everything bracket the metric, and a
+method's result is only readable between those two.
+
+## How it will run
+
+```bash
+# the data directory that CONTAINS raw/locomo10.json; the default is this machine's path
+export HG_LOCOMO_DATA=/mnt/20t/xubuqiang/datasets/locomo
+
+# controls first: noop and oracle bracket the metric before any method is measured
+HG_AGENT_BACKEND=mock python3 data/datasets/locomo/control.py --task-id locomo/conv-26 --noop
+HG_AGENT_BACKEND=mock python3 data/datasets/locomo/control.py --task-id locomo/conv-26 --oracle
+
+# one task through the driver, then the official question-weighted report from the verdicts
+python3 driver.py --harness loop --dataset locomo --split declared --side train \
+  --sampling all --tasks locomo/conv-26 --trials 1 --jobs 1 --rounds 0 --improver none \
+  --run-id locomo-smoke --runs-root runs
+```
+
+## Contribute
+
+A LoCoMo result is welcome, and the two declarations above are part of submitting one: name the
+metric you report, and say that the benchmark has no held-out split. Format and verification:
+**[Contributing](../../contributing/)**.

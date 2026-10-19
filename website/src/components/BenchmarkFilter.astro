@@ -1,0 +1,176 @@
+---
+/**
+ * The filter bar for a benchmark page, in the shape of a console: five dropdowns, one per axis
+ * that can differ between two published results.
+ *
+ * The axes are the ones that make a result a result: which method improved the harness, which
+ * model the agent used, which model the improver used, which base harness was improved, and
+ * which split was scored. Hiding rows and chart lines is all it does — every row is rendered
+ * and visible without JavaScript, so a published number never depends on a script running.
+ */
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  splits: Option[];
+  methods: Option[];
+  taskModels: Option[];
+  metaModels: Option[];
+  metaHarnesses: Option[];
+  baseHarnesses: Option[];
+}
+
+const { splits, methods, taskModels, metaModels, metaHarnesses, baseHarnesses } = Astro.props;
+const axes = [
+  { key: "split", label: "split", options: splits },
+  { key: "method", label: "RSI method", options: methods },
+  { key: "task-model", label: "task model", options: taskModels },
+  { key: "base-harness", label: "base harness", options: baseHarnesses },
+  { key: "meta-model", label: "meta model", options: metaModels },
+  { key: "meta-harness", label: "meta harness", options: metaHarnesses },
+];
+---
+<div class="hg-console" data-hg-console>
+  {axes.map((axis) => (
+    <label class="hg-console-field">
+      <span>{axis.label}</span>
+      <select data-hg-filter={axis.key}>
+        <option value="*">all</option>
+        {axis.options.map((option) => (
+          <option value={option.value}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+  ))}
+  <button type="button" data-hg-reset>reset</button>
+</div>
+
+<script>
+  const panel = document.querySelector<HTMLElement>("[data-hg-console]");
+  if (panel) {
+    const selects = Array.from(panel.querySelectorAll<HTMLSelectElement>("[data-hg-filter]"));
+    const picked = () => {
+      const chosen: Record<string, string> = {};
+      for (const select of selects) {
+        chosen[select.dataset.hgFilter ?? ""] = select.value;
+      }
+      return chosen;
+    };
+    // Every axis except the method narrows whole panels; the method narrows rows and chart
+    // lines. An element that does not carry an axis is not filtered by it, which is why a
+    // single-setup page still behaves correctly when a setup dropdown is left at "all".
+    const setupAxes = ["base-harness", "task-model", "meta-model", "meta-harness"];
+    const apply = () => {
+      const chosen = picked();
+      for (const element of document.querySelectorAll<HTMLElement>("[data-split]")) {
+        const wanted = chosen["split"];
+        let visible = wanted === "*" || element.dataset.split === wanted;
+        for (const axis of setupAxes) {
+          const pick = chosen[axis];
+          if (pick === "*") continue;
+          const own = element.dataset[
+            axis.replace(/-(.)/g, (_, letter: string) => letter.toUpperCase()) as keyof DOMStringMap];
+          if (own !== undefined && own !== "all" && own !== pick) visible = false;
+        }
+        element.hidden = !visible;
+      }
+      for (const element of document.querySelectorAll<HTMLElement>("[data-method-row]")) {
+        const wanted = chosen["method"];
+        element.hidden = wanted !== "*" && element.dataset.methodRow !== wanted;
+      }
+      for (const element of document.querySelectorAll<HTMLElement>("[data-method-line]")) {
+        const wanted = chosen["method"];
+        element.hidden = wanted !== "*" && element.dataset.methodLine !== wanted;
+      }
+    };
+    for (const select of selects) select.addEventListener("change", apply);
+    panel.querySelector("[data-hg-reset]")?.addEventListener("click", () => {
+      for (const select of selects) select.value = "*";
+      apply();
+    });
+  }
+</script>
+
+<style>
+  .hg-console {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.5rem 0.75rem;
+    align-items: end;
+    margin: 1rem 0 1.5rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+  }
+  .hg-console-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-3);
+  }
+  .hg-console-field select {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.3rem;
+    background: var(--sl-color-bg);
+    color: var(--sl-color-white);
+  }
+  [data-hg-reset] {
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.3rem;
+    background: transparent;
+    color: var(--sl-color-white);
+    cursor: pointer;
+  }
+  .hg-table {
+    overflow-x: auto;
+    margin: 0.5rem 0 1.25rem;
+  }
+  .hg-table table {
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .hg-table th,
+  .hg-table td {
+    padding: 0.18rem 0.45rem;
+    border-bottom: 1px solid var(--sl-color-gray-6);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .hg-table th {
+    font-weight: 500;
+    color: var(--sl-color-gray-3);
+  }
+  .hg-table caption {
+    caption-side: top;
+    text-align: left;
+    font-size: 0.72rem;
+    color: var(--sl-color-gray-3);
+    padding-bottom: 0.25rem;
+  }
+  .hg-table th[colspan] {
+    text-align: center;
+    border-bottom-color: var(--sl-color-gray-5);
+  }
+  .hg-table td:first-child,
+  .hg-table th:first-child {
+    text-align: left;
+  }
+  .hg-chart {
+    margin: 0.5rem 0 1rem;
+    overflow-x: auto;
+  }
+  .hg-chart svg {
+    max-width: 100%;
+    height: auto;
+  }
+</style>

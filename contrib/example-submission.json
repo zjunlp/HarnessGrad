@@ -1,0 +1,68 @@
+{
+  "schema": "harnessgrad.submission.v1",
+  "dataset": "alfworld",
+  "task_agent": {
+    "base_harness": "loop@0.2.0",
+    "model": "qwen3.5-9b-local",
+    "decoding": "greedy (temperature=0)"
+  },
+  "improver": {
+    "method": "sica_ci@0.2.0",
+    "model": "deepseek-flash",
+    "harness": "dsh (headless profile)",
+    "rounds": 10
+  },
+  "method": {
+    "name": "sica_ci",
+    "paper": "https://arxiv.org/abs/2409.15254",
+    "code": "https://github.com/zjunlp/HarnessGrad"
+  },
+  "variant": "greedy-local-9b",
+  "platform": {
+    "commit": "d52171db",
+    "content_sha": "26b56b9ca29bd6be\u2026"
+  },
+  "runs": [
+    {
+      "run_id": "rsi10-20261017T123952Z-sica_ci-ckpt-r9-valid_unseen",
+      "harness_sha": "f99539b371672d744a6121b0fc3a55de57a38277",
+      "round": 9,
+      "score": 1.0,
+      "n_tasks": 134,
+      "n_invalid": 0,
+      "n_harness_failed": 0,
+      "per_task": "results/alfworld/sica_ci/per_task.json"
+    }
+  ],
+  "config": {
+    "study_ids": "train100.csv",
+    "rounds": 10,
+    "jobs": 12,
+    "slots": 48,
+    "sampling": "all",
+    "trials": 1,
+    "endpoint": "http://127.0.0.1:8100/v1",
+    "model": "qwen3.5-9b-local",
+    "temperature": 0,
+    "seed": null
+  },
+  "trajectories": {
+    "location": "https://huggingface.co/datasets/zjunlp/harnessgrad-trajectories",
+    "format": "one JSONL per task, one record per step",
+    "verified": false,
+    "mirrored": false
+  },
+  "credit": {
+    "name": "Example Contributor",
+    "affiliation": "Example University",
+    "link": "https://example.edu/~contributor",
+    "submitted": [
+      {
+        "dataset": "alfworld",
+        "method": "sica_ci"
+      }
+    ],
+    "acknowledge_in_report": true,
+    "contact": "optional: you@example.edu, or your WeChat id"
+  }
+}

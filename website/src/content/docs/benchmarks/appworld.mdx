@@ -1,0 +1,84 @@
+---
+title: AppWorld
+description: What AppWorld measures, how its 732 tasks are split, what our adapter had to solve before it could measure anything, and why there is no score on this page yet.
+---
+
+**No score is published here yet, and none will be until a valid point exists.** What follows is
+what the benchmark measures, what our adapter does, and the specific blocker that stands between
+the adapter and a measurement. This page exists so that "we have an adapter" and "we have a
+result" cannot be confused for one another.
+
+## What it measures
+
+AppWorld is an executed-action benchmark: a simulated world of apps (e-mail, calendar, contacts,
+a file system, shopping, a music player) behind REST-like APIs, and a task is a natural-language
+goal that must be reached by calling those APIs. A task is solved when the official evaluator
+inspects the **world state it produced** — the database the task's apps read and write — and finds
+it in the target state. Returning the right-looking answer without touching the world is a
+failure, which is what makes it a benchmark of doing rather than of saying.
+
+| property | value |
+| --- | --- |
+| tasks | **732 released** |
+| official splits | `train` 90 · `dev` 57 · `test_normal` 168 · `test_challenge` 417 |
+| what a task is | one goal, one world, one evaluator over the resulting database state |
+| per-task runtime | a task container (2 CPU / 4 GB) plus an environment service (2 CPU / 4 GB), then the verifier |
+| metric | the official evaluator's pass/fail over the final world state |
+
+The three-way protocol this platform uses maps onto it directly: `train` is the study set, `dev`
+is the pool a method's round is chosen on, and `test_normal` / `test_challenge` are measured once,
+on the state that was chosen — never used for selection.
+
+## What our adapter does, and the blocker it hit
+
+The adapter runs a task as a container pair behind an HTTP service, and admits a run only when it
+can **observe** the resource bounds it hands the container. It refused to measure for a week with
+
+```
+backend_observation_unavailable: env.cpus, env.exec_defaults, env.memory_mb, env.network
+```
+
+— the honest version of "we cannot prove the container got the memory we said it did". The fix is
+a narrow observation path that reads the bounds back from the running container instead of
+declaring them: a real probe on the pinned image reports declared = Docker = cgroup (2 CPU /
+4096 MB / 1024 pids) in 1.34 s. That is merged, and it is what the first smoke test will exercise.
+
+## Why there is no result yet
+
+Two things, both of which have to be true before a number appears here:
+
+1. **A one-task smoke has to pass.** The staged-pilot policy in this repository is a single task
+   first (`--tasks 07b42fd_1`, `jobs=1`), because a plumbing failure and a bad harness look
+   identical in a score table, and only one of them is worth debugging.
+2. **The concurrency ceiling has to be measured, not guessed.** Each task holds 4 CPU and 8 GB
+   across two containers, so the host reserve (14 cores, 30 GB) survives at roughly 20–22
+   concurrent tasks. The pilot starts at 4 and samples `docker stats` to argue the next value
+   from numbers.
+
+Until both hold, this page carries no table and no chart: a score is published only when it can be
+traced to per-task verdicts, and there is nothing to trace yet.
+
+## How it will run
+
+```bash
+# smoke: one task, jobs=1, no rounds, no improver -- a plumbing check, not a result
+python3 driver.py --harness loop --dataset appworld --split declared --side train \
+  --sampling all --tasks 07b42fd_1 --trials 1 --jobs 1 --rounds 0 --improver none \
+  --run-id appworld-smoke --runs-root runs
+
+# pilot: 15 study-side tasks (10% of the eligible set), jobs=4, docker stats sampled alongside
+HG_APPWORLD_STUDY_IDS=<the 15 ids> \
+  python3 driver.py --harness loop --dataset appworld --split declared --side train \
+  --sampling all --tasks "$TASKS" --trials 1 --jobs 4 --rounds 0 --improver none \
+  --run-id appworld-pilot-15 --runs-root runs
+```
+
+The resource reserve is checked before every task is admitted, so the pilot cannot starve the
+login session or the rest of the machine: if the headroom falls below 14 cores or 30 GB, nothing
+new starts.
+
+## Contribute
+
+If you have measured AppWorld with a harness-improvement method, that result is welcome — see
+**[Contributing](../../contributing/)** for the file format and what we verify. An unmeasured
+adapter is not a result, on this page or in yours.

@@ -44,7 +44,7 @@
   },
   "metric": "locomo.harbor.question_micro_mean.v1",
   "dependency": {
-    "nltk": "3.9.2",
+    "nltk": "3.10.3",
     "nltk_corpora_required": false
   }
 }

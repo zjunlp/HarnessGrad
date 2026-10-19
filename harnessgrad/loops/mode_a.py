@@ -88,11 +88,70 @@ def _no_loadable_change(changed: list[str], unreachable: list[str]) -> dict | No
     }
 
 
+def _identical_prior(curve: list[dict], sha: str, trials: int) -> dict | None:
+    """The earlier point that already measured **this exact harness**, or None.
+
+    `identity.harness_sha` is a *content address* -- `ckpt.git_state.commit_state`
+    returns the tree hash, not the commit sha, precisely so that "the same harness" has
+    one name. So equality here means the candidate carries byte-identical content to a
+    state this run already measured, and measuring it again would buy a replicate of a
+    number the record already holds.
+
+    The trials count is part of the question: a single measurement is not the mean of
+    three, and reusing one for the other would answer something the run did not ask.
+    """
+    for point in reversed(curve):
+        if (point.get("identity") or {}).get("harness_sha") != sha:
+            continue
+        if (point.get("sampling") or {}).get("trials", trials) != trials:
+            continue
+        return point
+    return None
+
+
+def _copy_round_traces(run_dir: Path, source_round: int, target_round: int) -> None:
+    """Give the reused round its predecessor's traces, so the record stays complete.
+
+    The method's own channel is staged from the base traces (`_stage_for_method`), so this
+    is about the run directory a reader inspects -- a round that says "reused" and has no
+    traces at all would look like a round that failed to produce any.
+    """
+    src = run_dir / f"round{source_round}_traces"
+    dst = run_dir / f"round{target_round}_traces"
+    if src.is_dir() and not dst.exists():
+        shutil.copytree(src, dst)
+
+
+def _keep_endpoint_records(source: Path, run_dir: Path, round_no: int) -> None:
+    """Move the endpoint conversations into the run's record, beside the CLI transcripts.
+
+    The method wrote them under `method_root` (its sandbox does not mount the run
+    directory); this is the same trip the trajectory takes. Best-effort: a run whose
+    records cannot be kept is still a run that ran, so a failure here is logged, never
+    raised.
+    """
+    if not source.is_dir():
+        return
+    dest = run_dir / "method_logs" / f"round-{round_no}" / "endpoint"
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+        # Recursive: `editor.ask` writes under `<dir>/endpoint/`, so a flat glob here
+        # copied nothing -- the same silent-empty record the move exists to prevent.
+        for path in sorted(source.rglob("*.json")):
+            shutil.copy2(path, dest / path.name)
+    except OSError as exc:
+        console.note(f"could not keep the endpoint records of round {round_no}: {exc}",
+                     level="warn")
+        return
+    shutil.rmtree(source, ignore_errors=True)
+
+
 def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 task_ids, scorable, sampling, cache, cumulative,
                 train_ids=None, split=None, setups=None,
                 verifiers=None, verifier_kinds=None, envs=None,
-                improver=None) -> list[dict]:
+                improver=None, start_steps: int = 0,
+                resumed_from: int | None = None) -> list[dict]:
     """Mode A: the platform owns the loop and calls an EXTERNAL method each round.
 
     One round = hand the method the current harness, take back the one candidate
@@ -286,7 +345,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     #: declares it. Mode B read these from the trajectory; with one engine there is no mode
     #: to imply them, so they come from the method -- which is where they were always true.
     declared_shape: dict = {}
-    steps_done, step_attempts = 0, 0
+    # **A resumed run continues the count, it does not restart it.** `--rounds` is the
+    # total number of measured rounds, so re-running the same command after a crash picks
+    # up at `last + 1` instead of appending a second set of rounds.
+    steps_done, step_attempts = start_steps, 0
     pending: list[dict] = []      # steps of the current submission, not yet measured
     submission_stop = False       # that submission asked to finish
     steps_in_submission = 0
@@ -310,7 +372,23 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                     "why": f"no completion in {STEP_ATTEMPTS} attempts; the run stops here "
                            f"because a step that cannot finish is not a step"})
                 break
-            reply, traj, gen_s = _invoke_method(r)
+            # **Where an endpoint call keeps its conversation.** The CLI improver's
+            # transcript already lands in this round's `method_logs`; a proposal that goes
+            # through the chat endpoint has no such transcript, so the method is told where
+            # to write one. Cleared afterwards so a later call cannot inherit a stale path.
+            # **The record is written where the method can actually write.** Its sandbox
+            # does not mount the run directory -- the trajectory travels the same way, into
+            # `method_root` under /tmp -- so pointing this at `runs/...` made every write
+            # fail silently (measured 2026-10-18: zero endpoint records for a run whose
+            # design call is `endpoint_only=True`). It lands beside the trajectory and is
+            # copied into the run's own `method_logs` right after the call.
+            call_log_dir = method_root / f"round{r}_endpoint"
+            os.environ["HG_CALL_LOG_DIR"] = str(call_log_dir)
+            try:
+                reply, traj, gen_s = _invoke_method(r)
+            finally:
+                os.environ.pop("HG_CALL_LOG_DIR", None)
+                _keep_endpoint_records(call_log_dir, run_dir, r)
             if reply is None:
                 continue
             # **The declared rule is nested, and this loop looked at the top level.** The
@@ -448,14 +526,35 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # method that names a file it did not change is itself a finding.
         changed_files = [f["path"] for f in (diff.get("files") or [])]
         _save_round_state(run_dir, r, work)
-        t0 = time.time()
-        res = (evaluate(work, tasks, scorable, cache, harness_sha=sha, jobs=args.jobs,
-                        trials=args.trials, progress_dir=run_dir,
-                        sandbox=args.sandbox, setups=setups, verifiers=verifiers,
-                    envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
-                    recordings_root=run_dir / "recordings",
-                    round_no=r)
-               if has_manifest else None)
+        # **An identical candidate costs nothing to measure.** A method without an early
+        # stop that has nothing left to change still has to spend its remaining rounds,
+        # and re-running 100 task evaluations to learn a number the record already holds
+        # is the most expensive way to say "no change". The point is still written -- the
+        # round happened, the method's budget moves, and the curve keeps its shape -- but
+        # it carries `reused_from` and the same per-task scores instead of a fresh sample.
+        prior_point = (_identical_prior(curve, sha, args.trials)
+                       if (has_manifest and getattr(args, "reuse_identical", False)) else None)
+        if prior_point is not None:
+            reused_from = prior_point.get("round")
+            _copy_round_traces(run_dir, reused_from, r)
+            console.note(
+                f"round {r}: the candidate is byte-identical to round {reused_from} "
+                f"({sha[:12]}); reusing that measurement instead of spending "
+                f"{len(tasks)} task runs", level="info")
+            res = {"per_task": dict(prior_point.get("per_task") or {}),
+                   "invalid": [], "harness_failed": [],
+                   "trials": (prior_point.get("sampling") or {}).get("trials", args.trials),
+                   "reused_from": reused_from,
+                   "cached_tasks": sorted(prior_point.get("per_task") or {})}
+        else:
+            t0 = time.time()
+            res = (evaluate(work, tasks, scorable, cache, harness_sha=sha, jobs=args.jobs,
+                            trials=args.trials, progress_dir=run_dir,
+                            sandbox=args.sandbox, setups=setups, verifiers=verifiers,
+                        envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
+                        recordings_root=run_dir / "recordings",
+                        round_no=r)
+                   if has_manifest else None)
         _require_untampered(res)
         _report_invalid(res, args.dataset)
         _report_harness_failed(res, args.dataset)
@@ -520,6 +619,17 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             candidate_problems=candidate_problems,
             method_reported=step.get("method_reported") or {})
         point["edit_kind"] = step.get("edit_kind")
+        # **A reused measurement says so.** The score is the earlier state's score, so a
+        # reader -- or a statistic like "best of N rounds" -- must be able to tell a
+        # replicate from an independent observation. `measured_by_platform` stays true:
+        # the platform did measure this harness, just at an earlier round.
+        if resumed_from is not None:
+            # Every point this invocation writes came after a resume; the marker keeps a
+            # stitched curve readable as stitched.
+            point["resumed_from"] = resumed_from
+        if (res or {}).get("reused_from") is not None:
+            point["reused_from"] = res["reused_from"]
+            point["reused_reason"] = "candidate content identical to an already-measured state"
         # **The shape of the submission this step came from.** `steps_in_submission > 1`
         # means the method handed over a batch and therefore saw no score between these
         # states -- the one thing that separates "used the feedback" from "guessed a

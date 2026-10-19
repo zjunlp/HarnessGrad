@@ -1,0 +1,70 @@
+# Which manifests Dependabot should watch, and which it must not.
+#
+# Why this file exists: with no config, Dependabot's default behaviour is to scan **every**
+# manifest-shaped file it can find, including the byte-pinned upstream copies under
+# `tests/fixtures/**`. Those are test data, not dependencies of this platform: they are copied
+# verbatim from upstream projects, their SHA-256 values are asserted by tests, and no version
+# bump is possible without destroying the provenance they exist to prove. Measured on
+# 2026-10-19, with no config in place, the default-branch alert list was dominated by exactly
+# those files:
+#
+#   tests/fixtures/bfcl_ast_source/*/pyproject.toml   vllm==0.8.5 (extras), 80 advisories
+#   tests/fixtures/twowikimultihopqa_upstream_codex197/requirements.txt   torch==1.1.0, 30
+#   tests/fixtures/ujson_pypi_codex226/requirements-codex226.txt          ujson==5.10.0, 4
+#   tests/fixtures/triviaqa_upstream/requirements.txt, hg_fevhub/, hg_spreadrt/  (floors)
+#
+# That is why GitHub still reports 61 findings on a branch whose only *runtime* pinned
+# dependency (nltk, in the locomo scorer) was just moved to a clean release. Pointing the
+# scanner at the four real manifest locations is the fix: an alert about a file that exists to
+# be byte-identical upstream is noise that hides the alerts that matter.
+#
+# Do not add `tests/fixtures/**` here. If a fixture's upstream version matters, the pin moves
+# by re-vendoring the file and updating the hash in the same commit — that is a measurement,
+# not a dependency bump.
+version: 2
+updates:
+  # The two runtime manifests. `requirements.txt` in the base harness ships `openai`, and the
+  # locomo scorer's `nltk` pin is the one dependency whose advisory cluster reached this repo.
+  - package-ecosystem: "pip"
+    directory: "/base_harness/loop"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+  - package-ecosystem: "pip"
+    directory: "/data/datasets/locomo"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+
+  # The two Node projects. `web/` is the platform UI (Vite/Vitest); `website/` is the public
+  # site (Astro/Starlight). `braces@3.0.3` is knowingly unpatched upstream (GHSA-vfj7-8cjw-p6xm,
+  # `patched: <0.0.0`) and arrives through tailwind -> chokidar, so it is ignored rather than
+  # re-alerted every week.
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "braces"
+  - package-ecosystem: "npm"
+    directory: "/website"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "braces"
+
+  # Base images. All four Dockerfiles name a tag today, which is why Dependabot cannot alert on
+  # them at all; listing them here at least surfaces upstream tag moves, and the digest pin is
+  # the follow-up. `appworld` and `gaia` also install pip packages inline, so their contents
+  # move with the image, not with a requirements file.
+  - package-ecosystem: "docker"
+    directories:
+      - "/data/datasets/appworld"
+      - "/data/datasets/gaia"
+      - "/data/datasets/tau_bench"
+      - "/tools"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3

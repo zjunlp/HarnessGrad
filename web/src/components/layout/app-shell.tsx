@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { TranslationKey } from "@/i18n/en";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router";
 import { FlaskConical, GitCompareArrows, Info, Rocket, Sigma } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LanguageToggle } from "@/components/layout/language-toggle";
