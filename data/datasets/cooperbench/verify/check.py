@@ -12,16 +12,17 @@ import sys
 
 def mirror_health(case):
     runtime = case['provenance'].get('runtime', {})
-    mirror = runtime.get('hf_mirror')
+    mirror = runtime.get('hf_mirror') or runtime.get('https_asset_mirror')
     if mirror is None:
         return None
-    probe = subprocess.run([runtime['python'], '--hf-mirror-health'],
+    flag = '--hf-mirror-health' if runtime.get('hf_mirror') else '--dependency-mirror-health'
+    probe = subprocess.run([runtime['python'], flag],
                            text=True, capture_output=True, timeout=5)
     if probe.returncode:
-        raise RuntimeError('HF dependency mirror health failed: ' + probe.stderr[-500:])
+        raise RuntimeError('Dependency mirror health failed: ' + probe.stderr[-500:])
     result = json.loads(probe.stdout)
     if result.get('manifest_sha256') != mirror['manifest_sha256']:
-        raise ValueError('HF dependency mirror manifest differs from prepared runtime')
+        raise ValueError('Dependency mirror manifest differs from prepared runtime')
     return result
 
 
@@ -33,9 +34,10 @@ def main():
     try:
         case = json.loads((root / 'private/case.json').read_text())
         evidence.update(task_id=case['task_id'], provenance=case['provenance'])
+        mirror_key = 'hf_mirror' if case['provenance'].get('runtime', {}).get('hf_mirror') else 'https_asset_mirror'
         initial_mirror = mirror_health(case)
         if initial_mirror is not None:
-            evidence['hf_mirror_before'] = initial_mirror
+            evidence[mirror_key + '_before'] = initial_mirror
         base = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root / 'repo', text=True).strip()
         if base != case['base_commit']:
             raise ValueError('runtime repository base identity mismatch')
@@ -78,9 +80,9 @@ def main():
         if any(code in (124, 125, 126, 127, 137, 143) for code in exits):
             raise RuntimeError(f'feature runner timeout/infrastructure failure: {exits}')
         if initial_mirror is not None:
-            evidence['hf_mirror_after'] = mirror_health(case)
-            if evidence['hf_mirror_after'] != initial_mirror:
-                raise RuntimeError('HF dependency mirror identity changed during scoring')
+            evidence[mirror_key + '_after'] = mirror_health(case)
+            if evidence[mirror_key + '_after'] != initial_mirror:
+                raise RuntimeError('Dependency mirror identity changed during scoring')
         evidence['measured'] = True
         (output / 'reward.txt').write_text(str(reward))
     except Exception as exc:

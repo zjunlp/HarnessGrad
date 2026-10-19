@@ -406,7 +406,8 @@ Path('/workspace/release').write_text('1')
 
 
 @pytest.mark.parametrize('changed', [False, True])
-def test_verifier_mirror_identity_gate_preserves_valid_score_or_withholds_reward(tmp_path, monkeypatch, changed):
+@pytest.mark.parametrize('mirror_kind', ['hf_mirror', 'https_asset_mirror'])
+def test_verifier_mirror_identity_gate_preserves_valid_score_or_withholds_reward(tmp_path, monkeypatch, changed, mirror_kind):
     from types import SimpleNamespace
     spec = importlib.util.spec_from_file_location('cooper_mirror_check', SOURCE.parent / 'verify/check.py')
     check = importlib.util.module_from_spec(spec); spec.loader.exec_module(check)
@@ -414,11 +415,11 @@ def test_verifier_mirror_identity_gate_preserves_valid_score_or_withholds_reward
     (tmp_path / 'private').mkdir()
     (tmp_path / 'private/case.json').write_text(json.dumps({'task_id': 'fixture', 'base_commit': 'base',
         'private_sha256': {}, 'provenance': {'runtime': {'python': '/mirror/python',
-        'hf_mirror': {'manifest_sha256': 'expected'}}}}))
+        mirror_kind: {'manifest_sha256': 'expected'}}}}))
     monkeypatch.setattr(check.subprocess, 'check_output', lambda *a, **kw: 'base')
     calls = []
     def execute(argv, **kwargs):
-        if argv == ['/mirror/python', '--hf-mirror-health']:
+        if argv == ['/mirror/python', '--hf-mirror-health' if mirror_kind == 'hf_mirror' else '--dependency-mirror-health']:
             calls.append('health')
             identity = 'changed' if changed and len(calls) > 1 else 'expected'
             return SimpleNamespace(returncode=0, stdout=json.dumps({'manifest_sha256': identity}), stderr='')

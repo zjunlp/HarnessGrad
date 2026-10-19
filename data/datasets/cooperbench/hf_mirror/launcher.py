@@ -90,12 +90,25 @@ def main():
         verified = health(config)
     # Trusted probe/init/quiesce must remain usable even if the mirror died.
     # Subsequent wrappers never restart it and cannot overwrite root state.
-    if args == ['--hf-mirror-health']:
+    if args in (['--hf-mirror-health'], ['--dependency-mirror-health']):
         print(json.dumps(verified, sort_keys=True)); return 0
-    os.environ.update(HF_ENDPOINT=ENDPOINT, HF_HUB_OFFLINE='0',
-                      HF_HOME='/workspace/.hf-cache', HF_HUB_CACHE='/workspace/.hf-cache/hub',
-                      HF_HUB_DISABLE_TELEMETRY='1', HF_HUB_DISABLE_IMPLICIT_TOKEN='1',
-                      HF_HUB_DISABLE_XET='1', NO_PROXY='127.0.0.1,localhost')
+    mode = config.get('mode', 'huggingface')
+    if mode == 'huggingface':
+        os.environ.update(HF_ENDPOINT=ENDPOINT, HF_HUB_OFFLINE='0',
+                          HF_HOME='/workspace/.hf-cache', HF_HUB_CACHE='/workspace/.hf-cache/hub',
+                          HF_HUB_DISABLE_TELEMETRY='1', HF_HUB_DISABLE_IMPLICIT_TOKEN='1',
+                          HF_HUB_DISABLE_XET='1', NO_PROXY='127.0.0.1,localhost')
+    elif mode == 'fixed-https-asset':
+        # requests and httpx keep their ordinary TLS/hostname checks. Only this
+        # dedicated runtime trusts the recorded local CA for the fixed asset.
+        for key in ('HTTP_PROXY', 'http_proxy', 'ALL_PROXY', 'all_proxy'):
+            os.environ.pop(key, None)
+        os.environ.update(HTTPS_PROXY=ENDPOINT, https_proxy=ENDPOINT,
+                          NO_PROXY='127.0.0.1,localhost', no_proxy='127.0.0.1,localhost',
+                          REQUESTS_CA_BUNDLE=str(ROOT / 'assets/ca.pem'),
+                          SSL_CERT_FILE=str(ROOT / 'assets/ca.pem'))
+    else:
+        raise ValueError('unsupported dependency mirror mode')
     if helper:
         os.execv(config['python'], [config['python'], *args])
     # Preserve program I/O and exit status, but retain a trusted outer process
