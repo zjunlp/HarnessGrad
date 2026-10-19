@@ -13,7 +13,7 @@
 # them -- those tasks are solvable only through the web or not at all, and the dataset does not
 # pretend otherwise: the oracle control submits the released answer and proves the *check* is
 # reachable, not that a harness can obtain the answer.
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV DEBIAN_FRONTEND=noninteractive PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN apt-get update \
