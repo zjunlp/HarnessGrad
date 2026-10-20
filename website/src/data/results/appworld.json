@@ -1,615 +1,406 @@
 {
-  "slug": "appworld",
-  "generated_at": "2026-10-20T02:50:48Z",
-  "source": "runs/appworld-* (per-task verdicts)",
-  "study": {
-    "pool": "train",
-    "tasks": 90
+ "slug": "appworld",
+ "generated_at": "2026-10-20T02:56:18Z",
+ "stamp": "20261020",
+ "study": {
+  "pool": "train",
+  "tasks": 90,
+  "rounds": 10
+ },
+ "pools": {
+  "train": 90,
+  "dev": 57
+ },
+ "reference": {
+  "train": 0.011111111111111112,
+  "dev": 0.0
+ },
+ "platform_content_sha": null,
+ "stacks": [
+  {
+   "id": "loop-qwen9b__dsh-deepseek",
+   "task_agent": {
+    "base_harness": "loop@0.2.0",
+    "model": "qwen3.5-9b-local",
+    "decoding": "greedy (temperature=0)"
+   },
+   "improver": {
+    "method": "the methods listed below",
+    "improver_model": "deepseek-flash",
+    "improver_harness": "dsh (headless profile)",
+    "rounds": 10
+   },
+   "methods": [
+    {
+     "name": "sica_ci",
+     "run": "appworld-study-sica_ci-20261019T1816Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.0
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 1,
+       "train": 0.2,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.14035087719298245
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 2,
+       "train": 0.28888888888888886,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.2807017543859649
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 3,
+       "train": 0.3333333333333333,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.3508771929824561
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 4,
+       "train": 0.3888888888888889,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.3684210526315789
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 5,
+       "train": 0.35555555555555557,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.3508771929824561
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 6,
+       "train": 0.4777777777777778,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.43859649122807015
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 7,
+       "train": 0.5222222222222223,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.4909090909090909
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 8,
+       "train": 0.4777777777777778,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.39285714285714285
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 9,
+       "train": 0.5,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.47058823529411764
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 10,
+       "train": 0.6555555555555556,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.47368421052631576
+       },
+       "valid": true,
+       "n_invalid": 0
+      }
+     ],
+     "best_dev_round": 7
+    },
+    {
+     "name": "ahe",
+     "run": "appworld-study-ahe-20261019T1817Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.0
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 1,
+       "train": 0.1111111111111111,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.12280701754385964
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 2,
+       "train": 0.13333333333333333,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.22807017543859648
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 3,
+       "train": 0.2777777777777778,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.3508771929824561
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 4,
+       "train": 0.4111111111111111,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.3508771929824561
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 5,
+       "train": 0.4888888888888889,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.40350877192982454
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 6,
+       "train": 0.4888888888888889,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.43859649122807015
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 7,
+       "train": 0.5111111111111111,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.45614035087719296
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 8,
+       "train": 0.5333333333333333,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.43859649122807015
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 9,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.0
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 10,
+       "train": 0.5666666666666667,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.5789473684210527
+       },
+       "valid": true,
+       "n_invalid": 0
+      }
+     ],
+     "best_dev_round": 10
+    },
+    {
+     "name": "harnessx",
+     "run": "appworld-study-harnessx-20261019T1817Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.0
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 1,
+       "train": 0.14444444444444443,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.07017543859649122
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 2,
+       "train": 0.3,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.22807017543859648
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 3,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.12280701754385964
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 4,
+       "train": 0.3,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.2807017543859649
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 5,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.0
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 6,
+       "train": 0.3,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.24561403508771928
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 7,
+       "train": 0.32222222222222224,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.2807017543859649
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 8,
+       "train": 0.3111111111111111,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.40350877192982454
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 9,
+       "train": 0.5777777777777777,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.47368421052631576
+       },
+       "valid": true,
+       "n_invalid": 0
+      },
+      {
+       "round": 10,
+       "train": 0.5333333333333333,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.44642857142857145
+       },
+       "valid": true,
+       "n_invalid": 0
+      }
+     ],
+     "best_dev_round": 9
+    }
+   ]
+  }
+ ],
+ "excluded": [],
+ "coverage": {
+  "train": {
+   "measured": 3,
+   "valid": 3,
+   "planned": null
   },
   "dev": {
-    "pool": "dev",
-    "tasks": 57
-  },
-  "exam": {
-    "pool": "test_normal + test_challenge",
-    "tasks": 585,
-    "measured": false
-  },
-  "h0": {
-    "run_id": "appworld-study-sica_ci-20261019T052140Z",
-    "tasks": 90,
-    "score": 0.011111111111111112,
-    "h0_sha": "7a40f6ddd0cef5c7210c1be3dc6529cc19c03775"
-  },
-  "methods": [
-    {
-      "name": "sica_ci",
-      "status": "measured",
-      "run": "appworld-study-sica_ci-20261019T1816Z",
-      "study": {
-        "0": {
-          "score": 0.011111111111111112,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "7a40f6ddd0cef5c7210c1be3dc6529cc19c03775",
-          "label": "H0 (base harness)",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "1": {
-          "score": 0.2,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "3858bd9586fcbe0b481311909c4dcbd42fd3acd6",
-          "label": "[SICA base r0] One more: the platform may run the entrypoint with",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "2": {
-          "score": 0.28888888888888886,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "280fa82a6c0cf72a03c1c87e6b060f3ba34a2f82",
-          "label": "[SICA base r1] One more thought: **the model may see the auth blo",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "3": {
-          "score": 0.3333333333333333,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "7cf524721a66e2562a6ba6092bde47c3ab1b2fb3",
-          "label": "[SICA base r2] - Why score: turns would-be-zero loops into execut",
-          "repairs": 1,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "4": {
-          "score": 0.3888888888888889,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "f4dd9ee1fddebd45d4038a6055dc22681fbc06fa",
-          "label": "[SICA base r3] Now final response. Should I include that no tasks",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "5": {
-          "score": 0.35555555555555557,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "ea045ac9bc5a82704962c57c8fb2503f7f90c43f",
-          "label": "[SICA base r4] Need to be honest: some of the 17 had effective wr",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "6": {
-          "score": 0.4777777777777778,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "183f325a626e63770a9eb6c74ec36024d2907881",
-          "label": "[SICA base r5] Let's maybe remove `/tmp` test files? Not in works",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "7": {
-          "score": 0.5222222222222223,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "c33ab6aad7e856ddb03f14436d2841a34929bcae",
-          "label": "[SICA base r6] But before final, maybe I should preserve the diag",
-          "repairs": 6,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "8": {
-          "score": 0.4777777777777778,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "b623ecc9a94a86c792d153707c2b7b3f59b5ec61",
-          "label": "[SICA base r7] Need not include headings. Let's produce.",
-          "repairs": 5,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "9": {
-          "score": 0.5,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "4181f66a3946a88ecaea1216e44263a3effe7208",
-          "label": "[SICA base r8] Also, should I mention `changed: true`? The reply ",
-          "repairs": 14,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        },
-        "10": {
-          "score": 0.6555555555555556,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "c0ea984b1f77cebb3267d423e738ade7e5fe99a4",
-          "label": "[SICA base r9] One more consideration: the instructions say \"If y",
-          "repairs": 0,
-          "run": "appworld-study-sica_ci-20261019T1816Z"
-        }
-      },
-      "dev": {
-        "0": {
-          "score": 0.0,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r0-20261019T1818Z"
-        },
-        "1": {
-          "score": 0.14035087719298245,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r1-20261019T1846Z"
-        },
-        "2": {
-          "score": 0.2807017543859649,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r2-20261019T1918Z"
-        },
-        "3": {
-          "score": 0.3508771929824561,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r3-20261019T2102Z"
-        },
-        "4": {
-          "score": 0.3684210526315789,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r4-20261019T2130Z"
-        },
-        "5": {
-          "score": 0.3508771929824561,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r5-20261019T2151Z"
-        },
-        "6": {
-          "score": 0.43859649122807015,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r6-20261019T2219Z"
-        },
-        "7": {
-          "score": 0.4909090909090909,
-          "tasks": 55,
-          "invalid": 2,
-          "run": "appworld-dev-sica_ci-r7-20261020T0015Z"
-        },
-        "8": {
-          "score": 0.39285714285714285,
-          "tasks": 56,
-          "invalid": 1,
-          "run": "appworld-dev-sica_ci-r8-20261020T0039Z"
-        },
-        "9": {
-          "score": 0.47058823529411764,
-          "tasks": 51,
-          "invalid": 6,
-          "run": "appworld-dev-sica_ci-r9-20261020T0101Z"
-        },
-        "10": {
-          "score": 0.47368421052631576,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-sica_ci-r10-20261020T0008Z"
-        }
-      },
-      "best_dev_round": 7,
-      "reverts": []
-    },
-    {
-      "name": "ahe",
-      "status": "measured",
-      "run": "appworld-study-ahe-20261019T1817Z",
-      "study": {
-        "0": {
-          "score": 0.011111111111111112,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "7a40f6ddd0cef5c7210c1be3dc6529cc19c03775",
-          "label": "H0 (base harness)",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "1": {
-          "score": 0.1111111111111111,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "e7f923ba269a37968b6483370a1a57a17c8a25be",
-          "label": "AHE variant 1: Let's ensure the final answer doesn't claim a scor",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "2": {
-          "score": 0.13333333333333333,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "028239f8d24dd9a0cf4bf2f759272939dca906b1",
-          "label": "AHE variant 1: Let me produce the final answer with a short parag",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "3": {
-          "score": 0.2777777777777778,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "b9ce4f158c17c8cbf4b8993133d3b21dd9514429",
-          "label": "AHE variant 1: Let's make sure the final response doesn't claim a",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "4": {
-          "score": 0.4111111111111111,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "ecaf0abc2186c1d33c4036f59b024457e75f9ec8",
-          "label": "AHE variant 1: Should I mention \"predicted_fixes\" explicitly? The",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "5": {
-          "score": 0.4888888888888889,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "4e968b363bd2ab16950508bd20bfd861ef2ec1fc",
-          "label": "AHE variant 1: Let's ensure no artifacts requirement. The method ",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "6": {
-          "score": 0.4888888888888889,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "82a4e140175f7f0c1cb822302e9cb492c5450710",
-          "label": "AHE variant 1: Before final, maybe check the diff of the file to ",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "7": {
-          "score": 0.5111111111111111,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "9b14cfde1795f5714b06821e3e90e01ef98edce5",
-          "label": "AHE variant 1: Ensure we don't claim we ran the dataset (we didn'",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "8": {
-          "score": 0.5333333333333333,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "a3096e2e96a3354bb3778e00ffe7be7610260163",
-          "label": "AHE variant 1: Let me make sure the final answer doesn't over-cla",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "9": {
-          "score": 0.0,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "e040299118c6cc8c38c713b5cf36485070cce77b",
-          "label": "AHE variant 1: - Verified: entrypoint smoke test exit 0, answer.t",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        },
-        "10": {
-          "score": 0.5666666666666667,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "d04433173d293fbbba461111728ebbdc9f796c59",
-          "label": "AHE variant 1: I'll mention smoke test exit 0. Might be useful.",
-          "repairs": 0,
-          "run": "appworld-study-ahe-20261019T1817Z"
-        }
-      },
-      "dev": {
-        "0": {
-          "score": 0.0,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r0-20261019T1825Z"
-        },
-        "1": {
-          "score": 0.12280701754385964,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r1-20261019T1944Z"
-        },
-        "2": {
-          "score": 0.22807017543859648,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r2-20261019T2019Z"
-        },
-        "3": {
-          "score": 0.3508771929824561,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r3-20261019T2049Z"
-        },
-        "4": {
-          "score": 0.3508771929824561,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r4-20261019T2111Z"
-        },
-        "5": {
-          "score": 0.40350877192982454,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r5-20261019T2140Z"
-        },
-        "6": {
-          "score": 0.43859649122807015,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r6-20261019T2157Z"
-        },
-        "7": {
-          "score": 0.45614035087719296,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r7-20261019T2232Z"
-        },
-        "8": {
-          "score": 0.43859649122807015,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r8-20261019T2245Z"
-        },
-        "9": {
-          "score": 0.0,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r9-20261019T2309Z"
-        },
-        "10": {
-          "score": 0.5789473684210527,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-ahe-r10-20261019T2329Z"
-        }
-      },
-      "best_dev_round": 10,
-      "reverts": []
-    },
-    {
-      "name": "harnessx",
-      "status": "measured",
-      "run": "appworld-study-harnessx-20261019T1817Z",
-      "study": {
-        "0": {
-          "score": 0.011111111111111112,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "7a40f6ddd0cef5c7210c1be3dc6529cc19c03775",
-          "label": "H0 (base harness)",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "1": {
-          "score": 0.14444444444444443,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "11d248431468d3c1d658da7f3bdbb73905634d20",
-          "label": "[HarnessX harnessx_rule] Let me ensure I don't claim tests that I didn't ru",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "2": {
-          "score": 0.3,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "1768910476f815998aa7bb2cdcef237496b9d2d6",
-          "label": "[HarnessX harnessx_rule] Now, one very last consideration: the round's hypo",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "3": {
-          "score": 0.23333333333333334,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "457817b9d9fa0fef454c3e309818f76801362827",
-          "label": "[HarnessX harnessx_rule] Before final, maybe verify no accidental issue wit",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "4": {
-          "score": 0.3,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "1768910476f815998aa7bb2cdcef237496b9d2d6",
-          "label": "HarnessX gate: revert to R2",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "5": {
-          "score": 0.011111111111111112,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "5f0b9f42850da2759b07b11150661f5e6832a416",
-          "label": "[HarnessX harnessx_rule] Why it raises the score: the dominant failure clas",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "6": {
-          "score": 0.3,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "1768910476f815998aa7bb2cdcef237496b9d2d6",
-          "label": "HarnessX gate: revert to R2",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "7": {
-          "score": 0.32222222222222224,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "ac0b7ef951abd062f62dbcf552654f92f9a09866",
-          "label": "[HarnessX harnessx_rule] Need be short. The user asked \"one short paragraph",
-          "repairs": 1,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "8": {
-          "score": 0.3111111111111111,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "39b70d9dbc97ad021f84a9f892484902510b185a",
-          "label": "[HarnessX harnessx_rule] Now, do we need to keep the `evidence` directory? ",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "9": {
-          "score": 0.5777777777777777,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "8b4595c2e895807c141c7af43f0bf90955e0475d",
-          "label": "[HarnessX harnessx_rule] Also, `_harness_adapt` isn't applied to login (ret",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        },
-        "10": {
-          "score": 0.5333333333333333,
-          "tasks": 90,
-          "invalid": 0,
-          "harness_failed": 0,
-          "harness_sha": "5e677440d5de9b2412ed1454412424c868517ce9",
-          "label": "[HarnessX harnessx_rule] Let's do a final check that the entrypoint still w",
-          "repairs": 0,
-          "run": "appworld-study-harnessx-20261019T1817Z"
-        }
-      },
-      "dev": {
-        "0": {
-          "score": 0.0,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r0-20261019T1942Z"
-        },
-        "1": {
-          "score": 0.07017543859649122,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r1-20261019T1946Z"
-        },
-        "2": {
-          "score": 0.22807017543859648,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r2-20261019T2036Z"
-        },
-        "3": {
-          "score": 0.12280701754385964,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r3-20261019T2055Z"
-        },
-        "4": {
-          "score": 0.2807017543859649,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r4-20261019T2122Z"
-        },
-        "5": {
-          "score": 0.0,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r5-20261019T2148Z"
-        },
-        "6": {
-          "score": 0.24561403508771928,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r6-20261019T2210Z"
-        },
-        "7": {
-          "score": 0.2807017543859649,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r7-20261019T2238Z"
-        },
-        "8": {
-          "score": 0.40350877192982454,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r8-20261019T2254Z"
-        },
-        "9": {
-          "score": 0.47368421052631576,
-          "tasks": 57,
-          "invalid": 0,
-          "run": "appworld-dev-harnessx-r9-20261019T2316Z"
-        },
-        "10": {
-          "score": 0.44642857142857145,
-          "tasks": 56,
-          "invalid": 1,
-          "run": "appworld-dev-harnessx-r10-20261019T2335Z"
-        }
-      },
-      "best_dev_round": 9,
-      "reverts": [
-        4,
-        6
-      ]
-    },
-    {
-      "name": "dgm",
-      "status": "not measured"
-    },
-    {
-      "name": "dream_rsi",
-      "status": "not measured"
-    },
-    {
-      "name": "hyperagents",
-      "status": "not measured"
-    },
-    {
-      "name": "meta_harness",
-      "status": "not measured"
-    },
-    {
-      "name": "tthe",
-      "status": "not measured"
-    }
-  ],
-  "coverage": {
-    "measured": 3,
-    "not_measured": 5,
-    "dev_states": 33
+   "measured": 33,
+   "valid": 33,
+   "planned": 33
   }
+ },
+ "h0": {
+  "run_id": "appworld-study-sica_ci-20261019T052140Z",
+  "train_score": 0.011111111111111112,
+  "dev_score": 0.0
+ }
 }
