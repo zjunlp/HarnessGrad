@@ -584,6 +584,11 @@ def _write_run_meta(run_dir: Path, fresh: bool = False, **fields) -> None:
         except json.JSONDecodeError:
             existing = {}
     existing.update({k: v for k, v in fields.items() if v is not None})
+    # **Where the curve began, kept even when the run continues on another tree.** Every write
+    # carries the platform that is running *now*, so without this a resumed run's record makes
+    # the whole curve look like it came from the newer tree. A `platform-seams/` approval in the
+    # run directory says what changed and why; this says which two versions to compare.
+    existing.setdefault("platform_content_sha_started", existing.get("platform_content_sha"))
     path.write_text(json.dumps(existing, indent=1))
 
 def _save_traces(run_dir: Path, round_no: int, traces: dict,

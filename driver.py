@@ -246,6 +246,53 @@ def _platform_content_sha() -> str:
     return content_sha(PLATFORM_ROOT)
 
 
+def _git_sha() -> str | None:
+    """`HEAD` of the platform checkout, or None when it is not a repository."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", str(PLATFORM_ROOT), "rev-parse", "HEAD"],
+                             capture_output=True, text=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return out.stdout.strip() or None
+
+
+def _record_platform_seam(run_dir: Path, before: str, after: str, reason: str,
+                          platform_before: dict) -> dict:
+    """Write the approval that lets this curve cross a platform change, beside the run.
+
+    The guard's answer is "no" by default; this is the record of a human saying "yes, and
+    here is what I checked". Two properties matter more than the wording:
+
+      * **it is a file next to the curve, not a field inside `run_meta`.** `run_meta` is
+        rewritten as the run continues (and `platform_content_sha` there tracks the tree the
+        run is on *now*), so a seam kept only there would be overwritten by the very resume it
+        authorised. `platform-seams/<utc>-approved.json` is written once and never touched.
+      * **both sides are named.** The sha the curve started on, the sha it continues on, both
+        git shas, and the sentence the operator wrote -- a reader can re-do the review instead
+        of trusting it.
+    """
+    import datetime as _dt
+    folder = run_dir / "platform-seams"
+    folder.mkdir(parents=True, exist_ok=True)
+    stamp = _dt.datetime.now(_dt.timezone.utc)
+    record = {
+        "kind": "platform seam approved for a resume",
+        "approved_utc": stamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "reason_reviewed": reason,
+        "platform_content_sha": {"before": before, "after": after},
+        "git_sha": {"before": platform_before.get("git_sha"), "after": _git_sha()},
+        "how_to_recheck": ("`git log <before>..<after>` tells you what changed; the review is "
+                           "the claim that none of it can move a measured round"),
+    }
+    path = folder / f"{stamp:%Y%m%dT%H%M%SZ}-approved.json"
+    path.write_text(json.dumps(record, indent=1) + "\n")
+    console.note(
+        f"resume across a platform change: {before[:12]} -> {after[:12]}; approved and recorded "
+        f"in {path.relative_to(run_dir)}", level="warn")
+    return record
+
+
 class ResumeRefused(RuntimeError):
     """A resume this run cannot honour, with a sentence a reader can act on."""
 
@@ -284,14 +331,31 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
         raise ResumeRefused(
             f"the run was measured on split_sha {recorded_split[:12]}, this invocation on "
             f"{now_split[:12]}; the old points are not the same task set")
+    seam = None                     # set only when a reviewed cross-platform resume proceeds
     recorded_platform = meta.get("platform_content_sha")
     if recorded_platform:
         now_platform = _platform_content_sha()
         if recorded_platform != now_platform:
-            raise ResumeRefused(
-                f"the platform content changed since this run started "
-                f"({recorded_platform[:12]} -> {now_platform[:12]}); continuing would stitch "
-                f"two code versions into one curve")
+            # **Refused by default, allowed after a review.** The guard exists because two code
+            # versions in one curve is the confound this platform is built to remove -- but
+            # "different sha" is not the same claim as "different measurement". A tree that
+            # moved only in a file the measured path never reads (a sibling method's `stop`
+            # field, a driver flag) leaves every round comparable, and only a human can tell
+            # those apart. So the default stays refuse, and the exception is a sentence the
+            # operator writes, recorded with both hashes next to the run it applies to.
+            reason = (getattr(args, "resume_across_platforms", None) or "").strip()
+            if not reason:
+                raise ResumeRefused(
+                    f"the platform content changed since this run started "
+                    f"({recorded_platform[:12]} -> {now_platform[:12]}); continuing would "
+                    f"stitch two code versions into one curve. If you reviewed the diff and "
+                    f"the change cannot move a measurement, pass "
+                    f"`--resume-across-platforms \"<what you checked>\"` and it will be "
+                    f"recorded under {run_dir.name}/platform-seams/")
+            # Deferred: a seam is written only if this resume really continues (the budget and
+            # the saved state are checked below), so a run directory cannot claim an approval
+            # for a resume that refused itself a moment later.
+            seam = (recorded_platform, now_platform, reason, meta.get("platform") or {})
 
     last = max(int(point.get("round") or 0) for point in existing)
     if last >= args.rounds:
@@ -302,6 +366,14 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
         raise ResumeRefused(
             f"{run_dir.name} has no state_after_round{last}/; the state round {last} scored "
             f"was not kept, so there is nothing to continue from")
+
+    if seam is not None:
+        _record_platform_seam(run_dir, *seam)
+        # The curve's origin stays readable after the run's own `run_meta` writes move
+        # `platform_content_sha` to whatever tree the resumed rounds are on.
+        if not meta.get("platform_content_sha_started"):
+            meta["platform_content_sha_started"] = recorded_platform
+            meta_path.write_text(json.dumps(meta, indent=1))
 
     if work.exists():
         shutil.rmtree(work)
@@ -576,6 +648,12 @@ def _main(attempt: dict) -> int:
                     help="continue an interrupted run instead of starting clean: the train "
                          "side continues from its last measured round, the eval side scores "
                          "only the tasks whose progress file is missing")
+    ap.add_argument("--resume-across-platforms", default=None, metavar="REASON",
+                    help="--resume: continue a run whose `platform_content_sha` is not this "
+                         "tree's, after a human reviewed what changed. Refused by default; the "
+                         "REASON is recorded with both hashes and both git shas under the run's "
+                         "`platform-seams/`, so the curve says which code measured which rounds "
+                         "instead of hiding it")
     ap.add_argument("--from-round", type=int, default=None,
                     help="--side eval: which round of that run (default: its last)")
     ap.add_argument("--h0-from", default=None, metavar="RUN_ID",

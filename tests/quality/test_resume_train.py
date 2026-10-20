@@ -113,6 +113,46 @@ def test_refuses_when_the_split_moved(tmp_path: Path) -> None:
         driver.datasets.split_sha = monkeypatched
 
 
+def test_allows_a_reviewed_cross_platform_resume_and_records_it(tmp_path: Path) -> None:
+    """The guard's default is "no"; a sentence from the operator is the exception, and it is
+    kept beside the curve with both hashes -- a resume that crosses a platform change must be
+    auditable later, not just permitted once."""
+    run_dir = _run(tmp_path, platform="platform-OLD")
+    import driver
+    original = driver._platform_content_sha
+    try:
+        driver._platform_content_sha = lambda: "platform-NEW"
+        args = _args(rounds=3)
+        args.resume_across_platforms = "reviewed: only a sibling method's stop field moved"
+        state = _resume_train_state(args, run_dir, None, tmp_path / "work")
+        assert state is not None
+    finally:
+        driver._platform_content_sha = original
+    seams = sorted((run_dir / "platform-seams").glob("*-approved.json"))
+    assert len(seams) == 1
+    record = json.loads(seams[0].read_text())
+    assert record["platform_content_sha"] == {"before": "platform-OLD", "after": "platform-NEW"}
+    assert "only a sibling method" in record["reason_reviewed"]
+
+
+def test_an_empty_review_note_is_still_a_refusal(tmp_path: Path) -> None:
+    """`--resume-across-platforms ""` is not a review: the flag carries a claim, and a blank
+    one would let the seam through with nothing recorded to check."""
+    run_dir = _run(tmp_path, platform="platform-OLD")
+    import driver
+    original = driver._platform_content_sha
+    try:
+        driver._platform_content_sha = lambda: "platform-NEW"
+        args = _args(rounds=3)
+        args.resume_across_platforms = "   "
+        with pytest.raises(ResumeRefused) as exc:
+            _resume_train_state(args, run_dir, None, tmp_path / "work")
+        assert "content changed" in str(exc.value)
+    finally:
+        driver._platform_content_sha = original
+    assert not (run_dir / "platform-seams").exists()
+
+
 def test_refuses_when_the_platform_changed(tmp_path: Path) -> None:
     run_dir = _run(tmp_path, platform="platform-OLD")
     import driver
