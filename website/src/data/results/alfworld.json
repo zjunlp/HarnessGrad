@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-20T14:51:37Z",
+ "generated_at": "2026-10-20T15:46:08Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -558,194 +558,6 @@
      }
     },
     {
-     "name": "dgm",
-     "rounds": [
-      {
-       "round": 0,
-       "train": 0.53,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0
-      },
-      {
-       "round": 1,
-       "train": 0.82,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.850746,
-        "valid_seen": 0.814286,
-        "valid_train": 0.79
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 19898205,
-        "valid_seen": 22074901,
-        "valid_train": 32242742
-       },
-       "eval_n": 200
-      },
-      {
-       "round": 2,
-       "train": 0.89,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.843284,
-        "valid_seen": 0.828571,
-        "valid_train": 0.84
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 19839692,
-        "valid_seen": 22147837,
-        "valid_train": 30690691
-       },
-       "eval_n": 200
-      },
-      {
-       "round": 3,
-       "train": 0.94,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.962687,
-        "valid_seen": 0.928571,
-        "valid_train": 0.96
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 10159770,
-        "valid_seen": 13436258,
-        "valid_train": 17635361
-       },
-       "eval_n": 200
-      },
-      {
-       "round": 4,
-       "train": 0.95,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.977612,
-        "valid_seen": 0.957143,
-        "valid_train": 0.93
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 13154761,
-        "valid_seen": 15021591,
-        "valid_train": 22363163
-       },
-       "eval_n": 200
-      },
-      {
-       "round": 5,
-       "train": 0.95,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.985075,
-        "valid_seen": 0.971429,
-        "valid_train": 0.95
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 2271914,
-        "valid_seen": 1757681,
-        "valid_train": 5947725
-       },
-       "eval_source": {
-        "valid_unseen": "exam"
-       },
-       "eval_n": 200
-      }
-     ],
-     "cost": {
-      "0": {
-       "task": {
-        "tokens": 8530045,
-        "calls": 2005
-       }
-      },
-      "1": {
-       "task": {
-        "tokens": 15991882,
-        "calls": 2491
-       },
-       "task_split": {
-        "input": 15932742,
-        "output": 59140,
-        "tasks_reporting": 100,
-        "tasks": 100
-       },
-       "improver": {
-        "input": 152923,
-        "output": 152738,
-        "cache_read": 18987904,
-        "cache_write": 0,
-        "calls": 146
-       }
-      },
-      "2": {
-       "task": {
-        "tokens": 13362343,
-        "calls": 2173
-       },
-       "task_split": {
-        "input": 13313906,
-        "output": 48437,
-        "tasks_reporting": 100,
-        "tasks": 100
-       }
-      },
-      "3": {
-       "task": {
-        "tokens": 9833232,
-        "calls": 1908
-       },
-       "task_split": {
-        "input": 9788036,
-        "output": 45196,
-        "tasks_reporting": 100,
-        "tasks": 100
-       },
-       "improver": {
-        "input": 180983,
-        "output": 270080,
-        "cache_read": 51200896,
-        "cache_write": 0,
-        "calls": 219
-       }
-      },
-      "4": {
-       "task": {
-        "tokens": 10610686,
-        "calls": 1749
-       },
-       "task_split": {
-        "input": 10569126,
-        "output": 41560,
-        "tasks_reporting": 100,
-        "tasks": 100
-       }
-      },
-      "5": {
-       "task": {
-        "tokens": 3726381,
-        "calls": 650
-       },
-       "task_split": {
-        "input": 3710398,
-        "output": 15983,
-        "tasks_reporting": 29,
-        "tasks": 100
-       }
-      }
-     }
-    },
-    {
      "name": "harnessx",
      "rounds": [
       {
@@ -1135,128 +947,6 @@
         "cache_read": 12088448,
         "cache_write": 0,
         "calls": 92
-       }
-      }
-     }
-    },
-    {
-     "name": "hyperagents",
-     "rounds": [
-      {
-       "round": 0,
-       "train": 0.53,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0
-      },
-      {
-       "round": 1,
-       "train": 0.74,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.686567,
-        "valid_seen": 0.628571,
-        "valid_train": 0.705
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 28805982,
-        "valid_seen": 31410569,
-        "valid_train": 40017830
-       },
-       "eval_n": 200
-      },
-      {
-       "round": 2,
-       "train": 0.9,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 1.0,
-        "valid_seen": 0.914286,
-        "valid_train": 0.94
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 12409030,
-        "valid_seen": 25279280,
-        "valid_train": 29093385
-       },
-       "eval_n": 200
-      },
-      {
-       "round": 3,
-       "train": 0.99,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 1.0,
-        "valid_seen": 1.0,
-        "valid_train": 0.995
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "eval_tokens": {
-        "valid_unseen": 224907,
-        "valid_seen": 383990,
-        "valid_train": 103205
-       },
-       "eval_source": {
-        "valid_unseen": "exam",
-        "valid_seen": "exam"
-       },
-       "eval_n": 200
-      }
-     ],
-     "cost": {
-      "0": {
-       "task": {
-        "tokens": 8530045,
-        "calls": 2005
-       }
-      },
-      "1": {
-       "task": {
-        "tokens": 19193504,
-        "calls": 2909
-       },
-       "task_split": {
-        "input": 19125471,
-        "output": 68033,
-        "tasks_reporting": 100,
-        "tasks": 100
-       },
-       "improver": {
-        "input": 110101,
-        "output": 234895,
-        "cache_read": 29708416,
-        "cache_write": 0,
-        "calls": 161
-       }
-      },
-      "2": {
-       "task": {
-        "tokens": 19989243,
-        "calls": 2801
-       },
-       "task_split": {
-        "input": 19895339,
-        "output": 93904,
-        "tasks_reporting": 100,
-        "tasks": 100
-       }
-      },
-      "3": {
-       "task": {
-        "tokens": 282949,
-        "calls": 77
-       },
-       "task_split": {
-        "input": 281265,
-        "output": 1684,
-        "tasks_reporting": 4,
-        "tasks": 100
        }
       }
      }
@@ -1661,18 +1351,18 @@
  "excluded": [],
  "coverage": {
   "valid_unseen": {
-   "measured": 41,
-   "valid": 41,
+   "measured": 33,
+   "valid": 33,
    "planned": null
   },
   "valid_seen": {
-   "measured": 41,
-   "valid": 41,
+   "measured": 33,
+   "valid": 33,
    "planned": null
   },
   "valid_train": {
-   "measured": 41,
-   "valid": 41,
+   "measured": 33,
+   "valid": 33,
    "planned": null
   }
  }
