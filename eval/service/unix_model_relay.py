@@ -16,7 +16,24 @@ import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-HOST, PORT, ROUTE = "127.0.0.1", 8002, "/v1/chat/completions"
+#: **The agent endpoint, not a constant.** A bwrap task reaches the model through this relay,
+#: and its route used to be `127.0.0.1:8002` -- one vLLM server, one GPU. A docker task sets
+#: `HG_AGENT_BASE_URL` and goes through `lb_proxy`, so the two sandbox kinds were using different
+#: amounts of the machine: measured 2026-10-20T15:35Z, four ALFWorld runs at jobs=12 held GPU0 at
+#: 0% and GPU1 at 100%, and `8100/stats` counted no traffic at all for them. The default stays
+#: 8002 (the endpoint this machine keeps) so a caller that sets nothing sees no change.
+_DEFAULT_ENDPOINT = "http://127.0.0.1:8002/v1"
+
+
+def _route(raw: str) -> "tuple[str, int, str]":
+    """`(host, port, path)` from an endpoint URL, accepting a bare `host:port`."""
+    from urllib.parse import urlsplit
+    parts = urlsplit(raw if "://" in raw else f"http://{raw}")
+    path = (parts.path or "/v1").rstrip("/") + "/chat/completions"
+    return parts.hostname or "127.0.0.1", parts.port or 8002, path
+
+
+HOST, PORT, ROUTE = _route(os.environ.get("HG_AGENT_BASE_URL") or _DEFAULT_ENDPOINT)
 MAX_CALLS, MAX_TOKENS, MAX_TOTAL_TOKENS = 4, 512, 2048
 MAX_BODY, MAX_RESPONSE = 32768, 2097152
 
