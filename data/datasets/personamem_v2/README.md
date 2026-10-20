@@ -22,9 +22,13 @@ Official sources:
 - [Paper](https://arxiv.org/abs/2512.06688), *PersonaMem-v2: Towards Personalized
   Intelligence via Learning Implicit User Personas and Agentic Memory*, Jiang et al.
 
-The adapter is registered as `memory / supplied_history` and exercises `context`,
-`control` and `memory`. Interaction is `closed_loop`: acknowledging a history
-message or submitting an answer advances the private episode.
+The adapter is registered as `memory / supplied_history` and exercises `context`
+and `memory`: answers depend on retaining and updating user information and
+selecting relevant, current preferences for the model's context.
+Interaction is `closed_loop`: acknowledging a history message or submitting an
+answer advances the private episode. The fixed `next/ack/submit` sequence does
+not require action planning or stopping decisions, so it does not establish
+`control` coverage.
 
 ## Native divisions
 

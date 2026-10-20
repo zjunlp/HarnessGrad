@@ -5,6 +5,12 @@ This adapter pins the official τ³ release **v1.0.1**, commit
 It retains all **375 base tasks**: airline 50, retail 114, telecom 114 and
 banking_knowledge 97. Banking uses BM25; voice/full-duplex is outside this adapter.
 
+The adapter is registered as `tool_use / tool_dialogue` and exercises `context`,
+`tools`, `control` and `reliability`. Policies, dialogue and business state require
+context selection; business actions require tool calls and decisions based on
+user and tool feedback. Reliability coverage comes from the official repeated-trial
+`pass^k` protocol described below, not from a single successful dialogue or API call.
+
 The native service runs the official business tools, databases, user-side tools
 and `UserSimulator`. The half-duplex bridge derives from Harbor commit
 `3e9f14a7c1033896cc600d27de69d6948bcb3410`; see `LICENSE.harbor`.

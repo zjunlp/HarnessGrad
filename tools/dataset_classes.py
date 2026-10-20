@@ -169,8 +169,10 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     # Harbor delivers the complete conversation at task start; the score tests
     # selecting evidence from that static history, not incremental retention.
     "locomo": ("context",),
-    "memoryagentbench": ("context", "control", "memory"),
-    "personamem_v2": ("context", "control", "memory"),
+    # Fixed next/ack/submit delivery advances state, but does not test action
+    # planning or stopping decisions. Closed-loop interaction alone is not control coverage.
+    "memoryagentbench": ("context", "memory"),
+    "personamem_v2": ("context", "memory"),
     "appworld": ("context", "tools", "control", "recovery"),
     "bird_minidev": ("context", "tools", "verification"),
     "physicsquestions": ("context", "verification"),

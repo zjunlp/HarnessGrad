@@ -14,8 +14,11 @@ chunk fingerprints are in `specs/`. All corpus bytes stay outside the repository
 
 The adapter is registered as `memory / supplied_history`: material arrives
 incrementally, and the harness retains information for later questions.
-It exercises `context`, `control` and `memory`. Interaction is `closed_loop`;
-acknowledging material and submitting answers advance the private episode.
+It exercises `context` and `memory`: selecting material for the model's context
+and retaining, updating and retrieving earlier information affect later answers.
+Interaction is `closed_loop`; acknowledging material and submitting answers
+advance the private episode. The fixed `next/ack/submit` sequence does not require
+action planning or stopping decisions, so it does not establish `control` coverage.
 
 ## Preparation
 

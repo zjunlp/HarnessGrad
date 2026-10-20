@@ -498,7 +498,6 @@
       "demand": "memory",
       "exercises": [
         "context",
-        "control",
         "memory"
       ],
       "historical_runs": [],
@@ -563,7 +562,6 @@
       "demand": "memory",
       "exercises": [
         "context",
-        "control",
         "memory"
       ],
       "historical_runs": [],

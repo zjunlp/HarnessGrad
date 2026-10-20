@@ -5,6 +5,14 @@ Source: `linhaowei1/kumo@576748764f7d72634654d0784944a485eca9047c`.
 The default data root is the workspace sibling `datasets/kumo`; override with `HG_KUMO_DATA`.
 Data, private answers, books and audit artifacts stay outside this repository.
 
+The adapter is registered as `reasoning / planning_and_search` and exercises
+`context`, `tools`, `control` and `verification`. The harness organizes the
+knowledge book and accumulated observations, chooses queries and uses their
+results to decide what to query next or when to submit. Public rules and observed
+outcomes let it check a candidate for contradictions before submission. This
+candidate-consistency check supports `verification` coverage; the presence of
+the platform's final scorer alone does not.
+
 ## Provisioning
 
 ```sh

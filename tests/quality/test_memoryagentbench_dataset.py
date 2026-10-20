@@ -25,7 +25,7 @@ def test_registered_memory_classification_uses_sequential_cli(prepared):
     assert (row["demand"], row["surface"]) == ("memory", "supplied_history")
     assert row["interaction"] == "closed_loop"
     assert row["action_surface"] == ["mab[ack,next,submit]"]
-    assert set(row["exercises"]) == {"context", "control", "memory"}
+    assert set(row["exercises"]) == {"context", "memory"}
     assert not row["adversarial"]
 
 

@@ -5,6 +5,13 @@ with one platform-assigned released feature per peer and a platform mailbox. The
 artifact is `agent.patch`. Both patches are merged in a fresh verifier; no solver
 sidecar, Redis server, model-specific agent or reference patch is part of SETUP.
 
+The adapter is registered as `artifact / code_generation` and exercises
+`context`, `tools`, `control` and `verification`: peers select relevant code and
+messages, operate on the repository, adapt edits to execution or communication
+feedback, and can check their changes with available tests before submission.
+Platform-assigned peers and features do not establish `delegation` coverage:
+the harness does not choose the task decomposition, assign peers or route models.
+
 The metric is **Harbor merged-pair success**, pinned to Harbor
 `3e9f14a7c1033896cc600d27de69d6948bcb3410`: filter test diffs, merge normally then
 with union fallback, and require both feature runners to exit zero. Data is pinned to CooperBench
