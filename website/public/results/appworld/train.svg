@@ -91,7 +91,7 @@
 <text x="614" y="96" font-size="11" fill="#111827">harnessx</text>
 </g>
 <g data-method-line="hyperagents">
-<path d="M56.0,331.2 L56.0,331.2 L107.4,267.9 L158.8,254.3 L210.2,254.3 L261.6,239.9 L313.0,230.2 L364.4,215.8 L415.8,215.8 L467.2,215.8" fill="none" stroke="#ff7f0e" stroke-width="2"/>
+<path d="M56.0,331.2 L56.0,331.2 L107.4,267.9 L158.8,254.3 L210.2,254.3 L261.6,239.9 L313.0,230.2 L364.4,215.8 L415.8,215.8 L467.2,215.8 L518.6,215.8" fill="none" stroke="#ff7f0e" stroke-width="2"/>
 <circle cx="56.0" cy="331.2" r="2.8" fill="#ff7f0e"/>
 <circle cx="56.0" cy="331.2" r="2.8" fill="#ff7f0e"/>
 <circle cx="107.4" cy="267.9" r="2.8" fill="#ff7f0e"/>
@@ -102,6 +102,7 @@
 <circle cx="364.4" cy="215.8" r="2.8" fill="#ff7f0e"/>
 <circle cx="415.8" cy="215.8" r="2.8" fill="#ff7f0e"/>
 <circle cx="467.2" cy="215.8" r="2.8" fill="#ff7f0e"/>
+<circle cx="518.6" cy="215.8" r="2.8" fill="#ff7f0e"/>
 <line x1="586" y1="110" x2="608" y2="110" stroke="#ff7f0e" stroke-width="2"/>
 <text x="614" y="114" font-size="11" fill="#111827">hyperagents</text>
 </g>

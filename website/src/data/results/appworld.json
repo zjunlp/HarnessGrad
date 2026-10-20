@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T10:39:30Z",
+ "generated_at": "2026-10-20T10:46:40Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -1877,11 +1877,14 @@
       },
       {
        "round": 9,
-       "train": null,
-       "train_n": null,
+       "train": 0.2777777777777778,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.2,
+       "state": "0241ffe55e18",
+       "batch": 3
       },
       {
        "round": 10,
@@ -2053,6 +2056,25 @@
        "task_split": {
         "input": 8750636,
         "output": 234218,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 589279,
+        "output": 323566,
+        "cache_read": 76428800,
+        "cache_write": 0,
+        "calls": 357
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 21730479,
+        "calls": 2246
+       },
+       "task_split": {
+        "input": 21518938,
+        "output": 211541,
         "tasks_reporting": 90,
         "tasks": 90
        },
