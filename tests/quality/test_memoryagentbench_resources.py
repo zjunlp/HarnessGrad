@@ -1,7 +1,6 @@
 """Resource checks and bounded pinned archive restoration; no network requests."""
 import hashlib
 import io
-from pathlib import Path
 import zipfile
 
 import pytest

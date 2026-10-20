@@ -1,7 +1,6 @@
 """Real pinned data and synthetic HTTP judge controls; never a real model score."""
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 import threading
 
 import pytest

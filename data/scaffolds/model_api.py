@@ -7,8 +7,7 @@ Interface definition: docs/dataset-runtime-interfaces.md, verifier model channel
 import re
 
 
-# Preserve the adapter's original GPT-4o defaults. New switch support is scoped
-# to the explicitly selected models, not all releases from these providers.
+# Only these model IDs and the supported OpenAI date snapshots are admitted.
 _OPENAI_PLAIN = {'gpt-4o'}
 _OPENAI_NONE = {'gpt-6-sol', 'gpt-6-luna'}
 _DEEPSEEK = {'deepseek-flash'}  # Official API ID for DeepSeek-V4.1-Flash.
@@ -42,7 +41,7 @@ def non_reasoning_profile(model):
                 'fields': {'thinking': {'type': 'disabled'}}}
     raise ValueError(
         f'Model {model!r} has no supported non-reasoning Chat Completions profile. '
-        'MemoryAgentBench requires a native non-reasoning model or a documented '
+        'reasoning="disabled" requires a native non-reasoning model or a documented '
         'reasoning-off mode; low/minimal and larger token budgets do not qualify.')
 
 

@@ -1,5 +1,4 @@
 """Offline input boundary and selected-artifact validation, without a model."""
-import copy
 import json
 from pathlib import Path
 

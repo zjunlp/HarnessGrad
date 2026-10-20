@@ -15,20 +15,23 @@ those entries, run IDs, receipts, scores and incomplete statuses remain intact.
 AppWorld's successful measured task gate remains unresolved; its measured-zero
 smokes are retained, with no task tuning or budget increase authorized here.
 
-## Five integrations: explicit runtime limits — 2026-10-19
+## Dataset integration summary
 
-KUMO, MemoryAgentBench, StrongREJECT, τ³ and CooperBench now separate dataset protocol
-from explicitly declared runtime resources. Unsupported adapter token,
-call, byte and extra timeout defaults are removed; sourced protocol settings remain.
-CooperBench preparation requires selected memory/workspace resources instead of sizing
-formulas. Isolation, cancellation, explicit quota enforcement and unmeasured failures
-remain; existing adapters retain legacy shared-interface defaults.
+KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT, τ³ and CooperBench are registered
+adapters. Their READMEs define the current task scope, splits, scoring, preparation
+and controls:
 
-The [runtime interface](dataset-runtime-interfaces.md) records configuration, provenance
-and remaining platform supervision. Regression tests cover optional and explicit caps,
-protocol scoring, retry/usage records and legacy behavior; local stub
-and Docker controls make no paid API calls. Validation artifacts remain outside the
-repository. This change does not rerun or reinterpret previous model pilots.
+- [KUMO](../data/datasets/kumo/README.md)
+- [MemoryAgentBench](../data/datasets/memoryagentbench/README.md)
+- [PersonaMem-v2](../data/datasets/personamem_v2/README.md)
+- [StrongREJECT](../data/datasets/strongreject/README.md)
+- [τ³](../data/datasets/tau3_bench/README.md)
+- [CooperBench](../data/datasets/cooperbench/README.md)
+
+The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction
+records, judge/environment model channels, repeated trials and fixed peer execution.
+Dataset tests cover these integrations; API receipts and validation artifacts are
+kept outside the repository.
 
 ## `data/` split complete: scaffolds and datasets separated — 2026-10-14 — ds, ds2, ds3, ds4
 
@@ -5852,140 +5855,3 @@ No API calls were made for this layout change.
 - Conda validation: **60 passed**, including the optional pinned-data comparisons over all 10 conversations and 1,986 questions. LoCoMo dataset lint and `git diff --check` pass. No model calls.
 
 - API connectivity check after cleanup: Conda + standard `driver.py` + unchanged `loop`, one full conv-26 transcript with only its first three questions, one trial, jobs=1, rounds=0. Six successful calls to the configured `Ling-3.1-flash` API; driver exited 0, all three answers and per-question records saved, task/curve/manual-summary scores agree. The temporary loopback HTTP-to-HTTPS bridge was needed by the existing HTTP-only native model route; no platform code was changed. Test artifacts are outside Git at `datasets/locomo/audit-20261018/api-cleanup-01/`. The test is not comparable to a full benchmark, and does not establish direct HTTPS support. Runner temporary files, bridge and work root cleaned; source data hash unchanged.
-
-### StrongREJECT: fixed rubric adapter, publication pending
-
-Added the real 150-task frozen Harbor pool with source hashes, original-request
-split grouping, official rubric parsing/formula, bounded fixed judge configuration
-and isolated scoring through the existing public interfaces. The five unchanged
-PAP attacks are retained and marked. Missing submissions and judge failures stay
-unmeasured. Data preparation and synthetic platform controls are implemented;
-no real judge call or oracle sweep has been run. The adapter remains unpublished
-(`KIND="fixture"`) pending demand/surface classification; see
-[the adapter README](../data/datasets/strongreject/README.md) for the protocol,
-control semantics and remaining admission requirement.
-
-### MemoryAgentBench: native local-primary adapter, publication pending
-
-Added 41 released episodes / 3,271 questions using ordered private input delivery,
-platform-sealed records and an immutable scorer. The 105 judge-dependent episodes
-remain explicitly excluded. Incomplete episodes are unmeasured; completed wrong
-answers use official scoring. Official primary-score comparisons and a full data
-preparation replay pass, alongside sandbox and hostile-import controls. The adapter
-remains unpublished (`KIND="fixture"`) pending the first memory-demand registration
-rule; no taxonomy exception or existing dataset reclassification was introduced.
-See [the adapter README](../data/datasets/memoryagentbench/README.md) for preparation,
-per-source reporting and validation limits. No real-model experiment was run.
-
-## τ³ text base integration
-
-`tau3_bench` pins official v1.0.1 (`fc0055dc`) and all 375 four-domain base tasks.
-Private business state and the official user simulator run behind the native relay;
-sealed episodes feed the official ALL scorer, retaining NL criteria and checking
-judge response coverage. Complete three-trial pass^k uses official seed derivation;
-per-domain reporting is provided by `tools/tau3_report.py`.
-Source and verifier code use immutable projections, including adversarial preseed
-controls. The released airline/8 action control and the no-business-action stop
-control exercise actual tools and scoring through deterministic local HTTP;
-these validate integration, not model performance. Full production simulator/judge
-and repeated-trial benchmark runs remain unmeasured. Setup and limits are in
-[data/datasets/tau3_bench/README.md](../data/datasets/tau3_bench/README.md).
-
-### CooperBench: initial fixed-peer coding and isolated pair scoring
-
-Added all 652 released pair identities with grouped splits, two independent
-candidate workers, mailbox communication and patch-only export to the pinned
-Harbor scorer. Offline preparation recipes cover all 30 base tasks. Real Click
-oracle/noop controls pass with resource observation and complete cleanup; the
-other 29 runtimes remain unvalidated. The fixed platform roles do not establish
-candidate delegation. See [the adapter README](../data/datasets/cooperbench/README.md)
-for preparation, metric identity and validation scope.
-
-### Bounded live checks and runtime fixes — 2026-10-18
-
-StrongREJECT now accepts an explicitly selected rubric judge and includes its model
-in the metric identity; the original default remains unchanged. One Ling refusal
-control passed. Bounded API checks also exercised the τ³ simulator and NL judge,
-MemoryAgentBench's first four ordered submissions, and CooperBench's two-worker
-model/mailbox/patch path. The partial memory episode remained unmeasured. These
-checks are integration evidence, not full benchmark results; receipts stay outside Git.
-
-Cooperative worker failures now make the group unmeasured even when a leftover
-patch passes the scorer. Legacy single-actor scoring is unchanged. CooperBench
-preparation gained bounded compilation scratch, an explicit auxiliary Python for
-older task images, and a measured Typst resource envelope. Per-group oracle/noop
-validation continues; the adapter README records the current scope and upstream
-blockers. MemoryAgentBench and StrongREJECT classification/publication remain
-pending author confirmation.
-
-### Offline CooperBench dependencies and command completion — 2026-10-19
-
-CooperBench preparation now resolves editable backend dependencies from the public
-baseline and preserves Harbor's test-file filtering when relocating writable paths.
-The corrected prepared manifest keeps all 652 pair identities; every released oracle
-patch has identical filtered bytes before and after the scorer correction.
-A dataset-local, immutable Hub mirror supports pinned Outlines model dependencies
-without runtime internet access; it preserves the original loaders and test commands.
-
-`result_contract.require_exit_zero` optionally rejects a failed scorer before reading
-its reward or evidence. CooperBench enables it so a dependency service failure cannot
-publish a stale score. Other adapters retain their default interpretation. Controls
-cover root-helper startup isolation, service loss and an undeletable residual reward;
-real dependency resolution and CPU model loading also passed. Per-group official
-control outcomes and remaining blockers are maintained in the adapter README and
-registry; detailed receipts and cleanup records remain outside Git.
-
-### Dataset follow-up and interrupted trial evidence — 2026-10-19
-
-LlamaIndex task18813 now uses the exact public W3C PDF through a dataset-local
-TLS mirror, retaining the original loader, tests and network isolation. A dedicated
-local CA preserves client certificate/hostname checks; it does not reproduce the
-public certificate chain. Official two-worker oracle/noop controls pass 1/0, with
-complete cleanup. CooperBench's README and registry retain the remaining groups'
-preparation and upstream limits; detailed receipts stay outside Git.
-
-MemoryAgentBench, StrongREJECT and τ³ now opt into successful scorer completion.
-Normal incomplete submissions keep their unmeasured coverage evidence; a failed
-scorer cannot publish a leftover reward. Taxonomy and publication decisions for
-the two fixture adapters remain pending author confirmation.
-
-Eval resume for explicit repeated-trial protocols retains the original full
-manifest and actual per-task trial evidence, rather than rebuilding trials from
-mean scores. Interrupted tasks cannot silently be measured again; complete task
-records can be reused, including ordinary actor failures with valid official
-scores. Different protocol seeds, task selections or declarations are refused.
-The interface guide describes the persistence paths and compatibility behavior.
-Focused regression, official τ³ controls with a local model stub, and independent
-reviews cover these changes; no full benchmark or new external API run was made.
-
-
-### MemoryAgentBench model-judge scoring paths — 2026-10-19
-
-Enabled all 146 released episodes / 3,671 questions by adding the pinned official
-summary fluency/recall/precision and LongMemEval question-type judges. The existing
-verifier-only broker carries model calls; no shared runtime API changes are needed.
-Selected metadata, protocol identity, explicit model/output-budget overrides and
-full-denominator reporting bind each result. Failed or malformed judge calls leave
-the entire episode unmeasured, and mixed profiles cannot share a source mean.
-
-Validation passed 413 dataset tests, 24 shared-runtime tests and dataset lint,
-including official prompt/formula comparisons, native sandbox controls, complete
-60-question stub episodes, later-question failures and all released judge metadata. Ten bounded API calls exercised reference/wrong controls: summary 1/0;
-QA empty responses at the official 10-token limit were preserved as unmeasured,
-and an explicitly distinct 512-token protocol produced 1/0. Detailed receipts and
-cleanup records remain outside Git. Publication/classification status is unchanged.
-
-### Judge model configuration precedence — 2026-10-19
-
-MemoryAgentBench, StrongREJECT and Tau3 now resolve their judge model from a dataset
-override, then the shared global default, then an official default where provided.
-Blank optional values are unset; Tau3 still requires an explicit model. The typed
-configuration layer declares and records all three overrides and MemoryAgentBench's
-output budget. The broker executes the trusted verifier's frozen model, allowing a
-dataset override to differ from the global default; environment model matching is
-unchanged. Shared endpoint/credentials, failure behavior and sampling remain intact.
-
-Updated `.env.example` and adapter/interface documentation. 230 focused tests passed,
-including actual sandbox requests to local HTTP stubs, source defaults, overrides,
-frozen model evidence, official scorers and simulator regression. No real API calls
-were made; detailed logs and cleanup receipts remain outside the repository.

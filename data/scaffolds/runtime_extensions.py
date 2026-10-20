@@ -14,7 +14,7 @@ def validate_record(spec) -> None:
         raise ValueError("tool_relay.record.path must be one relative directory name")
     limit = spec.get("max_bytes", 32 * 1024 * 1024)
     if limit is not None and (type(limit) is not int or limit <= 0):
-        raise ValueError("tool_relay.record.max_bytes must be a positive integer")
+        raise ValueError("tool_relay.record.max_bytes must be a positive integer or null")
 
 
 def validate_judge(spec, *, allow_trial_seed=False):
@@ -23,7 +23,7 @@ def validate_judge(spec, *, allow_trial_seed=False):
     if allow_trial_seed:
         fields.add('seed_source')
     if not isinstance(spec, dict) or set(spec) - fields:
-        raise ValueError('judge must declare model, max_calls, max_output_tokens, timeout_s and optional parameters')
+        raise ValueError('judge must be an object containing only supported model-channel fields')
     if not isinstance(spec.get('model'), str) or not spec['model'].strip():
         raise ValueError('judge.model must be nonempty')
     if 'reasoning' in spec:
@@ -40,7 +40,7 @@ def validate_judge(spec, *, allow_trial_seed=False):
         raise ValueError('judge.max_retries must be a nonnegative integer')
     timeout = spec.get('timeout_s')
     if timeout is not None and (type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0):
-        raise ValueError('judge.timeout_s must be positive and finite')
+        raise ValueError('judge.timeout_s must be positive and finite or null')
     tools = spec.get('tools', [])
     if not isinstance(tools, list) or any(not isinstance(t, dict) or t.get('type') != 'function'
             or not isinstance(t.get('function'), dict) or not isinstance(t['function'].get('name'), str)

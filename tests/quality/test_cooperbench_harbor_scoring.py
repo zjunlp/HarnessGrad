@@ -182,7 +182,6 @@ def test_worker_completion_required_even_when_official_patch_score_passes(tmp_pa
     Only verifier placement is replaced: its official shell still executes. This
     exercises exit/artifact handling without needing a released Docker image.
     """
-    import json
     import shutil
     from eval.run import cooperative, runner
     from test_shared_dataset_runtime import harness

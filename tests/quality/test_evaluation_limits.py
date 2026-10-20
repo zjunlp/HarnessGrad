@@ -1,6 +1,5 @@
 """Optional runtime limits preserve explicit enforcement and integrity checks."""
 import json
-from pathlib import Path
 import pytest
 
 from eval.service.tool_transport import Relay, call, ToolTransportError
