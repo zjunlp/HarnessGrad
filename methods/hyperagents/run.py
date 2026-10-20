@@ -487,7 +487,11 @@ def main() -> int:
         req, method="hyperagents", steps=measured,
         acceptance_rule=("HyperAgents' validity gate never looks at score; the "
                          "platform's measurement decides the score"),
-        stop=(not errors and len(measured) == children),
+        # A finished batch ends the batch, not the run: the budget counts measured states
+        # and `children` is clamped to the remaining budget so one call tiles it. See the
+        # same fix in `methods/dgm/run.py` (measured 2026-10-20: `stop=True` here ended the
+        # run at its first complete batch, AppWorld r3 of 10).
+        stop=False,
         note=f"HyperAgents: {len(measured)} child(ren) submitted in one call",
         extra={"children_this_call": len(measured),
                "children_requested": children,

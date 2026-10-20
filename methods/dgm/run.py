@@ -525,10 +525,16 @@ def main() -> int:
         req, method="dgm", steps=steps,
         acceptance_rule=("DGM's archive is maintained by keep_better/keep_all inside "
                          "the method; the platform's measurement decides the score"),
-        # A batch is the method's own schedule, so it says what it had to say: the platform
-        # calls it again only if the budget has room and this says otherwise. (The
-        # nothing-usable case returned above with `stop: false`.)
-        stop=(not errors and len(measured) == children),
+        # **A finished batch ends the batch, not the run.** The platform's budget counts
+        # measured states (`mode_a.py`: "measured states, not method calls"), and
+        # `children = max(1, min(children, remaining))` above exists so one batch tiles
+        # the remaining budget. `stop` here therefore says only "this call has nothing
+        # more to add"; the macro iteration continues until the budget or a real
+        # convergence rule ends it. Measured 2026-10-20: `stop=True` on this path ended the
+        # run at its first complete batch (AppWorld r3 of 10; the archive was never reused,
+        # every child's `dgm_parent` was r0). The no-child case returns above with
+        # `stop: false` for the same reason.
+        stop=False,
         note=f"DGM: {len(steps)} child(ren) submitted in one call",
         extra={"children_this_call": len(steps),
                "children_requested": children,
