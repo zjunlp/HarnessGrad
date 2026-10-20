@@ -101,13 +101,16 @@ def _verify(row):
         cfg = current().judge
         model = cfg.resolve_model('memoryagentbench', default=profile(row['source'])['model'])
         output_tokens = cfg.memoryagentbench_max_output_tokens
-        selected = profile(row['source'], model, max_output_tokens=output_tokens)
+        selected = profile(row['source'], model, max_output_tokens=output_tokens, reasoning='disabled')
         result['judge'] = {key: selected[key] for key in ('model', 'max_output_tokens', 'parameters')}
         result['judge'].update(max_calls=row['question_count'] * selected['calls_per_question'],
                                timeout_s=None, max_retries=0, max_attempts=None,
-                               response_max_bytes=None, max_line_bytes=None)
+                               response_max_bytes=None, max_line_bytes=None, reasoning='disabled')
+        from data.scaffolds.runtime_extensions import validate_judge
+        validate_judge(result['judge'])  # Reject unsupported judges before running the actor.
         result['argv'] += ['--judge-model', selected['model'],
-                           '--judge-max-output-tokens', str(selected['max_output_tokens'])]
+                           '--judge-max-output-tokens', str(selected['max_output_tokens']),
+                           '--judge-reasoning', 'disabled']
         result['inputs'].append({'path': 'mab_judge_transport.py',
             'from': str(ASSETS.parents[2] / 'eval/service/tool_transport.py')})
     return result

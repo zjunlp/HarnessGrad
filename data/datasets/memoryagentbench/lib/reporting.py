@@ -50,7 +50,8 @@ def summarize(records, selected):
             declared = evidence.get('judge')
             if (not isinstance(declared, dict) or not isinstance(declared.get('model'), str)
                     or declared != profile(source, declared['model'],
-                                           max_output_tokens=declared.get('max_output_tokens'))
+                                           max_output_tokens=declared.get('max_output_tokens'),
+                                           reasoning=declared.get('reasoning'))
                     or result.get('judge') != declared):
                 raise ValueError('invalid judge profile')
             if 'judge' in group and group['judge'] != declared:

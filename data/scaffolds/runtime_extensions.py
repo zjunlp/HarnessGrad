@@ -19,13 +19,18 @@ def validate_record(spec) -> None:
 
 def validate_judge(spec, *, allow_trial_seed=False):
     fields = {'model', 'max_calls', 'max_output_tokens', 'timeout_s', 'parameters', 'tools', 'tool_choice',
-              'max_retries', 'max_attempts', 'response_max_bytes', 'max_line_bytes'}
+              'max_retries', 'max_attempts', 'response_max_bytes', 'max_line_bytes', 'reasoning'}
     if allow_trial_seed:
         fields.add('seed_source')
     if not isinstance(spec, dict) or set(spec) - fields:
         raise ValueError('judge must declare model, max_calls, max_output_tokens, timeout_s and optional parameters')
     if not isinstance(spec.get('model'), str) or not spec['model'].strip():
         raise ValueError('judge.model must be nonempty')
+    if 'reasoning' in spec:
+        if spec['reasoning'] != 'disabled':
+            raise ValueError('judge.reasoning only supports disabled; omit it to preserve provider defaults')
+        from data.scaffolds.model_api import non_reasoning_profile
+        non_reasoning_profile(spec['model'])
     for key in ('max_calls', 'max_output_tokens', 'max_attempts', 'response_max_bytes', 'max_line_bytes'):
         value = spec.get(key)
         if value is not None and (type(value) is not int or value <= 0):

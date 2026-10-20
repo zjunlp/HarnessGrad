@@ -65,6 +65,7 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--judge-model')
     parser.add_argument('--judge-max-output-tokens', type=int)
+    parser.add_argument('--judge-reasoning', choices=['disabled'])
     parser.add_argument('--record', default='trusted_episode/episode.json')
     parser.add_argument('--reward-file', default='verifier/reward.txt')
     parser.add_argument('--evidence-file', default='verifier/evidence.json')
@@ -83,7 +84,9 @@ def main():
             from lib.judge import profile
             if not args.judge_model:
                 raise ValueError('judge source requires its declared model')
-            selected = profile(gold['source'], args.judge_model, max_output_tokens=args.judge_max_output_tokens)
+            selected = profile(gold['source'], args.judge_model,
+                               max_output_tokens=args.judge_max_output_tokens,
+                               reasoning=args.judge_reasoning)
             # Verifier-only projected transport; the candidate cannot import or
             # call this socket during its actor phase.
             import importlib.util

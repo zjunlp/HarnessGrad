@@ -92,8 +92,19 @@ iteration; compare scores only under the same tie-breaking protocol.
 
 ### Model judges
 
-Both paths use verifier-only `VERIFY.judge`. Gold and judge metadata remain
-private; only the scorer receives the judge socket after the actor has finished.
+Both paths use verifier-only `VERIFY.judge` with `reasoning="disabled"`.
+Gold and judge metadata remain private; only the scorer receives the judge
+socket, after the actor has finished. The source-specific GPT-4o defaults and
+models listed in the shared runtime's reasoning-off mapping are supported. Unsupported models
+are rejected before actor execution. The judge profile includes the reasoning
+policy; records without this field remain readable but cannot be aggregated
+with profiles that declare it.
+
+The adapter selects the reasoning-off parameter automatically. See the
+[runtime interfaces](../../../docs/dataset-runtime-interfaces.md) for request
+mapping, supported models and endpoint compatibility. Provider sampling differences are recorded
+in `verdict.judge.api_options`; they are not equivalent to the official GPT-4o
+sampling configuration.
 
 | Source | Coverage | Primary score | Default judge | Calls per question |
 | --- | --- | --- | --- | --- |
@@ -120,7 +131,7 @@ the official default-model results. `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` accepts a
 positive integer output budget for both sources and changes the profile/identity.
 Without this setting,
 the official output limits apply. There is no automatic budget increase. Model,
-output budget, sampling, prompt/source hashes and
+output budget, sampling, reasoning policy, prompt/source hashes and
 response-admission rules enter the profile. The platform separately records the
 endpoint hash, request/response hashes, returned model and token usage. Source
 reports reject mixed judge profiles, including per-question mismatches.

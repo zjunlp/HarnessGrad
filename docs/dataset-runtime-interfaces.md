@@ -118,6 +118,28 @@ VERIFY[task_id] = {
 服务使用可信 verifier 声明中固定的最终 model，允许其与全局默认值不同；
 最终声明写入 `verdict.judge.configuration`。
 
+`VERIFY.judge.reasoning="disabled"` 要求非推理模式；未声明时不发送推理模式参数，由 provider 使用默认模式。
+声明校验拒绝未适配的型号。支持的模型及请求映射如下：
+
+| 模型 ID | Chat Completions 请求字段 | 输出预算字段 |
+| --- | --- | --- |
+| `gpt-4o` 及日期快照 | 原生非推理模式，无额外字段 | `max_tokens` |
+| `gpt-6-sol`、`gpt-6-luna` | `reasoning_effort: "none"` | `max_completion_tokens` |
+| `deepseek-flash`（DeepSeek-V4.1-Flash） | `thinking: {"type": "disabled"}` | `max_tokens` |
+| `glm-5.2` | `thinking: {"type": "disabled"}` | `max_tokens` |
+| `mimo-v2.6-flash` | `thinking: {"type": "disabled"}` | `max_completion_tokens` |
+| `Ling-3.1-flash`（Ant Ling 官方 API） | `thinking: {"type": "disabled"}` | `max_tokens` |
+
+OpenAI 型号支持 `-YYYY-MM-DD` 日期后缀，请求保留声明的完整 model ID。
+该模式不以低强度推理兜底，不自动扩大预算，不替换模型。
+第三方网关必须兼容对应官方协议；模型在具体 endpoint 的可用性由 provider 决定。
+
+DeepSeek、Z.ai、MiMo 和 Ant Ling 不声明 `seed` 参数，因此不发送它；DeepSeek Flash 的非推理
+模式固定 `top_p=1`，该路径也不发送 `top_p`。原声明保存在 `configuration`，实际参数、未发送参数和服务端固定值写入
+`verdict.judge.api_options`。
+若响应含非空 `reasoning_content`/`reasoning` 或非零 reasoning token 计数，broker
+拒绝该评分并保留 usage，不将其变为零分。缺失推理计数本身不能证明推理已关闭。
+
 secret 只进入平台 broker；不会进入 actor 或 verifier 的环境，也不写入回执。
 
 在 `VERIFY.inputs` 中投影 `eval/service/tool_transport.py`，例如命名为 `judge_transport.py`。
@@ -134,7 +156,7 @@ text = response["content"]
 
 支持 OpenAI-compatible `/chat/completions`、非流式文本消息，以及预先声明的 function tools。
 模型、可选 `max_output_tokens` 和 sampling 参数由平台声明固定，调用者只提交 messages。
-输出预算使用 `max_tokens` 发送；`max_output_tokens=null` 时不发送输出预算字段。
+输出预算使用 `max_tokens` 或上表指定的字段发送；`max_output_tokens=null` 时不发送输出预算字段。
 支持的 sampling 参数为 `temperature/top_p/seed`。环境模拟器可在 model 声明中固定 `tools` 和 `tool_choice`（auto/none/required）；请求支持 assistant/tool 消息，响应的完整 message 保留 tool_calls。调用者不能临时替换工具定义。服务必须返回有效 completion 和 token usage。
 每次请求由独立可信子进程执行；非 null 的 `timeout_s` 限制单次请求总时长；
 整个评分阶段还受 verifier 超时限制，评分结束会关闭 broker 和在途请求。
@@ -387,6 +409,7 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 
 - `tests/quality/test_shared_dataset_runtime.py`
 - `tests/quality/test_shared_judge_trials_workers.py`
+- `tests/quality/test_judge_model_api.py`
 - `tests/quality/test_observed_workers.py`
 - `tests/quality/test_registry_selection.py`
 

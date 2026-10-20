@@ -57,6 +57,10 @@ class Judge:
             raise JudgeUnavailable('judge base URL must be HTTP(S) without credentials/query/fragment')
         self.url = cfg.base_url.rstrip('/') + '/chat/completions'
         self.key = cfg.api_key
+        self.api_options = None
+        if spec.get('reasoning') == 'disabled':
+            from data.scaffolds.model_api import request_options
+            self.api_options = request_options(spec['model'], self.spec.get('parameters', {}))
         self.calls = []
         self.attempts = []
         self.faults = []
@@ -98,8 +102,13 @@ class Judge:
                     raise JudgeUnavailable('tool messages require declared model tools')
             body = {**self.spec.get('parameters', {}), 'model': self.spec['model'],
                     'messages': messages, 'stream': False}
+            token_parameter = 'max_tokens'
+            if self.api_options is not None:
+                body = {**self.api_options['parameters'], **self.api_options['fields'],
+                        'model': self.spec['model'], 'messages': messages, 'stream': False}
+                token_parameter = self.api_options['token_parameter']
             if self.spec.get('max_output_tokens') is not None:
-                body['max_tokens'] = self.spec['max_output_tokens']
+                body[token_parameter] = self.spec['max_output_tokens']
             if self.spec.get('tools'):
                 body['tools'] = self.spec['tools']
                 body['tool_choice'] = self.spec.get('tool_choice', 'auto')
@@ -122,6 +131,12 @@ class Judge:
             if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0
                                                   for k in ('prompt_tokens', 'completion_tokens')):
                 raise JudgeUnavailable('judge response has no valid token usage')
+            if self.api_options is not None:
+                from data.scaffolds.model_api import check_non_reasoning_response
+                try:
+                    check_non_reasoning_response(message, usage)
+                except ValueError as exc:
+                    raise JudgeUnavailable(str(exc)) from None
             record.update(status='ok', response_sha256=hashlib.sha256(raw).hexdigest(),
                           usage={k: usage[k] for k in ('prompt_tokens', 'completion_tokens')},
                           response_model=result.get('model'))
@@ -190,7 +205,8 @@ class Judge:
         failures = list(self.faults)
         if transport.get('refused') or transport.get('errors'):
             failures.append('judge transport rejected or failed a request')
-        return {'schema': 'harnessgrad.judge.v1', 'role': self.role,
+        return {**({'api_options': self.api_options} if self.api_options is not None else {}),
+                'schema': 'harnessgrad.judge.v1', 'role': self.role,
                 'configuration': self.spec, 'endpoint_sha256': hashlib.sha256(self.url.encode()).hexdigest(), 'calls': self.calls, 'attempts': self.attempts, 'faults': failures,
                 'transport': transport,
                 'usage_complete': all(a['usage_known'] for a in self.attempts),

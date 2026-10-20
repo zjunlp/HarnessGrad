@@ -32,10 +32,12 @@ def _prompts():
     return json.loads(raw)
 
 
-def profile(source, model=None, *, max_output_tokens=None):
+def profile(source, model=None, *, max_output_tokens=None, reasoning=None):
     """Return the default protocol or explicitly identified model/output-budget overrides."""
     if source not in (SUMMARY, LONGMEM):
         raise JudgeError("unsupported judge source")
+    if reasoning not in (None, 'disabled'):
+        raise JudgeError('unsupported judge reasoning policy')
     default = "gpt-4o-2024-05-13" if source == SUMMARY else "gpt-4o"
     if model is not None and (not isinstance(model, str) or not model.strip()):
         raise JudgeError("judge model must be a nonempty string")
@@ -63,6 +65,10 @@ def profile(source, model=None, *, max_output_tokens=None):
                       if source == SUMMARY else
                       "official_yes_substring;require_yes_or_no_word;errors_unmeasured"),
     }
+    # Absent on historical records: keep those identities readable, but prevent
+    # combining their provider-default mode with new non-reasoning measurements.
+    if reasoning is not None:
+        result['reasoning'] = reasoning
     result["identity"] = _digest(result)
     return result
 
@@ -96,7 +102,8 @@ def _answer_input(answers):
 
 
 def _check_profile(source, value):
-    if not isinstance(value, dict) or value != profile(source, value.get("model"), max_output_tokens=value.get("max_output_tokens")):
+    if not isinstance(value, dict) or value != profile(source, value.get("model"),
+            max_output_tokens=value.get("max_output_tokens"), reasoning=value.get('reasoning')):
         raise JudgeError("judge profile does not match the fixed protocol")
 
 

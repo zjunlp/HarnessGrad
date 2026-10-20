@@ -64,7 +64,7 @@ def judge_server(monkeypatch):
                 return
             prompt = body['messages'][0]['content']
             wrong = 'ZXQVMABWRONGSENTINEL' in prompt
-            if body['max_tokens'] in (10, 512):
+            if body.get('max_tokens', body.get('max_completion_tokens')) in (10, 512):
                 response = 'no' if wrong else 'yes'
             else:
                 index = (len(state['requests']) - 1) % 3
@@ -74,7 +74,10 @@ def judge_server(monkeypatch):
                 response = 'unparseable response'
             if state['fault'] == 'out-of-range':
                 response = '{"fluency":2,"recall":99,"sentence_count":1,"precision":99}'
-            out = json.dumps({'model': 'fixture-judge', 'choices': [{'message': {'content': response}}],
+            message = {'content': response}
+            if state['fault'] == 'reasoning':
+                message['reasoning_content'] = 'provider ignored the off switch'
+            out = json.dumps({'model': body['model'], 'choices': [{'message': message}],
                               'usage': {'prompt_tokens': 11, 'completion_tokens': 3}}).encode()
             self.send_response(200)
             self.send_header('Content-Length', str(len(out)))
@@ -85,8 +88,8 @@ def judge_server(monkeypatch):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     monkeypatch.setenv('HG_JUDGE_BASE_URL', f'http://127.0.0.1:{server.server_port}/v1')
-    monkeypatch.setenv('HG_JUDGE_MODEL', 'fixture-judge')
-    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'fixture-judge')
+    monkeypatch.setenv('HG_JUDGE_MODEL', 'gpt-4o')
+    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'gpt-4o')
     monkeypatch.setenv('HG_JUDGE_API_KEY', 'fixture-secret')
     yield state
     server.shutdown()
@@ -117,7 +120,7 @@ def test_judges_complete_episode_in_real_sandbox(judge_pool, judge_server, tmp_p
         assert 'fixture-secret' not in json.dumps(result)
         report = summarize([result['evidence']], [dataset._rows()[tid]])
         assert report['sources'][source]['score'] == score
-        assert report['sources'][source]['judge'] == judge.profile(source, 'fixture-judge')
+        assert report['sources'][source]['judge'] == judge.profile(source, 'gpt-4o', reasoning='disabled')
         assert report['coverage']['measured_questions'] == count
         prompts = [r['messages'][0]['content'] for r in judge_server['requests']]
         if source == judge.LONGMEM:
@@ -148,7 +151,7 @@ def test_judges_complete_episode_in_real_sandbox(judge_pool, judge_server, tmp_p
 
 
 @pytest.mark.parametrize('source', [judge.SUMMARY, judge.LONGMEM])
-@pytest.mark.parametrize('fault', ['http', 'late-http', 'malformed', 'metadata'])
+@pytest.mark.parametrize('fault', ['http', 'late-http', 'malformed', 'metadata', 'reasoning'])
 def test_judge_failure_never_becomes_zero(judge_pool, judge_server, tmp_path, monkeypatch, source, fault):
     tid = judge_pool(source, count=2, broken_metadata=fault == 'metadata')
     judge_server['fault'] = fault
@@ -182,7 +185,7 @@ def test_output_budget_override_reaches_broker_and_evidence(judge_pool, judge_se
     result = run_control(tmp_path, monkeypatch, tid, 'oracle')
     assert result['score'] == 1, result
     assert judge_server['requests'][0]['max_tokens'] == 512
-    selected = judge.profile(judge.LONGMEM, 'fixture-judge', max_output_tokens=512)
+    selected = judge.profile(judge.LONGMEM, 'gpt-4o', max_output_tokens=512, reasoning='disabled')
     assert result['evidence']['judge'] == selected
     report = summarize([result['evidence']], [dataset._rows()[tid]])
     assert report['sources'][judge.LONGMEM]['judge'] == selected
@@ -197,11 +200,11 @@ def test_model_priority_reaches_actual_requests_and_profile(judge_pool, judge_se
     monkeypatch.delenv('HG_JUDGE_MODEL', raising=False)
     expected = judge.profile(source)['model']
     if selection != 'official':
-        monkeypatch.setenv('HG_JUDGE_MODEL', 'global-model')
-        expected = 'global-model'
+        monkeypatch.setenv('HG_JUDGE_MODEL', 'gpt-6-sol')
+        expected = 'gpt-6-sol'
     if selection == 'specific':
-        monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'specific-model')
-        expected = 'specific-model'
+        monkeypatch.setenv('HG_MAB_JUDGE_MODEL', 'gpt-6-luna')
+        expected = 'gpt-6-luna'
     spec = dataset.VERIFY[tid]
     result = run_control(tmp_path, monkeypatch, tid, 'oracle')
     assert result['score'] == 1, result
@@ -225,7 +228,7 @@ def test_existing_judge_output_setting_reaches_broker_without_fixed_ceiling(
     assert result['score'] == 1, result
     assert len(judge_server['requests']) == 6
     assert all(request['max_tokens'] == 65536 for request in judge_server['requests'])
-    assert result['evidence']['judge'] == judge.profile(judge.SUMMARY, 'fixture-judge', max_output_tokens=65536)
+    assert result['evidence']['judge'] == judge.profile(judge.SUMMARY, 'gpt-4o', max_output_tokens=65536, reasoning='disabled')
 
 
 @pytest.mark.parametrize('source,count,protocol_calls', [(judge.SUMMARY, 2, 6), (judge.LONGMEM, 3, 3)])
@@ -245,3 +248,52 @@ def test_tighter_judge_calls_exhaustion_is_unmeasured(judge_pool, judge_server, 
     verdict = result['detail']['verdict']
     assert verdict['outcome'] == 'unmeasured'
     assert verdict['judge']['configuration']['max_calls'] == 1
+
+
+@pytest.mark.parametrize('model', ['gpt-6-astra', 'gpt-6.1-sol', 'Ling-3.0-flash'])
+def test_unsupported_judge_rejected_when_building_task(judge_pool, judge_server, monkeypatch, model):
+    tid = judge_pool(judge.LONGMEM)
+    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', model)
+    with pytest.raises(ValueError, match='non-reasoning'):
+        dataset.VERIFY[tid]
+    assert not judge_server['requests']
+
+
+@pytest.mark.parametrize('source', [judge.SUMMARY, judge.LONGMEM])
+@pytest.mark.parametrize('model', ['deepseek-flash', 'glm-5.2', 'mimo-v2.6-flash', 'Ling-3.1-flash'])
+def test_thinking_off_and_original_budget_reach_sandbox(judge_pool, judge_server,
+                                                       tmp_path, monkeypatch, source, model):
+    tid = judge_pool(source)
+    monkeypatch.setenv('HG_MAB_JUDGE_MODEL', model)
+    result = run_control(tmp_path, monkeypatch, tid, 'oracle')
+    assert result['score'] == 1, result
+    assert result['evidence']['judge']['reasoning'] == 'disabled'
+    for request in judge_server['requests']:
+        assert request['thinking'] == {'type': 'disabled'}
+        token_key = 'max_completion_tokens' if model == 'mimo-v2.6-flash' else 'max_tokens'
+        assert request[token_key] == (4096 if source == judge.SUMMARY else 10)
+        other_key = 'max_tokens' if token_key == 'max_completion_tokens' else 'max_completion_tokens'
+        assert other_key not in request
+        assert 'seed' not in request
+        if model == 'deepseek-flash':
+            assert 'top_p' not in request
+        elif source == judge.SUMMARY:
+            assert request['top_p'] == 0.9
+
+
+def test_old_profiles_still_readable_but_not_mixed_with_non_reasoning(
+        judge_pool, judge_server, tmp_path, monkeypatch):
+    tid = judge_pool(judge.LONGMEM)
+    result = run_control(tmp_path, monkeypatch, tid, 'oracle')
+    old = copy.deepcopy(result['evidence'])
+    old_row = dict(dataset._rows()[tid], task_id=storage.task_id('Conflict_Resolution', 1),
+                   episode_id=storage.task_id('Conflict_Resolution', 1))
+    old['task_id'] = old['result']['episode_id'] = old_row['task_id']
+    legacy_profile = judge.profile(judge.LONGMEM, 'gpt-4o')
+    old['judge'] = old['result']['judge'] = legacy_profile
+    for index, question in enumerate(old['result']['questions']):
+        question['question_id'] = storage.question_id(old_row['task_id'], index)
+        question['judge']['profile'] = legacy_profile
+    assert summarize([old], [old_row])['sources'][judge.LONGMEM]['score'] == 1
+    with pytest.raises(ValueError, match='mixed judge profiles'):
+        summarize([result['evidence'], old], [dataset._rows()[tid], old_row])
