@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T10:46:40Z",
+ "generated_at": "2026-10-20T11:39:29Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -1067,12 +1067,12 @@
       },
       {
        "round": 7,
-       "train": 0.24719101123595505,
-       "train_n": 89,
+       "train": 0.24444444444444444,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 1,
-       "train_raw": 0.24719101123595505,
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.24444444444444444,
        "state": "bc0ea64e490a",
        "batch": 3
       },
@@ -1100,11 +1100,14 @@
       },
       {
        "round": 10,
-       "train": null,
-       "train_n": null,
+       "train": 0.37777777777777777,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.37777777777777777,
+       "state": "e86d633e1baf",
+       "batch": 2
       }
      ],
      "cost": {
@@ -1287,6 +1290,25 @@
        "task_split": {
         "input": 14851309,
         "output": 174451,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 482319,
+        "output": 324944,
+        "cache_read": 73243008,
+        "cache_write": 0,
+        "calls": 431
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 12811027,
+        "calls": 1559
+       },
+       "task_split": {
+        "input": 12658946,
+        "output": 152081,
         "tasks_reporting": 90,
         "tasks": 90
        },
@@ -1790,12 +1812,12 @@
       },
       {
        "round": 1,
-       "train": 0.15730337078651685,
-       "train_n": 89,
+       "train": 0.15555555555555556,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 1,
-       "train_raw": 0.15730337078651685,
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.15555555555555556,
        "state": "913b5b40512a",
        "batch": 3
       },
@@ -1888,11 +1910,14 @@
       },
       {
        "round": 10,
-       "train": null,
-       "train_n": null,
+       "train": 0.2777777777777778,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.17777777777777778,
+       "state": "a89fe4f298c4",
+       "batch": 3
       }
      ],
      "cost": {
@@ -2075,6 +2100,25 @@
        "task_split": {
         "input": 21518938,
         "output": 211541,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 589279,
+        "output": 323566,
+        "cache_read": 76428800,
+        "cache_write": 0,
+        "calls": 357
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 9336070,
+        "calls": 1286
+       },
+       "task_split": {
+        "input": 9146614,
+        "output": 189456,
         "tasks_reporting": 90,
         "tasks": 90
        },
@@ -2480,7 +2524,7 @@
        "train": 0.3888888888888889,
        "train_n": 90,
        "eval": {},
-       "valid": false,
+       "valid": true,
        "n_invalid": 0,
        "train_raw": 0.3888888888888889,
        "state": "05e620c0d969"
@@ -2500,7 +2544,7 @@
        "train": 0.4666666666666667,
        "train_n": 90,
        "eval": {},
-       "valid": false,
+       "valid": true,
        "n_invalid": 0,
        "train_raw": 0.4666666666666667,
        "state": "76354c8212bb"
@@ -2527,11 +2571,13 @@
       },
       {
        "round": 10,
-       "train": null,
-       "train_n": null,
+       "train": 0.6111111111111112,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.6111111111111112,
+       "state": "4cbd083b077c"
       }
      ],
      "cost": {
@@ -2723,6 +2769,25 @@
         "cache_read": 11760768,
         "cache_write": 0,
         "calls": 82
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 10625832,
+        "calls": 1153
+       },
+       "task_split": {
+        "input": 10405346,
+        "output": 220486,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 191436,
+        "output": 91595,
+        "cache_read": 20573312,
+        "cache_write": 0,
+        "calls": 110
        }
       }
      },
@@ -3125,21 +3190,23 @@
       },
       {
        "round": 5,
-       "train": 0.02247191011235955,
-       "train_n": 89,
+       "train": 0.022222222222222223,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 1,
-       "train_raw": 0.02247191011235955,
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.022222222222222223,
        "state": "8ae8833299f0"
       },
       {
        "round": 6,
-       "train": null,
-       "train_n": null,
+       "train": 0.0,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "cdfa238d4030"
       },
       {
        "round": 7,
@@ -3287,6 +3354,25 @@
         "cache_read": 49146240,
         "cache_write": 0,
         "calls": 383
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 15919176,
+        "calls": 2513
+       },
+       "task_split": {
+        "input": 15656361,
+        "output": 262815,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 524736,
+        "output": 241257,
+        "cache_read": 33488000,
+        "cache_write": 0,
+        "calls": 286
        }
       }
      },
