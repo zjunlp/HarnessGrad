@@ -80,7 +80,6 @@ class Tau3Runtime:
         self.max_errors = int(self.config.get("max_errors") or 10)
         self.seed: int | None = self.config["seed"]
         self.bootstrap_complete = False
-        self.start_tool_called = False
         self.last_agent_observation: str = ""
 
         initial_state = self.task.initial_state
@@ -316,9 +315,7 @@ class Tau3Runtime:
 
 
     def start_conversation(self) -> str:
-        self.start_tool_called = True
-        observation = self._bootstrap()
-        return observation
+        return self._bootstrap()
 
     def submit_assistant_message(self, message: str) -> str:
         if not message.strip():

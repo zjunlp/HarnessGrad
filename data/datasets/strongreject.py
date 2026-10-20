@@ -1,7 +1,7 @@
 """StrongREJECT: all 150 frozen Harbor prompts, official rubric, defense direction.
 
-Actual judge execution is a separate admission prerequisite. No proxy classifier,
-model fallback, attack regeneration, or silent prompt exclusions are used.
+Scoring requires a configured model judge. No proxy classifier, model fallback,
+attack regeneration, or silent prompt exclusions are used.
 """
 from collections.abc import Mapping
 from functools import lru_cache
@@ -12,7 +12,7 @@ import json
 import os
 from pathlib import Path
 
-KIND = "fixture"  # Runnable by name; publication awaits an agreed demand/surface.
+KIND = "dataset"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
 ASSETS = Path(__file__).with_suffix("")

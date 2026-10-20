@@ -20,7 +20,7 @@ SPLIT_SOURCE = 'hash'
 ASSETS = Path(__file__).with_suffix('')
 TRANSPORT = Path(__file__).resolve().parents[2] / 'eval/service/tool_transport.py'
 DATASET_ROOT = Path(os.environ.get('HG_COOPERBENCH_DATA', Path(__file__).resolve().parents[3] / 'datasets/cooperbench'))
-MANIFEST_SHA256 = '3accea49615abcc01f65d366e5717fe27d39626bd59e3f8c331297fc60d5b072'
+MANIFEST_SHA256 = '64069b7c5dd126b999070a9e4462d5af82e9752a686e8c59a104d59c7a78d84b'
 REVISION = '63b9d44d9f39a02fccf5bf0052db48a917a011fd'
 HARBOR_REVISION = '3e9f14a7c1033896cc600d27de69d6948bcb3410'
 METRIC = 'cooperbench.harbor.merged_pair_success.v1'
@@ -133,8 +133,6 @@ def _verify(tid, row):
                'runner.sh': checked(folder / 'runner.sh', config['runner_sha256']),
                'tests/tests1.patch': task_file(row, 'tests/tests1.patch'),
                'tests/tests2.patch': task_file(row, 'tests/tests2.patch')}
-    if 'tests/testfix.patch' in row['files_sha256']:
-        private['tests/testfix.patch'] = task_file(row, 'tests/testfix.patch')
     case = {'task_id': tid, 'base_commit': row['base_commit'],
             'private_sha256': {k: hashlib.sha256(v.encode()).hexdigest() for k, v in private.items()},
             'provenance': {'source_revision': REVISION, 'harbor_revision': HARBOR_REVISION,

@@ -26,8 +26,24 @@ def write(path, value):
     path.write_text(json.dumps(value, sort_keys=True, ensure_ascii=False) + '\n')
 
 
+def validate_native_splits(source):
+    """Check the frozen train/test IDs against the pinned upstream files."""
+    spec = json.loads((ASSETS / 'specs/task-splits.json').read_text())
+    if spec['revision'] != REVISION:
+        raise ValueError('tau3 native split revision mismatch')
+    for domain, expected in spec['domains'].items():
+        path = source / expected['path']
+        actual = json.loads(path.read_text())
+        if (digest(path) != expected['sha256']
+                or any(actual[side] != expected[side] for side in ('train', 'test'))
+                or set(actual['train']) & set(actual['test'])
+                or set(actual['train']) | set(actual['test']) != set(actual['base'])):
+            raise ValueError(f'{domain}: official train/test split mismatch')
+
+
 def prepare(source, target):
     """source is extracted from the digest-checked official archive."""
+    validate_native_splits(source)
     target.mkdir(parents=True, exist_ok=True)
     bundle = target / 'bundle'
     if bundle.exists():

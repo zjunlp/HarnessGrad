@@ -14,7 +14,9 @@ import random
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
+# Upstream's full-base reporting protocol, distinct from the held-out split.
 OFFICIAL_EVAL = None
+SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'tau3_bench'
 DATASET_ROOT = Path(os.environ.get('HG_TAU3_DATA', Path(__file__).resolve().parents[3] / 'datasets/tau3_bench'))
 RUNTIME = Path(os.environ.get('HG_TAU3_RUNTIME', DATASET_ROOT / 'runtime'))
@@ -147,6 +149,18 @@ def provision_status():
 
 def __getattr__(name):
     if name == 'SPLIT':
-        from data.scaffolds.registry import default_split
-        return default_split(load()[0])
+        from data.scaffolds.registry import default_split, validate_split
+        raw = (ASSETS / 'specs/task-splits.json').read_bytes()
+        if hashlib.sha256(raw).hexdigest() != '7c54f64946e9398341707eee3979726bf620278b72b1e9daf8a0b42f994f872a':
+            raise ValueError('tau3 native split digest mismatch')
+        spec = json.loads(raw)
+        split = {side: [f'tau3_bench/{domain}/{tid}'
+                        for domain, parts in spec['domains'].items() for tid in parts[source]]
+                 for side, source in (('train', 'train'), ('eval', 'test'))}
+        # Banking has no upstream division; apply the platform's hash rule only here.
+        banking = default_split([{'task_id': tid} for tid, row in roster().items()
+                                 if row['domain'] == 'banking_knowledge'])
+        for side in split:
+            split[side].extend(banking[side])
+        return validate_split('tau3_bench', load()[0], split)
     raise AttributeError(name)

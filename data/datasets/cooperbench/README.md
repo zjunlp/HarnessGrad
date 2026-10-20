@@ -1,27 +1,31 @@
 # CooperBench fixed-peer integration
 
 Each candidate harness runs twice, in independent observed Docker workspaces,
-with one released feature per peer and a platform mailbox. The only submitted
+with one platform-assigned released feature per peer and a platform mailbox. The only submitted
 artifact is `agent.patch`. Both patches are merged in a fresh verifier; no solver
 sidecar, Redis server, model-specific agent or reference patch is part of SETUP.
 
 The metric is **Harbor merged-pair success**, pinned to Harbor
 `3e9f14a7c1033896cc600d27de69d6948bcb3410`: filter test diffs, merge normally then
-with union fallback, and require both feature runners to exit zero. This is not
-the subsequently changed upstream evaluator. Data is pinned to CooperBench
+with union fallback, and require both feature runners to exit zero. Data is pinned to CooperBench
 `63b9d44d9f39a02fccf5bf0052db48a917a011fd` (199 features, 30 base tasks, 652 pairs).
-Harbor's four existing task fixes are applied by its pinned adapter during
-preparation, including the oracle-only combined-patch corrections.
+Harbor's applicable task fixes are applied by its pinned adapter during
+preparation, including the oracle-only combined-patch corrections. DSPy task8563
+uses the released CooperBench test patches unchanged: feature 1 expects the dict
+return format, and features 2–6 already normalize both formats before checking
+the payload. Harbor's redundant testfix is not appended to these patches.
+React Hook Form task85's reference patch declares the resolved-defaults type
+explicitly and lists the external-loading value in its effect dependencies.
+Its type/lint commit hooks, feature tests and candidate scoring remain unchanged.
 
 The train/eval split hashes the **base task**, so related pairs never cross the
 split. It is an adapter split, not an official heldout designation; the official
 flash subset is development material. All pair IDs remain in the inventory even
 when a machine has imported only one runtime. A missing runtime fails explicitly.
 
-Prepared inputs must use the corrected scorer manifest `3accea49615abcc01f65d366e5717fe27d39626bd59e3f8c331297fc60d5b072`.
-Roots prepared with the earlier mount relocation must be prepared again in a
-fresh directory. Preserve their inputs and receipts; copy verified runtime
-metadata to reuse the same immutable images without rebuilding them.
+Prepared inputs must match scorer manifest `64069b7c5dd126b999070a9e4462d5af82e9752a686e8c59a104d59c7a78d84b`.
+If a prepared root has a different manifest, prepare a fresh root. Preserve its
+inputs and receipts outside the repository.
 
 ## Preparation
 
@@ -89,7 +93,7 @@ then derive a runtime into a fresh data root containing the same prepared inputs
 python data/datasets/cooperbench/prepare.py \
   --root /your/fresh/cooperbench --source-root /your/sources/CooperBench \
   --image-group dottxt_ai_outlines_task/task1706 \
-  --base-runtime /your/previous/cooperbench/runtimes/dottxt_ai_outlines_task-task1706 \
+  --base-runtime /your/base/cooperbench/runtimes/dottxt_ai_outlines_task-task1706 \
   --hf-mirror-assets /your/hf-assets
 ```
 
@@ -112,85 +116,44 @@ exit status; service failure stays unmeasured even if a reward file remains.
 
 The official reset, patch application, test commands and cleanup remain intact.
 `/patches` and Harbor's other writable mounts move under `/workspace` to retain
-the platform's filesystem limits. Native compilation scratch also stays inside
-this quota, under `/workspace/.test-tmp`, rather than the small system `/tmp`. `--build-network host` is available **only for
-preparation**, for hosts whose download proxy listens on loopback; measurement
+the platform's filesystem limits. Native compilation scratch uses
+`/workspace/.test-tmp` within this quota. `--build-network host` is available
+**only for preparation**, for hosts whose download proxy listens on loopback; measurement
 always has no network. A stale published image whose runner/base does not match
 is refused. Rebuild the pinned task Dockerfile and supply its explicit local ID
 with `--source-image` in that case; the prepared identity remains recorded.
 
-Preparation records measured seed size/inode count and the explicitly selected
-resource budgets. It does not multiply seed sizes, infer memory from workspace,
-or impose adapter-specific byte/inode/PID ceilings. Runtime allocations come
-from the prepared metadata;
-missing memory or workspace budgets fail clearly. PIDs are uncapped unless set
+Runtime allocations come from the prepared metadata. PIDs are uncapped unless set
 in metadata. Harbor's pinned task template supplies the default
-2 CPUs; its adapter declares 1800-second worker and verifier deadlines. The platform owns the verifier
-lifecycle; there is no additional 1700-second adapter timeout. Original per-project
-test commands and their upstream timeouts remain intact.
+2 CPUs; the adapter declares 1800-second worker and verifier deadlines.
+Per-project test commands retain their upstream timeouts.
+DSPy task8587 runs its local LiteLLM fixture with `NUM_WORKERS=1`, the server's
+native worker-count setting. One asynchronous server process avoids redundant
+worker imports under the allocated CPUs; the official 10-second readiness check,
+test cases and 300-second runner timeout remain intact.
 
-The adapter declares no extra mailbox cap; optional finite bounds remain available
-in `SETUP.mailbox`. Network
-isolation, observed resource enforcement, sender/peer binding, artifact identity
+The adapter explicitly sets mailbox limits, `artifact_max_bytes`,
+`model_route` limits and verifier `result_max_bytes` to null. Optional finite
+bounds can be declared through the [shared runtime interfaces](../../../docs/dataset-runtime-interfaces.md).
+`/tmp`, `/dev` and `/dev/shm` each use the selected workspace byte/inode
+allocation; total tmpfs usage also remains subject to the selected memory limit.
+Network isolation, observed resource enforcement, sender/peer binding, artifact identity
 checks and mirror lifecycle health checks remain mandatory. Mirror readiness and
 HTTP health timeouts are service lifecycle checks, not additional scoring budgets.
 The public HF asset preparation tool accepts optional `--max-total-bytes`; it
 has no implicit total download ceiling. Exact source sizes/hashes, metadata
 framing checks and finite transport recovery remain enforced.
 
-All 30 recipe transformations have source-drift and shell syntax checks.
-`provision_status()` reports prepared and unprepared groups without dropping any
-of the 652 pair identities. Preparation alone does not establish validation.
+`provision_status()` reports prepared and unprepared groups without dropping
+any of the 652 pair identities.
 
-A small Click communication check also passed with Ling-3.1-flash: two model
-requests, mailbox exchange and patch submission through a temporary fixed
-HTTP-to-HTTPS bridge. The provider key stayed on the host and workers received
-temporary tokens. This checks the API/communication path, not model coding
-performance.
+## Controls and tests
 
-## Controls and validation
-
-Real Docker oracle/noop controls passed (1/0) for the representative **f1-2 pair
-in 25 of 30 groups**, including both candidate workers, private-input isolation,
-artifact submission, official scoring and cleanup:
-
-| Project | Passed task IDs |
-| --- | --- |
-| Click | 2068, 2800, 2956 |
-| Jinja | 1465, 1559, 1621 |
-| Go chi | 26, 27, 56 |
-| Pillow | 25, 68, 290 |
-| dirty-equals | 43 |
-| React Hook Form | 153 |
-| Typst | 6554 |
-| tiktoken | 0 |
-| DSPy | 8394, 8635 |
-| Hugging Face datasets | 3997, 6252 |
-| LlamaIndex | 17070, 17244, 18813 (fixed W3C PDF mirror) |
-| Outlines | 1371; 1706 with the fixed public HF mirror |
-
-The remaining five groups have explicit limits:
-
-- React Hook Form 85 has an **upstream oracle/merge blocker**: its released patch
-  fails the original Husky/TypeScript pre-commit check, producing an empty merge.
-- DSPy 8563's pinned Harbor test-fix append conflicts with its second test patch;
-  the conflict also reproduces in the original image.
-- DSPy 8587's local LiteLLM service misses the official 10-second readiness check
-  at the official 2 CPUs. Follow-up profiling found millisecond DNS failures;
-  removing the optional remote cost-map lookup still missed the deadline. Its
-  timeout and resource limit remain unchanged.
-- Outlines 1655's image imports. A fresh attempt passed the earlier metadata
-  request failure but exhausted its 1,200-second preparation budget while
-  downloading the original locked dependencies; no scoring control ran.
-- Datasets 7309 retains a verified partial image download after a bounded attempt;
-  no runtime or scoring control is available yet.
-
-These controls cover environment reachability, not all 652 pairs or candidate
-coding quality. Earlier receipts remain preserved. The corrected scorer's
-migration checked all 652 input identities and all 30 distinct oracle patch
-contents: only scorer mount relocation changed, and official filtered oracle
-patches remained identical. Fresh Click oracle/noop and an adversarial
-`tests/helpers.py` patch control verify the corrected filter end to end.
+Run oracle/noop controls for the selected prepared image and task pair. Tests
+cover recipe source drift and shell syntax, patch filtering, scoring and worker
+isolation. Controls exercise the selected environment and scorer; they do not
+measure candidate coding quality. Keep control receipts and API diagnostics
+outside the repository.
 
 ```sh
 python data/datasets/cooperbench/control.py --oracle --platform \
@@ -213,11 +176,6 @@ Scorer startup, provenance, timeout or runtime failures are unmeasured. Candidat
 repositories, process state and arbitrary files never enter the verifier;
 selected tests enter only after both worker containers stop.
 
-This integration exercises fixed-peer cooperation. It does not claim that the
-candidate dynamically decomposes work or spawns/delegates to subagents: the
-platform assigns the two official feature roles. The strict delegation gap
-therefore remains.
-
 `vendor/harbor-test.sh` is the unmodified pinned Harbor scoring source (Apache-2.0,
 see `vendor/LICENSE`). It is retained for byte-level drift and Git-based scoring
-controls; runtime preparation uses Harbor's task-specific corrected copy.
+controls; runtime preparation uses Harbor's task-specific copy, including the pinned task fixes.

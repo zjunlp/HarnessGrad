@@ -13,6 +13,40 @@ from data.datasets import memoryagentbench as dataset
 from data.datasets.memoryagentbench import control
 from data.datasets.memoryagentbench.lib import storage, scoring
 from data.datasets.memoryagentbench.relay import Session
+from data.scaffolds import registry
+
+
+def test_registered_memory_classification_uses_sequential_cli(prepared):
+    from tools import dataset_classes
+
+    assert dataset.KIND == "dataset"
+    assert "memoryagentbench" in registry.published()
+    row = dataset_classes.classify("memoryagentbench")
+    assert (row["demand"], row["surface"]) == ("memory", "supplied_history")
+    assert row["interaction"] == "closed_loop"
+    assert row["action_surface"] == ["mab[ack,next,submit]"]
+    assert set(row["exercises"]) == {"context", "control", "memory"}
+    assert not row["adversarial"]
+
+
+def test_declared_split_partitions_complete_released_episodes(monkeypatch):
+    frozen = json.loads((dataset.ASSETS / 'specs/frozen-episodes.json').read_text())
+    rows = {}
+    for episode in frozen['episodes']:
+        _, partition, index = episode['episode_id'].split('/')
+        tid = storage.task_id(partition, int(index))
+        rows[tid] = dict(task_id=tid, source=episode['source'],
+                         chunk_count=episode['chunks'], question_count=episode['questions'])
+    monkeypatch.setattr(dataset, '_rows', lambda: rows)
+    tasks, scorable, split = registry.load_split('memoryagentbench')
+    assert dataset.SPLIT_SOURCE == 'hash'
+    assert len(tasks) == len(scorable) == 146
+    assert split == registry.default_split(tasks)
+    assert not set(split['train']) & set(split['eval'])
+    assert set(split['train']) | set(split['eval']) == set(rows)
+    assert {side: (len(ids), sum(rows[tid]['question_count'] for tid in ids))
+            for side, ids in split.items()} == {'train': (100, 2069), 'eval': (46, 1602)}
+    assert set(registry.official_split('memoryagentbench', tasks)['eval']) == set(rows)
 
 
 @pytest.fixture
@@ -271,7 +305,6 @@ def test_all_prepared_sources_have_scoring_paths(monkeypatch):
     dataset._rows.cache_clear()
     try:
         assert set(dataset._rows()) == {'0', '1', '2'}
-        assert dataset.excluded_tasks() == []
     finally:
         dataset._rows.cache_clear()
 

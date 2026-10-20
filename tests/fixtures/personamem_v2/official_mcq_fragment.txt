@@ -1,0 +1,30 @@
+        all_answers = []
+        if correct_answer_text != '':
+            all_answers.append(str(correct_answer_text))
+        all_answers.extend(str(x) for x in incorrect_answers)
+        
+        # Add MCQ format to the question if requested and we have enough options
+        if is_mcq and len(all_answers) >= 4:
+            # Randomize the order of options so correct answer isn't always 'a'
+            shuffled_answers = all_answers[:4].copy()
+            random.seed(42 + idx)  # Use deterministic seed based on row index for reproducibility
+            random.shuffle(shuffled_answers)
+            
+            # Find which position the correct answer ended up in
+            correct_index = shuffled_answers.index(str(correct_answer_text))
+            correct_letter = chr(97 + correct_index)  # Convert to 'a', 'b', 'c', or 'd'
+            correct_answer = f"({correct_letter}) {correct_answer_text}"  # Format as "(a) text"
+            
+            options_text = "\n".join([
+                f"({chr(97 + i)}) {option}"  # chr(97) = 'a'
+                for i, option in enumerate(shuffled_answers)
+            ])
+            mcq_prompt = f"\n\nYou are performing a multiple-choice question task. You must choose the best response from the following options to answer the user query above:\n{options_text}\n\nProvide your answer in the format: \\boxed{{a}}, \\boxed{{b}}, \\boxed{{c}}, or \\boxed{{d}}."
+            question = question + mcq_prompt
+            all_answers = shuffled_answers  # Update all_answers to match MCQ order
+        else:
+            # Regular format - keep original correct answer
+            correct_answer = correct_answer_text
+        
+        # Add thinking instruction at the end
+        question += " Always perform your reasoning inside <think> and </think> tags before your final answer."

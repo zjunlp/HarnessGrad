@@ -90,7 +90,7 @@ def prepare(root, source, harbor):
     if (prepared / 'manifest.json').exists():
         raise FileExistsError('prepared manifest exists; choose a fresh root to preserve provenance')
     rows = []
-    # Use Harbor's own fixes without importing or running any solver sidecar.
+    # Use applicable Harbor fixes without importing or running a solver sidecar.
     adapter_object = module.CooperBenchAdapter(prepared / 'unused')
     for group in sorted((source / 'dataset').glob('*/task*')):
         features = sorted(group.glob('feature[0-9]*'), key=lambda p: int(p.name[7:]))
@@ -110,7 +110,43 @@ def prepare(root, source, harbor):
             (paths.tests_dir / 'test.sh').write_bytes(template.read_bytes())
             (paths.solution_dir / 'combined.patch').write_bytes((group / 'combined.patch').read_bytes())
             pair = type('Pair', (), {'repo': repo, 'task_id': group.name[4:]})()
-            adapter_object._apply_upstream_fixes(pair, paths)
+            # This pinned CooperBench revision already handles format()'s dict
+            # result in all six task8563 test patches: feature 1 expects it;
+            # features 2-6 normalize it before the original payload assertions.
+            # Harbor's older testfix duplicates their import edit and conflicts
+            # with that normalization. Keep the released tests byte-for-byte.
+            if group_id != 'dspy_task/task8563':
+                adapter_object._apply_upstream_fixes(pair, paths)
+            if group_id == 'react_hook_form_task/task85':
+                # Repair the released reference only. The repository's real
+                # type/lint hooks and all feature tests still run unchanged.
+                reference = paths.solution_dir / 'combined.patch'
+                text = reference.read_text()
+                text = text.replace(
+                    '+++ b/src/logic/createFormControl.ts\n',
+                    '+++ b/src/logic/createFormControl.ts\n'
+                    '@@ -1,4 +1,5 @@\n'
+                    " import { EVENTS, VALIDATION_MODE } from '../constants';\n"
+                    "+import type { DefaultValues } from '../types';\n"
+                    ' import {\n'
+                    '   BatchFieldArrayUpdate,\n'
+                    '   ChangeHandler,\n',
+                )
+                text = text.replace(
+                    '+        _options.onDefaultValuesResolved?.(values);',
+                    '+        _options.onDefaultValuesResolved?.(values as DefaultValues<TFieldValues>);',
+                )
+                text = text.replace(
+                    '+    const { values: currentValues, debounceValuesMs } = props;',
+                    '+    const currentValues = props.values;\n'
+                    '+    const debounceValuesMs = props.debounceValuesMs;',
+                )
+                text = text.replace(
+                    '+  }, [props.values, props.debounceValuesMs, props.preventResetIfDirty, formState.isDirty, control]);',
+                    '+  }, [props.values, props.debounceValuesMs, props.preventResetIfDirty, props.isLoadingExternalValues, formState.isDirty, control]);',
+                )
+                reference.write_text(text)
+                adapter_object._fix_patch_hunk_headers(reference)
             # Record exactly the transformed source supplied to the scorer.
             scorer = adapt_scorer((paths.tests_dir / 'test.sh').read_text())
             (folder / 'test.sh').write_text(scorer)

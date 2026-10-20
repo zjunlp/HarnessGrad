@@ -21,13 +21,16 @@ The dedicated `/bin/sh` entrypoint invokes the wrapper with Python `-I -S`,
 before any Python site or editable-package startup code can execute.
 At the trusted container idle launch, the wrapper starts one root-owned loopback
 server, verifies readiness against PID/start time/UID and a root-owned identity,
-then executes the real interpreter for trusted helper operations. Actor/scorer
-programs retain inherited standard streams under a small outer wrapper, which checks
-service health again when the real interpreter exits. Service loss returns exit 78;
-the existing worker-group policy treats nonzero worker exits as unmeasured. Private launch state stays in a root-only
-directory. The existing side-effect-free image interpreter-version probe is also supported.
+then executes the real interpreter for trusted helper operations. Trusted `init`
+waits for PID 1 to complete this startup and checks health before admitting a
+worker or verifier within the startup readiness deadline. Actor/scorer
+programs check health immediately and retain inherited standard streams under
+a small outer wrapper, which checks health again when the real interpreter exits. Service loss returns exit 78;
+the worker-group policy treats nonzero worker exits as unmeasured. Private launch state stays in a root-only
+directory. A side-effect-free image interpreter-version probe is also supported.
 Nested wrappers reuse the same service; failed services are never restarted.
-Trusted platform cleanup helpers remain usable after a service failure. Root service
+Trusted probe and cleanup helpers remain usable after a service failure. The HTTPS
+asset mirror shares this launcher contract. Root service
 processes die with the container. Workers and the verifier each start a fresh container;
 no worker cache is imported by the verifier.
 
@@ -44,8 +47,3 @@ This keeps service failures unmeasured without relying on file deletion.
 This component alone does not certify an official task or complete benchmark run.
 The optional `HG_COOPERBENCH_HF_TEST_IMAGE=sha256:...` test exercises tiny assets in
 real observed containers, including actor tampering, service loss and cleanup.
-
-Validation also exercised the pinned Hub client and released GGUF resolver against
-the local mirror, and loaded both real models on CPU without generation. These
-checks cover dependency resolution and model construction; official task scores
-remain the responsibility of the separately prepared dataset controls.

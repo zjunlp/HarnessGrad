@@ -247,60 +247,18 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "upstream-oracle-and-test-patches",
-          "family": "official-scorer-execution",
-          "status": "external",
-          "observed": "React Hook Form task85's released oracle fails the original Husky/TypeScript pre-commit hook. DSPy task8563's pinned Harbor test-fix append conflicts with its second test patch; the conflict also reproduces in the original image.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "data/datasets/cooperbench/README.md",
-              "locator": "upstream oracle/merge blocker"
-            }
-          ],
-          "next_action": "Resolve the pinned upstream patch/merge defects without bypassing hooks, changing official tests or weakening the scorer; then revalidate the affected controls."
-        },
-        {
-          "id": "offline-runtime-dependencies",
-          "family": "scorer-dependency-network",
-          "status": "runtime",
-          "observed": "DSPy task8587's LiteLLM service misses the official 10-second readiness check at the official 2 CPUs. Follow-up profiling found fast DNS failures; the package-native local cost-map mode still missed the deadline. LlamaIndex task18813 is now closed by fixed original PDF bytes served through an isolated local TLS mirror, with official oracle/noop controls passing 1/0.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "data/datasets/cooperbench/README.md",
-              "locator": "## Controls and validation"
-            }
-          ],
-          "next_action": "Establish the original service/dependency paths within the existing test deadlines and isolation contract; do not substitute fixtures or raise resources to force a passing score."
-        },
-        {
-          "id": "remaining-runtime-provisioning",
-          "family": "scorer-dependency-network",
-          "status": "external",
-          "observed": "Outlines task1655 passed its earlier metadata transport failure but exhausted a fresh 1,200-second preparation budget downloading its original locked dependencies. Outlines task1371 completed verified import and preparation, then passed official oracle/noop controls 1/0. Datasets task7309 retains a partial image download after a bounded attempt. Outlines task1655 and datasets task7309 still have no scoring controls.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "data/datasets/cooperbench/README.md",
-              "locator": "## Controls and validation"
-            }
-          ],
-          "next_action": "Resume verified partial downloads or locked dependency preparation under a separately bounded provisioning attempt, preserving old receipts; run oracle/noop controls only after preparation succeeds."
-        },
-        {
           "id": "runtime-group-coverage",
           "family": "measurement-coverage",
           "status": "measurement",
-          "observed": "All 30 recipe transformations pass pinned source/shell checks. Real two-worker oracle/noop controls pass 1/0 for f1-2 in 25 groups, including newly prepared Outlines task1371, Outlines task1706 with the verified local HF mirror and LlamaIndex task18813 with the fixed W3C PDF TLS mirror. Five groups retain the explicit blockers above. This is not coverage of all 652 pairs or model coding performance; the separate API smoke checks communication only.",
+          "observed": "The adapter retains all 652 pair identities across 30 runtime groups. Preparation pins source, scorer, dependencies and image identities; runtime availability is checked per selected group. Two isolated workers submit patches to a fresh verifier using Harbor's merged-pair scorer. Oracle/noop controls exercise the selected runtime without measuring candidate coding quality.",
           "evidence": [
             {
               "kind": "repository",
               "path": "data/datasets/cooperbench/README.md",
-              "locator": "## Controls and validation"
+              "locator": "## Controls and tests"
             }
           ],
-          "next_action": "Keep all 652 pair identities and explicit preparation status. Address remaining blockers and separately authorize broader candidate-harness evaluation before claiming complete benchmark coverage."
+          "next_action": "Retain all 652 pair identities and explicit task/trial coverage when running candidate-harness diagnostics or broader evaluation. Do not report representative reference controls as full-benchmark model performance."
         }
       ],
       "historical_runs": []
@@ -474,7 +432,7 @@
           "id": "kumo-measurement-coverage",
           "family": "measurement-coverage",
           "status": "measurement",
-          "observed": "5290/5300 released cases pass a repeated official consistency audit; 10 unsatisfiable cases excluded and 35 multi-answer cases retained. Native oracle/noop and relay isolation checks cover the integration. A bounded single-task API diagnostic is not a benchmark or production admission; inherited network and absent filesystem quotas remain limitations.",
+          "observed": "The adapter retains 5290/5300 released standard cases under the official consistency predicate: 10 unsatisfiable cases are excluded and 35 multi-answer cases retained. It uses the query50 protocol, native oracle/noop controls and a private relay. Actor networking is inherited and the adapter does not enforce filesystem quotas.",
           "evidence": [
             {
               "kind": "repository",
@@ -482,7 +440,7 @@
               "locator": "Validation"
             }
           ],
-          "next_action": "Retain explicit subset/protocol identity and inspect the single-task diagnostic receipt before any separately authorized broader evaluation."
+          "next_action": "Retain explicit subset, split and protocol identity in evaluation records; report selected and unmeasured coverage without treating a subset as a full-benchmark result."
         }
       ]
     },
@@ -536,6 +494,19 @@
     },
     {
       "blockers": [],
+      "dataset": "memoryagentbench",
+      "demand": "memory",
+      "exercises": [
+        "context",
+        "control",
+        "memory"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "supplied_history"
+    },
+    {
+      "blockers": [],
       "dataset": "musique",
       "demand": "evidence",
       "exercises": [
@@ -570,6 +541,34 @@
       "historical_runs": [],
       "shared_blockers": [],
       "surface": "tool_calling"
+    },
+    {
+      "blockers": [
+        {
+          "id": "incomplete-native-train-row",
+          "family": "source-provenance",
+          "status": "external",
+          "observed": "Native train row 949 for persona 592 lacks distractors and has a truncated reference. The adapter retains its 29-question episode and returns unmeasured source_data_error. Native val and benchmark contain no such blocked episode.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/personamem_v2/README.md",
+              "locator": "Native train row 949"
+            }
+          ],
+          "next_action": "Retain the source error and selected coverage in reports. A complete train-side score requires an upstream source correction with an explicitly updated data revision; do not fabricate missing options or silently drop the episode."
+        }
+      ],
+      "dataset": "personamem_v2",
+      "demand": "memory",
+      "exercises": [
+        "context",
+        "control",
+        "memory"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "supplied_history"
     },
     {
       "blockers": [],
@@ -690,6 +689,17 @@
       "surface": "reasoning"
     },
     {
+      "blockers": [],
+      "dataset": "strongreject",
+      "demand": "reasoning",
+      "exercises": [
+        "safety"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
       "blockers": [
         {
           "id": "retain-contract-refusal",
@@ -732,15 +742,15 @@
           "id": "bounded-controls-not-full-evaluation",
           "family": "measurement-coverage",
           "status": "measurement",
-          "observed": "The pinned tau3 v1.0.1 text half-duplex adapter retains all 375 base tasks across four domains; banking uses BM25 and voice/full-duplex is outside its scope. Official scorer and deterministic controls are implemented. Bounded live controls used airline/8 and retail/24 once each, with three successful Ling-3.1-flash requests and valid official scores 1 and 0. They exercise run_one with real user and NL judge services, not a candidate-harness driver pilot, full-base evaluation or complete pass^k result.",
+          "observed": "The pinned tau3 v1.0.1 text half-duplex adapter retains all 375 base tasks across four domains; banking uses BM25 and voice/full-duplex is outside its scope. It runs the official business tools, user simulator and ALL scorer, including every task's NL assertions. Complete pass^k reporting requires three trials per selected task.",
           "evidence": [
             {
               "kind": "repository",
               "path": "data/datasets/tau3_bench/README.md",
-              "locator": "pilot through the driver, a full-base evaluation, or a complete pass^k result."
+              "locator": "A report for a selected subset is explicitly labelled; it is not a full-base result."
             }
           ],
-          "next_action": "Validate a separately authorized bounded candidate-harness driver diagnostic with explicit model roles and recorded source, trial, usage and cleanup identity. Report complete required three-trial manifests before publishing pass^k; retain missing/provider/scorer outcomes as unmeasured. Do not infer full-base, voice/full-duplex or production authorization from the live controls."
+          "next_action": "Record model roles, source, split, selected tasks, trials, usage and cleanup identity. Report complete required three-trial manifests before publishing pass^k; retain missing/provider/scorer outcomes as unmeasured and label subset results explicitly."
         }
       ],
       "historical_runs": []

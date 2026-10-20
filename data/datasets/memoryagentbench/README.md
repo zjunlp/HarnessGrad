@@ -12,23 +12,24 @@ Official input and scoring reference:
 The fixed source hashes, question templates, tokenizer resources and ordered
 chunk fingerprints are in `specs/`. All corpus bytes stay outside the repository.
 
-The adapter currently uses the existing `KIND = "fixture"` publication switch
-while the taxonomy's minimum-members rule for the first memory-demand dataset
-is under review. This is a real released benchmark, not synthetic task data.
-Explicit `registry.load("memoryagentbench")`, `run_one` and the controls work;
-the chooser and corpus-level driver aggregation are not published yet. Formal
-registration must add aggregation policy, control/inventory/blocker entries and
-`memory / supplied_history` with `context, memory` exercises together, after the
-taxonomy policy decision. No minimum-members exception is introduced here.
+The adapter is registered as `memory / supplied_history`: material arrives
+incrementally, and the harness retains information for later questions.
+It exercises `context`, `control` and `memory`. Interaction is `closed_loop`;
+acknowledging material and submitting answers advance the private episode.
 
 ## Preparation
 
 Set `HG_MAB_DATA` to the external dataset directory; by default it is
 `../datasets/memoryagentbench` relative to the checkout. `HG_MAB_PREPARED` can
 independently select a prepared pool (default `$HG_MAB_DATA/prepared`). Imports do
-not read the corpus. The four upstream splits are capability partitions; the
-adapter declares no study/evaluation split. Supply an explicit experiment split
-when one is needed.
+not read the corpus. The four upstream splits are capability partitions, not
+train/test divisions. The default declared split uses HarnessGrad's deterministic
+task-ID hash rule, approximately 2:1 train/eval, with each complete episode kept
+on one side. The full release yields **100 train episodes / 2,069 questions** and
+**46 eval episodes / 1,602 questions**. This is a platform study split, not an
+official upstream division; the ratio applies to episodes, not questions.
+`--split official --side eval` selects the complete pool and includes the training
+episodes, so it is not a held-out evaluation after studying the declared train side.
 
 Install `requirements-prepare.txt` in a separate environment. These dependencies
 are needed for preparation and official differential tests; the relay and primary
@@ -48,7 +49,7 @@ python data/datasets/memoryagentbench/prepare.py \
 Preparation refuses an existing output, verifies all raw and resource hashes,
 and checks every prepared chunk/query sequence against the frozen official
 comparison. Repeat `--task-id` to prepare only selected episodes. Every prepared
-episode is included in the runnable pool; `excluded_tasks()` returns an empty list.
+episode is included in the runnable pool.
 The two judge sources require explicit provider configuration at scoring time.
 
 ## Runtime and scoring
@@ -78,7 +79,6 @@ transport failures as unmeasured. A genuinely idle control is incomplete;
 completed wrong or empty answers are scored by the official formulas. Empty
 recommendations may score nonzero under upstream nearest-movie matching.
 
-Runtime limits use the existing declarations and driver phase settings described below.
 Native mount isolation keeps relay state private; actor networking uses
 the platform default and this adapter does not claim egress isolation.
 
@@ -92,9 +92,8 @@ iteration; compare scores only under the same tie-breaking protocol.
 
 ### Model judges
 
-Both paths use the existing verifier-only `VERIFY.judge` capability. No shared
-platform interface changes are needed. Gold and judge metadata remain private;
-only the scorer receives the judge socket, after the actor has finished.
+Both paths use verifier-only `VERIFY.judge`. Gold and judge metadata remain
+private; only the scorer receives the judge socket after the actor has finished.
 
 | Source | Coverage | Primary score | Default judge | Calls per question |
 | --- | --- | --- | --- | --- |
@@ -104,24 +103,23 @@ only the scorer receives the judge socket, after the actor has finished.
 `specs/judge-prompts.json` freezes the official book-summary prompts and all
 LongMemEval question-type/abstention prompts. Summary sampling is temperature
 0.1, top-p 0.9, seed 42, maximum 4,096 output tokens; QA uses temperature 0 and
-maximum 10 output tokens. The successful scoring call budget is exactly three
+maximum 10 output tokens. The logical scoring call budget is exactly three
 times the selected question count for summary, once for QA. Model fallbacks are
 not used. The adapter declares no judge request timeout and defaults to zero
 retries; the broker supports explicit limits through `VERIFY.judge`.
 
 Configure `HG_JUDGE_BASE_URL` and `HG_JUDGE_API_KEY` for the judge service.
 Model selection is `HG_MAB_JUDGE_MODEL` > `HG_JUDGE_MODEL` > the source's official
-default. Blank optional settings mean unset. Set only `HG_JUDGE_MODEL` to share
-one model across datasets, or use `HG_MAB_JUDGE_MODEL` to override it here; the two
-values need not match. With neither set, summary and QA retain their different
-official models. The endpoint must serve whichever model is selected.
+default. Blank optional settings mean unset. The endpoint must serve the selected
+model. `HG_MAB_JUDGE_MODEL` overrides the global choice for this dataset only.
 Model and output overrides are declared in the unified configuration layer and
 appear in `--show-config`/configuration snapshots; the final per-source profile
 is frozen in the verifier and its evidence. A nondefault model changes
 the recorded judge profile/identity; such scores do not establish equivalence to
-the official default-model results. If a provider needs more output tokens,
-`HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` explicitly selects a positive integer;
-it applies to both sources and changes the profile/identity. Without this setting, the official output limits remain. There is no automatic budget increase. Model,
+the official default-model results. `HG_MAB_JUDGE_MAX_OUTPUT_TOKENS` accepts a
+positive integer output budget for both sources and changes the profile/identity.
+Without this setting,
+the official output limits apply. There is no automatic budget increase. Model,
 output budget, sampling, prompt/source hashes and
 response-admission rules enter the profile. The platform separately records the
 endpoint hash, request/response hashes, returned model and token usage. Source
@@ -168,37 +166,17 @@ scorer differential tests, ordering and retries, selected-input privacy, trusted
 record binding, source aggregation and real sandbox controls. Set `MAB_UPSTREAM`
 to the pinned official checkout and `NLTK_DATA` to the locked English sentence
 resources to enable the official comparisons. Missing reference source skips
-those comparisons; it does not establish equivalence. No real-model diagnostic
-or benchmark performance claim follows from these controls.
+those comparisons.
 
-A bounded API connectivity smoke also exercised the normal SDK and `./mab`
-client in the actual sandbox: it retained both full material chunks of
-`conflict_resolution-r0000` and submitted the first four of its 100 questions.
-The trusted record and verifier correctly reported `incomplete_episode` with no
-score. This fixed diagnostic selection is not an official training split or a
-completed benchmark episode. This actor-side smoke is separate from judge validation; complete-episode
-scoring is covered by released-data controls.
-Keep smoke harnesses, API receipts and sealed records outside the repository.
+Keep API receipts, diagnostic harnesses and sealed records outside the repository.
 
-The two judge paths were also checked with bounded released-data API controls:
-one complete summary episode (reference/wrong, six calls) and one selected QA
-question (reference/wrong). With explicit `Ling-3.1-flash`, summary scored 1/0;
-QA returned no scoring text at the default 10-token limit, correctly remaining
-unmeasured. A separately declared 512-token QA diagnostic scored 1/0 in two more
-calls. Total: ten API calls, no full evaluation. These validate transport and
-scoring, not judge equivalence or benchmark performance. Full 60-question QA
-protocol/aggregation is tested with a local HTTP stub; all 146 prepared episodes
-and 400 judge questions passed inventory/metadata validation without API calls.
-
-### Run resource limits
+## Run resource limits
 
 This adapter adds no task deadline, relay call/frame cap, recording cap, answer
 size cap, or judge request deadline. Task execution still follows the driver's
-phase settings. Optional finite limits can be declared directly in the existing
-`SETUP / ENV / VERIFY` interfaces. Official scoring output defaults and successful
-call structure remain as described above. Answers and request IDs
-have no dataset-specific size ceiling. UTF-8 decoding, ordered access,
-idempotent request IDs, private records and complete-episode scoring remain
-required. A resource limit or service failure produces an unmeasured result,
-not an ordinary zero score. The official 4,096-token material chunking policy
-is unchanged.
+phase settings. Optional finite limits can be declared directly in
+`SETUP / ENV / VERIFY` interfaces. Official scoring output defaults and logical
+call structure are defined under Model judges. UTF-8 decoding, ordered access,
+idempotent request IDs and complete-episode scoring are required.
+A resource limit or service failure produces an unmeasured result,
+not an ordinary zero score. Material follows the official 4,096-token chunking policy.

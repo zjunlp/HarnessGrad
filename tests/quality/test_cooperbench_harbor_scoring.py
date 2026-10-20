@@ -26,7 +26,7 @@ def test_vendored_harbor_scorer_is_exact_pinned_source():
 def test_relocation_preserves_official_test_diff_filter(tmp_path):
     official = (ASSETS / 'vendor/harbor-test.sh').read_text()
     adapted = protocol.adapt_scorer(official)
-    with pytest.raises(ValueError, match='pinned source variants'):
+    with pytest.raises(ValueError, match='pinned source'):
         protocol.adapt_scorer(official + '\n# unknown source\n')
     function = lambda source: 'filter_test_files() {\n' + source.split('filter_test_files() {\n', 1)[1].split('\n}\n', 1)[0] + '\n}\n'
     assert function(adapted) == function(official)
@@ -39,6 +39,32 @@ def test_relocation_preserves_official_test_diff_filter(tmp_path):
         subprocess.run(['bash', '-c', function(source) + 'filter_test_files "$1"', 'filter', str(target)], check=True)
         outputs.append(target.read_text())
     assert outputs == ['diff --git a/pkg/core.py b/pkg/core.py\n+candidate change\n'] * 2
+
+
+@pytest.mark.parametrize('group,pairs', [
+    ('dspy_task/task8563', 15), ('react_hook_form_task/task85', 10),
+])
+def test_patch_repairs_preserve_released_tests_and_scorer(group, pairs):
+    from data.datasets import cooperbench as dataset
+
+    source = dataset.DATASET_ROOT / 'upstream/dataset' / group
+    if not (source.exists() and (dataset.DATASET_ROOT / 'prepared-v1/manifest.json').exists()):
+        pytest.skip('prepared CooperBench inputs and pinned source needed for patch regression')
+    rows = [row for row in dataset.roster().values() if row['group'] == group]
+    assert len(rows) == pairs
+    scorer = protocol.adapt_scorer((ASSETS / 'vendor/harbor-test.sh').read_text())
+    for row in rows:
+        # Every pair must retain the released feature assertions. Appending the
+        # obsolete Harbor fix conflicts with the import and format normalization
+        # already supplied by features 2-6, before pytest can even run.
+        assert 'tests/testfix.patch' not in row['files_sha256']
+        assert dataset.task_file(row, 'test.sh') == scorer
+        features = row['task_id'].rsplit('/f', 1)[1].split('-')
+        for index, feature in enumerate(features, 1):
+            assert dataset.task_file(row, f'tests/tests{index}.patch') == (
+                source / f'feature{feature}/tests.patch').read_text()
+        if group == 'dspy_task/task8563':
+            assert dataset.task_file(row, 'solution/combined.patch') == (source / 'combined.patch').read_text()
 
 
 def test_offline_conversion_preserves_editable_builds_and_test_commands(monkeypatch):
@@ -68,8 +94,8 @@ def test_official_filter_merge_and_both_feature_rule(tmp_path, mode, expected):
         (repo / 'a.py').write_text('B=1\n'); patch_b = git(repo, 'diff'); git(repo, 'checkout', '--', '.')
     if mode == 'helper_injection':
         # This deliberately unapplicable test hunk must disappear before Git
-        # applies the valid implementation patch; the old broad relocation
-        # accidentally changed the official '/tests/' filtering predicate.
+        # applies the valid implementation patch. Path relocation must preserve
+        # the official '/tests/' filtering predicate.
         patch_a += ('diff --git a/tests/helpers.py b/tests/helpers.py\n'
                     '--- a/tests/helpers.py\n+++ b/tests/helpers.py\n'
                     '@@ -1 +1 @@\n-never-present\n+candidate-injection\n')
@@ -109,6 +135,7 @@ def test_all_30_pinned_recipes_preserve_shell_and_test_commands(tmp_path):
     for group, recipe in recipes.items():
         source = (root / group / 'runner.sh').read_text()
         block, adapted = protocol.prepare_recipe(source, group)
+        assert ('export NUM_WORKERS=1' in adapted) == (group == 'dspy_task/task8587')
         script = tmp_path / 'runner.sh'; script.write_text(adapted)
         subprocess.run(['bash', '-n', str(script)], check=True)
         dockerfile, install, _ = protocol.image_recipe('sha256:' + 'a'*64, source, group)

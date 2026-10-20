@@ -51,7 +51,7 @@ def relays(monkeypatch):
         try:
             assert handle.proc.poll() is not None
         finally:
-            # Test-owned cleanup: the unchanged runner does not remove relay staging.
+            # Reap every test-owned handle, including failures before runner cleanup.
             handle.stop()
             handle.cleanup()
 
@@ -85,7 +85,7 @@ def test_budget_survives_reconnects_and_receipt_is_private(synthetic, relays):
         assert 'valid_truth' not in json.dumps(relay.receipt)
     finally:
         relay.stop()
-        assert relay.cleanup() is None  # original interface
+        assert relay.cleanup() is None
 
 
 def test_management_calls_do_not_spend_official_budget_or_have_a_hidden_cap(synthetic):

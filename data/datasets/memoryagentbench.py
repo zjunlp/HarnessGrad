@@ -5,8 +5,9 @@ One ordered material sequence and its questions form each interactive task.
 
 Provision using ``python -m data.datasets.memoryagentbench.prepare``; set HG_MAB_DATA or
 HG_MAB_PREPARED for another external location. Import reads no data or gold.
-No study/evaluation division is declared. Four upstream splits are capability
-partitions, and OFFICIAL_EVAL=None identifies the complete provisioned pool.
+The declared study/evaluation split uses the platform's episode-ID hash rule.
+Four upstream splits are capability partitions, not train/test divisions;
+OFFICIAL_EVAL=None identifies the complete provisioned pool.
 """
 from __future__ import annotations
 
@@ -18,12 +19,11 @@ import os
 from pathlib import Path
 
 
-# Real released benchmark adapter. Publication awaits the memory taxonomy policy;
-# explicit registry.load/run_one remain available for adapter controls.
-KIND = "fixture"
+KIND = "dataset"
 ORACLE_SOURCE = "released"
 ORACLE_COVERAGE = "Released answers; model-judge controls require explicit judge configuration"
 OFFICIAL_EVAL = None
+SPLIT_SOURCE = "hash"
 ASSETS = Path(__file__).resolve().parent / "memoryagentbench"
 # Keep dataset-private imports available beside the registry's flat declaration.
 __path__ = [str(ASSETS)]
@@ -143,18 +143,12 @@ def reporting_manifest(task_ids):
     return [dict(_rows()[tid]) for tid in task_ids]
 
 
-def excluded_tasks():
-    """All provisioned sources now have a scoring path."""
-    return []
-
-
 def provision_status():
     try:
         rows = _rows()
         return {"root": str(DATASET_ROOT), "prepared": str(PREPARED_ROOT),
                 "present": bool(rows), "tasks": len(rows), "questions": sum(row["question_count"] for row in rows.values()),
-                "excluded_tasks": len(excluded_tasks()),
-                "excluded_questions": sum(row["question_count"] for row in excluded_tasks())}
+                "excluded_tasks": 0, "excluded_questions": 0}
     except (OSError, ValueError) as exc:
         return {"root": str(DATASET_ROOT), "prepared": str(PREPARED_ROOT), "present": False,
                 "detail": str(exc)}
@@ -168,7 +162,7 @@ def downloads():
              "version": REVISION, "dst": "raw", "files": list(pins["files"]),
              "sha256": {name: item["sha256"] for name, item in pins["files"].items()},
              "size": str(sum(item["bytes"] for item in pins["files"].values())) + " bytes",
-             "note": "Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers local and model-judge primary scoring. No study/eval division."},
+             "note": "Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers local and model-judge primary scoring. Study/eval uses the platform's episode-ID hash split."},
             {"kind": "http", "name": "MemoryAgentBench English sentence tables archive",
              "version": resources["nltk_data_revision"], "dst": "resources/downloads/punkt_tab.zip",
              "url": resources["nltk_archive_url"], "sha256": resources["nltk_archive_sha256"],
@@ -186,3 +180,10 @@ def aggregate(records, selected_task_ids=None):
     from data.datasets.memoryagentbench.lib.reporting import summarize
     ids = list(_rows()) if selected_task_ids is None else selected_task_ids
     return summarize(records, reporting_manifest(ids))
+
+
+def __getattr__(name):
+    if name == "SPLIT":
+        from data.scaffolds.registry import default_split
+        return default_split(load()[0])
+    raise AttributeError(name)

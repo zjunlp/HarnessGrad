@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Actor CLI: policy/tool schemas and the four permitted conversation operations."""
+"""Actor CLI for policy, tool schemas and conversation operations."""
 import argparse
 import json
 from pathlib import Path

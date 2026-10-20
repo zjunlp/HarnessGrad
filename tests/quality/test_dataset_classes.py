@@ -37,6 +37,15 @@ def _rows() -> list[dict]:
     return dataset_classes.classify_all()
 
 
+def _declared_rows() -> list[dict]:
+    """Read the judged axis without requiring every dataset's external task pool."""
+    return [
+        {"dataset": name, "demand": demand, "surface": surface,
+         "exercises": list(dataset_classes.EXERCISES[name])}
+        for name, (demand, surface) in dataset_classes.CAPABILITY.items()
+    ]
+
+
 def test_every_published_dataset_is_classified_exactly_once():
     rows = _rows()
     names = [row["dataset"] for row in rows]
@@ -92,45 +101,38 @@ def test_an_uncovered_demand_is_declared_and_holds_no_adapters():
             f"{demand!r} is a gap with no recorded shape")
 
 
-def test_a_silent_gap_is_refused():
-    """Dropping the declaration must be loud, not a quiet claim of full coverage."""
-    original = dict(dataset_classes.UNCOVERED_DEMANDS)
-    try:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "memory" in str(excinfo.value)
-    finally:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        dataset_classes.UNCOVERED_DEMANDS.update(original)
-    assert dataset_classes.classify_all()  # restored
+def test_a_silent_gap_is_refused(monkeypatch):
+    """Removing a demand's adapters must not silently claim complete coverage."""
+    dataset_classes._check_judged_axis(_declared_rows())
+    remaining = {name: pair for name, pair in dataset_classes.CAPABILITY.items()
+                 if pair[0] != "memory"}
+    monkeypatch.setattr(dataset_classes, "CAPABILITY", remaining)
+    monkeypatch.setattr(dataset_classes, "UNCOVERED_DEMANDS", {})
+    with pytest.raises(SystemExit, match="no datasets.*memory"):
+        dataset_classes._check_judged_axis(_declared_rows())
 
 
-def test_a_stale_coverage_declaration_is_refused():
+def test_a_stale_coverage_declaration_is_refused(monkeypatch):
     """The other direction: a demand that gains an adapter must lose its gap entry."""
-    original = dict(dataset_classes.UNCOVERED_DEMANDS)
-    try:
-        dataset_classes.UNCOVERED_DEMANDS["reasoning"] = ("reasoning",)
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "reasoning" in str(excinfo.value)
-    finally:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        dataset_classes.UNCOVERED_DEMANDS.update(original)
-    assert dataset_classes.classify_all()  # restored
+    monkeypatch.setattr(dataset_classes, "UNCOVERED_DEMANDS",
+                        {"memory": ("supplied_history",)})
+    with pytest.raises(SystemExit, match="now hold datasets.*memory"):
+        dataset_classes._check_judged_axis(_declared_rows())
 
 
-def test_a_gap_with_no_recorded_shape_is_refused():
-    original = dict(dataset_classes.UNCOVERED_DEMANDS)
-    try:
-        dataset_classes.UNCOVERED_DEMANDS["memory"] = ()
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "memory" in str(excinfo.value)
-    finally:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        dataset_classes.UNCOVERED_DEMANDS.update(original)
-    assert dataset_classes.classify_all()  # restored
+def test_a_gap_with_no_recorded_shape_is_refused(monkeypatch):
+    monkeypatch.setattr(dataset_classes, "UNCOVERED_DEMANDS", {"memory": ()})
+    with pytest.raises(SystemExit, match="memory.*no planned surface"):
+        dataset_classes._check_judged_axis(_declared_rows())
+
+
+@pytest.mark.parametrize("name", ["memoryagentbench", "personamem_v2"])
+def test_sequential_memory_cli_declares_state_advancing_ack(name):
+    source = ROOT / "data/datasets" / name / "cli" / (
+        "mab" if name == "memoryagentbench" else "personamem")
+    verbs = dataset_classes._declared_verbs(source)
+    assert verbs == {"next", "ack", "submit"}
+    assert verbs & set(dataset_classes.ACT_VERBS) == {"ack"}
 
 
 def test_a_surface_belongs_to_exactly_one_demand():

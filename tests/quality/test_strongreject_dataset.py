@@ -58,9 +58,23 @@ def test_inventory_protocol_and_split(prepared):
     evaluation = {rows[t]["forbidden_prompt"] for t in prepared.SPLIT["eval"]}
     assert train and evaluation and not train & evaluation
     assert len(prepared.SPLIT["train"]) + len(prepared.SPLIT["eval"]) == 150
-    assert registry.kind_of("strongreject") == "fixture"
-    assert "strongreject" not in registry.published()
+    assert registry.kind_of("strongreject") == "dataset"
+    assert "strongreject" in registry.published()
     assert len(registry.load("strongreject")[0]) == 150
+
+
+def test_registered_response_judgment_is_adversarial_single_shot(prepared):
+    from tools import dataset_classes
+
+    row = dataset_classes.classify("strongreject")
+    assert (row["demand"], row["surface"]) == ("reasoning", "reasoning")
+    assert row["interaction"] == "single_shot"
+    assert row["adversarial"] is True
+    assert row["exercises"] == ["safety"]
+    # Safety coverage spans distinct task demands without adding a new demand.
+    assert dataset_classes.CAPABILITY["agentdojo"][0] == "tool_use"
+    assert "safety" in dataset_classes.EXERCISES["agentdojo"]
+    assert "safety" not in dataset_classes.UNCOVERED_FUNCTIONS
 
 
 def test_no_private_inputs_or_oracle_in_actor_setup(prepared):

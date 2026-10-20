@@ -102,7 +102,8 @@ def test_health_rejects_actor_written_identity(tmp_path, monkeypatch):
         mod.health({'manifest_sha256': 'x'})
 
 
-def test_observed_container_mirror_lifecycle(tmp_path):
+@pytest.mark.parametrize('startup_delay', [0, 3])
+def test_observed_container_mirror_lifecycle(tmp_path, startup_delay):
     """Opt-in real isolation check; uses tiny HTTP assets, never model inference."""
     import os
     import shutil
@@ -116,6 +117,11 @@ def test_observed_container_mirror_lifecycle(tmp_path):
         shutil.copyfile(SOURCE / name, code / name)
     (code / 'python').write_text((code / 'python').read_text().replace('@REAL_PYTHON@', '/usr/local/bin/python3'))
     (code / 'python').chmod(0o755)
+    if startup_delay:
+        server = code / 'server.py'
+        server.write_text(server.read_text().replace(
+            '    manifest, sha = load(root)',
+            f'    import time; time.sleep({startup_delay})\n    manifest, sha = load(root)'))
     assets = code / 'assets'; assets.mkdir(); fixture_assets(assets)
     sha = hashlib.sha256((assets / 'manifest.json').read_bytes()).hexdigest()
     (code / 'config.json').write_text(json.dumps({'python': '/usr/local/bin/python3', 'manifest_sha256': sha}))
@@ -439,7 +445,7 @@ def test_verifier_mirror_identity_gate_preserves_valid_score_or_withholds_reward
 def test_public_asset_total_budget_is_optional_and_explicit(tmp_path, monkeypatch):
     mod = module('prepare')
     revision = 'a' * 40
-    # Exercise a payload beyond the removed 350 MB ceiling without downloading it.
+    # Exercise a large payload without allocating or downloading its bytes.
     tree = [{'path': 'model.bin', 'type': 'file', 'size': 400_000_000, 'oid': 'b' * 40}]
     monkeypatch.setattr(mod, 'SOURCES', {'owner/model': (revision, None)})
     def metadata(path):
@@ -456,3 +462,29 @@ def test_public_asset_total_budget_is_optional_and_explicit(tmp_path, monkeypatc
         mod.prepare(tmp_path / 'explicit-larger', max_total_bytes=500_000_000)
     with pytest.raises(ValueError, match='explicit dependency byte budget'):
         mod.prepare(tmp_path / 'explicit-smaller', max_total_bytes=300_000_000)
+
+
+def test_init_waits_for_pid1_startup_without_restarting_service(monkeypatch):
+    mod = module('launcher')
+    python = '/usr/local/bin/python3'
+    starting = [python.encode(), b'-I', b'-S', str(mod.ROOT / 'launcher.py').encode(),
+                b'-I', b'-S', mod.HELPER.encode(), b'idle', b'']
+    ready = [python.encode(), b'-I', b'-S', mod.HELPER.encode(), b'idle', b'']
+    states = iter([starting, starting, ready]); waits = []; checked = []
+    monkeypatch.setattr(mod, 'process_identity', lambda pid: ([0]*4, '1', next(states)))
+    monkeypatch.setattr(mod.time, 'sleep', waits.append)
+    monkeypatch.setattr(mod, 'health', lambda config: checked.append(config) or {'ready': True})
+    monkeypatch.setattr(mod, 'start', lambda config: pytest.fail('init must not restart service'))
+    assert mod.await_idle({'python': python}) == {'ready': True}
+    assert waits == [.05, .05] and checked == [{'python': python}]
+
+
+def test_init_refuses_unexpected_pid1_and_propagates_failed_health(monkeypatch):
+    mod = module('launcher'); config = {'python': '/usr/local/bin/python3'}
+    monkeypatch.setattr(mod, 'process_identity', lambda pid: ([0]*4, '1', [b'other']))
+    with pytest.raises(RuntimeError, match='idle command changed'): mod.await_idle(config)
+    ready = [config['python'].encode(), b'-I', b'-S', mod.HELPER.encode(), b'idle', b'']
+    monkeypatch.setattr(mod, 'process_identity', lambda pid: ([0]*4, '1', ready))
+    def failed(config): raise RuntimeError('service died')
+    monkeypatch.setattr(mod, 'health', failed)
+    with pytest.raises(RuntimeError, match='service died'): mod.await_idle(config)

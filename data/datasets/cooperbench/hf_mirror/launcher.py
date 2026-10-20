@@ -76,6 +76,21 @@ def start(config):
         raise
 
 
+def await_idle(config):
+    # The PID1 launcher owns startup and its existing 15-second deadline.
+    # Only init blocks here; cleanup/probe remain usable after service failure.
+    expected = [config['python'].encode(), b'-I', b'-S', str(ROOT / 'launcher.py').encode(),
+                b'-I', b'-S', HELPER.encode(), b'idle', b'']
+    while True:
+        uid, _, cmd = process_identity(1)
+        if uid != [0, 0, 0, 0]:
+            raise RuntimeError('container idle identity changed')
+        if cmd != expected:
+            if cmd != [config['python'].encode(), b'-I', b'-S', HELPER.encode(), b'idle', b'']:
+                raise RuntimeError('container idle command changed')
+            return health(config)
+        time.sleep(.05)
+
 def main():
     config = json.loads((ROOT / 'config.json').read_text())
     args = sys.argv[1:]
@@ -86,9 +101,12 @@ def main():
     helper = len(args) >= 4 and args[:3] == ['-I', '-S', HELPER]
     if helper and args[-1] == 'idle':
         start(config)
+    elif args == ['-I', '-S', HELPER, 'init']:
+        await_idle(config)
     elif not helper:
         verified = health(config)
-    # Trusted probe/init/quiesce must remain usable even if the mirror died.
+    # Trusted probe/quiesce remain usable even if the mirror died.
+    # Init is the admission barrier; actor execution never retries startup.
     # Subsequent wrappers never restart it and cannot overwrite root state.
     if args in (['--hf-mirror-health'], ['--dependency-mirror-health']):
         print(json.dumps(verified, sort_keys=True)); return 0
