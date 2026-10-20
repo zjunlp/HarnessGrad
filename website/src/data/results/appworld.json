@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T02:56:18Z",
+ "generated_at": "2026-10-20T02:58:40Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -43,7 +43,10 @@
         "dev": 0.0
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 9629736
+       }
       },
       {
        "round": 1,
@@ -53,7 +56,10 @@
         "dev": 0.14035087719298245
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 11525830
+       }
       },
       {
        "round": 2,
@@ -63,7 +69,10 @@
         "dev": 0.2807017543859649
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 8200535
+       }
       },
       {
        "round": 3,
@@ -73,7 +82,10 @@
         "dev": 0.3508771929824561
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6300095
+       }
       },
       {
        "round": 4,
@@ -83,7 +95,10 @@
         "dev": 0.3684210526315789
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 5647359
+       }
       },
       {
        "round": 5,
@@ -93,7 +108,10 @@
         "dev": 0.3508771929824561
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 5785277
+       }
       },
       {
        "round": 6,
@@ -103,7 +121,10 @@
         "dev": 0.43859649122807015
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7175421
+       }
       },
       {
        "round": 7,
@@ -113,7 +134,10 @@
         "dev": 0.4909090909090909
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7335028
+       }
       },
       {
        "round": 8,
@@ -123,7 +147,10 @@
         "dev": 0.39285714285714285
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 5821472
+       }
       },
       {
        "round": 9,
@@ -133,7 +160,10 @@
         "dev": 0.47058823529411764
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 5165043
+       }
       },
       {
        "round": 10,
@@ -143,9 +173,223 @@
         "dev": 0.47368421052631576
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6929680
+       }
       }
      ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 14768323,
+        "calls": 2346
+       },
+       "task_split": {
+        "input": 14545006,
+        "output": 223317,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 157322,
+        "output": 115057,
+        "cache_read": 25550848,
+        "cache_write": 0,
+        "calls": 161
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 13348561,
+        "calls": 1765
+       },
+       "task_split": {
+        "input": 13165749,
+        "output": 182812,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 187577,
+        "output": 137851,
+        "cache_read": 23337088,
+        "cache_write": 0,
+        "calls": 111
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 10595631,
+        "calls": 1424
+       },
+       "task_split": {
+        "input": 10379146,
+        "output": 216485,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 216530,
+        "output": 92966,
+        "cache_read": 18540800,
+        "cache_write": 0,
+        "calls": 96
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 9183615,
+        "calls": 1289
+       },
+       "task_split": {
+        "input": 9029389,
+        "output": 154226,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 194283,
+        "output": 70197,
+        "cache_read": 14240768,
+        "cache_write": 0,
+        "calls": 75
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 9809203,
+        "calls": 1319
+       },
+       "task_split": {
+        "input": 9656133,
+        "output": 153070,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 208524,
+        "output": 102355,
+        "cache_read": 32260864,
+        "cache_write": 0,
+        "calls": 161
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 12169369,
+        "calls": 1517
+       },
+       "task_split": {
+        "input": 11988648,
+        "output": 180721,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 204635,
+        "output": 60662,
+        "cache_read": 13238272,
+        "cache_write": 0,
+        "calls": 73
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 10938211,
+        "calls": 1373
+       },
+       "task_split": {
+        "input": 10753748,
+        "output": 184463,
+        "tasks_reporting": 84,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 169515,
+        "output": 86989,
+        "cache_read": 16588544,
+        "cache_write": 0,
+        "calls": 104
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 9999797,
+        "calls": 1293
+       },
+       "task_split": {
+        "input": 9813705,
+        "output": 186092,
+        "tasks_reporting": 85,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 233648,
+        "output": 83292,
+        "cache_read": 21664384,
+        "cache_write": 0,
+        "calls": 107
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 8988545,
+        "calls": 1143
+       },
+       "task_split": {
+        "input": 8802848,
+        "output": 185697,
+        "tasks_reporting": 76,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 170001,
+        "output": 104365,
+        "cache_read": 20090368,
+        "cache_write": 0,
+        "calls": 118
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 11281996,
+        "calls": 1383
+       },
+       "task_split": {
+        "input": 11104911,
+        "output": 177085,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 217476,
+        "output": 119029,
+        "cache_read": 27890432,
+        "cache_write": 0,
+        "calls": 134
+       }
+      }
+     },
      "best_dev_round": 7
     },
     {
@@ -160,7 +404,10 @@
         "dev": 0.0
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 9496184
+       }
       },
       {
        "round": 1,
@@ -170,7 +417,10 @@
         "dev": 0.12280701754385964
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7497196
+       }
       },
       {
        "round": 2,
@@ -180,7 +430,10 @@
         "dev": 0.22807017543859648
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7926905
+       }
       },
       {
        "round": 3,
@@ -190,7 +443,10 @@
         "dev": 0.3508771929824561
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6989091
+       }
       },
       {
        "round": 4,
@@ -200,7 +456,10 @@
         "dev": 0.3508771929824561
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6595167
+       }
       },
       {
        "round": 5,
@@ -210,7 +469,10 @@
         "dev": 0.40350877192982454
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 5599128
+       }
       },
       {
        "round": 6,
@@ -220,7 +482,10 @@
         "dev": 0.43859649122807015
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6520670
+       }
       },
       {
        "round": 7,
@@ -230,7 +495,10 @@
         "dev": 0.45614035087719296
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6890012
+       }
       },
       {
        "round": 8,
@@ -240,7 +508,10 @@
         "dev": 0.43859649122807015
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7052025
+       }
       },
       {
        "round": 9,
@@ -250,7 +521,10 @@
         "dev": 0.0
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 8693209
+       }
       },
       {
        "round": 10,
@@ -260,9 +534,223 @@
         "dev": 0.5789473684210527
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 5770053
+       }
       }
      ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 11663444,
+        "calls": 2039
+       },
+       "task_split": {
+        "input": 11467951,
+        "output": 195493,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 317252,
+        "output": 162223,
+        "cache_read": 27977472,
+        "cache_write": 0,
+        "calls": 190
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 11104601,
+        "calls": 1983
+       },
+       "task_split": {
+        "input": 10922431,
+        "output": 182170,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 276569,
+        "output": 196932,
+        "cache_read": 33939840,
+        "cache_write": 0,
+        "calls": 206
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 15032830,
+        "calls": 2099
+       },
+       "task_split": {
+        "input": 14798969,
+        "output": 233861,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 296772,
+        "output": 195014,
+        "cache_read": 31756928,
+        "cache_write": 0,
+        "calls": 192
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 11092112,
+        "calls": 1715
+       },
+       "task_split": {
+        "input": 10895017,
+        "output": 197095,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 255328,
+        "output": 124842,
+        "cache_read": 18952064,
+        "cache_write": 0,
+        "calls": 146
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 11401314,
+        "calls": 1719
+       },
+       "task_split": {
+        "input": 11164815,
+        "output": 236499,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 401678,
+        "output": 139336,
+        "cache_read": 25728512,
+        "cache_write": 0,
+        "calls": 147
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 11422813,
+        "calls": 1630
+       },
+       "task_split": {
+        "input": 11187582,
+        "output": 235231,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 292348,
+        "output": 123116,
+        "cache_read": 22588032,
+        "cache_write": 0,
+        "calls": 163
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 11442226,
+        "calls": 1651
+       },
+       "task_split": {
+        "input": 11214510,
+        "output": 227716,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 333030,
+        "output": 139580,
+        "cache_read": 29829888,
+        "cache_write": 0,
+        "calls": 171
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 11132756,
+        "calls": 1638
+       },
+       "task_split": {
+        "input": 10923316,
+        "output": 209440,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 312088,
+        "output": 158488,
+        "cache_read": 22476928,
+        "cache_write": 0,
+        "calls": 165
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 13481107,
+        "calls": 2936
+       },
+       "task_split": {
+        "input": 13308875,
+        "output": 172232,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 303257,
+        "output": 150432,
+        "cache_read": 28911872,
+        "cache_write": 0,
+        "calls": 196
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 9463396,
+        "calls": 1522
+       },
+       "task_split": {
+        "input": 9266198,
+        "output": 197198,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 226250,
+        "output": 75542,
+        "cache_read": 12053248,
+        "cache_write": 0,
+        "calls": 133
+       }
+      }
+     },
      "best_dev_round": 10
     },
     {
@@ -277,7 +765,10 @@
         "dev": 0.0
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 9559001
+       }
       },
       {
        "round": 1,
@@ -287,7 +778,10 @@
         "dev": 0.07017543859649122
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7668024
+       }
       },
       {
        "round": 2,
@@ -297,7 +791,10 @@
         "dev": 0.22807017543859648
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 8064233
+       }
       },
       {
        "round": 3,
@@ -307,7 +804,10 @@
         "dev": 0.12280701754385964
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6748441
+       }
       },
       {
        "round": 4,
@@ -317,7 +817,10 @@
         "dev": 0.2807017543859649
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 8504815
+       }
       },
       {
        "round": 5,
@@ -327,7 +830,10 @@
         "dev": 0.0
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 4010785
+       }
       },
       {
        "round": 6,
@@ -337,7 +843,10 @@
         "dev": 0.24561403508771928
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7779139
+       }
       },
       {
        "round": 7,
@@ -347,7 +856,10 @@
         "dev": 0.2807017543859649
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6814816
+       }
       },
       {
        "round": 8,
@@ -357,7 +869,10 @@
         "dev": 0.40350877192982454
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 6446015
+       }
       },
       {
        "round": 9,
@@ -367,7 +882,10 @@
         "dev": 0.47368421052631576
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7532733
+       }
       },
       {
        "round": 10,
@@ -377,9 +895,223 @@
         "dev": 0.44642857142857145
        },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "dev": 7661874
+       }
       }
      ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 9657435,
+        "calls": 1876
+       },
+       "task_split": {
+        "input": 9509314,
+        "output": 148121,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 100888,
+        "output": 100508,
+        "cache_read": 10991232,
+        "cache_write": 0,
+        "calls": 87
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 16084201,
+        "calls": 1704
+       },
+       "task_split": {
+        "input": 15834733,
+        "output": 249468,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 151252,
+        "output": 103393,
+        "cache_read": 18518656,
+        "cache_write": 0,
+        "calls": 113
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 12728510,
+        "calls": 1388
+       },
+       "task_split": {
+        "input": 12530506,
+        "output": 198004,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 219400,
+        "output": 89774,
+        "cache_read": 23300864,
+        "cache_write": 0,
+        "calls": 110
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 16084201,
+        "calls": 1704
+       },
+       "task_split": {
+        "input": 15834733,
+        "output": 249468,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 7503158,
+        "calls": 1333
+       },
+       "task_split": {
+        "input": 7436930,
+        "output": 66228,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 140333,
+        "output": 84688,
+        "cache_read": 10698624,
+        "cache_write": 0,
+        "calls": 77
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 16084201,
+        "calls": 1704
+       },
+       "task_split": {
+        "input": 15834733,
+        "output": 249468,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 12729673,
+        "calls": 1415
+       },
+       "task_split": {
+        "input": 12523955,
+        "output": 205718,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 173210,
+        "output": 69104,
+        "cache_read": 13800704,
+        "cache_write": 0,
+        "calls": 83
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 11883797,
+        "calls": 1310
+       },
+       "task_split": {
+        "input": 11717459,
+        "output": 166338,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 157179,
+        "output": 78543,
+        "cache_read": 12505472,
+        "cache_write": 0,
+        "calls": 86
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 10548739,
+        "calls": 1121
+       },
+       "task_split": {
+        "input": 10351694,
+        "output": 197045,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 219173,
+        "output": 108303,
+        "cache_read": 30434944,
+        "cache_write": 0,
+        "calls": 141
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 12676933,
+        "calls": 1292
+       },
+       "task_split": {
+        "input": 12475672,
+        "output": 201261,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 226251,
+        "output": 90728,
+        "cache_read": 24656128,
+        "cache_write": 0,
+        "calls": 121
+       }
+      }
+     },
      "best_dev_round": 9
     }
    ]
