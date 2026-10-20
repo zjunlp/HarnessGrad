@@ -313,10 +313,15 @@ def select_parent(history: list[dict], round_index: int) -> tuple[dict, dict]:
     return chosen, report
 
 
-#: `broad` (the default) is the rule this port has always used: one sentence describing how
-#: many tasks fail. `trace` is the variant `methods/dgm_targeted` selects, and it picks the
-#: group of failing tasks whose *episode* already names the failure -- see `_trace_signals`.
-TARGET_MODE = os.environ.get("HG_DGM_TARGET_MODE", "broad")
+#: `trace` (the default since 2026-10-20) picks the group of failing tasks whose *episode*
+#: already names the failure -- see `_trace_signals`. `broad` is the rule this port used before
+#: that: one sentence describing how many tasks fail, which on a benchmark that fails most tasks
+#: is the same sentence every round (AppWorld: 56-89 of 90 failed, every round, so the editor was
+#: asked to fix "everything" fifteen times and traded 17-20 of the 34 solved tasks each round --
+#: findings §121). It stays reachable as `HG_DGM_TARGET_MODE=broad` because the fifteen-round
+#: AppWorld curve was measured with it, and a record that cannot say which rule produced it is
+#: the kind of record this platform exists to avoid.
+TARGET_MODE = os.environ.get("HG_DGM_TARGET_MODE", "trace")
 
 
 def _trace_signals(base: Path | None, round_no) -> dict[str, set[str]]:
