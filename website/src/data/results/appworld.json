@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T11:39:29Z",
+ "generated_at": "2026-10-20T14:10:43Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -287,6 +287,52 @@
          "output": 108953
         }
        }
+      },
+      {
+       "round": 11,
+       "train": 0.5222222222222223,
+       "train_n": 90,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0,
+       "train_raw": 0.5222222222222223,
+       "state": "7e2e3301a720"
+      },
+      {
+       "round": 12,
+       "train": 0.5888888888888889,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.5888888888888889,
+       "state": "0b3e3e1f3599"
+      },
+      {
+       "round": 13,
+       "train": 0.6333333333333333,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.6333333333333333,
+       "state": "4e2052219cbe"
+      },
+      {
+       "round": 14,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 15,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
       }
      ],
      "cost": {
@@ -497,6 +543,63 @@
         "cache_read": 27890432,
         "cache_write": 0,
         "calls": 134
+       }
+      },
+      "11": {
+       "task": {
+        "tokens": 12235396,
+        "calls": 1491
+       },
+       "task_split": {
+        "input": 12031604,
+        "output": 203792,
+        "tasks_reporting": 88,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 311032,
+        "output": 84484,
+        "cache_read": 23855104,
+        "cache_write": 0,
+        "calls": 91
+       }
+      },
+      "12": {
+       "task": {
+        "tokens": 12156235,
+        "calls": 1473
+       },
+       "task_split": {
+        "input": 11950261,
+        "output": 205974,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 165474,
+        "output": 64969,
+        "cache_read": 11405056,
+        "cache_write": 0,
+        "calls": 83
+       }
+      },
+      "13": {
+       "task": {
+        "tokens": 11967866,
+        "calls": 1370
+       },
+       "task_split": {
+        "input": 11785715,
+        "output": 182151,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 180411,
+        "output": 51331,
+        "cache_read": 9886208,
+        "cache_write": 0,
+        "calls": 70
        }
       }
      },
@@ -758,6 +861,46 @@
          "output": 99716
         }
        }
+      },
+      {
+       "round": 11,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 12,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 13,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 14,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 15,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
       }
      ],
      "cost": {
@@ -1108,6 +1251,55 @@
        "train_raw": 0.37777777777777777,
        "state": "e86d633e1baf",
        "batch": 2
+      },
+      {
+       "round": 11,
+       "train": 0.37777777777777777,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.28888888888888886,
+       "state": "13aa9ee9f3e0",
+       "batch": 3
+      },
+      {
+       "round": 12,
+       "train": 0.37777777777777777,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.23333333333333334,
+       "state": "55e97f032cbb",
+       "batch": 3
+      },
+      {
+       "round": 13,
+       "train": 0.37777777777777777,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.28888888888888886,
+       "state": "e4b4ca623f02",
+       "batch": 3
+      },
+      {
+       "round": 14,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 15,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
       }
      ],
      "cost": {
@@ -1318,6 +1510,63 @@
         "cache_read": 73243008,
         "cache_write": 0,
         "calls": 431
+       }
+      },
+      "11": {
+       "task": {
+        "tokens": 12833413,
+        "calls": 1315
+       },
+       "task_split": {
+        "input": 12679746,
+        "output": 153667,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 538370,
+        "output": 395786,
+        "cache_read": 85646464,
+        "cache_write": 0,
+        "calls": 456
+       }
+      },
+      "12": {
+       "task": {
+        "tokens": 13573736,
+        "calls": 1374
+       },
+       "task_split": {
+        "input": 13406756,
+        "output": 166980,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 538370,
+        "output": 395786,
+        "cache_read": 85646464,
+        "cache_write": 0,
+        "calls": 456
+       }
+      },
+      "13": {
+       "task": {
+        "tokens": 16328788,
+        "calls": 1620
+       },
+       "task_split": {
+        "input": 16142023,
+        "output": 186765,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 538370,
+        "output": 395786,
+        "cache_read": 85646464,
+        "cache_write": 0,
+        "calls": 456
        }
       }
      },
@@ -1581,6 +1830,46 @@
          "output": 156585
         }
        }
+      },
+      {
+       "round": 11,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 12,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 13,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 14,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 15,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
       }
      ],
      "cost": {
@@ -1918,6 +2207,46 @@
        "train_raw": 0.17777777777777778,
        "state": "a89fe4f298c4",
        "batch": 3
+      },
+      {
+       "round": 11,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 12,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 13,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 14,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 15,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
       }
      ],
      "cost": {
@@ -2250,6 +2579,46 @@
        "n_invalid": 0,
        "train_raw": 0.34444444444444444,
        "state": "0491c2f4d66c"
+      },
+      {
+       "round": 11,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 12,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 13,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 14,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 15,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
       }
      ],
      "cost": {
@@ -2578,6 +2947,56 @@
        "n_invalid": 0,
        "train_raw": 0.6111111111111112,
        "state": "4cbd083b077c"
+      },
+      {
+       "round": 11,
+       "train": 0.4888888888888889,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.4888888888888889,
+       "state": "7f99afa655c9"
+      },
+      {
+       "round": 12,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "5fc05fe3a67b"
+      },
+      {
+       "round": 13,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "e9da876b05bd"
+      },
+      {
+       "round": 14,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "4586df484c24"
+      },
+      {
+       "round": 15,
+       "train": 0.022222222222222223,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.022222222222222223,
+       "state": "ffc57a8bb958"
       }
      ],
      "cost": {
@@ -2789,590 +3208,100 @@
         "cache_write": 0,
         "calls": 110
        }
-      }
-     },
-     "best_dev_round": null
-    },
-    {
-     "name": "meta_harness",
-     "run": "appworld-study-meta_harness-20261020T0414Z",
-     "rounds": [
-      {
-       "round": 0,
-       "train": 0.011111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.011111111111111112,
-       "state": "7a40f6ddd0ce"
       },
-      {
-       "round": 1,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "ebc92feffde0",
-       "batch": 3
-      },
-      {
-       "round": 2,
-       "train": 0.011235955056179775,
-       "train_n": 89,
-       "eval": {},
-       "valid": false,
-       "n_invalid": 1,
-       "train_raw": 0.011235955056179775,
-       "state": "c546927cb154",
-       "batch": 3
-      },
-      {
-       "round": 3,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "6b4af6a58fad",
-       "batch": 3
-      },
-      {
-       "round": 4,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "de03e46631b4",
-       "batch": 3
-      },
-      {
-       "round": 5,
-       "train": 0.03333333333333333,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.03333333333333333,
-       "state": "dee86ade23e9",
-       "batch": 3
-      },
-      {
-       "round": 6,
-       "train": 0.03333333333333333,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.03333333333333333,
-       "state": "c0f916f7c5c6",
-       "batch": 3
-      },
-      {
-       "round": 7,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "b86c62fe1d3a",
-       "batch": 3
-      },
-      {
-       "round": 8,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "e64734651c59",
-       "batch": 3
-      },
-      {
-       "round": 9,
-       "train": 0.022222222222222223,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.022222222222222223,
-       "state": "4255102cb32e",
-       "batch": 3
-      },
-      {
-       "round": 10,
-       "train": 0.03333333333333333,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.03333333333333333,
-       "state": "0342479a3310"
-      }
-     ],
-     "cost": {
-      "0": {
+      "11": {
        "task": {
-        "tokens": 15601500,
-        "calls": 2492
+        "tokens": 12151546,
+        "calls": 1298
        },
        "task_split": {
-        "input": 15342095,
-        "output": 259405,
+        "input": 11930428,
+        "output": 221118,
         "tasks_reporting": 90,
         "tasks": 90
        },
        "improver": {
-        "input": null,
-        "output": null,
-        "cache_read": null,
+        "input": 274319,
+        "output": 102953,
+        "cache_read": 29375872,
         "cache_write": 0,
-        "calls": null
+        "calls": 126
        }
       },
-      "1": {
+      "12": {
        "task": {
-        "tokens": 15538768,
-        "calls": 2430
+        "tokens": 9441233,
+        "calls": 1883
        },
        "task_split": {
-        "input": 15301149,
-        "output": 237619,
+        "input": 9246605,
+        "output": 194628,
         "tasks_reporting": 90,
         "tasks": 90
        },
        "improver": {
-        "input": 195163,
-        "output": 98951,
-        "cache_read": 5881472,
+        "input": 15440,
+        "output": 23674,
+        "cache_read": 1664,
         "cache_write": 0,
-        "calls": 103
+        "calls": 1
        }
       },
-      "2": {
+      "13": {
        "task": {
-        "tokens": 8726119,
-        "calls": 1784
+        "tokens": null,
+        "calls": 0
        },
        "task_split": {
-        "input": 8566204,
-        "output": 159915,
-        "tasks_reporting": 89,
+        "input": 0,
+        "output": 0,
+        "tasks_reporting": 0,
         "tasks": 90
        },
        "improver": {
-        "input": 195163,
-        "output": 98951,
-        "cache_read": 5881472,
+        "input": 970,
+        "output": 40217,
+        "cache_read": 33280,
         "cache_write": 0,
-        "calls": 103
+        "calls": 2
        }
       },
-      "3": {
+      "14": {
        "task": {
-        "tokens": 13759149,
-        "calls": 2386
+        "tokens": 3620630,
+        "calls": 1262
        },
        "task_split": {
-        "input": 13496036,
-        "output": 263113,
+        "input": 3566679,
+        "output": 53951,
         "tasks_reporting": 90,
         "tasks": 90
        },
        "improver": {
-        "input": 195163,
-        "output": 98951,
-        "cache_read": 5881472,
+        "input": 1173,
+        "output": 40320,
+        "cache_read": 50304,
         "cache_write": 0,
-        "calls": 103
+        "calls": 3
        }
       },
-      "4": {
+      "15": {
        "task": {
-        "tokens": 12735611,
-        "calls": 1923
+        "tokens": 11040818,
+        "calls": 2043
        },
        "task_split": {
-        "input": 12565750,
-        "output": 169861,
+        "input": 10831557,
+        "output": 209261,
         "tasks_reporting": 90,
         "tasks": 90
        },
        "improver": {
-        "input": 29855,
-        "output": 64202,
-        "cache_read": 35072,
+        "input": 982,
+        "output": 33914,
+        "cache_read": 33408,
         "cache_write": 0,
-        "calls": 4
-       }
-      },
-      "5": {
-       "task": {
-        "tokens": 9305593,
-        "calls": 1871
-       },
-       "task_split": {
-        "input": 9137977,
-        "output": 167616,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 29855,
-        "output": 64202,
-        "cache_read": 35072,
-        "cache_write": 0,
-        "calls": 4
-       }
-      },
-      "6": {
-       "task": {
-        "tokens": 9190184,
-        "calls": 1822
-       },
-       "task_split": {
-        "input": 9027957,
-        "output": 162227,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 29855,
-        "output": 64202,
-        "cache_read": 35072,
-        "cache_write": 0,
-        "calls": 4
-       }
-      },
-      "7": {
-       "task": {
-        "tokens": 9556228,
-        "calls": 1900
-       },
-       "task_split": {
-        "input": 9383247,
-        "output": 172981,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 175606,
-        "output": 98183,
-        "cache_read": 5286912,
-        "cache_write": 0,
-        "calls": 102
-       }
-      },
-      "8": {
-       "task": {
-        "tokens": 5435887,
-        "calls": 1260
-       },
-       "task_split": {
-        "input": 5360279,
-        "output": 75608,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 175606,
-        "output": 98183,
-        "cache_read": 5286912,
-        "cache_write": 0,
-        "calls": 102
-       }
-      },
-      "9": {
-       "task": {
-        "tokens": 9607847,
-        "calls": 1880
-       },
-       "task_split": {
-        "input": 9449996,
-        "output": 157851,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 175606,
-        "output": 98183,
-        "cache_read": 5286912,
-        "cache_write": 0,
-        "calls": 102
-       }
-      },
-      "10": {
-       "task": {
-        "tokens": 9993032,
-        "calls": 1936
-       },
-       "task_split": {
-        "input": 9825754,
-        "output": 167278,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 33449,
-        "output": 87630,
-        "cache_read": 39296,
-        "cache_write": 0,
-        "calls": 4
-       }
-      }
-     },
-     "best_dev_round": null
-    },
-    {
-     "name": "rrsi",
-     "run": "appworld-study-rrsi-20261020T0415Z",
-     "rounds": [
-      {
-       "round": 0,
-       "train": 0.011111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.011111111111111112,
-       "state": "7a40f6ddd0ce"
-      },
-      {
-       "round": 1,
-       "train": 0.011111111111111112,
-       "train_n": 89,
-       "eval": {},
-       "valid": false,
-       "n_invalid": 1,
-       "train_raw": 0.011235955056179775,
-       "state": "7a40f6ddd0ce",
-       "repeat_of": 0
-      },
-      {
-       "round": 2,
-       "train": 0.011111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.011111111111111112,
-       "state": "7a40f6ddd0ce",
-       "repeat_of": 0
-      },
-      {
-       "round": 3,
-       "train": 0.011111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.022222222222222223,
-       "state": "7a40f6ddd0ce",
-       "repeat_of": 0
-      },
-      {
-       "round": 4,
-       "train": 0.011111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.022222222222222223,
-       "state": "7a40f6ddd0ce",
-       "repeat_of": 0
-      },
-      {
-       "round": 5,
-       "train": 0.022222222222222223,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.022222222222222223,
-       "state": "8ae8833299f0"
-      },
-      {
-       "round": 6,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "cdfa238d4030"
-      },
-      {
-       "round": 7,
-       "train": null,
-       "train_n": null,
-       "eval": {},
-       "valid": false,
-       "n_invalid": 0
-      },
-      {
-       "round": 8,
-       "train": null,
-       "train_n": null,
-       "eval": {},
-       "valid": false,
-       "n_invalid": 0
-      },
-      {
-       "round": 9,
-       "train": null,
-       "train_n": null,
-       "eval": {},
-       "valid": false,
-       "n_invalid": 0
-      },
-      {
-       "round": 10,
-       "train": null,
-       "train_n": null,
-       "eval": {},
-       "valid": false,
-       "n_invalid": 0
-      }
-     ],
-     "cost": {
-      "0": {
-       "task": {
-        "tokens": 15601500,
-        "calls": 2492
-       },
-       "task_split": {
-        "input": 15342095,
-        "output": 259405,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": null,
-        "output": null,
-        "cache_read": null,
-        "cache_write": 0,
-        "calls": null
-       }
-      },
-      "1": {
-       "task": {
-        "tokens": 14444043,
-        "calls": 2393
-       },
-       "task_split": {
-        "input": 14177513,
-        "output": 266530,
-        "tasks_reporting": 89,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 814792,
-        "output": 430418,
-        "cache_read": 54490880,
-        "cache_write": 0,
-        "calls": 413
-       }
-      },
-      "2": {
-       "task": {
-        "tokens": 14612066,
-        "calls": 2425
-       },
-       "task_split": {
-        "input": 14342267,
-        "output": 269799,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 852907,
-        "output": 632950,
-        "cache_read": 97721472,
-        "cache_write": 0,
-        "calls": 659
-       }
-      },
-      "3": {
-       "task": {
-        "tokens": 14695790,
-        "calls": 2438
-       },
-       "task_split": {
-        "input": 14436505,
-        "output": 259285,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 804926,
-        "output": 430103,
-        "cache_read": 55635200,
-        "cache_write": 0,
-        "calls": 431
-       }
-      },
-      "4": {
-       "task": {
-        "tokens": 14695790,
-        "calls": 2438
-       },
-       "task_split": {
-        "input": 14436505,
-        "output": 259285,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 873561,
-        "output": 470911,
-        "cache_read": 69072384,
-        "cache_write": 0,
-        "calls": 518
-       }
-      },
-      "5": {
-       "task": {
-        "tokens": 16486577,
-        "calls": 2508
-       },
-       "task_split": {
-        "input": 16228691,
-        "output": 257886,
-        "tasks_reporting": 89,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 693571,
-        "output": 313505,
-        "cache_read": 49146240,
-        "cache_write": 0,
-        "calls": 383
-       }
-      },
-      "6": {
-       "task": {
-        "tokens": 15919176,
-        "calls": 2513
-       },
-       "task_split": {
-        "input": 15656361,
-        "output": 262815,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 524736,
-        "output": 241257,
-        "cache_read": 33488000,
-        "cache_write": 0,
-        "calls": 286
+        "calls": 2
        }
       }
      },
@@ -3384,14 +3313,14 @@
  "excluded": [],
  "coverage": {
   "train": {
-   "measured": 9,
-   "valid": 9,
+   "measured": 7,
+   "valid": 7,
    "planned": null
   },
   "dev": {
    "measured": 34,
    "valid": 34,
-   "planned": 99
+   "planned": 112
   }
  },
  "h0": {
