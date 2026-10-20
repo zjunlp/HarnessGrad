@@ -36,6 +36,15 @@ container, which is why the server is declared in ``services``.
 The release bundle contains generated solution artifacts for train and dev tasks. Their
 released API-call logs are used as the oracle only for those covered tasks; uncovered
 test tasks raise from ``oracle_files`` rather than receiving an empty reference.
+
+That sidecar also makes this dataset the one whose size decides how many Docker networks a
+pilot holds at once: every in-flight AppWorld task owns an ``--internal`` network from
+start to stop.  Before the platform allocated those subnets itself, two 16-job runs
+exhausted Docker's default address pool and recorded ``all predefined address pools have
+been fully subnetted`` as 77 invalid tasks.  The platform now carves ``/24``s from
+``HG_NET_SUBNET_BASE`` (default ``10.42.0.0/16``), so a 90-task pilot at ``--jobs 16`` needs
+16 of 256; ``python3 tools/network_preflight.py --networks 40 --concurrency 16`` is the
+pre-pilot check and ``docs/network-subnets.md`` has the measurement.
 """
 from __future__ import annotations
 

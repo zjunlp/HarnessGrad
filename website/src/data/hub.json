@@ -1,0 +1,18 @@
+{
+  "_note": "Where each object's data lives on the Hub. A page renders a link only when status is 'published', so a planned upload never becomes a dead link. `root` + `agent` + `families` are the directory structure the links are built from: families is keyed by the meta-agent model the page itself shows, so a link can never point at a directory for a different improver than the row it sits on.",
+  "alfworld": {
+    "dataset": "Xubqpanda/HarnessGrad",
+    "status": "published",
+    "root": "Experiments/ALFWorld",
+    "agent": "qwen3.5-9b_loop",
+    "baseline": {
+      "dir": "h0",
+      "pools": ["train"],
+      "stamp": "20261017T090642Z"
+    },
+    "families": {
+      "deepseek-flash": "dsh-deepseek-flash"
+    },
+    "splits": {}
+  }
+}

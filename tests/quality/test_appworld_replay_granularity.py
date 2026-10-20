@@ -1,20 +1,11 @@
-"""The AppWorld replay must be exactly one `world.execute` per logged API call, in order.
+"""Replay trusted API calls in order without imposing the actor's execution cap twice.
 
-Why this test exists: a reviewer claimed the scoring counts executions at the wrong
-granularity -- "one agent action may dispatch several API calls, but scoring records one
-execution per API call, so a correct solution can be judged wrong". Two things settle it:
-
-  * the official evaluator grades the **database state** before and after the episode
-    (`appworld/evaluator.py: evaluate_task` builds a `ModelCollectionPair` and runs the
-    task's evaluation module against it); nothing in the package or in the task data reads an
-    execution counter, and `num_executions` does not exist anywhere in it;
-  * empirically, `data/datasets/appworld/control.py --oracle` runs the reference solution
-    live, then replays its `api_calls.jsonl` through `verify/check.py`: two tasks measured
-    TGC 1.0 with every expected test passing, so replay does not misjudge a correct solution.
-
-What remains true, and is what this test pins, is the **contract**: the verifier replays one
-`execute` per log line. If a future evaluator ever graded on execution counts, this test is
-where the assumption lives -- and changing it would be a deliberate act, not an accident.
+The official evaluator grades database state via ModelCollectionPair. However,
+AppWorld.execute enforces max_interactions (default 1000) and increments
+num_interactions once per code action. One actor action can issue multiple APIs,
+so one verifier execute per logged API may exceed that cap on a valid transcript.
+Replay therefore provisions one execution per trusted recorded call. It never
+executes actor-supplied code or changes the actor service's interaction policy.
 """
 from __future__ import annotations
 
@@ -43,12 +34,16 @@ STUB = textwrap.dedent('''
     class AppWorld:
         def __init__(self, **kwargs):
             self.calls = []
+            self.max_interactions = kwargs.get("max_interactions", 1000)
+            RECORD.with_name("kwargs.json").write_text(json.dumps(kwargs))
         def __enter__(self):
             return self
         def __exit__(self, *exc):
             RECORD.write_text(json.dumps(self.calls))
             return False
         def execute(self, code):
+            if len(self.calls) >= self.max_interactions:
+                return "Maximum number of executions reached."
             self.calls.append(code)
             return ""
         def evaluate(self):
@@ -100,6 +95,16 @@ def test_the_replayed_url_drops_the_query_string(tmp_path):
     assert proc.returncode == 0, proc.stdout + proc.stderr
     executed = json.loads((stub_dir / "executed.json").read_text())
     assert executed and "'/api/0'" in executed[0] and "page=2" not in executed[0]
+
+
+def test_replay_allows_one_execution_per_logged_api_call(tmp_path):
+    # A single action with a loop can emit more than the default 1000 APIs.
+    # The stand-in mirrors upstream execute's cap and silently rejects excess
+    # executions, so assert actual replay, not just the constructor argument.
+    executed = _run(tmp_path, 1002)
+    assert len(executed) == 1002
+    kwargs = json.loads((tmp_path / "stub/appworld/kwargs.json").read_text())
+    assert kwargs["max_interactions"] == 1002
 
 
 def test_the_evidence_carries_no_execution_counter(tmp_path):

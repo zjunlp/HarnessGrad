@@ -48,3 +48,29 @@ def test_names_keep_namespace_normalization_case_and_multiplicity():
     assert dataset.score("Fabricated_tool", gold)["reward"] == 0.0
     assert dataset.score("fabricated_tool\nfabricated_tool", gold)["reward"] == 0.0
     assert dataset.score("fabricated_tool(value=1)", gold)["reward"] == 0.0
+
+
+@pytest.mark.parametrize("prediction", [
+    "wrong_tool(); namespace.expected_tool",
+    "wrong_tool(value=namespace.expected_tool",
+    "Calling wrong_tool(). namespace.expected_tool",
+    "namespace.expected_tool()",
+])
+def test_call_shaped_lines_cannot_become_names_after_namespace_normalization(prediction):
+    gold = {"functions": ["expected_tool"], "subset": "simple"}
+    # Preserve the whole invalid line: neither dots in arguments nor a trailing
+    # dotted identifier may hide the wrong call and produce a name-only match.
+    assert dataset.parse_prediction(prediction) == [prediction]
+    assert dataset.bare_name(prediction) == prediction
+    verdict = dataset.score(prediction, gold)
+    assert verdict["reward"] == 0.0
+    assert verdict["official"]["predicted_functions"] == [prediction]
+    assert dataset.score(prediction, {"functions": [], "subset": "irrelevance"})[
+        "reward"] == 0.0
+
+
+@pytest.mark.parametrize("prediction", ["expected_tool", "namespace.expected_tool",
+                                         "outer.namespace.expected_tool"])
+def test_valid_names_remain_namespace_normalized(prediction):
+    assert dataset.bare_name(prediction) == "expected_tool"
+    assert dataset.score(prediction, {"functions": ["expected_tool"]})["reward"] == 1.0

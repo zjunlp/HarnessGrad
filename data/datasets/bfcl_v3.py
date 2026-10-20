@@ -177,8 +177,14 @@ def bare_name(name: str) -> str:
     `restaurant_search.find_closest` -- the answer file drops the namespace the question file
     carries. The comparison takes the last dotted segment on **both** sides, so that row grades
     the function the agent can actually see, and a nested name still compares exactly.
+    Only valid identifiers are normalized; call syntax and prose stay invalid.
     """
-    return str(name).rsplit(".", 1)[-1]
+    # parse_prediction retains call-shaped lines so they fail even on irrelevance.
+    # Never let a dot in prose/arguments turn such a line into a valid tool name.
+    name = str(name)
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*", name):
+        return name
+    return name.rsplit(".", 1)[-1]
 
 
 def gold_names(ground_truth) -> list[str]:

@@ -24,6 +24,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -343,6 +344,76 @@ def test_client_speaks_the_shared_transport(tmp_path):
         assert proc.returncode != 0
         assert 'relay failed' in proc.stderr and 'environment server failed' in proc.stderr
         assert (workdir / 'action.json').read_text() == before
+
+
+def test_concurrent_clients_preserve_relay_order_and_submit(tmp_path):
+    """All workers reach the lock (or old unlocked read) before first reply."""
+    work = tmp_path / 'concurrent'
+    work.mkdir()
+    shutil.copy2(CLI, work / 'dojo.py')
+    (work / 'action.json').write_text(json.dumps({'calls': [], 'output': ''}))
+    wrapper = work / 'worker.py'
+    wrapper.write_text('''
+import fcntl, runpy, sys
+from pathlib import Path
+marker = Path(sys.argv.pop(1))
+original_lock = fcntl.flock
+original_read = Path.read_text
+def lock(*args):
+    marker.touch()
+    return original_lock(*args)
+def read(path, *args, **kwargs):
+    value = original_read(path, *args, **kwargs)
+    if path.name == 'action.json':
+        marker.touch()
+    return value
+fcntl.flock = lock
+Path.read_text = read
+sys.argv[0] = 'dojo.py'
+runpy.run_path('dojo.py', run_name='__main__')
+''')
+    entered, release = threading.Event(), threading.Event()
+    seen = []
+
+    def handler(op, args):
+        seen.append({'function': args['function'], 'args': args['arguments']})
+        if len(seen) == 1:
+            entered.set()
+            assert release.wait(20), 'test did not release first relay call'
+        return {'result': len(seen), 'error': None}
+
+    socket_path = publish(tmp_path / 'concurrent-relay') / 'relay.sock'
+    processes = []
+    env = {**os.environ, 'HG_DOJO_SOCKET': str(socket_path)}
+    with Relay(socket_path, handler) as relay:
+        try:
+            for index in range(9):
+                command = ['submit', 'concurrent answer'] if index == 8 else [
+                    'call', json.dumps({'function': 'stub', 'args': {'index': index}})]
+                processes.append(subprocess.Popen(
+                    [sys.executable, str(wrapper), str(work / f'ready-{index}'), *command],
+                    cwd=work, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
+                if index == 0:
+                    assert entered.wait(10), 'first client did not reach relay'
+            deadline = time.monotonic() + 10
+            while not all((work / f'ready-{i}').exists() for i in range(9)):
+                assert time.monotonic() < deadline, 'workers did not reach transaction boundary'
+                time.sleep(0.01)
+            release.set()
+            for process in processes:
+                out, err = process.communicate(timeout=20)
+                assert process.returncode == 0, out + err
+        finally:
+            release.set()
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate()
+    transcript = json.loads((work / 'action.json').read_text())
+    assert len(seen) == 8
+    assert {item['args']['index'] for item in seen} == set(range(8))
+    assert transcript == {'calls': seen, 'output': 'concurrent answer'}
+    assert relay.receipt['calls'] == 8 and relay.receipt['errors'] == 0
 
 
 def test_setup_ships_no_environment_payload():

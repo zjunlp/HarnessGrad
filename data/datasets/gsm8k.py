@@ -83,9 +83,10 @@ TRAIN = "main/train-00000-of-00001.parquet"
 #: The gold answer lives after this marker in the `answer` field.
 ANSWER_MARK = "####"
 
-#: Adapter decimal-aware-extract: keep the last signed integer or decimal intact.
+#: Adapter decimal-aware-extract: keep the last signed integer or decimal intact,
+#: including leading-dot decimals such as `.5` and `-.5`.
 #: This differs from the immutable original integer-only flexible-extract fixture.
-FLEXIBLE_RE = re.compile(r"(-?[$]?(?:\d[\d,]*\.\d+|\d[\d,]*))")
+FLEXIBLE_RE = re.compile(r"(-?[$]?(?:(?:\d[\d,]*)?\.\d+|\d[\d,]*))")
 
 #: Adapter strict-marker extraction uses the first marker. The pattern also appears
 #: upstream; matching the pattern alone does not establish full scorer equivalence.

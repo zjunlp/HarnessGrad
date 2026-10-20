@@ -78,6 +78,13 @@ def _workdir_on_path() -> None:
         sys.path.insert(0, work)
 
 
+def _json_scalar(value):
+    """Convert numpy booleans to JSON-native bools, retaining numeric sentinels."""
+    item = getattr(value, "item", None)
+    value = item() if callable(item) else value
+    return bool(value) if isinstance(value, bool) else value
+
+
 def _child(tests_text: str, solution: str, queue) -> None:
     """`run_test` in its own process: it mutates process-global state (`reliability_guard`
     nulls `os.system`, `os.remove`, `builtins.quit` and `os.environ` itself) and it executes
@@ -93,8 +100,7 @@ def _child(tests_text: str, solution: str, queue) -> None:
     try:
         results, metadata = run_test({"input_output": tests_text}, test=solution, debug=False,
                                      timeout=PER_TEST_TIMEOUT)
-        queue.put({"results": [bool(value) if isinstance(value, bool) else value
-                               for value in results],
+        queue.put({"results": [_json_scalar(value) for value in results],
                    "metadata": str(metadata)[:2000]})
     except Exception as exc:                   # noqa: BLE001
         queue.put({"error": f"run_test raised {type(exc).__name__}: {exc}"})

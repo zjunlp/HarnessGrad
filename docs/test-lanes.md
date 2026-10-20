@@ -171,6 +171,8 @@ that lives in `SLOW`.
 | `test_progress.py` | d | all `docker` arguments are passed to a monkeypatched `container._run_streaming`. |
 | `test_run_schema.py`, `test_sandbox.py`, `test_scienceworld_dataset.py` | c | `/tmp/...` strings are fixture *inputs* (`"/tmp/w"`, `"/tmp/x"`, archive candidates); none is bound or written. |
 | `test_test_lanes.py` | d | this document's own guard contains the literal `"docker"` in its signal table. It reads files; it binds nothing. |
+| `test_service_launcher_unchanged.py` | c | `hg-*` strings are container-internal path *expectations* and the probe network's name; nothing is created at them. No daemon is touched: `container_mod.run`, `sandbox_mod.run` and `docker` are all monkeypatched in this file. |
+| `test_run_observation_wiring.py` | c, d | (c) `hg-observe-run-9-…` is an expected network-name prefix, asserted on a fake runner. (d) every `docker` argv in the file is handed to a monkeypatched runner; no daemon is touched. |
 
 ## Measurements
 

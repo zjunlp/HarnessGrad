@@ -415,7 +415,7 @@ def recalculate(workbook: Path, *, scratch: Path, soffice: str) -> tuple[bool, s
 
 
 def workbook_has_formulas(path: Path) -> bool:
-    """Does any cell hold a formula? Decides whether recalculation is needed."""
+    """Detect OOXML formula cells; literal strings beginning ``=`` are ordinary text."""
     try:
         wb = _load_workbook(path, data_only=False)
     except Exception as exc:  # noqa: BLE001 - False must mean a readable, formula-free file
@@ -424,8 +424,7 @@ def workbook_has_formulas(path: Path) -> bool:
     for ws in wb.worksheets:
         for row in ws.iter_rows():
             for cell in row:
-                if cell.data_type == "f" or (
-                        isinstance(cell.value, str) and cell.value.startswith("=")):
+                if cell.data_type == "f":
                     return True
     return False
 

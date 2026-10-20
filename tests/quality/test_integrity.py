@@ -17,18 +17,27 @@
 """
 from __future__ import annotations
 
+import os
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+import eval.run.integrity as integrity  # noqa: E402
 from eval.run.integrity import NOT_PLATFORM, PLATFORM, PLATFORM_ROOT, snapshot  # noqa: E402
 
 #: 运行产物与缓存:由运行本身生成,不是平台源码。和 `runs/` 同类,所以按前缀放行,
 #: 不逐个登记 —— 它们的名字带日期/编号,登记不完。
 _GENERATED_PREFIXES = ("runs", "__pycache__", ".git", ".pytest_cache",
-                      ".scratch", ".ruff_cache", ".overleaf-mcp")
+                      ".scratch", ".ruff_cache", ".overleaf-mcp",
+                      # `improver-hg-cli-ask-*.log`: the transcript an improver call dumps
+                      # into the directory it was started from. Written *by* a run, named
+                      # with a random suffix, and already ignored by `.gitignore`; without
+                      # this prefix one improver call leaves the whole classification test
+                      # red for whoever runs it next.
+                      "improver-hg-cli-ask-")
 
 
 def _top_level() -> list[str]:
@@ -97,3 +106,81 @@ def test_the_implementation_package_is_hashed():
                      "harnessgrad/loops/mode_a.py"):
         assert expected in snap, \
             f"{expected} 没有被 hash:裁判侧的实现可以被方法改掉而检测不到"
+
+
+def test_a_snapshot_reuses_the_digest_of_a_file_it_already_read(tmp_path, monkeypatch):
+    """`snapshot()` runs around **every method call** and hashes the whole platform.
+
+    Measured 2026-10-19: 20,817 files, 2.4 s per call, twice per call. Reusing a digest
+    while the file's identity is unchanged is what makes that affordable; this asserts the
+    reuse actually happens rather than that it would be nice if it did.
+    """
+    monkeypatch.setattr(integrity, "_CACHE_MIN_AGE_S", 0.0)
+    (tmp_path / "driver.py").write_text("print(1)\n", encoding="utf-8")
+    integrity.reset_cache()
+    first = integrity.snapshot(tmp_path)
+    misses_after_first = integrity.cache_stats()["miss"]
+    second = integrity.snapshot(tmp_path)
+    stats = integrity.cache_stats()
+    assert first == second
+    assert stats["miss"] == misses_after_first, "第二次 snapshot 又把文件重读了一遍"
+    assert stats["hit"] >= 1, "缓存没有被用上"
+
+
+def test_a_rewrite_that_restores_size_and_mtime_is_still_detected(tmp_path, monkeypatch):
+    """The one way this cache could hide a change: put the stat fields back afterwards.
+
+    `mtime` can be restored with `os.utime`; `ctime` cannot be set from user space, so the
+    identity test still fails and the file is re-hashed. Without `st_ctime_ns` in the
+    identity, this test passes the old digest through and a method could edit the scorer
+    and re-date it.
+    """
+    monkeypatch.setattr(integrity, "_CACHE_MIN_AGE_S", 0.0)
+    path = tmp_path / "driver.py"
+    path.write_text("aaaa", encoding="utf-8")
+    before = integrity.snapshot(tmp_path)["driver.py"]
+    st = path.stat()
+    time.sleep(0.05)                                             # past the coarse clock tick
+    path.write_text("bbbb", encoding="utf-8")                    # same size, same path
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))          # put mtime back
+    after = integrity.snapshot(tmp_path)["driver.py"]
+    assert path.stat().st_size == st.st_size
+    assert path.stat().st_mtime_ns == st.st_mtime_ns
+    assert after != before, "重写 + 复原 mtime 的文件被缓存当成了没变"
+
+
+def test_a_digest_taken_moments_ago_is_not_trusted(tmp_path):
+    """The coarse-clock window: rewrite and re-date inside one tick, and the cache must miss.
+
+    This is why the cache has a minimum age at all. Without it the previous test's scenario
+    reuses a stale digest whenever `ctime` did not advance -- a few milliseconds is enough.
+    """
+    path = tmp_path / "driver.py"
+    path.write_text("aaaa", encoding="utf-8")
+    before = integrity.snapshot(tmp_path)["driver.py"]
+    st = path.stat()
+    path.write_text("bbbb", encoding="utf-8")
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns))
+    after = integrity.snapshot(tmp_path)["driver.py"]
+    assert after != before, "刚做过的摘要被直接信任了:粗时钟窗口里也能藏住一次改写"
+
+
+def test_the_cache_never_changes_what_the_snapshot_says(tmp_path, monkeypatch):
+    (tmp_path / "driver.py").write_text("x\n", encoding="utf-8")
+    (tmp_path / "eval").mkdir()
+    (tmp_path / "eval" / "metrics.py").write_text("y\n", encoding="utf-8")
+    integrity.reset_cache()
+    cached = integrity.snapshot(tmp_path)
+    monkeypatch.setenv("HG_INTEGRITY_NO_CACHE", "1")
+    fresh = integrity.snapshot(tmp_path)
+    assert cached == fresh, "缓存给出了与无缓存路径不同的摘要"
+
+
+def test_the_cache_can_be_switched_off(tmp_path, monkeypatch):
+    (tmp_path / "driver.py").write_text("z\n", encoding="utf-8")
+    integrity.reset_cache()
+    integrity.snapshot(tmp_path)
+    monkeypatch.setenv("HG_INTEGRITY_NO_CACHE", "1")
+    before = integrity.cache_stats()["miss"]
+    integrity.snapshot(tmp_path)
+    assert integrity.cache_stats()["miss"] > before, "HG_INTEGRITY_NO_CACHE 没有绕开缓存"

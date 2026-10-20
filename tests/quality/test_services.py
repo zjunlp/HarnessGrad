@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -31,6 +32,8 @@ from pathlib import Path
 import pytest
 
 import eval.containers.container as container
+import eval.run.runner as runner
+import eval.service.container_observation as container_observation
 import eval.service.services as services
 from data.scaffolds import registry
 from eval.run.runner import evaluate, run_one
@@ -373,10 +376,28 @@ def test_a_harness_reaches_the_service_by_the_name_it_was_told(tmp_path):
         running.stop()
 
 
+def _no_observation(monkeypatch) -> None:
+    """Make the admission probe fail, which is the one way a task is still unobservable.
+
+    These two tests are about **refusal**, and an environment whose declared bounds are
+    what the launcher applies is now admitted (the demo declares none, so both sides are
+    2 cpus / 4096 MB). Taking the receipt away is therefore the test's job: "we could not
+    look" has to keep refusing, and the cache is cleared because a receipt taken by an
+    earlier test in this process would otherwise be reused.
+    """
+    monkeypatch.setattr(runner, "_OBSERVATIONS", {})
+
+    def refused(*args, **kwargs):
+        raise container_observation.ObservationError("this test removes the probe")
+
+    monkeypatch.setattr(container_observation, "observe_for", refused)
+
+
 def test_unobserved_service_task_is_refused_before_health_checks(tmp_path, monkeypatch):
     """008348b: admission precedes service health, so this is not a health failure."""
     _require_docker()
     monkeypatch.setattr(services, "start", lambda *a, **kw: pytest.fail("must not start a service"))
+    _no_observation(monkeypatch)
     result = _evaluate(tmp_path, _env([_service(health={"argv": ["false"], "timeout_s": 3})]))
     assert result["per_task"] == {}
     assert set(result["invalid"]) == {"s01"}
@@ -387,6 +408,7 @@ def test_unobserved_service_task_is_refused_before_health_checks(tmp_path, monke
 def test_healthy_service_cannot_authorize_an_unobserved_backend(tmp_path, monkeypatch):
     _require_docker()
     monkeypatch.setattr(services, "start", lambda *a, **kw: pytest.fail("must not start a service"))
+    _no_observation(monkeypatch)
     result = _evaluate(tmp_path, _env(), verifier={"kind": "command", "argv": ["true"]})
     assert result["per_task"] == {}
     assert set(result["invalid"]) == {"s01"}
@@ -698,16 +720,48 @@ def test_a_run_where_nothing_is_scoreable_is_refused_not_recorded_as_zero(tmp_pa
         "a curve point was written for a task set that was never measured")
 
 
+def _without_the_probe(tmp_path: Path) -> dict:
+    """`extra_env` that leaves the driver subprocess with no admission probe.
+
+    The driver is a separate process, so `_no_observation` cannot reach it; what can is a
+    `docker` on its `PATH` that refuses the one call the probe makes first -- creating its
+    throwaway network -- and passes everything else through, so image pinning at startup
+    still works. `verify_service` declares no `cpus`/`memory_mb`, so both sides are the
+    launcher's 2 cpus / 4096 MB and the platform can now admit it; these two tests are
+    about the refusal that must survive when nobody could look.
+    """
+    stub = tmp_path / "probe-less-bin"
+    stub.mkdir(parents=True, exist_ok=True)
+    real = shutil.which("docker")
+    assert real, "these tests require a docker client"
+    shim = stub / "docker"
+    shim.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = "network" ] && [ "$2" = "create" ]; then\n'
+        '  case "$*" in *hg-observe-*)\n'
+        '    echo "shim: the observation probe may not create its network" >&2\n'
+        "    exit 1;;\n"
+        "  esac\n"
+        "fi\n"
+        f'exec "{real}" "$@"\n', encoding="utf-8")
+    shim.chmod(0o755)
+    return {"PATH": f"{stub}{os.pathsep}{os.environ.get('PATH', '')}"}
+
+
 def test_a_refused_service_run_names_the_service_in_its_header(tmp_path):
     _require_docker()
-    proc = _run_driver(tmp_path, "verify_service", extra_env={"HG_AGENT_PROBE": "idle"})
+    proc = _run_driver(tmp_path, "verify_service",
+                       extra_env={"HG_AGENT_PROBE": "idle",
+                                  **_without_the_probe(tmp_path)})
     assert_driver_policy_refusal(proc, tmp_path, ("s01", "s02"))
     assert "services[orders]" in _said(proc), _said(proc)[:1500]
 
 
 def test_an_unmeasured_service_environment_is_recorded_without_a_curve(tmp_path):
     _require_docker()
-    proc = _run_driver(tmp_path, "verify_service", extra_env={"HG_AGENT_PROBE": "idle"})
+    proc = _run_driver(tmp_path, "verify_service",
+                       extra_env={"HG_AGENT_PROBE": "idle",
+                                  **_without_the_probe(tmp_path)})
     assert_driver_policy_refusal(proc, tmp_path, ("s01", "s02"))
     meta = json.loads((tmp_path / "runs/probe/run_meta.json").read_text())
     assert meta["env"]["services"][0]["name"] == "orders"

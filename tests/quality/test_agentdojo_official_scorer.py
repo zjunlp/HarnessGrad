@@ -127,7 +127,7 @@ def test_subject_projection_ships_no_agentdojo_package():
             imported |= {alias.name.split('.')[0] for alias in node.names}
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split('.')[0])
-    assert imported == {'__future__', 'argparse', 'json', 'os', 'sys', 'pathlib',
+    assert imported == {'__future__', 'argparse', 'fcntl', 'json', 'os', 'sys', 'pathlib',
                         'tool_transport'}, imported
 
 

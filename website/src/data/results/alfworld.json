@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-19T02:44:59Z",
+ "generated_at": "2026-10-19T17:07:34Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -1670,66 +1670,130 @@
        "round": 1,
        "train": 0.76,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.619403,
+        "valid_seen": 0.714286,
+        "valid_train": 0.66
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 29577770,
+        "valid_seen": 28078189,
+        "valid_train": 41273877
+       },
+       "eval_n": 200
       },
       {
        "round": 2,
        "train": 0.81,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.791045,
+        "valid_seen": 0.864286,
+        "valid_train": 0.815
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 22131600,
+        "valid_seen": 20363778,
+        "valid_train": 30408048
+       },
+       "eval_n": 200
       },
       {
        "round": 3,
        "train": 0.99,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 1.0,
+        "valid_seen": 1.0,
+        "valid_train": 0.99
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 0,
+        "valid_seen": 6865,
+        "valid_train": 137544
+       },
+       "eval_n": 200
       },
       {
        "round": 4,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 1.0,
+        "valid_seen": 1.0,
+        "valid_train": 1.0
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 0,
+        "valid_seen": 0,
+        "valid_train": 0
+       },
+       "eval_n": 200
       },
       {
        "round": 5,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 1.0,
+        "valid_seen": 1.0,
+        "valid_train": 1.0
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 0,
+        "valid_seen": 0,
+        "valid_train": 0
+       },
+       "eval_n": 200
       },
       {
        "round": 6,
        "train": 1.0,
        "train_n": 100,
        "eval": {
-        "valid_unseen": 1.0
+        "valid_unseen": 1.0,
+        "valid_seen": 1.0,
+        "valid_train": 1.0
        },
        "valid": true,
        "n_invalid": 0,
        "eval_tokens": {
-        "valid_unseen": 0
+        "valid_unseen": 0,
+        "valid_seen": 0,
+        "valid_train": 0
        },
        "eval_source": {
         "valid_unseen": "exam"
        },
-       "eval_n": 134
+       "eval_n": 200
       },
       {
        "round": 7,
        "train": 0.6,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.477612,
+        "valid_seen": 0.55,
+        "valid_train": 0.48
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 24788896,
+        "valid_seen": 25096494,
+        "valid_train": 38803453
+       },
+       "eval_n": 200
       }
      ],
      "cost": {
@@ -1884,82 +1948,166 @@
        "round": 1,
        "train": 0.25,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.231343,
+        "valid_seen": 0.135714,
+        "valid_train": 0.19
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 13949248,
+        "valid_seen": 16599664,
+        "valid_train": 24062383
+       },
+       "eval_n": 200
       },
       {
        "round": 2,
        "train": 0.61,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.477612,
+        "valid_seen": 0.471429,
+        "valid_train": 0.58
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 16386539,
+        "valid_seen": 21507385,
+        "valid_train": 28162278
+       },
+       "eval_n": 200
       },
       {
        "round": 3,
        "train": 0.49,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.365672,
+        "valid_seen": 0.421429,
+        "valid_train": 0.485
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 8254869,
+        "valid_seen": 8166039,
+        "valid_train": 11681143
+       },
+       "eval_n": 200
       },
       {
        "round": 4,
        "train": 0.61,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.485075,
+        "valid_seen": 0.507143,
+        "valid_train": 0.585
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 16637082,
+        "valid_seen": 20033729,
+        "valid_train": 28327400
+       },
+       "eval_n": 200
       },
       {
        "round": 5,
        "train": 0.67,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.597015,
+        "valid_seen": 0.592857,
+        "valid_train": 0.645
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 35665051,
+        "valid_seen": 41726346,
+        "valid_train": 53460803
+       },
+       "eval_n": 200
       },
       {
        "round": 6,
        "train": 0.16,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.097015,
+        "valid_seen": 0.185714,
+        "valid_train": 0.155
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 7414579,
+        "valid_seen": 7347562,
+        "valid_train": 10682030
+       },
+       "eval_n": 200
       },
       {
        "round": 7,
        "train": 0.69,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.589552,
+        "valid_seen": 0.642857,
+        "valid_train": 0.665
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 35972429,
+        "valid_seen": 38629683,
+        "valid_train": 52910155
+       },
+       "eval_n": 200
       },
       {
        "round": 8,
        "train": 0.7,
        "train_n": 100,
        "eval": {
-        "valid_unseen": 0.544776
+        "valid_unseen": 0.544776,
+        "valid_seen": 0.578571,
+        "valid_train": 0.635
        },
        "valid": true,
        "n_invalid": 0,
        "eval_tokens": {
-        "valid_unseen": 28985866
+        "valid_unseen": 28985866,
+        "valid_seen": 33411498,
+        "valid_train": 43895750
        },
        "eval_source": {
         "valid_unseen": "exam"
        },
-       "eval_n": 134
+       "eval_n": 200
       },
       {
        "round": 9,
        "train": 0.66,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.589552,
+        "valid_seen": 0.657143,
+        "valid_train": 0.61
+       },
        "valid": true,
-       "n_invalid": 0
+       "n_invalid": 0,
+       "eval_tokens": {
+        "valid_unseen": 37270351,
+        "valid_seen": 41210717,
+        "valid_train": 58165178
+       },
+       "eval_n": 200
       }
      ],
      "cost": {
@@ -2101,18 +2249,18 @@
  "excluded": [],
  "coverage": {
   "valid_unseen": {
-   "measured": 43,
-   "valid": 43,
+   "measured": 57,
+   "valid": 57,
    "planned": null
   },
   "valid_seen": {
-   "measured": 41,
-   "valid": 41,
+   "measured": 57,
+   "valid": 57,
    "planned": null
   },
   "valid_train": {
-   "measured": 41,
-   "valid": 41,
+   "measured": 57,
+   "valid": 57,
    "planned": null
   }
  }

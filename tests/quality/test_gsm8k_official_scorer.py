@@ -72,6 +72,11 @@ def test_adapter_and_original_agree_on_integer_extraction(gsm8k, text, extracted
     ("-3.25", "25", "-3.25"),
     ("$1,250.75", "75", "1250.75"),
     ("-$1,250.75", "75", "-1250.75"),
+    (".5", "5", ".5"),
+    ("-.5", "5", "-.5"),
+    ("$.5", "5", ".5"),
+    ("-$.5", "5", "-.5"),
+    ("Worked with 18, then concluded -.5 dollars", "5", "-.5"),
     ("Worked with 18, then concluded -3.25", "25", "-3.25"),
     ("#### 3.5", "5", "3.5"),
 ])

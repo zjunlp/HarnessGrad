@@ -40,6 +40,7 @@ import time
 from pathlib import Path
 
 import eval.containers.container as container_mod
+import eval.service.netpool as netpool
 from harnessgrad.config import current as current_config
 
 #: Where a service's recording appears, inside the service container and inside the
@@ -240,16 +241,84 @@ def create_network(run_id: str, task_id: str) -> str:
     harness cannot reach a model on the host's loopback, so the platform publishes the
     endpoint on this network (`eval/service/modelgate.py`). Without that the harness has no
     model, and a harness with no model is not being measured.
+
+    **Every create carries an explicit `--subnet`** from `eval/service/netpool.py`. Without
+    one the daemon carves the network out of its default address pool, which hands out a
+    whole `/16` per network and is finite: measured 2026-10-18, two methods in parallel at
+    `--jobs 16` exhausted it (`all predefined address pools have been fully subnetted`) and
+    77 of 90 tasks in the run that started second were invalid. A subnet the caller names
+    bypasses the default pools entirely, so the ceiling is gone without root, a
+    `daemon.json` edit or a daemon restart (`docs/network-subnets.md`).
+
+    A collision on the subnet is not a failure: the allocator's next candidate is tried.
+    "It is already taken" is the expected case on a host that has been running for a while,
+    and turning it into an invalid task is exactly the defect the explicit subnet fixes.
     """
     net = label(f"hg-{run_id}-{task_id}")
-    proc = container_mod.docker("network", "create", "--internal", net,
-                                "--label", f"harnessgrad.run={run_id}",
-                                "--label", f"harnessgrad.task={task_id}", timeout=120)
-    if proc.returncode != 0:
+    try:
+        candidates = netpool.allocate(run_id, task_id)
+    except netpool.NetPoolError as exc:
+        # Bad configuration, not a transient failure: the allocator's message names the
+        # variable to change. Translated so every caller of `create_network` keeps its
+        # existing "this task is invalid" path instead of crashing the run on a ValueError.
+        raise ServiceUnavailable(
+            f"could not create the internal network for task {task_id!r}: {exc}") from exc
+    taken: list[str] = []
+    for cidr in candidates:
+        proc = container_mod.docker("network", "create", "--internal", net,
+                                    "--subnet", cidr,
+                                    "--label", f"harnessgrad.run={run_id}",
+                                    "--label", f"harnessgrad.task={task_id}",
+                                    "--label", f"{netpool.SUBNET_LABEL}={cidr}",
+                                    timeout=120)
+        if proc.returncode == 0:
+            return net
+        stderr = proc.stderr.strip()
+        if netpool.network_exists(stderr, net):
+            existing = network_subnet(net)
+            if existing == cidr:
+                # A crashed run that was reaped badly leaves the name *and* the subnet we
+                # are about to ask for, because both are a function of (run_id, task_id).
+                # Reusing it is what keeps that crash out of the next run's measurement;
+                # `reap` remains the cleaner path, it just may have lost a container.
+                return net
+            raise ServiceUnavailable(
+                f"network {net!r} already exists with subnet "
+                f"{existing or 'unknown'}, but this task asked for {cidr}. Refusing to "
+                f"reuse it: the harness's gateway address comes from that subnet. Remove "
+                f"the leftover with `docker network rm {net}` (or run "
+                f"`eval.service.services.reap({run_id!r})`) and re-run.")
+        if netpool.subnet_taken(stderr):
+            taken.append(f"{cidr}: {stderr.splitlines()[-1][:160]}")
+            continue
         raise ServiceUnavailable(
             f"could not create the internal network for task {task_id!r}: "
-            f"{proc.stderr.strip()[:300]}")
-    return net
+            f"{stderr[:300]}")
+    raise ServiceUnavailable(
+        f"could not create the internal network for task {task_id!r} ({net}): every "
+        f"/{netpool.SUBNET_PREFIX} of the configured base {candidates.base} is taken "
+        f"({candidates.count} tried; last: {taken[-1] if taken else 'none'}). "
+        f"Set {netpool.BASE_ENV} to an unused IPv4 CIDR of /{netpool.SUBNET_PREFIX} or "
+        f"larger (for example {netpool.BASE_ENV}=10.99.0.0/16) and re-run; "
+        f"`python3 tools/network_preflight.py --networks 40 --concurrency 16` checks a "
+        f"base before a run depends on it.")
+
+
+def network_subnet(network: str) -> str | None:
+    """The subnet a network was created with, or `None` when it cannot be read.
+
+    Public because `tools/network_preflight.py` reports what the allocator actually got,
+    and because `create_network` needs the same answer to decide whether an existing
+    network of its name is the one it would have created. The parse is
+    `netpool.subnet_from_network_inspect` so a probe network is read the same way.
+    """
+    try:
+        proc = container_mod.docker("network", "inspect", network, timeout=60)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return netpool.subnet_from_network_inspect(proc.stdout)
 
 
 def remove_network(network: str) -> list[str]:

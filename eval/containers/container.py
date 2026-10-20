@@ -542,7 +542,7 @@ def command(argv: list[str], *, image: str, task_dir: Path, task_mount: str,
             immutable_runtimes: tuple[tuple[Path, str], ...] = (),
             limits: dict | None = None) -> list[str]:
     """The `docker run` argv. Split out so `self_check` and the tests can read it."""
-    limits = limits or {}
+    limits = envelope(limits)
     cmd = ["docker", "run", "--rm", "--network", network]
 
     if read_only:
@@ -553,9 +553,9 @@ def command(argv: list[str], *, image: str, task_dir: Path, task_mount: str,
         # confusing failures; it is a tmpfs, so it dies with the container.
         cmd += ["--read-only", "--tmpfs", "/tmp:rw,exec,nosuid,size=512m,mode=1777"]
 
-    cmd += ["--pids-limit", str(limits.get("pids", 1024))]
-    cmd += ["--memory", str(limits.get("memory", "4g"))]
-    cmd += ["--cpus", str(limits.get("cpus", "2"))]
+    cmd += ["--pids-limit", str(limits["pids"])]
+    cmd += ["--memory", limits["memory"]]
+    cmd += ["--cpus", _number(limits["cpus"])]
 
     cmd += _mounts(task_dir, task_mount, harness_root, tuple(state_dirs),
                    task_dir_writable, tuple(readonly_paths))
@@ -612,8 +612,15 @@ def run(argv: list[str], *, image: str, task_dir: Path, task_mount: str,
         extra_mounts: tuple[str, ...] = (),
         readonly_paths: tuple[Path, ...] = (),
         immutable_runtimes: tuple[tuple[Path, str], ...] = (),
-        ) -> subprocess.CompletedProcess:
+        limits: dict | None = None) -> subprocess.CompletedProcess:
     """`subprocess.run` shape, inside a **fresh** container. Same return type.
+
+    `limits` is the caller's resource envelope, forwarded to `command()`. It is a keyword
+    with the same `None` default `command()` has, and that default is load-bearing: before
+    it existed, **this function had no way to pass one on**, so every container it started
+    got `command()`'s defaults (2 cpus / 4g / 1024 pids) no matter what the environment
+    declared. `limits=None` therefore still means "the defaults", which is what
+    `eval/verification/verifier.py` relies on for the check's container.
 
     Fresh per call, not one container reused for the harness and then the check. The
     property §2.5.6 asks for -- that nothing the harness started is still running when
@@ -639,7 +646,8 @@ def run(argv: list[str], *, image: str, task_dir: Path, task_mount: str,
                   harness_root=harness_root, state_dirs=state_dirs, cwd=cwd,
                   env=env, network=network, read_only=read_only,
                   task_dir_writable=task_dir_writable, extra_mounts=extra_mounts,
-                  readonly_paths=readonly_paths, immutable_runtimes=immutable_runtimes)
+                  readonly_paths=readonly_paths, immutable_runtimes=immutable_runtimes,
+                  limits=limits)
     # A client timeout kills `docker run`, not the daemon-side container. `--rm`
     # only takes effect when that container exits, so retain an exact per-call
     # identity and reap it before callers tear down recordings or their network.
@@ -1052,3 +1060,67 @@ def limits_from(spec: dict) -> dict:
     """The `docker run/create` resource envelope declared by an environment."""
     return {"cpus": spec.get("cpus", 2), "pids": 1024,
             "memory": f"{int(spec.get('memory_mb', 4096))}m"}
+
+
+def _number(value) -> str:
+    """A CPU count as docker spells it: `2`, not `2.0`.
+
+    `envelope()` normalises to a float so two envelopes compare as numbers; the argv must
+    not inherit that, because `--cpus 2.0` and `--cpus 2` are the same request and only one
+    of them is the string this module has always passed.
+    """
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ContainerUnavailable(f"unreadable cpu limit {value!r}") from exc
+    return str(int(number)) if number.is_integer() else str(number)
+
+
+def envelope(limits: dict | None = None) -> dict:
+    """The resource flags a container **really gets**, in one place and in one shape.
+
+    Three readers have to agree about this and used to have no way to: `command()` writes
+    the flags, `eval/service/container_observation.py` measures them back, and the runner
+    has to know whether an environment's declared `cpus`/`memory_mb` are what the launcher
+    applies. A fourth hand-written copy of "the defaults are 2 / 4g / 1024" is a copy that
+    can drift, and the drift would be invisible -- the receipt would describe a container
+    nobody runs.
+
+    `limits=None` is not "no limits": it is docker's default CPU, memory and PID envelope,
+    which is what `command()` has always applied when a caller passes none. The numbers are
+    the same values as `memory_mb`, so a caller that has to compare an envelope against a
+    declaration does not have to parse `4g`.
+
+    **The memory spelling is the default's when the value is the default.** `limits_from`
+    renders 4096 MB as `4096m`, and `--memory 4096m` is the same request as `--memory 4g`
+    -- but the argv is what a run's log and receipts quote, and a dataset whose envelope
+    did not change must not read as though it had. Measured against the two datasets on
+    this path (`appworld`, `tau_bench`), which both declare 2 cpus / 4096 MB.
+    """
+    limits = limits or {}
+    memory = str(limits.get("memory", DEFAULT_MEMORY))
+    memory_mb = _memory_mb(memory)
+    if memory_mb == _memory_mb(DEFAULT_MEMORY):
+        memory = DEFAULT_MEMORY
+    return {"cpus": float(limits.get("cpus", 2)), "pids": int(limits.get("pids", 1024)),
+            "memory": memory, "memory_mb": memory_mb}
+
+
+#: `command()`'s own default memory flag. Named because `envelope()` compares against it:
+#: a request for exactly 4096 MB keeps this spelling rather than `4096m`.
+DEFAULT_MEMORY = "4g"
+
+
+def _memory_mb(memory: str) -> int:
+    """The MB a docker memory string names. Only the two spellings `command()` emits."""
+    suffixes = {"g": 1024, "m": 1}
+    text = memory.strip().lower()
+    factor = suffixes.get(text[-1:], None)
+    if factor is not None:
+        text = text[:-1]
+    try:
+        value = float(text)
+    except ValueError as exc:
+        raise ContainerUnavailable(
+            f"unreadable docker memory limit {memory!r}") from exc
+    return int(round(value * (factor or 1)))

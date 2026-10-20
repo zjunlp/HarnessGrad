@@ -27,6 +27,7 @@ that runs is the code that is tested.
 from __future__ import annotations
 
 import datetime
+import json
 import sys
 from pathlib import Path
 
@@ -137,6 +138,53 @@ def _write(path: Path, rows: dict, sheet: str = "S") -> Path:
         ws[coordinate] = value
     wb.save(path)
     return path
+
+
+@pytest.mark.parametrize("literal", ["=", "=not a formula", "=SUM(A1:A2)"])
+@pytest.mark.parametrize("matches", [True, False])
+def test_leading_equals_text_is_compared_without_recalculation(
+        check, tmp_path, monkeypatch, literal, matches):
+    for name, value in (("result.xlsx", literal),
+                        ("golden.xlsx", literal if matches else "different text")):
+        wb = openpyxl.Workbook()
+        wb.active.title = "S"
+        wb.active["A1"] = value
+        # A leading '=' typed through openpyxl defaults to a formula. Store genuine text,
+        # just as OOXML inline/shared strings can contain literal formula-looking prose.
+        wb.active["A1"].data_type = "s"
+        wb.save(tmp_path / name)
+        wb.close()
+    assert check.workbook_has_formulas(tmp_path / "result.xlsx") is False
+
+    def unexpected_runtime():
+        pytest.fail("literal text must not require LibreOffice")
+
+    monkeypatch.setattr(check, "soffice_path", unexpected_runtime)
+    (tmp_path / "task.json").write_text(json.dumps({"task_id": "literal",
+                                                   "answer_position": "S!A1"}))
+    reward, evidence = tmp_path / "reward.txt", tmp_path / "evidence.json"
+    assert check.main(["--workdir", str(tmp_path), "--reward-file", str(reward),
+                       "--evidence-file", str(evidence)]) == (0 if matches else 1)
+    recorded = json.loads(evidence.read_text())
+    assert recorded["measured"] is True and recorded["recalculated"] is False
+    assert recorded["reward"] == float(matches) == float(reward.read_text())
+    assert check.compare_cell_value(literal, literal if matches else "different text") is matches
+
+
+@pytest.mark.parametrize("formula_tag", [b"<f>", b'<f t="shared" si="0" ref="A1:A1">',
+                                        b'<f t="array" ref="A1:A1">'])
+def test_real_ooxml_formulas_still_require_recalculation(check, tmp_path, formula_tag):
+    import zipfile
+
+    workbook = _write(tmp_path / "formula.xlsx", {"A1": "=1+1"})
+    with zipfile.ZipFile(workbook) as source:
+        entries = {name: source.read(name) for name in source.namelist()}
+    entries["xl/worksheets/sheet1.xml"] = entries["xl/worksheets/sheet1.xml"].replace(
+        b"<f>", formula_tag)
+    with zipfile.ZipFile(workbook, "w") as target:
+        for name, content in entries.items():
+            target.writestr(name, content)
+    assert check.workbook_has_formulas(workbook) is True
 
 
 def test_the_comparison_reads_only_the_named_cells(check, tmp_path):

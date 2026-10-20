@@ -1085,7 +1085,12 @@ has stopped.
 
 `evidence_file` is optional and must share the reward file's directory. A check may write a
 JSON object there, including `measured: false` when the environment could not be evaluated;
-the platform preserves that distinction from a measured zero. `image` is optional for an
+the platform preserves that distinction from a measured zero. Evidence fields are dataset-owned
+and passed through in the per-task verdict. For GAIA, the check records the released `level`
+label (1/2/3) beside the reward; progress records retain it, and curve points expose additive
+`per_level` rows with measured count, count scored 1, and accuracy, plus `unknown` for missing
+labels. This report partitions measured tasks and does not change the headline score.
+`image` is optional for an
 exec command verifier and names a pinned image used only for the fresh check container. It
 defaults to the task image, so a dataset may keep a small agent image separate from an image
 that contains its released evaluator and data.

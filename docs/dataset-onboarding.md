@@ -1,4 +1,34 @@
 # Onboarding a dataset: the procedure
+## Step 0: measure the baseline once, and share it
+
+Every run measures round 0 as the baseline harness's score, so a batch that starts N runs has N
+baselines unless one is shared. Those are not interchangeable: the cross-method comparison is
+paired, and "method A beat method B" computed against two different baselines answers two
+different questions.
+
+```bash
+# once per (dataset, study set, agent model, endpoint)
+python3 tools/prepare_h0.py --dataset appworld --side train \
+    --study-ids /tmp/appworld-study-train90.txt --jobs 32
+# -> H0 measured: h0-appworld-<stamp>   score 0.0111 on 90 tasks
+#    --h0-from h0-appworld-<stamp>
+
+# then every study run for that dataset passes it
+driver.py ... --h0-from h0-appworld-<stamp>
+```
+
+The tool refuses instead of measuring when a valid baseline for the same configuration is already
+on disk (two measurements of one state are two numbers, and picking either is a choice no record
+can defend), and it refuses to *publish* a baseline with holes: fewer tasks than the study set, any
+invalid task, or no `h0_sha` is not a baseline.
+
+**What counts as the same configuration** is the dataset, the side, the study-id set (by content,
+not by path), the agent model and the endpoint. A different model or a different study set is a
+different H0, and the tool measures one rather than reusing.
+
+`--h0-from` copies the donor's point **and its `round0_traces`**, so every method's first input
+traces are the same traces too -- which matters for methods that read the traces rather than the
+score.
 
 **This page is the procedure. `docs/adapter-integration-journal.md` is the in-repository onboarding log and evidence index.**
 Every adapter entry must also update `docs/platform-improvement-log.md` when it teaches the shared platform a reusable capability.

@@ -61,6 +61,30 @@ trial, one job and zero improvement rounds. **The demo grants no production/H0
 authorization** and is not evidence that runtime, quota, snapshot or cleanup gates have
 passed.
 
+## Step 0: measure one shared H0
+
+A round 0 baseline is measured **inside** every run, so a batch that starts N runs gets N
+baselines. Those are not interchangeable: the cross-method comparison is a *paired* one, and
+"method A beat method B" computed against two different baselines is a statement about two
+different questions. Measured 2026-10-19: three AppWorld study runs were launched without a
+shared baseline and each re-measured H0.
+
+`tools/prepare_h0.py` is the missing step 0. It measures the baseline once, verifies it (whole
+study set, no invalid task, a recorded `h0_sha`) and prints the `--h0-from` to pass to every run
+that follows:
+
+```bash
+python3 tools/prepare_h0.py --dataset appworld --side train --study-ids ids.txt --jobs 32
+# -> h0 run id, score, task count, and the exact --h0-from <id>
+python3 driver.py ... --h0-from <that id>
+```
+
+It **reuses** an existing baseline whose configuration matches instead of measuring a second one.
+The configuration is `(dataset, side, study-id set, agent model, endpoint)`: a different model or
+a different study set is a different H0, and the tool measures one rather than pretending they
+are the same. A baseline with holes is not published, and a typo'd `--study-ids` path is an error
+instead of "no study set".
+
 ## Test the part you changed
 
 The full suite is large, so run the tests for the dataset you are editing:
@@ -72,6 +96,20 @@ python3 tools/run_tests.py --dataset gsm8k
 It runs that dataset's tests plus the core platform tests, and skips every other
 dataset's. If you pass `--basetemp`, it must be **outside the platform tree** — the
 runner refuses a harness work root inside it, and a suite writes thousands of small files.
+
+That covers a change that belongs to one dataset. For a change to the platform itself
+(`eval/`, `harnessgrad/`, `tools/`) use the lane, which selects the tests that mention what you
+touched and prints one reason per selection:
+
+```bash
+python3 tools/test_lane.py                 # what this branch changed
+python3 tools/test_lane.py --list          # the selection, nothing run
+python3 tools/test_lane.py --full          # the whole suite: the gate for a merge
+```
+
+A changed file that no test mentions is printed as **unmatched** rather than dropped — that is
+usually the most useful line the lane produces.
+
 
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \

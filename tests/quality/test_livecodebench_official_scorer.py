@@ -20,7 +20,10 @@ test:
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
+from queue import SimpleQueue
+from types import SimpleNamespace
 import shutil
 import subprocess
 import sys
@@ -226,6 +229,33 @@ def test_the_check_scores_a_wrong_solution_zero_with_the_tally_recorded(tmp_path
     # correct zero because every truncation carries a non-positive sentinel.
     assert 0 < len(evidence["per_test"]) <= evidence["tests"]["total"]
     assert any(value is not True and value <= 0 for value in evidence["per_test"])
+
+
+def test_numpy_boolean_verdicts_become_json_native_booleans(tmp_path, monkeypatch):
+    """Run the worker/evidence boundary with real numpy scalars, no released task."""
+    np = pytest.importorskip("numpy")
+    spec = importlib.util.spec_from_file_location("livecodebench_check_json_scalar", CHECK)
+    check = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(check)
+    verdicts = [np.bool_(True), np.bool_(False), True, False, -1, -2, -3, -4]
+    monkeypatch.setitem(sys.modules, "testing_util", SimpleNamespace(
+        run_test=lambda *args, **kwargs: (verdicts, "synthetic")))
+    queue = SimpleQueue()
+    check._child("{}", "pass", queue)
+    outcome = queue.get()
+    assert "error" not in outcome
+    results = outcome["results"]
+    assert results == [True, False, True, False, -1, -2, -3, -4]
+    assert all(type(value) is bool for value in results[:4])
+    assert all(type(value) is int for value in results[4:])
+    assert sum(check._positive(value) for value in results) == 2
+    args = SimpleNamespace(reward_file=str(tmp_path / "reward.txt"),
+                           evidence_file=str(tmp_path / "evidence.json"),
+                           scorer_input_receipt={"verified": False})
+    assert check._measure(args, 0.0, "synthetic verdicts", 8, 2, results) == 0
+    evidence = json.loads((tmp_path / "evidence.json").read_text())
+    assert evidence["per_test"] == results
+    assert evidence["measured"] is True and evidence["reward"] == 0.0
 
 
 def test_a_correct_solution_scores_one(tmp_path):

@@ -15,6 +15,7 @@ from pathlib import Path
 import eval.containers.container as container_mod
 import eval.containers.harness_runtime as harness_runtime
 import eval.service.modelgate as modelgate_mod
+from eval.service import container_observation as container_observation_mod
 from eval.service.native_model_route import NativeModelRoute
 import eval.observe.progress as progress_mod
 import eval.containers.sandbox as sandbox_mod
@@ -114,6 +115,138 @@ def _refuse_unobserved_policies(task: dict, env: dict | None,
         receipt["observation_receipt"] = observation
     result["invalid"]["receipt"] = receipt
     return result
+
+
+#: The observation receipts this process has taken, keyed by the container shape each one
+#: measured. **Module-level, because a probe costs about 1.3 s and a run is one process**:
+#: a per-round cache would re-probe on every round of a twenty-round run for a value that
+#: cannot change while the daemon and the image do not.
+_OBSERVATIONS: dict[tuple, dict | None] = {}
+
+
+def _environment_shape(env: dict) -> dict | None:
+    """The container `_run_one` gives the harness, or `None` when it cannot be described.
+
+    Every field comes from the **launcher**, never from the declaration, because the
+    receipt is only worth something as evidence about the container the harness really ran
+    in:
+
+    * the image is `env["image"]`, which `container_mod.run` starts;
+    * the bounds are `container_mod.envelope(container_mod.limits_from(env))` -- the same
+      envelope the launcher passes -- **not** the raw declaration. Until `container_mod.run`
+      took a `limits` keyword it forwarded none (signature at `container.py:607-615`, the
+      `command()` call at `:638`), so a `cpus: 4` environment ran at `--cpus 2`; the receipt
+      has to describe the flags the container gets, so it is derived from them and
+      `_declared_but_not_applied` checks the two against each other;
+    * `read_only` is that launcher's own default (it passes no `read_only`), which is what
+      decides whether the rootfs in the receipt is the one the harness saw;
+    * the network is the declared **policy word** (`none`/`services`/`bridge`) -- which is
+      what `_run_one` hands the launcher once it has resolved `services` to a per-task
+      internal network. The probe resolves it the same way
+      (`eval/service/container_observation.py:observe_for`).
+    """
+    # Only the launcher this module can describe. `state: "container"`
+    # (`_run_one_container_state`) has its own envelope, a writable rootfs, an
+    # always-internal network and an optional second `bridge` connection, so a probe of
+    # the launch below would put a `NetworkMode` in the receipt that that container does
+    # not have. Its receipt is a separate change, not a guess; it keeps today's refusal.
+    if env.get("state", "mount") != "mount":
+        return None
+    if not env.get("image"):
+        return None
+    limits = container_mod.envelope(container_mod.limits_from(env))
+    return {"image": env["image"], "cpus": limits["cpus"], "memory_mb": limits["memory_mb"],
+            "pids": limits["pids"], "read_only": True,
+            "network": env.get("network", "none")}
+
+
+def _declared_but_not_applied(env: dict, shape: dict) -> str | None:
+    """Why the environment's declared bounds are not the launcher's, or `None`.
+
+    A **tripwire**, not the mechanism: with the declaration now forwarded to
+    `container_mod.run` this cannot fire for a launcher that was given it, and it is kept
+    because the defect it catches is silent by construction -- a launch that drops the
+    envelope produces a container whose receipt is about different numbers, and `ok: True`
+    on the wrong container is worse than a refusal. One path can still trip it, and only
+    because the declaration cannot be expressed: `limits_from` truncates `memory_mb` with
+    `int()`, so a fractional value (4096.5) is applied as 4096 and the task keeps its
+    refusal with this reason rather than a receipt for a bound it did not get.
+    """
+    for field, default in (("cpus", 2), ("memory_mb", 4096)):
+        declared, applied = float(env.get(field, default)), float(shape[field])
+        if abs(declared - applied) > 1e-9:
+            return (f"the environment declares {field}={declared:g} but the launcher "
+                    f"applies {field}={applied:g}; the declaration did not survive the "
+                    f"trip through `limits_from` to the container, and a receipt for the "
+                    f"declared number would describe a container the score does not come "
+                    f"from")
+    return None
+
+
+def _observations_for(envs: dict | None, tasks: list[dict], *,
+                      run_id: str = "") -> dict[str, dict]:
+    """One backend observation per distinct container shape, for the tasks that use it.
+
+    Admission refuses `env.cpus`/`env.memory_mb`/`env.exec_defaults`/`env.network` unless
+    the caller shows a receipt from `eval/service/container_observation.py` whose `covers`
+    names every declared field. Nothing in production supplied one, which is why AppWorld
+    stopped at `backend_observation_unavailable` (2026-10-18) instead of running.
+
+    A probe costs about 1.3 s, so it is taken once per distinct `(image, cpus, memory_mb,
+    pids, read_only, network)` and cached for the process; a 585-task set must not pay it
+    585 times. Failures are cached as `None` for the same reason: one broken daemon must
+    not become 585 identical waits before a refusal that was already decided.
+    """
+    observations: dict[str, dict] = {}
+    said: set[str] = set()
+    for task in tasks:
+        task_id = task["task_id"]
+        env = (envs or {}).get(task_id) or {}
+        if env.get("kind") != "exec":
+            continue
+        if not (env.get("services") or []):
+            # The refusal that does not change: a plain `exec` environment's declared
+            # bounds are still unobserved. Only the declaration whose missing observation
+            # blocked the services contract (AppWorld, 2026-10-18) is probed here;
+            # widening the receipt to every exec environment would admit datasets nobody
+            # has measured, which is a separate change with its own review.
+            continue
+        shape = _environment_shape(env)
+        if shape is None:
+            # Once per run, not once per task: a property of the dataset's state kind, and
+            # 585 copies of one sentence would bury the rest of the log.
+            if "state" not in said:
+                said.add("state")
+                print(f"  admission: environments with state {env.get('state')!r} keep "
+                      f"today's refusal in this commit -- their launcher is a different "
+                      f"container shape -- so nothing is probed for them",
+                      file=sys.stderr)
+            continue
+        key = tuple(shape[field] for field in
+                    ("image", "cpus", "memory_mb", "pids", "read_only", "network"))
+        if key not in _OBSERVATIONS:
+            problem = _declared_but_not_applied(env, shape)
+            if problem is not None:
+                _OBSERVATIONS[key] = None
+                print(f"  admission: no observation for {shape['image']}: {problem}",
+                      file=sys.stderr)
+            else:
+                try:
+                    _OBSERVATIONS[key] = container_observation_mod.observe_for(
+                        shape["image"],
+                        {"cpus": shape["cpus"], "memory_mb": shape["memory_mb"]},
+                        network=shape["network"], run_id=run_id,
+                        read_only=shape["read_only"]).receipt()
+                except (container_observation_mod.ObservationError, OSError,
+                        subprocess.TimeoutExpired) as exc:
+                    _OBSERVATIONS[key] = None
+                    print(f"  admission: the observation probe could not run for "
+                          f"{shape['image']} ({type(exc).__name__}: {exc}); nothing was "
+                          f"observed, so every task that needs it stays refused",
+                          file=sys.stderr)
+        if _OBSERVATIONS[key] is not None:
+            observations[task_id] = _OBSERVATIONS[key]
+    return observations
 
 
 def harness_env() -> dict:
@@ -577,6 +710,12 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                     task_mount=task_mount, harness_root=repo,
                     state_dirs=(state_dir,), cwd=task_mount, env=child_env,
                     timeout_s=timeout_s, network=network,
+                    # The declared envelope, finally reaching the launcher. Until
+                    # `container_mod.run` took a `limits` keyword it had no way to pass
+                    # one on, so every mount-state `exec` container got `command()`'s
+                    # defaults whatever `env.cpus`/`env.memory_mb` said -- measured: a
+                    # `cpus: 4` declaration ran at `--cpus 2`.
+                    limits=container_mod.limits_from(env_spec),
                     # Stated rather than omitted: the harness gets **no** view of a
                     # service's recording, and the empty list is that decision.
                     readonly_paths=runtime,
@@ -1267,6 +1406,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # task touched them is not something a failing run needs.
     before = snapshot(PLATFORM_ROOT)
 
+    # The backend observations, taken **once per distinct container shape and here**, not
+    # in `_measure`: a probe starts a container and costs about 1.3 s, and `_measure` runs
+    # on up to `jobs` threads. A diagnostic authorization bypasses admission by design, so
+    # it needs none and this does not spend the probe on it.
+    observations = ({} if diagnostic_authorization is not None
+                    else _observations_for(envs, tasks, run_id=run_id))
+    if observations:
+        admitted = len({id(receipt) for receipt in observations.values()})
+        print(f"  admission: {admitted} container observation(s) admit "
+              f"{len(observations)} of {len(tasks)} task(s)", file=sys.stderr)
+
     # ---- one task, `trials` times, as a function ----------------------------------
     #
     # Extracted from the loop this used to be so that `--jobs N` can measure several tasks
@@ -1280,10 +1430,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         tid = task["task_id"]
         enforcement = (diagnostic_authorization.record()
                        if diagnostic_authorization is not None else None)
+        # The backend observation for *this* environment, when the platform has one. It is
+        # handed to both admission checks -- this one, which decides whether the task runs
+        # at all, and `run_one`'s, which is the same check made once more where the task is
+        # actually executed -- because a receipt that admits a task here and is dropped
+        # there is the same refusal one call later.
+        observation = observations.get(tid)
         # Cache entries carry scores, not fresh backend enforcement observations.
         refusal = _refuse_unobserved_policies(task, (envs or {}).get(tid),
                                               (verifiers or {}).get(tid), run_id=run_id,
-                                              diagnostic_authorization=diagnostic_authorization)
+                                              diagnostic_authorization=diagnostic_authorization,
+                                              observation=observation)
         if refusal is not None:
             _write_progress(progress_dir, round_no, tid, [], refusal["invalid"],
                             diagnostic=refusal, enforcement=enforcement)
@@ -1348,7 +1505,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                                      **({"trial_id": trial_identity(trial)}
                                         if fresh_measurement(tid) or declared_class((verifiers or {}).get(tid)) == "pristine-offline" else {}),
                                      **({"diagnostic_authorization": diagnostic_authorization}
-                                        if diagnostic_authorization is not None else {}))
+                                        if diagnostic_authorization is not None else {}),
+                                     **({"observation": observation}
+                                        if observation is not None else {}))
                 except BaseException as exc:
                     # The record says the task died and why; the exception still travels.
                     held.failed(f"{type(exc).__name__}: {exc}")
@@ -1728,6 +1887,16 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             "harness_runtime": runtime_records,
             "env_usage": env_usage,
             "model_gateway": model_gateway,
+            # The receipts that admitted these tasks, deduplicated. They are the evidence
+            # for the `env.cpus`/`env.memory_mb`/`env.exec_defaults`/`env.network` fields
+            # `_refuse_unobserved_policies` demands, and a run that ran because of one has
+            # to carry it: "we observed this" is a claim a reader can only check against
+            # the record. Absent when nothing was probed, so an unobserved round's result
+            # is unchanged.
+            **({"env_observations": [
+                   receipt for index, receipt in enumerate(observations.values())
+                   if receipt not in list(observations.values())[:index]]}
+               if observations else {}),
             "identity_declared": identity_declared,
             "identity_variants": identity_variants,
             "tokens": tokens}

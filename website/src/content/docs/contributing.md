@@ -7,6 +7,49 @@ This site publishes **measured** results: a score that can be traced to per-task
 the exact harness that earned it. If you have a method that improves a harness on one of the
 benchmarks here, we want it on that benchmark's page with your name on it.
 
+## Two things you can contribute, and where each one lives
+
+| what you have | where it goes | how to send it |
+| --- | --- | --- |
+| **artifacts** for a run — the harness, the edit that produced it, the per-task trajectories | the dataset on the Hub, under `Experiments/<benchmark>/` | [open a pull request on the Hub](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/main/Experiments?new_pr=true) |
+| **a one-file record** of your numbers, to appear as a row on a benchmark page | this repository, `contrib/results/<benchmark>/<method>/<variant>.json` | the JSON below, as a pull request or an issue |
+
+One is not a substitute for the other: a dataset pull request is data somebody can re-run, and the
+JSON is a row that appears in a table. Send both and the row links to your data.
+
+### What a dataset pull request contains
+
+One directory per **experiment family** — the task agent being improved, then the meta agent doing
+the improving, then your method:
+
+```
+Experiments/<benchmark>/
+  <task-agent>/                     e.g. qwen3.5-9b_loop   (agent model + base harness)
+    <family>/                       e.g. dsh-your-model    (improver harness + improver model)
+      family.json                   what the meta agent was, and the baseline round 0 hit
+      <method>/
+        curve.jsonl                 one record per round: score, per-task verdicts, identity
+        harness/round-N/            the harness deployed in round N — the tree, not a diff
+        patches/round-N.patch       the edit that produced round N
+        tasks/round-N.tar.gz        one JSONL per task per trial
+```
+
+Copy the shape of an existing family rather than inventing one: the manifest fields and the
+round-0 baseline are what make a result comparable to the ones already published.
+
+What we check before merging, mechanically rather than by reading:
+
+- every `curve.jsonl` record names the same task agent and meta agent as the manifests above it;
+- round 0 is the **same baseline** as every other family (`harness_sha` and config), because that
+  is what makes a comparison across families a comparison at all;
+- every `harness/round-N/` recomputes to the `harness_sha` that round reports;
+- every `patches/round-N.patch` joins the two states it claims to join;
+- the coverage file matches the files actually present.
+
+A pull request that fails this is not merged as data. If your numbers still have per-task records
+behind them, they can be published as a row marked **unverified** (see below) — we will not
+publish a score whose artifacts we could not check.
+
 ## What a submission contains
 
 A submission is one JSON file plus, optionally, a link to the trajectories. It is **not** a
@@ -77,10 +120,12 @@ and a filled-in example is [`contrib/example-submission.json`](https://github.co
 
 0. **Run the validator first**: `python3 contrib/validate.py <your-file>.json`. It checks the
    schema, not the numbers — a file that fails it cannot be reviewed at all.
-1. **Open a pull request** that adds `contrib/results/<dataset>/<method>/<variant>.json` (the
-   file above) and the small `per_task.json` it points at. Keep the trajectories **out of git**:
-   put them somewhere you control (your own HuggingFace dataset, Zenodo, an institutional
-   archive) and only link them here.
+1. **Open a pull request to this repository** that adds
+   `contrib/results/<dataset>/<method>/<variant>.json` (the file above) and the small
+   `per_task.json` it points at. Keep the trajectories **out of this repository's git**: either
+   send them as a dataset pull request ([above](#two-things-you-can-contribute-and-where-each-one-lives)),
+   or put them somewhere you control (your own HuggingFace dataset, Zenodo, an institutional
+   archive) and link them here.
 2. If a pull request is not convenient, **open an issue** using the submission template and
    attach the same JSON. We will open the pull request for you, with you as the author of the
    data.
@@ -127,7 +172,8 @@ Verified and unverified rows are never mixed in one table.
 
 Trajectories are large, so they never enter git. The flow is:
 
-1. you upload them wherever you prefer and link that location in `trajectories`;
+1. you either add them to our dataset with a pull request, or upload them wherever you prefer
+   and link that location in `trajectories`;
 2. we download, check the archive hash and the file format, and verify that replaying the
    per-task records reproduces the same verdicts;
 3. **after verification we mirror the archive into our own HuggingFace dataset**, and the

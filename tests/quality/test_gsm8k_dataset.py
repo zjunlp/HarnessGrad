@@ -150,8 +150,23 @@ def test_the_goal_carries_the_question_and_no_answer(gsm8k):
         record = records[task["task_id"]]
         assert record["question"] in task["goal"]
         assert "answer.txt" in task["goal"]
-        assert "####" not in task["goal"], "the solution field must not be rendered"
-        assert task["goal"].count(record["gold"]["verbatim"]) == 0
+        assert "write `#### 18`, including the space" in task["goal"]
+        assert record["gold"]["verbatim"] not in task["goal"]
+
+
+def test_goal_is_independent_of_gold_despite_answer_format_markers(gsm8k):
+    question = "Synthetic question with 18 units; compute a value."
+    first = {"answer": "987654321",
+             "verbatim": "PRIVATE solution alpha\n#### 987654321"}
+    second = {"answer": "-123456789.5",
+              "verbatim": "PRIVATE solution beta\n#### -123456789.5"}
+    goal = gsm8k._goal(question, first)
+    assert goal == gsm8k._goal(question, second) == gsm8k._goal(question, {})
+    assert question in goal
+    assert "write `#### 18`, including the space" in goal
+    for gold in (first, second):
+        assert gold["answer"] not in goal
+        assert gold["verbatim"] not in goal
 
 
 def test_the_task_dict_carries_no_grade(gsm8k):

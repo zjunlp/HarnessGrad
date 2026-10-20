@@ -42,8 +42,10 @@ def main() -> int:
             (runtime_root / "experiments").mkdir()
             os.environ["APPWORLD_ROOT"] = str(runtime_root)
         from appworld import AppWorld
+        # An actor execute may issue many APIs. This verifier executes one trusted
+        # API record at a time; do not truncate replay at the actor's action cap.
         with AppWorld(task_id=args.task_id, experiment_name="verify", raise_on_failure=False,
-                      ground_truth_mode="minimal") as world:
+                      ground_truth_mode="minimal", max_interactions=max(1, len(calls))) as world:
             for call in calls:
                 url = str(call["url"]).split("?", 1)[0]
                 method = str(call.get("method", "get")).lower()

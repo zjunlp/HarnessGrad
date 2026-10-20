@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HarnessGrad · 实验台</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/app.css">
+<style>
+  .filters button.chip[aria-pressed="true"] {
+    background: var(--hg-alias-bg-layer-3);
+    border-color: var(--hg-alias-border-l3);
+    color: var(--hg-alias-label-primary);
+    font-weight: 600;
+  }
+  .load { padding: 24px 18px; color: var(--hg-alias-label-secondary); font-size: 12px; }
+  .err { margin: 18px; padding: 12px; border-radius: 10px;
+         border: 1px solid color-mix(in oklab, #d04b3a 40%, var(--hg-alias-border-l2));
+         background: color-mix(in oklab, #d04b3a 8%, var(--hg-alias-bg-layer-1)); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">HG</div>
+      <div>
+        <div class="brand-name">HarnessGrad</div>
+        <div class="brand-sub">实验台 · 只读</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item" href="/chat.html">对话</a>
+      <a class="nav-item" href="#/runs" data-view-link="runs">实验 <span class="nav-badge" id="nav-runs">—</span></a>
+      <a class="nav-item" href="#/trace" data-view-link="trace">轨迹</a>
+      <a class="nav-item" href="#/version" data-view-link="harness">版本</a>
+    </nav>
+
+    <div class="nav-group">
+      <div class="nav-group-label">在跑</div>
+      <div id="live"></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="status-line" id="status-platform">平台 <b>…</b></div>
+      <div class="status-line" id="status-disk"></div>
+      <a class="side-link" href="https://zjunlp.github.io/HarnessGrad/" target="_blank" rel="noreferrer">公开结果站 ↗</a>
+      <a class="side-link" href="https://huggingface.co/datasets/Xubqpanda/HarnessGrad" target="_blank" rel="noreferrer">数据集 ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- 实验 -->
+    <section class="view" data-active="true" id="view-runs">
+      <div class="topbar">
+        <h1>实验</h1>
+        <span class="sub" id="runs-sub"></span>
+        <span class="spacer"></span>
+        <div class="filters" style="padding:0;border:0;background:none">
+          <button class="chip" data-kind="study" aria-pressed="true">研究（多轮）</button>
+          <button class="chip" data-kind="eval" aria-pressed="false">单点测量</button>
+          <button class="chip" data-kind="unknown" aria-pressed="false">无曲线</button>
+          <button class="chip" data-kind="" aria-pressed="false">全部</button>
+        </div>
+      </div>
+      <div class="filters">
+        <select id="f-dataset"><option value="">benchmark: 全部</option></select>
+        <select id="f-harness"><option value="">task-agent harness: 全部</option></select>
+        <select id="f-status"><option value="">状态: 全部</option><option value="running">running</option><option value="done">done</option><option value="empty">无曲线</option></select>
+        <span class="chip" id="f-count">—</span>
+        <span class="spacer"></span>
+        <input id="f-q" placeholder="按 run id / 方法过滤" style="font:inherit;font-size:11.5px;padding:4px 8px;border-radius:7px;border:1px solid var(--hg-alias-border-l2);background:var(--hg-alias-bg-layer-1);color:inherit;width:200px">
+      </div>
+      <div class="cols" data-cols="2">
+        <div class="col"><div id="runs-table" class="load">读取 runs…</div></div>
+        <div class="col pad" id="run-rail"><div class="load">选一行</div></div>
+      </div>
+    </section>
+
+
+    <!-- 轨迹：与 /trace.html 同一个模块（trace-view.js），两条入口显示同一条轨迹 -->
+    <section class="view" id="view-trace">
+      <div class="topbar">
+        <h1>轨迹</h1>
+        <span class="sub">一条 task 的完整来回：模型说的 → 执行的 → 输出 → 环境第几步</span>
+      </div>
+      <div id="trace-root"></div>
+    </section>
+
+    <!-- 版本：一个 harness 在各轮长什么样、改了什么（旧 #/harness 与 #/version 都到这里） -->
+    <section class="view" id="view-harness">
+      <div class="topbar">
+        <h1>版本</h1>
+        <span class="sub" id="h-start-hint">选起点 → 看这一轮的改动与事实</span>
+      </div>
+      <div class="lab-toolbar">
+        <span class="lab-lbl">起点</span>
+        <select id="h-run"></select>
+        <select id="h-round"></select>
+        <div class="seg" id="h-mode">
+          <button aria-pressed="true" data-mode="diff">改动</button>
+          <button aria-pressed="false" data-mode="file">文件</button>
+        </div>
+        <span class="spacer"></span>
+        <span class="lab-hint">选中的状态就是这一轮的起点</span>
+      </div>
+      <div class="cols" data-cols="3">
+        <div class="col" id="h-tree"></div>
+        <div class="col" id="h-editor"></div>
+        <div class="col pad" id="h-explain"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="/trace-view.js"></script>
+<script src="/console.js"></script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

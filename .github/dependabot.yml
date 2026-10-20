@@ -25,11 +25,21 @@ version: 2
 updates:
   # The two runtime manifests. `requirements.txt` in the base harness ships `openai`, and the
   # locomo scorer's `nltk` pin is the one dependency whose advisory cluster reached this repo.
+  #
+  # **`openai` here is not a platform dependency, it is part of what gets measured.** The base
+  # harness is copied into every run's workspace and its SDK decides how a task becomes model
+  # calls; every published number was produced against the version the platform overlay
+  # resolved (3.22.x as of 2026-10-20). Raising this floor changes what a run does, so it is a
+  # re-measurement, not a bump: done by hand, followed by a run that records the new overlay in
+  # `identity.env.harness_runtime`. #8 (`openai>=1.0` → `>=3.31.0`) is exactly that change and
+  # was closed rather than merged.
   - package-ecosystem: "pip"
     directory: "/base_harness/loop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "openai"
   - package-ecosystem: "pip"
     directory: "/data/datasets/locomo"
     schedule:
@@ -40,13 +50,10 @@ updates:
   # site (Astro/Starlight). `braces@3.0.3` is knowingly unpatched upstream (GHSA-vfj7-8cjw-p6xm,
   # `patched: <0.0.0`) and arrives through tailwind -> chokidar, so it is ignored rather than
   # re-alerted every week.
-  - package-ecosystem: "npm"
-    directory: "/web"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    ignore:
-      - dependency-name: "braces"
+  # `/web` was the first console and is retired: the read-only audit console replaces it.
+  # Watching a directory nobody builds produces PRs nobody can evaluate (#9-#12, #7 on
+  # 2026-10-20: react 18→19, four radix minors, recharts 2→3, all in `/web`). Re-add this
+  # entry only if `web/` comes back to life.
   - package-ecosystem: "npm"
     directory: "/website"
     schedule:
@@ -59,6 +66,11 @@ updates:
   # them at all; listing them here at least surfaces upstream tag moves, and the digest pin is
   # the follow-up. `appworld` and `gaia` also install pip packages inline, so their contents
   # move with the image, not with a requirements file.
+  #
+  # **A base image is a measurement pin.** `python:3.12-slim` → `3.14-slim` (#6, `/data/datasets/gaia`)
+  # is a different interpreter running the same tasks, so the numbers it produces are not
+  # comparable with the published ones. The directories stay listed so the intent is written
+  # down, but every version update is ignored: a base image moves only together with a re-run.
   - package-ecosystem: "docker"
     directories:
       - "/data/datasets/appworld"
@@ -67,4 +79,6 @@ updates:
       - "/tools"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"

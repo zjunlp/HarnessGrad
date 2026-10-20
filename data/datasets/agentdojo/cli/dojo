@@ -24,6 +24,7 @@ exits nonzero with a message saying so and appends nothing to ``action.json``.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import sys
@@ -71,16 +72,22 @@ def main():
         print(json.dumps(_relay(transport, socket_path, 'tools'), ensure_ascii=False))
         return
     action_file = Path(ACTION_FILE)
-    actions = json.loads(action_file.read_text()) if action_file.exists() else {'calls': [], 'output': ''}
-    if args.command == 'submit':
-        actions['output'] = args.value or ''
-    else:
-        raw = json.loads(args.value)
-        payload = _relay(transport, socket_path, 'call',
-                         {'function': raw['function'], 'arguments': raw['args']})
-        actions['calls'].append({'function': raw['function'], 'args': raw['args']})
+    # Hold a stable sidecar lock across the relay call as well as the file update:
+    # locking only the append can record successful calls in a different order from
+    # their state changes. Submit must use the same lock to preserve both fields.
+    with Path(ACTION_FILE + '.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        actions = json.loads(action_file.read_text()) if action_file.exists() else {'calls': [], 'output': ''}
+        if args.command == 'submit':
+            actions['output'] = args.value or ''
+        else:
+            raw = json.loads(args.value)
+            payload = _relay(transport, socket_path, 'call',
+                             {'function': raw['function'], 'arguments': raw['args']})
+            actions['calls'].append({'function': raw['function'], 'args': raw['args']})
+        action_file.write_text(json.dumps(actions, ensure_ascii=False))
+    if args.command == 'call':
         print(json.dumps(payload, ensure_ascii=False))
-    action_file.write_text(json.dumps(actions, ensure_ascii=False))
 
 
 if __name__ == '__main__':

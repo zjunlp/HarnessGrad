@@ -1,20 +1,38 @@
 ---
 /**
- * The filter bar for a benchmark page, in the shape of a console: five dropdowns, one per axis
- * that can differ between two published results.
+ * The axis bar for a benchmark page, shaped the way a dataset viewer is shaped.
  *
- * The axes are the ones that make a result a result: which method improved the harness, which
- * model the agent used, which model the improver used, which base harness was improved, and
- * which split was scored. Hiding rows and chart lines is all it does — every row is rendered
- * and visible without JavaScript, so a published number never depends on a script running.
+ * **Why the split is the primary control, not one filter among six.** A split is the evaluation
+ * contract, not a view. `train` is what a method may evolve on; every `valid_*` split is scored
+ * once per checkpoint and never re-enters the search. Two numbers from different splits do not
+ * describe two views of one result — they answer different questions — so a page that offers
+ * them side by side, equally weighted, invites exactly the comparison the contract forbids.
+ * Splits are therefore tabs: one split is shown at a time, and the remaining axes (method, task
+ * model, base harness, meta model, meta harness) narrow rows *inside* the chosen split.
+ *
+ * **What stays true without JavaScript.** Every section is in the HTML and visible by default;
+ * the tabs are real links (`?split=valid_unseen`), and script only upgrades them into an in-place
+ * switch. A published number never depends on a script running, which is the rule the rest of
+ * the site already follows.
  */
+interface SplitOption {
+  value: string;
+  label: string;
+  /** Tasks in this split, shown in the tab. Omitted when unknown. */
+  count?: number;
+  /** The split's H0 under the same harness, shown in the tab. */
+  h0?: string;
+}
+
 interface Option {
   value: string;
   label: string;
 }
 
 interface Props {
-  splits: Option[];
+  /** Results slug; the filter derives how many stacks the export carries. */
+  slug?: string;
+  splits: SplitOption[];
   methods: Option[];
   taskModels: Option[];
   metaModels: Option[];
@@ -22,18 +40,58 @@ interface Props {
   baseHarnesses: Option[];
 }
 
-const { splits, methods, taskModels, metaModels, metaHarnesses, baseHarnesses } = Astro.props;
-const axes = [
-  { key: "split", label: "split", options: splits },
+const { slug, splits, methods, taskModels, metaModels, metaHarnesses, baseHarnesses } = Astro.props;
+
+/**
+ * How many stacks the export carries. A stack is (task-agent × improver); when a second
+ * contributor publishes under a different improver, that is a second stack, and a selection
+ * that spans them is a selection across results that are not comparable.
+ */
+const files = import.meta.glob<{ default: Record<string, unknown> }>("../data/results/*.json", {
+  eager: true,
+});
+const exported = slug ? (files[`../data/results/${slug}.json`]?.default as {
+  stacks?: Array<{ id: string }>;
+}) : undefined;
+const stackCount = exported?.stacks?.length ?? 0;
+const filters = [
   { key: "method", label: "RSI method", options: methods },
   { key: "task-model", label: "task model", options: taskModels },
   { key: "base-harness", label: "base harness", options: baseHarnesses },
   { key: "meta-model", label: "meta model", options: metaModels },
   { key: "meta-harness", label: "meta harness", options: metaHarnesses },
 ];
+const first = "*";
 ---
-<div class="hg-console" data-hg-console>
-  {axes.map((axis) => (
+
+<nav class="hg-splits" data-hg-splits aria-label="Split">
+  <a class="hg-split" href="?split=*" data-hg-split="*" aria-current="true">
+    <span class="hg-split-name">all splits</span>
+  </a>
+  {splits.map((split) => (
+    <a
+      class="hg-split"
+      href={`?split=${split.value}`}
+      data-hg-split={split.value}
+      aria-current="false"
+    >
+      <span class="hg-split-name">{split.label}</span>
+      <span class="hg-split-meta">
+        {split.count !== undefined ? `${split.count} tasks` : ""}
+        {split.count !== undefined && split.h0 !== undefined ? " · " : ""}
+        {split.h0 !== undefined ? `H0 ${split.h0}` : ""}
+      </span>
+    </a>
+  ))}
+</nav>
+
+<div class="hg-console" data-hg-console data-stack-count={stackCount}>
+  <div class="hg-console-stack" data-hg-stack-line aria-live="polite">
+    <span class="hg-console-stack-key">stack</span>
+    <span class="hg-console-stack-value" data-hg-stack-value>all stacks</span>
+    <span class="hg-console-stack-note" data-hg-stack-note hidden></span>
+  </div>
+  {filters.map((axis) => (
     <label class="hg-console-field">
       <span>{axis.label}</span>
       <select data-hg-filter={axis.key}>
@@ -48,58 +106,148 @@ const axes = [
 </div>
 
 <script>
-  const panel = document.querySelector<HTMLElement>("[data-hg-console]");
-  if (panel) {
-    const selects = Array.from(panel.querySelectorAll<HTMLSelectElement>("[data-hg-filter]"));
-    const picked = () => {
-      const chosen: Record<string, string> = {};
-      for (const select of selects) {
-        chosen[select.dataset.hgFilter ?? ""] = select.value;
+  const bar = document.querySelector<HTMLElement>("[data-hg-splits]");
+  const sections = Array.from(document.querySelectorAll<HTMLElement>("section[data-split]"));
+  const scope = sections[0]?.parentElement ?? null;
+  if (bar && scope) {
+    const tabs = Array.from(bar.querySelectorAll<HTMLAnchorElement>("[data-hg-split]"));
+    const values = tabs.map((tab) => tab.dataset.hgSplit ?? "");
+    const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-method-row]"));
+    const lines = Array.from(document.querySelectorAll<HTMLElement>("[data-method-line]"));
+    const selects = Array.from(document.querySelectorAll<HTMLSelectElement>("[data-hg-filter]"));
+
+    const showSplit = (value: string) => {
+      scope.dataset.hgActiveSplit = value;
+      for (const tab of tabs) {
+        tab.setAttribute("aria-current", tab.dataset.hgSplit === value ? "true" : "false");
       }
-      return chosen;
     };
-    // Every axis except the method narrows whole panels; the method narrows rows and chart
-    // lines. An element that does not carry an axis is not filtered by it, which is why a
-    // single-setup page still behaves correctly when a setup dropdown is left at "all".
-    const setupAxes = ["base-harness", "task-model", "meta-model", "meta-harness"];
-    const apply = () => {
-      const chosen = picked();
-      for (const element of document.querySelectorAll<HTMLElement>("[data-split]")) {
-        const wanted = chosen["split"];
-        let visible = wanted === "*" || element.dataset.split === wanted;
-        for (const axis of setupAxes) {
-          const pick = chosen[axis];
-          if (pick === "*") continue;
-          const own = element.dataset[
-            axis.replace(/-(.)/g, (_, letter: string) => letter.toUpperCase()) as keyof DOMStringMap];
-          if (own !== undefined && own !== "all" && own !== pick) visible = false;
+
+    /**
+     * A method row is a per-round series, not a point: narrowing by method hides the other
+     * methods' rows and chart lines *within* whichever split is shown, and never changes which
+     * split that is. The setup axes do the same for whole splits — a split measured under a
+     * different setup is a different result, so it disappears rather than being relabelled.
+     */
+    const applyFilters = () => {
+      const picked: Record<string, string> = {};
+      for (const select of selects) picked[select.dataset.hgFilter ?? ""] = select.value;
+      for (const section of sections) {
+        let visible = true;
+        for (const axis of ["base-harness", "task-model", "meta-model", "meta-harness"]) {
+          const want = picked[axis];
+          if (want === "*") continue;
+          const key = axis.replace(/-(.)/g, (_, letter: string) => letter.toUpperCase());
+          const own = (section.dataset as Record<string, string | undefined>)[key];
+          if (own !== undefined && own !== "all" && own !== want) visible = false;
         }
-        element.hidden = !visible;
+        section.dataset.hgFiltered = visible ? "" : "out";
       }
-      for (const element of document.querySelectorAll<HTMLElement>("[data-method-row]")) {
-        const wanted = chosen["method"];
-        element.hidden = wanted !== "*" && element.dataset.methodRow !== wanted;
+      const method = picked["method"];
+      for (const row of rows) {
+        row.hidden = method !== "*" && row.dataset.methodRow !== method;
       }
-      for (const element of document.querySelectorAll<HTMLElement>("[data-method-line]")) {
-        const wanted = chosen["method"];
-        element.hidden = wanted !== "*" && element.dataset.methodLine !== wanted;
+      for (const line of lines) {
+        line.hidden = method !== "*" && line.dataset.methodLine !== method;
       }
     };
-    for (const select of selects) select.addEventListener("change", apply);
-    panel.querySelector("[data-hg-reset]")?.addEventListener("click", () => {
+
+    const initial = new URLSearchParams(location.search).get("split");
+    showSplit(initial && values.includes(initial) ? initial : "*");
+    const stackCount = Number(
+      document.querySelector<HTMLElement>("[data-hg-console]")?.dataset.stackCount ?? "0",
+    );
+    const stackLine = document.querySelector<HTMLElement>("[data-hg-stack-value]");
+    const stackNote = document.querySelector<HTMLElement>("[data-hg-stack-note]");
+    const showStack = () => {
+      const picked: Record<string, string> = {};
+      for (const select of selects) picked[select.dataset.hgFilter ?? ""] = select.value;
+      const pair = (left: string, right: string) =>
+        [picked[left], picked[right]].every((v) => v === "*")
+          ? null
+          : `${picked[left] === "*" ? "any" : picked[left]} × ${picked[right] === "*" ? "any" : picked[right]}`;
+      const agent = pair("base-harness", "task-model");
+      const meta = pair("meta-harness", "meta-model");
+      if (stackLine) {
+        stackLine.textContent = agent || meta ? `${agent ?? "any" } → ${meta ?? "any"}` : "all stacks";
+      }
+      // A selection that spans improvers compares results that a different meta-agent produced.
+      const splitByMeta = picked["meta-model"] === "*" || picked["meta-harness"] === "*";
+      if (stackNote) {
+        stackNote.hidden = !(stackCount > 1 && splitByMeta);
+        stackNote.textContent = stackCount > 1 && splitByMeta
+          ? `${stackCount} improvers — not comparable across them`
+          : "";
+      }
+    };
+
+    applyFilters();
+    showStack();
+
+    bar.addEventListener("click", (event) => {
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("[data-hg-split]");
+      if (!link) return;
+      const value = link.dataset.hgSplit ?? "";
+      if (!values.includes(value)) return;
+      event.preventDefault();
+      showSplit(value);
+      const url = new URL(location.href);
+      if (value === "*") url.searchParams.delete("split");
+      else url.searchParams.set("split", value);
+      history.replaceState(null, "", url);
+    });
+
+    for (const select of selects) select.addEventListener("change", () => { applyFilters(); showStack(); });
+    document.querySelector("[data-hg-reset]")?.addEventListener("click", () => {
       for (const select of selects) select.value = "*";
-      apply();
+      applyFilters();
+      showStack();
     });
   }
 </script>
 
-<style>
+<style is:global>
+  .hg-splits {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    margin: 1rem 0 0.75rem;
+  }
+  .hg-split {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.08rem;
+    padding: 0.38rem 0.68rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.45rem;
+    text-decoration: none;
+    line-height: 1.18;
+  }
+  .hg-split:hover {
+    border-color: var(--sl-color-gray-3);
+  }
+  .hg-split[aria-current="true"] {
+    border-color: var(--sl-color-gray-3);
+    background: var(--sl-color-gray-6, #f0ece2);
+  }
+  .hg-split-name {
+    font-family: var(--sl-font-mono, ui-monospace);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .hg-split-meta {
+    font-size: 0.7rem;
+    color: var(--sl-color-gray-3);
+  }
   .hg-console {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
     gap: 0.5rem 0.75rem;
     align-items: end;
-    margin: 1rem 0 1.5rem;
+    margin: 0 0 1.25rem;
     padding: 0.75rem 0.9rem;
     border: 1px solid var(--sl-color-gray-5);
     border-radius: 0.5rem;
@@ -109,6 +257,31 @@ const axes = [
     flex-direction: column;
     gap: 0.2rem;
     font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--sl-color-gray-3);
+  }
+  .hg-console-stack {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.45rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px dashed var(--sl-color-gray-5);
+    margin-bottom: 0.15rem;
+  }
+  .hg-console-stack-key {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sl-color-gray-3);
+  }
+  .hg-console-stack-value {
+    font-family: var(--sl-font-mono, ui-monospace);
+    font-size: 0.78rem;
+  }
+  .hg-console-stack-note {
+    font-size: 0.72rem;
     color: var(--sl-color-gray-3);
   }
   .hg-console-field select {
@@ -129,6 +302,21 @@ const axes = [
     background: transparent;
     color: var(--sl-color-white);
     cursor: pointer;
+  }
+  [data-hg-active-split] > section[data-split] {
+    display: none;
+  }
+  [data-hg-active-split="*"] > section[data-split] {
+    display: block;
+  }
+  [data-hg-active-split="train"] > section[data-split="train"],
+  [data-hg-active-split="valid_seen"] > section[data-split="valid_seen"],
+  [data-hg-active-split="valid_unseen"] > section[data-split="valid_unseen"],
+  [data-hg-active-split="valid_train"] > section[data-split="valid_train"] {
+    display: block;
+  }
+  section[data-split][data-hg-filtered="out"] {
+    display: none !important;
   }
   .hg-table {
     overflow-x: auto;

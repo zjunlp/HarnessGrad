@@ -1,2 +1,0 @@
-{"guard": [], "line": 20, "module_id": 6226, "names": ["fix_atomic_specifiers", "fix_switch_cases"], "state": "FOUND syntactic import; execution not inferred", "targets": [".ast_transforms"], "text": "from .ast_transforms import fix_atomic_specifiers, fix_switch_cases"}
-{"guard": [], "line": 21, "module_id": 6226, "names": ["CLexer", "Token"], "state": "FOUND syntactic import; execution not inferred", "targets": [".c_lexer"], "text": "from .c_lexer import CLexer, Token"}

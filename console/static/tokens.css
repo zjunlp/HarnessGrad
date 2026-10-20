@@ -1,0 +1,907 @@
+/**
+ * HarnessGrad 实验台 · 设计令牌
+ *
+ * ══════════════════════════════════════════════════════════════
+ *  这份文件**照搬自 DeepSeek Harness**，只做了机械改名：
+ *
+ *      --dsw-static-*    →  --hg-static-*      原始色阶
+ *      --dsw-alias-*     →  --hg-alias-*       语义别名
+ *      --dsw-specific-*  →  --hg-specific-*    具名表面
+ *      [data-ds-dark-theme]  →  [data-jl-dark]
+ *
+ *  保留 `alias` 那一段是为了**和上游保持 1:1** —— 想核对某个值是不是
+ *  抄对了，把这份文件和 DSH 的并排 diff 就能看出来，而不需要先在心里
+ *  做一次名字映射。
+ *
+ *  改名而不是原样留着 `--dsw-`，是因为名字里带着 dsw 会让后来的人以为
+ *  这里有一份上游同步机制，而实际上没有。出处见下。
+ * ══════════════════════════════════════════════════════════════
+ *
+ * 三层结构，从下往上：
+ *
+ *      1  --hg-static-<色相>-<深浅>   原始调色板，不带语义
+ *      2  --hg-alias-<用途>-<角色>    语义别名，亮/暗两套值
+ *      3  --hg-specific-<表面>        具名表面（侧栏、气泡、输入框）
+ *
+ * **组件只用第 2 层。** 直接用第 1 层意味着换主题时那个组件不会跟着变。
+ * DSH 那边这条规矩是由测试强制的（ui-theme 的 stylesheet-scan），
+ * 这里靠约定 —— 所以 app.css 里不出现任何字面颜色值，一眼可以查。
+ *
+ * ── 出处 ──────────────────────────────────────────────────────
+ *
+ * 改编自 DeepSeek Harness 的 packages/client/ui-theme/src/styles/：
+ *   design-platform.css · base.css · corner-shape.css · scrollbar.css
+ *   · gradient-shadow-text.css
+ *
+ *   MIT License
+ *   Copyright (c) 2026 DeepSeek
+ *
+ * 完整许可文本见同目录的 LICENSE-DSH。
+ */
+
+/* ── base.css：字体栈与动效曲线 ─────────────────────────── */
+/* Base variables referenced by the token sheets and component CSS but defined
+ * upstream (deepsuite theme/global.css) — supplied here so the composite
+ * --hg-font-* variables resolve and motion rides the upstream curve. Code
+ * font stack deliberately omits a bare `monospace` tail (Windows CJK falls
+ * back to SimSun otherwise). */
+:root {
+  --hg-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --hg-font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas,
+    'Liberation Mono', Menlo, Courier, 'PingFang SC', 'Microsoft YaHei';
+  --hg-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --hg-duration: 0.2s;
+  --hg-duration-fast: 0.1s;
+  --hg-duration-slow: 0.3s;
+}
+
+/* ── corner-shape.css：超椭圆圆角 ───────────────────────── */
+/* Smooth corner curvature for every rounded surface. Inside the support
+ * guard, all corners curve along superellipse(1.5) — between a circular arc
+ * (round = superellipse(1)) and a squircle (superellipse(2)) — instead of the
+ * default arc; engines without corner-shape keep circular corners because the
+ * token and the rule exist only inside the guard.
+ *
+ * corner-shape does not inherit, so the universal selector applies the token
+ * to elements and their ::before/::after; other pseudo-elements (for example
+ * the ::-webkit-scrollbar parts) stay circular.
+ *
+ * Full-round shapes opt out where they are declared: a superellipse deforms a
+ * circle into a squircle and squares off capsule ends, so every effectively
+ * uncapped radius (50%, 100%, or a pill radius far above the box size) pairs
+ * `corner-shape: round` with its `border-radius` in the owning component
+ * sheet. The corner-shape stylesheet spec enforces that pairing. */
+@supports (corner-shape: superellipse(1.5)) {
+  :root {
+    --hg-corner-shape: superellipse(1.5);
+  }
+
+  *,
+  *::before,
+  *::after {
+    corner-shape: var(--hg-corner-shape);
+  }
+}
+
+/* ── design-platform.css：三层令牌 ──────────────────────── */
+/* Figma font-weight 510 (an SF Pro variable-font weight) always renders as
+   font-weight: 500 in this UI — non-variable webfonts snap intermediate
+   weights unpredictably across platforms. */
+body {
+  --hg-static-amber-100: rgb(254, 245, 231);
+  --hg-static-amber-400: rgb(247, 173, 49);
+  --hg-static-amber-500: rgb(245, 158, 11);
+  --hg-static-amber-600: rgb(221, 134, 41);
+  --hg-static-amber-900: rgb(39, 36, 31);
+  --hg-static-blue-100: rgb(219, 234, 254);
+  --hg-static-blue-300: rgb(147, 197, 253);
+  --hg-static-blue-400: rgb(96, 165, 250);
+  --hg-static-blue-450: rgb(77, 147, 248);
+  --hg-static-blue-500: rgb(59, 130, 246);
+  --hg-static-blue-50: rgb(239, 246, 255);
+  --hg-static-blue-50p: rgb(234, 243, 255);
+  --hg-static-blue-600: rgb(37, 99, 235);
+  --hg-static-blue-75: rgb(229, 240, 255);
+  --hg-static-blue-800: rgb(30, 64, 175);
+  --hg-static-blue-900: rgb(14, 48, 116);
+  --hg-static-blue-950: rgb(23, 37, 84);
+  --hg-static-deepseek-100: rgb(228, 237, 253);
+  --hg-static-deepseek-200: rgb(211, 226, 255);
+  --hg-static-deepseek-300: rgb(183, 200, 254);
+  --hg-static-deepseek-400: rgb(103, 158, 254);
+  --hg-static-deepseek-450: rgb(86, 134, 254);
+  --hg-static-deepseek-500: rgb(65, 118, 230);
+  --hg-static-deepseek-50: rgb(237, 243, 254);
+  --hg-static-deepseek-600: rgb(72, 104, 178);
+  --hg-static-deepseek-700-delete: rgb(47, 76, 143);
+  --hg-static-deepseek-800: rgb(52, 65, 91);
+  --hg-static-deepseek-900: rgb(40, 49, 66);
+  --hg-static-green-100: rgb(230, 250, 237);
+  --hg-static-green-400: rgb(78, 209, 126);
+  --hg-static-green-500: rgb(34, 197, 94);
+  --hg-static-green-900: rgb(35, 60, 44);
+  --hg-static-neutral-00: rgb(255, 255, 255);
+  --hg-static-neutral-1000: rgb(0, 0, 0);
+  --hg-static-neutral-100: rgb(245, 245, 245);
+  --hg-static-neutral-150: rgb(237, 237, 237);
+  --hg-static-neutral-200: rgb(229, 229, 229);
+  --hg-static-neutral-250: rgb(220, 220, 220);
+  --hg-static-neutral-300: rgb(212, 212, 212);
+  --hg-static-neutral-400: rgb(162, 164, 166);
+  --hg-static-neutral-500: rgb(127, 130, 135);
+  --hg-static-neutral-50: rgb(250, 250, 250);
+  --hg-static-neutral-550: rgb(101, 103, 107);
+  --hg-static-neutral-600: rgb(84, 85, 87);
+  --hg-static-neutral-700: rgb(60, 60, 61);
+  --hg-static-neutral-800: rgb(41, 41, 41);
+  --hg-static-neutral-850: rgb(33, 33, 35);
+  --hg-static-neutral-900: rgb(15, 15, 15);
+  --hg-static-neutral-bluish-00: rgb(255, 255, 255);
+  --hg-static-neutral-bluish-1000: rgb(15, 17, 21);
+  --hg-static-neutral-bluish-100: rgb(235, 238, 242);
+  --hg-static-neutral-bluish-150: rgb(233, 236, 242);
+  --hg-static-neutral-bluish-200: rgb(225, 229, 238);
+  --hg-static-neutral-bluish-300: rgb(207, 211, 214);
+  --hg-static-neutral-bluish-400: rgb(173, 178, 184);
+  --hg-static-neutral-bluish-500: rgb(151, 157, 166);
+  --hg-static-neutral-bluish-50: rgb(249, 250, 251);
+  --hg-static-neutral-bluish-600: rgb(129, 133, 140);
+  --hg-static-neutral-bluish-60: rgb(245, 246, 247);
+  --hg-static-neutral-bluish-700: rgb(97, 102, 107);
+  --hg-static-neutral-bluish-750: rgb(67, 69, 74);
+  --hg-static-neutral-bluish-75: rgb(241, 243, 245);
+  --hg-static-neutral-bluish-800: rgb(53, 54, 56);
+  --hg-static-neutral-bluish-850: rgb(44, 44, 46);
+  --hg-static-neutral-bluish-875: rgb(35, 35, 36);
+  --hg-static-neutral-bluish-900: rgb(27, 27, 28);
+  --hg-static-neutral-bluish-950: rgb(21, 21, 23);
+  --hg-static-red-100: rgb(254, 226, 226);
+  --hg-static-red-400: rgb(242, 90, 90);
+  --hg-static-red-500: rgb(239, 68, 68);
+  --hg-static-red-50: rgb(254, 242, 242);
+  --hg-static-red-600: rgb(236, 19, 19);
+  --hg-static-red-900: rgb(87, 12, 12);
+}
+
+body[data-jl-dark] {
+  --hg-static-amber-100: rgb(254, 245, 231);
+  --hg-static-amber-400: rgb(247, 173, 49);
+  --hg-static-amber-500: rgb(245, 158, 11);
+  --hg-static-amber-600: rgb(221, 134, 41);
+  --hg-static-amber-900: rgb(39, 36, 31);
+  --hg-static-blue-100: rgb(219, 234, 254);
+  --hg-static-blue-300: rgb(147, 197, 253);
+  --hg-static-blue-400: rgb(96, 165, 250);
+  --hg-static-blue-450: rgb(77, 147, 248);
+  --hg-static-blue-500: rgb(59, 130, 246);
+  --hg-static-blue-50: rgb(239, 246, 255);
+  --hg-static-blue-50p: rgb(234, 243, 255);
+  --hg-static-blue-600: rgb(37, 99, 235);
+  --hg-static-blue-75: rgb(229, 240, 255);
+  --hg-static-blue-800: rgb(30, 64, 175);
+  --hg-static-blue-900: rgb(14, 48, 116);
+  --hg-static-blue-950: rgb(23, 37, 84);
+  --hg-static-deepseek-100: rgb(228, 237, 253);
+  --hg-static-deepseek-200: rgb(211, 226, 255);
+  --hg-static-deepseek-300: rgb(183, 200, 254);
+  --hg-static-deepseek-400: rgb(103, 158, 254);
+  --hg-static-deepseek-450: rgb(86, 134, 254);
+  --hg-static-deepseek-500: rgb(65, 118, 230);
+  --hg-static-deepseek-50: rgb(237, 243, 254);
+  --hg-static-deepseek-600: rgb(72, 104, 178);
+  --hg-static-deepseek-700-delete: rgb(47, 76, 143);
+  --hg-static-deepseek-800: rgb(52, 65, 91);
+  --hg-static-deepseek-900: rgb(40, 49, 66);
+  --hg-static-green-100: rgb(230, 250, 237);
+  --hg-static-green-400: rgb(78, 209, 126);
+  --hg-static-green-500: rgb(34, 197, 94);
+  --hg-static-green-900: rgb(35, 60, 44);
+  --hg-static-neutral-00: rgb(255, 255, 255);
+  --hg-static-neutral-1000: rgb(0, 0, 0);
+  --hg-static-neutral-100: rgb(245, 245, 245);
+  --hg-static-neutral-150: rgb(237, 237, 237);
+  --hg-static-neutral-200: rgb(229, 229, 229);
+  --hg-static-neutral-250: rgb(220, 220, 220);
+  --hg-static-neutral-300: rgb(212, 212, 212);
+  --hg-static-neutral-400: rgb(162, 164, 166);
+  --hg-static-neutral-500: rgb(127, 130, 135);
+  --hg-static-neutral-50: rgb(250, 250, 250);
+  --hg-static-neutral-550: rgb(101, 103, 107);
+  --hg-static-neutral-600: rgb(84, 85, 87);
+  --hg-static-neutral-700: rgb(60, 60, 61);
+  --hg-static-neutral-800: rgb(41, 41, 41);
+  --hg-static-neutral-850: rgb(33, 33, 35);
+  --hg-static-neutral-900: rgb(15, 15, 15);
+  --hg-static-neutral-bluish-00: rgb(255, 255, 255);
+  --hg-static-neutral-bluish-1000: rgb(15, 17, 21);
+  --hg-static-neutral-bluish-100: rgb(235, 238, 242);
+  --hg-static-neutral-bluish-150: rgb(233, 236, 242);
+  --hg-static-neutral-bluish-200: rgb(225, 229, 238);
+  --hg-static-neutral-bluish-300: rgb(207, 211, 214);
+  --hg-static-neutral-bluish-400: rgb(173, 178, 184);
+  --hg-static-neutral-bluish-500: rgb(151, 157, 166);
+  --hg-static-neutral-bluish-50: rgb(249, 250, 251);
+  --hg-static-neutral-bluish-600: rgb(129, 133, 140);
+  --hg-static-neutral-bluish-60: rgb(249, 250, 251);
+  --hg-static-neutral-bluish-700: rgb(97, 102, 107);
+  --hg-static-neutral-bluish-750: rgb(67, 69, 74);
+  --hg-static-neutral-bluish-75: rgb(241, 243, 245);
+  --hg-static-neutral-bluish-800: rgb(53, 54, 56);
+  --hg-static-neutral-bluish-850: rgb(44, 44, 46);
+  --hg-static-neutral-bluish-875: rgb(35, 35, 36);
+  --hg-static-neutral-bluish-900: rgb(27, 27, 28);
+  --hg-static-neutral-bluish-950: rgb(21, 21, 23);
+  --hg-static-red-100: rgb(254, 226, 226);
+  --hg-static-red-400: rgb(242, 90, 90);
+  --hg-static-red-500: rgb(239, 68, 68);
+  --hg-static-red-50: rgb(254, 242, 242);
+  --hg-static-red-600: rgb(236, 19, 19);
+  --hg-static-red-900: rgb(87, 12, 12);
+}
+
+body {
+  --hg-alias-bg-base: var(--hg-static-neutral-bluish-00);
+  --hg-alias-bg-layer-1: var(--hg-static-neutral-bluish-00);
+  --hg-alias-bg-layer-2: var(--hg-static-neutral-bluish-00);
+  --hg-alias-bg-layer-3: var(--hg-static-neutral-bluish-00);
+  --hg-alias-bg-mask-1: rgba(0, 0, 0, 0.24);
+  --hg-alias-bg-mask-2: rgba(0, 0, 0, 0.12);
+  --hg-alias-bg-mask-3: rgba(0, 0, 0, 0.48);
+  --hg-alias-bg-mask-photo: rgba(0, 0, 0, 0.88);
+  --hg-alias-bg-mask-drop: rgba(255, 255, 255, 0.7);
+  --hg-alias-bg-module-platform: var(--hg-static-neutral-bluish-60);
+  --hg-alias-bg-multi-select: var(--hg-static-neutral-bluish-60);
+  --hg-alias-bg-overlay: var(--hg-static-neutral-bluish-150);
+  --hg-alias-bg-skeleton: rgba(0, 0, 0, 0.04);
+  --hg-alias-border-inverted2: rgba(0, 0, 0, 0);
+  --hg-alias-border-inverted: rgba(0, 0, 0, 0);
+  --hg-alias-border-l1: rgba(0, 0, 0, 0.04);
+  --hg-alias-border-l2-darkmode-thin: rgba(0, 0, 0, 0.1);
+  --hg-alias-border-l2: rgba(0, 0, 0, 0.1);
+  --hg-alias-border-l3: rgba(0, 0, 0, 0.12);
+  --hg-alias-border-l4: rgba(0, 0, 0, 0.16);
+  --hg-alias-brand-primary-invert: var(--hg-static-neutral-bluish-1000);
+  --hg-alias-brand-primary-new-colorprimary-new-color: rgb(65, 118, 230);
+  --hg-alias-brand-primary: var(--hg-static-neutral-bluish-1000);
+  --hg-alias-brand-text: var(--hg-static-neutral-bluish-1000);
+  --hg-alias-button-contrast-fill: var(--hg-static-neutral-bluish-700);
+  --hg-alias-button-elevated-fill: var(--hg-static-neutral-bluish-00);
+  --hg-alias-button-floating-fill: var(--hg-static-neutral-bluish-00);
+  --hg-alias-button-floating-hover: var(--hg-static-neutral-bluish-75);
+  --hg-alias-button-ghost-active-border: var(--hg-static-neutral-bluish-500);
+  --hg-alias-button-ghost-active-fill: var(--hg-static-neutral-bluish-100);
+  --hg-alias-button-ghost-active-hover: var(--hg-static-neutral-bluish-150);
+  --hg-alias-button-info-fill: var(--hg-static-deepseek-500);
+  --hg-alias-button-info-text: var(--hg-static-neutral-00);
+  --hg-alias-button-info-hover: var(--hg-static-deepseek-400);
+  --hg-alias-button-primary-dimmed: var(--hg-static-neutral-bluish-100);
+  --hg-alias-button-primary-fill: var(--hg-alias-brand-primary);
+  --hg-alias-button-primary-hover: var(--hg-static-neutral-bluish-750);
+  --hg-alias-button-tool-bar-fill-invisible: rgba(31, 31, 31, 0.36);
+  --hg-alias-button-tool-bar-fill: rgba(84, 85, 87, 0.5);
+  --hg-alias-button-tool-bar-hover: rgba(84, 85, 87, 0.6);
+  --hg-alias-interactive-bg-active: rgba(38, 49, 72, 0.1);
+  --hg-alias-interactive-bg-hover-accent: rgba(38, 49, 72, 0.14);
+  --hg-alias-interactive-bg-hover-danger: rgba(236, 19, 19, 0.05);
+  --hg-alias-interactive-bg-hover-solid: var(--hg-static-neutral-bluish-75);
+  --hg-alias-interactive-bg-hover: rgba(38, 49, 72, 0.06);
+  --hg-alias-label-caption: var(--hg-static-neutral-bluish-400);
+  --hg-alias-label-dimmed: var(--hg-static-neutral-bluish-200);
+  --hg-alias-label-primary-bluish: var(--hg-static-blue-900);
+  --hg-alias-label-primary-dimmed: var(--hg-static-neutral-bluish-950);
+  --hg-alias-label-primary-foreground: var(--hg-static-neutral-bluish-00);
+  --hg-alias-label-primary-inverted: var(--hg-static-neutral-bluish-00);
+  --hg-alias-label-primary: var(--hg-static-neutral-bluish-1000);
+  --hg-alias-label-secondary: var(--hg-static-neutral-bluish-700);
+  --hg-alias-label-tertiary: var(--hg-static-neutral-bluish-600);
+  --hg-alias-link: var(--hg-static-deepseek-500);
+  --hg-alias-markdown-citation: var(--hg-static-neutral-bluish-100);
+  --hg-alias-markdown-code-block-banner: var(--hg-static-neutral-bluish-50);
+  --hg-alias-markdown-code-block: var(--hg-static-neutral-bluish-50);
+  --hg-alias-markdown-code-segment-selected: var(--hg-static-neutral-bluish-00);
+  --hg-alias-markdown-code-segment-unselected: var(--hg-static-neutral-bluish-75);
+  --hg-alias-markdown-inline-code: var(--hg-static-neutral-50);
+  --hg-alias-markdown-placeholder: var(--hg-static-neutral-bluish-60);
+  --hg-alias-markdown-tag: var(--hg-static-neutral-bluish-75);
+  --hg-alias-scrollbar-bg-l1: var(--hg-static-neutral-200);
+  --hg-alias-scrollbar-bg-l2: var(--hg-static-neutral-200);
+  --hg-alias-scrollbar-hover-l1: var(--hg-static-neutral-300);
+  --hg-alias-scrollbar-hover-l2: var(--hg-static-neutral-300);
+  --hg-alias-state-business-primary: var(--hg-static-deepseek-500);
+  --hg-alias-state-business-tertiary: var(--hg-static-deepseek-100);
+  --hg-alias-state-error-primary: var(--hg-static-red-600);
+  --hg-alias-state-error-secondary: var(--hg-static-red-400);
+  --hg-alias-state-success-primary: var(--hg-static-green-500);
+  --hg-alias-state-success-secondary: var(--hg-static-green-400);
+  --hg-alias-state-success-tertiary: var(--hg-static-green-100);
+  --hg-alias-state-warn-label: var(--hg-static-amber-600);
+  --hg-alias-state-warn-primary: var(--hg-static-amber-500);
+  --hg-alias-state-warn-secondary: var(--hg-static-amber-400);
+  --hg-alias-state-warn-tertiary: var(--hg-static-amber-100);
+  --hg-alias-toast-bg: var(--hg-static-neutral-bluish-800);
+  --hg-alias-tooltip-bg: var(--hg-static-neutral-bluish-850);
+  --hg-specific-bubble-highlight: var(--hg-static-deepseek-200);
+  --hg-specific-bubble: var(--hg-static-deepseek-50);
+  --hg-specific-input-major: var(--hg-static-neutral-bluish-00);
+  --hg-specific-login-input: var(--hg-static-neutral-bluish-50);
+  --hg-specific-menu: var(--hg-alias-bg-layer-3);
+  --hg-specific-selector: var(--hg-static-neutral-bluish-60);
+  --hg-specific-sidebar-fill: var(--hg-static-neutral-bluish-50);
+  --hg-specific-sidebar-nav-item-active-accent: var(--hg-static-deepseek-100);
+  --hg-specific-sidebar-nav-item-active: var(--hg-static-neutral-bluish-100);
+  --hg-specific-sidebar-nav-item-hover: var(--hg-static-neutral-bluish-75);
+  --hg-specific-tip: var(--hg-static-neutral-bluish-60);
+}
+
+body[data-jl-dark] {
+  --hg-alias-bg-base: var(--hg-static-neutral-bluish-950);
+  --hg-alias-bg-layer-1: var(--hg-static-neutral-bluish-875);
+  --hg-alias-bg-layer-2: var(--hg-static-neutral-bluish-850);
+  --hg-alias-bg-layer-3: var(--hg-static-neutral-bluish-800);
+  --hg-alias-bg-mask-1: rgba(0, 0, 0, 0.5);
+  --hg-alias-bg-mask-2: rgba(0, 0, 0, 0.2);
+  --hg-alias-bg-mask-3: rgba(0, 0, 0, 0.48);
+  --hg-alias-bg-mask-photo: rgba(0, 0, 0, 0.88);
+  --hg-alias-bg-mask-drop: rgba(39, 39, 48, 0.7);
+  --hg-alias-bg-module-platform: var(--hg-static-neutral-bluish-800);
+  --hg-alias-bg-multi-select: var(--hg-static-neutral-850);
+  --hg-alias-bg-overlay: var(--hg-static-neutral-bluish-700);
+  --hg-alias-bg-skeleton: rgba(255, 255, 255, 0.08);
+  --hg-alias-border-inverted2: rgba(255, 255, 255, 0.08);
+  --hg-alias-border-inverted: rgba(255, 255, 255, 0.06);
+  --hg-alias-border-l1: rgba(255, 255, 255, 0.06);
+  --hg-alias-border-l2-darkmode-thin: rgba(255, 255, 255, 0.06);
+  --hg-alias-border-l2: rgba(255, 255, 255, 0.12);
+  --hg-alias-border-l3: rgba(255, 255, 255, 0.16);
+  --hg-alias-border-l4: rgba(255, 255, 255, 0.2);
+  --hg-alias-brand-primary-invert: var(--hg-static-neutral-bluish-50);
+  --hg-alias-brand-primary-new-colorprimary-new-color: var(--hg-static-deepseek-450);
+  --hg-alias-brand-primary: var(--hg-static-neutral-bluish-50);
+  --hg-alias-brand-text: var(--hg-static-neutral-bluish-50);
+  --hg-alias-button-contrast-fill: var(--hg-static-neutral-bluish-50);
+  --hg-alias-button-elevated-fill: var(--hg-static-neutral-bluish-750);
+  --hg-alias-button-floating-fill: var(--hg-static-neutral-bluish-850);
+  --hg-alias-button-floating-hover: var(--hg-static-neutral-bluish-800);
+  --hg-alias-button-ghost-active-border: var(--hg-static-neutral-bluish-600);
+  --hg-alias-button-ghost-active-fill: var(--hg-static-neutral-bluish-750);
+  --hg-alias-button-ghost-active-hover: var(--hg-static-neutral-bluish-700);
+  --hg-alias-button-info-fill: var(--hg-static-deepseek-400);
+  --hg-alias-button-info-text: var(--hg-static-neutral-00);
+  --hg-alias-button-info-hover: var(--hg-static-deepseek-500);
+  --hg-alias-button-primary-dimmed: var(--hg-static-neutral-bluish-750);
+  --hg-alias-button-primary-fill: var(--hg-alias-brand-primary);
+  --hg-alias-button-primary-hover: var(--hg-static-neutral-bluish-100);
+  --hg-alias-button-tool-bar-fill-invisible: rgba(31, 31, 31, 0.36);
+  --hg-alias-button-tool-bar-fill: rgba(84, 85, 87, 0.5);
+  --hg-alias-button-tool-bar-hover: rgba(84, 85, 87, 0.6);
+  --hg-alias-interactive-bg-active: rgba(255, 255, 255, 0.14);
+  --hg-alias-interactive-bg-hover-accent: rgba(255, 255, 255, 0.24);
+  --hg-alias-interactive-bg-hover-danger: rgba(242, 90, 90, 0.15);
+  --hg-alias-interactive-bg-hover-solid: var(--hg-static-neutral-bluish-800);
+  --hg-alias-interactive-bg-hover: rgba(255, 255, 255, 0.08);
+  --hg-alias-label-caption: var(--hg-static-neutral-bluish-600);
+  --hg-alias-label-dimmed: var(--hg-static-neutral-bluish-750);
+  --hg-alias-label-primary-bluish: var(--hg-static-neutral-bluish-50);
+  --hg-alias-label-primary-dimmed: var(--hg-static-neutral-bluish-100);
+  --hg-alias-label-primary-foreground: var(--hg-static-neutral-bluish-1000);
+  --hg-alias-label-primary-inverted: var(--hg-static-neutral-bluish-800);
+  --hg-alias-label-primary: var(--hg-static-neutral-bluish-50);
+  --hg-alias-label-secondary: var(--hg-static-neutral-bluish-300);
+  --hg-alias-label-tertiary: var(--hg-static-neutral-bluish-400);
+  --hg-alias-link: var(--hg-static-deepseek-400);
+  --hg-alias-markdown-citation: var(--hg-static-neutral-bluish-800);
+  --hg-alias-markdown-code-block-banner: var(--hg-static-neutral-bluish-850);
+  --hg-alias-markdown-code-block: var(--hg-static-neutral-bluish-900);
+  --hg-alias-markdown-code-segment-selected: var(--hg-static-neutral-bluish-800);
+  --hg-alias-markdown-code-segment-unselected: var(--hg-static-neutral-bluish-900);
+  --hg-alias-markdown-inline-code: var(--hg-static-neutral-800);
+  --hg-alias-markdown-placeholder: var(--hg-static-neutral-bluish-850);
+  --hg-alias-markdown-tag: var(--hg-static-neutral-bluish-850);
+  --hg-alias-scrollbar-bg-l1: var(--hg-static-neutral-700);
+  --hg-alias-scrollbar-bg-l2: var(--hg-static-neutral-600);
+  --hg-alias-scrollbar-hover-l1: var(--hg-static-neutral-600);
+  --hg-alias-scrollbar-hover-l2: var(--hg-static-neutral-550);
+  --hg-alias-state-business-primary: var(--hg-static-deepseek-400);
+  --hg-alias-state-business-tertiary: var(--hg-static-deepseek-800);
+  --hg-alias-state-error-primary: var(--hg-static-red-400);
+  --hg-alias-state-error-secondary: var(--hg-static-red-400);
+  --hg-alias-state-success-primary: var(--hg-static-green-500);
+  --hg-alias-state-success-secondary: var(--hg-static-green-400);
+  --hg-alias-state-success-tertiary: var(--hg-static-green-900);
+  --hg-alias-state-warn-label: var(--hg-static-amber-600);
+  --hg-alias-state-warn-primary: var(--hg-static-amber-500);
+  --hg-alias-state-warn-secondary: var(--hg-static-amber-400);
+  --hg-alias-state-warn-tertiary: var(--hg-static-amber-900);
+  --hg-alias-toast-bg: var(--hg-static-neutral-bluish-750);
+  --hg-alias-tooltip-bg: var(--hg-static-neutral-bluish-750);
+  --hg-specific-bubble-highlight: var(--hg-static-neutral-bluish-750);
+  --hg-specific-bubble: var(--hg-static-neutral-bluish-850);
+  --hg-specific-input-major: var(--hg-static-neutral-bluish-850);
+  --hg-specific-login-input: var(--hg-static-neutral-bluish-900);
+  --hg-specific-menu: var(--hg-alias-bg-layer-3);
+  --hg-specific-selector: var(--hg-static-neutral-bluish-800);
+  --hg-specific-sidebar-fill: var(--hg-static-neutral-bluish-900);
+  --hg-specific-sidebar-nav-item-active-accent: var(--hg-static-neutral-bluish-800);
+  --hg-specific-sidebar-nav-item-active: var(--hg-static-neutral-bluish-750);
+  --hg-specific-sidebar-nav-item-hover: var(--hg-static-neutral-bluish-850);
+  --hg-specific-tip: var(--hg-static-neutral-bluish-800);
+}
+
+/* ── gradient-shadow-text.css：排版角色、高度、渐变与阴影 ── */
+body {
+  --hg-linear-gradient-think: linear-gradient(180deg, #fff 20.19%, rgba(255, 255, 255, 0) 100%);
+  --hg-linear-think-select: linear-gradient(180deg, #f5f6f7 20.19%, rgba(245, 246, 247, 0) 100%);
+  /* 阴影 */
+  --hg-shadow-lv1: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  --hg-shadow-lv1-blur: 0 4px 12px 0 rgba(0, 0, 0, 0.02);
+  --hg-shadow-lv2: 0 4px 12px 0 rgba(0, 0, 0, 0.02), 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+  --hg-shadow-lv3:
+    0 0 1px 0 rgba(0, 0, 0, 0.2), 0 0 4px 0 rgba(0, 0, 0, 0.02), 0 12px 32px 0 rgba(0, 0, 0, 0.08);
+  /* Elevation：浮层/面板/面型按钮的描边+投影三件套。0.5px 发丝描边画在
+     box-shadow 里（组件配 border: 0，不占布局），叠两层极淡柔光；深色主题下
+     柔光几乎不可见，由描边承担分离。描边颜色经 --hg-elevation-stroke-color
+     间接，组件可重绑（菜单面重绑最浅的 l1、输入框重绑 l2，输入框的
+     workspace-trigger 态置 transparent 只保留柔光）。soft 供输入框：更大
+     模糊、更低透明度的柔光。默认色只声明在 body 上，让表面的重绑沿继承
+     传给真正消费投影的后代。 */
+  --hg-elevation-stroke-color: var(--hg-alias-border-l4);
+  /* blur filter */
+  --hg-mask-blur: blur(2px);
+}
+
+/* 派生 elevation 值逐元素声明而非从 body 继承：继承传下来的是在 body 上就
+   已替换完 var() 的值，组件重绑 --hg-elevation-stroke-color 将无法进入
+   var(--hg-elevation-*)；逐元素声明让每个元素按自己看到的描边色重新替换
+   （同 scrollbar.css 对 --hg-scrollbar-thumb 的处理）。 */
+body,
+body * {
+  --hg-elevation-stroke: 0 0 0 0.5px var(--hg-elevation-stroke-color);
+  --hg-elevation-panel:
+    var(--hg-elevation-stroke), 0 3px 8px 0 rgba(0, 0, 0, 0.03), 0 0 16px 0 rgba(0, 0, 0, 0.02);
+  --hg-elevation-prominent:
+    var(--hg-elevation-stroke), 0 3px 8px 0 rgba(0, 0, 0, 0.04), 0 0 20px 0 rgba(0, 0, 0, 0.05);
+  --hg-elevation-soft:
+    var(--hg-elevation-stroke), 0 4px 16px 0 rgba(0, 0, 0, 0.03), 0 0 24px 0 rgba(0, 0, 0, 0.03);
+}
+
+body[data-jl-dark] {
+  --hg-linear-gradient-think: linear-gradient(180deg, #151517 20.19%, rgba(21, 21, 23, 0) 100%);
+  --hg-linear-think-select: linear-gradient(180deg, #232325 20.19%, rgba(35, 35, 37, 0) 100%);
+}
+
+/* ---------- 字体 ---------- */
+/* 由 @deepseek-figma-plugin/custom-variable-name 插件导出 */
+/* Markdown 阶梯整体按 0.875（正文 16 → 14）等比缩放，四舍五入到整数像素；
+   重新从 Figma 导出时需要保留这一缩放。 */
+/* 正文字号调节：--hg-content-font-size 由主题 bootstrap 与 ThemePresenter
+   写在 body 上（整数 px，12–17，默认 14）。标题与正文变体按同一像素增量
+   （--hg-content-font-delta）随动，保持层级。低一档文本（think、工具/bash
+   行的标题与摘要、markdown 表格、流内次级说明等）统一读
+   --hg-content-font-size-secondary：设置 ≤14 时为设置值 −1，>14 时为
+   设置值 −2（12→11、13→12、14→13、15→13、16→14、17→15）。式中
+   max(13px,·) 的作用是让低设置取 −1 而非 −2，不是结果下限——12 设置下
+   层级触底 11px。small、code 属于密集次级文本，保持固定。 */
+body {
+  --hg-content-font-delta: calc(var(--hg-content-font-size, 14px) - 14px);
+  --hg-content-font-size-secondary: min(calc(var(--hg-content-font-size, 14px) - 1px), max(13px, calc(var(--hg-content-font-size, 14px) - 2px)));
+  --hg-content-font-delta-secondary: calc(var(--hg-content-font-size-secondary) - 13px);
+
+  --hg-font-markdown-h1: 700 calc(21px + var(--hg-content-font-delta)) / calc(30px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-h1-font-family: var(--hg-font-family);
+  --hg-font-markdown-h1-font-weight: 700;
+  --hg-font-markdown-h1-line-height: calc(30px + var(--hg-content-font-delta));
+  --hg-font-markdown-h1-font-size: calc(21px + var(--hg-content-font-delta));
+  --hg-font-markdown-h1-font-style: normal;
+
+  --hg-font-markdown-h2: 700 calc(19px + var(--hg-content-font-delta)) / calc(28px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-h2-font-family: var(--hg-font-family);
+  --hg-font-markdown-h2-font-weight: 700;
+  --hg-font-markdown-h2-line-height: calc(28px + var(--hg-content-font-delta));
+  --hg-font-markdown-h2-font-size: calc(19px + var(--hg-content-font-delta));
+  --hg-font-markdown-h2-font-style: normal;
+
+  --hg-font-markdown-h3: 700 calc(18px + var(--hg-content-font-delta)) / calc(26px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-h3-font-family: var(--hg-font-family);
+  --hg-font-markdown-h3-font-weight: 700;
+  --hg-font-markdown-h3-line-height: calc(26px + var(--hg-content-font-delta));
+  --hg-font-markdown-h3-font-size: calc(18px + var(--hg-content-font-delta));
+  --hg-font-markdown-h3-font-style: normal;
+
+  --hg-font-markdown-h4: 600 var(--hg-content-font-size, 14px) / calc(24px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-h4-font-family: var(--hg-font-family);
+  --hg-font-markdown-h4-font-weight: 600;
+  --hg-font-markdown-h4-line-height: calc(24px + var(--hg-content-font-delta));
+  --hg-font-markdown-h4-font-size: var(--hg-content-font-size, 14px);
+  --hg-font-markdown-h4-font-style: normal;
+
+  --hg-font-markdown-base: var(--hg-content-font-size, 14px) / calc(24px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-base-font-family: var(--hg-font-family);
+  --hg-font-markdown-base-font-weight: 400;
+  --hg-font-markdown-base-line-height: calc(24px + var(--hg-content-font-delta));
+  --hg-font-markdown-base-font-size: var(--hg-content-font-size, 14px);
+  --hg-font-markdown-base-font-style: normal;
+
+  --hg-font-markdown-base-strong: 600 var(--hg-content-font-size, 14px) / calc(24px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-base-strong-font-family: var(--hg-font-family);
+  --hg-font-markdown-base-strong-font-weight: 600;
+  --hg-font-markdown-base-strong-line-height: calc(24px + var(--hg-content-font-delta));
+  --hg-font-markdown-base-strong-font-size: var(--hg-content-font-size, 14px);
+  --hg-font-markdown-base-strong-font-style: normal;
+
+  --hg-font-markdown-base-italic: italic var(--hg-content-font-size, 14px) / calc(24px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-base-italic-font-family: var(--hg-font-family);
+  --hg-font-markdown-base-italic-font-weight: 400;
+  --hg-font-markdown-base-italic-line-height: calc(24px + var(--hg-content-font-delta));
+  --hg-font-markdown-base-italic-font-size: var(--hg-content-font-size, 14px);
+  --hg-font-markdown-base-italic-font-style: italic;
+
+  --hg-font-markdown-base-strong-italic: italic 600 var(--hg-content-font-size, 14px) / calc(24px + var(--hg-content-font-delta)) var(--hg-font-family);
+  --hg-font-markdown-base-strong-italic-font-family: var(--hg-font-family);
+  --hg-font-markdown-base-strong-italic-font-weight: 600;
+  --hg-font-markdown-base-strong-italic-line-height: calc(24px + var(--hg-content-font-delta));
+  --hg-font-markdown-base-strong-italic-font-size: var(--hg-content-font-size, 14px);
+  --hg-font-markdown-base-strong-italic-font-style: italic;
+
+  --hg-font-markdown-table: var(--hg-content-font-size-secondary, 13px)/calc(22px + var(--hg-content-font-delta-secondary, 0px)) var(--hg-font-family);
+  --hg-font-markdown-table-font-family: var(--hg-font-family);
+  --hg-font-markdown-table-font-weight: 400;
+  --hg-font-markdown-table-line-height: calc(22px + var(--hg-content-font-delta-secondary, 0px));
+  --hg-font-markdown-table-font-size: var(--hg-content-font-size-secondary, 13px);
+  --hg-font-markdown-table-font-style: normal;
+
+  --hg-font-markdown-table-head: 500 var(--hg-content-font-size-secondary, 13px)/calc(22px + var(--hg-content-font-delta-secondary, 0px)) var(--hg-font-family);
+  --hg-font-markdown-table-head-font-family: var(--hg-font-family);
+  --hg-font-markdown-table-head-font-weight: 500;
+  --hg-font-markdown-table-head-line-height: calc(22px + var(--hg-content-font-delta-secondary, 0px));
+  --hg-font-markdown-table-head-font-size: var(--hg-content-font-size-secondary, 13px);
+  --hg-font-markdown-table-head-font-style: normal;
+
+  --hg-font-markdown-small: 12px/20px var(--hg-font-family);
+  --hg-font-markdown-small-font-family: var(--hg-font-family);
+  --hg-font-markdown-small-font-weight: 400;
+  --hg-font-markdown-small-line-height: 20px;
+  --hg-font-markdown-small-font-size: 12px;
+  --hg-font-markdown-small-font-style: normal;
+
+  --hg-font-markdown-small-strong: 600 12px/20px var(--hg-font-family);
+  --hg-font-markdown-small-strong-font-family: var(--hg-font-family);
+  --hg-font-markdown-small-strong-font-weight: 600;
+  --hg-font-markdown-small-strong-line-height: 20px;
+  --hg-font-markdown-small-strong-font-size: 12px;
+  --hg-font-markdown-small-strong-font-style: normal;
+
+  --hg-font-markdown-small-italic: italic 12px/20px var(--hg-font-family);
+  --hg-font-markdown-small-italic-font-family: var(--hg-font-family);
+  --hg-font-markdown-small-italic-font-weight: 400;
+  --hg-font-markdown-small-italic-line-height: 20px;
+  --hg-font-markdown-small-italic-font-size: 12px;
+  --hg-font-markdown-small-italic-font-style: italic;
+
+  --hg-font-markdown-small-strong-italic: italic 600 12px/20px var(--hg-font-family);
+  --hg-font-markdown-small-strong-italic-font-family: var(--hg-font-family);
+  --hg-font-markdown-small-strong-italic-font-weight: 600;
+  --hg-font-markdown-small-strong-italic-line-height: 20px;
+  --hg-font-markdown-small-strong-italic-font-size: 12px;
+  --hg-font-markdown-small-strong-italic-font-style: italic;
+
+  --hg-font-markdown-code: 12px/19px var(--hg-font-mono);
+  --hg-font-markdown-code-font-family: var(--hg-font-mono);
+  --hg-font-markdown-code-font-weight: 400;
+  --hg-font-markdown-code-line-height: 19px;
+  --hg-font-markdown-code-font-size: 12px;
+  --hg-font-markdown-code-font-style: normal;
+
+  --hg-font-markdown-code-block: 11px/19px var(--hg-font-mono);
+  --hg-font-markdown-code-block-font-family: var(--hg-font-mono);
+  --hg-font-markdown-code-block-font-weight: 400;
+  --hg-font-markdown-code-block-line-height: 19px;
+  --hg-font-markdown-code-block-font-size: 11px;
+  --hg-font-markdown-code-block-font-style: normal;
+
+  /* 手工补充（非插件导出）：tool row 展开卡片内的小号 code 字体。 */
+  --hg-font-markdown-code-block-small: 11px/16px var(--hg-font-mono);
+  --hg-font-markdown-code-block-small-font-family: var(--hg-font-mono);
+  --hg-font-markdown-code-block-small-font-weight: 400;
+  --hg-font-markdown-code-block-small-line-height: 16px;
+  --hg-font-markdown-code-block-small-font-size: 11px;
+  --hg-font-markdown-code-block-small-font-style: normal;
+
+  --hg-font-xl-24: 600 24px/32px var(--hg-font-family);
+  --hg-font-xl-24-font-family: var(--hg-font-family);
+  --hg-font-xl-24-font-weight: 600;
+  --hg-font-xl-24-line-height: 32px;
+  --hg-font-xl-24-font-size: 24px;
+  --hg-font-xl-24-font-style: normal;
+
+  --hg-font-l-20: 500 20px/28px var(--hg-font-family);
+  --hg-font-l-20-font-family: var(--hg-font-family);
+  --hg-font-l-20-font-weight: 500;
+  --hg-font-l-20-line-height: 28px;
+  --hg-font-l-20-font-size: 20px;
+  --hg-font-l-20-font-style: normal;
+
+  --hg-font-m-18: 500 16px/28px var(--hg-font-family);
+  --hg-font-m-18-font-family: var(--hg-font-family);
+  --hg-font-m-18-font-weight: 500;
+  --hg-font-m-18-line-height: 28px;
+  --hg-font-m-18-font-size: 16px;
+  --hg-font-m-18-font-style: normal;
+
+  --hg-font-base-16: 16px/24px var(--hg-font-family);
+  --hg-font-base-16-font-family: var(--hg-font-family);
+  --hg-font-base-16-font-weight: 400;
+  --hg-font-base-16-line-height: 24px;
+  --hg-font-base-16-font-size: 16px;
+  --hg-font-base-16-font-style: normal;
+
+  --hg-font-base-strong-16: 500 16px/24px var(--hg-font-family);
+  --hg-font-base-strong-16-font-family: var(--hg-font-family);
+  --hg-font-base-strong-16-font-weight: 500;
+  --hg-font-base-strong-16-line-height: 24px;
+  --hg-font-base-strong-16-font-size: 16px;
+  --hg-font-base-strong-16-font-style: normal;
+
+  --hg-font-s-14: 14px/22px var(--hg-font-family);
+  --hg-font-s-14-font-family: var(--hg-font-family);
+  --hg-font-s-14-font-weight: 400;
+  --hg-font-s-14-line-height: 22px;
+  --hg-font-s-14-font-size: 14px;
+  --hg-font-s-14-font-style: normal;
+
+  --hg-font-s-strong-14: 500 14px/22px var(--hg-font-family);
+  --hg-font-s-strong-14-font-family: var(--hg-font-family);
+  --hg-font-s-strong-14-font-weight: 500;
+  --hg-font-s-strong-14-line-height: 22px;
+  --hg-font-s-strong-14-font-size: 14px;
+  --hg-font-s-strong-14-font-style: normal;
+
+  --hg-font-xs-13: 13px/20px var(--hg-font-family);
+  --hg-font-xs-13-font-family: var(--hg-font-family);
+  --hg-font-xs-13-font-weight: 400;
+  --hg-font-xs-13-line-height: 20px;
+  --hg-font-xs-13-font-size: 13px;
+  --hg-font-xs-13-font-style: normal;
+
+  --hg-font-xs-strong-13: 500 13px/20px var(--hg-font-family);
+  --hg-font-xs-strong-13-font-family: var(--hg-font-family);
+  --hg-font-xs-strong-13-font-weight: 500;
+  --hg-font-xs-strong-13-line-height: 20px;
+  --hg-font-xs-strong-13-font-size: 13px;
+  --hg-font-xs-strong-13-font-style: normal;
+
+  --hg-font-xxs-12: 12px/18px var(--hg-font-family);
+  --hg-font-xxs-12-font-family: var(--hg-font-family);
+  --hg-font-xxs-12-font-weight: 400;
+  --hg-font-xxs-12-line-height: 18px;
+  --hg-font-xxs-12-font-size: 12px;
+  --hg-font-xxs-12-font-style: normal;
+
+  --hg-font-xxs-strong-12: 500 12px/18px var(--hg-font-family);
+  --hg-font-xxs-strong-12-font-family: var(--hg-font-family);
+  --hg-font-xxs-strong-12-font-weight: 500;
+  --hg-font-xxs-strong-12-line-height: 18px;
+  --hg-font-xxs-strong-12-font-size: 12px;
+  --hg-font-xxs-strong-12-font-style: normal;
+
+  --hg-font-xxxs-11: 11px/14px var(--hg-font-family);
+  --hg-font-xxxs-11-font-family: var(--hg-font-family);
+  --hg-font-xxxs-11-font-weight: 400;
+  --hg-font-xxxs-11-line-height: 14px;
+  --hg-font-xxxs-11-font-size: 11px;
+  --hg-font-xxxs-11-font-style: normal;
+
+  --hg-font-xxxs-strong-11: 500 11px/14px var(--hg-font-family);
+  --hg-font-xxxs-strong-11-font-family: var(--hg-font-family);
+  --hg-font-xxxs-strong-11-font-weight: 500;
+  --hg-font-xxxs-strong-11-line-height: 14px;
+  --hg-font-xxxs-strong-11-font-size: 11px;
+  --hg-font-xxxs-strong-11-font-style: normal;
+}
+
+/* ── scrollbar.css：滚动条皮肤 ──────────────────────────── */
+/* Scrollbar skin: the sole consumer of the four --hg-alias-scrollbar-*
+ * tokens. Without it every scrolling region renders the UA scrollbar, which
+ * ignores the theme — a light native bar over the dark palette.
+ *
+ * The rules sit on `body`, not `html`: design-platform.css declares the
+ * --hg-alias-* tokens on `body` (and the dark overrides on
+ * `body[data-jl-dark]`), and custom properties only inherit downward,
+ * so an `html` rule resolves them to the guaranteed-invalid value and
+ * `scrollbar-color` falls back to `auto`.
+ *
+ * Surfaces pick their elevation by rebinding --hg-scrollbar-thumb{,-hover}:
+ * the l1 pair here is the base-surface default, and an elevated surface
+ * (menu, popover, dialog) rebinds to the l2 pair on its own container. A
+ * scroll container may also rebind the three geometry variables below. */
+
+body {
+  --hg-scrollbar-thumb: var(--hg-alias-scrollbar-bg-l1);
+  --hg-scrollbar-thumb-hover: var(--hg-alias-scrollbar-hover-l1);
+  --hg-scrollbar-thumb-border: 0px;
+  --hg-scrollbar-track-margin: 0px;
+  /* The WebKit bar's layout width, mirrored by the ::-webkit-scrollbar rule
+     below. A surface that must align itself beside a space-consuming bar
+     (ConversationRoot's overlay composer seat) reads this instead of
+     hardcoding the number. */
+  --hg-scrollbar-width: 8px;
+}
+
+/* The two paths are mutually exclusive, and the gate is load-bearing rather
+   than defensive. A non-`auto` `scrollbar-width` or `scrollbar-color` makes
+   Chromium and Safari drop every `::-webkit-scrollbar*` rule for that
+   element, including `::-webkit-scrollbar-thumb:hover` — measured in chromium
+   as an 8px `::-webkit-scrollbar` width taking effect on its own and being
+   ignored as soon as `scrollbar-width: thin` is added. Declaring both
+   unconditionally therefore leaves the hover tokens with no rendering at all,
+   because the engines that implement the hover pseudo-element are exactly the
+   ones the standard properties silence, and Firefox has no hover
+   pseudo-element to fall back on.
+
+   `not selector(::-webkit-scrollbar)` is true only where the pseudo-element
+   is unimplemented, so Firefox takes the standard path and WebKit-based
+   engines take the pseudo-element path. An engine too old for the
+   `selector()` function makes the condition invalid, which evaluates false
+   and selects the pseudo-element path — the correct side for the pre-16.4
+   Safari that is the realistic case. */
+@supports not selector(::-webkit-scrollbar) {
+  /* Declared on every element rather than inherited from `body`. Inheriting
+     would pass down the COLOUR already substituted at `body`, so a descendant
+     rebinding --hg-scrollbar-thumb could not change it; re-declaring makes
+     each element substitute the variable as it sees it, which is what gives
+     an elevated surface a working rebind. `scrollbar-width` is not an
+     inherited property at all, so it needs the per-element declaration
+     regardless.
+
+     No hover counterpart exists on this path: `scrollbar-color` states one
+     thumb colour and the engine derives its own hover treatment. */
+  body,
+  body * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--hg-scrollbar-thumb) transparent;
+  }
+}
+
+/* Not gated in turn: an engine that does not implement these pseudo-elements
+   drops the rules as unknown selectors, so the gate would only restate what
+   selector matching already does. Not inherited either, hence the unscoped
+   selectors. */
+::-webkit-scrollbar {
+  width: var(--hg-scrollbar-width);
+  height: var(--hg-scrollbar-width);
+}
+
+/* Track stays transparent so the thumb reads against whatever surface scrolls
+   under it; only the thumb carries a token colour. */
+::-webkit-scrollbar-track {
+  margin-block: var(--hg-scrollbar-track-margin);
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: var(--hg-scrollbar-thumb-border) solid transparent;
+  border-radius: 999px;
+  corner-shape: round;
+  background: var(--hg-scrollbar-thumb);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--hg-scrollbar-thumb-hover);
+}
+
+/* Both scrollbars meeting in a corner: no separate token, so the corner
+   matches the transparent track rather than the UA's opaque default. */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   JevLoop 自己补的几个排版常量
+
+   DSH 那边这些值属于各组件的局部契约（它一个组件一个 CSS Module），
+   而这里是单文件界面，抽出来集中定义。字号与行高**成对出现** ——
+   只给字号不给行高是排版最常见的走样来源。
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --hg-font-size-caption: 12px;
+  --hg-font-size-sm: 13px;
+  --hg-font-size: 14px;
+  --hg-line-caption: 18px;
+  --hg-line-sm: 20px;
+  --hg-line: 22px;
+  --hg-font-sans: var(--hg-font-family);
+  --hg-radius-sm: 6px;
+  --hg-radius: 10px;
+  --hg-gap: 12px;
+  --hg-pad: 16px;
+
+  /*
+   * 正文字号轴。
+   *
+   * DSH 里这个值由 ThemePresenter 从设置面板发布到 body，所以主题表只
+   * 引用它、不定义它。这里没有设置面板，于是显式钉成默认值 —— 让整条
+   * `calc(21px + var(--hg-content-font-delta))` 有一个确定的起点，
+   * 而不是靠每一处 `var()` 的兜底参数各自为政。
+   */
+  --hg-content-font-size: var(--hg-font-size);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   五类事件的颜色 —— **只在这里定义一次**
+
+     图例、顶栏计数、过程行、时间轴、轨迹徽章、判定规格，六处都从
+     这里取。以前它们各写各的，于是改一个颜色要改六个地方，而漏掉
+     任何一个都不会报错 —— 只会让同一件事在两个视图里颜色不同。
+
+     ── 和「状态色」的分工 ─────────────────────────────────────
+
+     这五个是**类别**，不是状态：一个判定既没成功也没失败，它只是发生了。
+     所以它们一律用清淡的色，不用红。
+
+     红色（`--hg-alias-state-error-primary`）留给真正的故障：
+     连接断开、策略没编译出来。**「停下来等人」不是故障** ——
+     把它画成红的会让人以为自己哪里做错了。
+
+     棕色是混出来的：DSH 的调色板里没有棕，用琥珀压向中性灰得到一个
+     低饱和的暖色，亮暗两套都成立（混的是随主题变的 label-tertiary）。
+
+     ── 为什么声明在 body 上，而不是 :root ─────────────────────
+
+     这十个值全部 `var()` 链到 `--hg-alias-*`，而 alias 定义在 **body**
+     上（DSH 的主题挂在 body，见上面 `body` / `body[data-jl-dark]` 两处）。
+
+     自定义属性在**声明它的那个元素上**完成替换。`:root` 替换时找不到
+     body 上的 alias，于是整条属性在 :root 就变成 guaranteed-invalid，
+     再原样继承下去 —— 一路都是空的。
+
+     后果不是「颜色偏了」，是「颜色彻底没有」：
+     `color: var(--hg-kind-*)` 失效后回退成 inherit（拿到正文色），
+     `background` 回退成 transparent。十个 token 全空，五个徽章全是
+     没上色的裸文字 —— 而**没有任何东西会报错**。
+
+     实测（2026-09-21）：这十个声明还在 `:root` 上时，
+     `getComputedStyle(document.documentElement).getPropertyValue(
+     '--hg-kind-decide-fg')` 返回空串；而同一条链上的 alias
+     `--hg-alias-state-business-primary` 在 body 上读得到 rgb(65,118,230)。
+     挪到 body 之后两者都有值。
+
+     放在 body 上还有第二个好处：暗色主题在 `body[data-jl-dark]` 上重绑
+     alias，替换发生在同一个元素上，所以换主题时这五类颜色**自己跟着变**。
+     挂在 :root 的话，即使替换成功，暗色主题也拿不到 —— :root 上的值在
+     主题切换之前就定死了。
+     ═══════════════════════════════════════════════════════════ */
+
+body {
+  /* 判定 —— 蓝。这是这一层最该被看见的东西，也是数量最多的 */
+  --hg-kind-decide-fg: var(--hg-alias-state-business-primary);
+  --hg-kind-decide-bg: var(--hg-alias-state-business-tertiary);
+
+  /* 规则 —— 灰。代码做的决定，不花任何模型 */
+  --hg-kind-rule-fg: var(--hg-alias-label-tertiary);
+  --hg-kind-rule-bg: var(--hg-alias-bg-module-platform);
+
+  /* 工具 —— 绿。唯一有真实副作用的地方，用"动作发生了"的颜色 */
+  --hg-kind-tool-fg: var(--hg-alias-state-success-primary);
+  --hg-kind-tool-bg: var(--hg-alias-state-success-tertiary);
+
+  /* 模型生成 —— 紫罗兰。沿用 DSH 给 assistant message 的混法：
+     品牌蓝 60% 混错误红，得到一个既不像成功也不像失败的颜色 ——
+     生成是**产物**，不是状态。 */
+  --hg-kind-model-fg: color-mix(
+    in srgb,
+    var(--hg-alias-brand-primary-new-colorprimary-new-color) 60%,
+    var(--hg-alias-state-error-secondary)
+  );
+  --hg-kind-model-bg: color-mix(in srgb, var(--hg-kind-model-fg) 15%, var(--hg-alias-bg-layer-1));
+
+  /* 授权 —— 棕。停下来等人是一个**正常**状态，不该像出错 */
+  --hg-kind-authorize-fg: color-mix(
+    in srgb,
+    var(--hg-static-amber-600) 62%,
+    var(--hg-alias-label-tertiary)
+  );
+  --hg-kind-authorize-bg: color-mix(in srgb, var(--hg-kind-authorize-fg) 14%, var(--hg-alias-bg-layer-1));
+}
