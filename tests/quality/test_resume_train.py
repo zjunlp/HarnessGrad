@@ -258,3 +258,24 @@ def test_a_resume_refuses_before_measuring_when_the_base_object_is_gone(
         _resume_train_state(_args(), run_dir, None, tmp_path / "work")
     assert "state_after_round0" in str(exc.value)
     assert "object store" in str(exc.value)
+
+
+def test_run_meta_keeps_the_platform_the_curve_began_on(tmp_path: Path) -> None:
+    """The field is the resume guard's evidence, so a later write must not move it.
+
+    Measured 2026-10-20T12:10Z: `_write_run_meta` passed the *current* digest on every call,
+    and the write happens before `--resume` reads the record -- so the guard compared the new
+    value with itself and let a run whose recorded sha was `deadbeef` continue silently.
+    """
+    from harnessgrad.records import _write_run_meta
+
+    run_dir = tmp_path / "runs" / "r"
+    run_dir.mkdir(parents=True)
+    _write_run_meta(run_dir, platform_content_sha="tree-A", run_id="r")
+    _write_run_meta(run_dir, platform_content_sha="tree-B", rounds_measured=3)
+    meta = json.loads((run_dir / "run_meta.json").read_text())
+    assert meta["platform_content_sha"] == "tree-A"
+    assert meta["platform_content_sha_started"] == "tree-A"
+    assert meta["rounds_measured"] == 3
+    # ...and the tree that is running now is still on the record, under `platform`.
+    assert meta["platform"]["content_sha"]

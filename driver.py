@@ -1395,8 +1395,15 @@ def _main(attempt: dict) -> int:
         # a property of the run that produced all of them, and a reader comparing two
         # runs needs to know whether one was under four-way contention.
         trials=args.trials, jobs=args.jobs,
-        # The run's first write: drop anything a previous run left under this id.
-        fresh=True,
+        # The run's first write: drop anything a previous run left under this id -- **except
+        # when this invocation is a `--resume`**. A resume continues *this* run, so its record
+        # is the input, not leftovers to clear: writing fresh here replaced
+        # `platform_content_sha` with the current tree before `_resume_train_state` could read
+        # it, which made the cross-platform guard compare a value with itself and never fire
+        # (measured 2026-10-20T12:10Z: a run directory whose recorded sha was `deadbeef`
+        # resumed silently). `_write_run_meta` keeps the first platform digest anyway; this is
+        # the other half of the same fix.
+        fresh=not getattr(args, "resume", False),
     )
 
     stage_workspace(harness_src, work)

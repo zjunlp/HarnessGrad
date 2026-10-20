@@ -583,11 +583,19 @@ def _write_run_meta(run_dir: Path, fresh: bool = False, **fields) -> None:
             existing = json.loads(path.read_text())
         except json.JSONDecodeError:
             existing = {}
+    # **`platform_content_sha` names the tree the curve began on, not the one running now.**
+    # The two differed the moment a run was resumed after a platform change, and this write is
+    # what decided which: it passed the *current* digest on every call, including the call that
+    # happens before `--resume` inspects the record -- so the field was rewritten to "now" and
+    # the resume guard then compared the new value with itself and never fired (measured
+    # 2026-10-20T12:10Z: a run directory whose recorded sha was replaced with `deadbeef` resumed
+    # without a word). Keeping the first value makes the field mean what its reader wants
+    # ("which code measured these points"), and the current tree is already recorded in
+    # `platform.content_sha` below, so nothing is lost.
+    origin = existing.get("platform_content_sha")
     existing.update({k: v for k, v in fields.items() if v is not None})
-    # **Where the curve began, kept even when the run continues on another tree.** Every write
-    # carries the platform that is running *now*, so without this a resumed run's record makes
-    # the whole curve look like it came from the newer tree. A `platform-seams/` approval in the
-    # run directory says what changed and why; this says which two versions to compare.
+    if origin:
+        existing["platform_content_sha"] = origin
     existing.setdefault("platform_content_sha_started", existing.get("platform_content_sha"))
     path.write_text(json.dumps(existing, indent=1))
 
