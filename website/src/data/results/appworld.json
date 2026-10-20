@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T02:58:40Z",
+ "generated_at": "2026-10-20T03:03:26Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -46,6 +46,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 9629736
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 9469151,
+         "output": 160585
+        }
        }
       },
       {
@@ -59,6 +67,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 11525830
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 11323872,
+         "output": 201958
+        }
        }
       },
       {
@@ -72,6 +88,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 8200535
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 8095507,
+         "output": 105028
+        }
        }
       },
       {
@@ -85,6 +109,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6300095
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6175136,
+         "output": 124959
+        }
        }
       },
       {
@@ -98,6 +130,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 5647359
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 5559009,
+         "output": 88350
+        }
        }
       },
       {
@@ -111,6 +151,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 5785277
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 5696972,
+         "output": 88305
+        }
        }
       },
       {
@@ -124,6 +172,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7175421
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7058866,
+         "output": 116555
+        }
        }
       },
       {
@@ -137,6 +193,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7335028
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 55,
+         "input": 7196808,
+         "output": 138220
+        }
        }
       },
       {
@@ -150,6 +214,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 5821472
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 56,
+         "input": 5721393,
+         "output": 100079
+        }
        }
       },
       {
@@ -163,6 +235,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 5165043
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 51,
+         "input": 5079297,
+         "output": 85746
+        }
        }
       },
       {
@@ -176,6 +256,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6929680
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6820727,
+         "output": 108953
+        }
        }
       }
      ],
@@ -407,6 +495,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 9496184
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 9353008,
+         "output": 143176
+        }
        }
       },
       {
@@ -420,6 +516,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7497196
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7380617,
+         "output": 116579
+        }
        }
       },
       {
@@ -433,6 +537,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7926905
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7799213,
+         "output": 127692
+        }
        }
       },
       {
@@ -446,6 +558,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6989091
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6887886,
+         "output": 101205
+        }
        }
       },
       {
@@ -459,6 +579,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6595167
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6490364,
+         "output": 104803
+        }
        }
       },
       {
@@ -472,6 +600,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 5599128
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 5499828,
+         "output": 99300
+        }
        }
       },
       {
@@ -485,6 +621,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6520670
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6412149,
+         "output": 108521
+        }
        }
       },
       {
@@ -498,6 +642,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6890012
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6775360,
+         "output": 114652
+        }
        }
       },
       {
@@ -511,6 +663,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7052025
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6921572,
+         "output": 130453
+        }
        }
       },
       {
@@ -524,6 +684,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 8693209
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 8588403,
+         "output": 104806
+        }
        }
       },
       {
@@ -537,6 +705,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 5770053
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 5670337,
+         "output": 99716
+        }
        }
       }
      ],
@@ -768,6 +944,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 9559001
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 9394479,
+         "output": 164522
+        }
        }
       },
       {
@@ -781,6 +965,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7668024
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7554257,
+         "output": 113767
+        }
        }
       },
       {
@@ -794,6 +986,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 8064233
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7917397,
+         "output": 146836
+        }
        }
       },
       {
@@ -807,6 +1007,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6748441
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6642018,
+         "output": 106423
+        }
        }
       },
       {
@@ -820,6 +1028,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 8504815
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 8356133,
+         "output": 148682
+        }
        }
       },
       {
@@ -833,6 +1049,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 4010785
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 3967900,
+         "output": 42885
+        }
        }
       },
       {
@@ -846,6 +1070,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7779139
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7636177,
+         "output": 142962
+        }
        }
       },
       {
@@ -859,6 +1091,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6814816
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6683844,
+         "output": 130972
+        }
        }
       },
       {
@@ -872,6 +1112,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 6446015
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 6311883,
+         "output": 134132
+        }
        }
       },
       {
@@ -885,6 +1133,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7532733
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 7405988,
+         "output": 126745
+        }
        }
       },
       {
@@ -898,6 +1154,14 @@
        "n_invalid": 0,
        "eval_tokens": {
         "dev": 7661874
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 56,
+         "input": 7505289,
+         "output": 156585
+        }
        }
       }
      ],
