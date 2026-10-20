@@ -1,0 +1,19 @@
+{
+ "kind": "variant",
+ "title": "DGM（具体目标变体）：按轨迹里的失败类别选目标",
+ "fidelity_profile": "archive-aligned-staged-eval-dual-role + concrete-target",
+ "source_commit": "bd7c0773c8f7d17549a3b67e7d783c47f7fba407",
+ "note": "与 methods/dgm 的唯一差别是 choose_target：当父代失败占比≥50% 时，上游给的是具体条目，而不要移植版给一句“广谱失败”。这个变体从轨迹里取两类**不需要标准答案**的信号——从未提交（≈ solve_empty_patches）与上下文被裁剪（solve_contextlength）——把目标变成一组具体任务。这样做的理由：AppWorld 每一轮失败率都是 56–89/90，广谱目标每轮都产出同一句常量，编辑因此每轮都在造新的广谱机制并丢掉上一轮 17–20 道已解出的题（findings §121）。上游另外两类（solve_stochasticity、连续分数下的最差任务）在本平台不可得：trials=1，且 per-task 是 0/1。",
+ "deviations": [
+  {
+   "what": "The target is chosen from two trace-derived categories instead of upstream's four entries.",
+   "why": "solve_empty_patches and solve_contextlength are episode properties the platform records (a missing `submitted` event, `usage.context_trims`), while the other two need gold-adjacent or repeated-trial signals the platform excludes.",
+   "direction": "closer to upstream than the broad rule, still narrower than upstream"
+  },
+  {
+   "what": "Everything else is methods/dgm unchanged.",
+   "why": "The delta is one environment variable (HG_DGM_TARGET_MODE=trace) read by the port; archive, sampling distribution, retention and batch size are byte-identical.",
+   "direction": "neutral"
+  }
+ ]
+}
