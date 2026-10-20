@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T14:10:43Z",
+ "generated_at": "2026-10-20T14:51:25Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -320,19 +320,23 @@
       },
       {
        "round": 14,
-       "train": null,
-       "train_n": null,
+       "train": 0.6777777777777778,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.6777777777777778,
+       "state": "797bc848b09e"
       },
       {
        "round": 15,
-       "train": null,
-       "train_n": null,
+       "train": 0.7444444444444445,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.7444444444444445,
+       "state": "a3fd66f16fe9"
       }
      ],
      "cost": {
@@ -600,6 +604,44 @@
         "cache_read": 9886208,
         "cache_write": 0,
         "calls": 70
+       }
+      },
+      "14": {
+       "task": {
+        "tokens": 10939801,
+        "calls": 1259
+       },
+       "task_split": {
+        "input": 10761874,
+        "output": 177927,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 244396,
+        "output": 79428,
+        "cache_read": 21402112,
+        "cache_write": 0,
+        "calls": 102
+       }
+      },
+      "15": {
+       "task": {
+        "tokens": 11221495,
+        "calls": 1268
+       },
+       "task_split": {
+        "input": 11066102,
+        "output": 155393,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 283695,
+        "output": 90386,
+        "cache_read": 39933312,
+        "cache_write": 0,
+        "calls": 148
        }
       }
      },
@@ -1287,19 +1329,25 @@
       },
       {
        "round": 14,
-       "train": null,
-       "train_n": null,
+       "train": 0.37777777777777777,
+       "train_n": 89,
        "eval": {},
        "valid": false,
-       "n_invalid": 0
+       "n_invalid": 1,
+       "train_raw": 0.3146067415730337,
+       "state": "3246596f844c",
+       "batch": 2
       },
       {
        "round": 15,
-       "train": null,
-       "train_n": null,
+       "train": 0.37777777777777777,
+       "train_n": 90,
        "eval": {},
-       "valid": false,
-       "n_invalid": 0
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.24444444444444444,
+       "state": "68174ed6a15b",
+       "batch": 2
       }
      ],
      "cost": {
@@ -1567,6 +1615,44 @@
         "cache_read": 85646464,
         "cache_write": 0,
         "calls": 456
+       }
+      },
+      "14": {
+       "task": {
+        "tokens": 16915172,
+        "calls": 2074
+       },
+       "task_split": {
+        "input": 16722948,
+        "output": 192224,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 357935,
+        "output": 165943,
+        "cache_read": 36766848,
+        "cache_write": 0,
+        "calls": 232
+       }
+      },
+      "15": {
+       "task": {
+        "tokens": 13152632,
+        "calls": 1298
+       },
+       "task_split": {
+        "input": 13017211,
+        "output": 135421,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 357935,
+        "output": 165943,
+        "cache_read": 36766848,
+        "cache_write": 0,
+        "calls": 232
        }
       }
      },
@@ -2833,479 +2919,6 @@
       }
      },
      "best_dev_round": null
-    },
-    {
-     "name": "dream_rsi",
-     "run": "appworld-study-dream_rsi-20261020T0414Z",
-     "rounds": [
-      {
-       "round": 0,
-       "train": 0.011111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.011111111111111112,
-       "state": "7a40f6ddd0ce"
-      },
-      {
-       "round": 1,
-       "train": 0.13333333333333333,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.13333333333333333,
-       "state": "4bb5f065272c"
-      },
-      {
-       "round": 2,
-       "train": 0.17777777777777778,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.17777777777777778,
-       "state": "d2c39591e4a2"
-      },
-      {
-       "round": 3,
-       "train": 0.25555555555555554,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.25555555555555554,
-       "state": "b89a8c2904d9"
-      },
-      {
-       "round": 4,
-       "train": 0.3333333333333333,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.3333333333333333,
-       "state": "4b0100426936"
-      },
-      {
-       "round": 5,
-       "train": 0.3888888888888889,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.3888888888888889,
-       "state": "05e620c0d969"
-      },
-      {
-       "round": 6,
-       "train": 0.34444444444444444,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.34444444444444444,
-       "state": "e1700a1d2c2e"
-      },
-      {
-       "round": 7,
-       "train": 0.4666666666666667,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.4666666666666667,
-       "state": "76354c8212bb"
-      },
-      {
-       "round": 8,
-       "train": 0.4888888888888889,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.4888888888888889,
-       "state": "bc621479cd77"
-      },
-      {
-       "round": 9,
-       "train": 0.5,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.5,
-       "state": "f7cf4289b3b8"
-      },
-      {
-       "round": 10,
-       "train": 0.6111111111111112,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.6111111111111112,
-       "state": "4cbd083b077c"
-      },
-      {
-       "round": 11,
-       "train": 0.4888888888888889,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.4888888888888889,
-       "state": "7f99afa655c9"
-      },
-      {
-       "round": 12,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "5fc05fe3a67b"
-      },
-      {
-       "round": 13,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "e9da876b05bd"
-      },
-      {
-       "round": 14,
-       "train": 0.0,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.0,
-       "state": "4586df484c24"
-      },
-      {
-       "round": 15,
-       "train": 0.022222222222222223,
-       "train_n": 90,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_raw": 0.022222222222222223,
-       "state": "ffc57a8bb958"
-      }
-     ],
-     "cost": {
-      "0": {
-       "task": {
-        "tokens": 15601500,
-        "calls": 2492
-       },
-       "task_split": {
-        "input": 15342095,
-        "output": 259405,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": null,
-        "output": null,
-        "cache_read": null,
-        "cache_write": 0,
-        "calls": null
-       }
-      },
-      "1": {
-       "task": {
-        "tokens": 14557597,
-        "calls": 2281
-       },
-       "task_split": {
-        "input": 14269815,
-        "output": 287782,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 157411,
-        "output": 106622,
-        "cache_read": 20866688,
-        "cache_write": 0,
-        "calls": 127
-       }
-      },
-      "2": {
-       "task": {
-        "tokens": 13352695,
-        "calls": 2028
-       },
-       "task_split": {
-        "input": 13106445,
-        "output": 246250,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 140595,
-        "output": 85670,
-        "cache_read": 12636928,
-        "cache_write": 0,
-        "calls": 88
-       }
-      },
-      "3": {
-       "task": {
-        "tokens": 10062717,
-        "calls": 1186
-       },
-       "task_split": {
-        "input": 9914078,
-        "output": 148639,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 180609,
-        "output": 162179,
-        "cache_read": 41574400,
-        "cache_write": 0,
-        "calls": 208
-       }
-      },
-      "4": {
-       "task": {
-        "tokens": 10717237,
-        "calls": 1223
-       },
-       "task_split": {
-        "input": 10536240,
-        "output": 180997,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 177465,
-        "output": 76153,
-        "cache_read": 15362432,
-        "cache_write": 0,
-        "calls": 94
-       }
-      },
-      "5": {
-       "task": {
-        "tokens": 15797731,
-        "calls": 1579
-       },
-       "task_split": {
-        "input": 15539171,
-        "output": 258560,
-        "tasks_reporting": 88,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 175056,
-        "output": 89185,
-        "cache_read": 22858752,
-        "cache_write": 0,
-        "calls": 141
-       }
-      },
-      "6": {
-       "task": {
-        "tokens": 20338078,
-        "calls": 1946
-       },
-       "task_split": {
-        "input": 20090846,
-        "output": 247232,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 199897,
-        "output": 117359,
-        "cache_read": 31350784,
-        "cache_write": 0,
-        "calls": 154
-       }
-      },
-      "7": {
-       "task": {
-        "tokens": 15519048,
-        "calls": 1559
-       },
-       "task_split": {
-        "input": 15207949,
-        "output": 311099,
-        "tasks_reporting": 87,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 15172,
-        "output": 27587,
-        "cache_read": 18048,
-        "cache_write": 0,
-        "calls": 2
-       }
-      },
-      "8": {
-       "task": {
-        "tokens": 12488166,
-        "calls": 1351
-       },
-       "task_split": {
-        "input": 12241374,
-        "output": 246792,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 203268,
-        "output": 172063,
-        "cache_read": 41278464,
-        "cache_write": 0,
-        "calls": 203
-       }
-      },
-      "9": {
-       "task": {
-        "tokens": 11965239,
-        "calls": 1296
-       },
-       "task_split": {
-        "input": 11741136,
-        "output": 224103,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 161146,
-        "output": 61136,
-        "cache_read": 11760768,
-        "cache_write": 0,
-        "calls": 82
-       }
-      },
-      "10": {
-       "task": {
-        "tokens": 10625832,
-        "calls": 1153
-       },
-       "task_split": {
-        "input": 10405346,
-        "output": 220486,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 191436,
-        "output": 91595,
-        "cache_read": 20573312,
-        "cache_write": 0,
-        "calls": 110
-       }
-      },
-      "11": {
-       "task": {
-        "tokens": 12151546,
-        "calls": 1298
-       },
-       "task_split": {
-        "input": 11930428,
-        "output": 221118,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 274319,
-        "output": 102953,
-        "cache_read": 29375872,
-        "cache_write": 0,
-        "calls": 126
-       }
-      },
-      "12": {
-       "task": {
-        "tokens": 9441233,
-        "calls": 1883
-       },
-       "task_split": {
-        "input": 9246605,
-        "output": 194628,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 15440,
-        "output": 23674,
-        "cache_read": 1664,
-        "cache_write": 0,
-        "calls": 1
-       }
-      },
-      "13": {
-       "task": {
-        "tokens": null,
-        "calls": 0
-       },
-       "task_split": {
-        "input": 0,
-        "output": 0,
-        "tasks_reporting": 0,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 970,
-        "output": 40217,
-        "cache_read": 33280,
-        "cache_write": 0,
-        "calls": 2
-       }
-      },
-      "14": {
-       "task": {
-        "tokens": 3620630,
-        "calls": 1262
-       },
-       "task_split": {
-        "input": 3566679,
-        "output": 53951,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 1173,
-        "output": 40320,
-        "cache_read": 50304,
-        "cache_write": 0,
-        "calls": 3
-       }
-      },
-      "15": {
-       "task": {
-        "tokens": 11040818,
-        "calls": 2043
-       },
-       "task_split": {
-        "input": 10831557,
-        "output": 209261,
-        "tasks_reporting": 90,
-        "tasks": 90
-       },
-       "improver": {
-        "input": 982,
-        "output": 33914,
-        "cache_read": 33408,
-        "cache_write": 0,
-        "calls": 2
-       }
-      }
-     },
-     "best_dev_round": null
     }
    ]
   }
@@ -3313,14 +2926,14 @@
  "excluded": [],
  "coverage": {
   "train": {
-   "measured": 7,
-   "valid": 7,
+   "measured": 6,
+   "valid": 6,
    "planned": null
   },
   "dev": {
    "measured": 34,
    "valid": 34,
-   "planned": 112
+   "planned": 96
   }
  },
  "h0": {
