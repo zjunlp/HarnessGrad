@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-20T03:03:26Z",
+ "generated_at": "2026-10-20T10:39:30Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -44,6 +44,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce",
        "eval_tokens": {
         "dev": 9629736
        },
@@ -65,6 +67,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.2,
+       "state": "3858bd9586fc",
        "eval_tokens": {
         "dev": 11525830
        },
@@ -86,6 +90,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.28888888888888886,
+       "state": "280fa82a6c0c",
        "eval_tokens": {
         "dev": 8200535
        },
@@ -107,6 +113,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.3333333333333333,
+       "state": "7cf524721a66",
        "eval_tokens": {
         "dev": 6300095
        },
@@ -128,6 +136,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.3888888888888889,
+       "state": "f4dd9ee1fdde",
        "eval_tokens": {
         "dev": 5647359
        },
@@ -149,6 +159,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.35555555555555557,
+       "state": "ea045ac9bc5a",
        "eval_tokens": {
         "dev": 5785277
        },
@@ -170,6 +182,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.4777777777777778,
+       "state": "183f325a626e",
        "eval_tokens": {
         "dev": 7175421
        },
@@ -191,6 +205,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5222222222222223,
+       "state": "c33ab6aad7e8",
        "eval_tokens": {
         "dev": 7335028
        },
@@ -212,6 +228,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.4777777777777778,
+       "state": "b623ecc9a94a",
        "eval_tokens": {
         "dev": 5821472
        },
@@ -233,6 +251,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5,
+       "state": "4181f66a3946",
        "eval_tokens": {
         "dev": 5165043
        },
@@ -254,6 +274,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.6555555555555556,
+       "state": "c0ea984b1f77",
        "eval_tokens": {
         "dev": 6929680
        },
@@ -493,6 +515,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce",
        "eval_tokens": {
         "dev": 9496184
        },
@@ -514,6 +538,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.1111111111111111,
+       "state": "e7f923ba269a",
        "eval_tokens": {
         "dev": 7497196
        },
@@ -535,6 +561,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.13333333333333333,
+       "state": "028239f8d24d",
        "eval_tokens": {
         "dev": 7926905
        },
@@ -556,6 +584,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.2777777777777778,
+       "state": "b9ce4f158c17",
        "eval_tokens": {
         "dev": 6989091
        },
@@ -577,6 +607,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.4111111111111111,
+       "state": "ecaf0abc2186",
        "eval_tokens": {
         "dev": 6595167
        },
@@ -598,6 +630,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.4888888888888889,
+       "state": "4e968b363bd2",
        "eval_tokens": {
         "dev": 5599128
        },
@@ -619,6 +653,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.4888888888888889,
+       "state": "82a4e140175f",
        "eval_tokens": {
         "dev": 6520670
        },
@@ -640,6 +676,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5111111111111111,
+       "state": "9b14cfde1795",
        "eval_tokens": {
         "dev": 6890012
        },
@@ -661,6 +699,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5333333333333333,
+       "state": "a3096e2e96a3",
        "eval_tokens": {
         "dev": 7052025
        },
@@ -682,6 +722,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "e040299118c6",
        "eval_tokens": {
         "dev": 8693209
        },
@@ -703,6 +745,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5666666666666667,
+       "state": "d04433173d29",
        "eval_tokens": {
         "dev": 5770053
        },
@@ -930,6 +974,334 @@
      "best_dev_round": 10
     },
     {
+     "name": "dgm",
+     "run": "appworld-study-dgm-20261020T0414Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {
+        "dev": 0.0
+       },
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce",
+       "eval_tokens": {
+        "dev": 9533673
+       },
+       "eval_split": {
+        "dev": {
+         "tasks": 57,
+         "tasks_reporting": 57,
+         "input": 9383643,
+         "output": 150030
+        }
+       }
+      },
+      {
+       "round": 1,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.23333333333333334,
+       "state": "bb8ebbe6465e",
+       "batch": 3
+      },
+      {
+       "round": 2,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.06666666666666667,
+       "state": "d806084806a3",
+       "batch": 3
+      },
+      {
+       "round": 3,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.044444444444444446,
+       "state": "99d65efbb070",
+       "batch": 3
+      },
+      {
+       "round": 4,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.07777777777777778,
+       "state": "99d65efbb070",
+       "repeat_of": 3
+      },
+      {
+       "round": 5,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.07777777777777778,
+       "state": "bb5742bfdfec"
+      },
+      {
+       "round": 6,
+       "train": 0.23333333333333334,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.08888888888888889,
+       "state": "94728e97eb84",
+       "batch": 3
+      },
+      {
+       "round": 7,
+       "train": 0.24719101123595505,
+       "train_n": 89,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 1,
+       "train_raw": 0.24719101123595505,
+       "state": "bc0ea64e490a",
+       "batch": 3
+      },
+      {
+       "round": 8,
+       "train": 0.2777777777777778,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.2777777777777778,
+       "state": "7a91a500d3ed",
+       "batch": 3
+      },
+      {
+       "round": 9,
+       "train": 0.35555555555555557,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.35555555555555557,
+       "state": "457382a8f52d",
+       "batch": 2
+      },
+      {
+       "round": 10,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      }
+     ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 9292097,
+        "calls": 1705
+       },
+       "task_split": {
+        "input": 9127896,
+        "output": 164201,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 497998,
+        "output": 367181,
+        "cache_read": 85302144,
+        "cache_write": 0,
+        "calls": 489
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 11861679,
+        "calls": 1888
+       },
+       "task_split": {
+        "input": 11710609,
+        "output": 151070,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 497998,
+        "output": 367181,
+        "cache_read": 85302144,
+        "cache_write": 0,
+        "calls": 489
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 9931235,
+        "calls": 1561
+       },
+       "task_split": {
+        "input": 9785563,
+        "output": 145672,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 497998,
+        "output": 367181,
+        "cache_read": 85302144,
+        "cache_write": 0,
+        "calls": 489
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 9835016,
+        "calls": 1567
+       },
+       "task_split": {
+        "input": 9691192,
+        "output": 143824,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 5911492,
+        "calls": 1113
+       },
+       "task_split": {
+        "input": 5830702,
+        "output": 80790,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 206179,
+        "output": 111291,
+        "cache_read": 22501120,
+        "cache_write": 0,
+        "calls": 110
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 5382618,
+        "calls": 1109
+       },
+       "task_split": {
+        "input": 5290121,
+        "output": 92497,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 499063,
+        "output": 333654,
+        "cache_read": 62301440,
+        "cache_write": 0,
+        "calls": 366
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 10094585,
+        "calls": 1567
+       },
+       "task_split": {
+        "input": 9923984,
+        "output": 170601,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 499063,
+        "output": 333654,
+        "cache_read": 62301440,
+        "cache_write": 0,
+        "calls": 366
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 11976989,
+        "calls": 1701
+       },
+       "task_split": {
+        "input": 11780151,
+        "output": 196838,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 499063,
+        "output": 333654,
+        "cache_read": 62301440,
+        "cache_write": 0,
+        "calls": 366
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 15025760,
+        "calls": 1526
+       },
+       "task_split": {
+        "input": 14851309,
+        "output": 174451,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 482319,
+        "output": 324944,
+        "cache_read": 73243008,
+        "cache_write": 0,
+        "calls": 431
+       }
+      }
+     },
+     "best_dev_round": 0
+    },
+    {
      "name": "harnessx",
      "run": "appworld-study-harnessx-20261019T1817Z",
      "rounds": [
@@ -942,6 +1314,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce",
        "eval_tokens": {
         "dev": 9559001
        },
@@ -963,6 +1337,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.14444444444444443,
+       "state": "11d248431468",
        "eval_tokens": {
         "dev": 7668024
        },
@@ -984,6 +1360,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.3,
+       "state": "1768910476f8",
        "eval_tokens": {
         "dev": 8064233
        },
@@ -1005,6 +1383,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.23333333333333334,
+       "state": "457817b9d9fa",
        "eval_tokens": {
         "dev": 6748441
        },
@@ -1026,6 +1406,9 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.3,
+       "state": "1768910476f8",
+       "repeat_of": 2,
        "eval_tokens": {
         "dev": 8504815
        },
@@ -1047,6 +1430,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "5f0b9f42850d",
        "eval_tokens": {
         "dev": 4010785
        },
@@ -1068,6 +1453,9 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.3,
+       "state": "1768910476f8",
+       "repeat_of": 2,
        "eval_tokens": {
         "dev": 7779139
        },
@@ -1089,6 +1477,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.32222222222222224,
+       "state": "ac0b7ef951ab",
        "eval_tokens": {
         "dev": 6814816
        },
@@ -1110,6 +1500,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.3111111111111111,
+       "state": "39b70d9dbc97",
        "eval_tokens": {
         "dev": 6446015
        },
@@ -1131,6 +1523,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5777777777777777,
+       "state": "8b4595c2e895",
        "eval_tokens": {
         "dev": 7532733
        },
@@ -1152,6 +1546,8 @@
        },
        "valid": true,
        "n_invalid": 0,
+       "train_raw": 0.5333333333333333,
+       "state": "5e677440d5de",
        "eval_tokens": {
         "dev": 7661874
        },
@@ -1377,6 +1773,1502 @@
       }
      },
      "best_dev_round": 9
+    },
+    {
+     "name": "hyperagents",
+     "run": "appworld-study-hyperagents-20261020T0414Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce"
+      },
+      {
+       "round": 1,
+       "train": 0.15730337078651685,
+       "train_n": 89,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 1,
+       "train_raw": 0.15730337078651685,
+       "state": "913b5b40512a",
+       "batch": 3
+      },
+      {
+       "round": 2,
+       "train": 0.18888888888888888,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.18888888888888888,
+       "state": "b6b44d275daf",
+       "batch": 3
+      },
+      {
+       "round": 3,
+       "train": 0.18888888888888888,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.18888888888888888,
+       "state": "8fd8fe86671e",
+       "batch": 3
+      },
+      {
+       "round": 4,
+       "train": 0.2222222222222222,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.2222222222222222,
+       "state": "bf766966cada"
+      },
+      {
+       "round": 5,
+       "train": 0.24444444444444444,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.24444444444444444,
+       "state": "ffb1aeb7cdfc",
+       "batch": 3
+      },
+      {
+       "round": 6,
+       "train": 0.2777777777777778,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.2777777777777778,
+       "state": "36ac2aafee71",
+       "batch": 3
+      },
+      {
+       "round": 7,
+       "train": 0.2777777777777778,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "6e0ab9f5c4dd",
+       "batch": 3
+      },
+      {
+       "round": 8,
+       "train": 0.2777777777777778,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.14444444444444443,
+       "state": "4a1c65d31b63",
+       "batch": 3
+      },
+      {
+       "round": 9,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 10,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      }
+     ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 12251615,
+        "calls": 2383
+       },
+       "task_split": {
+        "input": 11960288,
+        "output": 291327,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 376811,
+        "output": 275325,
+        "cache_read": 40284160,
+        "cache_write": 0,
+        "calls": 297
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 14977289,
+        "calls": 2496
+       },
+       "task_split": {
+        "input": 14636401,
+        "output": 340888,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 376811,
+        "output": 275325,
+        "cache_read": 40284160,
+        "cache_write": 0,
+        "calls": 297
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 10265916,
+        "calls": 1973
+       },
+       "task_split": {
+        "input": 10078682,
+        "output": 187234,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 376811,
+        "output": 275325,
+        "cache_read": 40284160,
+        "cache_write": 0,
+        "calls": 297
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 15924712,
+        "calls": 1964
+       },
+       "task_split": {
+        "input": 15649174,
+        "output": 275538,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 171833,
+        "output": 112415,
+        "cache_read": 26791680,
+        "cache_write": 0,
+        "calls": 141
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 15416514,
+        "calls": 1882
+       },
+       "task_split": {
+        "input": 15158230,
+        "output": 258284,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 523313,
+        "output": 370329,
+        "cache_read": 67360768,
+        "cache_write": 0,
+        "calls": 348
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 7983600,
+        "calls": 1235
+       },
+       "task_split": {
+        "input": 7765470,
+        "output": 218130,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 523313,
+        "output": 370329,
+        "cache_read": 67360768,
+        "cache_write": 0,
+        "calls": 348
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 5219054,
+        "calls": 1598
+       },
+       "task_split": {
+        "input": 5013764,
+        "output": 205290,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 523313,
+        "output": 370329,
+        "cache_read": 67360768,
+        "cache_write": 0,
+        "calls": 348
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 8984854,
+        "calls": 1673
+       },
+       "task_split": {
+        "input": 8750636,
+        "output": 234218,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 589279,
+        "output": 323566,
+        "cache_read": 76428800,
+        "cache_write": 0,
+        "calls": 357
+       }
+      }
+     },
+     "best_dev_round": null
+    },
+    {
+     "name": "tthe",
+     "run": "appworld-study-tthe-20261020T0414Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce"
+      },
+      {
+       "round": 1,
+       "train": 0.14444444444444443,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.14444444444444443,
+       "state": "0cbf3a459cec"
+      },
+      {
+       "round": 2,
+       "train": 0.16666666666666666,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.16666666666666666,
+       "state": "05b8fa8a41bd"
+      },
+      {
+       "round": 3,
+       "train": 0.15555555555555556,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.15555555555555556,
+       "state": "929ea7ddbf5d"
+      },
+      {
+       "round": 4,
+       "train": 0.26666666666666666,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.26666666666666666,
+       "state": "0d14986ffbda"
+      },
+      {
+       "round": 5,
+       "train": 0.36666666666666664,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.36666666666666664,
+       "state": "51dbfa421275"
+      },
+      {
+       "round": 6,
+       "train": 0.36666666666666664,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.36666666666666664,
+       "state": "51dbfa421275",
+       "repeat_of": 5
+      },
+      {
+       "round": 7,
+       "train": 0.36666666666666664,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.36666666666666664,
+       "state": "51dbfa421275",
+       "repeat_of": 5
+      },
+      {
+       "round": 8,
+       "train": 0.36666666666666664,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.36666666666666664,
+       "state": "51dbfa421275",
+       "repeat_of": 5
+      },
+      {
+       "round": 9,
+       "train": 0.36666666666666664,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.36666666666666664,
+       "state": "51dbfa421275",
+       "repeat_of": 5
+      },
+      {
+       "round": 10,
+       "train": 0.34444444444444444,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.34444444444444444,
+       "state": "0491c2f4d66c"
+      }
+     ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 14555544,
+        "calls": 2411
+       },
+       "task_split": {
+        "input": 14342393,
+        "output": 213151,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 159566,
+        "output": 134658,
+        "cache_read": 25748608,
+        "cache_write": 0,
+        "calls": 152
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 14153479,
+        "calls": 2265
+       },
+       "task_split": {
+        "input": 13930757,
+        "output": 222722,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 146723,
+        "output": 108342,
+        "cache_read": 14038656,
+        "cache_write": 0,
+        "calls": 99
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 14783410,
+        "calls": 2336
+       },
+       "task_split": {
+        "input": 14554699,
+        "output": 228711,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 121154,
+        "output": 43516,
+        "cache_read": 6309376,
+        "cache_write": 0,
+        "calls": 56
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 14624276,
+        "calls": 2364
+       },
+       "task_split": {
+        "input": 14411004,
+        "output": 213272,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 136003,
+        "output": 74616,
+        "cache_read": 13720704,
+        "cache_write": 0,
+        "calls": 102
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 13076619,
+        "calls": 1990
+       },
+       "task_split": {
+        "input": 12869341,
+        "output": 207278,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 174632,
+        "output": 100440,
+        "cache_read": 19146624,
+        "cache_write": 0,
+        "calls": 112
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 13076619,
+        "calls": 1990
+       },
+       "task_split": {
+        "input": 12869341,
+        "output": 207278,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 123925,
+        "output": 37077,
+        "cache_read": 6029568,
+        "cache_write": 0,
+        "calls": 57
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 13076619,
+        "calls": 1990
+       },
+       "task_split": {
+        "input": 12869341,
+        "output": 207278,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 161073,
+        "output": 68466,
+        "cache_read": 12722176,
+        "cache_write": 0,
+        "calls": 83
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 13076619,
+        "calls": 1990
+       },
+       "task_split": {
+        "input": 12869341,
+        "output": 207278,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 216796,
+        "output": 89379,
+        "cache_read": 26959744,
+        "cache_write": 0,
+        "calls": 135
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 13076619,
+        "calls": 1990
+       },
+       "task_split": {
+        "input": 12869341,
+        "output": 207278,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 101824,
+        "output": 24333,
+        "cache_read": 2861824,
+        "cache_write": 0,
+        "calls": 37
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 12026709,
+        "calls": 1777
+       },
+       "task_split": {
+        "input": 11826701,
+        "output": 200008,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 201747,
+        "output": 89808,
+        "cache_read": 14708864,
+        "cache_write": 0,
+        "calls": 82
+       }
+      }
+     },
+     "best_dev_round": null
+    },
+    {
+     "name": "dream_rsi",
+     "run": "appworld-study-dream_rsi-20261020T0414Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce"
+      },
+      {
+       "round": 1,
+       "train": 0.13333333333333333,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.13333333333333333,
+       "state": "4bb5f065272c"
+      },
+      {
+       "round": 2,
+       "train": 0.17777777777777778,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.17777777777777778,
+       "state": "d2c39591e4a2"
+      },
+      {
+       "round": 3,
+       "train": 0.25555555555555554,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.25555555555555554,
+       "state": "b89a8c2904d9"
+      },
+      {
+       "round": 4,
+       "train": 0.3333333333333333,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.3333333333333333,
+       "state": "4b0100426936"
+      },
+      {
+       "round": 5,
+       "train": 0.3888888888888889,
+       "train_n": 90,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0,
+       "train_raw": 0.3888888888888889,
+       "state": "05e620c0d969"
+      },
+      {
+       "round": 6,
+       "train": 0.34444444444444444,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.34444444444444444,
+       "state": "e1700a1d2c2e"
+      },
+      {
+       "round": 7,
+       "train": 0.4666666666666667,
+       "train_n": 90,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0,
+       "train_raw": 0.4666666666666667,
+       "state": "76354c8212bb"
+      },
+      {
+       "round": 8,
+       "train": 0.4888888888888889,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.4888888888888889,
+       "state": "bc621479cd77"
+      },
+      {
+       "round": 9,
+       "train": 0.5,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.5,
+       "state": "f7cf4289b3b8"
+      },
+      {
+       "round": 10,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      }
+     ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 14557597,
+        "calls": 2281
+       },
+       "task_split": {
+        "input": 14269815,
+        "output": 287782,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 157411,
+        "output": 106622,
+        "cache_read": 20866688,
+        "cache_write": 0,
+        "calls": 127
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 13352695,
+        "calls": 2028
+       },
+       "task_split": {
+        "input": 13106445,
+        "output": 246250,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 140595,
+        "output": 85670,
+        "cache_read": 12636928,
+        "cache_write": 0,
+        "calls": 88
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 10062717,
+        "calls": 1186
+       },
+       "task_split": {
+        "input": 9914078,
+        "output": 148639,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 180609,
+        "output": 162179,
+        "cache_read": 41574400,
+        "cache_write": 0,
+        "calls": 208
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 10717237,
+        "calls": 1223
+       },
+       "task_split": {
+        "input": 10536240,
+        "output": 180997,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 177465,
+        "output": 76153,
+        "cache_read": 15362432,
+        "cache_write": 0,
+        "calls": 94
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 15797731,
+        "calls": 1579
+       },
+       "task_split": {
+        "input": 15539171,
+        "output": 258560,
+        "tasks_reporting": 88,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 175056,
+        "output": 89185,
+        "cache_read": 22858752,
+        "cache_write": 0,
+        "calls": 141
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 20338078,
+        "calls": 1946
+       },
+       "task_split": {
+        "input": 20090846,
+        "output": 247232,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 199897,
+        "output": 117359,
+        "cache_read": 31350784,
+        "cache_write": 0,
+        "calls": 154
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 15519048,
+        "calls": 1559
+       },
+       "task_split": {
+        "input": 15207949,
+        "output": 311099,
+        "tasks_reporting": 87,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 15172,
+        "output": 27587,
+        "cache_read": 18048,
+        "cache_write": 0,
+        "calls": 2
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 12488166,
+        "calls": 1351
+       },
+       "task_split": {
+        "input": 12241374,
+        "output": 246792,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 203268,
+        "output": 172063,
+        "cache_read": 41278464,
+        "cache_write": 0,
+        "calls": 203
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 11965239,
+        "calls": 1296
+       },
+       "task_split": {
+        "input": 11741136,
+        "output": 224103,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 161146,
+        "output": 61136,
+        "cache_read": 11760768,
+        "cache_write": 0,
+        "calls": 82
+       }
+      }
+     },
+     "best_dev_round": null
+    },
+    {
+     "name": "meta_harness",
+     "run": "appworld-study-meta_harness-20261020T0414Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce"
+      },
+      {
+       "round": 1,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "ebc92feffde0",
+       "batch": 3
+      },
+      {
+       "round": 2,
+       "train": 0.011235955056179775,
+       "train_n": 89,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 1,
+       "train_raw": 0.011235955056179775,
+       "state": "c546927cb154",
+       "batch": 3
+      },
+      {
+       "round": 3,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "6b4af6a58fad",
+       "batch": 3
+      },
+      {
+       "round": 4,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "de03e46631b4",
+       "batch": 3
+      },
+      {
+       "round": 5,
+       "train": 0.03333333333333333,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.03333333333333333,
+       "state": "dee86ade23e9",
+       "batch": 3
+      },
+      {
+       "round": 6,
+       "train": 0.03333333333333333,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.03333333333333333,
+       "state": "c0f916f7c5c6",
+       "batch": 3
+      },
+      {
+       "round": 7,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "b86c62fe1d3a",
+       "batch": 3
+      },
+      {
+       "round": 8,
+       "train": 0.0,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.0,
+       "state": "e64734651c59",
+       "batch": 3
+      },
+      {
+       "round": 9,
+       "train": 0.022222222222222223,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.022222222222222223,
+       "state": "4255102cb32e",
+       "batch": 3
+      },
+      {
+       "round": 10,
+       "train": 0.03333333333333333,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.03333333333333333,
+       "state": "0342479a3310"
+      }
+     ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 15538768,
+        "calls": 2430
+       },
+       "task_split": {
+        "input": 15301149,
+        "output": 237619,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 195163,
+        "output": 98951,
+        "cache_read": 5881472,
+        "cache_write": 0,
+        "calls": 103
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 8726119,
+        "calls": 1784
+       },
+       "task_split": {
+        "input": 8566204,
+        "output": 159915,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 195163,
+        "output": 98951,
+        "cache_read": 5881472,
+        "cache_write": 0,
+        "calls": 103
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 13759149,
+        "calls": 2386
+       },
+       "task_split": {
+        "input": 13496036,
+        "output": 263113,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 195163,
+        "output": 98951,
+        "cache_read": 5881472,
+        "cache_write": 0,
+        "calls": 103
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 12735611,
+        "calls": 1923
+       },
+       "task_split": {
+        "input": 12565750,
+        "output": 169861,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 29855,
+        "output": 64202,
+        "cache_read": 35072,
+        "cache_write": 0,
+        "calls": 4
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 9305593,
+        "calls": 1871
+       },
+       "task_split": {
+        "input": 9137977,
+        "output": 167616,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 29855,
+        "output": 64202,
+        "cache_read": 35072,
+        "cache_write": 0,
+        "calls": 4
+       }
+      },
+      "6": {
+       "task": {
+        "tokens": 9190184,
+        "calls": 1822
+       },
+       "task_split": {
+        "input": 9027957,
+        "output": 162227,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 29855,
+        "output": 64202,
+        "cache_read": 35072,
+        "cache_write": 0,
+        "calls": 4
+       }
+      },
+      "7": {
+       "task": {
+        "tokens": 9556228,
+        "calls": 1900
+       },
+       "task_split": {
+        "input": 9383247,
+        "output": 172981,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 175606,
+        "output": 98183,
+        "cache_read": 5286912,
+        "cache_write": 0,
+        "calls": 102
+       }
+      },
+      "8": {
+       "task": {
+        "tokens": 5435887,
+        "calls": 1260
+       },
+       "task_split": {
+        "input": 5360279,
+        "output": 75608,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 175606,
+        "output": 98183,
+        "cache_read": 5286912,
+        "cache_write": 0,
+        "calls": 102
+       }
+      },
+      "9": {
+       "task": {
+        "tokens": 9607847,
+        "calls": 1880
+       },
+       "task_split": {
+        "input": 9449996,
+        "output": 157851,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 175606,
+        "output": 98183,
+        "cache_read": 5286912,
+        "cache_write": 0,
+        "calls": 102
+       }
+      },
+      "10": {
+       "task": {
+        "tokens": 9993032,
+        "calls": 1936
+       },
+       "task_split": {
+        "input": 9825754,
+        "output": 167278,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 33449,
+        "output": 87630,
+        "cache_read": 39296,
+        "cache_write": 0,
+        "calls": 4
+       }
+      }
+     },
+     "best_dev_round": null
+    },
+    {
+     "name": "rrsi",
+     "run": "appworld-study-rrsi-20261020T0415Z",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce"
+      },
+      {
+       "round": 1,
+       "train": 0.011111111111111112,
+       "train_n": 89,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 1,
+       "train_raw": 0.011235955056179775,
+       "state": "7a40f6ddd0ce",
+       "repeat_of": 0
+      },
+      {
+       "round": 2,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.011111111111111112,
+       "state": "7a40f6ddd0ce",
+       "repeat_of": 0
+      },
+      {
+       "round": 3,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.022222222222222223,
+       "state": "7a40f6ddd0ce",
+       "repeat_of": 0
+      },
+      {
+       "round": 4,
+       "train": 0.011111111111111112,
+       "train_n": 90,
+       "eval": {},
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.022222222222222223,
+       "state": "7a40f6ddd0ce",
+       "repeat_of": 0
+      },
+      {
+       "round": 5,
+       "train": 0.02247191011235955,
+       "train_n": 89,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 1,
+       "train_raw": 0.02247191011235955,
+       "state": "8ae8833299f0"
+      },
+      {
+       "round": 6,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 7,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 8,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 9,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      },
+      {
+       "round": 10,
+       "train": null,
+       "train_n": null,
+       "eval": {},
+       "valid": false,
+       "n_invalid": 0
+      }
+     ],
+     "cost": {
+      "0": {
+       "task": {
+        "tokens": 15601500,
+        "calls": 2492
+       },
+       "task_split": {
+        "input": 15342095,
+        "output": 259405,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": null,
+        "output": null,
+        "cache_read": null,
+        "cache_write": 0,
+        "calls": null
+       }
+      },
+      "1": {
+       "task": {
+        "tokens": 14444043,
+        "calls": 2393
+       },
+       "task_split": {
+        "input": 14177513,
+        "output": 266530,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 814792,
+        "output": 430418,
+        "cache_read": 54490880,
+        "cache_write": 0,
+        "calls": 413
+       }
+      },
+      "2": {
+       "task": {
+        "tokens": 14612066,
+        "calls": 2425
+       },
+       "task_split": {
+        "input": 14342267,
+        "output": 269799,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 852907,
+        "output": 632950,
+        "cache_read": 97721472,
+        "cache_write": 0,
+        "calls": 659
+       }
+      },
+      "3": {
+       "task": {
+        "tokens": 14695790,
+        "calls": 2438
+       },
+       "task_split": {
+        "input": 14436505,
+        "output": 259285,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 804926,
+        "output": 430103,
+        "cache_read": 55635200,
+        "cache_write": 0,
+        "calls": 431
+       }
+      },
+      "4": {
+       "task": {
+        "tokens": 14695790,
+        "calls": 2438
+       },
+       "task_split": {
+        "input": 14436505,
+        "output": 259285,
+        "tasks_reporting": 90,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 873561,
+        "output": 470911,
+        "cache_read": 69072384,
+        "cache_write": 0,
+        "calls": 518
+       }
+      },
+      "5": {
+       "task": {
+        "tokens": 16486577,
+        "calls": 2508
+       },
+       "task_split": {
+        "input": 16228691,
+        "output": 257886,
+        "tasks_reporting": 89,
+        "tasks": 90
+       },
+       "improver": {
+        "input": 693571,
+        "output": 313505,
+        "cache_read": 49146240,
+        "cache_write": 0,
+        "calls": 383
+       }
+      }
+     },
+     "best_dev_round": null
     }
    ]
   }
@@ -1384,14 +3276,14 @@
  "excluded": [],
  "coverage": {
   "train": {
-   "measured": 3,
-   "valid": 3,
+   "measured": 9,
+   "valid": 9,
    "planned": null
   },
   "dev": {
-   "measured": 33,
-   "valid": 33,
-   "planned": 33
+   "measured": 34,
+   "valid": 34,
+   "planned": 99
   }
  },
  "h0": {
