@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from lib.protocol import METRIC, CODE_REVISION, REVISION
+from lib.protocol import METRIC, CODE_REVISION, REVISION, coverage
 from lib.scoring import score_answer
 
 
@@ -24,6 +24,11 @@ def verify(gold, record, *, task_id, input_sha256, relay_sha256):
             or payload.get("task_id") != task_id or payload.get("input_sha256") != input_sha256):
         raise ValueError("trusted record identity mismatch")
     qids = [q["id"] for q in gold["questions"]]
+    source_coverage = coverage(gold, len(qids))
+    excluded_indices = {e["row_index"] for e in gold["excluded_questions"]}
+    if (not qids or any(q["correct_letter"] not in ("a", "b", "c", "d")
+                       or q["row_index"] in excluded_indices for q in gold["questions"])):
+        raise ValueError("invalid eligible MCQ gold")
     answers = payload.get("answers")
     if (len(set(qids)) != len(qids) or payload.get("question_ids") != qids
             or payload.get("chunk_count") != gold["chunk_count"]
@@ -40,12 +45,10 @@ def verify(gold, record, *, task_id, input_sha256, relay_sha256):
     result = {"schema": "personamem-v2-verdict-v1", "task_id": task_id, "metric": METRIC,
               "split": gold["split"], "persona_id": gold["persona_id"], "binding": binding,
               "measured": complete, "expected_questions": len(qids), "answered_questions": len(answers),
+              **source_coverage,
               "artifacts": {"dataset_revision": REVISION, "code_revision": CODE_REVISION,
                             "source_manifest_sha256": gold["source_manifest_sha256"],
                             "input_sha256": input_sha256, "history_sha256": gold["history_sha256"]}}
-    if gold.get("source_errors"):
-        result.update(measured=False, reason="source_data_error", source_errors=gold["source_errors"])
-        return result
     if not complete:
         result["reason"] = "incomplete_episode"
         return result

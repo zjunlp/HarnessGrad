@@ -41,7 +41,7 @@ def main():
         CURRENT.write_bytes(raw)
         CURRENT_ID.write_text(json.dumps({key: result[key] for key in ("chunk_id", "question_id") if key in result}))
         result.update(path=str(CURRENT), bytes=len(raw), sha256=digest)
-    elif args.operation == "next" and result.get("kind") in ("done", "blocked"):
+    elif args.operation == "next" and result.get("kind") == "done":
         clear_current()
     elif result.get("accepted") and args.operation in ("ack", "submit") and CURRENT_ID.exists():
         identity = json.loads(CURRENT_ID.read_text())

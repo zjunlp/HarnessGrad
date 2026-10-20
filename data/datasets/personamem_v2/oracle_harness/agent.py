@@ -31,11 +31,10 @@ def main():
         first = subprocess.run([sys.executable, str(work / 'personamem'), 'next'], cwd=work,
                                capture_output=True, text=True, check=True)
         metadata = json.loads(first.stdout)
-        if metadata['kind'] != 'blocked':
-            assert len((work / metadata['path']).read_bytes()) == metadata['bytes']
+        assert len((work / metadata['path']).read_bytes()) == metadata['bytes']
         while True:
             item = call('/run/harnessgrad-tool/tool.sock', 'next')
-            if item['kind'] in ('done', 'blocked'):
+            if item['kind'] == 'done':
                 break
             if item['kind'] == 'chunk':
                 op, fields = 'ack', {'chunk_id': item['chunk_id']}

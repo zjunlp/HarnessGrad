@@ -37,10 +37,11 @@ def prepared(tmp_path, monkeypatch):
     gold = {"schema": "personamem-v2-gold-v1", "task_id": tid, "metric": METRIC,
             "split": "train", "persona_id": 78, "input_sha256": payload["input_sha256"],
             "chunk_count": 2, "history_sha256": "a" * 64, "source_manifest_sha256": "b" * 64,
+            "original_question_count": 1, "excluded_questions": [],
             "questions": [{"id": qid, "correct_letter": "c", "row_index": 1,
                            "pref_type": "ask_to_forget", "updated": "True", "sensitive_info": "False"}]}
     row = {"task_id": tid, "split": "train", "persona_id": 78, "input_sha256": payload["input_sha256"],
-           "question_count": 1, "chunk_count": 2}
+           "question_count": 1, "chunk_count": 2, "original_question_count": 1, "excluded_questions": []}
     artifacts = {"pool.json": [row], f"service/{tid}.json": payload, f"gold/{tid}.json": gold}
     hashes = {}
     for name, value in artifacts.items():
@@ -189,27 +190,66 @@ def test_released_trailing_null_is_not_an_option_and_missing_options_are_not_inv
     regular = dict(row, incorrect_answers="['one', 'two', 'three']")
     assert (text, letter) == inputs.question(regular, 2631)
     assert "null" not in text
-    assert inputs.question(dict(row, incorrect_answers=""), 949) == ("What now?", None)
+    with pytest.raises(ValueError, match="missing MCQ distractors"):
+        inputs.question(dict(row, incorrect_answers=""), 949)
 
 
-def test_source_failure_keeps_question_but_never_becomes_a_zero(prepared):
+def test_excluded_source_question_does_not_block_valid_answers_or_count_as_zero(prepared):
     tid, payload, gold = prepared
-    payload = copy.deepcopy(payload)
-    payload["source_errors"] = [gold["questions"][0]["id"]]
-    payload["input_sha256"] = digest({k: v for k, v in payload.items() if k != "input_sha256"})
     gold = copy.deepcopy(gold)
-    gold["source_errors"] = payload["source_errors"]
-    gold["input_sha256"] = payload["input_sha256"]
-    gold["questions"][0]["correct_letter"] = None
-    session = Session(payload)
-    assert session.handle("next", {}) == {"kind": "blocked", "reason": "source_data_error"}
+    gold.update(original_question_count=2, excluded_questions=[{
+        "split": "train", "row_index": 949, "persona_id": 78,
+        "row_sha256": "c" * 64, "reason": "missing_mcq_distractors"}])
+    pool = dataset.rows()
+    pool[tid].update(original_question_count=2, excluded_questions=gold["excluded_questions"])
     sha = hashlib.sha256(canonical(payload).encode()).hexdigest()
-    record = {"schema": "harnessgrad.interaction-record.v1",
-              "binding": {"task_id": tid, "input_sha256": sha, "run_id": "test", "trial_id": "t"},
-              "payload": session.record()}
-    result = verify(gold, record, task_id=tid, input_sha256=payload["input_sha256"], relay_sha256=sha)
-    assert result["reason"] == "source_data_error" and result["expected_questions"] == 1
-    assert result["measured"] is False and "score" not in result
+    for answer, expected in [(r"\boxed{c}", 1), (r"\boxed{a}", 0)]:
+        result = verify(gold, completed_record(payload, answer), task_id=tid,
+                        input_sha256=payload["input_sha256"], relay_sha256=sha)
+        assert result["measured"] and result["score"] == expected
+        assert result["original_questions"] == 2 and result["expected_questions"] == 1
+        assert result["excluded_question_count"] == 1
+        summary = dataset.aggregate([result], [tid])["train"]
+        assert summary["score"] == expected and summary["measured_questions"] == 1
+        assert summary["original_questions"] == 2 and summary["excluded_questions"] == gold["excluded_questions"]
+        forged = copy.deepcopy(result)
+        forged["excluded_questions"] = []
+        with pytest.raises(ValueError, match="source coverage"):
+            dataset.aggregate([forged], [tid])
+    incomplete = completed_record(payload)
+    incomplete["payload"].update(answers=[], complete=False)
+    result = verify(gold, incomplete, task_id=tid, input_sha256=payload["input_sha256"], relay_sha256=sha)
+    assert result["reason"] == "incomplete_episode" and not result["measured"]
+    assert dataset.aggregate([result], [tid])["train"]["score"] is None
+    legacy = dict(result, metric="personamem_v2.text32k.memagent_mcq_accuracy.v1")
+    with pytest.raises(ValueError, match="incompatible metric"):
+        dataset.aggregate([legacy], [tid])
+
+
+def test_prepared_pool_rejects_old_scoring_scope(prepared):
+    path = dataset.PREPARED_ROOT / "manifest.json"
+    value = json.loads(path.read_text())
+    value["metric"] = "personamem_v2.text32k.memagent_mcq_accuracy.v1"
+    path.write_text(canonical(value))
+    with pytest.raises(ValueError, match="prepare a fresh pool"):
+        storage.pool(dataset.PREPARED_ROOT)
+
+
+@pytest.mark.parametrize("change", ["original_count", "bad_gold", "excluded_index"])
+def test_verifier_rejects_inconsistent_source_coverage(prepared, change):
+    tid, payload, gold = prepared
+    gold = copy.deepcopy(gold)
+    if change == "original_count":
+        gold["original_question_count"] += 1
+    elif change == "bad_gold":
+        gold["questions"][0]["correct_letter"] = "y"
+    else:
+        gold.update(original_question_count=2, excluded_questions=[{
+            "split": "train", "row_index": 1, "persona_id": 78,
+            "row_sha256": "c" * 64, "reason": "missing_mcq_distractors"}])
+    with pytest.raises(ValueError):
+        verify(gold, completed_record(payload), task_id=tid, input_sha256=payload["input_sha256"],
+               relay_sha256=hashlib.sha256(canonical(payload).encode()).hexdigest())
 
 
 def test_official_scorer_and_mcq_fixture_pins():
@@ -357,6 +397,8 @@ def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monke
            "incorrect_answers": "['old','other','none']", "pref_type": "neutral_preferences",
            "updated": "True", "sensitive_info": "False"}
     names = [history_name]
+    bad = dict(row, user_query="{'content':'Broken?'}", incorrect_answers="")
+    after = dict(row, user_query="{'content':'Later?'}")
     for split in ("train", "val", "benchmark"):
         name = f"benchmark/text/{split}.csv"
         path = raw / name
@@ -365,21 +407,47 @@ def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monke
             writer = csv.DictWriter(stream, fieldnames=list(row))
             writer.writeheader()
             writer.writerow(row)
+            if split == "train":
+                writer.writerow(bad)
+                writer.writerow(after)
         names.append(name)
-    pins = {"files": {n: {"sha256": storage.file_sha(raw / n)} for n in names}}
+    exclusion = {"split": "train", "row_index": 1, "persona_id": 78,
+                 "row_sha256": digest(bad), "reason": "missing_mcq_distractors"}
+    pins = {"files": {n: {"sha256": storage.file_sha(raw / n)} for n in names},
+            "excluded_questions": [exclusion]}
     monkeypatch.setattr(prepare, "source_pins", lambda: (pins, "a" * 64))
-    monkeypatch.setattr(prepare, "COUNTS", {s: 1 for s in ("train", "val", "benchmark")})
+    monkeypatch.setattr(prepare, "COUNTS", {"train": 3, "val": 1, "benchmark": 1})
     output = tmp_path / "prepared"
     result = prepare.prepare(raw, output)
-    assert result["episodes"] == result["questions"] == 3
+    assert result["episodes"] == 3 and result["questions"] == 4
+    assert result["original_questions"] == 5 and result["excluded_questions"] == 1
     for tid, r in storage.pool(output).items():
         payload = storage.artifact(output, f"service/{tid}.json")
         assert payload["questions"][0]["id"] == inputs.question_id(tid, row["user_query"])
         assert set(payload["questions"][0]) == {"id", "text"}
         assert "row_index" not in canonical(payload)
         assert "PRIVATE PERSONA" not in canonical(payload)
+        gold = storage.artifact(output, f"gold/{tid}.json")
+        if r["split"] == "train":
+            assert r["question_count"] == 2 and r["original_question_count"] == 3
+            assert r["excluded_questions"] == gold["excluded_questions"] == [exclusion]
+            assert [q["row_index"] for q in gold["questions"]] == [0, 2]
+            assert payload["questions"][1]["text"] == inputs.question(after, 2)[0]
+            assert gold["questions"][1]["correct_letter"] == inputs.question(after, 2)[1]
+            assert all(q["id"] != inputs.question_id(tid, bad["user_query"]) for q in payload["questions"])
+        else:
+            assert r["excluded_questions"] == []
+    assert storage.manifest(output)["excluded_questions"] == [exclusion]
     with pytest.raises(FileExistsError):
         prepare.prepare(raw, output)
+    exclusion["row_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="exclusion identity"):
+        prepare.prepare(raw, tmp_path / "wrong-exclusion")
+    exclusion["row_sha256"] = digest(bad)
+    pins["excluded_questions"] = []
+    with pytest.raises(ValueError, match="missing MCQ distractors"):
+        prepare.prepare(raw, tmp_path / "unknown-bad-row")
+    pins["excluded_questions"] = [exclusion]
     history.write_text("{}")
     with pytest.raises(ValueError, match="history digest"):
         prepare.prepare(raw, tmp_path / "broken")
@@ -391,7 +459,8 @@ def test_complete_release_inventory_native_overlap_and_gold_parity():
     if not (dataset.PREPARED_ROOT / "manifest.json").is_file():
         pytest.skip("provision the pinned release to audit full native divisions")
     rows = dataset.rows()
-    assert len(rows) == 1735 and sum(r["question_count"] for r in rows.values()) == 25610
+    assert len(rows) == 1735 and sum(r["question_count"] for r in rows.values()) == 25609
+    assert sum(r["original_question_count"] for r in rows.values()) == 25610
     assert {s: len(ids) for s, ids in dataset.NATIVE_SPLITS.items()} == {
         "train": 800, "val": 735, "benchmark": 200}
     for split, count in (("train", 20), ("val", 2), ("benchmark", 6)):
@@ -400,12 +469,12 @@ def test_complete_release_inventory_native_overlap_and_gold_parity():
     assert personas["benchmark"] & personas["train"] == {78}
     assert personas["benchmark"] & personas["val"] == {78}
     normalized = sum(len(r["normalized_json_distractors"]) for r in rows.values())
-    blocked = [r for r in rows.values() if r["source_errors"]]
+    excluded = [r for r in rows.values() if r["excluded_questions"]]
     assert normalized == 10
-    assert len(blocked) == 1 and blocked[0]["task_id"] == storage.task_id("train", 592)
-    assert len(blocked[0]["source_errors"]) == 1
-    broken_gold = storage.artifact(dataset.PREPARED_ROOT, f"gold/{blocked[0]['task_id']}.json")
-    assert [q["row_index"] for q in broken_gold["questions"] if q["correct_letter"] is None] == [949]
+    assert len(excluded) == 1 and excluded[0]["task_id"] == storage.task_id("train", 592)
+    assert excluded[0]["original_question_count"] == 29 and excluded[0]["question_count"] == 28
+    assert len(excluded[0]["excluded_questions"]) == 1
+    assert excluded[0]["excluded_questions"][0]["row_index"] == 949
     # Every runnable released reference must reach the actual MCQ scoring path.
     scored = 0
     native_queries = {}
@@ -415,10 +484,10 @@ def test_complete_release_inventory_native_overlap_and_gold_parity():
     for tid in rows:
         gold = storage.artifact(dataset.PREPARED_ROOT, f"gold/{tid}.json")
         for q in gold["questions"]:
-            raw_query = native_queries[gold["split"]][q["row_index"]]["user_query"]
+            native_row = native_queries[gold["split"]][q["row_index"]]
+            raw_query = native_row["user_query"]
             assert q["id"] == inputs.question_id(tid, raw_query)
-            if q["correct_letter"] is None:
-                continue
+            assert q["correct_letter"] == inputs.question(native_row, q["row_index"])[1]
             assert score_answer("\\boxed{" + q["correct_letter"] + "}", q["correct_letter"]) == 1
             scored += 1
     assert scored == 25609

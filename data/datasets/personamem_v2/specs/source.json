@@ -3,6 +3,15 @@
   "revision": "ed956dea41521fc4499acbc63f966e0fd3c053ba",
   "code_revision": "d29d91d016add354e459dfeb0d24af08bc402e2a",
   "license": "CC-BY-4.0",
+  "excluded_questions": [
+    {
+      "split": "train",
+      "row_index": 949,
+      "persona_id": 592,
+      "row_sha256": "1a7cd7ad2799437018591243a63871650d5fe3e233832c3047ab8015c0f645b2",
+      "reason": "missing_mcq_distractors"
+    }
+  ],
   "files": {
     "benchmark/text/benchmark.csv": {
       "sha256": "95f2a8a324aab7baf2af937feae12731369e2abf7cad5ab3e170594cb25a3e52",

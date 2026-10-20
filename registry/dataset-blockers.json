@@ -545,10 +545,10 @@
     {
       "blockers": [
         {
-          "id": "incomplete-native-train-row",
-          "family": "source-provenance",
-          "status": "external",
-          "observed": "Native train row 949 for persona 592 lacks distractors and has a truncated reference. The adapter retains its 29-question episode and returns unmeasured source_data_error. Native val and benchmark contain no such blocked episode.",
+          "id": "excluded-source-question",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Native train row 949 for persona 592 lacks distractors. The valid-question metric excludes only this pinned row and scores the episode's other 28 questions. All 1735 episodes remain; native train has 18548 eligible questions out of 18549 released, while val and benchmark are unchanged. Prepared artifacts and scoring evidence retain the exact exclusion and reason.",
           "evidence": [
             {
               "kind": "repository",
@@ -556,7 +556,7 @@
               "locator": "Native train row 949"
             }
           ],
-          "next_action": "Retain the source error and selected coverage in reports. A complete train-side score requires an upstream source correction with an explicitly updated data revision; do not fabricate missing options or silently drop the episode."
+          "next_action": "Report original, excluded, eligible and measured question counts under the valid-question metric. Do not label the filtered training score as an exact full-release result or mix it with earlier metric versions; uncompleted eligible questions and runtime failures remain unmeasured."
         }
       ],
       "dataset": "personamem_v2",

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 
-from .protocol import REVISION, CODE_REVISION, METRIC, SPLITS
+from .protocol import REVISION, CODE_REVISION, METRIC, SPLITS, coverage
 
 _TASK = re.compile(r"personamem-v2-(train|val|benchmark)-p([0-9]{4})-text32k")
 
@@ -31,9 +31,11 @@ def file_sha(path):
 
 def manifest(root):
     value = json.loads((Path(root) / "manifest.json").read_text())
+    if value.get("metric") != METRIC:
+        raise ValueError("prepared metric differs; prepare a fresh pool for the valid-question protocol")
     if (value.get("schema") != "personamem-v2-manifest-v1"
             or value.get("dataset_revision") != REVISION or value.get("code_revision") != CODE_REVISION
-            or value.get("metric") != METRIC or not isinstance(value.get("artifacts"), dict)):
+            or not isinstance(value.get("artifacts"), dict)):
         raise ValueError("invalid prepared manifest")
     for name, sha in value["artifacts"].items():
         if name != "pool.json":
@@ -68,6 +70,7 @@ def pool(root):
                 or type(row["question_count"]) is not int or row["question_count"] <= 0
                 or type(row["chunk_count"]) is not int or row["chunk_count"] <= 0):
             raise ValueError("invalid pool task")
+        coverage(row, row["question_count"])
         seen.add(tid)
     expected = {"pool.json"} | {f"{kind}/{tid}.json" for kind in ("gold", "service") for tid in seen}
     if set(manifest(root)["artifacts"]) != expected:

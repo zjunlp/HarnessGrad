@@ -23,8 +23,6 @@ from eval.policy.runtime_policy import phase_timeout
 
 def control_answers(tid, mode):
     gold = artifact(dataset.PREPARED_ROOT, f'gold/{tid}.json')
-    if gold.get('source_errors'):
-        return {}
     return {q['id']: ('\\boxed{' + (q['correct_letter'] if mode == 'oracle'
                                  else chr(97 + (ord(q['correct_letter']) - 96) % 4)) + '}')
             for q in gold['questions']}
@@ -63,7 +61,7 @@ def run(mode, platform, tid, work, *, recordings_root=None, actor_preload=None):
             if mode != 'noop':
                 while True:
                     item = call(relay.path, 'next', timeout_s=None, max_line_bytes=None)
-                    if item['kind'] in ('done', 'blocked'):
+                    if item['kind'] == 'done':
                         break
                     if item['kind'] == 'chunk':
                         op, params = 'ack', {'chunk_id': item['chunk_id'], 'request_id': 'a-' + item['chunk_id']}

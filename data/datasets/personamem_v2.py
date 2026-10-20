@@ -36,8 +36,7 @@ def instruction(row):
         "./personamem submit --question-id ID --answer-file PATH --request-id ID. "
         "Use a unique request ID per operation; reuse it only to retry identical input. "
         "Every answer is final. The required MCQ answer is \\boxed{a}, \\boxed{b}, \\boxed{c}, or \\boxed{d}. "
-        "Continue until next reports done. If it reports blocked, finish: the released source is incomplete "
-        "and this episode cannot be scored. The final harness answer does not submit the MCQs. "
+        "Continue until next reports done. The final harness answer does not submit the MCQs. "
         "Choose your own memory, retrieval and context strategy. "
         f"There are {row['chunk_count']} history messages and {row['question_count']} questions."
     )
@@ -120,7 +119,8 @@ def provision_status():
     try:
         return {"present": True, "root": str(DATASET_ROOT), "tasks": len(rows()),
                 "questions": sum(r["question_count"] for r in rows().values()),
-                "source_blocked_episodes": sum(bool(r.get("source_errors")) for r in rows().values())}
+                "original_questions": sum(r["original_question_count"] for r in rows().values()),
+                "excluded_questions": sum(len(r["excluded_questions"]) for r in rows().values())}
     except (OSError, ValueError, KeyError) as exc:
         return {"present": False, "root": str(DATASET_ROOT), "detail": str(exc)}
 
@@ -140,8 +140,8 @@ def control_task(tid):
 
 
 def aggregate(records, selected_task_ids=None):
-    """Official question micro-accuracy per native split, with explicit coverage."""
-    from data.datasets.personamem_v2.lib.protocol import METRIC, SPLITS
+    """Question micro-accuracy over the fixed eligible pool, with source coverage."""
+    from data.datasets.personamem_v2.lib.protocol import METRIC, SPLITS, coverage
     ids = list(rows()) if selected_task_ids is None else list(selected_task_ids)
     if len(ids) != len(set(ids)) or set(ids) - rows().keys():
         raise ValueError("duplicate or unknown selected task")
@@ -157,6 +157,10 @@ def aggregate(records, selected_task_ids=None):
         if (row.get("artifacts", {}).get("input_sha256") != rows()[tid]["input_sha256"]
                 or row.get("split") != rows()[tid]["split"]):
             raise ValueError("evidence input or native split mismatch")
+        expected_coverage = coverage(rows()[tid], rows()[tid]["question_count"])
+        if (any(row.get(key) != value for key, value in expected_coverage.items())
+                or row.get("expected_questions") != rows()[tid]["question_count"]):
+            raise ValueError("evidence source coverage mismatch")
         evidence[tid] = row
     result = {}
     for split in SPLITS:
@@ -172,6 +176,9 @@ def aggregate(records, selected_task_ids=None):
         missing = [tid for tid in selected if tid not in evidence or not evidence[tid].get("measured")]
         result[split] = {"metric": METRIC, "selected_episodes": len(selected),
                          "measured_episodes": len(complete), "expected_questions": expected,
+                         "original_questions": sum(rows()[tid]["original_question_count"] for tid in selected),
+                         "excluded_question_count": sum(len(rows()[tid]["excluded_questions"]) for tid in selected),
+                         "excluded_questions": [e for tid in selected for e in rows()[tid]["excluded_questions"]],
                          "measured_questions": sum(len(e["questions"]) for e in complete),
                          "unmeasured_task_ids": missing,
                          "score": None if missing else sum(q["score"] for e in complete for q in e["questions"]) / expected}

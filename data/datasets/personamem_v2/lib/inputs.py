@@ -23,8 +23,7 @@ def question(row, index):
         parsed = raw
     text = str(parsed.get("content", "")) if isinstance(parsed, dict) else raw
     if not row["incorrect_answers"]:
-        # Keep the released question identity, but never invent distractors.
-        return text, None
+        raise ValueError("missing MCQ distractors outside the pinned exclusion")
     try:
         wrong = ast.literal_eval(row["incorrect_answers"])
     except (SyntaxError, ValueError):

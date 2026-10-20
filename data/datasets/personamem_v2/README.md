@@ -28,13 +28,14 @@ message or submitting an answer advances the private episode.
 
 ## Native divisions
 
-All **25,610 released questions** remain in **1,735 episodes**:
+The release contains **25,610 questions** in **1,735 episodes**. The fixed
+valid-question evaluation pool retains **25,609 questions and all 1,735 episodes**:
 
-| Native split | Questions | Episodes |
-| --- | ---: | ---: |
-| train | 18,549 | 800 |
-| val | 2,061 | 735 |
-| benchmark | 5,000 | 200 |
+| Native split | Released questions | Excluded questions | Evaluated questions | Episodes |
+| --- | ---: | ---: | ---: | ---: |
+| train | 18,549 | 1 | 18,548 | 800 |
+| val | 2,061 | 0 | 2,061 | 735 |
+| benchmark | 5,000 | 0 | 5,000 | 200 |
 
 `NATIVE_SPLITS` exposes the three sets of episode IDs. HarnessGrad's two-sided
 `SPLIT` maps **study/train = native train + val**, **eval = native benchmark**.
@@ -69,6 +70,9 @@ Preparation uses Python's standard library. It checks every source CSV and each
 selected history against `specs/source.json`, retains original split row indices,
 and refuses to overwrite existing prepared output. Repeat `--task-id` to prepare
 selected complete episodes; the three native CSVs are still checked in full.
+Prepared pools must declare the current valid-question metric; incompatible pools
+are rejected. Prepare into a fresh directory and preserve previous data and receipts
+outside the repository when changing evaluation protocols.
 Each history message is one delivery item; no token-based truncation is applied.
 Rendering follows MemAgent's `Message N (role): content` format, removing the first
 system message containing the explicit persona. Empty text is retained; a source
@@ -81,12 +85,22 @@ The source includes two concrete data irregularities:
   explicit serialization normalization: the official MemAgent Python-literal
   parser does not handle these rows correctly. Original files and row IDs remain
   pinned; affected IDs appear in prepared metadata as `normalized_json_distractors`.
-- Native train row 949, persona 592, has no distractors and a truncated reference.
-  Its question and complete 29-question
-  episode remain in the pool. The relay reports `blocked` without releasing
-  history; the verifier returns **unmeasured `source_data_error`**, never zero.
-  Consequently a complete train-side benchmark score cannot be published from
-  this release. Native val and benchmark contain no such blocked episode.
+- Native train row 949 (zero-based; the 950th data record), persona 592, has no
+  distractors. Its reference contains only `You can try a minimal script like:`.
+  This single question is excluded with reason `missing_mcq_distractors`;
+  the other **28 questions** in the same episode remain runnable and scored.
+  `specs/source.json::excluded_questions` pins the split, original row index,
+  persona and SHA256 of the canonical parsed CSV row. Preparation verifies that
+  identity and the missing distractors before excluding the row. Unknown malformed
+  questions fail preparation; there is no general-purpose automatic filtering.
+
+The official MemAgent converter retains this row without MCQ options while
+leaving `is_mcq=True`. Its rule scorer interprets the reference's initial `Y`
+as answer `y`, so this adapter does not use that malformed scoring path.
+The exclusion is an explicit HarnessGrad evaluation policy, not an upstream
+correction or an exact reproduction of all released training questions.
+Original CSV bytes and indices remain unchanged, including the shuffle seeds
+of every retained question. Exclusion metadata stays outside actor inputs.
 
 ## Runtime and scoring
 
@@ -104,9 +118,10 @@ must copy, summarize or otherwise retain anything it needs in its own storage
 before acknowledging. The relay cannot replay acknowledged history and cannot
 provide future history or questions. Successful request IDs are idempotent for identical retries;
 answers cannot be revised. The final harness `answer.txt` is not a submission.
-On `done`, finish; on `blocked`, finish without attempting unavailable questions.
+On `done`, finish.
 
-The metric is `personamem_v2.text32k.memagent_mcq_accuracy.v1`. Four options are
+The metric is `personamem_v2.text32k.memagent_mcq_accuracy.valid_questions.v1`.
+Four options are
 shuffled using `random.Random(42 + original_split_row_index)`, matching official
 MemAgent preprocessing on valid source rows. Answers use `\boxed{a}` through
 `\boxed{d}`. The scorer preserves the official last-boxed extraction and
@@ -126,12 +141,19 @@ There is no adapter-specific deadline, output-token budget, step cap, relay call
 cap, answer-size cap or record-size cap. Platform lifecycle and phase settings,
 harness policy and provider limits still apply.
 
-Platform reward is the question mean within an episode; platform averaging across
+Platform reward is the mean over eligible questions within an episode (28 for
+train persona 592); the excluded question is not a zero. Platform averaging across
 episodes is not the benchmark's question-weighted accuracy. `aggregate(records,
 selected_task_ids=...)` reports question-weighted accuracy **per native split**,
-with selected/measured coverage. Any missing or unmeasured selected episode leaves
-that split's score unset. It does not combine native train/val/benchmark into an
-invented official total.
+with selected/measured coverage. Verifier evidence and split summaries include
+`original_questions`, eligible `expected_questions`, `excluded_question_count`
+and the exact `excluded_questions` with reasons. The full native train denominator
+is 18,548 eligible questions, not 18,549 released questions. Report this explicitly
+as accuracy over the fixed valid-question pool.
+Any missing or unmeasured selected episode leaves that split's score unset;
+incomplete model answers and runtime failures are never treated as source exclusions.
+Mixed metric versions or conflicting exclusion coverage are rejected. The aggregator
+does not combine native train/val/benchmark into an invented official total.
 
 ## Controls and tests
 
@@ -151,5 +173,5 @@ and trusted record outside the repository; controls make no model calls.
 
 `tests/quality/test_personamem_v2.py` covers official scorer/preprocessing parity,
 ordering and retries, delayed questions, source integrity, native split identity,
-unmeasured data failures, scorer isolation and real sandbox controls. The full
+the fixed exclusion and retained-question denominators, scorer isolation and real sandbox controls. The full
 release inventory test requires the external prepared pool.

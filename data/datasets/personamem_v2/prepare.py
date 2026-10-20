@@ -42,6 +42,10 @@ def prepare(raw, output, selected=None):
     if output.exists():
         raise FileExistsError("prepared output already exists")
     pins, source_sha = source_pins()
+    exclusions = {(e["split"], e["row_index"]): e for e in pins["excluded_questions"]}
+    if len(exclusions) != len(pins["excluded_questions"]):
+        raise ValueError("duplicate source exclusion")
+    matched_exclusions = set()
     groups = defaultdict(list)
     for split in SPLITS:
         name = f"benchmark/text/{split}.csv"
@@ -54,7 +58,17 @@ def prepare(raw, output, selected=None):
             raise ValueError("native question inventory mismatch")
         for index, row in enumerate(rows):
             persona = int(row["persona_id"])
+            key = (split, index)
+            if key in exclusions:
+                exclusion = exclusions[key]
+                if (persona != exclusion["persona_id"] or digest(row) != exclusion["row_sha256"]
+                        or exclusion["reason"] != "missing_mcq_distractors"
+                        or row["incorrect_answers"]):
+                    raise ValueError("source exclusion identity or reason mismatch")
+                matched_exclusions.add(key)
             groups[task_id(split, persona)].append((split, index, row))
+    if matched_exclusions != set(exclusions):
+        raise ValueError("source exclusion not found")
     requested = set(groups) if selected is None else set(selected)
     if not requested or requested - groups.keys():
         raise ValueError("unknown or empty selected episode set")
@@ -83,49 +97,54 @@ def prepare(raw, output, selected=None):
                     raise ValueError("history persona mismatch")
                 history_cache[history] = history_chunks(data)
             chunks = history_cache[history]
-            public_questions, answers, source_errors, normalizations = [], [], [], []
+            public_questions, answers, excluded, normalizations = [], [], [], []
             for _, index, row in entries:
+                if (split, index) in exclusions:
+                    excluded.append(dict(exclusions[split, index]))
+                    continue
                 text, letter = question(row, index)
                 qid = question_id(tid, row["user_query"])
-                if letter is None:
-                    source_errors.append(qid)
-                else:
-                    try:
-                        ast.literal_eval(row["incorrect_answers"])
-                    except (ValueError, SyntaxError):
-                        normalizations.append(qid)
+                try:
+                    ast.literal_eval(row["incorrect_answers"])
+                except (ValueError, SyntaxError):
+                    normalizations.append(qid)
                 public_questions.append({"id": qid, "text": text})
                 answers.append({"id": qid, "correct_letter": letter, "row_index": index,
                                 "pref_type": row["pref_type"], "updated": row["updated"],
                                 "sensitive_info": row["sensitive_info"]})
-            if len({q["id"] for q in public_questions}) != len(public_questions):
-                raise ValueError("duplicate native query within one episode")
+            if not answers or len({q["id"] for q in public_questions}) != len(public_questions):
+                raise ValueError("empty episode or duplicate native query")
             payload = {"schema": "personamem-v2-input-v1", "task_id": tid,
-                       "chunks": chunks, "questions": public_questions, "source_errors": source_errors}
+                       "chunks": chunks, "questions": public_questions}
             payload["input_sha256"] = digest(payload)
             gold = {"schema": "personamem-v2-gold-v1", "task_id": tid, "metric": METRIC,
                     "split": split, "persona_id": int(first["persona_id"]),
                     "input_sha256": payload["input_sha256"], "chunk_count": len(chunks),
                     "questions": answers, "history_sha256": pins["files"][history]["sha256"],
-                    "source_manifest_sha256": source_sha, "source_errors": source_errors,
+                    "source_manifest_sha256": source_sha, "original_question_count": len(entries),
+                    "excluded_questions": excluded,
                     "normalized_json_distractors": normalizations}
             write(f"service/{tid}.json", payload)
             write(f"gold/{tid}.json", gold)
             pool.append({"task_id": tid, "split": split, "persona_id": int(first["persona_id"]),
                          "question_count": len(answers), "chunk_count": len(chunks),
-                         "input_sha256": payload["input_sha256"], "source_errors": source_errors,
+                         "input_sha256": payload["input_sha256"], "original_question_count": len(entries),
+                         "excluded_questions": excluded,
                          "normalized_json_distractors": normalizations})
         write("pool.json", pool)
         metadata = {"schema": "personamem-v2-manifest-v1", "dataset_revision": REVISION,
                     "code_revision": CODE_REVISION, "metric": METRIC,
                     "source_manifest_sha256": source_sha, "artifacts": artifacts,
-                    "native_question_counts": COUNTS, "selected_episodes": len(pool)}
+                    "native_question_counts": COUNTS, "selected_episodes": len(pool),
+                    "excluded_questions": [e for row in pool for e in row["excluded_questions"]]}
         (staging / "manifest.json").write_text(canonical(metadata) + "\n")
         staging.rename(output)
     except BaseException:
         shutil.rmtree(staging)
         raise
     return {"episodes": len(pool), "questions": sum(r["question_count"] for r in pool),
+            "original_questions": sum(r["original_question_count"] for r in pool),
+            "excluded_questions": sum(len(r["excluded_questions"]) for r in pool),
             "native_episodes": dict(Counter(row["split"] for row in pool)),
             "output": str(output), "manifest_sha256": file_sha(output / "manifest.json")}
 

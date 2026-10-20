@@ -6,7 +6,7 @@ from threading import Lock
 
 REVISION = "ed956dea41521fc4499acbc63f966e0fd3c053ba"
 CODE_REVISION = "d29d91d016add354e459dfeb0d24af08bc402e2a"
-METRIC = "personamem_v2.text32k.memagent_mcq_accuracy.v1"
+METRIC = "personamem_v2.text32k.memagent_mcq_accuracy.valid_questions.v1"
 SPLITS = ("train", "val", "benchmark")
 
 
@@ -18,12 +18,34 @@ def digest(value):
     return hashlib.sha256(canonical(value).encode()).hexdigest()
 
 
+def coverage(row, question_count):
+    """Account for fixed source exclusions separately from execution failures."""
+    original = row.get("original_question_count")
+    excluded = row.get("excluded_questions")
+    if (type(original) is not int or not isinstance(excluded, list)
+            or original != question_count + len(excluded)):
+        raise ValueError("source question coverage mismatch")
+    identities = set()
+    for item in excluded:
+        if (not isinstance(item, dict)
+                or set(item) != {"split", "row_index", "persona_id", "row_sha256", "reason"}
+                or item["split"] != row["split"] or item["persona_id"] != row["persona_id"]
+                or type(item["row_index"]) is not int or item["row_index"] < 0
+                or not isinstance(item["row_sha256"], str) or len(item["row_sha256"]) != 64
+                or any(c not in "0123456789abcdef" for c in item["row_sha256"])
+                or item["reason"] != "missing_mcq_distractors"
+                or item["row_index"] in identities):
+            raise ValueError("invalid source exclusion")
+        identities.add(item["row_index"])
+    return {"original_questions": original, "excluded_question_count": len(excluded),
+            "excluded_questions": deepcopy(excluded)}
+
+
 class Session:
     """Only the issued item may be acknowledged; submitted answers are immutable."""
 
     def __init__(self, payload):
-        if (set(payload) not in ({"schema", "task_id", "chunks", "questions", "input_sha256"},
-                                 {"schema", "task_id", "chunks", "questions", "input_sha256", "source_errors"})
+        if (set(payload) != {"schema", "task_id", "chunks", "questions", "input_sha256"}
                 or payload["schema"] != "personamem-v2-input-v1"
                 or not isinstance(payload["task_id"], str)
                 or not isinstance(payload["chunks"], list) or not payload["chunks"]
@@ -36,10 +58,6 @@ class Session:
                 or len({q["id"] for q in questions}) != len(questions)
                 or digest({k: v for k, v in payload.items() if k != "input_sha256"}) != payload["input_sha256"]):
             raise ValueError("invalid questions or input hash")
-        if ("source_errors" in payload and
-                (not isinstance(payload["source_errors"], list)
-                 or any(qid not in {q["id"] for q in questions} for qid in payload["source_errors"]))):
-            raise ValueError("invalid source error identities")
         self.payload = deepcopy(payload)
         self.chunk = self.question = self.rejected = 0
         self.issued = False
@@ -75,10 +93,6 @@ class Session:
                 return deepcopy(result)
         if self.sealed is not None:
             raise ValueError("episode_sealed")
-        if self.payload.get("source_errors"):
-            if operation == "next":
-                return {"kind": "blocked", "reason": "source_data_error"}
-            raise ValueError("source_data_error")
         if self.chunk < len(self.payload["chunks"]):
             item = {"kind": "chunk", "chunk_id": f"chunk:{self.chunk}",
                     "text": self.payload["chunks"][self.chunk]}
