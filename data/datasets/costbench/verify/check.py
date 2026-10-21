@@ -27,6 +27,11 @@ def main():
         if hashlib.sha256(raw).hexdigest() != args.case_sha256:
             raise ValueError('private CostBench case digest mismatch')
         config = json.loads(raw)
+        if config.get('protocol', {}).get('use_blocker') is True:
+            from dynamic_scoring import metric as dynamic_metric, score as score_episode
+            evidence['metric'] = dynamic_metric(config['protocol'].get('block_mode'))
+        else:
+            score_episode = score
         sealed = json.loads(Path('trusted_episode/episode.json').read_text())
         binding = sealed['binding']
         payload = sealed['payload']
@@ -36,7 +41,7 @@ def main():
                 or str(payload['seed']) != str(binding['seed'])):
             raise ValueError('trusted CostBench episode identity mismatch')
         bootstrap('costbench_bundle', 'costbench_runtime', split=config['split'])
-        result = score(config, payload)
+        result = score_episode(config, payload)
         evidence.update(measured=True, official=result, revision=config['revision'], binding=binding,
                         scorer_input={'task_id': args.task_id, 'sha256': args.case_sha256, 'verified': True})
         reward.write_text(str(result['reward']) + '\n')

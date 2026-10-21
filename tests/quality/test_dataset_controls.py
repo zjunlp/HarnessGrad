@@ -45,6 +45,10 @@ QUALITY = ROOT / "tests" / "quality"
 #: metric. An empty `control` with an `exempt` sentence is a dataset that has no oracle arm,
 #: and the sentence has to say why and what writing one would take.
 ROWS: dict[str, dict] = {
+    "costbench_dynamic": {"control": ["data/datasets/costbench_dynamic/control.py"],
+                          "metric_tests": ["test_costbench_dynamic_dataset.py",
+                                           "test_costbench_dynamic_runtime.py",
+                                           "test_costbench_dynamic_scoring.py"]},
     "costbench": {"control": ["data/datasets/costbench/control.py"],
                   "metric_tests": ["test_costbench_official_scorer.py", "test_costbench_dataset.py"]},
     "personamem_v2": {

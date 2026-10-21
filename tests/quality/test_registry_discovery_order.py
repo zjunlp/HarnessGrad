@@ -36,6 +36,7 @@ EXPECTED_DATASETS = (
     "chessbench_puzzles",
     "cooperbench",
     "costbench",
+    "costbench_dynamic",
     "ds1000",
     "fever",
     "gaia",

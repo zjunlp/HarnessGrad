@@ -18,7 +18,11 @@ from runtime import CostBenchRuntime
 
 class Service:
     def __init__(self, config, public):
-        self.state = CostBenchRuntime(config, public)
+        if config.get('protocol', {}).get('use_blocker'):
+            from dynamic_runtime import DynamicCostBenchRuntime
+            self.state = DynamicCostBenchRuntime(config, public)
+        else:
+            self.state = CostBenchRuntime(config, public)
         self.failure = None
         self.lock = threading.Lock()
 
@@ -26,6 +30,8 @@ class Service:
         with self.lock:
             if not isinstance(args, dict):
                 return {'error': 'arguments_must_be_object'}
+            if op == 'show' and not args and hasattr(self.state, 'show'):
+                return self.state.show()
             if op == 'status' and not args:
                 return self.state.status()
             if op != 'turn' or set(args) != {'content', 'calls'}:

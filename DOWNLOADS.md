@@ -238,6 +238,18 @@ loads and scores it stays in git.
 
 > Run costbench/prepare.py using Python 3.12 and requirements.lock. Static sequence5, seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. Gold audit executes every task; generated search databases stay outside git.
 
+## `costbench_dynamic`
+
+### CostBench dynamic sequence5: four one-event protocols (http, 6424069f3f773ade076bcedbed302ed47cfb1837)
+
+- **Version (pinned):** `6424069f3f773ade076bcedbed302ed47cfb1837`
+- **Size:** same pinned source; 9172 mode/query cases across train and test
+- **URL:** https://codeload.github.com/JiayuJeff/CostBench/tar.gz/6424069f3f773ade076bcedbed302ed47cfb1837
+- **Destination:** `source.tar.gz`
+- **sha256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
+
+> Prepare static costbench first, then run costbench_dynamic/prepare.py. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
+
 ## `ds1000`
 
 ### DS-1000 simplified test.jsonl (hf-dataset, 4416080ac5cb80bdf7576aefb8f9a0b4d5426a44)

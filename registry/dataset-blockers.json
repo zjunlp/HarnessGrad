@@ -293,6 +293,36 @@
       "historical_runs": []
     },
     {
+      "dataset": "costbench_dynamic",
+      "demand": "tool_use",
+      "surface": "tool_dialogue",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "cost",
+        "recovery"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "dynamic-controls-not-model-evaluation",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "The dynamic adapter targets four separately named one-event protocols at atomic sequence length five: cost_change, steplen_change, ban_tool and preference_change. It retains official train/test identities and reports event eligibility separately from primary path exact match. Static and dynamic protocols are one benchmark family, not independent cost coverage. Reference controls and registration do not establish candidate-harness performance. Training uses explicitly declared enum and seven-digit-ID compatibility.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/costbench_dynamic/README.md",
+              "locator": "# CostBench dynamic"
+            }
+          ],
+          "next_action": "For candidate diagnostics, retain protocol mode, source/configuration, split, task/trial coverage, actual/effective event counts, metric eligibility, model identity, usage and cleanup. Do not combine modes or promote oracle controls to model scores; preserve incomplete intervention episodes and undefined cost denominators explicitly."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "ds1000",
       "demand": "artifact",

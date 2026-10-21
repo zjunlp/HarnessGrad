@@ -14,19 +14,21 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from bootstrap import bootstrap
 from scoring import METRIC, REVISION, aggregate
+from dynamic_scoring import MODES, metric as dynamic_metric, aggregate as dynamic_aggregate
 
 
 def cell(row):
     return tuple(row[name] for name in ('task_id', 'run_id', 'trial_id'))
 
 
-def collect(evidences, expected, *, include_splits=False):
+def collect(evidences, expected, *, include_splits=False, mode=None):
+    selected_metric = METRIC if mode is None else dynamic_metric(mode)
     expected_ids = [cell(row) for row in expected]
     if not expected_ids or len(set(expected_ids)) != len(expected_ids):
         raise ValueError('expected-cell manifest is empty or contains duplicates')
     found = {}
     for evidence in evidences:
-        if (evidence.get('measured') is not True or evidence.get('metric') != METRIC
+        if (evidence.get('measured') is not True or evidence.get('metric') != selected_metric
                 or evidence.get('revision') != REVISION
                 or evidence.get('scorer_input', {}).get('verified') is not True):
             raise ValueError('only measured, verified, pinned CostBench evidence is accepted')
@@ -38,6 +40,9 @@ def collect(evidences, expected, *, include_splits=False):
         split = evidence['official']['split']
         if split not in ('train', 'test'):
             raise ValueError('invalid evidence train/test split')
+        if mode is not None and (evidence['official'].get('mode') != mode
+                or not key[0].startswith(f'costbench_dynamic/{mode}/{split}/')):
+            raise ValueError('dynamic evidence mode or task identity mismatch')
         found[key] = (evidence['official']['query_result'], split)
     missing = set(expected_ids) - set(found)
     extra = set(found) - set(expected_ids)
@@ -53,12 +58,16 @@ def main():
     parser.add_argument('--bundle', type=Path, required=True)
     parser.add_argument('--runtime', type=Path, required=True)
     parser.add_argument('--expected-cells', type=Path, required=True)
+    parser.add_argument('--mode', choices=MODES,
+                        help='Explicitly select one dynamic mode; omit for static evidence')
     parser.add_argument('evidence', nargs='+', type=Path)
     args = parser.parse_args()
     queries, splits = collect([json.loads(p.read_text()) for p in args.evidence],
-                             json.loads(args.expected_cells.read_text()), include_splits=True)
+                             json.loads(args.expected_cells.read_text()), include_splits=True,
+                             mode=args.mode)
     bootstrap(args.bundle, args.runtime)
-    result = aggregate(queries, splits=splits)
+    result = (aggregate(queries, splits=splits) if args.mode is None else
+              dynamic_aggregate(queries, mode=args.mode, splits=splits))
     result.update(complete=True, revision=REVISION)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
 

@@ -149,6 +149,7 @@ from harnessgrad.components import COMPONENTS as FUNCTIONS  # noqa: E402
 EXERCISES: dict[str, tuple[str, ...]] = {
     # Official optimal-path agreement makes tool-price planning score-relevant.
     "costbench": ("context", "tools", "control", "cost"),
+    "costbench_dynamic": ("context", "tools", "control", "cost", "recovery"),
     "cooperbench": ("context", "tools", "control", "verification"),
     "kumo": ("context", "tools", "control", "verification"),
     "alfworld": ("context", "tools", "control", "recovery"),
@@ -198,14 +199,16 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "tau2_bench": ("tools", "control"),
 }
 
-#: How few datasets make a harness function covered rather than merely touched.
+#: How few independent benchmark families make a function covered. Protocol
+#: variants remain separate adapters but cannot manufacture independent coverage.
 MIN_MEMBERS_PER_FUNCTION = 2
+FUNCTION_COVERAGE_FAMILY = {"costbench_dynamic": "costbench"}
 
 #: Functions below that floor, with the reason and the shape of the gap. Same two-way rule as
 #: `UNCOVERED_DEMANDS`: a function under the floor must appear here, and a function here must be
 #: under the floor, so closing a gap deletes the entry in the same change.
 #:
-#: A function's coverage counts adapters across demands. Safety is covered by AgentDojo's
+#: A function's coverage counts independent benchmark families across demands. Safety is covered by AgentDojo's
 #: adversarial tool dialogue and StrongREJECT's direct response judgment. The remaining
 #: gaps below distinguish missing task requirements from ordinary runtime accounting.
 #:
@@ -220,9 +223,9 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
                   "platform supplies rather than the harness",
     "reliability": "one adapter (tau3_bench) reports complete-manifest pass^k; "
                    "a second independent demand is still below the coverage floor",
-    "cost": "one adapter (costbench static) scores tool-cost-optimal trajectories; "
-            "this is task-level tool-cost optimization, not a hard compute budget. "
-            "Coverage remains below the two-adapter floor",
+    "cost": "one benchmark family (CostBench static and dynamic protocols) scores "
+            "tool-cost-optimal trajectories; this is task-level tool-cost optimization, "
+            "not a hard compute budget. Coverage remains below the two-family floor",
 }
 
 #: Level 2 of the judged axis: the surface the demand is exercised on. Kept because a SQL task
@@ -235,6 +238,7 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
 #: forget its surface, which a second dict keyed by the same names would allow.
 CAPABILITY: dict[str, tuple[str, str]] = {
     "costbench": ("tool_use", "tool_dialogue"),
+    "costbench_dynamic": ("tool_use", "tool_dialogue"),
     "kumo": ("reasoning", "planning_and_search"),
     "cooperbench": ("artifact", "code_generation"),
     "alfworld": ("environment", "embodied_text"),
@@ -308,6 +312,7 @@ ACT_VERBS = ("do", "call", "send_message", "ack")
 #: `agentdojo` mistake above; the derived side is what caught it.
 EXPECTED_INTERACTION = {
     "costbench": "closed_loop",
+    "costbench_dynamic": "closed_loop",
     "cooperbench": "closed_loop",
     "agentdojo": "closed_loop",
     "kumo": "closed_loop",
@@ -574,6 +579,13 @@ def _check_judged_axis(rows: list[dict]) -> None:
             f"benchmark either belongs to an existing demand or the demand is wrong.")
 
 
+def function_family_counts(rows: list[dict]) -> dict[str, int]:
+    """Protocol variants of one benchmark count once toward coverage."""
+    return {function: len({FUNCTION_COVERAGE_FAMILY.get(row["dataset"], row["dataset"])
+                           for row in rows if function in row["exercises"]})
+            for function in FUNCTIONS}
+
+
 def _check_functions(rows: list[dict]) -> None:
     """Every dataset names the harness functions it stresses, and every function is covered.
 
@@ -596,7 +608,7 @@ def _check_functions(rows: list[dict]) -> None:
     if stray:
         raise SystemExit(f"UNCOVERED_FUNCTIONS names functions outside FUNCTIONS: {stray}.")
 
-    counts = {f: sum(1 for r in rows if f in r["exercises"]) for f in FUNCTIONS}
+    counts = function_family_counts(rows)
     thin = sorted(f for f in FUNCTIONS if counts[f] < MIN_MEMBERS_PER_FUNCTION)
     declared = sorted(UNCOVERED_FUNCTIONS)
     if thin != declared:
@@ -605,7 +617,7 @@ def _check_functions(rows: list[dict]) -> None:
         raise SystemExit(
             f"the function coverage floor is out of step with what is declared. Under the "
             f"floor and undeclared: {undeclared}. Declared but now at or above the floor: "
-            f"{stale}. Below the floor means {MIN_MEMBERS_PER_FUNCTION} datasets; entries are "
+            f"{stale}. Below the floor means {MIN_MEMBERS_PER_FUNCTION} benchmark families; entries are "
             f"deleted in the same change that closes the gap.")
 
 
@@ -655,8 +667,8 @@ def _table(rows: list[dict]) -> str:
     for demand, surfaces in UNCOVERED_DEMANDS.items():
         out.append(f"  {demand:12s} {0:2d}  [planned: {', '.join(surfaces)}]"
                    f"   (declared, no adapter yet)")
-    out += ["", "harness functions (which component a dataset makes score-relevant):"]
-    fcounts = {f: sum(1 for r in rows if f in r["exercises"]) for f in FUNCTIONS}
+    out += ["", "harness functions (independent benchmark families; score-relevant components):"]
+    fcounts = function_family_counts(rows)
     for f in sorted(FUNCTIONS, key=lambda f: (-fcounts[f], f)):
         names = [r["dataset"] for r in rows if f in r["exercises"]]
         note = "  <-- declared gap" if f in UNCOVERED_FUNCTIONS else ""
