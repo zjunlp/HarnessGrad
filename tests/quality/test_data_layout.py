@@ -8,7 +8,6 @@ from __future__ import annotations
 import ast
 import importlib
 import importlib.util
-import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
@@ -31,7 +30,7 @@ FIXTURES = (
     "demo.py", "probe_set.py", "broken_service.py", "verify_demo.py",
     "verify_exec.py", "verify_service.py",
 )
-# Existing published-adapter assets must be moved, rather than simply deleted.
+# Reviewed adapter assets stay beside their declarations.
 # pinchbench is not a published adapter and is deliberately not classified here.
 EXPECTED_ASSET_DIRS = (
     "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "ds1000",
@@ -50,10 +49,10 @@ def _source(path):
     return text, ast.parse(text, filename=_relative(path))
 
 
-def _kind(path):
+def _kind(path, *, require_declaration=False):
     """Read declarations for every adapter, including AgentDojo, without imports."""
     _, tree = _source(path)
-    kind = "fixture"
+    kind = None if require_declaration else "fixture"
     for node in tree.body:
         targets = (node.targets if isinstance(node, ast.Assign) else
                    [node.target] if isinstance(node, ast.AnnAssign) else [])
@@ -92,7 +91,7 @@ def test_scaffolds_contain_shared_code_and_no_adapters():
     _check(errors)
 
 
-def test_all_30_adapters_live_in_datasets():
+def test_reviewed_adapters_live_in_datasets():
     errors = []
     if not DATASETS.is_dir():
         errors.append("Missing adapter directory: data/datasets/")
@@ -105,12 +104,12 @@ def test_all_30_adapters_live_in_datasets():
         errors.append(f"Unexpected adapter/module: data/datasets/{name}")
     for name in sorted(expected & actual):
         path = DATASETS / name
-        if _kind(path) != "dataset":
+        if _kind(path, require_declaration=True) != "dataset":
             errors.append(f"{_relative(path)} must declare KIND = 'dataset'")
     _check(errors)
 
 
-def test_registry_publishes_exactly_the_30_adapters_without_loading_them(monkeypatch):
+def test_registry_publishes_exactly_the_reviewed_datasets_without_loading_adapters(monkeypatch):
     path = SCAFFOLDS / "registry.py"
     assert path.is_file(), f"Missing registry: {_relative(path)}"
     errors = []
@@ -163,7 +162,7 @@ def test_flat_paths_and_migration_shims_are_gone():
             for path in old if path.exists() or path.is_symlink()])
 
 
-def test_adapter_imports_only_use_scaffolds_stdlib_or_third_party():
+def test_adapter_imports_do_not_cross_dataset_boundaries():
     """An adapter may reach `data.scaffolds.*`; it may not reach another adapter.
 
     Deliberately narrower than "any import whose root is a local name", which is what
@@ -176,7 +175,8 @@ def test_adapter_imports_only_use_scaffolds_stdlib_or_third_party():
     adapter, so it tested the wrong thing.
 
     What this pins is the boundary the split exists to create: no adapter imports
-    another adapter, and an adapter's only `data.*` dependency is `data.scaffolds.*`.
+    another adapter. Shared `data.scaffolds.*` and `data.runtimes.*` plus an
+    adapter's own private modules under `data.datasets.<name>.*` are permitted.
     """
     errors = []
     for name in EXPECTED_DATASETS:
@@ -203,6 +203,9 @@ def test_adapter_imports_only_use_scaffolds_stdlib_or_third_party():
                 statement = ast.get_source_segment(text, node)
                 if target.startswith("data.datasets."):
                     other = target.split(".")[2]
+                    if other == name:
+                        # Dataset-private helpers are part of this adapter, not a sibling.
+                        continue
                     errors.append(
                         f"{_relative(path)}:{node.lineno}: {statement} "
                         f"[forbidden dependency: adapter {name!r} imports adapter {other!r}]")

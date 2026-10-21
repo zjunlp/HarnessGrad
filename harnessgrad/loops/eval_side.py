@@ -10,8 +10,10 @@ reconstructible from two records rather than assumed from two runs started close
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import json
 import os
+import statistics
 import time
 
 from ckpt.git_state import commit_state
@@ -187,10 +189,8 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     """
     merged = dict(res)
     per_task = dict(merged.get("per_task") or {})
-    invalid = list(merged.get("invalid") or [])
-    failed = list(merged.get("harness_failed") or [])
-    known = {str(x.get("task_id")) for x in invalid if isinstance(x, dict)}
-    known_failed = {str(x.get("task_id")) for x in failed if isinstance(x, dict)}
+    invalid = dict(merged.get("invalid") or {})
+    failed = dict(merged.get("harness_failed") or {})
     for task_id, record in prior.items():
         if task_id in per_task:
             continue
@@ -198,12 +198,10 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
         if outcome == "completed" and record.get("score") is not None:
             per_task[task_id] = float(record["score"])
         elif outcome in ("invalid", "unmeasured"):
-            if task_id not in known:
-                invalid.append({"task_id": task_id, "why": record.get("detail") or outcome})
-                known.add(task_id)
-        elif task_id not in known_failed:
-            failed.append({"task_id": task_id, "why": record.get("detail") or str(outcome)})
-            known_failed.add(task_id)
+            invalid.setdefault(task_id, {'stage': 'resume', 'detail': record.get('detail') or outcome})
+        else:
+            failed.setdefault(task_id, {'reason': record.get('detail') or str(outcome),
+                                        'exit_code': record.get('exit_code')})
     merged["per_task"] = per_task
     merged["invalid"] = invalid
     merged["harness_failed"] = failed
@@ -237,8 +235,47 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     # scored once must not be scored again, because two measurements of one task are two
     # numbers and picking either is a choice the record cannot defend.
     prior: dict[str, dict] = {}
+    from eval.run import repeated_trials
+    protocol = repeated_trials.protocol_for(tasks, verifiers or {}, args.trials)
+    trial_plan = None
+    old_trial_rows = []
+    plan_path = run_dir / 'protocols/round-0/resume-plan.json'
+    if getattr(args, 'resume', False) and plan_path.exists() and protocol is None:
+        console.note('refusing repeated-trial resume: the original trial protocol was removed', level='error')
+        return 2
+    if protocol:
+        trial_plan = repeated_trials.plan(tasks, protocol, run_id=run_id,
+                                         round_no=0, harness_sha=sha)
+        # Bind the selected declarations too: same seeds with a different user,
+        # judge, task input or endpoint are not the same measurement.
+        declarations = {'tasks': tasks, 'scorable': {t['task_id']: scorable[t['task_id']] for t in tasks},
+                        'setups': {t['task_id']: (setups or {}).get(t['task_id']) for t in tasks},
+                        'verifiers': {t['task_id']: (verifiers or {}).get(t['task_id']) for t in tasks},
+                        'envs': {t['task_id']: (envs or {}).get(t['task_id']) for t in tasks},
+                        'sandbox': args.sandbox, 'jobs': args.jobs,
+                        'models': {k: os.environ.get(k) for k in (
+                            'HG_AGENT_BACKEND', 'HG_AGENT_MODEL', 'HG_AGENT_BASE_URL',
+                            'HG_ENV_BASE_URL', 'HG_JUDGE_BASE_URL')}}
+        # The explicit protocol replaces the outer run seed for every trial;
+        # HARNESSGRAD_SEED is also excluded from the actor environment.
+        trial_plan['declarations_sha256'] = hashlib.sha256(json.dumps(
+            declarations, sort_keys=True, default=str).encode()).hexdigest()
+        try:
+            if getattr(args, 'resume', False) and not plan_path.is_file():
+                raise ValueError('repeated-trial resume requires its original full manifest')
+            repeated_trials.immutable_json(plan_path, trial_plan)
+        except (OSError, ValueError) as exc:
+            console.note(f'refusing repeated-trial resume: {exc}', level='error')
+            return 2
     if getattr(args, "resume", False):
         prior = _progress_results(run_dir)
+        if trial_plan:
+            try:
+                old_trial_rows = repeated_trials.resume_rows(
+                    repeated_trials.report_root(run_dir, 0, sha), trial_plan, prior)
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                console.note(f'refusing repeated-trial resume: {exc}', level='error')
+                return 2
         if prior:
             why = _resume_mismatch(run_dir, args,
                                    os.environ.get("HG_ALFWORLD_POOL", ""), sha)
@@ -259,9 +296,34 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        trials=args.trials, jobs=args.jobs,
                        setups=setups, verifiers=verifiers, envs=envs, run_id=run_id,
                        run_seed=os.environ["HARNESSGRAD_SEED"],
-                       recordings_root=run_dir / "recordings", round_no=0)
+                       recordings_root=run_dir / "recordings", round_no=0,
+                       **({'persist_trial_report': False} if trial_plan else {}))
     if prior:
         res = _merge_prior(res, prior)
+    if trial_plan:
+        fresh_rows = (res.get('repeated_trials') or {}).get('results', [])
+        report = repeated_trials.aggregate(trial_plan['manifest'], old_trial_rows + fresh_rows,
+                                           protocol['ks'])
+        report.update({k: v for k, v in trial_plan.items() if k != 'manifest'})
+        try:
+            repeated_trials.persist(repeated_trials.report_root(run_dir, 0, sha), report)
+        except (OSError, ValueError) as exc:
+            console.note(f'refusing repeated-trial publication: {exc}', level='error')
+            return 2
+        res['repeated_trials'] = report
+        if not report['complete']:
+            console.note('refusing repeated-trial curve: full manifest contains missing or unmeasured trials', level='error')
+            return 2
+        scores = {tid: [r['score'] for r in report['results'] if r['task_id'] == tid]
+                  for tid in report['per_task']}
+        # A normally completed scorer may measure an artifact left by a nonzero
+        # actor. Keep that score and the separate harness_failed attribution.
+        res['per_task'] = {tid: sum(values) / len(values) for tid, values in scores.items()}
+        res['per_task_trials'] = scores
+        res['per_task_std'] = {tid: statistics.pstdev(values) for tid, values in scores.items()}
+        res['score_std'] = statistics.pstdev([
+            sum(values[i] for values in scores.values()) / len(scores)
+            for i in range(protocol['trials'])])
     complete_measurement = after_evaluation(res) if after_evaluation is not None else True
     _require_untampered(res)
     _report_invalid(res, args.dataset)

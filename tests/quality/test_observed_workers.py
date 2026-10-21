@@ -108,6 +108,36 @@ def test_timeout_kills_worker_and_removes_container(image):
     assert runtime.receipt['cleanup']['complete']
 
 
+def test_explicit_large_artifacts_and_scratch_keep_logs_as_retention_only(image):
+    filesystems = {path: {'bytes': 96 << 20, 'inodes': 8192}
+                   for path in ('/workspace', '/tmp', '/dev', '/dev/shm')}
+    runtime = observed.Runtime(spec(image, filesystems=filesystems), binding=binding(), timeout_s=20)
+    with runtime:
+        code = '''from pathlib import Path
+import sys
+Path('/tmp/large-build-output').write_bytes(b'x' * (65 << 20))
+Path('patch.diff').write_bytes(b'p' * ((16 << 20) + 1))
+Path('trace.jsonl').write_bytes(b'l' * (9 << 20))
+sys.stdout.write('o' * (9 << 20))
+sys.stderr.write('e' * ((1 << 20) + 1))
+Path('done').write_text('yes')
+'''
+        proc = runtime.run(['/usr/local/bin/python3', '-c', code])
+        assert proc.returncode == 0
+        assert runtime.receipt['console_logs']['stdout']['truncated']
+        assert runtime.receipt['console_logs']['stderr']['truncated']
+        artifacts = runtime.collect(['patch.diff', 'done'], max_bytes=None)
+        assert artifacts['patch.diff']['bytes'] == (16 << 20) + 1
+        assert base64.b64decode(artifacts['done']['base64']) == b'yes'
+        with pytest.raises(RuntimeError, match='byte limit'):
+            runtime.collect(['patch.diff'])  # Omission keeps the old 16 MiB policy.
+        logs = runtime.collect(['trace.jsonl'], max_bytes=8 << 20, truncate=True)
+        assert logs['trace.jsonl']['source_bytes'] == 9 << 20
+        assert logs['trace.jsonl']['bytes'] == 8 << 20 and logs['trace.jsonl']['truncated']
+        assert runtime.receipt['observed']['filesystems']['/tmp']['bytes'] == 96 << 20
+    assert runtime.receipt['cleanup']['complete']
+
+
 @pytest.mark.parametrize('use_model', [False, True])
 def test_pair_uses_candidate_in_two_images_and_fresh_observed_verifier(image,tmp_path,monkeypatch,endpoint,use_model):
     monkeypatch.setenv('HG_AGENT_BACKEND', 'openai' if use_model else 'mock')
@@ -137,7 +167,8 @@ assert messages[0]['from']==peer
 (w/'patch.diff').write_text(me+':'+messages[0]['message'])
 (w/'trace.jsonl').write_text(json.dumps({'usage':{'input_tokens':2,'output_tokens':3,'calls':1}})+'\\n')
 ''')
-    workers=[{'id':name,'goal':'fixture','env':spec(image),'artifacts':['patch.diff'],
+    workers=[{'id':name,'goal':'fixture','env':spec(image),'artifacts':['patch.diff'], 'artifact_max_bytes': None,
+              'model_route': dict.fromkeys(('max_connections', 'request_max_bytes', 'response_max_bytes', 'header_timeout_s')),
               'files':[{'path':'transport.py','from':str(TRANSPORT)}],'timeout_s':15} for name in ('a','b')]
     check='''from pathlib import Path
 import json,os
@@ -221,3 +252,19 @@ def test_image_cannot_supply_a_stale_verifier_reward(image,tmp_path):
     assert verdict['score'] is None and verdict['outcome']=='unmeasured',verdict
     assert 'wrote no' in verdict['unmeasured']
     assert verdict['container_runtime']['cleanup']['complete']
+
+
+def test_verifier_result_export_can_explicitly_exceed_legacy_ceiling(image, tmp_path):
+    from eval.verification.verifier import _verify
+    code = "from pathlib import Path;import json;Path('verifier/reward.txt').write_text('1');Path('verifier/evidence.json').write_text(json.dumps({'detail':'x'*(5<<20)}))"
+    verifier = {'kind': 'command', 'argv': ['python3', '-c', code],
+        'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
+        'container_runtime': spec(image), 'result_contract': {'version': 1, 'score_range': [0, 1]}}
+    result = _verify(tmp_path, {**verifier, 'result_max_bytes': None}, '', sandbox=True, timeout_s=10)
+    assert result['score'] == 1, result.get('unmeasured')
+    assert len(result['evidence']['detail']) == 5 << 20
+    assert result['container_runtime']['cleanup']['complete']
+    result = _verify(tmp_path, verifier, '', sandbox=True, timeout_s=10)
+    assert result['score'] is None
+    assert 'byte limit' in result['unmeasured']
+    assert result['container_runtime']['cleanup']['complete']

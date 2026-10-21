@@ -82,7 +82,7 @@ def diagnostic_driver(monkeypatch, stubbed_driver):
     content["context"]["gates"] = dict(status="unknown", receipt_sha256=None,
                                       detail="Policy enforcement not observed")
     evidence.write_text(json.dumps(content))
-    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a: {TASK["task_id"]: EXEC})
+    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a, **kwargs: {TASK["task_id"]: EXEC})
     monkeypatch.setattr(driver.container, "available", lambda: "synthetic")
     monkeypatch.setattr(driver.container, "self_check", lambda *a: dict(ok=True, detail="synthetic"))
     monkeypatch.setattr(driver.platform_config, "current", lambda: SimpleNamespace(

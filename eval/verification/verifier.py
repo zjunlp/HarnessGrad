@@ -239,6 +239,16 @@ def _check_output_detail(out: str, err: str) -> str:
     if err and err.strip():
         parts.append(f"stderr {err.strip()[-VERDICT_STDERR_TAIL:]}")
     return " | ".join(parts)
+def _command_exit_failure(spec, code, out, err):
+    """Opt-in command completion check, before trusting any scorer output file."""
+    if not (spec.get('result_contract') or {}).get('require_exit_zero') or code == 0:
+        return None
+    reason = f'verifier command exited {code}; result_contract requires exit 0'
+    return {'kind': 'command', 'passed': False, 'score': None,
+            'outcome': 'unmeasured', 'unmeasured': reason, 'exit_code': code,
+            'detail': (reason + ' | ' + _check_output_detail(out, err))[:VERDICT_DETAIL_LIMIT]}
+
+
 def _verify_container_state(snapshot: str, verifier, *, task_mount: str,
                             staging: Path, timeout_s: int, run_id: str,
                             task_id: str, network: str = "none",
@@ -336,6 +346,10 @@ def _verify_container_state_inner(snapshot: str, verifier, *, task_mount: str,
             detail = f"the verifier timed out after {timeout_s}s"
             return {"kind": kind, "passed": False,
                     "outcome": "timeout", "unmeasured": detail, "detail": detail}
+
+        failure = _command_exit_failure(spec, code, out, err)
+        if failure is not None:
+            return failure
 
         # Step 9. `reward_file` first: the real task set writes 1/0 into a file and exits
         # 0 either way, so the exit code is not a fallback, it is noise.
@@ -486,6 +500,8 @@ def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dic
         if contract is not None:
             try:
                 validate_result(contract)
+                if contract.get('require_exit_zero') and verifier.get('kind') != 'command':
+                    raise ValueError('require_exit_zero requires command verification')
             except ValueError as exc:
                 return {"kind": "command", "passed": False, "score": None,
                         "outcome": "unmeasured", "unmeasured": str(exc)}
@@ -565,6 +581,11 @@ def _verify_existing(workdir: Path, verifier: dict | None, answer: str,
     actual = ("in-process" if spec.get("kind", "answer") == "answer" else
               "snapshot-service" if running is not None or service_specs else "actor-workdir")
     if declared == "pristine-offline":
+        if (spec.get('result_contract') or {}).get('require_exit_zero'):
+            return record_class({'kind': 'command', 'passed': False, 'score': None,
+                                 'outcome': 'unmeasured',
+                                 'unmeasured': 'require_exit_zero is unsupported for pristine-offline'},
+                                spec, 'unknown')
         if actual != "actor-workdir" or spec.get("reward_file") or spec.get("pass_when", "exit0") != "exit0":
             return record_class({"kind": spec.get("kind"), "passed": False, "score": None,
                                  "unmeasured": "pristine scorer requires artifact command with exit0 protocol"},
@@ -769,6 +790,10 @@ def _verify_inner(workdir: Path, verifier: dict | None, answer: str,
         detail = f"the verifier timed out after {timeout_s}s"
         return {"kind": "command", "passed": False,
                 "outcome": "timeout", "unmeasured": detail, "detail": detail}
+
+    failure = _command_exit_failure(spec, code, out, proc.stderr)
+    if failure is not None:
+        return failure
 
     # ---- a host (`files`) check's reward and evidence files ------------------
     #

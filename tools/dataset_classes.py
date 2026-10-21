@@ -41,11 +41,9 @@ it. So the axes split into three kinds, and only the middle one is a judgement:
 The judged axis also carries a third level that answers a different question from the first
 two. `demand` and `surface` say what a *task* asks for; `exercises` says which *harness
 component* a dataset makes score-relevant, as a set, because a task can stress several at
-once. It exists because onboarding was ordered by scaffold cost (`docs/survey/README.md`), and
-scaffold cost is orthogonal to functional coverage: the two reusable scaffolds over-sample the
-functions they exercise and nothing ever checked the rest. Measured against the harness
-functions the experiment program names, that left `delegation`, `reliability` and `cost` with
-no dataset at all, and `safety` with one.
+once. Scaffold reuse does not establish functional coverage, so `EXERCISES` records
+which functions each dataset stresses and `UNCOVERED_FUNCTIONS` names those below
+the coverage floor.
 
 The function vocabulary is not invented here. It is the union of the decompositions the
 survey corpus already reports -- `2507.21504`'s Agent Capabilities, `2601.01743`'s agent
@@ -89,8 +87,7 @@ DEMANDS = ("evidence", "reasoning", "tool_use", "artifact", "environment", "memo
 #: Demands the vocabulary names but the registry does not cover yet, with the surfaces each is
 #: expected to need. A key here means "no adapter", and the check below holds both directions:
 #: a demand with no adapter must be declared here, and a demand declared here must have no
-#: adapter. The pair is what makes the gap self-clearing -- the first `memory` adapter to land
-#: breaks the second direction and the entry has to be deleted in the same change.
+#: adapter. A gap entry must be removed when adapters cover that demand.
 #:
 #: `memory` asks the Harness to maintain a representation of information that arrives over
 #: time and changes. That is not `evidence`, which asks it to select from a static set: no
@@ -206,12 +203,8 @@ MIN_MEMBERS_PER_FUNCTION = 2
 #: `UNCOVERED_DEMANDS`: a function under the floor must appear here, and a function here must be
 #: under the floor, so closing a gap deletes the entry in the same change.
 #:
-#: The three at zero are not oversights and are not equally cheap to fix. `delegation` and
-#: `reliability` are *closable* -- a sub-agent benchmark and a pass^k protocol are both
-#: hostable on this platform. `cost` is only partly closable: the platform measures cost on
-#: every run, so what is missing is a task that is *budget-bounded*, where spending less changes
-#: the score rather than the ledger. `safety` has one adapter and deserves the note that
-#: agentdojo carries the condition as a flag, not as a surface.
+#: A function's coverage counts adapters across demands. The remaining
+#: gaps below distinguish missing task requirements from ordinary runtime accounting.
 #:
 #: Deliberately absent from `FUNCTIONS`: perception. Computer-use and GUI benchmarks need a
 #: browser or a VM (`docs/survey/README.md` excludes both), and the platform has no multimodal

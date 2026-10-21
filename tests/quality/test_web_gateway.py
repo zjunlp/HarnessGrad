@@ -426,8 +426,8 @@ def test_driver_writes_real_run_meta_before_task_launch(tmp_path, monkeypatch, p
     env = {'fixture': {'kind': 'exec', 'image': 'fixture', 'network': 'services',
                        'web': {'search': True, 'fetch': True}}}
     monkeypatch.setattr(driver.datasets, 'load_split', lambda *_args: ([task], {}, None))
-    monkeypatch.setattr(driver.datasets, 'load_tasks', lambda *_args: ([task], {}, {}))
-    monkeypatch.setattr(driver.datasets, 'load_envs', lambda *_args: env)
+    monkeypatch.setattr(driver.datasets, 'load_tasks', lambda *_args, **kwargs: ([task], {}, {}))
+    monkeypatch.setattr(driver.datasets, 'load_envs', lambda *_args, **kwargs: env)
     monkeypatch.setattr(driver.datasets, 'oracle_source', lambda *_args: ('released', 'fixture'))
     monkeypatch.setattr(driver, '_resolve_envs', lambda specs: (specs, None))
     monkeypatch.setattr(driver.container, 'available', lambda: 'fixture')

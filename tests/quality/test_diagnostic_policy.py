@@ -289,8 +289,8 @@ def prepared_driver(monkeypatch, tmp_path, context):
     monkeypatch.setattr(driver.datasets, "load_split", lambda _: (
         [dict(task_id=t) for t in ELIGIBLE], {}, None))
     monkeypatch.setattr(driver.datasets, "oracle_source", lambda _: ("unit-test", 0))
-    monkeypatch.setattr(driver.datasets, "load_tasks", lambda _: ([], {}, {}))
-    monkeypatch.setattr(driver.datasets, "load_envs", lambda _: {})
+    monkeypatch.setattr(driver.datasets, "load_tasks", lambda _, **kwargs: ([], {}, {}))
+    monkeypatch.setattr(driver.datasets, "load_envs", lambda _, **kwargs: {})
     monkeypatch.setattr(driver, "evaluate", lambda *a, **k: pytest.fail("H0 is forbidden"))
     monkeypatch.setattr(driver, "_probe_tool_calls", lambda *a, **k: pytest.fail("model is forbidden"))
     return driver, path
@@ -303,8 +303,20 @@ def test_driver_selects_before_runtime_with_frozen_eligible_pool(monkeypatch, pr
                                     "--policy-evidence", str(path)])
     class SelectionObserved(Exception):
         pass
+    loaded = []
+    def load_tasks(name, *, task_ids):
+        assert task_ids == policy.staged_task_set(ELIGIBLE, stage)
+        loaded.append("tasks")
+        return [], {}, {}
+    def load_envs(name, *, task_ids):
+        assert task_ids == policy.staged_task_set(ELIGIBLE, stage)
+        loaded.append("envs")
+        return {}
+    monkeypatch.setattr(driver.datasets, "load_tasks", load_tasks)
+    monkeypatch.setattr(driver.datasets, "load_envs", load_envs)
     def stop_at_narrow(setups, verifiers, envs, side_ids):
         assert side_ids == policy.staged_task_set(ELIGIBLE, stage)
+        assert loaded == ["tasks", "envs"]
         raise SelectionObserved
     monkeypatch.setattr(driver, "_narrow_to_run", stop_at_narrow)
     with pytest.raises(SelectionObserved):

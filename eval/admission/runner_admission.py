@@ -132,6 +132,10 @@ def _lifecycle_observation(binding, observed, keys, uncertainties):
 def _resources(values, code):
     _object(values, RESOURCE_KEYS, code)
     for key, value in values.items():
+        # PID policy None requests no container-specific cap; in observations
+        # None denotes a kernel hierarchy with no finite PID ceiling.
+        if key == 'pids' and value is None:
+            continue
         _integer(value, code, positive=key != "swap_bytes")
 
 
@@ -160,7 +164,10 @@ def admit_runtime(binding: dict, policy: dict, observed: dict) -> dict:
     _require(observed["resource_backend"] in ("cgroup-v1", "cgroup-v2"),
              "resource_enforcement_unproven")
     _require(observed["timeout_backend"] == "host-supervisor", "deadline_enforcement_unproven")
-    _require(observed["resources"] == policy["resources"], "resource_limit_mismatch")
+    for key, expected in policy["resources"].items():
+        if key == "pids" and expected is None:
+            continue  # Preserve any host-inherited ceiling in the observed receipt.
+        _require(observed["resources"][key] == expected, "resource_limit_mismatch")
     _require(observed["network"] == "none" and observed["attachments"] == [],
              "network_enforcement_unproven")
     _require(observed["read_only_root"] is True, "writable_root_unbounded")

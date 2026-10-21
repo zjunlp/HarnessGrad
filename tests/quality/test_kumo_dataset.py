@@ -51,7 +51,7 @@ def relays(monkeypatch):
         try:
             assert handle.proc.poll() is not None
         finally:
-            # Test-owned cleanup: the unchanged runner does not remove relay staging.
+            # Reap every test-owned handle, including failures before runner cleanup.
             handle.stop()
             handle.cleanup()
 
@@ -85,7 +85,34 @@ def test_budget_survives_reconnects_and_receipt_is_private(synthetic, relays):
         assert 'valid_truth' not in json.dumps(relay.receipt)
     finally:
         relay.stop()
-        assert relay.cleanup() is None  # original interface
+        assert relay.cleanup() is None
+
+
+def test_management_calls_do_not_spend_official_budget_or_have_a_hidden_cap(synthetic):
+    relay = tool_relay.start(kumo.SETUP[synthetic['task_id']])
+    try:
+        for _ in range(270):
+            assert call(relay.path, 'stats', {})['queries_used'] == 0
+        assert call(relay.path, 'do', {'action': 'probe'})['step'] == 1
+        relay.stop()
+        assert relay.fault() is None
+        assert relay.receipt['transport']['limits']['max_calls'] is None
+    finally:
+        relay.cleanup()
+
+
+def test_explicit_management_limit_remains_enforced(synthetic):
+    setup = kumo.SETUP[synthetic['task_id']]
+    setup['tool_relay']['max_calls'] = 1
+    relay = tool_relay.start(setup)
+    try:
+        call(relay.path, 'stats', {})
+        with pytest.raises(RuntimeError, match='call_budget'):
+            call(relay.path, 'stats', {})
+        relay.stop()
+        assert relay.fault() is not None
+    finally:
+        relay.cleanup()
 
 
 @pytest.mark.parametrize('oracle,expected', [(True, 1.0), (False, 0.0)])
@@ -176,7 +203,8 @@ def test_public_input_checked_before_materialization(synthetic):
 def test_registered_interaction_and_adapter_split(synthetic):
     from tools.dataset_classes import classify, ACT_VERBS
     row = classify('kumo')
-    assert ACT_VERBS == ('do', 'call')
+    # Other adapters may add action verbs; KUMO must retain its existing route.
+    assert {'do', 'call'} <= set(ACT_VERBS)
     assert row['interaction'] == 'closed_loop'
     assert row['tasks'] == row['train'] + row['eval'] == 1
     assert synthetic['task_id'] in kumo.SPLIT['train'] + kumo.SPLIT['eval']

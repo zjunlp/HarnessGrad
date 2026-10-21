@@ -38,7 +38,7 @@ def verify(workdir, spec, answer, **options):
                     with runtime:
                         runtime.clear(outputs)
                         proc = runtime.run(argv, cwd=root + ('/' + spec['cwd'] if spec.get('cwd') else ''))
-                        files = runtime.collect(outputs, max_bytes=4 << 20)
+                        files = runtime.collect(outputs, max_bytes=spec.get('result_max_bytes', 4 << 20))
                         for name, item in files.items():
                             if item['status'] == 'submitted':
                                 target = workdir / name; target.parent.mkdir(parents=True, exist_ok=True)
