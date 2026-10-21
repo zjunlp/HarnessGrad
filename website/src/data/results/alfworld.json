@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-21T01:00:33Z",
+ "generated_at": "2026-10-21T01:05:41Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -1766,128 +1766,6 @@
       }
      ],
      "cost": {}
-    },
-    {
-     "name": "meta_harness",
-     "rounds": [
-      {
-       "round": 0,
-       "train": 0.53,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 1,
-       "train": 0.58,
-       "train_n": 100,
-       "eval": {
-        "valid_unseen": 0.470149
-       },
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0,
-       "eval_tokens": {
-        "valid_unseen": 16350769
-       },
-       "eval_n": 134
-      },
-      {
-       "round": 2,
-       "train": 0.57,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 3,
-       "train": 0.55,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 4,
-       "train": 0.24,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 5,
-       "train": 0.61,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 6,
-       "train": 0.61,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 7,
-       "train": 0.6,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 8,
-       "train": 0.61,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 9,
-       "train": 0.62,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      },
-      {
-       "round": 10,
-       "train": 0.6,
-       "train_n": 100,
-       "eval": {},
-       "valid": true,
-       "n_invalid": 0,
-       "train_invalid": 0,
-       "train_harness_failed": 0
-      }
-     ],
-     "cost": {}
     }
    ]
   }
@@ -1905,8 +1783,8 @@
  ],
  "coverage": {
   "valid_unseen": {
-   "measured": 34,
-   "valid": 34,
+   "measured": 33,
+   "valid": 33,
    "planned": null
   },
   "valid_seen": {

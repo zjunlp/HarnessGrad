@@ -67,56 +67,88 @@
 <line x1="586" y1="56" x2="608" y2="56" stroke="#d62728" stroke-width="2"/>
 <text x="614" y="60" font-size="11" fill="#111827">ahe</text>
 </g>
-<g data-method-line="harnessx">
-<path d="M56.0,331.8 L56.0,331.8 L90.3,281.0 L124.5,221.7 L158.8,247.1 L193.1,221.7 L227.3,331.8 L261.6,221.7 L295.9,213.2 L330.1,217.5 L364.4,115.9 L398.7,132.8" fill="none" stroke="#2ca02c" stroke-width="2"/>
+<g data-method-line="dgm">
+<path d="M56.0,331.8 L56.0,331.8 L90.3,306.4 L124.5,297.9 L158.8,264.0 L193.1,183.6 L227.3,217.5 L261.6,213.2 L295.9,289.4 L330.1,259.8 L364.4,209.0" fill="none" stroke="#2ca02c" stroke-width="2"/>
 <circle cx="56.0" cy="331.8" r="2.8" fill="#2ca02c"/>
 <circle cx="56.0" cy="331.8" r="2.8" fill="#2ca02c"/>
-<circle cx="90.3" cy="281.0" r="2.8" fill="#2ca02c"/>
-<circle cx="124.5" cy="221.7" r="2.8" fill="#2ca02c"/>
-<circle cx="158.8" cy="247.1" r="2.8" fill="#2ca02c"/>
-<circle cx="193.1" cy="221.7" r="2.8" fill="#2ca02c"/>
-<circle cx="227.3" cy="331.8" r="2.8" fill="#2ca02c"/>
-<circle cx="261.6" cy="221.7" r="2.8" fill="#2ca02c"/>
-<circle cx="295.9" cy="213.2" r="2.8" fill="#2ca02c"/>
-<circle cx="330.1" cy="217.5" r="2.8" fill="#2ca02c"/>
-<circle cx="364.4" cy="115.9" r="2.8" fill="#2ca02c"/>
-<circle cx="398.7" cy="132.8" r="2.8" fill="#2ca02c"/>
+<circle cx="90.3" cy="306.4" r="2.8" fill="#2ca02c"/>
+<circle cx="124.5" cy="297.9" r="2.8" fill="#2ca02c"/>
+<circle cx="158.8" cy="264.0" r="2.8" fill="#2ca02c"/>
+<circle cx="193.1" cy="183.6" r="2.8" fill="#2ca02c"/>
+<circle cx="227.3" cy="217.5" r="2.8" fill="#2ca02c"/>
+<circle cx="261.6" cy="213.2" r="2.8" fill="#2ca02c"/>
+<circle cx="295.9" cy="289.4" r="2.8" fill="#2ca02c"/>
+<circle cx="330.1" cy="259.8" r="2.8" fill="#2ca02c"/>
+<circle cx="364.4" cy="209.0" r="2.8" fill="#2ca02c"/>
 <line x1="586" y1="74" x2="608" y2="74" stroke="#2ca02c" stroke-width="2"/>
-<text x="614" y="78" font-size="11" fill="#111827">harnessx</text>
+<text x="614" y="78" font-size="11" fill="#111827">dgm</text>
+</g>
+<g data-method-line="harnessx">
+<path d="M56.0,331.8 L56.0,331.8 L90.3,281.0 L124.5,221.7 L158.8,247.1 L193.1,221.7 L227.3,331.8 L261.6,221.7 L295.9,213.2 L330.1,217.5 L364.4,115.9 L398.7,132.8" fill="none" stroke="#9467bd" stroke-width="2"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#9467bd"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#9467bd"/>
+<circle cx="90.3" cy="281.0" r="2.8" fill="#9467bd"/>
+<circle cx="124.5" cy="221.7" r="2.8" fill="#9467bd"/>
+<circle cx="158.8" cy="247.1" r="2.8" fill="#9467bd"/>
+<circle cx="193.1" cy="221.7" r="2.8" fill="#9467bd"/>
+<circle cx="227.3" cy="331.8" r="2.8" fill="#9467bd"/>
+<circle cx="261.6" cy="221.7" r="2.8" fill="#9467bd"/>
+<circle cx="295.9" cy="213.2" r="2.8" fill="#9467bd"/>
+<circle cx="330.1" cy="217.5" r="2.8" fill="#9467bd"/>
+<circle cx="364.4" cy="115.9" r="2.8" fill="#9467bd"/>
+<circle cx="398.7" cy="132.8" r="2.8" fill="#9467bd"/>
+<line x1="586" y1="92" x2="608" y2="92" stroke="#9467bd" stroke-width="2"/>
+<text x="614" y="96" font-size="11" fill="#111827">harnessx</text>
 </g>
 <g data-method-line="hyperagents">
-<path d="M56.0,331.8 L56.0,331.8 L90.3,276.7 L124.5,264.0 L158.8,264.0 L193.1,251.3 L227.3,242.9 L261.6,230.2 L295.9,230.2 L330.1,230.2 L364.4,230.2 L398.7,230.2" fill="none" stroke="#9467bd" stroke-width="2"/>
-<circle cx="56.0" cy="331.8" r="2.8" fill="#9467bd"/>
-<circle cx="56.0" cy="331.8" r="2.8" fill="#9467bd"/>
-<circle cx="90.3" cy="276.7" r="2.8" fill="#9467bd"/>
-<circle cx="124.5" cy="264.0" r="2.8" fill="#9467bd"/>
-<circle cx="158.8" cy="264.0" r="2.8" fill="#9467bd"/>
-<circle cx="193.1" cy="251.3" r="2.8" fill="#9467bd"/>
-<circle cx="227.3" cy="242.9" r="2.8" fill="#9467bd"/>
-<circle cx="261.6" cy="230.2" r="2.8" fill="#9467bd"/>
-<circle cx="295.9" cy="230.2" r="2.8" fill="#9467bd"/>
-<circle cx="330.1" cy="230.2" r="2.8" fill="#9467bd"/>
-<circle cx="364.4" cy="230.2" r="2.8" fill="#9467bd"/>
-<circle cx="398.7" cy="230.2" r="2.8" fill="#9467bd"/>
-<line x1="586" y1="92" x2="608" y2="92" stroke="#9467bd" stroke-width="2"/>
-<text x="614" y="96" font-size="11" fill="#111827">hyperagents</text>
+<path d="M56.0,331.8 L56.0,331.8 L90.3,276.7 L124.5,264.0 L158.8,264.0 L193.1,251.3 L227.3,242.9 L261.6,230.2 L295.9,336.0 L330.1,281.0 L364.4,259.8 L398.7,268.3" fill="none" stroke="#ff7f0e" stroke-width="2"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#ff7f0e"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#ff7f0e"/>
+<circle cx="90.3" cy="276.7" r="2.8" fill="#ff7f0e"/>
+<circle cx="124.5" cy="264.0" r="2.8" fill="#ff7f0e"/>
+<circle cx="158.8" cy="264.0" r="2.8" fill="#ff7f0e"/>
+<circle cx="193.1" cy="251.3" r="2.8" fill="#ff7f0e"/>
+<circle cx="227.3" cy="242.9" r="2.8" fill="#ff7f0e"/>
+<circle cx="261.6" cy="230.2" r="2.8" fill="#ff7f0e"/>
+<circle cx="295.9" cy="336.0" r="2.8" fill="#ff7f0e"/>
+<circle cx="330.1" cy="281.0" r="2.8" fill="#ff7f0e"/>
+<circle cx="364.4" cy="259.8" r="2.8" fill="#ff7f0e"/>
+<circle cx="398.7" cy="268.3" r="2.8" fill="#ff7f0e"/>
+<line x1="586" y1="110" x2="608" y2="110" stroke="#ff7f0e" stroke-width="2"/>
+<text x="614" y="114" font-size="11" fill="#111827">hyperagents</text>
 </g>
 <g data-method-line="tthe">
-<path d="M56.0,331.8 L56.0,331.8 L90.3,281.0 L124.5,272.5 L158.8,276.7 L193.1,234.4 L227.3,196.3 L261.6,196.3 L295.9,196.3 L330.1,196.3 L364.4,196.3 L398.7,204.8" fill="none" stroke="#ff7f0e" stroke-width="2"/>
-<circle cx="56.0" cy="331.8" r="2.8" fill="#ff7f0e"/>
-<circle cx="56.0" cy="331.8" r="2.8" fill="#ff7f0e"/>
-<circle cx="90.3" cy="281.0" r="2.8" fill="#ff7f0e"/>
-<circle cx="124.5" cy="272.5" r="2.8" fill="#ff7f0e"/>
-<circle cx="158.8" cy="276.7" r="2.8" fill="#ff7f0e"/>
-<circle cx="193.1" cy="234.4" r="2.8" fill="#ff7f0e"/>
-<circle cx="227.3" cy="196.3" r="2.8" fill="#ff7f0e"/>
-<circle cx="261.6" cy="196.3" r="2.8" fill="#ff7f0e"/>
-<circle cx="295.9" cy="196.3" r="2.8" fill="#ff7f0e"/>
-<circle cx="330.1" cy="196.3" r="2.8" fill="#ff7f0e"/>
-<circle cx="364.4" cy="196.3" r="2.8" fill="#ff7f0e"/>
-<circle cx="398.7" cy="204.8" r="2.8" fill="#ff7f0e"/>
-<line x1="586" y1="110" x2="608" y2="110" stroke="#ff7f0e" stroke-width="2"/>
-<text x="614" y="114" font-size="11" fill="#111827">tthe</text>
+<path d="M56.0,331.8 L56.0,331.8 L90.3,281.0 L124.5,272.5 L158.8,276.7 L193.1,234.4 L227.3,196.3 L261.6,196.3 L295.9,196.3 L330.1,196.3 L364.4,196.3 L398.7,204.8" fill="none" stroke="#17becf" stroke-width="2"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#17becf"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#17becf"/>
+<circle cx="90.3" cy="281.0" r="2.8" fill="#17becf"/>
+<circle cx="124.5" cy="272.5" r="2.8" fill="#17becf"/>
+<circle cx="158.8" cy="276.7" r="2.8" fill="#17becf"/>
+<circle cx="193.1" cy="234.4" r="2.8" fill="#17becf"/>
+<circle cx="227.3" cy="196.3" r="2.8" fill="#17becf"/>
+<circle cx="261.6" cy="196.3" r="2.8" fill="#17becf"/>
+<circle cx="295.9" cy="196.3" r="2.8" fill="#17becf"/>
+<circle cx="330.1" cy="196.3" r="2.8" fill="#17becf"/>
+<circle cx="364.4" cy="196.3" r="2.8" fill="#17becf"/>
+<circle cx="398.7" cy="204.8" r="2.8" fill="#17becf"/>
+<line x1="586" y1="128" x2="608" y2="128" stroke="#17becf" stroke-width="2"/>
+<text x="614" y="132" font-size="11" fill="#111827">tthe</text>
+</g>
+<g data-method-line="dream_rsi">
+<path d="M56.0,331.8 L56.0,331.8 L90.3,310.6 L124.5,336.0 L158.8,281.0 L193.1,272.5 L227.3,247.1 L261.6,230.2 L295.9,162.4 L330.1,149.7 L364.4,145.5" fill="none" stroke="#8c564b" stroke-width="2"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#8c564b"/>
+<circle cx="56.0" cy="331.8" r="2.8" fill="#8c564b"/>
+<circle cx="90.3" cy="310.6" r="2.8" fill="#8c564b"/>
+<circle cx="124.5" cy="336.0" r="2.8" fill="#8c564b"/>
+<circle cx="158.8" cy="281.0" r="2.8" fill="#8c564b"/>
+<circle cx="193.1" cy="272.5" r="2.8" fill="#8c564b"/>
+<circle cx="227.3" cy="247.1" r="2.8" fill="#8c564b"/>
+<circle cx="261.6" cy="230.2" r="2.8" fill="#8c564b"/>
+<circle cx="295.9" cy="162.4" r="2.8" fill="#8c564b"/>
+<circle cx="330.1" cy="149.7" r="2.8" fill="#8c564b"/>
+<circle cx="364.4" cy="145.5" r="2.8" fill="#8c564b"/>
+<line x1="586" y1="146" x2="608" y2="146" stroke="#8c564b" stroke-width="2"/>
+<text x="614" y="150" font-size="11" fill="#111827">dream_rsi</text>
 </g>
 <text x="313" y="374" font-size="11" fill="#374151" text-anchor="middle">checkpoint round</text>
 </svg>
