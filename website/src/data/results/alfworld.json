@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-21T01:05:41Z",
+ "generated_at": "2026-10-21T01:14:00Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -1600,12 +1600,12 @@
       },
       {
        "round": 6,
-       "train": null,
-       "train_n": 99,
+       "train": 1.0,
+       "train_n": 100,
        "eval": {},
        "valid": true,
        "n_invalid": 0,
-       "train_invalid": 1,
+       "train_invalid": 0,
        "train_harness_failed": 0
       },
       {
@@ -1770,17 +1770,7 @@
    ]
   }
  ],
- "excluded": [
-  {
-   "method": "dream_rsi",
-   "round": 6,
-   "pool": "train",
-   "score": 1.0,
-   "n_tasks": 99,
-   "n_invalid": 1,
-   "n_harness_failed": 0
-  }
- ],
+ "excluded": [],
  "coverage": {
   "valid_unseen": {
    "measured": 33,
