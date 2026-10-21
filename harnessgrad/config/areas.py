@@ -299,6 +299,10 @@ class JudgeConfig:
     base_url: str | None = _var("HG_JUDGE_BASE_URL", None, "Verifier judge endpoint.", kind="opt")
     api_key: str | None = _var("HG_JUDGE_API_KEY", None, "Verifier-only credential.", kind="opt", secret=True)
 
+    strongreject_model: str | None = _var(
+        "HG_STRONGREJECT_JUDGE_MODEL", None,
+        "StrongREJECT judge override; otherwise global model, then official default.", kind="opt")
+
     def resolve_model(self, *, override: str | None = None, default: str | None = None) -> str:
         """Resolve an adapter override, global default, then official default.
 

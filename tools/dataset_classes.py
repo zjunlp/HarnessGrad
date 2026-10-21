@@ -185,6 +185,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "sportsunderstanding": ("context", "verification"),
     "spreadsheetbench": ("context", "tools", "control", "verification"),
     "strategyqa": ("context", "verification"),
+    "strongreject": ("safety",),
     "tau_bench": ("context", "tools", "control", "memory", "recovery"),
     "terminal_bench": ("context", "tools", "control", "recovery", "verification"),
     "triviaqa": ("context",),
@@ -206,7 +207,8 @@ MIN_MEMBERS_PER_FUNCTION = 2
 #: `UNCOVERED_DEMANDS`: a function under the floor must appear here, and a function here must be
 #: under the floor, so closing a gap deletes the entry in the same change.
 #:
-#: A function's coverage counts adapters across demands. The remaining
+#: A function's coverage counts adapters across demands. Safety is covered by AgentDojo's
+#: adversarial tool dialogue and StrongREJECT's direct response judgment. The remaining
 #: gaps below distinguish missing task requirements from ordinary runtime accounting.
 #:
 #: Deliberately absent from `FUNCTIONS`: perception. Computer-use and GUI benchmarks need a
@@ -221,8 +223,6 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
                    "the platform takes repeated trials, but no task is constructed for pass^k",
     "cost": "every run is costed, but no task is budget-bounded, so spending less changes the "
             "ledger rather than the score",
-    "safety": "one adapter (agentdojo), and it carries the adversary as a condition flag on an "
-              "ordinary tool-dialogue task rather than as a surface of its own",
 }
 
 #: Level 2 of the judged axis: the surface the demand is exercised on. Kept because a SQL task
@@ -260,6 +260,9 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "sportsunderstanding": ("reasoning", "reasoning"),
     "spreadsheetbench": ("artifact", "spreadsheet"),
     "strategyqa": ("reasoning", "reasoning"),
+    # Interpret an adversarial request and judge the appropriate response.
+    # The safety function describes the scored behavior; no reasoning trace is required.
+    "strongreject": ("reasoning", "reasoning"),
     "tau_bench": ("tool_use", "tool_dialogue"),
     "terminal_bench": ("environment", "terminal"),
     "triviaqa": ("evidence", "information_seeking"),
@@ -283,7 +286,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
 #: As a flag it composes, and the claim it supports is the sharper one -- an improvement that
 #: survives the ordinary dialogue may still fail here, which is a transfer result rather than
 #: a category.
-ADVERSARIAL = frozenset({"agentdojo"})
+ADVERSARIAL = frozenset({"agentdojo", "strongreject"})
 
 #: A CLI verb that means "act, then observe the result". Its presence is the difference
 #: between a dataset a scaffold can iterate inside and one it can only answer once.
@@ -325,6 +328,7 @@ EXPECTED_INTERACTION = {
     "sportsunderstanding": "single_shot",
     "spreadsheetbench": "single_shot",
     "strategyqa": "single_shot",
+    "strongreject": "single_shot",
     "tau_bench": "closed_loop",
     "terminal_bench": "closed_loop",
     "appworld": "closed_loop",

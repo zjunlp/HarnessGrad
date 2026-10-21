@@ -44,6 +44,12 @@ EXCEPTIONS = {
         "Dataset control applies the existing platform verification timeout.",
     ("data-eval", "data/datasets/personamem_v2/relay.py", "eval.service.tool_transport"):
         "Private episode server reuses the platform transport.",
+    ("data-eval", "data/datasets/strongreject/control.py", "eval.run.runner"):
+        "Explicit dataset control uses the platform execution path, never the actor API.",
+    ("data-eval", "data/datasets/strongreject/control.py", "eval.verification.verifier"):
+        "Explicit dataset control exercises the trusted judge wrapper in its real sandbox.",
+    ("data-eval", "data/datasets/strongreject/control.py", "eval.policy.runtime_policy"):
+        "Dataset control uses the platform's verification timeout.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.runner"):
         "The dataset-local control validates SETUP -> oracle harness -> VERIFY, as ALFWorld does.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.tool_relay"):
@@ -259,7 +265,7 @@ class ImportDirectionTests(unittest.TestCase):
 
     def test_publication_preserves_the_ordered_adapter_names(self):
         from data.scaffolds import registry
-        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'musique', 'nestful', 'personamem_v2', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'tau2_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
+        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'musique', 'nestful', 'personamem_v2', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'strongreject', 'tau2_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
         self.assertEqual(registry.published(), expected)
         for name in expected:
             module = registry.importlib.import_module(registry.module_name(name))
