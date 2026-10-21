@@ -22,7 +22,9 @@ def endpoint(monkeypatch):
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             state['requests'].append(body)
-            response = json.dumps({'model': body['model'],
+            # `served_model` lets a test make the provider answer as a different model than the
+            # one the request named, which is the case the receipt has to be able to show.
+            response = json.dumps({'model': state.get('served_model') or body['model'],
                 'choices': [{'message': state['message'], 'finish_reason': 'stop'}],
                 'usage': state['usage']}).encode()
             self.send_response(200)
@@ -174,3 +176,30 @@ def test_matching_judge_model_leaves_the_receipt_unchanged(endpoint, monkeypatch
     monkeypatch.setenv('HG_JUDGE_MODEL', 'declared-judge-model')
     with Judge(spec('declared-judge-model')) as broker:
         assert 'model_mismatch' not in broker.report()
+
+
+def test_served_model_mismatch_is_recorded(endpoint):
+    """The provider's own model id is compared with the declaration, per call.
+
+    The request always names the declared model, so a provider that answers as something else
+    would otherwise leave the receipt carrying the declared id -- and `strongreject`'s metric
+    identity bakes that id in (`strongreject.rubric.defense.<model>.v1`). Recorded by default;
+    see the next test for the opt-in refusal.
+    """
+    endpoint['served_model'] = 'some-other-snapshot'
+    with Judge(spec('declared-judge-model')) as broker:
+        assert complete(broker)['content'] == 'yes'
+        report = broker.report()
+    assert report['served_model_mismatches'] == [{
+        'declared': 'declared-judge-model', 'served': 'some-other-snapshot',
+        'request_sha256': report['calls'][0]['request_sha256']}]
+    assert report['calls'][0]['served_model_mismatch']['served'] == 'some-other-snapshot'
+
+
+def test_served_model_mismatch_can_be_made_fatal(endpoint, monkeypatch):
+    monkeypatch.setenv('HG_JUDGE_REQUIRE_SERVED_MODEL', '1')
+    endpoint['served_model'] = 'some-other-snapshot'
+    with Judge(spec('declared-judge-model')) as broker:
+        with pytest.raises(JudgeUnavailable):
+            complete(broker)
+        assert broker.report()['served_model_mismatches'][0]['served'] == 'some-other-snapshot'
