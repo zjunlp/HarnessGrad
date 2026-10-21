@@ -147,3 +147,55 @@ The report refuses missing, duplicate, unexpected, unmeasured or unverified
 cells. Use an expected manifest for the intended split; keep training diagnostics
 and official test results separate. Preserve incomplete receipts and correct
 infrastructure failures before making complete-split comparisons.
+
+## Real API validation (2026-10-21)
+
+The latest static diagnostic used `Ling-3.1-flash` with `base_harness/loop`
+and the operator's API configuration. Run
+`costbench-static-ling31-24-display50k-20261021-01` measured all 24 preselected
+tasks: 12 train and 12 test, two per domain on each split, one trial and one job.
+It ran adapter commit `d970a47da83d1f2845afe9e8a05ff2596593a48a`, with manifest
+`7bcc4ba0bc653229b5536f625d797217b3b48f31764314d9d2a397e2e8332587`.
+
+| Split | Selected / measured | Reference path matches | Correct answers across selected tasks | Official path / answer / cost denominator |
+| --- | --- | --- | --- | --- |
+| Train | 12 / 12 | 5 / 12 | 7 / 12 (training compatibility) | 7 / 7 / 7 |
+| Test | 12 / 12 | 4 / 12 | 7 / 12 (official answer check) | 7 / 7 / 7 |
+
+All tasks were measured, with no invalid or excluded attempts. Fourteen episodes
+submitted answers; ten ended after parsing retries and remain measured zeros.
+The primary means are 5/12 and 4/12, while the eligibility-filtered official EMR
+is 5/7 and 4/7. Raw official training TCR remains zero; `train_compat_tcr` is 7/7
+on eligible training episodes. These denominators must not be interchanged.
+
+The display limit was temporarily set to `HG_AGENT_OUTPUT_LIMIT=50000` in child
+processes. The loop source and `.env` were unchanged; this is not a measurement
+of the default display limit. The remaining limits were 32 model calls, 2,048
+output tokens per call, a 60,000-character history budget and the official
+20-turn episode limit. No output clipping occurred. All 24 relay cleanups passed,
+and temporary work directories were archived and removed. Provider usage is
+recorded separately from simulated tool costs; no currency cost is claimed.
+
+The [summary][static-api-summary], [launch and source identities][static-api-launch],
+[split reports][static-api-train-report] ([test][static-api-test-report]) and
+[cleanup receipt][static-api-cleanup] are retained outside Git. This is a small
+integration diagnostic, not a full-benchmark estimate. Earlier model/display
+diagnostics remain preserved and are not pooled into these 24 measurements.
+
+| Earlier diagnostic on the same 24 selected tasks | Measured | Reference path matches | Correct answers | Display clipping events |
+| --- | --- | --- | --- | --- |
+| [Ling-3.0-flash, original display limit][static-api-original] | 24 | 0 | 0 | 97 |
+| [Ling-3.0-flash, temporary 50,000-character display limit][static-api-display50k] | 24 | 1 (train) | 0 | 0 |
+
+The original-display report combines valid measurements from fresh recovery
+runs; earlier mount, network and interrupted attempts are excluded and preserved
+in that report. The 50,000-character Ling-3.0 run ended in parsing retry exhaustion
+on all 24 tasks. These histories distinguish display coverage from model outcomes.
+
+[static-api-summary]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/summary.json
+[static-api-launch]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/launch.json
+[static-api-train-report]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/official-train-report.json
+[static-api-test-report]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/official-test-report.json
+[static-api-cleanup]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/cleanup.json
+[static-api-original]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling24-20261021-summary/summary.json
+[static-api-display50k]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling24-display50k-20261021-01/summary.json
