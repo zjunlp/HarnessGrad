@@ -32,6 +32,12 @@ ALLOWED_EVAL_CONFIG_EDGES = {
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.runner"):
+        "Dynamic protocol control validates real sandbox execution and sealed scoring.",
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.tool_relay"):
+        "Dynamic control owns the selected-task relay and trusted event record lifecycle.",
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.service.tool_transport"):
+        "Dynamic control uses the actor transport for costed, event-triggering actions.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.run.runner"):
         "Dataset control validates the real sandbox and sealed official trajectory scorer.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.run.tool_relay"):
@@ -39,7 +45,7 @@ EXCEPTIONS = {
     ("data-eval", "data/datasets/costbench/control.py", "eval.service.tool_transport"):
         "Control executes costed tool actions through the actor's actual transport.",
     ("data-eval", "data/datasets/costbench/relay.py", "eval.service.tool_transport"):
-        "Private static environment server reuses the shared bounded transport.",
+        "Private CostBench environment server reuses the shared bounded transport.",
     ("data-eval", "data/datasets/personamem_v2/control.py", "eval.run.runner"):
         "Dataset control exercises the real actor and verifier namespaces.",
     ("data-eval", "data/datasets/personamem_v2/control.py", "eval.run.tool_relay"):
@@ -308,6 +314,7 @@ class ImportDirectionTests(unittest.TestCase):
             'chessbench_puzzles',
             'cooperbench',
             'costbench',
+            'costbench_dynamic',
             'ds1000',
             'fever',
             'gaia',

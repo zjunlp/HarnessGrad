@@ -5920,3 +5920,51 @@ No API calls were made for this layout change.
 - Conda validation: **60 passed**, including the optional pinned-data comparisons over all 10 conversations and 1,986 questions. LoCoMo dataset lint and `git diff --check` pass. No model calls.
 
 - API connectivity check after cleanup: Conda + standard `driver.py` + unchanged `loop`, one full conv-26 transcript with only its first three questions, one trial, jobs=1, rounds=0. Six successful calls to the configured `Ling-3.1-flash` API; driver exited 0, all three answers and per-question records saved, task/curve/manual-summary scores agree. The temporary loopback HTTP-to-HTTPS bridge was needed by the existing HTTP-only native model route; no platform code was changed. Test artifacts are outside Git at `datasets/locomo/audit-20261018/api-cleanup-01/`. The test is not comparable to a full benchmark, and does not establish direct HTTPS support. Runner temporary files, bridge and work root cleaned; source data hash unchanged.
+
+## CostBench one-event dynamic protocols — 2026-10-21
+
+The operator requested moving `feat/costbench-static` to the workspace's
+`worktrees/costbench-static` and continuing in a new branch and worktree.
+`feat/costbench-dynamic` starts at static commit `d970a47d`; static retains that
+commit and a clean tree. Neither branch is merged into `feat/dataset-integrations`
+or `main`, because other dataset integrations are proceeding independently.
+
+`costbench_dynamic` registers four distinct protocols: `cost_change`,
+`steplen_change`, `ban_tool`, and `preference_change`, each with one event and
+atomic sequence length five. Each mode includes all 1,912 released train and
+381 test queries (9,172 mode/query cases). The adapter reuses the pinned official
+blocker, solver, tool generator and evaluator. Future plans and references stay
+private; the existing trusted relay exports the sealed scoring record, while
+`show` exposes current schemas and user requirements after changes. No shared
+loop or execution-platform behavior changes.
+
+The branch also supplies the previously missing static CostBench aggregation
+declaration alongside the dynamic one: both standard run means divide by measured
+tasks. The static worktree itself is unchanged.
+
+The upstream event order, charged failed bans, independently chosen reference
+ban, tool-length filtering, and effective-event counting are preserved. A task
+that ends before its event is a measured primary zero with separately reported
+upstream eligibility; a missing reference or service/scorer fault is unmeasured.
+Train enum and seven-digit answer compatibility remains explicit and separate
+from raw official scores. The blocker's hardcoded test database path is routed
+to the selected digest-checked split. Replacement preferences stay within that
+split. Static and dynamic protocols count as one benchmark family for cost
+coverage, and cost remains simulated tool-price units.
+
+See the [dynamic adapter README](../data/datasets/costbench_dynamic/README.md)
+for protocol details, preparation and controls. Mixed or multiple interventions
+are outside this version. Validation uses no model/API calls; historical static
+API results are not dynamic performance evidence.
+
+Validation: **9,172/9,172** full gold trajectories, **158** CostBench tests, both
+dataset lints, and **16** direct controls / **8** report CLI checks passed. The
+manifest is pinned to `a424801c3d156bfc9527534e715e40ed02cd812889ae0d1c711c9d8c792e4c14`.
+Source/catalog checks additionally passed 38 tests and 38 subtests; seven focused
+classification tests passed (26 live-registry tests deselected). Four broader
+checks remain red and were reproduced on static `d970a47d`: import boundaries,
+unavailable host dependencies, and aggregation inventory/declarations for
+`memoryagentbench`, `personamem_v2`, and `strongreject`. The static CostBench
+aggregation omission found in that baseline is fixed here. This is not a
+repository-wide green claim. The outside-Git validation receipt is workspace
+`datasets/costbench/dynamic-integration-validation-20261021/summary.json`.

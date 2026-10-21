@@ -212,13 +212,24 @@ def test_the_function_coverage_floor_matches_what_is_declared():
     """Same two-way rule as the demands: below the floor is declared, and a declaration means
     still below the floor."""
     rows = _rows()
-    counts = {f: sum(1 for r in rows if f in r["exercises"])
-              for f in dataset_classes.FUNCTIONS}
+    counts = dataset_classes.function_family_counts(rows)
     below = sorted(f for f in dataset_classes.FUNCTIONS
                    if counts[f] < dataset_classes.MIN_MEMBERS_PER_FUNCTION)
     assert below == sorted(dataset_classes.UNCOVERED_FUNCTIONS), (below, counts)
     assert set(dataset_classes.UNCOVERED_FUNCTIONS) <= set(dataset_classes.FUNCTIONS)
     assert counts["tools"] > counts["memory"], "the scaffolds we reuse over-sample their own"
+
+
+def test_costbench_protocols_do_not_close_independent_cost_coverage():
+    rows = _declared_rows()
+    cost_rows = [row for row in rows if "cost" in row["exercises"]]
+    assert {row["dataset"] for row in cost_rows} == {"costbench", "costbench_dynamic"}
+    assert dataset_classes.function_family_counts(rows)["cost"] == 1
+    assert "cost" in dataset_classes.UNCOVERED_FUNCTIONS
+    dataset_classes._check_functions(rows)
+    dataset_classes._check_judged_axis(rows)
+    independent = {"dataset": "independent_cost_benchmark", "exercises": ["cost"]}
+    assert dataset_classes.function_family_counts(cost_rows + [independent])["cost"] == 2
 
 
 def test_a_function_inside_one_demand_is_refused():

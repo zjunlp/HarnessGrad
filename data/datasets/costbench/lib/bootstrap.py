@@ -75,6 +75,7 @@ def bootstrap(bundle, runtime=None, *, split='test', search_space=None, config_p
     if 'env.run' in sys.modules:
         sys.modules['env.run'].ID_LENGTH = 7 if split == 'train' else 5
     _install_search_index(base_types, search_space)
+    _install_groundtruth_lookup(search_space)
     return {'revision': REVISION, 'files': pins, 'split': split}
 
 
@@ -103,3 +104,27 @@ def _install_search_index(base_types, search_space):
         return original(str(shard), task, category, tier, style, feature_package, LocationPreferenceID)
     lookup._costbench_original = original
     base_types.get_id_from_search_space = lookup
+
+
+def _install_groundtruth_lookup(search_space):
+    """Route the blocker's legacy test path to the selected trusted split.
+
+    DynamicBlocker hardcodes a relative test database path when recomputing its
+    reference ID.  Only that legacy argument is redirected; lookup and digest
+    checks remain the original solver/index implementation.  Static callers
+    already supply their selected database and therefore keep the same behavior.
+    """
+    from env.utils import solver
+    original = getattr(solver.calculate_groundtruth_id, '_costbench_original',
+                       solver.calculate_groundtruth_id)
+    if search_space is None:
+        solver.calculate_groundtruth_id = original
+        return
+    selected = str(Path(search_space).resolve())
+    def calculate(task, preferences, search_space_path, location_preference_id=None):
+        if search_space_path == 'env/data/static/search_spaces/test_search_space.json':
+            search_space_path = selected
+        return original(task=task, preferences=preferences, search_space_path=search_space_path,
+                        location_preference_id=location_preference_id)
+    calculate._costbench_original = original
+    solver.calculate_groundtruth_id = calculate
