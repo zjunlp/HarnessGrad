@@ -233,8 +233,6 @@ def test_the_function_coverage_floor_matches_what_is_declared():
                    if counts[f] < dataset_classes.MIN_MEMBERS_PER_FUNCTION)
     assert below == sorted(dataset_classes.UNCOVERED_FUNCTIONS), (below, counts)
     assert set(dataset_classes.UNCOVERED_FUNCTIONS) <= set(dataset_classes.FUNCTIONS)
-    # Measured when this was written: 22 context, 16 tools, 11 control, 10 verification,
-    # 5 recovery, 3 memory, 1 safety, 0 cost, 0 delegation, 0 reliability.
     assert counts["tools"] > counts["memory"], "the scaffolds we reuse over-sample their own"
 
 
