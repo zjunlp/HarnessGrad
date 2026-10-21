@@ -45,6 +45,7 @@ EXPECTED_DATASETS = (
     "locomo",
     "musique",
     "nestful",
+    "personamem_v2",
     "physicsquestions",
     "reasoning_gym",
     "scienceworld",

@@ -21,7 +21,7 @@ SCAFFOLDS = DATA / "scaffolds"
 EXPECTED_DATASETS = (
     "agentdojo", "aime", "alfworld", "api_bank", "appworld", "bfcl_v3",
     "bird_minidev", "chessbench_puzzles", "ds1000", "fever", "gaia",
-    "gsm8k", "hotpotqa", "jericho", "kumo", "livecodebench", "locomo", "musique", "nestful",
+    "gsm8k", "hotpotqa", "jericho", "kumo", "livecodebench", "locomo", "musique", "nestful", "personamem_v2",
     "physicsquestions", "reasoning_gym", "scienceworld", "sotuqa",
     "sportsunderstanding", "spreadsheetbench", "strategyqa", "tau2_bench",
     "tau_bench", "terminal_bench", "triviaqa", "twowikimultihopqa",
@@ -34,7 +34,7 @@ FIXTURES = (
 # pinchbench is not a published adapter and is deliberately not classified here.
 EXPECTED_ASSET_DIRS = (
     "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "ds1000",
-    "gaia", "jericho", "kumo", "livecodebench", "locomo", "nestful", "reasoning_gym",
+    "gaia", "jericho", "kumo", "livecodebench", "locomo", "nestful", "personamem_v2", "reasoning_gym",
     "scienceworld", "spreadsheetbench", "tau_bench",
 )
 

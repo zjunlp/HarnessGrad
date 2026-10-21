@@ -294,7 +294,10 @@ def test_within_task_memory_exercise_does_not_create_a_memory_demand(document):
     assert target["demand"] == "environment"
     assert target["surface"] == "interactive_fiction"
     assert "memory" in target["exercises"]
-    assert not any(entry["demand"] == "memory" for entry in document["datasets"])
+    memory_datasets = {entry["dataset"] for entry in document["datasets"]
+                       if entry["demand"] == "memory"}
+    assert "jericho" not in memory_datasets
+    assert "personamem_v2" in memory_datasets
 
 
 def test_agentdojo_production_gate_is_revoked_and_the_privacy_closure_stands(document):

@@ -1,0 +1,9 @@
+{
+  "name": "personamem-v2-control",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": ["files"],
+  "role": "control",
+  "notes": "Control only: submitted released answers traverse the private ordered episode. No model calls."
+}

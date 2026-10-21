@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Read the current history message or question; acknowledge or submit exactly once."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+from personamem_transport import call
+
+CURRENT = Path("personamem-current.txt")
+CURRENT_ID = Path("personamem-current.json")
+
+
+def clear_current():
+    CURRENT.unlink(missing_ok=True)
+    CURRENT_ID.unlink(missing_ok=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="operation", required=True)
+    sub.add_parser("next")
+    ack = sub.add_parser("ack")
+    ack.add_argument("--chunk-id", required=True)
+    ack.add_argument("--request-id", required=True)
+    submit = sub.add_parser("submit")
+    submit.add_argument("--question-id", required=True)
+    submit.add_argument("--request-id", required=True)
+    submit.add_argument("--answer-file", required=True, type=Path)
+    args = parser.parse_args()
+    payload = {}
+    if args.operation == "ack":
+        payload = {"chunk_id": args.chunk_id, "request_id": args.request_id}
+    elif args.operation == "submit":
+        payload = {"question_id": args.question_id, "request_id": args.request_id,
+                   "answer": args.answer_file.read_bytes().decode("utf-8")}
+    result = call("/run/harnessgrad-tool/tool.sock", args.operation, payload,
+                  timeout_s=None, max_line_bytes=None)
+    if "text" in result:
+        raw = result.pop("text").encode()
+        digest = hashlib.sha256(raw).hexdigest()
+        CURRENT.write_bytes(raw)
+        CURRENT_ID.write_text(json.dumps({key: result[key] for key in ("chunk_id", "question_id") if key in result}))
+        result.update(path=str(CURRENT), bytes=len(raw), sha256=digest)
+    elif args.operation == "next" and result.get("kind") == "done":
+        clear_current()
+    elif result.get("accepted") and args.operation in ("ack", "submit") and CURRENT_ID.exists():
+        identity = json.loads(CURRENT_ID.read_text())
+        key = "chunk_id" if args.operation == "ack" else "question_id"
+        # Replaying an old acknowledgement must not delete a newer input.
+        if identity.get(key) == payload[key]:
+            clear_current()
+    print(json.dumps(result, ensure_ascii=False))
+    return 1 if result.get("accepted") is False else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
