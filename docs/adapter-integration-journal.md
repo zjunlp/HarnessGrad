@@ -28,6 +28,7 @@ and controls:
 - [τ³](../data/datasets/tau3_bench/README.md)
 - [CooperBench](../data/datasets/cooperbench/README.md)
 - [CostBench static](../data/datasets/costbench/README.md)
+- [CostBench dynamic](../data/datasets/costbench_dynamic/README.md)
 
 The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction
 records, judge/environment model channels, repeated trials and fixed peer execution.
@@ -97,6 +98,40 @@ the previously omitted, already registered LoCoMo download entry.
 No candidate-harness evaluation or full-benchmark model performance is claimed
 by registration or reference controls. Dynamic blocking remains outside this
 adapter's static protocol.
+
+### Real API receipts and static aggregation follow-up — 2026-10-21
+
+The subsequent `Ling-3.1-flash` diagnostic at static commit `d970a47d`
+completed 24/24 measured tasks (12 train, 12 test), with no invalid or excluded
+attempts. Reference path matches were 5/12 train and 4/12 test; answer correctness
+was 7/12 on each split, using the named compatibility check for train. Ten parsing
+retry endings remain measured zeros. Official path/answer/cost denominators are
+seven per split, so their filtered metrics differ from these all-measured counts.
+The [static README](../data/datasets/costbench/README.md#real-api-validation-2026-10-21)
+records these results, earlier Ling-3.0/display diagnostics, resource limits,
+source identities, and the external summary/launch/cleanup receipts under
+workspace `runs/costbench-static-ling31-24-display50k-20261021-01/`.
+
+The Ling-3.1 run used a temporary child-process display limit of 50,000 characters;
+loop source and `.env` were unchanged. They are small integration diagnostics,
+not default-display or full-benchmark performance estimates. All 24 final-run
+relay cleanups passed; prior interrupted/invalid receipts remain preserved.
+
+The static branch now also declares `costbench.run_reward` as `arithmetic_mean`
+over `measured_tasks` in `data/aggregation_policies.json`, matching the existing
+dynamic-branch declaration. The aggregation regression inventory includes the
+static registration. This backports the omission's fix without adding dynamic
+tasks to the static branch or merging either branch into `feat/dataset-integrations`.
+
+Follow-up validation used the project's Python 3.12 environment:
+`python -m pytest -q tests/quality/test_aggregation_policies.py` passed 58 tests;
+two existing inventory checks still fail only for `memoryagentbench`,
+`personamem_v2`, and `strongreject`. CostBench is absent from both failure lists.
+A direct replay of the five historical aggregation inputs passed for `costbench`.
+`tests/quality/test_dataset_journal_coverage.py` passed both tests in each branch,
+and `python3 tools/check_dataset_blockers.py` validated both registries. All 24
+README evidence links resolve to readable JSON receipts; the static README is
+identical in both worktrees. This follow-up made no API calls or loop changes.
 
 ## `data/` split complete: scaffolds and datasets separated — 2026-10-14 — ds, ds2, ds3, ds4
 
@@ -5925,9 +5960,10 @@ No API calls were made for this layout change.
 
 The operator requested moving `feat/costbench-static` to the workspace's
 `worktrees/costbench-static` and continuing in a new branch and worktree.
-`feat/costbench-dynamic` starts at static commit `d970a47d`; static retains that
-commit and a clean tree. Neither branch is merged into `feat/dataset-integrations`
-or `main`, because other dataset integrations are proceeding independently.
+`feat/costbench-dynamic` started at static commit `d970a47d`. The later static
+aggregation/documentation follow-up is recorded above. Neither branch is merged
+into `feat/dataset-integrations` or `main`, because other dataset integrations
+are proceeding independently.
 
 `costbench_dynamic` registers four distinct protocols: `cost_change`,
 `steplen_change`, `ban_tool`, and `preference_change`, each with one event and
@@ -5940,7 +5976,8 @@ loop or execution-platform behavior changes.
 
 The branch also supplies the previously missing static CostBench aggregation
 declaration alongside the dynamic one: both standard run means divide by measured
-tasks. The static worktree itself is unchanged.
+tasks. The static worktree was unchanged at the initial dynamic integration;
+the subsequent follow-up above backports the static declaration there.
 
 The upstream event order, charged failed bans, independently chosen reference
 ban, tool-length filtering, and effective-event counting are preserved. A task
@@ -5954,8 +5991,9 @@ coverage, and cost remains simulated tool-price units.
 
 See the [dynamic adapter README](../data/datasets/costbench_dynamic/README.md)
 for protocol details, preparation and controls. Mixed or multiple interventions
-are outside this version. Validation uses no model/API calls; historical static
-API results are not dynamic performance evidence.
+are outside this version. The initial integration validation below used no
+model/API calls. Subsequent dynamic API receipts are recorded separately below;
+historical static API results are not dynamic performance evidence.
 
 Validation: **9,172/9,172** full gold trajectories, **158** CostBench tests, both
 dataset lints, and **16** direct controls / **8** report CLI checks passed. The
@@ -5968,3 +6006,39 @@ unavailable host dependencies, and aggregation inventory/declarations for
 aggregation omission found in that baseline is fixed here. This is not a
 repository-wide green claim. The outside-Git validation receipt is workspace
 `datasets/costbench/dynamic-integration-validation-20261021/summary.json`.
+
+### Dynamic real API coverage and step-length supplement — 2026-10-21
+
+At dynamic source commit `2f88e25e`, `Ling-3.1-flash` exercised the four modes
+on both splits with three preselected tasks per cell. The accepted-cohort report
+`runs/costbench-dynamic-ling31-coverage-20261021-01/summary.json` contains 24
+measurements from 37 attempts: 13 initial provider 429 failures were excluded and
+rerun, no other attempts were invalid, and nine normal parsing-retry zeros remain.
+The shared runner's terminal-429 classification gap remains a platform follow-up;
+this report explicitly excludes those failed attempts even where raw platform
+records store zero. The 24 accepted tasks produced seven reference-path matches,
+11 correct answers (training compatibility kept separate), and 15 actual/effective
+events across seven of the eight mode/split cells. Official aggregate eligibility
+and denominators remain explicit, including the zero-denominator/null metrics
+for the original `steplen_change/test` cell.
+
+The independent supplement
+`runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/summary.json` used three
+fresh `steplen_change/test` queries (`Query00002`, `Query00401`, `Query00798`).
+All three had valid measurements, actual/effective events, reference-path matches
+and correct answers, with no provider failures, other invalid attempts, API retries
+or output clipping. The supplement's `coverage-closure.json` closes real event
+execution coverage for **8/8 mode/split cells** and verifies that the original
+24-task reports were preserved. It does not replace the original three zero-score
+tasks or improve the original cohort's scores.
+
+Both runs used the same temporary 50,000-character display configuration and
+unchanged loop source and `.env`. The original cohort's integrity audit and
+independent final review passed; the supplement's three-task audit passed.
+All attempts completed relay cleanup, and scratch directories were archived and
+removed. Failed initial attempts have incomplete provider usage, so no complete
+API spending claim is made. The
+[dynamic README](../data/datasets/costbench_dynamic/README.md#real-api-validation-and-event-supplement-2026-10-21)
+links the per-cell counts, provenance, audits, cleanup and coverage-closure
+receipts. This closes the missing real-event coverage within the four single-event
+protocols; it is not a full-benchmark or cross-mode performance estimate.

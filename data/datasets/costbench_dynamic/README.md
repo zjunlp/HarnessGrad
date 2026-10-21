@@ -116,6 +116,80 @@ The broader source/catalog checks have four existing failures reproduced on the
 static base: unrelated import edges, unavailable adapter dependencies, and
 missing aggregation declarations/inventory entries for other datasets. This
 branch supplies the missing static CostBench aggregation declaration as well as
-the dynamic one. It does not claim a green repository-wide suite. Local logs,
-source hashes and report receipts are retained outside Git under workspace
+the dynamic one; the static declaration has subsequently been backported to
+`feat/costbench-static` as well. It does not claim a green repository-wide suite.
+Local logs, source hashes and report receipts are retained outside Git under workspace
 `datasets/costbench/dynamic-integration-validation-20261021/summary.json`.
+
+## Real API validation and event supplement (2026-10-21)
+
+The real API diagnostic used `Ling-3.1-flash`, `base_harness/loop` and the
+operator's API configuration at adapter commit
+`2f88e25e891dc7a60b835308e9a246fc3d2fad05`, with the dynamic manifest above.
+It preselected three tasks per mode/split cell: 24 tasks, one trial and one job.
+The temporary child-process setting `HG_AGENT_OUTPUT_LIMIT=50000` applies to
+both the original cohort and the supplement; loop source and `.env` were
+unchanged. Other limits remained 32 model calls, 2,048 output tokens per call,
+60,000 history characters and 20 environment turns. These are small integration
+diagnostics, not default-display performance or a paired comparison of modes.
+
+The [accepted-cohort report][dynamic-api-summary]
+(`costbench-dynamic-ling31-coverage-20261021-01`) retains 24 measured tasks from
+37 attempts. Thirteen initial API 429 failures were excluded and rerun, with
+their original receipts preserved. There were no other invalid attempts.
+The shared runner can store a raw zero for terminal 429 failures; this report
+explicitly treats those failed attempts as unmeasured. That generic provider
+classification gap remains a platform follow-up. Nine normal parsing-retry
+endings remain measured zeros and were not rerun to improve scores.
+
+| Mode | Split | Accepted | Actual / effective event tasks | Reference path matches | Correct answers |
+| --- | --- | --- | --- | --- | --- |
+| `cost_change` | train | 3 | 2 / 2 | 1 | 0 |
+| `cost_change` | test | 3 | 1 / 1 | 1 | 1 |
+| `steplen_change` | train | 3 | 3 / 3 | 2 | 2 |
+| `steplen_change` | test | 3 | 0 / 0 | 0 | 0 |
+| `ban_tool` | train | 3 | 2 / 2 | 1 | 2 |
+| `ban_tool` | test | 3 | 2 / 2 | 1 | 2 |
+| `preference_change` | train | 3 | 3 / 3 | 0 | 2 |
+| `preference_change` | test | 3 | 2 / 2 | 1 | 2 |
+
+Counts above use all accepted tasks in each cell. Training answer counts use the
+named compatibility metric; raw official training TCR is still zero. Official
+aggregate metrics use their own eligibility denominators, retained in the
+report. In the original `steplen_change/test` cell, no event occurred and all
+official aggregate denominators were zero, so those metrics are `null`.
+All accepted trajectories had zero output clipping; all 37 attempts completed
+relay cleanup. [Integrity checks][dynamic-api-audit] and the
+[independent final review][dynamic-api-review] passed. Source identities,
+resource limits and cleanup are retained in [provenance][dynamic-api-provenance]
+and the [cleanup receipt][dynamic-api-cleanup]. Thirteen failed attempts lack
+final provider usage, so recorded token totals do not establish the full API bill.
+
+The separate [three-task supplement][dynamic-api-supplement]
+(`costbench-dynamic-steplen-test-ling31-3-20261021-01`) preselected fresh
+`steplen_change/test` tasks `Query00002`, `Query00401` and `Query00798`, spanning
+location, accommodation and dining. All three were measured, triggered an actual
+and effective step-length change, matched the reference path and answered
+correctly. There were no provider failures, other invalid attempts, API retries
+or output clipping. Each trajectory's cost matched its reference within `1e-8`.
+The [supplement audit][dynamic-api-supplement-audit] and
+[cleanup checks][dynamic-api-supplement-cleanup] passed.
+
+The [coverage closure receipt][dynamic-api-closure] therefore establishes real
+event execution in **all eight mode/split cells**, up from seven in the original
+cohort. The supplement remains a separate diagnostic: the original 24-task
+results and receipts are unchanged, and these three successes are not pooled
+into the original scores. A separate [cost/reference review][dynamic-api-cost-review]
+recomputed representative official and adapter results without finding a
+discrepancy; the segmented reference is not a globally minimum-cost episode.
+
+[dynamic-api-summary]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/summary.json
+[dynamic-api-audit]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/integrity-audit.json
+[dynamic-api-review]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/final-review.json
+[dynamic-api-provenance]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/provenance.json
+[dynamic-api-cleanup]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/cleanup.json
+[dynamic-api-supplement]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/summary.json
+[dynamic-api-supplement-audit]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/integrity-audit.json
+[dynamic-api-supplement-cleanup]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/cleanup.json
+[dynamic-api-closure]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/coverage-closure.json
+[dynamic-api-cost-review]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/cost-reference-review.json
