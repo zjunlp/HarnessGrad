@@ -98,17 +98,10 @@ DEMANDS = ("evidence", "reasoning", "tool_use", "artifact", "environment", "memo
 #: Harness has to provide: a Harness with no store cannot attempt these tasks at all, and can
 #: still attempt every evidence task ever onboarded.
 #:
-#: PersonaMem-v2 uses `supplied_history`: the platform provides an
+#: MemoryAgentBench and PersonaMem-v2 use `supplied_history`: the platform provides an
 #: ordered stream, while the Harness chooses how to retain and use it for later questions.
-#: The adapter does not require a particular store representation or memory algorithm.
+#: Neither adapter requires a particular store representation or memory algorithm.
 UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
-
-#: Explicit coverage limits for populated demands below MIN_MEMBERS_PER_DEMAND.
-#: Remove a limit when a second independent adapter covers the demand.
-UNDERREPRESENTED_DEMANDS: dict[str, str] = {
-    "memory": "PersonaMem-v2 is the first adapter; a second independent memory dataset "
-              "is still needed to meet the coverage floor.",
-}
 
 #: The harness functions a dataset can make score-relevant: if you changed that component in a
 #: harness, could this dataset's score move? A set per dataset rather than one value, because a
@@ -178,6 +171,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     # Fixed next/ack/submit delivery advances state, but does not test action
     # planning or stopping decisions. Closed-loop interaction alone is not control coverage.
     "personamem_v2": ("context", "memory"),
+    "memoryagentbench": ("context", "memory"),
     "appworld": ("context", "tools", "control", "recovery"),
     "bird_minidev": ("context", "tools", "verification"),
     "physicsquestions": ("context", "verification"),
@@ -253,6 +247,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "livecodebench": ("artifact", "code_generation"),
     "locomo": ("evidence", "long_context"),
     "personamem_v2": ("memory", "supplied_history"),
+    "memoryagentbench": ("memory", "supplied_history"),
     "appworld": ("tool_use", "tool_dialogue"),
     "bird_minidev": ("artifact", "text_to_sql"),
     "physicsquestions": ("reasoning", "reasoning"),
@@ -322,6 +317,7 @@ EXPECTED_INTERACTION = {
     "livecodebench": "single_shot",
     "locomo": "single_shot",
     "personamem_v2": "closed_loop",
+    "memoryagentbench": "closed_loop",
     "bird_minidev": "single_shot",
     "physicsquestions": "single_shot",
     "scienceworld": "closed_loop",
@@ -523,13 +519,9 @@ def _check_judged_axis(rows: list[dict]) -> None:
 
     # And a covered demand has to be a category rather than a private name for one dataset.
     thin = {d: n for d, n in counts.items() if n and n < MIN_MEMBERS_PER_DEMAND}
-    stale_limits = sorted(set(UNDERREPRESENTED_DEMANDS) - set(thin))
-    if stale_limits or any(not reason.strip() for reason in UNDERREPRESENTED_DEMANDS.values()):
-        raise SystemExit(f"stale or unexplained demand coverage limits: {stale_limits}")
-    unrecorded = {d: n for d, n in thin.items() if d not in UNDERREPRESENTED_DEMANDS}
-    if unrecorded:
+    if thin:
         raise SystemExit(
-            f"these demands hold fewer than {MIN_MEMBERS_PER_DEMAND} datasets: {unrecorded}. The "
+            f"these demands hold fewer than {MIN_MEMBERS_PER_DEMAND} datasets: {thin}. The "
             f"flat vocabulary this replaced ended with seven one-dataset buckets; a new "
             f"benchmark either belongs to an existing demand or the demand is wrong.")
 

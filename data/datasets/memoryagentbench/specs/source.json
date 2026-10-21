@@ -1,0 +1,32 @@
+{
+  "dataset_repository": "ai-hyz/MemoryAgentBench",
+  "dataset_revision": "7ea066982b140a19337e17e60d45d4076e042faf",
+  "files": {
+    "README.md": {
+      "bytes": 9883,
+      "sha256": "5a9fd0dc2fbab5beb081eae40f24964ad1e47da75b9a7a01f0007791845b1580"
+    },
+    "data/Accurate_Retrieval-00000-of-00001.parquet": {
+      "bytes": 20024386,
+      "sha256": "56c3cd80fb6731a3e53cd1a6be3148f54df60ff2d290ee50e28f8acebf9655c1"
+    },
+    "data/Conflict_Resolution-00000-of-00001.parquet": {
+      "bytes": 1491588,
+      "sha256": "24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45"
+    },
+    "data/Long_Range_Understanding-00000-of-00001.parquet": {
+      "bytes": 49342452,
+      "sha256": "5ab175461954db67770d4a4cb69e569b513ebb96aceb9ee79b57f67488bcd539"
+    },
+    "data/Test_Time_Learning-00000-of-00001.parquet": {
+      "bytes": 3947476,
+      "sha256": "5338753be48f925d03318eed66117286e3489025fabe050a547bd086cd7d79c0"
+    },
+    "entity2id.json": {
+      "bytes": 1758081,
+      "sha256": "63353aca481bc9558b502f91cb98f6fa26438796fdd7e0bc06b5a1532126e8b5"
+    }
+  },
+  "schema": "hg-mab-source-pin-v1",
+  "upstream_revision": "538026089d1a8a8eff05121d0db89b388f360eba"
+}

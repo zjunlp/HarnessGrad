@@ -465,6 +465,18 @@
     },
     {
       "blockers": [],
+      "dataset": "memoryagentbench",
+      "demand": "memory",
+      "exercises": [
+        "context",
+        "memory"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "supplied_history"
+    },
+    {
+      "blockers": [],
       "dataset": "musique",
       "demand": "evidence",
       "exercises": [

@@ -43,6 +43,7 @@ EXPECTED_DATASETS = (
     "kumo",
     "livecodebench",
     "locomo",
+    "memoryagentbench",
     "musique",
     "nestful",
     "personamem_v2",

@@ -298,6 +298,7 @@ def test_within_task_memory_exercise_does_not_create_a_memory_demand(document):
                        if entry["demand"] == "memory"}
     assert "jericho" not in memory_datasets
     assert "personamem_v2" in memory_datasets
+    assert "memoryagentbench" in memory_datasets
 
 
 def test_agentdojo_production_gate_is_revoked_and_the_privacy_closure_stands(document):

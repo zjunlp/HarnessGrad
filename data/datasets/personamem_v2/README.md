@@ -29,8 +29,6 @@ Interaction is `closed_loop`: acknowledging a history message or submitting an
 answer advances the private episode. The fixed `next/ack/submit` sequence does
 not require action planning or stopping decisions, so it does not establish
 `control` coverage.
-This is the first registered adapter in the memory demand; a second independent
-dataset is still needed to meet the taxonomy's two-adapter coverage floor.
 
 ## Native divisions
 

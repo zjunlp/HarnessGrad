@@ -17,11 +17,12 @@ smokes are retained, with no task tuning or budget increase authorized here.
 
 ## Dataset integration summary
 
-KUMO, PersonaMem-v2 and StrongREJECT are registered
+KUMO, MemoryAgentBench, PersonaMem-v2 and StrongREJECT are registered
 adapters. Their READMEs define the current task scope, splits, scoring, preparation
 and controls:
 
 - [KUMO](../data/datasets/kumo/README.md)
+- [MemoryAgentBench](../data/datasets/memoryagentbench/README.md)
 - [PersonaMem-v2](../data/datasets/personamem_v2/README.md)
 - [StrongREJECT](../data/datasets/strongreject/README.md)
 
