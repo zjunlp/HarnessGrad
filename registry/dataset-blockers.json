@@ -235,6 +235,35 @@
       "surface": "planning_and_search"
     },
     {
+      "dataset": "cooperbench",
+      "demand": "artifact",
+      "surface": "code_generation",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "runtime-group-coverage",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "The adapter retains all 652 pair identities across 30 runtime groups. Preparation pins source, scorer, dependencies and image identities; runtime availability is checked per selected group. Two isolated workers submit patches to a fresh verifier using Harbor's merged-pair scorer. Oracle/noop controls exercise the selected runtime without measuring candidate coding quality.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/cooperbench/README.md",
+              "locator": "## Controls and tests"
+            }
+          ],
+          "next_action": "Retain all 652 pair identities and explicit task/trial coverage when running candidate-harness diagnostics or broader evaluation. Do not report representative reference controls as full-benchmark model performance."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "ds1000",
       "demand": "artifact",

@@ -34,6 +34,7 @@ EXPECTED_DATASETS = (
     "bfcl_v3",
     "bird_minidev",
     "chessbench_puzzles",
+    "cooperbench",
     "ds1000",
     "fever",
     "gaia",

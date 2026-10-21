@@ -1,0 +1,254 @@
+{
+  "dottxt_ai_outlines_task/task1371": {
+    "family": "python",
+    "install_lines": [
+      78,
+      97
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "39f137bd6397ff267c170afa7a327813a99a299dfccd1dba57046cfaa9bd848b"
+  },
+  "dottxt_ai_outlines_task/task1655": {
+    "family": "python",
+    "install_lines": [
+      58,
+      79
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "8b8f64edd787617469ac0df75300cf4827ca8e7a1bde92ed2ecdd4bc4153f619"
+  },
+  "dottxt_ai_outlines_task/task1706": {
+    "family": "python",
+    "install_lines": [
+      62,
+      70
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "0529c898d5e5d7f6f68fe978cdd31eaf2f0d384285b29e193f8f4f4f098f5a23"
+  },
+  "dspy_task/task8394": {
+    "family": "python",
+    "install_lines": [
+      73,
+      77
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "e1be404c73ca26cddca9040dbbec9cf8b7c417d6af9acde570ec9041709ba9a2"
+  },
+  "dspy_task/task8563": {
+    "family": "python",
+    "install_lines": [
+      73,
+      77
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "ed3d157d2cc39f12a06aadf9837eb2fb6b8e5dfcb07ddea1b7d0adb5b78fcc74"
+  },
+  "dspy_task/task8587": {
+    "family": "python",
+    "install_lines": [
+      73,
+      77
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "54b47f602368d63b03b1df8d4710d46d52372ba78759140ee70eec8e505676ec"
+  },
+  "dspy_task/task8635": {
+    "family": "python",
+    "install_lines": [
+      73,
+      77
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "7d160f6071434476e37a8653d659b10870e1960f630cd8dd3e1790ee037132f4"
+  },
+  "go_chi_task/task26": {
+    "family": "go",
+    "install_lines": null,
+    "mode": "go",
+    "runner_sha256": "bc20a264330e3635b67d6e38f0c233172fe16198bfad27993178b34e3e058549"
+  },
+  "go_chi_task/task27": {
+    "family": "go",
+    "install_lines": null,
+    "mode": "go",
+    "runner_sha256": "7b2013520a179273cf5998ef37a8c6516294c47f0a4e4396ae612fe9f0f62dde"
+  },
+  "go_chi_task/task56": {
+    "family": "go",
+    "install_lines": null,
+    "mode": "go",
+    "runner_sha256": "7b0462063345e48d4eb713c0caa3282981079472ee2906379189ac25f59c0a27"
+  },
+  "huggingface_datasets_task/task3997": {
+    "family": "python",
+    "install_lines": [
+      54,
+      61
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "599de2b4a2116b93e657fb9a43731fa16cc75aa448798e9a6aef68eddef47a99"
+  },
+  "huggingface_datasets_task/task6252": {
+    "family": "python",
+    "install_lines": [
+      74,
+      92
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "e92f36a10bdef5337e448076b338a7ea69fe02c755e140e53f0d0daf132b3c09"
+  },
+  "huggingface_datasets_task/task7309": {
+    "family": "python",
+    "install_lines": [
+      74,
+      86
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "04c4dc8d67a0c18bf8af74312af1e59685a8aa62340d4bbff36ff53976a6c80e"
+  },
+  "llama_index_task/task17070": {
+    "family": "python",
+    "install_lines": [
+      54,
+      59
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "f9f8b46a018a10fe55a6d84a4e7f78b8238745d477102505032e3751cfe51c46"
+  },
+  "llama_index_task/task17244": {
+    "family": "python",
+    "install_lines": [
+      74,
+      78
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "06b947b99f1824ab85c3e889fb7bc24c8e89bf0f2aed8128348f9af38c314051"
+  },
+  "llama_index_task/task18813": {
+    "family": "python",
+    "install_lines": [
+      74,
+      80
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "c0c72b322e3438dbb050488f5848c1579433218446073a8baf34f839865d8739"
+  },
+  "openai_tiktoken_task/task0": {
+    "family": "python",
+    "install_lines": [
+      44,
+      47
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "3ae396959bd0bed9155f4609e7fa506c0d22bae2b367e688934d5b447e2d0e48"
+  },
+  "pallets_click_task/task2068": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "ed67cd097a75040cbba6ebc5c7496c2ec483fdafb17bdefa0007496340e37bc4"
+  },
+  "pallets_click_task/task2800": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "4755a39855b9df524408a203cc15ee211a90f1399829edfd325fca54d63bef9e"
+  },
+  "pallets_click_task/task2956": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "93cf9186b6ce5c22567d2ffbf973222eb9b96615ab23df4b8570e79409403415"
+  },
+  "pallets_jinja_task/task1465": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "83e52fdde51b8eaac6d7917aef40efe25218eda47feddf4f04cc47286cc26e33"
+  },
+  "pallets_jinja_task/task1559": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "160cd82672f34449a063b7764ce89f79deb899aeb6c3dd41a3b2e14ec6000665"
+  },
+  "pallets_jinja_task/task1621": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "38e7039dadf918ea29979f49a775618e057d5f66abffe3a88cb96bcf137652dd"
+  },
+  "pillow_task/task25": {
+    "family": "python",
+    "install_lines": [
+      44,
+      47
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "217ad5c84c6abf011e42e5df606325cdee040af011cad3db0d41ab81f1f21f25"
+  },
+  "pillow_task/task290": {
+    "family": "python",
+    "install_lines": [
+      50,
+      53
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "f6a612dabe70721966413ddd9e83c771bfa008bd2ac27b40021fd2cdace39e31"
+  },
+  "pillow_task/task68": {
+    "family": "python",
+    "install_lines": [
+      50,
+      53
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "526ea12c841b4aa66112505ac4f7caa5913653efa6755f1a9ff7a20472100dbc"
+  },
+  "react_hook_form_task/task153": {
+    "family": "node",
+    "install_lines": null,
+    "mode": "node",
+    "runner_sha256": "755bc363046e1edb2e71bdc1222ade8fc69643d75bcffcbb905d28ec4a373ffc"
+  },
+  "react_hook_form_task/task85": {
+    "family": "node",
+    "install_lines": null,
+    "mode": "node",
+    "runner_sha256": "588da71dc6ef4d14ec375a9d35dd89fba9125e62eba73c3488364b5ae3434fee"
+  },
+  "samuelcolvin_dirty_equals_task/task43": {
+    "family": "python",
+    "install_lines": [
+      54,
+      58
+    ],
+    "mode": "editable-venv",
+    "runner_sha256": "04e67d230a6d1badfa2dfb82932dc0086779cffaed4afdff8d82bc9e473fceda"
+  },
+  "typst_task/task6554": {
+    "family": "rust",
+    "install_lines": null,
+    "mode": "rust",
+    "runner_sha256": "658e90e0f0b052ceefd81a8513e4bae4f48e3ff0020d85a832b89b52746c13ca"
+  }
+}
