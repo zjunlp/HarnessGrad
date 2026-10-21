@@ -25,7 +25,7 @@ EXPECTED_DATASETS = (
     "memoryagentbench", "musique", "nestful", "personamem_v2",
     "physicsquestions", "reasoning_gym", "scienceworld", "sotuqa",
     "sportsunderstanding", "spreadsheetbench", "strategyqa", "strongreject", "tau2_bench",
-    "tau_bench", "terminal_bench", "triviaqa", "twowikimultihopqa",
+    "tau3_bench", "tau_bench", "terminal_bench", "triviaqa", "twowikimultihopqa",
 )
 FIXTURES = (
     "demo.py", "probe_set.py", "broken_service.py", "verify_demo.py",
@@ -37,7 +37,7 @@ EXPECTED_ASSET_DIRS = (
     "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "cooperbench", "ds1000",
     "gaia", "jericho", "kumo", "livecodebench", "locomo", "memoryagentbench", "nestful",
     "personamem_v2", "reasoning_gym",
-    "scienceworld", "spreadsheetbench", "strongreject", "tau_bench",
+    "scienceworld", "spreadsheetbench", "strongreject", "tau3_bench", "tau_bench",
 )
 
 

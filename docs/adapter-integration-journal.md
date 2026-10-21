@@ -17,7 +17,7 @@ smokes are retained, with no task tuning or budget increase authorized here.
 
 ## Dataset integration summary
 
-KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT and CooperBench are registered
+KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT, τ³ and CooperBench are registered
 adapters. Their READMEs define the current task scope, splits, scoring, preparation
 and controls:
 
@@ -25,6 +25,7 @@ and controls:
 - [MemoryAgentBench](../data/datasets/memoryagentbench/README.md)
 - [PersonaMem-v2](../data/datasets/personamem_v2/README.md)
 - [StrongREJECT](../data/datasets/strongreject/README.md)
+- [τ³](../data/datasets/tau3_bench/README.md)
 - [CooperBench](../data/datasets/cooperbench/README.md)
 
 The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction

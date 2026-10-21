@@ -2217,6 +2217,18 @@ loads and scores it stays in git.
 
 > Trap 1 (**the whole reason for the pin**): the repository's HEAD is now **τ³-bench v1.0.1**, whose README says results below 1.0.1 are not comparable with results at or above it -- so a loader pinned to `main` would produce numbers that cannot be compared with the paper's, and the directory name would not say so. Trap 2: only at v0.1.0 is `tasks.json` **the base split** (airline 50 + retail 114 + telecom 114 = 278, the paper's number); later trees add `split_tasks.json` and the base has to be selected out of it, which changes *which* 278 tasks those are. Trap 3: telecom ships `db.toml` and a directory of policy markdown, not `db.json` and `policy.md`.
 
+## `tau3_bench`
+
+### τ³ official v1.0.1 text base tasks and runtime source (http, fc0055dc4e0a316c3f83133267fbd6faaa770992)
+
+- **Version (pinned):** `fc0055dc4e0a316c3f83133267fbd6faaa770992`
+- **Size:** 92 MB archive
+- **URL:** https://codeload.github.com/sierra-research/tau2-bench/tar.gz/fc0055dc4e0a316c3f83133267fbd6faaa770992
+- **Destination:** `source.tar.gz`
+- **sha256:** `7a227036d07fdeb088dbd0c99fdb40ee9b9e0ebc06aadbc4dec1217b3383e57e`
+
+> Run tau3_bench/prepare.py with Python 3.12 and isolated pinned dependencies. All four base domains retained; text half-duplex, BM25 banking, no voice.
+
 ## `tau_bench`
 
 ### tau-bench checkout (regenerates the committed assets) (http, 59a200c6d575d595120f1cb70fea53cef0632f6b)
