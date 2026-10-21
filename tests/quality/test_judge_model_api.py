@@ -145,3 +145,32 @@ def test_legacy_judge_path_does_not_change(endpoint):
     assert request['max_tokens'] == 10 and request['seed'] == 42
     assert not {'reasoning_effort', 'thinking', 'max_completion_tokens'} & request.keys()
     assert 'api_options' not in broker.report()
+
+
+def test_judge_model_mismatch_is_recorded_not_refused(endpoint, monkeypatch):
+    """An overridden judge model is allowed, but the receipt must say so.
+
+    The metric identity of two of the stacked datasets depends on which model answered
+    (`strongreject.rubric.defense.<model>.v1`; memoryagentbench's profile carries the model plus
+    its reasoning policy), and two profiles must be reported separately. The old behaviour let
+    `HG_JUDGE_MODEL` replace the declared model with nothing on the record saying so, so two
+    points measured under different judges were indistinguishable. It is recorded rather than
+    refused because the override is a supported capability -- unlike `environment`, where a
+    different model is a different world and stays fatal.
+    """
+    monkeypatch.setenv('HG_JUDGE_MODEL', 'some-other-judge')
+    with Judge(spec('declared-judge-model')) as broker:
+        assert complete(broker)['content'] == 'yes'
+        report = broker.report()
+    assert report['model_mismatch'] == {'declared': 'declared-judge-model',
+                                       'actual': 'some-other-judge'}
+    # The declaration still governs the wire request: the override is about *recording*, not
+    # about silently sending a different model than the one the declaration froze.
+    request, = endpoint['requests']
+    assert request['model'] == 'declared-judge-model'
+
+
+def test_matching_judge_model_leaves_the_receipt_unchanged(endpoint, monkeypatch):
+    monkeypatch.setenv('HG_JUDGE_MODEL', 'declared-judge-model')
+    with Judge(spec('declared-judge-model')) as broker:
+        assert 'model_mismatch' not in broker.report()
