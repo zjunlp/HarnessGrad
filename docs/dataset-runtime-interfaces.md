@@ -114,7 +114,8 @@ VERIFY[task_id] = {
 平台配置：`HG_JUDGE_MODEL`、`HG_JUDGE_BASE_URL`、`HG_JUDGE_API_KEY`。
 模型在数据集构建 `VERIFY.judge` 时统一解析：数据集专属覆盖 → 全局
 `HG_JUDGE_MODEL` → 数据集官方默认；可选项为空视为未设置，无可用模型时报错。
-数据集专属配置项见对应 README；配置的声明、展示与快照由 `harnessgrad.config` 管理。
+通用入口为 `current().judge.resolve_model(override=..., default=...)`；
+数据集专属配置由对应集成声明，并通过 `harnessgrad.config` 展示与快照。
 服务使用可信 verifier 声明中固定的最终 model，允许其与全局默认值不同；
 最终声明写入 `verdict.judge.configuration`。
 
