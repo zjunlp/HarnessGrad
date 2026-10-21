@@ -42,6 +42,10 @@ def _verifier_env(workdir: Path) -> dict:
     env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
            "HOME": str(workdir), "LANG": os.environ.get("LANG", "C.UTF-8"),
            "PYTHONDONTWRITEBYTECODE": "1"}
+    # Native Windows Python needs SystemRoot to initialize its random source.
+    # Forward only this OS prerequisite, never the agent or improver credentials.
+    if os.name == "nt" and os.environ.get("SystemRoot"):
+        env["SystemRoot"] = os.environ["SystemRoot"]
     return env
 
 

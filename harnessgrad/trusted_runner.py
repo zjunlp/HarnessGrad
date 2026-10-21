@@ -8,6 +8,8 @@ and requests are idempotent by operation and key.
 """
 from __future__ import annotations
 
+from ckpt.source_tree import copy_harness
+
 import hashlib
 import json
 import math
@@ -60,6 +62,9 @@ def _tree_sha(root: Path) -> str:
     entries: list[dict[str, Any]] = []
     root = Path(root)
     ignored = {".git", ".state", "_harnessgrad", "__pycache__"}
+    from ckpt.source_tree import has_bun_runtime
+    if has_bun_runtime(root):
+        ignored.update({"node_modules", ".opencode-state"})
     for path in sorted(root.rglob("*")):
         rel = path.relative_to(root)
         if any(part in ignored for part in rel.parts) or path.is_socket():
@@ -330,7 +335,7 @@ class TrustedRunnerFacade:
                 if _tree_sha(Path(source)) != expected_parent_sha:
                     raise TrustedRunnerError("parent_snapshot_sha_mismatch")
                 if workspace.exists(): shutil.rmtree(workspace)
-                shutil.copytree(source, workspace, symlinks=True)
+                copy_harness(source, workspace, symlinks=True)
                 self._apply(workspace, proposal)
                 base_manifest = None
                 try:
@@ -578,6 +583,23 @@ class TrustedRunnerFacade:
         incumbent = request.get("incumbent_id")
         eval_ids = request.get("evaluation_ids") or []
         evals = [self.evaluations[e] for e in eval_ids if e in self.evaluations and self._evaluation_scopes.get(e, self.evaluations[e].get("task_set", {}).get("visibility")) != "final_report_only"]
+        runtime_groups = [[(trial.get("harness_runtime") or {})
+                           for task in evaluation.get("task_outcomes", [])
+                           for trial in task.get("trials", [])] for evaluation in evals]
+        runtime_records = [record for group in runtime_groups for record in group]
+        from ckpt.source_tree import has_bun_runtime
+        declared_bun = any(has_bun_runtime(Path(candidate["workspace"]))
+                           for evaluation in evals
+                           if (candidate := self.candidates.get(evaluation["candidate_id"]))
+                           and candidate.get("workspace"))
+        if declared_bun or any("bun" in record for record in runtime_records):
+            from eval.containers.responses_overlay import require_comparable
+            try:
+                if any(not group for group in runtime_groups):
+                    raise ValueError("Missing Responses overlay trial evidence")
+                require_comparable(runtime_records, runtime_records)
+            except ValueError as exc:
+                raise TrustedRunnerError(str(exc)) from exc
         incumbent_evals = [e for e in evals if e["candidate_id"] == incumbent and e.get("aggregate_score") is not None and e.get("measurement_status") == "eligible"]
         selection_id = _id("sel", {"incumbent": incumbent, "candidates": request.get("candidate_ids", []), "evaluations": eval_ids})
         basis = [e.get("score_artifact") for e in evals if e.get("score_artifact")]

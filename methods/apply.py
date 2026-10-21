@@ -25,6 +25,10 @@ weak harness.
 from __future__ import annotations
 
 import json
+try:
+    from .source_tree import copy_harness
+except ImportError:
+    from source_tree import copy_harness
 import os
 import shutil
 from pathlib import Path
@@ -123,7 +127,7 @@ def apply(base: Path, dest: Path, edits) -> tuple[list[str], list[str]]:
     base, dest = Path(base), Path(dest)
     if dest.exists():
         shutil.rmtree(dest)
-    shutil.copytree(base, dest, ignore=shutil.ignore_patterns(".git", CHANNEL))
+    copy_harness(base, dest, ignore=shutil.ignore_patterns(".git", CHANNEL))
 
     if not isinstance(edits, list):
         return [], [f"no edit sequence: `files` was {type(edits).__name__}, not a list"]

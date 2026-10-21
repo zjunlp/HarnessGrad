@@ -349,6 +349,13 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         runtime_receipt=runtime_receipt, worker=_worker)
     if runtime_receipt:
         result["runtime_services"] = runtime_receipt
+        if runtime_receipt.get("bun"):
+            result["harness_runtime"] = {**(result.get("harness_runtime") or {}),
+                                         "bun": runtime_receipt["bun"]["identity"]}
+        capture = runtime_receipt.get("responses_capture")
+        if capture is not None and not capture["complete"]:
+            result.setdefault("invalid", {"stage": "Responses capture", "service": None,
+                "detail": "Protocol capture incomplete; retained available artifacts and original task outcome"})
     if observation is not None and refusal is None:
         result.setdefault("env_observation", observation)
     if result.get("verdict") is not None:
@@ -441,14 +448,29 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     _manifest = json.loads((repo / "harness.json").read_text())
     if not is_exec:
         admit_native_network(env_spec, _manifest, os.environ.get("HG_AGENT_BACKEND", "mock"))
+    from eval.containers import bun_runtime
+    try:
+        bun_environment = bun_runtime.admit(repo, os.environ)
+        bun_preparation = bun_runtime.prepare(repo)
+    except bun_runtime.RuntimeUnavailable as exc:
+        return _invalid(task, exc, stage="harness runtime preparation", service=None)
+    bun_paths = tuple(Path(p) for p in (bun_preparation or {}).get("runtime_paths", []))
+    if bun_preparation:
+        runtime_receipt["bun"] = bun_preparation
+        execution_binary = bun_preparation.get("execution_binary", bun_preparation["binary"])
+        bun_environment.update(HG_AGENT_OPENCODE_BUN=execution_binary,
+                               HG_HARNESS_BUN=execution_binary)
+        if bun_preparation.get("responses_overlay"):
+            bun_environment["HG_RESPONSES_OVERLAY_SHA256"] = bun_preparation["responses_overlay"]["identity"]["sha256"]
     runtime_paths = tuple(Path(p).expanduser()
-                          for p in (_manifest.get("runtime_paths") or []))
+                          for p in (_manifest.get("runtime_paths") or [])) + bun_paths
     if is_exec and env_spec.get("state") == "container":
         return _run_one_container_state(
             repo, task, env_spec=env_spec, setup=setup, verifier=verifier,
             timeout_s=timeout_s, verify_timeout_s=verify_timeout_s,
             run_id=run_id, run_seed=run_seed, recordings_root=recordings_root,
-            runtime_paths=runtime_paths)
+            runtime_paths=runtime_paths, runtime_env=bun_environment,
+            runtime_receipt=runtime_receipt)
     service_specs = list(env_spec.get("services") or [])
     web_spec = env_spec.get("web") or {}
     running = None
@@ -468,6 +490,10 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     package_overlays = ()
     workdir = Path(tempfile.mkdtemp(prefix="hg-task-"))
     try:
+        if (bun_preparation or {}).get("responses_overlay"):
+            (workdir / ".responses").mkdir()
+            bun_environment["HG_RESPONSES_ARTIFACT_DIR"] = str(
+                Path(task_mount) / ".responses" if is_exec else workdir / ".responses")
         try:
             targets(workdir, (*immutable_runtimes, *verifier_runtimes))
         except (ImmutableRuntimeUnavailable, OSError) as exc:
@@ -529,7 +555,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # runtime it was built against. Declared, not inferred: the platform cannot
         # know where somebody's agent CLI is installed.
         runtime_paths = tuple(Path(p).expanduser()
-                              for p in (manifest.get("runtime_paths") or []))
+                              for p in (manifest.get("runtime_paths") or [])) + bun_paths
         # Inside a container the entrypoint is still `<repo>/<entry>` because the
         # harness tree is mounted at its own host path; only the task's paths move,
         # because the dataset named a location *in the environment*.
@@ -615,6 +641,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 # about, where a verifier would then be reading them.
                 "TMPDIR": str(home / "tmp"),
             })
+        child_env.update(bun_environment)
         if worker is not None:
             child_env["HG_WORKER_ID"] = worker["id"]
         child_env["HG_AGENT_DEADLINE_S"] = str(timeout_s)
@@ -885,6 +912,9 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                 if web_gateway is not None else None),
                 "identity": _last_identity(trace)}
     finally:
+        if (bun_preparation or {}).get("responses_overlay"):
+            from eval.containers.responses_overlay import collect_capture
+            runtime_receipt["responses_capture"] = collect_capture(workdir)
         if tool_relay is not None:
             tool_relay.cleanup()
             runtime_receipt["tool_relay"] = tool_relay.report()
@@ -935,40 +965,40 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
 
 
 
-#: 形如"harness 自己调模型时连不上"的失败痕迹。
+#: Markers for failures to reach the model from inside the harness.
 #:
-#: 为什么要单独认这一类:实测(2026-10-02,`loop-terminal_bench-submit-1`)两道题的
-#: harness 死在 `RuntimeError: 3 attempts failed, last: Connection error.`,而平台给它们
-#: 记的是 **0.0** —— 也就是把一次**网关故障**记成了"harness 很弱"。§2.5.7 的全部主张
-#: 就是"测不了的题"和"测出来是 0 的题"必须分开,这一条正是它要防的那种混淆。
+#: On 2026-10-02 (`loop-terminal_bench-submit-1`), two harnesses died with
+#: `RuntimeError: 3 attempts failed, last: Connection error.` but received 0.0.
+#: Section 2.5.7 separates tasks that could not be measured from measured zeros.
 #:
-#: 机制已经复现过(见 `eval/service/modelgate.py` 的说明):vLLM 的 uvicorn 默认 5 秒关掉空闲
-#: keep-alive,而网关把上游的 EOF 半关到客户端,于是 harness 隔十几秒的下一次调用
-#: 复用了一条死连接 —— 只要中间跑过一条几十秒的命令就会踩到。
+#: Reproduction details are in `eval/service/modelgate.py`: uvicorn closed idle
+#: keep-alive connections after five seconds, the gateway forwarded upstream EOF,
+#: and a later harness call reused the dead connection after a lengthy command.
 _PROVIDER_FAILURES = (
     "APIConnectionError", "APITimeoutError", "Connection error",
     "RemoteDisconnected", "Connection refused", "Connection reset",
     "connect timeout", "Server disconnected",
+    # The OpenCode adapter emits this only for an unhandled provider error event.
+    # Authentication, HTTP and malformed-stream failures must not become benchmark 0s.
+    "OpenCode provider failure:",
 )
 
 
 def _provider_failure(result: dict) -> dict | None:
-    """harness 是不是**因为连不上模型端点**而死的。`None` 表示不是。
+    """Identify a harness death caused by an unreachable model endpoint, or return None.
 
-    判据刻意很窄,只在这种情况成立:
+    Deliberately require both a nonzero exit code and client connection/timeout
+    markers at the end of stderr. Earlier markers may describe an error that the
+    harness recovered from successfully.
 
-      * harness 以**非零退出码**结束 —— 它自己没把这次故障吸收掉;
-      * stderr 的**尾部**有客户端连接/超时的痕迹 —— 尾部,不是全文:一个连上又掉了、
-        但自己重试成功的 harness 会在中间留下同样的字眼,而那是它做对了。
-
-    退出码 0 的一律不算:它跑完了,分数就是它该得的分数。
+    A zero exit code never qualifies: the harness completed and keeps its score.
     """
-    if not result.get("exit_code"):            # None(无效)或 0 都不算
+    if not result.get("exit_code"):            # Neither None (invalid) nor zero qualifies.
         return None
     tail = (result.get("stderr") or "")[-1500:]
     for marker in _PROVIDER_FAILURES:
         if marker in tail:
-            # 摘出那一行,放进记录里 —— 读者要的是"哪一句"。
+            # Preserve the matching line so the record identifies the exact error.
             line = next((l.strip() for l in reversed(tail.splitlines())
                          if marker in l), marker)
             return {"marker": marker, "line": line[:240],
@@ -1103,10 +1133,10 @@ def _harness_failure(result: dict) -> dict | None:
     if not trace:
         reason = "the harness left no trace at all"
     elif result.get("exit_code") and _last_usage(trace) is None:
-        # **只说平台知道的事。** 第一版这条写的是"没有记录到任何模型调用",而那是错的:
-        # `usage` 块是 harness 跑完之后才写一次的,所以**中途崩溃**永远看起来像"一次都没调
-        # 过模型"。实测(2026-10-04,本地模型,5 道题):三道题各有 15-23 次调用、轨迹 12-14 万
-        # 字节,控制台却按"left no trace"播报 —— 一句假话,而且是我自己上一版引入的。
+        # State only what the platform knows. Usage is written after completion,
+        # so a crash can hide real calls. On 2026-10-04, three local-model tasks
+        # had 15-23 calls and 120-140 KB traces, yet the old message incorrectly
+        # reported "left no trace" because their usage blocks were absent.
         reason = (f"the harness exited {result['exit_code']} and its trace has no `usage` "
                   f"block, so the run did not reach its end")
     if reason is None:
@@ -1306,8 +1336,19 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         return bool(trial_protocol or spec.get("judge") or spec.get("result_contract") or relay.get("record")
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
+    from eval.containers import bun_runtime
+    bun_identity, bun_error = None, None
+    try:
+        bun_runtime.admit(repo, os.environ)
+        bun_identity = bun_runtime.identity(repo)
+    except bun_runtime.RuntimeUnavailable as exc:
+        bun_error = str(exc)
+
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
+        if bun_identity is not None:
+            key += ":runtime:" + hashlib.sha256(json.dumps(
+                bun_identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         # A changed scorer declaration must not reuse another runtime's score.
         bundle = ((verifiers or {}).get(task["task_id"]) or {}).get("scorer_bundle")
         if bundle is not None:
@@ -1383,6 +1424,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     #: came from (`eval/containers/harness_runtime.py`). Distinct records, because the version is a
     #: property of the task's image and one run may cross several.
     runtime_records: list[dict] = []
+    runtime_diagnostics: dict[str, dict] = {}
     declarations: list[dict] = []
     tampered: dict[str, list[str]] = {}
     env_usage = {"input": 0, "output": 0, "calls": 0, "services_reported": 0}
@@ -1452,8 +1494,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # The trial count is part of the key: a cached single measurement is not a
         # cached mean of three, and reusing one for the other would quietly answer a
         # different question than the run asked.
+        if bun_error is not None:
+            invalid_runtime = {"stage": "harness runtime preparation", "detail": bun_error}
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
+            return {"task_id": tid, "invalid": invalid_runtime}
         key = measurement_key(task)
         hit = None if fresh_measurement(tid) else cache.get(key)
+        if (hit is not None and bun_identity is not None
+                and (hit.get("harness_runtime") or {}).get("bun") != bun_identity):
+            hit = None
         if hit is not None:
             if declared_class((verifiers or {}).get(tid)) == "pristine-offline":
                 cached = hit.get("trial_verdicts") or [hit.get("verdict") or {}]
@@ -1504,6 +1553,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 # cached either: the cache key names the harness, and the reason this
                 # task failed was not the harness, so caching it would carry a dataset bug
                 # into every later round and hide the round where it was introduced.
+                if bun_identity is not None and (result.get("harness_runtime") or {}).get("bun") != bun_identity:
+                    result.setdefault("invalid", {"stage": "harness runtime identity",
+                        "detail": "Runtime changed after evaluation admission; refusing mixed measurements"})
                 if trial_protocol:
                     plan = {"task_id": tid, "trial_id": trial_identity(trial),
                             "seed": str(trial_protocol["seeds"][trial])}
@@ -1586,7 +1638,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             # into every later round and hide the round where it was introduced.
             _write_progress(progress_dir, round_no, tid, [], unmeasured,
                             diagnostic=result, enforcement=enforcement)
-            return {"task_id": tid, "invalid": unmeasured}
+            return {"task_id": tid, "invalid": unmeasured,
+                    "harness_runtime": (result or {}).get("harness_runtime"),
+                    "runtime_services": (result or {}).get("runtime_services")}
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
         return {"task_id": tid, "measured": measured}
 
@@ -1629,6 +1683,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             cached_record = entry.get("harness_runtime")
             if cached_record and cached_record not in runtime_records:
                 runtime_records.append(cached_record)
+            if entry.get("runtime_services"):
+                runtime_diagnostics[tid] = entry["runtime_services"]
             if entry.get("harness_output"):
                 harness_output[tid] = entry["harness_output"]
             if entry.get("verdict"):
@@ -1640,6 +1696,11 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
 
         if outcome.get("invalid"):
             invalid[tid] = outcome["invalid"]
+            runtime_record = outcome.get("harness_runtime")
+            if runtime_record and runtime_record not in runtime_records:
+                runtime_records.append(runtime_record)
+            if outcome.get("runtime_services"):
+                runtime_diagnostics[tid] = outcome["runtime_services"]
             continue
 
         measured = outcome["measured"]
@@ -1718,6 +1779,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         runtime_record = result.get("harness_runtime")
         if runtime_record and runtime_record not in runtime_records:
             runtime_records.append(runtime_record)
+        if result.get("runtime_services"):
+            runtime_diagnostics[tid] = result["runtime_services"]
         for key_name in ("input", "output", "calls"):
             value = (result.get("env_usage") or {}).get(
                 {"input": "input_tokens", "output": "output_tokens",
@@ -1749,7 +1812,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                           # `loop-terminal_bench-41133` round 5: all five verdict files were
                           # empty because the round was entirely cache hits.
                           "verdict": verdicts.get(tid) or {},
-                          "harness_runtime": result.get("harness_runtime")}
+                          "harness_runtime": result.get("harness_runtime"),
+                          "runtime_services": result.get("runtime_services")}
 
     # What the harness spent. Read from the traces rather than asked for: a harness
     # that reports its own cost can under-report, and every harness already writes
@@ -1863,6 +1927,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             "harness_failed": harness_failed,
             "harness_output": harness_output,
             "harness_runtime": runtime_records,
+            "runtime_diagnostics": runtime_diagnostics,
             "env_usage": env_usage,
             "model_gateway": model_gateway,
             # The receipts that admitted these tasks, deduplicated. They are the evidence

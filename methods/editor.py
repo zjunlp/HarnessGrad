@@ -439,7 +439,7 @@ def failing_first(base: Path) -> list[str]:
             point = json.loads(rp.read_text())
         except (OSError, json.JSONDecodeError):
             point = {}
-    # 哪一侧是「诊断侧」由记录自己说(§2.6),这条规则只在 protocol 里写一次。
+    # The record identifies the diagnostic side (§2.6); define that rule once in the protocol.
     scores = protocol.studied_per_task(point)
     return [tid for tid, _ in sorted(scores.items(), key=lambda kv: kv[1])]
 
@@ -1304,6 +1304,11 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
            "base_harness": str(parent), "candidate": str(workspace / "candidate"),
            "improver": improver, "channel": str(channel(base)),
            "trajectory_out": "", "task_ids": [], "train_task_ids": []}
+    runtime_receipt = base / ".state/bun-runtime.json"
+    if runtime_receipt.is_file():
+        # Trusted preparation is staged on the incumbent. Archive parents may
+        # have no generated state; propose still validates their dependency inputs.
+        req["harness_runtime"] = json.loads(runtime_receipt.read_text())
     result = cli_improver.propose(req, parent, prompt=prompt, facts=facts,
                                    evidence=evidence_pointer(base))
     _keep_improver_transcript(result, workspace)
@@ -1463,8 +1468,6 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     reported. Silently returning `no_change` on a parse failure is the one thing
     that must not happen: it turns a broken call into a method decision.
     """
-    from openai import OpenAI
-
     # **One dispatch point for the improver layer.** When this run resolved a *CLI* improver
     # (codex), drive it rather than a chat endpoint -- on the tree the rule chose to build on
     # (`parent`, defaulting to the incumbent) -- and hand the result back as an ordinary edit
@@ -1481,6 +1484,8 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     if cli is not None:
         tree = Path(parent) if parent is not None else Path(base)
         return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli)
+
+    from openai import OpenAI
 
     base_url, api_key, model = model_settings()
     client = OpenAI(base_url=base_url, api_key=api_key,

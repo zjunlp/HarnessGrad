@@ -18,6 +18,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 REQUIRED = ("name", "version", "entrypoint")
 #: Keys a harness author may use. This list is what the *platform reads*, and it has to
 #: be kept in step with it: it was stale the moment `env_kinds` and `runtime_paths`
@@ -25,7 +29,7 @@ REQUIRED = ("name", "version", "entrypoint")
 #: was refusing runs on the strength of them. A validator that misdescribes the
 #: contract is worse than no validator, because it is believed.
 KNOWN = ("name", "version", "path", "entrypoint", "backend", "install",
-         "env_kinds", "runtime_paths", "role", "notes")
+         "env_kinds", "runtime_paths", "runtime", "role", "notes")
 
 #: What a harness *is*. `control` is for something the platform ships to check its own
 #: instruments rather than to be measured -- `base_harness/oracle` runs the dataset's own
@@ -41,7 +45,7 @@ DOCUMENTATION_ONLY = ("notes",)
 #: machinery, `__pycache__` is output, and `_harnessgrad` is the platform<->method channel
 #: (`methods/apply.py:CHANNEL`) -- a harness that shipped a copy of it would be carrying
 #: the platform's own files into a measured tree.
-_NOT_SOURCE = (".git", "__pycache__", "_harnessgrad")
+_NOT_SOURCE = (".git", "__pycache__", "_harnessgrad", "node_modules", ".state")
 
 
 def _compile_problems(base: Path) -> list[str]:
@@ -138,6 +142,12 @@ def validate(root: Path, smoke: bool) -> list[str]:
     role = man.get("role", "harness")
     if role not in ROLES:
         errs.append(f"role {role!r} is not one of {list(ROLES)}")
+
+    from ckpt.source_tree import runtime_spec
+    try:
+        runtime_spec(root)
+    except ValueError as exc:
+        errs.append(str(exc))
 
     # Independent of `smoke`, and that is the whole point: see `_compile_problems`.
     errs.extend(_compile_problems(base))

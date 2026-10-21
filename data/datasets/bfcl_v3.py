@@ -296,7 +296,7 @@ def _goal(record: dict) -> str:
         f"Write the name of each function that answers the request -- one per line -- to\n"
         f"`{base.ANSWER_FILE}` in your working directory, or submit them with\n"
         "\n"
-        f"    python3 {base.CLI_FILE} submit \"<function_name>\"\n"
+        f"    python3 {base.CLI_PATH} submit \"<function_name>\"\n"
         "\n"
         "If **no** function is needed, submit `NONE` (or write `NONE` in the file).\n"
         "\n"

@@ -6,6 +6,8 @@ rollback, and identical prefixes are deduplicated for free.
 """
 from __future__ import annotations
 
+from ckpt.source_tree import copy_harness, has_bun_runtime
+
 import json
 import shutil
 import subprocess
@@ -63,7 +65,8 @@ def init_repo(root: Path) -> None:
     gi = root / ".gitignore"
     existing = gi.read_text() if gi.exists() else ""
     # `IGNORED_HARNESS_STATE` states the principle and the measured instances behind it.
-    for rule in IGNORED_HARNESS_STATE:
+    rules = IGNORED_HARNESS_STATE + (("node_modules/", ".opencode-state/") if has_bun_runtime(root) else ())
+    for rule in rules:
         if rule not in existing:
             existing = existing.rstrip("\n") + f"\n{rule}\n"
     gi.write_text(existing)
@@ -141,7 +144,7 @@ def stage_workspace(harness_src: Path, work: Path) -> None:
     """
     if work.exists():
         shutil.rmtree(work)
-    shutil.copytree(harness_src, work, symlinks=True)
+    copy_harness(harness_src, work, symlinks=True)
     init_repo(work)
 
 

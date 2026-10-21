@@ -133,6 +133,10 @@ class ImproverConfig:
     override defect: one layer set it and another read it.
     """
 
+    registry: str | None = _var(
+        "HG_IMPROVER_CONFIG", None,
+        "Local improver registry JSON; an explicitly configured missing file is an error.",
+        kind="opt_raw")
     selection: str | None = _var(
         "HG_IMPROVER", None,
         "Name or path of the improver a method should drive, as its subprocess sees it.",
