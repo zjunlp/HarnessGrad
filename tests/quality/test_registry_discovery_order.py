@@ -57,6 +57,7 @@ EXPECTED_DATASETS = (
     "strategyqa",
     "strongreject",
     "tau2_bench",
+    "tau3_bench",
     "tau_bench",
     "terminal_bench",
     "triviaqa",

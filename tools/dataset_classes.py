@@ -182,6 +182,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "strategyqa": ("context", "verification"),
     "strongreject": ("safety",),
     "tau_bench": ("context", "tools", "control", "memory", "recovery"),
+    "tau3_bench": ("context", "tools", "control", "reliability"),
     "terminal_bench": ("context", "tools", "control", "recovery", "verification"),
     "triviaqa": ("context",),
     "gaia": ("context", "tools", "control"),
@@ -215,8 +216,8 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
                   "between models; CooperBench assigns fixed peer roles through the platform, "
                   "not dynamic harness delegation. tau2_bench needs an independent user simulator, which the "
                   "platform supplies rather than the harness",
-    "reliability": "no adapter is built so that consistency across trials is what is scored; "
-                   "the platform takes repeated trials, but no task is constructed for pass^k",
+    "reliability": "one adapter (tau3_bench) reports complete-manifest pass^k; "
+                   "a second independent demand is still below the coverage floor",
     "cost": "every run is costed, but no task is budget-bounded, so spending less changes the "
             "ledger rather than the score",
 }
@@ -262,6 +263,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     # The safety function describes the scored behavior; no reasoning trace is required.
     "strongreject": ("reasoning", "reasoning"),
     "tau_bench": ("tool_use", "tool_dialogue"),
+    "tau3_bench": ("tool_use", "tool_dialogue"),
     "terminal_bench": ("environment", "terminal"),
     "triviaqa": ("evidence", "information_seeking"),
     "gaia": ("evidence", "information_seeking"),
@@ -330,6 +332,7 @@ EXPECTED_INTERACTION = {
     "strategyqa": "single_shot",
     "strongreject": "single_shot",
     "tau_bench": "closed_loop",
+    "tau3_bench": "closed_loop",
     "terminal_bench": "closed_loop",
     "appworld": "closed_loop",
     "triviaqa": "single_shot",
