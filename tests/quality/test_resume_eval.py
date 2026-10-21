@@ -108,3 +108,27 @@ def test_resume_refuses_when_evaluated_from_is_absent(tmp_path: Path) -> None:
 
     why = _resume_mismatch(run_dir, Args(), "valid_unseen", "sha")
     assert why and "evaluated_from" in why
+
+
+def test_bun_resume_requires_matching_runtime_for_every_trial(tmp_path, monkeypatch):
+    from harnessgrad.loops.eval_side import _resume_runtime_mismatch
+    from eval.containers import bun_runtime
+    current = {"kind": "bun", "responses_overlay": {"sha256": "current"}}
+    monkeypatch.setattr(bun_runtime, "identity", lambda _: current)
+    prior = {"a": {"n_trials": 2, "runtime_services": [{"bun": {"identity": current}}]}}
+    assert _resume_runtime_mismatch(tmp_path, prior)
+    prior["a"]["runtime_services"] *= 2
+    assert _resume_runtime_mismatch(tmp_path, prior) is None
+    prior["b"] = {"n_trials": 1, "runtime_services": [{"bun": {"identity": {"kind": "bun"}}}]}
+    assert _resume_runtime_mismatch(tmp_path, prior)
+    prior["b"] = {"n_trials": 1}
+    assert _resume_runtime_mismatch(tmp_path, prior)
+
+
+def test_resumed_result_preserves_runtime_identity_and_capture():
+    identity = {"responses_overlay": {"sha256": "current"}}
+    services = {"bun": {"identity": identity}, "responses_capture": {"complete": True}}
+    prior = {"a": {"score": 1, "process_outcome": "completed", "runtime_services": [services]}}
+    merged = _merge_prior({}, prior)
+    assert merged["harness_runtime"] == [{"bun": identity}]
+    assert merged["runtime_diagnostics"]["a"] == services

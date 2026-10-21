@@ -133,7 +133,7 @@ def _goal(question: str, gold: dict) -> str:
         f"Write your answer to `{base.ANSWER_FILE}` in your working directory, or submit "
         f"it with\n"
         "\n"
-        f"    python3 {base.CLI_FILE} submit \"Yes\"      # or \"No\"\n"
+        f"    python3 {base.CLI_PATH} submit \"Yes\"      # or \"No\"\n"
         "\n"
         "The question above already states the answer format; follow it exactly. The\n"
         "**whole** answer is compared, so an explanation turns a correct answer into a\n"

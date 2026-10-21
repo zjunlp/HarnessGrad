@@ -74,3 +74,25 @@ def test_copy_never_clobbers_an_existing_round(tmp_path: Path) -> None:
 
     _copy_round_traces(run_dir, 0, 3)
     assert (dst / "t1.jsonl").read_text() == "this round's own\n"
+
+
+def test_identical_bun_source_requires_current_runtime_identity(tmp_path, monkeypatch):
+    from eval.containers import bun_runtime
+    from test_bun_runtime_contract import harness, fake_runtime
+    from eval.containers.responses_overlay import configure
+    repo = harness(tmp_path)
+    bun, _, calls = fake_runtime(tmp_path, monkeypatch)
+    before = bun_runtime.configure(repo)["identity"]
+    old = _point(0, "same")
+    assert _identical_prior([old], "same", 1, repo=repo) is None
+    old["env"] = {"harness_runtime": [{"bun": before}]}
+    assert _identical_prior([old], "same", 1, repo=repo) is old
+    overlay = configure(bun, tmp_path / "overlays", route="https://coding.tu-zi.com/v1/responses", mode="repair")
+    monkeypatch.setenv("HG_RESPONSES_OVERLAY", overlay["path"])
+    calls.clear()
+    assert _identical_prior([old], "same", 1, repo=repo) is None
+    old["env"]["harness_runtime"] = [{"bun": bun_runtime.identity(repo)}]
+    assert _identical_prior([old], "same", 1, repo=repo) is old
+    monkeypatch.setenv("HG_RESPONSES_OVERLAY", str(tmp_path / "absent"))
+    assert _identical_prior([old], "same", 1, repo=repo) is None
+    assert not any("install" in command for command in calls)

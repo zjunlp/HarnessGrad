@@ -12,6 +12,8 @@ would otherwise have happened.
 
 from __future__ import annotations
 
+from ckpt.source_tree import copy_harness
+
 from pathlib import Path
 import json
 import shutil
@@ -113,7 +115,7 @@ def _save_round_state(run_dir: Path, round_no: int, work: Path) -> None:
     if dest.exists():
         shutil.rmtree(dest)
     try:
-        shutil.copytree(work, dest, ignore=shutil.ignore_patterns(".git"))
+        copy_harness(work, dest, ignore=shutil.ignore_patterns(".git"))
     except OSError as exc:
         # Not fatal: the round's numbers are already recorded, and a run that measured
         # correctly must not be lost because a copy failed.

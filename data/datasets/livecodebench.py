@@ -351,7 +351,8 @@ def oracle_files(task: dict) -> dict[str, str]:
 
 
 def load() -> tuple[list[dict], dict[str, str]]:
-    tasks = [{"task_id": task_id(row["index"]), "goal": _question(row), "inputs": []}
+    tasks = [{"task_id": task_id(row["index"]), "goal": _question(row), "inputs": [],
+              "submission": {"kind": "files", "paths": ["solution.py"]}}
              for row in _INDEXED]
     # The scorable map is the human-readable grade slot. This dataset's grade is a program's
     # behaviour, so the value names the metric rather than pretending to be a gold answer.

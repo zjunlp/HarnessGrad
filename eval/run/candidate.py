@@ -65,6 +65,8 @@ def validate(repo: Path, *, base_manifest: dict | None = None) -> list[str]:
     """
     repo = Path(repo)
     problems = list(_validator().validate(repo, smoke=False))
+    from eval.containers.bun_runtime import validate_source
+    problems.extend(validate_source(repo))
     try:
         man = json.loads((repo / "harness.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):

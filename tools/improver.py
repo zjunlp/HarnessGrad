@@ -324,7 +324,7 @@ def candidates(extra: str | None = None) -> list[Candidate]:
 
 
 def _dotenv(path: Path) -> dict[str, str]:
-    """`KEY=value` 的最小读取器。见 `tools/serve_ui.py` 的同名函数。"""
+    """Read minimal `KEY=value` entries; see the same function in `tools/serve_ui.py`."""
     out: dict[str, str] = {}
     try:
         text = path.read_text(encoding="utf-8")
@@ -345,8 +345,11 @@ def requested_note(entry: dict) -> str:
 
 
 def load_config(path: Path | None = None) -> dict:
-    path = path or DEFAULT_CONFIG
+    selected = path or current_config().improver.registry
+    path = Path(selected).expanduser() if selected else DEFAULT_CONFIG
     if not path.exists():
+        if selected:
+            raise FileNotFoundError(f"configured improver registry does not exist: {path}")
         return {}
     return json.loads(path.read_text())
 
@@ -384,9 +387,9 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
     #: that the endpoint is configured; whether the *model* is good enough is a question
     #: for the smoke test, not for a version string.
     if entry.get("kind") and entry.get("kind") != "cli":
-        # `.env` 也要读:面板和 driver 是两个进程,`HG_METHOD_*` 通常只写在 `.env` 里
-        # (driver 会加载它,面板不会)。第一版只读 `os.environ`,于是面板报"没配置",
-        # 而同一个 run 明明在用这个端点。
+        # Read `.env` too: the panel and driver are separate processes, and
+        # `HG_METHOD_*` often exists only there. Reading only `os.environ` made
+        # the panel report a missing endpoint while the driver was using it.
         env = _dotenv(ROOT / ".env")
         # **A named entry's endpoint wins over `.env`, and that ordering was measured.**
         #
@@ -520,6 +523,8 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                 # and the resolution is the only place that read them off the entry.
                 "home": tool_home,
                 "api_key_env": str(entry.get("api_key_env") or ""),
+                **{key: str(entry[key]) for key in ("base_url", "provider", "profile", "wire")
+                   if entry.get(key)},
                 "model": (model_override
                           or declared_model(config, source=config_home(), entry=entry)),
                 "runtime": trees,

@@ -12,6 +12,8 @@ failed step rather than drawn on the curve.
 
 from __future__ import annotations
 
+from ckpt.source_tree import copy_harness
+
 from pathlib import Path
 import json
 import os
@@ -88,7 +90,7 @@ def _no_loadable_change(changed: list[str], unreachable: list[str]) -> dict | No
     }
 
 
-def _identical_prior(curve: list[dict], sha: str, trials: int) -> dict | None:
+def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | None = None) -> dict | None:
     """The earlier point that already measured **this exact harness**, or None.
 
     `identity.harness_sha` is a *content address* -- `ckpt.git_state.commit_state`
@@ -100,11 +102,22 @@ def _identical_prior(curve: list[dict], sha: str, trials: int) -> dict | None:
     The trials count is part of the question: a single measurement is not the mean of
     three, and reusing one for the other would answer something the run did not ask.
     """
+    from eval.containers import bun_runtime
+    try:
+        current = bun_runtime.identity(repo) if repo is not None else None
+    except bun_runtime.RuntimeUnavailable:
+        # Let normal evaluation report the unavailable runtime; never reuse scores
+        # to bypass preparation or a changed compatibility transport.
+        return None
     for point in reversed(curve):
         if (point.get("identity") or {}).get("harness_sha") != sha:
             continue
         if (point.get("sampling") or {}).get("trials", trials) != trials:
             continue
+        if current is not None:
+            records = (point.get("env") or {}).get("harness_runtime") or []
+            if not records or any(record.get("bun") != current for record in records):
+                continue
         return point
     return None
 
@@ -144,6 +157,24 @@ def _keep_endpoint_records(source: Path, run_dir: Path, round_no: int) -> None:
                      level="warn")
         return
     shutil.rmtree(source, ignore_errors=True)
+
+
+def _copy_method_round_input(work: Path, base_dir: Path) -> None:
+    """Copy source plus the freshly staged public channel for this method call.
+
+    Candidate snapshots deliberately exclude the channel for Bun. A round input has
+    a different purpose: the method needs its skill, improver identity and training
+    evidence as well as source. Copy that channel separately, preserving the source
+    snapshot rules and keeping archive paths inside the method's readable input.
+    """
+    copy_harness(work, base_dir, ignore=shutil.ignore_patterns(".git", "_harnessgrad"))
+    channel = base_dir / "_harnessgrad"
+    shutil.copytree(work / "_harnessgrad", channel, symlinks=True)
+    index_path = channel / "states" / "index.json"
+    index = json.loads(index_path.read_text())
+    for name in index["kept"]:
+        index[name]["harness_dir"] = str(channel / "states" / name)
+    index_path.write_text(json.dumps(index, indent=1))
 
 
 def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
@@ -200,7 +231,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     # decided to keep -- so the request now carries *both* and the method chooses. One copy
     # per run, made before any step, because it must not move as the run goes on.
     pristine = method_root / "base_harness"
-    shutil.copytree(work, pristine, ignore=shutil.ignore_patterns(".git"))
+    copy_harness(work, pristine, ignore=shutil.ignore_patterns(".git"))
 
     #: Rounds whose step did not finish -- the edit sequence never applied. Recorded
     #: rather than only printed: "3 rounds but 2 steps" is a fact a reader comparing two
@@ -263,7 +294,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         base_dir = (method_root / f"round{r}_base").resolve()
         if base_dir.exists():
             shutil.rmtree(base_dir)
-        shutil.copytree(work, base_dir, ignore=shutil.ignore_patterns(".git"))
+        _copy_method_round_input(work, base_dir)
 
         method_ws = (method_root / f"round{r}_ws").resolve()
         method_ws.mkdir(parents=True, exist_ok=True)
@@ -491,7 +522,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             if child.name == ".git":
                 continue
             shutil.rmtree(child) if child.is_dir() else child.unlink()
-        shutil.copytree(Path(src), work, dirs_exist_ok=True)
+        copy_harness(Path(src), work, dirs_exist_ok=True)
         # **The channel is never part of a measured tree.** `src` is method-supplied, so
         # it can name anything -- and on the error path `editor.fail` names the pristine
         # `base_dir`, which is a copy of `work` taken *after* staging and therefore
@@ -532,7 +563,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # is the most expensive way to say "no change". The point is still written -- the
         # round happened, the method's budget moves, and the curve keeps its shape -- but
         # it carries `reused_from` and the same per-task scores instead of a fresh sample.
-        prior_point = (_identical_prior(curve, sha, args.trials)
+        prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
                        if (has_manifest and getattr(args, "reuse_identical", False)) else None)
         if prior_point is not None:
             reused_from = prior_point.get("round")
@@ -545,6 +576,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                    "invalid": [], "harness_failed": [],
                    "trials": (prior_point.get("sampling") or {}).get("trials", args.trials),
                    "reused_from": reused_from,
+                   "harness_runtime": (prior_point.get("env") or {}).get("harness_runtime", []),
                    "cached_tasks": sorted(prior_point.get("per_task") or {})}
         else:
             t0 = time.time()
