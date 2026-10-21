@@ -17,8 +17,8 @@ smokes are retained, with no task tuning or budget increase authorized here.
 
 ## Dataset integration summary
 
-KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT, τ³ and CooperBench are registered
-adapters. Their READMEs define the current task scope, splits, scoring, preparation
+KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT, τ³, CooperBench and CostBench
+are registered adapters. Their READMEs define the current task scope, splits, scoring, preparation
 and controls:
 
 - [KUMO](../data/datasets/kumo/README.md)
@@ -27,11 +27,76 @@ and controls:
 - [StrongREJECT](../data/datasets/strongreject/README.md)
 - [τ³](../data/datasets/tau3_bench/README.md)
 - [CooperBench](../data/datasets/cooperbench/README.md)
+- [CostBench static](../data/datasets/costbench/README.md)
 
 The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction
 records, judge/environment model channels, repeated trials and fixed peer execution.
 Dataset tests cover these integrations; API receipts and validation artifacts are
 kept outside the repository.
+
+## CostBench static protocol — 2026-10-21
+
+The adapter targets the official `6424069f3f773ade076bcedbed302ed47cfb1837`
+release's static sequence-length-five setting: refinement level 2, no dynamic
+blocking, and tools that solve the complete task in one call disabled. Official
+train and test files remain separate. The release contains 1,912 training queries
+and 381 test queries; the paper's training count of 1,902 is not substituted for
+the released file count. The training runtime requires explicitly named enum and
+seven-digit-ID compatibility repairs: the shipped enums cover test values and
+the official answer parser recognizes five-digit IDs. The official test protocol
+and repaired training interpretation must not be pooled into a single official
+answer-accuracy claim.
+
+The full model-free gold audit executed all 2,293 retained tasks and recorded
+2,293 optimal-path matches. The unchanged official parser accepts all 381 test
+answers and rejects all 1,912 seven-digit training answers; the separately named
+training-ID-compatible check accepts all 1,912. Training answers are deliberately
+not relabelled as official parser successes.
+The original training runtime audit records 1,912/1,912 failures before the enum
+repair. Evidence: external dataset-root `gold-audit.json` (SHA256
+`7f98434190fb53a46aae338b1067f7c55bd6623e3c74ccc1baa52fb564260d89`),
+`raw-train-audit.json`, and `prepared-v1/manifest.json`; source and protocol pins
+are retained in the adapter and preparation code. These are deterministic
+reference checks, not model measurements.
+
+The primary metric is official optimal-tool-path exact match. Cost, path distance,
+answer accuracy and invalid-tool statistics remain separately identifiable with
+their official eligibility rules. Simulated tool prices are not actual model-token
+costs or a hard compute budget. CostBench adds the first `cost` function member;
+the coverage floor of two remains unmet.
+
+The adapter reuses the existing private tool relay, sealed interaction record and
+command verifier. Candidate harnesses choose their own actions; the reference
+solver and gold state remain in trusted runtime/verifier inputs. Dataset scope,
+preparation, controls and comparison limits live in the
+[CostBench README](../data/datasets/costbench/README.md). Reproducible validation
+entry point: `python3 tools/run_tests.py --dataset costbench --with-registry`.
+Source-only discovery, layout, blocker and journal checks pass (90 tests);
+`tools/check_dataset_blockers.py` validates 37 entries; CostBench-only lint and
+classification pass with 1,912 train / 381 eval tasks and a closed-loop interface.
+The broader registry tests are not all green on this host: unrelated legacy
+adapters require inaccessible `/mnt/20t/xubuqiang/datasets` data or missing
+packages/checkouts, and the import-direction guard finds existing unregistered
+edges in MemoryAgentBench, PersonaMem-v2 and StrongREJECT. Representative failures
+also reproduce on the unchanged `feat/dataset-integrations` worktree.
+The three CostBench test files pass all 62 tests with prepared data (no skips),
+including train/test gold and no-op sandbox controls, six-domain execution,
+actor scorer/record forgery attempts, malformed calls and database corruption.
+A fresh-root regeneration reproduces both complete database index hashes and
+all public/private/oracle hashes for twelve queries spanning both splits and all
+six domains. The six-domain test-evidence report smoke also passes its explicit
+cell manifest. Receipts live outside git under the dataset root in
+`integration-validation-20261021/` and `registry-validation-20261021/`.
+
+The full 37-entry download index was rendered with `tools.datasets.render_index`.
+For five legacy adapters that cannot import on this host, only their source-defined
+`downloads()` functions and literal metadata were evaluated; this preserves their
+existing entries without inventing data availability. Regeneration also restores
+the previously omitted, already registered LoCoMo download entry.
+
+No candidate-harness evaluation or full-benchmark model performance is claimed
+by registration or reference controls. Dynamic blocking remains outside this
+adapter's static protocol.
 
 ## `data/` split complete: scaffolds and datasets separated — 2026-10-14 — ds, ds2, ds3, ds4
 

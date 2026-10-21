@@ -147,6 +147,8 @@ UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
 from harnessgrad.components import COMPONENTS as FUNCTIONS  # noqa: E402
 
 EXERCISES: dict[str, tuple[str, ...]] = {
+    # Official optimal-path agreement makes tool-price planning score-relevant.
+    "costbench": ("context", "tools", "control", "cost"),
     "cooperbench": ("context", "tools", "control", "verification"),
     "kumo": ("context", "tools", "control", "verification"),
     "alfworld": ("context", "tools", "control", "recovery"),
@@ -218,8 +220,9 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
                   "platform supplies rather than the harness",
     "reliability": "one adapter (tau3_bench) reports complete-manifest pass^k; "
                    "a second independent demand is still below the coverage floor",
-    "cost": "every run is costed, but no task is budget-bounded, so spending less changes the "
-            "ledger rather than the score",
+    "cost": "one adapter (costbench static) scores tool-cost-optimal trajectories; "
+            "this is task-level tool-cost optimization, not a hard compute budget. "
+            "Coverage remains below the two-adapter floor",
 }
 
 #: Level 2 of the judged axis: the surface the demand is exercised on. Kept because a SQL task
@@ -231,6 +234,7 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
 #: than two so the levels cannot drift apart: there is no way to add a dataset to a demand and
 #: forget its surface, which a second dict keyed by the same names would allow.
 CAPABILITY: dict[str, tuple[str, str]] = {
+    "costbench": ("tool_use", "tool_dialogue"),
     "kumo": ("reasoning", "planning_and_search"),
     "cooperbench": ("artifact", "code_generation"),
     "alfworld": ("environment", "embodied_text"),
@@ -303,6 +307,7 @@ ACT_VERBS = ("do", "call", "send_message", "ack")
 #: edits this map, the tool stops and someone looks. A single source would have hidden the
 #: `agentdojo` mistake above; the derived side is what caught it.
 EXPECTED_INTERACTION = {
+    "costbench": "closed_loop",
     "cooperbench": "closed_loop",
     "agentdojo": "closed_loop",
     "kumo": "closed_loop",

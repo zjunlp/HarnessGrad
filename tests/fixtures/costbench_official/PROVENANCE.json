@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/JiayuJeff/CostBench",
+  "revision": "6424069f3f773ade076bcedbed302ed47cfb1837",
+  "path": "env/utils/eval.py",
+  "sha256": "d40872c4bbbcbbe99cb0e64cc011dc2e19a6b1c464b2ab71143709d751303aac",
+  "purpose": "Verbatim official scorer transcription for differential and drift tests. Static path and cost logic lives at lines 284-442 and 577-1208. No changes to the copied source."
+}

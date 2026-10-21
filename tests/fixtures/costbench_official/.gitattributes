@@ -1,0 +1,2 @@
+# Keep the upstream scorer byte-for-byte identical to its pinned SHA-256.
+eval.py -whitespace
