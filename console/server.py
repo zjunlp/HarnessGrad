@@ -534,13 +534,33 @@ def meta_harnesses() -> list[dict]:
 
 
 def improvers() -> list[dict]:
+    """The meta side: which improver harness may drive an edit, and which models it can use.
+
+    `improvers.json` is the platform's full registry -- it also holds improvers this console is not
+    meant to launch (a bare OpenAI-compatible endpoint, a local stub). What the launcher offers is
+    declared in `improvers/launchable.json`: one entry per usable *harness*, with the name the
+    operator sees. The record still stores the registry id (`dsh`), because `--improver` and every
+    curve point use it -- only the label changes.
+    """
     data = read_json(PLATFORM / "improvers" / "improvers.json")
     wanted = data.get("improvers") if isinstance(data.get("improvers"), dict) else {}
+    declared = read_json(PLATFORM / "improvers" / "launchable.json").get("improvers")
     out = []
+    if isinstance(declared, list) and declared:
+        for row in declared:
+            name = str(row.get("name") or "") if isinstance(row, dict) else str(row or "")
+            spec = wanted.get(name) if isinstance(wanted.get(name), dict) else {}
+            if not name or not spec:
+                continue
+            out.append({"name": name,
+                        "label": str((row or {}).get("label") or name) if isinstance(row, dict) else name,
+                        "model": spec.get("model") or "", "kind": spec.get("kind") or ""})
+        return out
     for name, spec in sorted(wanted.items()):
         if not isinstance(spec, dict):
             continue
-        out.append({"name": name, "model": spec.get("model") or "", "kind": spec.get("kind") or ""})
+        out.append({"name": name, "label": name, "model": spec.get("model") or "",
+                    "kind": spec.get("kind") or ""})
     return out
 
 

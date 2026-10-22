@@ -182,7 +182,7 @@
       <label for="c-tm">task-model</label>
       <select id="c-tm">${(FORM.task_models || []).map((m) => `<option${m === card.task_model ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>
       <label for="c-mh">meta-harness</label>
-      <select id="c-mh">${FORM.improvers.map((x) => `<option value="${esc(x.name)}"${x.name === card.improver ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>
+      <select id="c-mh">${FORM.improvers.map((x) => `<option value="${esc(x.name)}"${x.name === card.improver ? " selected" : ""}>${esc(x.label || x.name)}</option>`).join("")}</select>
       <label for="c-mm">meta-model</label>
       <select id="c-mm">${(FORM.meta_models || []).map((m) => `<option${m === card.improver_model ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>
       <label for="c-r">轮数</label><input id="c-r" type="number" min="1" max="20" value="${esc(card.rounds)}">
