@@ -119,7 +119,12 @@
         if (skill.args) openCard(skill.args);
       }
     } catch (e) {
-      s.msgs.push({ role: "system", content: `提交失败：${e.message}` });
+      // **The real reason, and where it was sent.** "Failed to fetch" with no context is what made
+      // this look like a server bug: the message itself says whether it was a refused connection,
+      // an aborted request or a page from another origin.
+      s.msgs.push({ role: "system",
+        content: `提交失败：${e && e.message ? e.message : e}（页面 ${location.origin} → /api/chat；` +
+                 `console 刚重启过的话刷新页面再试）` });
     }
     busy = false; save(); render();
   }
@@ -138,8 +143,9 @@
   async function openCard(prefill) {
     if (!FORM) FORM = await (await fetch("/api/launch/form")).json();
     const d = FORM.defaults;
-    card = { dataset: d.dataset, harness: d.harness, rounds: d.rounds, jobs: d.jobs, trials: d.trials,
-             sampling: d.sampling, improver: (FORM.improvers[0] || {}).name || "dsh",
+    card = { dataset: d.dataset, harness: d.harness, task_model: d.task_model || "",
+             rounds: d.rounds, jobs: d.jobs, trials: d.trials, sampling: d.sampling,
+             improver: (FORM.improvers[0] || {}).name || "dsh",
              improver_model: (FORM.improvers[0] || {}).model || "" };
     for (const k of Object.keys(card)) {
       if (prefill && prefill[k] !== undefined && prefill[k] !== null) card[k] = prefill[k];
@@ -155,10 +161,14 @@
     $("#fields3").innerHTML = `
       <label for="c-ds">数据集</label>
       <select id="c-ds">${FORM.datasets.map((x) => `<option value="${esc(x.name)}"${x.name === card.dataset ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>
-      <label for="c-h">基线 harness</label>
+      <label for="c-h">task-harness</label>
       <select id="c-h">${FORM.harnesses.map((h) => `<option${h === card.harness ? " selected" : ""}>${esc(h)}</option>`).join("")}</select>
-      <label for="c-imp">改进器</label>
-      <select id="c-imp">${FORM.improvers.map((x) => `<option value="${esc(x.name)}|${esc(x.model)}"${x.name === card.improver ? " selected" : ""}>${esc(x.name)}${x.model ? " + " + esc(x.model) : ""}</option>`).join("")}</select>
+      <label for="c-tm">task-model</label>
+      <select id="c-tm">${(FORM.task_models || []).map((m) => `<option${m === card.task_model ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>
+      <label for="c-mh">meta-harness</label>
+      <select id="c-mh">${FORM.improvers.map((x) => `<option value="${esc(x.name)}"${x.name === card.improver ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>
+      <label for="c-mm">meta-model</label>
+      <select id="c-mm">${(FORM.meta_models || []).map((m) => `<option${m === card.improver_model ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>
       <label for="c-r">轮数</label><input id="c-r" type="number" min="1" max="20" value="${esc(card.rounds)}">
       <label for="c-j">并发</label><input id="c-j" type="number" min="1" max="64" value="${esc(card.jobs)}">
       <label for="c-t">trials</label><input id="c-t" type="number" min="1" max="3" value="${esc(card.trials)}">`;
@@ -166,13 +176,19 @@
       const el = $(sel); if (!el) return;
       el[`on${event}`] = () => { card[key] = cast ? cast(el.value) : el.value; refreshCard(); };
     };
-    on("#c-ds", "dataset"); on("#c-h", "harness");
+    on("#c-ds", "dataset"); on("#c-h", "harness"); on("#c-tm", "task_model");
     on("#c-r", "rounds", Number, "input"); on("#c-j", "jobs", Number, "input");
     on("#c-t", "trials", Number, "input");
-    $("#c-imp").onchange = () => {
-      const [name, model] = $("#c-imp").value.split("|");
-      card.improver = name; card.improver_model = model; refreshCard();
+    on("#c-mh", "improver");
+    // The meta-model list is what the chosen improver can drive, so it is rebuilt on change and
+    // an unlisted model falls back to the improver's own first entry.
+    $("#c-mh").onchange = () => {
+      card.improver = $("#c-mh").value;
+      const row = (FORM.improvers || []).find((x) => x.name === card.improver) || {};
+      if (!(FORM.meta_models || []).includes(card.improver_model)) card.improver_model = row.model || "";
+      renderCard(); refreshCard();
     };
+    $("#c-mm").onchange = () => { card.improver_model = $("#c-mm").value; refreshCard(); };
   }
 
   async function refreshCard() {
@@ -186,18 +202,24 @@
       setState("bad", `${label}必须是 ${lo}..${hi} 的整数`, false);
       return;
     }
-    const q = new URLSearchParams({ dataset: card.dataset, harness: card.harness, rounds: card.rounds,
-      jobs: card.jobs, trials: card.trials, improver: card.improver, improver_model: card.improver_model,
-      sampling: card.sampling });
+    const q = new URLSearchParams({ dataset: card.dataset, harness: card.harness,
+      task_model: card.task_model, rounds: card.rounds, jobs: card.jobs, trials: card.trials,
+      improver: card.improver, improver_model: card.improver_model, sampling: card.sampling });
     try {
       const r = await fetch(`/api/launch/preview?${q}`);
       const d = await r.json();
       if (seq !== previewSeq) return;
       $("#cmd3").textContent = (d.argv || []).map((a) => (/[\s"]/.test(a) ? JSON.stringify(a) : a)).join(" ");
-      const preflight = d.preflight || {};
+      const preflight = d.preflight;
+      if (!preflight) {
+        // A server that predates the preflight has no such key: say so, instead of blaming an
+        // "unknown reason" that the operator cannot act on.
+        setState("bad", "服务端没有返回预检查结果：console 是旧进程，重启 console/server.py 后重试", false);
+        return;
+      }
       setState(preflight.ok ? "ok" : "bad", preflight.ok
         ? "预检查通过，可以起跑"
-        : `预检查未通过：${preflight.detail || preflight.error || "未知原因"}`,
+        : `预检查未通过：${preflight.detail || preflight.error || ("HTTP " + (preflight.status || "?"))}`,
       Boolean(preflight.ok));
     } catch {
       if (seq !== previewSeq) return;
@@ -232,8 +254,77 @@
     save(); render();
   }
 
+  /* ── 设置（两个 endpoint） ──────────────────────────── */
+  // Two sides, deliberately separate: `task` is the model the study's harness calls, `chat` is the
+  // model this panel calls. The key is never sent to the page -- the form shows "已配置" and a blank
+  // field means "keep the stored one".
+  async function openSettings() {
+    let d = {};
+    try { d = await (await fetch("/api/settings")).json(); }
+    catch (e) { $("#state4").textContent = `读不到设置：${e.message}`; }
+    const fill = (side) => {
+      const row = d[side] || {};
+      $(`#s-${side}-url`).value = row.base_url || "";
+      $(`#s-${side}-model`).value = row.model || "";
+      const key = $(`#s-${side}-key`);
+      key.value = "";
+      key.placeholder = row.api_key_set ? "已配置（留空 = 不修改）" : "未配置";
+      $(`#s-${side}-state`).textContent = "";
+    };
+    fill("task"); fill("chat");
+    $("#state4").textContent = "";
+    $("#mask4").dataset.open = "true";
+  }
+  function closeSettings() { $("#mask4").dataset.open = "false"; }
+
+  async function probeSide(side) {
+    const state = $(`#s-${side}-state`);
+    state.textContent = "测试中…";
+    try {
+      const r = await fetch("/api/settings/test", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ side, base_url: $(`#s-${side}-url`).value.trim(),
+                               api_key: $(`#s-${side}-key`).value.trim() }) });
+      const d = await r.json();
+      state.textContent = d.ok ? `可用，${d.count} 个模型：${(d.models || []).slice(0, 4).join(", ")}`
+                               : `失败：${d.detail || "未知"}`;
+      state.dataset.kind = d.ok ? "ok" : "bad";
+    } catch (e) {
+      state.textContent = `失败：${e.message}`;
+      state.dataset.kind = "bad";
+    }
+  }
+
+  async function saveSettings() {
+    const payload = {};
+    for (const side of ["task", "chat"]) {
+      payload[side] = {
+        base_url: $(`#s-${side}-url`).value.trim(),
+        model: $(`#s-${side}-model`).value.trim(),
+        api_key: $(`#s-${side}-key`).value.trim(),     // blank = keep
+      };
+    }
+    try {
+      const r = await fetch("/api/settings", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || d.error || r.status);
+      $("#state4").textContent = "已保存";
+      FORM = await (await fetch("/api/launch/form")).json();   // the model lists may have changed
+      if (card) renderCard();
+      await status();
+    } catch (e) { $("#state4").textContent = `保存失败：${e.message}`; }
+  }
+
   /* ── 绑定 ─────────────────────────────────────────── */
   $("#send").onclick = send;
+  $("#open-settings").onclick = (e) => { e.preventDefault(); openSettings(); };
+  $("#close4").onclick = closeSettings;
+  $("#save4").onclick = saveSettings;
+  for (const side of ["task", "chat"]) {
+    const btn = document.querySelector(`[data-probe="${side}"]`);
+    if (btn) btn.onclick = () => probeSide(side);
+  }
   $("#say").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   });

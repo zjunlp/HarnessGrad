@@ -455,3 +455,6 @@ console/.launch-log.jsonl
 # Local model credentials for the console's chat. Never committed: the key lives here and
 # only the server reads it.
 console/.local/
+
+# the console's endpoint settings live here and carry API keys
+.local/

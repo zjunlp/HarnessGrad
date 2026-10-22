@@ -486,11 +486,51 @@ def adapters() -> list[dict]:
 
 
 def base_harnesses() -> list[str]:
+    """The task harnesses this console may launch.
+
+    `base_harness/` also holds the platform's own probes and the improver agents
+    (`cli_agent`, `codex_agent`, `dsh_agent`, `oracle`, …): they are harnesses, but they are not
+    task harnesses, and offering them in the launcher invited a run whose baseline was an
+    improver. The launchable set is declared in `base_harness/launchable.json`; when that file is
+    missing the console falls back to every directory, which keeps an older checkout usable.
+    """
     root = PLATFORM / "base_harness"
     if not root.is_dir():
         return []
+    declared = read_json(root / "launchable.json").get("harnesses")
+    if isinstance(declared, list) and declared:
+        return [str(name) for name in declared
+                if (root / str(name) / "harness.json").is_file()]
     return sorted(p.name for p in root.iterdir()
                   if p.is_dir() and (p / "harness.json").is_file())
+
+
+def task_models() -> list[str]:
+    """The task-agent models the launcher offers.
+
+    The driver takes the task model as `HG_AGENT_MODEL` on the process, not as a flag, so the
+    console has to know the value it will pass. `mock` is listed because the demo's whole point is
+    that it needs no endpoint; the rest comes from the platform's own configuration, so the two
+    cannot drift.
+    """
+    names = ["mock"]
+    settings = load_settings()
+    if settings["task"].get("model"):
+        names.append(settings["task"]["model"])
+    try:
+        sys.path.insert(0, str(PLATFORM))
+        from harnessgrad.config import current_config          # type: ignore
+        configured = current_config().agent.model
+        if configured:
+            names.append(str(configured))
+    except Exception:  # noqa: BLE001 - a console without the package still lists `mock`
+        pass
+    return list(dict.fromkeys(names))
+
+
+def meta_harnesses() -> list[dict]:
+    """The improver harnesses, each with the models it can drive. One choice per side."""
+    return improvers()
 
 
 def improvers() -> list[dict]:
@@ -532,7 +572,13 @@ def live_drivers_by_run() -> dict[str, dict]:
             argv = [a.decode("utf-8", "replace") for a in (entry / "cmdline").read_bytes().split(b"\0") if a]
         except OSError:
             continue
-        if not any(a.endswith("driver.py") or a == "driver.py" for a in argv):
+        # **A driver, not a process that mentions one.** `bwrap` re-executes the driver's argv
+        # inside the namespace with `/proc/self/fd/N` as its argv[0], and those children were
+        # being reported as extra drivers -- measured: one 4-cell sweep produced 80 "live drivers"
+        # and a preflight that read like a wall of run ids.
+        if not any(a.endswith("driver.py") for a in argv):
+            continue
+        if not any(a in ("--dataset", "--run-id", "--from-run") for a in argv):
             continue
         run_id = ""
         if "--run-id" in argv:
@@ -546,6 +592,90 @@ def live_drivers_by_run() -> dict[str, dict]:
 #: key 只在服务端：浏览器拿到的是回复，不是凭证。缺这个文件时接口返回 503，
 #: 界面显示"未配置"，而不是假装能聊。
 LLM_CONFIG = ROOT / ".local" / "llm.json"
+#: The launcher's own configuration: the endpoint the *task agent* calls, and the endpoint the
+#: *chat* panel calls. Kept out of the repository (`.local/` is ignored) because both carry a key.
+SETTINGS = ROOT / ".local" / "settings.json"
+
+#: Two sides, two endpoints, and they are not the same thing: the task agent is the model the
+#: study's harness calls (a local VLLM server here), the chat panel is whatever model answers the
+#: operator (a hosted API). Merging them was how a launch could measure a different model than the
+#: form showed.
+SETTINGS_SIDES = ("task", "chat")
+
+
+def load_settings() -> dict:
+    """`{task: {...}, chat: {...}}`, file first, then the environment, then nothing.
+
+    Never returns a secret to a caller that is going to serialize it without thinking: the API
+    layer redacts `api_key` before a response (`settings_for_ui`).
+    """
+    data = read_json(SETTINGS)
+    chat_fallback = read_json(LLM_CONFIG)
+    out = {}
+    for side in SETTINGS_SIDES:
+        block = dict(data.get(side) or {})
+        if side == "chat" and not block.get("base_url"):
+            block = {**chat_fallback, **{k: v for k, v in block.items() if v}}
+        out[side] = {
+            "base_url": str(block.get("base_url") or "").strip(),
+            "api_key": str(block.get("api_key") or "").strip(),
+            "model": str(block.get("model") or "").strip(),
+        }
+    out["task"]["base_url"] = out["task"]["base_url"] or os.environ.get(
+        "HG_CONSOLE_TASK_BASE_URL", "").strip() or "http://127.0.0.1:8002/v1"
+    out["task"]["api_key"] = out["task"]["api_key"] or os.environ.get(
+        "HG_CONSOLE_TASK_API_KEY", "").strip() or "local"
+    return out
+
+
+def save_settings(payload: dict) -> dict:
+    """Write what the form sent, keeping a value the form left blank.
+
+    A blank field means "do not change it" -- a UI that echoed the redacted key back would
+    otherwise erase the key every time the operator changed only the model name.
+    """
+    current = load_settings()
+    merged = {}
+    for side in SETTINGS_SIDES:
+        incoming = payload.get(side) or {}
+        block = dict(current[side])
+        for key in ("base_url", "api_key", "model"):
+            value = str(incoming.get(key) or "").strip()
+            if value:
+                block[key] = value
+        merged[side] = block
+    SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS.write_text(json.dumps(merged, indent=1) + "\n", encoding="utf-8")
+    try:
+        SETTINGS.chmod(0o600)
+    except OSError:
+        pass
+    return merged
+
+
+def settings_for_ui() -> dict:
+    """What the form may see: the values, and whether a key is set -- never the key itself."""
+    data = load_settings()
+    return {side: {"base_url": data[side]["base_url"], "model": data[side]["model"],
+                   "api_key_set": bool(data[side]["api_key"])}
+            for side in SETTINGS_SIDES}
+
+
+def probe_endpoint(base_url: str, api_key: str) -> dict:
+    """`GET {base_url}/models` -- the cheapest question that distinguishes "wrong URL" from "no key"."""
+    if not base_url:
+        return {"ok": False, "detail": "base_url 为空"}
+    url = base_url.rstrip("/") + "/models"
+    request = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {api_key or 'none'}",
+        "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            body = json.loads(response.read().decode("utf-8", "replace"))
+    except Exception as exc:  # noqa: BLE001 - the message is the answer
+        return {"ok": False, "detail": f"{type(exc).__name__}: {str(exc)[:200]}"}
+    names = [row.get("id") for row in (body.get("data") or []) if isinstance(row, dict)]
+    return {"ok": True, "models": names[:40], "count": len(names)}
 
 CHAT_SYSTEM = """你是 HarnessGrad 实验台的助手。这个平台在一个共享机器上跑"改 harness"的实验:
 给定数据集与基线 harness,一个改进器(improver)多轮地改这个 harness,每轮用平台自己的
@@ -577,6 +707,10 @@ CHAT_SYSTEM = """你是 HarnessGrad 实验台的助手。这个平台在一个�
 
 
 def llm_config() -> dict | None:
+    """The chat side's endpoint: the settings file first, the old `.local/llm.json` as fallback."""
+    chat = load_settings()["chat"]
+    if chat.get("base_url") and chat.get("api_key"):
+        return chat
     data = read_json(LLM_CONFIG)
     if not data.get("api_key") or not data.get("base_url"):
         return None
@@ -640,10 +774,19 @@ def api_chat(messages: list[dict]) -> tuple[int, dict]:
 def launch_form() -> dict:
     """选择器的取值全部来自平台自己，不写死。"""
     names = adapters()
-    return {"datasets": names, "harnesses": base_harnesses(), "improvers": improvers(),
-            "pools": list(POOLS), "defaults": {"dataset": "alfworld", "harness": "loop",
-                                             "rounds": 10, "jobs": 12, "trials": 1,
-                                             "sampling": "all"}}
+    improver_rows = improvers()
+    return {"datasets": names, "harnesses": base_harnesses(),
+            "task_models": task_models(),
+            # The improver used to be one dropdown that packed "harness + model" into one value.
+            # They are two decisions -- which improver harness runs, and which model it drives --
+            # so the form asks for them separately and `launch_argv` maps them back onto the
+            # driver's `--improver` / `--improver-model`.
+            "improvers": improver_rows,
+            "meta_models": sorted({row["model"] for row in improver_rows if row["model"]}),
+            "pools": list(POOLS),
+            "defaults": {"dataset": "alfworld", "harness": "loop",
+                         "task_model": (task_models()[-1] if task_models() else "mock"),
+                         "rounds": 10, "jobs": 12, "trials": 1, "sampling": "all"}}
 
 
 def launch_argv(form: dict, run_id: str) -> list[str]:
@@ -664,6 +807,24 @@ def launch_argv(form: dict, run_id: str) -> list[str]:
             "--runs-root", str(RUNS),
             "--gpu-budget", str(jobs),
             "--gpu-budget-dir", str(BUDGET_DIR)]
+
+
+def launch_env(form: dict) -> dict:
+    """Environment the driver needs that has no CLI flag.
+
+    `--harness` names the task harness; the *model* that harness calls is `HG_AGENT_MODEL`, read by
+    `harnessgrad.identity`. The console used to inherit whatever the server had, which is how a
+    launch could quietly measure a different model than the form showed.
+    """
+    task = load_settings()["task"]
+    env = {}
+    if form.get("task_model"):
+        env["HG_AGENT_MODEL"] = str(form["task_model"])
+    if task.get("base_url"):
+        env["HG_AGENT_BASE_URL"] = task["base_url"]
+    if task.get("api_key"):
+        env["HG_AGENT_API_KEY"] = task["api_key"]
+    return env
 
 
 def new_run_id(form: dict) -> str:
@@ -701,9 +862,20 @@ def guard_launch(form: dict) -> tuple[int, dict]:
         return 400, {"error": "unknown-dataset",
                      "detail": f"{form.get('dataset')!r} 不是 KIND=dataset 的适配器"}
     if form.get("harness") not in set(base_harnesses()):
-        return 400, {"error": "unknown-harness", "detail": "基线 harness 不存在"}
+        return 400, {"error": "unknown-harness",
+                     "detail": f"task-harness {form.get('harness')!r} 不在可启动清单里"}
+    if not form.get("task_model"):
+        return 400, {"error": "no-task-model",
+                     "detail": "必须在「设置」里配置 task endpoint 的模型名"}
+    if form["task_model"] not in set(task_models()):
+        return 400, {"error": "unknown-task-model",
+                     "detail": f"task-model {form['task_model']!r} 不在设置里的模型清单中"}
     if not form.get("improver"):
-        return 400, {"error": "no-improver", "detail": "train 侧必须指定改进器"}
+        return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
+    if form.get("improver_model") and form["improver_model"] not in set(
+            row["model"] for row in improvers() if row["model"]):
+        return 400, {"error": "unknown-meta-model",
+                     "detail": f"meta-model {form['improver_model']!r} 不是任何改进器声明的模型"}
     for key, lo, hi in (("rounds", 1, 20), ("jobs", 1, 64), ("trials", 1, 3)):
         try:
             value = int(form[key])
@@ -724,7 +896,8 @@ def api_launch(form: dict) -> tuple[int, dict]:
     log_path = LAUNCH_DIR / f"{run_id}.log"
     with log_path.open("ab") as handle:
         subprocess.Popen(argv, stdout=handle, stderr=subprocess.STDOUT,
-                         start_new_session=True, cwd=str(PLATFORM))
+                         start_new_session=True, cwd=str(PLATFORM),
+                         env={**os.environ, **launch_env(form)})
     with LAUNCH_LOG.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                                  "run_id": run_id, "argv": argv, "by": "console chat"},
@@ -742,8 +915,11 @@ def launch_preview(form: dict) -> dict:
         if code == 200:
             code = 400
             err = {"error": "bad-value", "detail": "运行参数不完整或格式不正确"}
+    shown_env = {key: ("***" if "KEY" in key or "key" in key else value)
+                 for key, value in launch_env(form).items()}
     return {
         "argv": argv,
+        "env": shown_env,
         "form": form,
         "preflight": {"ok": code == 200, "status": code, **err},
     }
@@ -2608,6 +2784,17 @@ class Handler(BaseHTTPRequestHandler):
                                    "base_url": (cfg or {}).get("base_url")})
             if parts[1:] == ["launch", "form"]:
                 return self._send(launch_form())
+            if parts[1:] == ["settings"]:
+                return self._send(settings_for_ui())
+            if parts[1:] == ["settings", "test"]:
+                body = self._json_body() or {}
+                side = str(body.get("side") or "task")
+                if side not in SETTINGS_SIDES:
+                    return self._send({"error": "unknown-side"}, 400)
+                current = load_settings().get(side, {})
+                base_url = str(body.get("base_url") or current.get("base_url") or "")
+                api_key = str(body.get("api_key") or current.get("api_key") or "")
+                return self._send(probe_endpoint(base_url, api_key))
             if parts[1:] == ["launch", "preview"]:
                 # 预览和起跑共用 launch_argv() 与 guard_launch()，只是 run_id 用占位符。
                 base = launch_form()["defaults"]
@@ -2679,8 +2866,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._send({"error": str(exc)}, 500)
         return self._error("unknown endpoint", 404)
 
+    def _json_body(self) -> dict | None:
+        """The request body as an object, or None when it is not one."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(length) if length else b"{}"
+            body = json.loads(raw.decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError):
+            return None
+        return body if isinstance(body, dict) else None
+
     def do_POST(self) -> None:  # noqa: N802
-        """控制台唯一的写接口：起一次实验。别的一律 404。"""
+        """The console's write surface: one launch, one chat, and the endpoint settings."""
         url = urlparse(self.path)
         route = url.path.strip("/")
         if route == "api/chat":
@@ -2694,6 +2891,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"error": "bad-json", "detail": str(exc)}, 400)
             code, payload = api_chat(messages)
             return self._send(payload, code)
+        if route == "api/settings":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            save_settings(body)
+            return self._send(settings_for_ui())
+        if route == "api/settings/test":
+            body = self._json_body() or {}
+            side = str(body.get("side") or "task")
+            if side not in SETTINGS_SIDES:
+                return self._send({"error": "unknown-side"}, 400)
+            current = load_settings().get(side, {})
+            base_url = str(body.get("base_url") or current.get("base_url") or "")
+            api_key = str(body.get("api_key") or current.get("api_key") or "")
+            return self._send(probe_endpoint(base_url, api_key))
         if route != "api/runs":
             return self._send({"error": "unknown endpoint"}, 404)
         try:
