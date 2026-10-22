@@ -98,16 +98,16 @@ DEMANDS = ("evidence", "reasoning", "tool_use", "artifact", "environment", "memo
 #: Harness has to provide: a Harness with no store cannot attempt these tasks at all, and can
 #: still attempt every evidence task ever onboarded.
 #:
-#: The two surfaces are `authored_store`, where the Harness builds and maintains the store
-#: itself, and `supplied_history`, where the interaction history is provided and the demand is
-#: to retain it. Five candidates were screened against the platform's hard constraints in
-#: `docs/survey/notes/harnessgrad_memory_domain_report.md` and none is onboarded as of this
-#: revision: LoCoMo-MC10, PersonaMem v1, LaMP, MemoryAgentBench (deterministic sub-tasks), and
-#: LongMemEval's retrieval-recall variant. LongMemEval's QA headline, HaluMem, StructMemEval
-#: and LaMP-QA stay refused: their headline is an LLM judge, or in HaluMem's case a product of
-#: two judge scores.
-UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {
-    "memory": ("authored_store", "supplied_history"),
+#: PersonaMem-v2 uses `supplied_history`: the platform provides an
+#: ordered stream, while the Harness chooses how to retain and use it for later questions.
+#: The adapter does not require a particular store representation or memory algorithm.
+UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
+
+#: Explicit coverage limits for populated demands below MIN_MEMBERS_PER_DEMAND.
+#: Remove a limit when a second independent adapter covers the demand.
+UNDERREPRESENTED_DEMANDS: dict[str, str] = {
+    "memory": "PersonaMem-v2 is the first adapter; a second independent memory dataset "
+              "is still needed to meet the coverage floor.",
 }
 
 #: The harness functions a dataset can make score-relevant: if you changed that component in a
@@ -175,6 +175,9 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     # Harbor delivers the complete conversation at task start; the score tests
     # selecting evidence from that static history, not incremental retention.
     "locomo": ("context",),
+    # Fixed next/ack/submit delivery advances state, but does not test action
+    # planning or stopping decisions. Closed-loop interaction alone is not control coverage.
+    "personamem_v2": ("context", "memory"),
     "appworld": ("context", "tools", "control", "recovery"),
     "bird_minidev": ("context", "tools", "verification"),
     "physicsquestions": ("context", "verification"),
@@ -249,6 +252,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "twowikimultihopqa": ("evidence", "information_seeking"),
     "livecodebench": ("artifact", "code_generation"),
     "locomo": ("evidence", "long_context"),
+    "personamem_v2": ("memory", "supplied_history"),
     "appworld": ("tool_use", "tool_dialogue"),
     "bird_minidev": ("artifact", "text_to_sql"),
     "physicsquestions": ("reasoning", "reasoning"),
@@ -285,10 +289,11 @@ ADVERSARIAL = frozenset({"agentdojo"})
 #: between a dataset a scaffold can iterate inside and one it can only answer once.
 #:
 #: The vocabulary is closed and each entry names where it came from: `alf`, `scw` and `jer`
-#: expose `do "<action>"`, and `dojo` exposes `call '<json>'`. A dataset that ships a *new*
+#: expose `do "<action>"`, and `dojo` exposes `call '<json>'`. Memory adapters expose `ack`,
+#: which advances the private input stream. A dataset that ships a *new*
 #: action verb therefore fails the check below rather than being silently misclassified --
 #: which is what happened to `agentdojo` when this list held only `do`.
-ACT_VERBS = ("do", "call")
+ACT_VERBS = ("do", "call", "ack")
 
 #: The judged value, declared, and asserted equal to the derived one by `classify_all()`.
 #: Two independent sources that must agree: if a shipped CLI changes its surface, or someone
@@ -313,6 +318,7 @@ EXPECTED_INTERACTION = {
     "twowikimultihopqa": "single_shot",
     "livecodebench": "single_shot",
     "locomo": "single_shot",
+    "personamem_v2": "closed_loop",
     "bird_minidev": "single_shot",
     "physicsquestions": "single_shot",
     "scienceworld": "closed_loop",
@@ -334,13 +340,14 @@ MIN_MEMBERS_PER_DEMAND = 2
 _ACT_PATTERN = re.compile(
     r"^\s*(?:python3\s+\S+\s+)?(?:" + "|".join(ACT_VERBS) + r")\b", re.M)
 
-#: How a shipped CLI declares its verb set. Both spellings are declarations *in the program*,
+#: How a shipped CLI declares its verb set. These spellings are declarations *in the program*,
 #: which is why they are read instead of the prose in the module docstring: `dojo` documents
 #: "tools, call, and submit" in a sentence and lists them in `choices`, and the sentence is not
 #: a thing a program can rely on.
 _VERB_PATTERNS = (
     re.compile(r"choices\s*=\s*\[([^\]]*)\]"),
     re.compile(r"""command\s*==\s*["']([a-z_]+)["']"""),
+    re.compile(r"""\.add_parser\(\s*["']([a-z_]+)["']"""),
 )
 
 
@@ -512,9 +519,13 @@ def _check_judged_axis(rows: list[dict]) -> None:
 
     # And a covered demand has to be a category rather than a private name for one dataset.
     thin = {d: n for d, n in counts.items() if n and n < MIN_MEMBERS_PER_DEMAND}
-    if thin:
+    stale_limits = sorted(set(UNDERREPRESENTED_DEMANDS) - set(thin))
+    if stale_limits or any(not reason.strip() for reason in UNDERREPRESENTED_DEMANDS.values()):
+        raise SystemExit(f"stale or unexplained demand coverage limits: {stale_limits}")
+    unrecorded = {d: n for d, n in thin.items() if d not in UNDERREPRESENTED_DEMANDS}
+    if unrecorded:
         raise SystemExit(
-            f"these demands hold fewer than {MIN_MEMBERS_PER_DEMAND} datasets: {thin}. The "
+            f"these demands hold fewer than {MIN_MEMBERS_PER_DEMAND} datasets: {unrecorded}. The "
             f"flat vocabulary this replaced ended with seven one-dataset buckets; a new "
             f"benchmark either belongs to an existing demand or the demand is wrong.")
 

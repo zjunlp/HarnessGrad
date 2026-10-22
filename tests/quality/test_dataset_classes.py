@@ -37,6 +37,15 @@ def _rows() -> list[dict]:
     return dataset_classes.classify_all()
 
 
+def _declared_rows() -> list[dict]:
+    """Read the judged axis without requiring every dataset's external task pool."""
+    return [
+        {"dataset": name, "demand": demand, "surface": surface,
+         "exercises": list(dataset_classes.EXERCISES[name])}
+        for name, (demand, surface) in dataset_classes.CAPABILITY.items()
+    ]
+
+
 def test_every_published_dataset_is_classified_exactly_once():
     rows = _rows()
     names = [row["dataset"] for row in rows]
@@ -71,8 +80,8 @@ def test_no_demand_is_a_private_name_for_one_dataset():
     """
     rows = _rows()
     for demand in dataset_classes.DEMANDS:
-        if demand in dataset_classes.UNCOVERED_DEMANDS:
-            continue  # a declared gap is a different state, checked below
+        if demand in dataset_classes.UNCOVERED_DEMANDS or demand in dataset_classes.UNDERREPRESENTED_DEMANDS:
+            continue  # uncovered/underrepresented demands are checked explicitly below
         members = [row["dataset"] for row in rows if row["demand"] == demand]
         assert len(members) >= dataset_classes.MIN_MEMBERS_PER_DEMAND, (
             f"demand {demand!r} holds {members}; a one-dataset demand is a name, not a "
@@ -92,45 +101,37 @@ def test_an_uncovered_demand_is_declared_and_holds_no_adapters():
             f"{demand!r} is a gap with no recorded shape")
 
 
-def test_a_silent_gap_is_refused():
-    """Dropping the declaration must be loud, not a quiet claim of full coverage."""
-    original = dict(dataset_classes.UNCOVERED_DEMANDS)
-    try:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "memory" in str(excinfo.value)
-    finally:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        dataset_classes.UNCOVERED_DEMANDS.update(original)
-    assert dataset_classes.classify_all()  # restored
+def test_a_silent_gap_is_refused(monkeypatch):
+    """Removing a demand's adapters must not silently claim complete coverage."""
+    dataset_classes._check_judged_axis(_declared_rows())
+    remaining = {name: pair for name, pair in dataset_classes.CAPABILITY.items()
+                 if pair[0] != "memory"}
+    monkeypatch.setattr(dataset_classes, "CAPABILITY", remaining)
+    monkeypatch.setattr(dataset_classes, "UNCOVERED_DEMANDS", {})
+    with pytest.raises(SystemExit, match="no datasets.*memory"):
+        dataset_classes._check_judged_axis(_declared_rows())
 
 
-def test_a_stale_coverage_declaration_is_refused():
+def test_a_stale_coverage_declaration_is_refused(monkeypatch):
     """The other direction: a demand that gains an adapter must lose its gap entry."""
-    original = dict(dataset_classes.UNCOVERED_DEMANDS)
-    try:
-        dataset_classes.UNCOVERED_DEMANDS["reasoning"] = ("reasoning",)
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "reasoning" in str(excinfo.value)
-    finally:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        dataset_classes.UNCOVERED_DEMANDS.update(original)
-    assert dataset_classes.classify_all()  # restored
+    monkeypatch.setattr(dataset_classes, "UNCOVERED_DEMANDS",
+                        {"memory": ("supplied_history",)})
+    with pytest.raises(SystemExit, match="now hold datasets.*memory"):
+        dataset_classes._check_judged_axis(_declared_rows())
 
 
-def test_a_gap_with_no_recorded_shape_is_refused():
-    original = dict(dataset_classes.UNCOVERED_DEMANDS)
-    try:
-        dataset_classes.UNCOVERED_DEMANDS["memory"] = ()
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "memory" in str(excinfo.value)
-    finally:
-        dataset_classes.UNCOVERED_DEMANDS.clear()
-        dataset_classes.UNCOVERED_DEMANDS.update(original)
-    assert dataset_classes.classify_all()  # restored
+def test_a_gap_with_no_recorded_shape_is_refused(monkeypatch):
+    monkeypatch.setattr(dataset_classes, "UNCOVERED_DEMANDS", {"memory": ()})
+    with pytest.raises(SystemExit, match="memory.*no planned surface"):
+        dataset_classes._check_judged_axis(_declared_rows())
+
+
+@pytest.mark.parametrize("name", ["personamem_v2"])
+def test_sequential_memory_cli_declares_state_advancing_ack(name):
+    source = ROOT / "data/datasets" / name / "cli/personamem"
+    verbs = dataset_classes._declared_verbs(source)
+    assert verbs == {"next", "ack", "submit"}
+    assert verbs & set(dataset_classes.ACT_VERBS) == {"ack"}
 
 
 def test_a_surface_belongs_to_exactly_one_demand():
@@ -406,7 +407,8 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo", "scienceworld",
+        "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo",
+        "personamem_v2", "scienceworld",
         "tau_bench", "terminal_bench"}
 
 
@@ -415,7 +417,8 @@ def test_the_filters_select_what_they_say(classified):
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo", "scienceworld",
+        "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo",
+        "personamem_v2", "scienceworld",
         "tau_bench", "terminal_bench"}
 
 
@@ -458,3 +461,27 @@ def test_the_table_view_prints_both_levels(capsys):
         assert "no adapter yet" in out
         for surface in surfaces:
             assert surface in out, f"{demand} plans {surface} but the table hides it"
+
+
+def test_underrepresented_demand_limit_matches_actual_coverage():
+    rows = _declared_rows()
+    dataset_classes._check_judged_axis(rows)
+    for demand, reason in dataset_classes.UNDERREPRESENTED_DEMANDS.items():
+        assert reason.strip()
+        count = sum(row["demand"] == demand for row in rows)
+        assert 0 < count < dataset_classes.MIN_MEMBERS_PER_DEMAND
+
+
+def test_unrecorded_underrepresented_demand_is_refused(monkeypatch):
+    monkeypatch.setattr(dataset_classes, "UNDERREPRESENTED_DEMANDS", {})
+    with pytest.raises(SystemExit, match="fewer than.*memory"):
+        dataset_classes._check_judged_axis(_declared_rows())
+
+
+def test_coverage_limit_must_be_removed_when_second_adapter_arrives(monkeypatch):
+    capability = {**dataset_classes.CAPABILITY, "second_memory_fixture": ("memory", "supplied_history")}
+    exercises = {**dataset_classes.EXERCISES, "second_memory_fixture": ("context", "memory")}
+    monkeypatch.setattr(dataset_classes, "CAPABILITY", capability)
+    monkeypatch.setattr(dataset_classes, "EXERCISES", exercises)
+    with pytest.raises(SystemExit, match="stale.*memory"):
+        dataset_classes._check_judged_axis(_declared_rows())
