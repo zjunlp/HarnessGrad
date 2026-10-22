@@ -5,7 +5,7 @@ r"""tau2-bench -- **refused, conditionally**: a two-party benchmark with no simu
     python3 tools/dataset_lint.py --dataset tau2_bench       # REFUSED, not FAIL
 
 Not a permanent exclusion any more: the operator lifted that on 2026-10-22 and wrote the condition
-down (`docs/refusal-lift-decision.md`). What `REFUSED` still reports is a code fact -- `load()`
+down (`docs/refusal-policy.md`). What `REFUSED` still reports is a code fact -- `load()`
 cannot assemble these tasks without a second party -- not a policy about the benchmark.
 
 The pin is the point

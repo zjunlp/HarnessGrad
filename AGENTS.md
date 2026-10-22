@@ -129,9 +129,9 @@ Task capability is a cross-table: `demand x surface`. Harness coverage is a sepa
 
 ## Prohibited shortcuts
 
-No method tuning, paid endpoints, heldout leakage, SOTUQA, API-Bank, NESTFUL, Matrix, score fabrication or fake benchmark utilization.
+No method tuning, paid endpoints, heldout leakage, score fabrication or fake benchmark utilization.
 
-`tau2_bench` is **not** on that list: its adapter refuses because the *platform*, not the harness, was missing a second party. The operator lifted the permanent exclusion on 2026-10-22, conditionally — it runs only with an **independent user simulator** (the platform's; the actor never plays both sides) and the **judge** its metric names, both recorded in the receipt's `identity`, and its tasks pinned to one upstream revision. Until those exist the adapter keeps returning `REFUSED`. The database half alone, a `communicate_info` substring check, or a pooled number under the τ² name is a different benchmark under the same name; a paid-endpoint judge makes a number non-publishable. Reasoning, the three measured findings and the two recorded shapes: `docs/refusal-lift-decision.md`.
+A dataset this platform cannot **measure** is not a shortcut and is not prohibited: it is refused by its adapter, with the missing piece named in `registry/dataset-blockers.json`. `tau2_bench` (no second party), `api_bank` (the dialogue state its recorded replies depend on), `nestful` (a Win Rate its own release does not reproduce) and `sotuqa` (a headline judge metric that resolved to a retired model) are refused that way. Each lifts only when *that* missing thing exists and is declared in the receipt's `identity`; until then `load()` keeps raising. `tau2_bench`'s two facilities now ship in this repository (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`), so its exclusion is lifted conditionally and what remains is a pin, a split spec and an adapter. Never substitute a proxy under the benchmark's own name — the database half or a `communicate_info` substring for τ², EM/F1 for SOTU-QA's judge metric, slot/sequence for NESTFUL's Win Rate, an execution-success rate for API-Bank — and a paid-endpoint judge makes a number non-publishable. Reasoning, per-dataset exits and the recorded data: `docs/refusal-policy.md`.
 
 ## Evidence requirements
 

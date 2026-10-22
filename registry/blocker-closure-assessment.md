@@ -22,17 +22,17 @@ the artefact.
 | `PENDING-RUN` | Requires a live measured execution under the staged pilot policy (authorization plus a run). |
 | `PENDING-INPUT` | Requires an artefact only the operator or a third party can supply. |
 | `LIMIT-CANDIDATE` | The original artefact no longer exists anywhere the record can reach; a candidate for the operator's proven-unobtainable standing-limit treatment. |
-| `REFUSED` | Refusal the operator instructed not to revisit. **No longer permanent for `tau2_bench`:** lifted conditionally on 2026-10-22 (`docs/refusal-lift-decision.md`), while its adapter still refuses in code. |
+| `REFUSED` | The adapter refuses because this platform's contract cannot carry the dataset's metric. **A refusal is not a prohibition:** `docs/refusal-policy.md` names each exit, and `tau2_bench`'s exclusion is already lifted conditionally, though its adapter still refuses in code. |
 
 ## Summary
 
 | dataset / blocker | status | disposition | blocking class(es) |
 | --- | --- | --- | --- |
 | `kumo / kumo-measurement-coverage` | measurement | single-task integration verified; broader evaluation and resource closure remain separate | `PENDING-RUN`, `PRE-DIAGNOSTIC` |
-| `api_bank / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
-| `nestful / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
-| `sotuqa / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
-| `tau2_bench / retain-contract-refusal` | code-solvable | exclusion lifted conditionally 2026-10-22 (`docs/refusal-lift-decision.md`); the adapter still refuses in code | `REFUSED` |
+| `api_bank / retain-contract-refusal` | external | refused by contract: the dialogue state its recorded replies need is absent (gold reproduces 262/508); not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
+| `nestful / retain-contract-refusal` | external | refused by contract: the released Win Rate does not reproduce (1857/4 then 1854/7 on gold); not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
+| `sotuqa / retain-contract-refusal` | external | refused by contract: the headline judge resolved to a retired model; not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
+| `tau2_bench / retain-contract-refusal` | code-solvable | exclusion lifted conditionally 2026-10-22 (`docs/refusal-policy.md`); the adapter still refuses in code | `REFUSED` |
 | `aime / dataset-journal-gap` | measurement | the operator's bounded first-five custody packet, plus a comparability statement for the Harbor port | `PENDING-INPUT`, `PRE-DIAGNOSTIC` |
 | `cooperbench / runtime-group-coverage` | measurement | all 652 pair identities stay explicit; reference controls are not full-benchmark performance | `PRE-DIAGNOSTIC` |
 | `locomo / adapter-acceptance-pending` | measurement | accept the Conda receipt and pin scope/model/budget before any model evaluation | `PRE-DIAGNOSTIC` |
@@ -62,12 +62,20 @@ attempted (of 732; 147 eligible) and no successful measured actor task exists, s
 evidence about the dataset's difficulty or headroom, and a usable appworld number needs a fresh,
 separately authorized multi-task run.
 
-## The four permanent refusals
+## The four refusals — no longer permanent as of 2026-10-22
 
 `api_bank`, `nestful`, `sotuqa`, `tau2_bench` each carry one 113-character clause: retain the explicit
 refusal and exclusion, do not provision or run the dataset, do not substitute its metric. Each is
 `SATISFIED` by retention and is `REFUSED` by operator instruction — the objective explicitly says not to
-attempt closure. Unchanged.
+attempt closure. Unchanged as blockers: none of the four closed.
+
+**Superseded 2026-10-22 (`docs/refusal-policy.md`).** The operator took all four names out of
+`AGENTS.md`'s shortcut list, because a dataset this platform cannot measure is a contract statement
+rather than misconduct. None is a permanent exclusion any more: `tau2_bench`'s exclusion is lifted
+conditionally (its two facilities now ship in the repository; a pin, a split spec and an adapter
+remain) and `api_bank`, `nestful` and `sotuqa` stay refused for want of an artefact this repository
+cannot produce. All four adapters still return `REFUSED`, so their rows and their `REFUSED` class are
+unchanged; only their dispositions changed, from "permanent" to a named exit.
 
 ## Closed under reading A, 2026-10-15 — `physicsquestions` and `sportsunderstanding`
 
@@ -172,7 +180,7 @@ clause-by-clause basis; that closure waived no verification step. Five more - `r
 day, each with its own clause-by-clause section below, and that closure waived no verification step
 either. For every blocker that remains open,
 nothing here is discharged by a review that has not been done: every `SATISFIED` entry names an artefact
-that exists, every `PRE-DIAGNOSTIC` entry is labelled as such rather than counted as closure, and no measured score is asserted anywhere. The four permanent refusals are untouched.
+that exists, every `PRE-DIAGNOSTIC` entry is labelled as such rather than counted as closure, and no measured score is asserted anywhere. The four refusals remain untouched as open blockers; only their permanence was withdrawn on 2026-10-22 (`docs/refusal-policy.md`).
 
 ## Reverse audit — is every cleared dataset cleared for a recorded reason?
 

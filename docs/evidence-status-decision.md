@@ -1,5 +1,9 @@
 # Decision: all three evidence gates withdrawn; four permanent refusals remain
 
+> **Superseded 2026-10-22, on the refusal half only:** the four refusals are no longer permanent
+> exclusions, and `tau2_bench`'s was lifted conditionally. The three gate withdrawals stand.
+> See `docs/refusal-policy.md`.
+
 **Operator decision, 2026-10-16.** `bfcl_v3 / simple-ast-contract` and
 `triviaqa / hub-export-scorer-linkage` were withdrawn as **scope** limits — "relax these two,
 there is no need for evidence this rigorous" — and `appworld / successful-task-evidence` was
@@ -14,7 +18,7 @@ Applied to `registry/dataset-blockers.json`; the named limits are in
 | `appworld` | `successful-task-evidence` | **withdrawn** | the measurement path is proven sound by controls; a success-only gate can never be closed by a faithful failure |
 
 Checker: `{"valid": true, "datasets": 28, "shared_blockers": 0, "production_authorized": false}`.
-**No non-refusal blocker remains**; the registry now carries only the four permanent refusals
+**No non-refusal blocker remains**; the registry now carries only the four contract refusals
 (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`).
 
 ## The two scope withdrawals are not impossibility findings
@@ -117,12 +121,13 @@ registry.
 
 ## What is still open
 
-- **The four permanent refusals** (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`) — untouched, by
-  operator instruction. **Amended 2026-10-22:** `tau2_bench` is no longer a *permanent* refusal — the
-  operator lifted that exclusion conditionally (two-party facility + a judge named in `identity`) and
-  the blocker's status moved from `external` to `code-solvable`; its adapter still returns `REFUSED`
-  because the port has not been made. See `docs/refusal-lift-decision.md`. The other three are
-  unchanged and still permanent.
+- **The four refusals** (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`). **Superseded 2026-10-22:**
+  none of the four is a permanent exclusion any more. A refusal is a statement about what this
+  platform's contract cannot carry, and the operator took all four names out of the *Prohibited
+  shortcuts* list — `tau2_bench`'s exclusion is lifted conditionally (its two facilities now ship in
+  the repository; a pin, a split spec and an adapter remain) and its status moved from `external` to
+  `code-solvable`, while `api_bank`, `nestful` and `sotuqa` stay refused for want of an artefact this
+  repository cannot produce. All four adapters still return `REFUSED`. See `docs/refusal-policy.md`.
 - **`hotpotqa` and the `journal-coverage` family** — still open elsewhere in the record; what they
   need is an operator-supplied selected manifest, an input rather than an impossibility.
 - **No dataset in the registry now carries a non-refusal blocker.** That is a state the checker
