@@ -16,8 +16,14 @@
   .who3 { width: 26px; height: 26px; flex: none; border-radius: 8px; display: grid; place-items: center;
           font-size: 10.5px; font-weight: 700; background: var(--hg-alias-bg-layer-3); color: var(--hg-alias-label-secondary); }
   .turn[data-who="user"] .who3 { background: var(--hg-alias-label-primary); color: var(--hg-alias-bg-base); }
-  .bubble { max-width: 78%; padding: 10px 13px; border-radius: 14px; font-size: 13px; line-height: 1.65;
-            border: 1px solid var(--hg-alias-border-l2); background: var(--hg-alias-bg-layer-1); }
+  /* The bubble sits in an anonymous column beside the avatar. That column is the flex item, so the
+     width cap belongs on **it**: a `max-width: 78%` on the bubble is a percentage of a column that
+     has no definite width, and the column then shrank to one character per line (measured on
+     "你好": a vertical column of glyphs at the right edge). */
+  .turn > .col3 { min-width: 0; flex: 0 1 auto; max-width: 78%; }
+  .bubble { width: fit-content; max-width: 100%; padding: 10px 13px; border-radius: 14px; font-size: 13px;
+            line-height: 1.65; border: 1px solid var(--hg-alias-border-l2);
+            background: var(--hg-alias-bg-layer-1); }
   .turn[data-who="user"] .bubble { background: var(--hg-alias-bg-layer-3); border-color: transparent; }
   .bubble p { margin: 0 0 8px; } .bubble p:last-child { margin: 0; }
   .bubble code { background: var(--hg-alias-bg-base); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
@@ -172,7 +178,7 @@
   </div>
 </div>
 
-<script src="/chat.js"></script>
+<script src="/chat.js?v=20261022c"></script>
 <script src="/sidebar.js"></script>
 </body>
 </html>

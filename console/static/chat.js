@@ -72,11 +72,11 @@
     const html = msgs.map((m) => {
       if (m.role === "system") {
         return `<div class="turn" data-who="ai"><div class="who3">HG</div>
-          <div><div class="bubble">${md(m.content)}</div></div></div>`;
+          <div class="col3"><div class="bubble">${md(m.content)}</div></div></div>`;
       }
       return `<div class="turn" data-who="${m.role === "user" ? "user" : "ai"}">
         <div class="who3">${m.role === "user" ? "你" : "HG"}</div>
-        <div><div class="bubble">${md(m.content)}</div>
+        <div class="col3"><div class="bubble">${md(m.content)}</div>
         ${m.usage ? `<div class="meta3">${esc(m.usage)}</div>` : ""}</div></div>`;
     }).join("");
 
