@@ -177,8 +177,8 @@ and temporary work directories were archived and removed. Provider usage is
 recorded separately from simulated tool costs; no currency cost is claimed.
 
 The summary, launch and source identities, train/test reports and cleanup receipt
-are retained outside Git. This is a small
-integration diagnostic, not a full-benchmark estimate. Earlier model/display
+are retained outside Git. This is a small integration diagnostic, not a
+full-benchmark estimate. Earlier model/display
 diagnostics remain preserved and are not pooled into these 24 measurements.
 
 | Earlier diagnostic on the same 24 selected tasks | Measured | Reference path matches | Correct answers | Display clipping events |
@@ -190,12 +190,3 @@ The original-display report combines valid measurements from fresh recovery
 runs; earlier mount, network and interrupted attempts are excluded and preserved
 in that report. The 50,000-character Ling-3.0 run ended in parsing retry exhaustion
 on all 24 tasks. These histories distinguish display coverage from model outcomes.
-
-The evidence files below are retained only in the author's local workspace,
-under `/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/`. They are not
-checked into this repository and are not accessible through GitHub links.
-The validation results and their limitations are summarized above.
-
-- `costbench-static-ling31-24-display50k-20261021-01/`: `summary.json`, `launch.json`, `official-train-report.json`, `official-test-report.json`, `cleanup.json`.
-- `costbench-static-ling24-20261021-summary/`: `summary.json`.
-- `costbench-static-ling24-display50k-20261021-01/`: `summary.json`.

@@ -116,10 +116,8 @@ The broader source/catalog checks have four existing failures reproduced on the
 static base: unrelated import edges, unavailable adapter dependencies, and
 missing aggregation declarations/inventory entries for other datasets. This
 branch supplies the missing static CostBench aggregation declaration as well as
-the dynamic one; the static declaration has subsequently been backported to
-`feat/costbench-static` as well. It does not claim a green repository-wide suite.
-Local logs, source hashes and report receipts are retained outside Git under workspace
-`datasets/costbench/dynamic-integration-validation-20261021/summary.json`.
+the dynamic one. It does not claim a green repository-wide suite.
+Local logs, source hashes and report receipts are retained outside Git.
 
 ## Real API validation and event supplement (2026-10-21)
 
@@ -159,11 +157,10 @@ aggregate metrics use their own eligibility denominators, retained in the
 report. In the original `steplen_change/test` cell, no event occurred and all
 official aggregate denominators were zero, so those metrics are `null`.
 All accepted trajectories had zero output clipping; all 37 attempts completed
-relay cleanup. Integrity checks and the
-independent final review passed. Source identities,
-resource limits and cleanup are retained in provenance
-and the cleanup receipt. Thirteen failed attempts lack
-final provider usage, so recorded token totals do not establish the full API bill.
+relay cleanup. Integrity checks and the independent final review passed. Source
+identities, resource limits and cleanup are retained in provenance and the cleanup
+receipt. Thirteen failed attempts lack final provider usage, so recorded token
+totals do not establish the full API bill.
 
 The separate three-task supplement
 (`costbench-dynamic-steplen-test-ling31-3-20261021-01`) preselected fresh
@@ -172,21 +169,12 @@ location, accommodation and dining. All three were measured, triggered an actual
 and effective step-length change, matched the reference path and answered
 correctly. There were no provider failures, other invalid attempts, API retries
 or output clipping. Each trajectory's cost matched its reference within `1e-8`.
-The supplement audit and
-cleanup checks passed.
+The supplement audit and cleanup checks passed.
 
-The coverage closure receipt therefore establishes real
-event execution in **all eight mode/split cells**, up from seven in the original
+The coverage closure receipt therefore establishes real event execution in
+**all eight mode/split cells**, up from seven in the original
 cohort. The supplement remains a separate diagnostic: the original 24-task
 results and receipts are unchanged, and these three successes are not pooled
 into the original scores. A separate cost/reference review
 recomputed representative official and adapter results without finding a
 discrepancy; the segmented reference is not a globally minimum-cost episode.
-
-The evidence files below are retained only in the author's local workspace,
-under `/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/`. They are not
-checked into this repository and are not accessible through GitHub links.
-The validation results and their limitations are summarized above.
-
-- `costbench-dynamic-ling31-coverage-20261021-01/`: `summary.json`, `integrity-audit.json`, `final-review.json`, `provenance.json`, `cleanup.json`, `cost-reference-review.json`.
-- `costbench-dynamic-steplen-test-ling31-3-20261021-01/`: `summary.json`, `integrity-audit.json`, `cleanup.json`, `coverage-closure.json`.

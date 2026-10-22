@@ -109,29 +109,25 @@ retry endings remain measured zeros. Official path/answer/cost denominators are
 seven per split, so their filtered metrics differ from these all-measured counts.
 The [static README](../data/datasets/costbench/README.md#real-api-validation-2026-10-21)
 records these results, earlier Ling-3.0/display diagnostics, resource limits,
-source identities, and the external summary/launch/cleanup receipts under
-workspace `runs/costbench-static-ling31-24-display50k-20261021-01/`.
+and source identities. Run receipts remain outside Git.
 
 The Ling-3.1 run used a temporary child-process display limit of 50,000 characters;
 loop source and `.env` were unchanged. They are small integration diagnostics,
 not default-display or full-benchmark performance estimates. All 24 final-run
 relay cleanups passed; prior interrupted/invalid receipts remain preserved.
 
-The static branch now also declares `costbench.run_reward` as `arithmetic_mean`
-over `measured_tasks` in `data/aggregation_policies.json`, matching the existing
-dynamic-branch declaration. The aggregation regression inventory includes the
-static registration. This backports the omission's fix without adding dynamic
-tasks to the static branch or merging either branch into `feat/dataset-integrations`.
+`costbench.run_reward` is declared as `arithmetic_mean` over `measured_tasks`
+in `data/aggregation_policies.json`. The aggregation regression inventory
+includes the static registration.
 
 Follow-up validation used the project's Python 3.12 environment:
 `python -m pytest -q tests/quality/test_aggregation_policies.py` passed 58 tests;
 two existing inventory checks still fail only for `memoryagentbench`,
 `personamem_v2`, and `strongreject`. CostBench is absent from both failure lists.
 A direct replay of the five historical aggregation inputs passed for `costbench`.
-`tests/quality/test_dataset_journal_coverage.py` passed both tests in each branch,
-and `python3 tools/check_dataset_blockers.py` validated both registries. All 24
-README evidence links resolve to readable JSON receipts; the static README is
-identical in both worktrees. This follow-up made no API calls or loop changes.
+`tests/quality/test_dataset_journal_coverage.py` passed both tests,
+and `python3 tools/check_dataset_blockers.py` validated the registry.
+This follow-up made no API calls or loop changes.
 
 ## `data/` split complete: scaffolds and datasets separated — 2026-10-14 — ds, ds2, ds3, ds4
 
@@ -5958,13 +5954,6 @@ No API calls were made for this layout change.
 
 ## CostBench one-event dynamic protocols — 2026-10-21
 
-The operator requested moving `feat/costbench-static` to the workspace's
-`worktrees/costbench-static` and continuing in a new branch and worktree.
-`feat/costbench-dynamic` started at static commit `d970a47d`. The later static
-aggregation/documentation follow-up is recorded above. Neither branch is merged
-into `feat/dataset-integrations` or `main`, because other dataset integrations
-are proceeding independently.
-
 `costbench_dynamic` registers four distinct protocols: `cost_change`,
 `steplen_change`, `ban_tool`, and `preference_change`, each with one event and
 atomic sequence length five. Each mode includes all 1,912 released train and
@@ -5976,8 +5965,7 @@ loop or execution-platform behavior changes.
 
 The branch also supplies the previously missing static CostBench aggregation
 declaration alongside the dynamic one: both standard run means divide by measured
-tasks. The static worktree was unchanged at the initial dynamic integration;
-the subsequent follow-up above backports the static declaration there.
+tasks.
 
 The upstream event order, charged failed bans, independently chosen reference
 ban, tool-length filtering, and effective-event counting are preserved. A task
@@ -6039,17 +6027,18 @@ All attempts completed relay cleanup, and scratch directories were archived and
 removed. Failed initial attempts have incomplete provider usage, so no complete
 API spending claim is made. The
 [dynamic README](../data/datasets/costbench_dynamic/README.md#real-api-validation-and-event-supplement-2026-10-21)
-links the per-cell counts, provenance, audits, cleanup and coverage-closure
-receipts. This closes the missing real-event coverage within the four single-event
-protocols; it is not a full-benchmark or cross-mode performance estimate.
+summarizes the per-cell counts, validation and comparison limits. Run receipts
+remain outside Git. This closes the missing real-event coverage within the four
+single-event protocols; it is not a full-benchmark or cross-mode performance estimate.
 
-## CostBench registration and evidence locations — 2026-10-22
+## CostBench registration and validation notes — 2026-10-22
 
 The CLI and in-process closed-loop expectations now include both `costbench` and
 `costbench_dynamic`, alongside the existing adapters. Both READMEs retain the
-validation summaries and all receipt locations, explicitly identifying them as
-local records outside Git. CostBench execution, preparation, scoring, pinned
-resources and dedicated tests are unchanged.
+test commands, validation summaries and limitations; local receipt path lists
+have been removed. Run logs and validation artifacts remain outside Git.
+CostBench execution, preparation, scoring, pinned resources and test assertions
+are unchanged; an unused test import was removed.
 
 Validation on the shared-runtime and five-dataset stack: **158 CostBench tests**,
 **2 common controls** and **7 focused taxonomy checks** passed. The two CostBench
