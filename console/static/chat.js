@@ -8,7 +8,7 @@
 (() => {
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const KEY = "hg.chat.v2";
+  const KEY = "hg.chat.v3";  // v3: the v2 store carries "提交失败: Failed to fetch" lines; a new key is a clean slate.
 
   const store = {
     read() { try { return JSON.parse(sessionStorage.getItem(KEY) || "null") || { idx: 0, sessions: [] }; } catch { return { idx: 0, sessions: [] }; } },
