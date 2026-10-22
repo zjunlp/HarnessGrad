@@ -118,7 +118,11 @@ registry.
 ## What is still open
 
 - **The four permanent refusals** (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`) — untouched, by
-  operator instruction.
+  operator instruction. **Amended 2026-10-22:** `tau2_bench` is no longer a *permanent* refusal — the
+  operator lifted that exclusion conditionally (two-party facility + a judge named in `identity`) and
+  the blocker's status moved from `external` to `code-solvable`; its adapter still returns `REFUSED`
+  because the port has not been made. See `docs/refusal-lift-decision.md`. The other three are
+  unchanged and still permanent.
 - **`hotpotqa` and the `journal-coverage` family** — still open elsewhere in the record; what they
   need is an operator-supplied selected manifest, an input rather than an impossibility.
 - **No dataset in the registry now carries a non-refusal blocker.** That is a state the checker

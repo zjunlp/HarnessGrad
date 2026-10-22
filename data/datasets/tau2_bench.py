@@ -1,8 +1,12 @@
-r"""tau2-bench -- **refused**: it is a two-party benchmark and this platform has no user simulator.
+r"""tau2-bench -- **refused, conditionally**: a two-party benchmark with no simulator for *it* yet.
 
     python3 tools/datasets.py --fetch --dataset tau2_bench
     python3 data/scaffolds/qa/control.py --dataset tau2_bench          # says why there is no control
     python3 tools/dataset_lint.py --dataset tau2_bench       # REFUSED, not FAIL
+
+Not a permanent exclusion any more: the operator lifted that on 2026-10-22 and wrote the condition
+down (`docs/refusal-lift-decision.md`). What `REFUSED` still reports is a code fact -- `load()`
+cannot assemble these tasks without a second party -- not a policy about the benchmark.
 
 The pin is the point
 --------------------
@@ -55,13 +59,25 @@ What the data is, measured (so a future attempt starts here)
 * `telecom` ships `db.toml`, not `db.json`, and its policy is a directory of markdown files --
   the two artifacts a future attempt would have to learn to read.
 
-The constructive path, if it is ever taken
-------------------------------------------
-Declare the user's side as **staged data the platform re-materializes** (a scripted action list,
-exactly as ALFWorld's walkthrough and Jericho's gold commands are staged) rather than an LLM
-simulator, and restrict the task set to the 223 tasks whose gold actions are all the agent's.
-That is a real, measurable subset with a reproducible metric -- and it is a *decision* about what
-is being benchmarked, which is why it is written here rather than taken.
+The two constructive shapes, neither taken yet
+----------------------------------------------
+Both are decisions about *what is being benchmarked*, which is why they are written here and not
+taken silently. The exclusion is lifted as of 2026-10-22, so either may now be proposed.
+
+1. **A staged second party.** Declare the user's side as **data the platform re-materializes** (a
+   scripted action list, exactly as ALFWorld's walkthrough and Jericho's gold commands are staged)
+   rather than an LLM simulator, and restrict the task set to the **223 tasks whose gold actions are
+   all the agent's**. A real, measurable subset with a reproducible metric.
+2. **A real simulator.** All 278 tasks through a platform-owned user simulator plus the judge channel.
+   Closer to the published benchmark, and the number then carries simulator identity.
+
+The facility for shape 2 is no longer hypothetical: `data/datasets/tau3_bench/lib/runtime.py` runs
+the official `UserSimulator` in a private trusted process and already constructs **these** domain
+environments (`tau2.domains.airline.environment.get_environment`, retail, telecom), and
+`eval/service/judge.py` supplies the judge. What is missing is this benchmark's own pin and split:
+tau3 reads `split_tasks.json` at `fc0055dc...`, while the tasks here are v0.1.0's `tasks.json`, and
+upstream states that results below 1.0.1 are not comparable with results at or above it -- so mixing
+the two revisions would produce a number under this name that neither paper supports.
 """
 from __future__ import annotations
 
@@ -97,8 +113,13 @@ REFUSED = (
     "database-hash match with `env_assertion` results gated on `reward_basis`, while "
     "`nl_assertions` (all 50 airline tasks) need a model to judge. This repository's own "
     "tau-bench adapter avoided the simulator by giving the user id in the goal, because that "
-    "benchmark's reward compares database states only -- that does not transfer here. See "
-    "data/datasets/tau2_bench.py for the measured task data and the one constructive path."
+    "benchmark's reward compares database states only -- that does not transfer here. The refusal "
+    "is conditional, not permanent: it lifts when this platform supplies an independent user "
+    "simulator and the judge the metric names, both recorded in the receipt's identity, and the "
+    "module docstring records the two shapes it could be measured in -- staged user actions over a "
+    "subset, or a real simulator. Until then no nearby number "
+    "-- the database half alone, a communicate_info substring check -- may be reported under this "
+    "name, because each of those is a different benchmark."
 )
 
 

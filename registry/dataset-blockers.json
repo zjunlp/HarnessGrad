@@ -749,9 +749,9 @@
           ],
           "family": "contract-refusal",
           "id": "retain-contract-refusal",
-          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric.",
+          "next_action": "Exclusion lifted conditionally by the operator on 2026-10-22 (docs/refusal-lift-decision.md): this dataset may be provisioned and run once the platform supplies an independent user simulator (the actor never plays both sides) and the judge its metric names, both declared in the receipt's identity, with every task pinned to one upstream revision (v0.1.0 tasks.json, not the tau3 split_tasks.json). Until then the adapter returns REFUSED and no proxy number may be reported in its place: the database half alone, a communicate_info substring check, or a pooled figure under the tau2 name are different benchmarks, and a paid-endpoint judge makes a number non-publishable.",
           "observed": "Independent user simulation and judge-dependent assertions are unavailable; required user actions cannot be supplied by the actor.",
-          "status": "external"
+          "status": "code-solvable"
         }
       ],
       "dataset": "tau2_bench",

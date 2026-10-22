@@ -129,7 +129,9 @@ Task capability is a cross-table: `demand x surface`. Harness coverage is a sepa
 
 ## Prohibited shortcuts
 
-No method tuning, paid endpoints, heldout leakage, SOTUQA, API-Bank, NESTFUL, Tau2-bench, Matrix, score fabrication or fake benchmark utilization.
+No method tuning, paid endpoints, heldout leakage, SOTUQA, API-Bank, NESTFUL, Matrix, score fabrication or fake benchmark utilization.
+
+`tau2_bench` is **not** on that list: its adapter refuses because the *platform*, not the harness, was missing a second party. The operator lifted the permanent exclusion on 2026-10-22, conditionally — it runs only with an **independent user simulator** (the platform's; the actor never plays both sides) and the **judge** its metric names, both recorded in the receipt's `identity`, and its tasks pinned to one upstream revision. Until those exist the adapter keeps returning `REFUSED`. The database half alone, a `communicate_info` substring check, or a pooled number under the τ² name is a different benchmark under the same name; a paid-endpoint judge makes a number non-publishable. Reasoning, the three measured findings and the two recorded shapes: `docs/refusal-lift-decision.md`.
 
 ## Evidence requirements
 
