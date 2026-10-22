@@ -1,0 +1,613 @@
+{
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "harnessgrad.diagnostic-receipt.v2"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stage": {
+      "enum": [
+        "diagnostic",
+        "pilot_10pct"
+      ]
+    },
+    "trials": {
+      "const": 1,
+      "type": "integer"
+    },
+    "jobs": {
+      "const": 1,
+      "type": "integer"
+    },
+    "selected_task_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "side": {
+          "enum": [
+            "train",
+            "eval"
+          ]
+        },
+        "metric": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scorer_sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "name",
+            "scorer_sha256"
+          ]
+        },
+        "hashes": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "split": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "manifest": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "model": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "harness": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "source",
+            "split",
+            "manifest",
+            "model",
+            "harness"
+          ]
+        },
+        "endpoint": {
+          "enum": [
+            "http://127.0.0.1:8001/v1",
+            "http://127.0.0.1:8002/v1",
+            null
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "budget": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "required": [
+            "resource",
+            "budget"
+          ]
+        },
+        "gates": {
+          "$ref": "#/$defs/lifecycle"
+        },
+        "comparability_notes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "dataset",
+        "side",
+        "metric",
+        "hashes",
+        "endpoint",
+        "limits",
+        "gates",
+        "comparability_notes"
+      ]
+    },
+    "cleanup": {
+      "$ref": "#/$defs/lifecycle"
+    },
+    "snapshot": {
+      "$ref": "#/$defs/lifecycle"
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "eligible_tasks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "selected_tasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected_trials": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measured_tasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_tasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmeasured_tasks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "measured_trials": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid_trials": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmeasured_trials": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "eligible_tasks",
+        "selected_tasks",
+        "expected_trials",
+        "measured_tasks",
+        "invalid_tasks",
+        "unmeasured_tasks",
+        "measured_trials",
+        "invalid_trials",
+        "unmeasured_trials"
+      ]
+    },
+    "outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "trial": {
+            "const": 1,
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "measured",
+              "invalid",
+              "unmeasured"
+            ]
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "task_id",
+          "trial",
+          "status",
+          "score",
+          "reason"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "measured"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "score": {
+                  "type": "number"
+                },
+                "reason": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "score": {
+                  "type": "null"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "score": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "eligible_task_ids_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "lifecycle": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "schema": {
+          "const": "harnessgrad.lifecycle-receipt.v1"
+        },
+        "binding": {
+          "type": "object"
+        },
+        "scope_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "state": {
+          "enum": [
+            "scope",
+            "admit",
+            "execute",
+            "quiesce",
+            "score",
+            "seal",
+            "cleanup"
+          ]
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 6
+        },
+        "publication_ready": {
+          "type": "boolean"
+        },
+        "production_authorized": {
+          "const": false
+        }
+      },
+      "required": [
+        "schema",
+        "binding",
+        "scope_sha256",
+        "state",
+        "status",
+        "events",
+        "publication_ready",
+        "production_authorized"
+      ],
+      "additionalProperties": false
+    },
+    "enforcement": {
+      "type": "object",
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator_authorization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "const": "diagnostic"
+        },
+        "non_comparable_reason": {
+          "const": "policy_enforcement_not_observed"
+        },
+        "policy_enforcement_observed": {
+          "const": false,
+          "type": "boolean"
+        },
+        "measured": {
+          "const": false,
+          "type": "boolean"
+        },
+        "production_authorized": {
+          "const": false,
+          "type": "boolean"
+        },
+        "comparable": {
+          "const": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "run_id",
+        "task_id",
+        "operator_authorization",
+        "stage",
+        "non_comparable_reason",
+        "policy_enforcement_observed",
+        "measured",
+        "production_authorized",
+        "comparable"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "stage",
+    "trials",
+    "jobs",
+    "selected_task_ids",
+    "context",
+    "cleanup",
+    "snapshot",
+    "coverage",
+    "outcomes",
+    "score",
+    "eligible_task_ids_sha256",
+    "lifecycle"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "harnessgrad.diagnostic-receipt.v2",
+  "title": "HarnessGrad staged diagnostic/pilot receipt",
+  "description": "Shape validation plus fail-closed publication fields. eval.policy.diagnostic_policy.validate_receipt replays lifecycle and binds coverage, scope, outcomes and attestation digests. Hashes do not authenticate observation origin; unknown evidence never authorizes expansion.",
+  "$defs": {
+    "lifecycle": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "unknown"
+          ]
+        },
+        "receipt_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "status",
+        "receipt_sha256",
+        "detail"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "passed"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "receipt_sha256": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "score": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "properties": {
+              "outcomes": {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "const": "measured"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "cleanup"
+              },
+              "status": {
+                "const": "passed"
+              },
+              "publication_ready": {
+                "const": true
+              }
+            }
+          },
+          "cleanup": {
+            "properties": {
+              "status": {
+                "const": "passed"
+              },
+              "receipt_sha256": {
+                "type": "string"
+              }
+            }
+          },
+          "snapshot": {
+            "properties": {
+              "status": {
+                "const": "passed"
+              },
+              "receipt_sha256": {
+                "type": "string"
+              }
+            }
+          },
+          "context": {
+            "properties": {
+              "gates": {
+                "properties": {
+                  "status": {
+                    "const": "passed"
+                  },
+                  "receipt_sha256": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "enforcement"
+        ]
+      },
+      "then": {
+        "properties": {
+          "stage": {
+            "const": "diagnostic"
+          },
+          "score": {
+            "type": "null"
+          },
+          "outcomes": {
+            "items": {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "invalid",
+                    "unmeasured"
+                  ]
+                },
+                "score": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

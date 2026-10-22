@@ -1,0 +1,1300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessgrad.local/schemas/eight-stage-protocol-v1.json",
+  "title": "HarnessGrad eight-stage protocol event",
+  "type": "object",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/stage_event"
+    },
+    {
+      "$ref": "#/$defs/bootstrap_event"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,127}$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stage_id": {
+      "type": "string",
+      "enum": [
+        "select_context",
+        "execute",
+        "organize_feedback",
+        "propose_changes",
+        "build_validate",
+        "evaluate_candidates",
+        "select_deploy",
+        "stop_continue"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "default",
+        "custom",
+        "delegated",
+        "skip"
+      ]
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "framework",
+        "task_agent",
+        "meta_agent",
+        "method",
+        "delegate",
+        "evaluator",
+        "deployer",
+        "recorder"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "session_id",
+        "iteration_id",
+        "branch_id"
+      ],
+      "properties": {
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "session_id": {
+          "$ref": "#/$defs/id"
+        },
+        "iteration_id": {
+          "$ref": "#/$defs/id"
+        },
+        "branch_id": {
+          "$ref": "#/$defs/id"
+        },
+        "candidate_id": {
+          "$ref": "#/$defs/id"
+        },
+        "candidate_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "task_id": {
+          "$ref": "#/$defs/id"
+        },
+        "trial_id": {
+          "$ref": "#/$defs/id"
+        },
+        "parent_scope": {
+          "$ref": "#/$defs/id"
+        },
+        "stream_id": {
+          "$ref": "#/$defs/id"
+        },
+        "batch_id": {
+          "$ref": "#/$defs/id"
+        },
+        "deployment_epoch": {
+          "$ref": "#/$defs/id"
+        },
+        "scope_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "id"
+      ],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "kind",
+        "sha256",
+        "visibility",
+        "producer"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "task_set",
+            "parent_state",
+            "experience",
+            "feedback",
+            "proposal",
+            "candidate",
+            "validation",
+            "study_score",
+            "heldout_score",
+            "selection",
+            "deployment",
+            "stop_decision",
+            "archive",
+            "trace",
+            "claim",
+            "legacy_response",
+            "post_run_analysis",
+            "checkpoint",
+            "tree_snapshot",
+            "prompt",
+            "skill",
+            "memory",
+            "policy",
+            "parameter_update",
+            "patch",
+            "full_file",
+            "full-file",
+            "file",
+            "tree",
+            "config"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "uri": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "method",
+            "framework",
+            "heldout_private",
+            "public_record"
+          ]
+        },
+        "producer": {
+          "$ref": "#/$defs/principal"
+        },
+        "parents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "lineage": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "const": "root"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "parent_id",
+                  "role"
+                ],
+                "properties": {
+                  "parent_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "base",
+                      "donor",
+                      "peer",
+                      "crossover",
+                      "evidence"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "root": {
+          "type": "boolean"
+        },
+        "score_kind": {
+          "type": "string",
+          "enum": [
+            "study",
+            "heldout"
+          ]
+        },
+        "split_visibility": {
+          "type": "string",
+          "enum": [
+            "adaptation_visible",
+            "selection_only",
+            "report_only",
+            "heldout_private"
+          ]
+        },
+        "scorer_revision": {
+          "type": "string"
+        },
+        "content_kind": {
+          "type": "string",
+          "enum": [
+            "patch",
+            "full_file",
+            "full-file",
+            "file",
+            "tree",
+            "config",
+            "prompt",
+            "skill",
+            "memory",
+            "policy",
+            "checkpoint",
+            "parameter_update",
+            "none"
+          ]
+        }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "compliance",
+        "fidelity"
+      ],
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compliance": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "verified",
+            "unverified",
+            "not_applicable"
+          ]
+        },
+        "fidelity": {
+          "type": "string",
+          "enum": [
+            "measured",
+            "claimed",
+            "unknown",
+            "not_applicable"
+          ]
+        },
+        "delegate_id": {
+          "$ref": "#/$defs/id"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "request_artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "response_artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "independent_measurement_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "subject_or_infrastructure"
+      ],
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": [
+            "invalid_input",
+            "invalid_patch",
+            "subject_timeout",
+            "subject_error",
+            "budget_exhausted",
+            "delegate_error",
+            "evaluator_error",
+            "recorder_error",
+            "infrastructure_unavailable",
+            "cancelled"
+          ]
+        },
+        "subject_or_infrastructure": {
+          "type": "string",
+          "enum": [
+            "subject",
+            "infrastructure"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "payload": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/context_payload"
+        },
+        {
+          "$ref": "#/$defs/execution_payload"
+        },
+        {
+          "$ref": "#/$defs/feedback_payload"
+        },
+        {
+          "$ref": "#/$defs/proposal_payload"
+        },
+        {
+          "$ref": "#/$defs/validation_payload"
+        },
+        {
+          "$ref": "#/$defs/study_payload"
+        },
+        {
+          "$ref": "#/$defs/heldout_payload"
+        },
+        {
+          "$ref": "#/$defs/selection_payload"
+        },
+        {
+          "$ref": "#/$defs/deployment_payload"
+        },
+        {
+          "$ref": "#/$defs/continuation_payload"
+        },
+        {
+          "$ref": "#/$defs/archive_payload"
+        },
+        {
+          "$ref": "#/$defs/reconciliation_payload"
+        },
+        {
+          "$ref": "#/$defs/empty_payload"
+        }
+      ]
+    },
+    "payload_base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "payload_kind"
+      ],
+      "properties": {
+        "payload_kind": {},
+        "task_set_sha": {},
+        "parent_refs": {},
+        "selection_basis": {},
+        "execution_mode": {},
+        "replay_kind": {},
+        "source_trace_ids": {},
+        "new_execution": {},
+        "training_scope": {},
+        "feedback_consumers": {},
+        "consumer_role": {},
+        "source_artifact_ids": {},
+        "consumer_scope": {},
+        "candidate_ids": {},
+        "artifact_kind": {},
+        "hypothesis": {},
+        "valid": {},
+        "checks": {},
+        "score_kind": {},
+        "scorer_revision": {},
+        "evaluation_completeness": {},
+        "selected_candidate_ids": {},
+        "basis": {},
+        "tentative": {},
+        "later_eval_ref": {},
+        "deployment_id": {},
+        "deployed_candidate_ids": {},
+        "status": {},
+        "from_snapshot": {},
+        "to_snapshot": {},
+        "rollback_ref": {},
+        "action": {},
+        "next_scope": {},
+        "member_ids": {},
+        "retention_rule": {},
+        "reconciles_event_ids": {},
+        "reason": {}
+      }
+    },
+    "parent_ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "role"
+          ],
+          "properties": {
+            "role": {
+              "const": "root"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "parent_id",
+            "role"
+          ],
+          "properties": {
+            "parent_id": {
+              "$ref": "#/$defs/id"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "base",
+                "donor",
+                "peer",
+                "crossover",
+                "evidence"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "context_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "payload_kind": {
+              "const": "context_selection"
+            },
+            "task_set_sha": {
+              "$ref": "#/$defs/hash"
+            },
+            "parent_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/parent_ref"
+              }
+            },
+            "selection_basis": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "execution_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "execution_mode",
+            "new_execution"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "execution"
+            },
+            "execution_mode": {
+              "type": "string",
+              "enum": [
+                "online",
+                "replay"
+              ]
+            },
+            "replay_kind": {
+              "type": "string",
+              "enum": [
+                "stored_counterfactual",
+                "executed_smoke",
+                "executed_benchmark"
+              ]
+            },
+            "source_trace_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "new_execution": {
+              "type": "boolean"
+            },
+            "training_scope": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "feedback_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "payload_kind": {
+              "const": "feedback"
+            },
+            "source_artifact_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "consumer_scope": {
+              "$ref": "#/$defs/id"
+            },
+            "feedback_consumers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "uniqueItems": true
+            },
+            "consumer_role": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "proposal_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "candidate_ids"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "proposal"
+            },
+            "candidate_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "uniqueItems": true
+            },
+            "artifact_kind": {
+              "type": "string",
+              "enum": [
+                "patch",
+                "full_file",
+                "full-file",
+                "file",
+                "tree",
+                "config",
+                "prompt",
+                "skill",
+                "memory",
+                "policy",
+                "checkpoint",
+                "parameter_update",
+                "none"
+              ]
+            },
+            "hypothesis": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "validation_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "payload_kind": {
+              "const": "validation"
+            },
+            "candidate_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "valid": {
+              "type": "boolean"
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "study_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "score_kind"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "study_evaluation"
+            },
+            "score_kind": {
+              "const": "study"
+            },
+            "candidate_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "scorer_revision": {
+              "type": "string"
+            },
+            "evaluation_completeness": {
+              "type": "string",
+              "enum": [
+                "partial",
+                "staged",
+                "full"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "heldout_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "score_kind",
+            "candidate_ids",
+            "scorer_revision",
+            "evaluation_completeness"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "heldout_evaluation"
+            },
+            "score_kind": {
+              "const": "heldout"
+            },
+            "candidate_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "scorer_revision": {
+              "type": "string"
+            },
+            "evaluation_completeness": {
+              "const": "heldout"
+            }
+          }
+        }
+      ]
+    },
+    "selection_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "selected_candidate_ids",
+            "basis",
+            "tentative"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "selection_result"
+            },
+            "selected_candidate_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "uniqueItems": true
+            },
+            "basis": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "tentative": {
+              "type": "boolean"
+            },
+            "later_eval_ref": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      ]
+    },
+    "deployment_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "deployment_id",
+            "deployed_candidate_ids",
+            "status",
+            "from_snapshot",
+            "to_snapshot"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "deployment_fact"
+            },
+            "deployment_id": {
+              "$ref": "#/$defs/id"
+            },
+            "deployed_candidate_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "uniqueItems": true
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "deployed",
+                "none",
+                "rolled_back",
+                "failed"
+              ]
+            },
+            "from_snapshot": {
+              "$ref": "#/$defs/hash"
+            },
+            "to_snapshot": {
+              "$ref": "#/$defs/hash"
+            },
+            "rollback_ref": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      ]
+    },
+    "continuation_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "action"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "continuation"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "stop",
+                "continue",
+                "repeat",
+                "branch",
+                "replay"
+              ]
+            },
+            "next_scope": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      ]
+    },
+    "archive_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "member_ids"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "archive"
+            },
+            "member_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "retention_rule": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "reconciliation_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "required": [
+            "reconciles_event_ids"
+          ],
+          "properties": {
+            "payload_kind": {
+              "const": "reconciliation"
+            },
+            "reconciles_event_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "empty_payload": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/payload_base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "payload_kind": {
+              "const": "empty_result"
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "stage_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "run_id",
+        "event_id",
+        "event_kind",
+        "scope",
+        "stage",
+        "lifecycle",
+        "evidence",
+        "owner",
+        "producer",
+        "implementation",
+        "artifacts",
+        "output_artifacts",
+        "result_kind",
+        "attempt_id",
+        "attempt",
+        "idempotency_key",
+        "started_at",
+        "finished_at",
+        "payload"
+      ],
+      "properties": {
+        "protocol_version": {
+          "const": "1.0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "event_id": {
+          "$ref": "#/$defs/id"
+        },
+        "event_kind": {
+          "type": "string",
+          "enum": [
+            "stage_started",
+            "stage_completed",
+            "stage_failed",
+            "artifact_published",
+            "reconciliation"
+          ]
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "stage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "invocation_id",
+            "mode"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/stage_id"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/id"
+            },
+            "mode": {
+              "$ref": "#/$defs/mode"
+            },
+            "repeat_index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "running",
+            "completed",
+            "failed"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "measured",
+            "unobserved"
+          ]
+        },
+        "owner": {
+          "$ref": "#/$defs/principal"
+        },
+        "producer": {
+          "$ref": "#/$defs/principal"
+        },
+        "implementation": {
+          "$ref": "#/$defs/implementation"
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "input_artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "output_artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "result_kind": {
+          "type": "string",
+          "enum": [
+            "artifact",
+            "empty",
+            "not_observed"
+          ]
+        },
+        "causal_parent_events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/id"
+        },
+        "parallel_group": {
+          "$ref": "#/$defs/id"
+        },
+        "replay_of": {
+          "$ref": "#/$defs/id"
+        },
+        "concurrency_group": {
+          "$ref": "#/$defs/id"
+        },
+        "started_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "finished_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "invariants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "partial_results": {
+          "type": "boolean"
+        },
+        "reconciles_event_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "failure": {
+          "$ref": "#/$defs/failure"
+        },
+        "claims": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "payload": {
+          "$ref": "#/$defs/payload"
+        }
+      }
+    },
+    "bootstrap_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "run_id",
+        "event_id",
+        "event_kind",
+        "producer",
+        "bootstrap"
+      ],
+      "properties": {
+        "protocol_version": {
+          "const": "1.0"
+        },
+        "run_id": {
+          "$ref": "#/$defs/id"
+        },
+        "event_id": {
+          "$ref": "#/$defs/id"
+        },
+        "event_kind": {
+          "const": "protocol_bootstrap"
+        },
+        "producer": {
+          "$ref": "#/$defs/principal"
+        },
+        "bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile_opt_in",
+            "stage_modes",
+            "task_plan",
+            "evidence_mode",
+            "budget"
+          ],
+          "properties": {
+            "profile_opt_in": {
+              "type": "string",
+              "minLength": 1
+            },
+            "stage_modes": {
+              "type": "object",
+              "propertyNames": {
+                "$ref": "#/$defs/stage_id"
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/mode"
+              }
+            },
+            "task_plan": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "task_set_sha"
+              ],
+              "properties": {
+                "task_set_sha": {
+                  "$ref": "#/$defs/hash"
+                },
+                "split_visibility": {
+                  "type": "string",
+                  "enum": [
+                    "adaptation_visible",
+                    "selection_only",
+                    "report_only",
+                    "heldout_private"
+                  ]
+                }
+              }
+            },
+            "evidence_mode": {
+              "type": "string",
+              "enum": [
+                "trusted_events",
+                "replay_only",
+                "declared_traces"
+              ]
+            },
+            "budget": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "unit",
+                "limit"
+              ],
+              "properties": {
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "tokens",
+                    "usd",
+                    "wall_clock",
+                    "api_calls",
+                    "generations",
+                    "training_steps"
+                  ]
+                },
+                "limit": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            },
+            "delegates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "delegate_id",
+                  "capabilities",
+                  "timeout_ms"
+                ],
+                "properties": {
+                  "delegate_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "uniqueItems": true
+                  },
+                  "timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
