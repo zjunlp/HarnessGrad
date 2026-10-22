@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-22T06:25:21Z",
+ "generated_at": "2026-10-22T14:47:17Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -6526,9 +6526,9 @@
   {
    "method": "dgm",
    "round": 9,
-   "score": 0.20683760683760682,
+   "score": 0.20854700854700856,
    "tasks": 585,
-   "passed": 121,
+   "passed": 122,
    "invalid": 0,
    "by_split": {
     "test_normal": {
@@ -6537,9 +6537,9 @@
      "score": 0.3333
     },
     "test_challenge": {
-     "passed": 65,
+     "passed": 66,
      "tasks": 417,
-     "score": 0.1559
+     "score": 0.1583
     }
    },
    "harness_sha": "09ab36f5e6462d8b48ca7fcbcd56a823d9202cd1",
@@ -6572,20 +6572,20 @@
   {
    "method": "harnessx",
    "round": 17,
-   "score": 0.24786324786324787,
+   "score": 0.2547008547008547,
    "tasks": 585,
-   "passed": 145,
+   "passed": 149,
    "invalid": 0,
    "by_split": {
     "test_normal": {
-     "passed": 65,
+     "passed": 66,
      "tasks": 168,
-     "score": 0.3869
+     "score": 0.3929
     },
     "test_challenge": {
-     "passed": 80,
+     "passed": 83,
      "tasks": 417,
-     "score": 0.1918
+     "score": 0.199
     }
    },
    "harness_sha": "b980b646ede1bbcd1f823b5ecbe2040e0cf5ae02",
@@ -6595,10 +6595,10 @@
   {
    "method": "hyperagents",
    "round": 20,
-   "score": 0.35738831615120276,
-   "tasks": 582,
+   "score": 0.35555555555555557,
+   "tasks": 585,
    "passed": 208,
-   "invalid": 3,
+   "invalid": 0,
    "by_split": {
     "test_normal": {
      "passed": 77,
@@ -6607,8 +6607,8 @@
     },
     "test_challenge": {
      "passed": 131,
-     "tasks": 414,
-     "score": 0.3164
+     "tasks": 417,
+     "score": 0.3141
     }
    },
    "harness_sha": "b3076a15ba4e417af5169e07bd0d2cb668c1ffae",
