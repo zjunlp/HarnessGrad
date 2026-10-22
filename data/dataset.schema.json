@@ -56,7 +56,7 @@
     "command_optional": ["cwd", "inputs", "pass_when", "stdout", "timeout_s", "evidence_file", "image", "scorer_input", "native_runtime", "judge", "result_contract", "trial_protocol", "container_runtime"],
     "container_runtime": "Optional observed-v1 Docker command verifier. Requires sandboxed files parent, result_contract, local pinned image and bounded filesystems. Same declaration as Docker worker env; no judge/native_runtime combination.",
     "judge": "Optional verifier-only model broker: model, max_calls, max_output_tokens, timeout_s, parameters. Requires sandboxed files command verification and result_contract v1.",
-    "result_contract": "Optional version=1 and score_range=[min,max]. Invalid/nonfinite/out-of-range or measured:false results carry no score; omission preserves legacy interpretation.",
+    "result_contract": "Optional version=1 and score_range=[min,max], with optional boolean require_exit_zero (default false). Invalid/nonfinite/out-of-range or measured:false results carry no score. require_exit_zero rejects a nonzero command exit before reading score files; unsupported for pristine-offline. Omission preserves legacy interpretation.",
     "trial_protocol": "Optional version=1, metric=pass^k, trials, ks, seeds. Requires a complete explicit task/trial manifest; reports separately from legacy run_reward.",
     "native_runtime": "Explicit bird_minidev/jericho/alfworld trusted dataset/manifest/sha256 binding. Requires sandbox=True, a files command check, exact sealed runtime bytes, closed Python/loader resolution and a native_runtime receipt; any admission mismatch is unmeasured with no ambient fallback.",
     "scorer_input": "Optional trusted task_id/path/sha256 binding, with a files path-to-SHA256 inventory for native multi-file inputs. Native dispatch compares task_id to the selected task and requires matching verified scorer-input evidence (including files when declared) before accepting a reward.",
@@ -67,7 +67,7 @@
   },
   "setup_extensions": {
     "tool_relay.record": "Optional {path, max_bytes?}. Service writes HG_RELAY_RECORD_PATH JSON; HG_RELAY_CONTEXT_PATH supplies task/run/trial/input binding. Native sandboxed command verification only.",
-    "tool_relay.model": "Optional environment-role model broker with the same bounded completion declaration as judge. Service receives HG_ENV_MODEL_SOCKET, not model credentials.",
+    "tool_relay.model": "Optional environment-role model broker with the same bounded completion declaration as judge. Optional seed_source=trial binds parameters.seed to the platform run_seed and cannot combine with a static parameters.seed. Service receives HG_ENV_MODEL_SOCKET, not model credentials.",
     "workers": "Optional fixed-peer list: id, goal, files, env, artifacts, timeout_s. Each executes the same candidate harness with isolated files/state and a mailbox. Native files or explicit exec backend=observed-v1, with kernel resource observation, per-peer model/mailbox sockets and bounded artifact export."
   },
   "env": {

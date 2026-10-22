@@ -47,10 +47,10 @@ def test_merge_keeps_every_task_exactly_once(tmp_path: Path) -> None:
     _progress(run_dir, "b", score=0.0)
     _progress(run_dir, "c", outcome="invalid", detail="env died")
     prior = _progress_results(run_dir)
-    fresh = {"per_task": {"d": 1.0}, "invalid": [], "harness_failed": []}
+    fresh = {"per_task": {"d": 1.0}, "invalid": {}, "harness_failed": {}}
     merged = _merge_prior(fresh, prior)
     assert merged["per_task"] == {"d": 1.0, "a": 1.0, "b": 0.0}
-    assert [x["task_id"] for x in merged["invalid"]] == ["c"]
+    assert list(merged["invalid"]) == ["c"]
     # a task that the fresh half already scored must not be overwritten by the old record
     assert "a" not in fresh["per_task"]
 
@@ -59,7 +59,7 @@ def test_merge_does_not_duplicate_an_overlap(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     _progress(run_dir, "a", score=1.0)
     prior = _progress_results(run_dir)
-    merged = _merge_prior({"per_task": {"a": 0.0}, "invalid": [], "harness_failed": []}, prior)
+    merged = _merge_prior({"per_task": {"a": 0.0}, "invalid": {}, "harness_failed": {}}, prior)
     assert merged["per_task"] == {"a": 0.0}, "the fresh measurement wins, not a duplicate key"
 
 

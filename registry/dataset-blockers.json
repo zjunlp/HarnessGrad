@@ -403,7 +403,7 @@
           "id": "kumo-measurement-coverage",
           "family": "measurement-coverage",
           "status": "measurement",
-          "observed": "5290/5300 released cases pass a repeated official consistency audit; 10 unsatisfiable cases excluded and 35 multi-answer cases retained. Native oracle/noop and relay isolation checks cover the integration. A bounded single-task API diagnostic is not a benchmark or production admission; inherited network and absent filesystem quotas remain limitations.",
+          "observed": "The adapter retains 5290/5300 released standard cases under the official consistency predicate: 10 unsatisfiable cases are excluded and 35 multi-answer cases retained. It uses the query50 protocol, native oracle/noop controls and a private relay. Actor networking is inherited and the adapter does not enforce filesystem quotas.",
           "evidence": [
             {
               "kind": "repository",
@@ -411,7 +411,7 @@
               "locator": "Validation"
             }
           ],
-          "next_action": "Retain explicit subset/protocol identity and inspect the single-task diagnostic receipt before any separately authorized broader evaluation."
+          "next_action": "Retain explicit subset, split and protocol identity in evaluation records; report selected and unmeasured coverage without treating a subset as a full-benchmark result."
         }
       ]
     },

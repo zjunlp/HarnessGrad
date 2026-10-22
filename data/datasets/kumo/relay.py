@@ -58,8 +58,9 @@ def main():
     parser.add_argument("--socket", type=Path, required=True)
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--budget", type=int, default=50)
-    parser.add_argument("--max-calls", type=int, default=256)
-    parser.add_argument("--deadline-s", type=float, default=660)
+    parser.add_argument("--max-calls", type=int, default=None)
+    parser.add_argument("--deadline-s", type=float, default=None)
+    parser.add_argument("--max-line-bytes", type=int, default=None)
     args = parser.parse_args()
     spec = json.loads(args.case_spec.read_text())
     raw = Path(spec["path"]).read_bytes()
@@ -71,7 +72,8 @@ def main():
     stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())
-    with Relay(args.socket, game.handle, max_calls=args.max_calls, deadline_s=args.deadline_s) as relay:
+    with Relay(args.socket, game.handle, max_calls=args.max_calls, deadline_s=args.deadline_s,
+               max_line_bytes=args.max_line_bytes) as relay:
         clean = stop.wait(args.deadline_s)
     args.receipt.write_text(json.dumps(game.receipt(relay.receipt, clean), ensure_ascii=False) + "\n")
     return 0 if clean and not (relay.receipt["errors"] or relay.receipt["refused"]) else 1

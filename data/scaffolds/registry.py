@@ -568,18 +568,38 @@ def _normalize_env(spec: dict) -> dict:
     return normalized
 
 
-def load_envs(name: str) -> dict[str, dict]:
-    """Resolve every task's environment: `ENV[tid]`, else `DEFAULT_ENV`, else `files`.
+def _selected_tasks(name: str, tasks: list[dict], task_ids) -> list[dict]:
+    """Validate an explicit selection without reading any declaration values."""
+    if task_ids is None:
+        return tasks
+    if isinstance(task_ids, (str, bytes)):
+        raise ValueError(f"dataset {name!r}: task_ids must be an iterable of task IDs")
+    selected = list(task_ids)
+    if any(not isinstance(tid, str) for tid in selected):
+        raise ValueError(f"dataset {name!r}: selected task IDs must be strings")
+    if len(set(selected)) != len(selected):
+        raise ValueError(f"dataset {name!r}: duplicate selected task IDs")
+    unknown = set(selected) - {t["task_id"] for t in tasks}
+    if unknown:
+        raise ValueError(f"dataset {name!r}: selected unknown task(s) {sorted(unknown)}")
+    chosen = set(selected)
+    return [task for task in tasks if task["task_id"] in chosen]
 
-    A separate function rather than a fourth return value of `load_tasks`, because
-    every existing dataset and test calls that one and unpacking three values; a
-    dataset that says nothing about environments must be unaffected by this feature
-    existing, and the cheapest proof of that is that none of them changed.
+
+def load_envs(name: str, *, task_ids=None) -> dict[str, dict]:
+    """Resolve selected ENV values, falling back to DEFAULT_ENV or files.
+
+    None preserves the full-pool behavior. An explicit selection validates global
+    declaration keys but never materializes environments for unselected tasks.
+    The result remains an ordinary dict.
     """
     tasks, _ = load(name)
+    selected = _selected_tasks(name, tasks, task_ids)
     module = importlib.import_module(module_name(name))
     default = getattr(module, "DEFAULT_ENV", None) or {"kind": "files"}
-    declared = dict(getattr(module, "ENV", None) or {})
+    declared = getattr(module, "ENV", None)
+    if declared is None:
+        declared = {}
 
     if not isinstance(default, dict):
         raise ValueError(f"dataset {name!r}: DEFAULT_ENV must be a dict")
@@ -591,7 +611,8 @@ def load_envs(name: str) -> dict[str, dict]:
         raise ValueError(f"dataset {name!r}: ENV names unknown task(s) {sorted(unknown)}")
 
     envs = {}
-    for tid in ids:
+    for task in selected:
+        tid = task["task_id"]
         spec = declared.get(tid, default)
         _check_env(spec, tid, name)
         envs[tid] = _normalize_env(spec)
@@ -641,12 +662,17 @@ def _check_setup(spec, tid: str, name: str) -> None:
         validate_record(spec["tool_relay"]["record"])
     if (spec.get("tool_relay") or {}).get("model") is not None:
         from data.scaffolds.runtime_extensions import validate_judge
-        validate_judge(spec["tool_relay"]["model"])
+        validate_judge(spec["tool_relay"]["model"], allow_trial_seed=True)
     if "workers" in spec:
         from data.scaffolds.runtime_extensions import validate_workers
         validate_workers(spec["workers"])
         for worker in spec["workers"]:
             _check_setup({"files": worker.get("files", [])}, tid, name)
+    if 'mailbox' in spec:
+        from data.scaffolds.runtime_extensions import validate_mailbox
+        if 'workers' not in spec:
+            raise ValueError('mailbox requires workers')
+        validate_mailbox(spec['mailbox'])
     if "runtime_prompt" in spec and (
             not isinstance(spec["runtime_prompt"], str)
             or not spec["runtime_prompt"].strip()):
@@ -677,6 +703,12 @@ def _check_verifier(spec, tid: str, name: str) -> None:
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
     from data.scaffolds.scorer_isolation import declared_class
     declared_class(spec)
+    if "result_max_bytes" in spec:
+        limit = spec["result_max_bytes"]
+        if "container_runtime" not in spec:
+            raise ValueError("result_max_bytes requires container_runtime")
+        if limit is not None and (type(limit) is not int or limit <= 0):
+            raise ValueError("result_max_bytes must be positive or null")
     if "container_runtime" in spec:
         from data.scaffolds.runtime_extensions import validate_container_runtime
         validate_container_runtime(spec["container_runtime"])
@@ -755,8 +787,11 @@ def _check_verifier(spec, tid: str, name: str) -> None:
                 f"'exit0_stdout'")
 
 
-def load_tasks(name: str) -> tuple[list[dict], dict[str, dict], dict[str, dict]]:
-    """Return (tasks, setups, verifiers) — everything needed to run and grade.
+def load_tasks(name: str, *, task_ids=None) -> tuple[list[dict], dict[str, dict], dict[str, dict]]:
+    """Return selected (tasks, setups, verifiers) as a list and ordinary dicts.
+
+    None keeps full-pool loading. Explicit task_ids validate global identities,
+    then read only selected SETUP/VERIFY values, including lazy mappings.
 
     `SCORABLE` is not a second mechanism: a dataset that declares it and no `VERIFY`
     gets `{"kind": "answer", "expected": ...}` for each task, which is precisely what
@@ -765,7 +800,10 @@ def load_tasks(name: str) -> tuple[list[dict], dict[str, dict], dict[str, dict]]
     """
     tasks, scorable = load(name)
     module = importlib.import_module(module_name(name))
-    setups = dict(getattr(module, "SETUP", None) or {})
+    selected = _selected_tasks(name, tasks, task_ids)
+    setup_declarations = getattr(module, "SETUP", None)
+    if setup_declarations is None:
+        setup_declarations = {}
     declared = getattr(module, "VERIFY", None)
 
     for task in tasks:
@@ -774,12 +812,13 @@ def load_tasks(name: str) -> tuple[list[dict], dict[str, dict], dict[str, dict]]
     ids = {t["task_id"] for t in tasks}
 
     if declared is None:
-        missing = [t["task_id"] for t in tasks if t["task_id"] not in scorable]
+        missing = [t["task_id"] for t in selected if t["task_id"] not in scorable]
         if missing:
             raise ValueError(
                 f"dataset {name!r}: no VERIFY declared and SCORABLE is missing "
                 f"{missing}; those tasks would have no grade at all")
-        verifiers = {tid: {"kind": "answer", "expected": scorable[tid]} for tid in ids}
+        verifiers = {t["task_id"]: {"kind": "answer", "expected": scorable[t["task_id"]]}
+                     for t in selected}
     else:
         unknown = set(declared) - ids
         if unknown:
@@ -790,16 +829,24 @@ def load_tasks(name: str) -> tuple[list[dict], dict[str, dict], dict[str, dict]]
             raise ValueError(
                 f"dataset {name!r}: task(s) {sorted(absent)} have no VERIFY entry")
         verifiers = {}
-        for tid, spec in declared.items():
+        for task in selected:
+            tid = task["task_id"]
+            spec = declared[tid]
             _check_verifier(spec, tid, name)
             verifiers[tid] = {"kind": "answer", "expected": scorable.get(tid, ""),
                               **spec} if spec.get("kind") == "answer" else dict(spec)
 
-    unknown_setup = set(setups) - ids
+    setup_ids = set(setup_declarations)
+    unknown_setup = setup_ids - ids
     if unknown_setup:
         raise ValueError(f"dataset {name!r}: SETUP names unknown task(s) "
                          f"{sorted(unknown_setup)}")
-    for tid, spec in setups.items():
-        _check_setup(spec, tid, name)
+    setups = {}
+    for task in selected:
+        tid = task["task_id"]
+        if tid in setup_ids:
+            spec = setup_declarations[tid]
+            _check_setup(spec, tid, name)
+            setups[tid] = spec
 
-    return tasks, setups, verifiers
+    return selected, setups, verifiers

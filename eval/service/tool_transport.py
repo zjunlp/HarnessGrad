@@ -56,7 +56,7 @@ import threading
 import time
 from pathlib import Path
 
-#: Ceilings, not defaults: a caller that wants a tighter bound passes one.
+#: Legacy defaults. Callers may declare another positive bound or None.
 MAX_CALLS = 4096
 MAX_LINE = 8 * 1024 * 1024
 READY_TIMEOUT_S = 30.0
@@ -79,10 +79,14 @@ class Relay:
     """
 
     def __init__(self, socket_path, handler, *, max_calls=MAX_CALLS, deadline_s=None,
-                 ready_timeout_s=READY_TIMEOUT_S):
+                 ready_timeout_s=READY_TIMEOUT_S, max_line_bytes=MAX_LINE):
+        for key, value in (('max_calls', max_calls), ('max_line_bytes', max_line_bytes)):
+            if value is not None and (type(value) is not int or value <= 0):
+                raise ValueError(f'{key} must be a positive integer or None')
         self.path = Path(socket_path)
         self._handler = handler
         self._max_calls = max_calls
+        self._max_line_bytes = max_line_bytes
         self._deadline = None if deadline_s is None else time.monotonic() + float(deadline_s)
         self._ready_timeout_s = ready_timeout_s
         self._lock = threading.Lock()
@@ -90,7 +94,9 @@ class Relay:
         self._sock = None
         self._thread = None
         self.receipt = {"calls": 0, "refused": 0, "errors": 0, "connections": 0,
-                        "started_utc": None, "stopped_utc": None}
+                        "started_utc": None, "stopped_utc": None,
+                        "limits": {"max_calls": max_calls, "max_line_bytes": max_line_bytes,
+                                   "deadline_s": deadline_s}}
 
     # -- lifecycle -----------------------------------------------------------
     def start(self) -> "Relay":
@@ -175,7 +181,9 @@ class Relay:
             if not chunk:
                 return
             buffer += chunk
-            if len(buffer) > MAX_LINE:
+            if self._max_line_bytes is not None and len(buffer) > self._max_line_bytes:
+                with self.receipt_lock:
+                    self.receipt['refused'] += 1
                 self._reply(conn, {"ok": False, "error": "frame_too_large"})
                 return
             while b"\n" in buffer:
@@ -187,7 +195,12 @@ class Relay:
 
     def _reply(self, conn, payload: dict) -> bool:
         try:
-            conn.sendall(json.dumps(payload).encode() + b"\n")
+            raw = json.dumps(payload).encode() + b"\n"
+            if self._max_line_bytes is not None and len(raw) > self._max_line_bytes:
+                with self.receipt_lock:
+                    self.receipt['refused'] += 1
+                raw = b'{"ok": false, "error": "reply_too_large"}\n'
+            conn.sendall(raw)
             return True
         except OSError:
             return False
@@ -218,7 +231,7 @@ class Relay:
                 self.receipt["refused"] += 1
             return {"ok": False, "error": "deadline"}
         with self.receipt_lock:
-            if self.receipt["calls"] >= self._max_calls:
+            if self._max_calls is not None and self.receipt["calls"] >= self._max_calls:
                 self.receipt["refused"] += 1
                 return {"ok": False, "error": "call_budget"}
             self.receipt["calls"] += 1
@@ -237,7 +250,8 @@ class Relay:
         return {"ok": True, "result": result}
 
 
-def call(socket_path, op: str, args: dict | None = None, *, timeout_s: float = 60.0):
+def call(socket_path, op: str, args: dict | None = None, *, timeout_s: float | None = 60.0,
+         max_line_bytes: int | None = MAX_LINE):
     """One call against a `Relay`. Raises `ToolTransportError` on any failure.
 
     A missing socket is a *platform* failure, not a tool that returned nothing, and it is
@@ -248,7 +262,7 @@ def call(socket_path, op: str, args: dict | None = None, *, timeout_s: float = 6
         raise ToolTransportError(f"tool relay socket is absent: {path}")
     payload = json.dumps({"op": op, "args": args or {}}).encode() + b"\n"
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.settimeout(float(timeout_s))
+    sock.settimeout(None if timeout_s is None else float(timeout_s))
     try:
         sock.connect(str(path))
         sock.sendall(payload)
@@ -258,7 +272,7 @@ def call(socket_path, op: str, args: dict | None = None, *, timeout_s: float = 6
             if not chunk:
                 raise ToolTransportError("tool relay closed the connection mid-reply")
             buffer += chunk
-            if len(buffer) > MAX_LINE:
+            if max_line_bytes is not None and len(buffer) > max_line_bytes:
                 raise ToolTransportError("tool relay reply exceeded the frame limit")
     except OSError as exc:
         raise ToolTransportError(f"tool relay unreachable: {exc}") from exc

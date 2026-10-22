@@ -67,7 +67,9 @@ def init():
             if path.lstat().st_dev == device: os.chown(path, 65534, 65534, follow_symlinks=False)
 
 
-def collect(root, paths, maximum):
+def collect(root, paths, maximum, *, truncate=False):
+    if maximum is not None and (type(maximum) is not int or maximum <= 0):
+        raise ValueError('artifact maximum must be positive or null')
     if actors(): raise RuntimeError('artifact export requires quiescent actors')
     result = {}
     for name in paths:
@@ -81,11 +83,16 @@ def collect(root, paths, maximum):
         with os.fdopen(fd, 'rb') as f:
             info = os.fstat(f.fileno())
             if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1: raise ValueError('nonregular export refused')
-            data = f.read(maximum + 1)
-        if len(data) > maximum: raise ValueError('artifact byte limit exceeded')
-        maximum -= len(data)
+            data = f.read() if maximum is None else f.read(maximum + 1)
+        truncated = maximum is not None and len(data) > maximum
+        if truncated:
+            if not truncate: raise ValueError('artifact byte limit exceeded')
+            data = data[:maximum]
+        if maximum is not None: maximum -= len(data)
         result[name] = dict(status='submitted', bytes=len(data), sha256=hashlib.sha256(data).hexdigest(),
                             base64=base64.b64encode(data).decode())
+        if truncate:
+            result[name].update(source_bytes=info.st_size, truncated=truncated)
     return result
 
 
@@ -117,5 +124,6 @@ if __name__ == '__main__':
             target = root / rel
             if any(p.is_symlink() for p in target.parents): raise ValueError('symlink result parent')
             target.unlink(missing_ok=True)
-    elif op == 'collect': print(json.dumps(collect(sys.argv[2], json.loads(sys.argv[3]), int(sys.argv[4]))))
+    elif op == 'collect': print(json.dumps(collect(sys.argv[2], json.loads(sys.argv[3]),
+        json.loads(sys.argv[4]), truncate=len(sys.argv) > 5 and sys.argv[5] == 'truncate')))
     else: raise ValueError('unknown trusted operation')

@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 def collect(root, paths, *, max_bytes=16*1024*1024):
+    if max_bytes is not None and (type(max_bytes) is not int or max_bytes <= 0):
+        raise ValueError('artifact max_bytes must be positive or null')
     result={}
     for name in paths:
         rel=Path(name)
@@ -22,9 +24,10 @@ def collect(root, paths, *, max_bytes=16*1024*1024):
             info=os.fstat(stream.fileno())
             if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:
                 raise ValueError('artifact must be a regular file without hardlink aliases')
-            data=stream.read(max_bytes+1)
-        if len(data)>max_bytes:raise ValueError('artifact exceeds byte limit')
-        max_bytes-=len(data)
+            data=stream.read() if max_bytes is None else stream.read(max_bytes+1)
+        if max_bytes is not None:
+            if len(data)>max_bytes:raise ValueError('artifact exceeds byte limit')
+            max_bytes-=len(data)
         result[name]={'status':'submitted','bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),
                       'base64':base64.b64encode(data).decode()}
     return result

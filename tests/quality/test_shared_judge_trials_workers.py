@@ -67,10 +67,10 @@ def test_judge_failure_or_budget_exhaustion_cannot_be_hidden_by_scorer(tmp_path,
     assert len(endpoint)==1
 
 
-def test_judge_requires_explicit_matching_config(tmp_path,monkeypatch):
-    monkeypatch.delenv('HG_JUDGE_MODEL',raising=False)
+def test_judge_requires_explicit_endpoint(tmp_path,monkeypatch):
+    monkeypatch.delenv('HG_JUDGE_BASE_URL',raising=False)
     result=_verify(tmp_path,judge_spec(),'',sandbox=True,timeout_s=1)
-    assert result['score'] is None and 'HG_JUDGE_MODEL' in result['unmeasured']
+    assert result['score'] is None and 'HG_JUDGE_BASE_URL' in result['unmeasured']
 
 
 PROTOCOL={'version':1,'metric':'pass^k','trials':3,'ks':[1,2,3],'seeds':[10,20,30]}
@@ -215,3 +215,115 @@ def test_failed_worker_retains_peer_evidence_and_cleanup(tmp_path,monkeypatch):
     assert result['worker_group']['workers']['b']['exit_code']==0
     assert (Path(result['worker_group']['archive'])/'workers.json').is_file()
     assert result['runtime_services']['workers']['cleanup']['complete']
+
+
+@pytest.mark.parametrize('seed', [None, '', '1.5', 1.5, True])
+def test_environment_trial_seed_requires_an_explicit_integer(seed):
+    from eval.service.judge import Judge, JudgeUnavailable
+    spec = {**judge_spec()['judge'], 'seed_source': 'trial'}
+    with pytest.raises(JudgeUnavailable, match='explicit integer'):
+        Judge(spec, role='environment', trial_seed=seed)
+
+
+def test_trial_seed_option_is_environment_only_and_excludes_static_seed():
+    from data.scaffolds.registry import _check_setup
+    from data.scaffolds.runtime_extensions import validate_judge
+    spec = {**judge_spec()['judge'], 'seed_source': 'trial'}
+    with pytest.raises(ValueError):
+        validate_judge(spec)
+    validate_judge(spec, allow_trial_seed=True)
+    _check_setup({'tool_relay': {'model': spec}}, 'seeded-task', 'fixture')
+    with pytest.raises(ValueError, match='cannot combine'):
+        validate_judge({**spec, 'parameters': {'seed': 1}}, allow_trial_seed=True)
+    with pytest.raises(ValueError, match='must be trial'):
+        validate_judge({**spec, 'seed_source': 'actor'}, allow_trial_seed=True)
+
+
+@pytest.mark.parametrize('trial_seed', ['13', '29'])
+def test_relay_model_receives_trial_seed_without_recording(tmp_path, endpoint, monkeypatch, trial_seed):
+    import os
+    for suffix in ('BASE_URL', 'MODEL', 'API_KEY'):
+        monkeypatch.setenv('HG_ENV_' + suffix, os.environ['HG_JUDGE_' + suffix])
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    program = tmp_path / 'environment.py'
+    program.write_text(f'''import argparse,json,os,signal,sys,threading
+from pathlib import Path
+sys.path.insert(0, {str(TRANSPORT.parent)!r})
+from tool_transport import Relay,call
+p=argparse.ArgumentParser()
+p.add_argument('--socket');p.add_argument('--receipt');p.add_argument('--game')
+a=p.parse_args();done=threading.Event()
+signal.signal(signal.SIGTERM,lambda *_:done.set())
+def handle(op,args):
+    assert 'HG_ENV_API_KEY' not in os.environ
+    return call(os.environ['HG_ENV_MODEL_SOCKET'],'complete',
+                {{'messages':[{{'role':'user','content':'ok'}}]}})
+with Relay(a.socket,handle) as service:
+    done.wait(10)
+Path(a.receipt).write_text(json.dumps(service.receipt))
+''')
+    spec = {**judge_spec()['judge'], 'seed_source': 'trial'}
+    repo = harness(tmp_path, '''from transport import call
+reply=call('/run/harnessgrad-tool/tool.sock','ask',{})
+(w/'answer.txt').write_text(reply['content'])
+''')
+    result = runner.run_one(repo, {'task_id': 'seeded-environment'}, run_seed=trial_seed,
+        setup={'files': [{'path': 'transport.py', 'from': str(TRANSPORT)}],
+               'tool_relay': {'program': str(program), 'content': '{}', 'model': spec}},
+        verifier={'kind': 'answer', 'expected': 'safe fixture score'})
+    assert result['verdict']['passed'], result
+    report = result['runtime_services']['tool_relay']
+    assert report['recording'] is None
+    assert report['model']['configuration']['parameters']['seed'] == int(trial_seed)
+    assert endpoint[0][0]['seed'] == int(trial_seed)
+    assert 'seed' not in spec['parameters']
+    assert report['cleanup']['complete']
+
+
+def test_environment_static_seed_is_unchanged_by_trial_seed(endpoint, monkeypatch):
+    import os
+    from eval.service.judge import Judge
+    from eval.service.tool_transport import call
+    for suffix in ('BASE_URL', 'MODEL', 'API_KEY'):
+        monkeypatch.setenv('HG_ENV_' + suffix, os.environ['HG_JUDGE_' + suffix])
+    spec = {**judge_spec()['judge'], 'parameters': {'seed': 7}}
+    with Judge(spec, role='environment', trial_seed='99') as broker:
+        call(broker.path, 'complete', {'messages': [{'role': 'user', 'content': 'ok'}]})
+    assert endpoint[0][0]['seed'] == 7
+
+
+def test_trial_seeded_environment_does_not_reuse_measurement_cache(tmp_path, monkeypatch):
+    calls = []
+    def fake(*args, **kwargs):
+        calls.append(kwargs)
+        return {'verdict': {'score': 1, 'passed': True, 'scorer_isolation_class': 'actor-workdir'},
+                'exit_code': 0, 'trace': '', 'stderr': ''}
+    monkeypatch.setattr(runner, 'run_one', fake)
+    cache = {}
+    for seed in ('13', '29'):
+        runner._evaluate(tmp_path, [{'task_id': 't'}], {}, cache=cache, run_seed=seed,
+            setups={'t': {'tool_relay': {'model': {**judge_spec()['judge'], 'seed_source': 'trial'}}}})
+    assert [row['run_seed'] for row in calls] == ['13', '29']
+    assert all(row.get('trial_id') for row in calls)
+    assert cache == {}
+
+
+@pytest.mark.parametrize('global_model', [None, 'different-global-default'])
+def test_judge_uses_frozen_declaration_not_global_default(tmp_path, endpoint, monkeypatch, global_model):
+    if global_model is None:
+        monkeypatch.delenv('HG_JUDGE_MODEL')
+    else:
+        monkeypatch.setenv('HG_JUDGE_MODEL', global_model)
+    result = _verify(tmp_path, judge_spec(), '', sandbox=True, timeout_s=10)
+    assert result['score'] == 1, result
+    assert endpoint[0][0]['model'] == 'fixture-model'
+    assert result['judge']['configuration']['model'] == 'fixture-model'
+
+
+def test_environment_model_mismatch_is_still_rejected(endpoint, monkeypatch):
+    from eval.service.judge import Judge, JudgeUnavailable
+    import os
+    monkeypatch.setenv('HG_ENV_BASE_URL', os.environ['HG_JUDGE_BASE_URL'])
+    monkeypatch.setenv('HG_ENV_MODEL', 'different-environment-model')
+    with pytest.raises(JudgeUnavailable, match='HG_ENV_MODEL must match'):
+        Judge(judge_spec()['judge'], role='environment')

@@ -26,8 +26,9 @@ def snapshot_check(tmp_path, monkeypatch):
     monkeypatch.setattr(verifier.container_mod, "start", lambda *a: None)
     monkeypatch.setattr(verifier.container_mod, "remove_container", removed.append)
 
-    def check(raw, exit_code=3):
+    def check(raw, exit_code=3, require_exit_zero=False):
         def cp_out(name, source, destination):
+            assert not (require_exit_zero and exit_code), 'failed scorer reward must not be collected'
             assert source == "/verifier/reward.txt"
             if raw is None:
                 return False
@@ -40,13 +41,21 @@ def snapshot_check(tmp_path, monkeypatch):
                                 [], exit_code, "check starting\n", "check dependency unavailable\n"))
         result = verifier._verify_container_state(
             "synthetic-snapshot", {"kind": "command", "argv": ["synthetic-check"],
-                                   "reward_file": "/verifier/reward.txt"},
+                                   "reward_file": "/verifier/reward.txt",
+                                   "result_contract": {"version": 1, "score_range": [0, 1],
+                                                       "require_exit_zero": require_exit_zero}},
             expected_snapshot="synthetic-snapshot", task_mount="/app", staging=tmp_path,
             timeout_s=5, run_id="synthetic-verifierfix", task_id="synthetic-task")
         assert len(removed) == 1
         return result
 
     return check
+
+
+def test_snapshot_strict_completion_rejects_existing_reward(snapshot_check):
+    result = snapshot_check('1', exit_code=78, require_exit_zero=True)
+    assert result['score'] is None and result['outcome'] == 'unmeasured'
+    assert result['exit_code'] == 78
 
 
 @pytest.mark.parametrize("exit_code", [0, 3])
