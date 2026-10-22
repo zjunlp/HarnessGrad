@@ -44,6 +44,18 @@ EXCEPTIONS = {
         "Dataset control applies the existing platform verification timeout.",
     ("data-eval", "data/datasets/personamem_v2/relay.py", "eval.service.tool_transport"):
         "Private episode server reuses the platform transport.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.run.runner"):
+        "Dataset control exercises the real actor and verifier namespaces.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.run.tool_relay"):
+        "Local control owns the selected relay lifecycle and sealed episode.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.service.tool_transport"):
+        "Local control traverses the same ordered wire protocol as the actor.",
+    ("data-eval", "data/datasets/memoryagentbench/relay.py", "eval.service.tool_transport"):
+        "Private episode server reuses the platform's bounded transport.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.verification.verifier"):
+        "Local control invokes the trusted verifier in its actual sandbox.",
+    ("data-eval", "data/datasets/memoryagentbench/control.py", "eval.policy.runtime_policy"):
+        "Control uses the shared timeout precedence when invoking verification.",
     ("data-eval", "data/datasets/strongreject/control.py", "eval.run.runner"):
         "Explicit dataset control uses the platform execution path, never the actor API.",
     ("data-eval", "data/datasets/strongreject/control.py", "eval.verification.verifier"):
@@ -265,7 +277,7 @@ class ImportDirectionTests(unittest.TestCase):
 
     def test_publication_preserves_the_ordered_adapter_names(self):
         from data.scaffolds import registry
-        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'musique', 'nestful', 'personamem_v2', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'strongreject', 'tau2_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
+        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'memoryagentbench', 'musique', 'nestful', 'personamem_v2', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'strongreject', 'tau2_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
         self.assertEqual(registry.published(), expected)
         for name in expected:
             module = registry.importlib.import_module(registry.module_name(name))

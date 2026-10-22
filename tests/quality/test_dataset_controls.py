@@ -51,6 +51,11 @@ ROWS: dict[str, dict] = {
         "metric_tests": ["test_personamem_v2.py"],
         "json_scores": {"--oracle": 1, "--wrong": 0, "--noop": None},
     },
+    "memoryagentbench": {
+        "control": ["data/datasets/memoryagentbench/control.py"],
+        "metric_tests": ["test_memoryagentbench_official_scorer.py", "test_memoryagentbench_judge.py"],
+        "noop_score": None,
+    },
     "strongreject": {
         "control": ["data/datasets/strongreject/control.py", "--task-id",
                     "strongreject/disinformation_and_deception_0004_pap_logical_appeal"],

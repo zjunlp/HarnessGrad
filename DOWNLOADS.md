@@ -430,6 +430,39 @@ loads and scores it stays in git.
 
 > Pins `lcb_runner/evaluation/testing_util.py` (the executor, including the reliability_guard upstream warns is not a sandbox -- the platform's verification namespace is) and `pass_k_utils.py` (the aggregation). Both are copied into the verification namespace as VERIFY.inputs, so the metric runs upstream's bytes; `data/datasets/livecodebench.py` also transcribes pass_k_utils.py lines 4-53 verbatim. Never enters an agent SETUP.
 
+## `memoryagentbench`
+
+### MemoryAgentBench fixed data (hf-dataset, 7ea066982b140a19337e17e60d45d4076e042faf)
+
+- **Version (pinned):** `7ea066982b140a19337e17e60d45d4076e042faf`
+- **Size:** 76573866 bytes
+- **Repo:** `ai-hyz/MemoryAgentBench`
+- **Files:** `README.md`, `data/Accurate_Retrieval-00000-of-00001.parquet`, `data/Conflict_Resolution-00000-of-00001.parquet`, `data/Long_Range_Understanding-00000-of-00001.parquet`, `data/Test_Time_Learning-00000-of-00001.parquet`, `entity2id.json`
+- **Destination:** `raw`
+- **sha256:** `{'README.md': '5a9fd0dc2fbab5beb081eae40f24964ad1e47da75b9a7a01f0007791845b1580', 'data/Accurate_Retrieval-00000-of-00001.parquet': '56c3cd80fb6731a3e53cd1a6be3148f54df60ff2d290ee50e28f8acebf9655c1', 'data/Conflict_Resolution-00000-of-00001.parquet': '24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45', 'data/Long_Range_Understanding-00000-of-00001.parquet': '5ab175461954db67770d4a4cb69e569b513ebb96aceb9ee79b57f67488bcd539', 'data/Test_Time_Learning-00000-of-00001.parquet': '5338753be48f925d03318eed66117286e3489025fabe050a547bd086cd7d79c0', 'entity2id.json': '63353aca481bc9558b502f91cb98f6fa26438796fdd7e0bc06b5a1532126e8b5'}`
+
+> Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers local and model-judge primary scoring. Study/eval uses the platform's episode-ID hash split.
+
+### MemoryAgentBench English sentence tables archive (http, 550b6625bcef1f2abff2ff770a5a0d272c9c6b2a)
+
+- **Version (pinned):** `550b6625bcef1f2abff2ff770a5a0d272c9c6b2a`
+- **Size:** pinned punkt_tab archive; extract only four English tables
+- **URL:** https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip
+- **Destination:** `resources/downloads/punkt_tab.zip`
+- **sha256:** `e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106`
+
+> Run prepare_resources with --archive to extract and verify the four locked English tables offline.
+
+### MemoryAgentBench o200k_base encoding (http, 0.14.0)
+
+- **Version (pinned):** `0.14.0`
+- **Size:** 3613922 bytes
+- **URL:** https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken
+- **Destination:** `resources/tiktoken/fb374d419588a4632f3f557e76b4b70aebbca790`
+- **sha256:** `446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d`
+
+> The fixed encoding is loaded locally after checksum verification, without tokenizer downloads.
+
 ## `musique`
 
 ### MuSiQue-Ans dev (third-party HF release) (hf-dataset, c8f4f8c9465fb69d31a8eae894c3fd509c4ca321)

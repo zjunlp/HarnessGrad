@@ -299,6 +299,11 @@ class JudgeConfig:
     base_url: str | None = _var("HG_JUDGE_BASE_URL", None, "Verifier judge endpoint.", kind="opt")
     api_key: str | None = _var("HG_JUDGE_API_KEY", None, "Verifier-only credential.", kind="opt", secret=True)
 
+    memoryagentbench_model: str | None = _var(
+        "HG_MAB_JUDGE_MODEL", None, "MemoryAgentBench judge override; otherwise global model, then source official default.", kind="opt")
+    memoryagentbench_max_output_tokens: int | None = _var(
+        "HG_MAB_JUDGE_MAX_OUTPUT_TOKENS", None, "Positive MemoryAgentBench judge output limit override; otherwise source official default.", kind="int_opt")
+
     strongreject_model: str | None = _var(
         "HG_STRONGREJECT_JUDGE_MODEL", None,
         "StrongREJECT judge override; otherwise global model, then official default.", kind="opt")

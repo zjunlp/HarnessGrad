@@ -80,8 +80,8 @@ def test_no_demand_is_a_private_name_for_one_dataset():
     """
     rows = _rows()
     for demand in dataset_classes.DEMANDS:
-        if demand in dataset_classes.UNCOVERED_DEMANDS or demand in dataset_classes.UNDERREPRESENTED_DEMANDS:
-            continue  # uncovered/underrepresented demands are checked explicitly below
+        if demand in dataset_classes.UNCOVERED_DEMANDS:
+            continue  # a declared gap is a different state, checked below
         members = [row["dataset"] for row in rows if row["demand"] == demand]
         assert len(members) >= dataset_classes.MIN_MEMBERS_PER_DEMAND, (
             f"demand {demand!r} holds {members}; a one-dataset demand is a name, not a "
@@ -126,9 +126,10 @@ def test_a_gap_with_no_recorded_shape_is_refused(monkeypatch):
         dataset_classes._check_judged_axis(_declared_rows())
 
 
-@pytest.mark.parametrize("name", ["personamem_v2"])
+@pytest.mark.parametrize("name", ["personamem_v2", "memoryagentbench"])
 def test_sequential_memory_cli_declares_state_advancing_ack(name):
-    source = ROOT / "data/datasets" / name / "cli/personamem"
+    cli = "personamem" if name == "personamem_v2" else "mab"
+    source = ROOT / "data/datasets" / name / "cli" / cli
     verbs = dataset_classes._declared_verbs(source)
     assert verbs == {"next", "ack", "submit"}
     assert verbs & set(dataset_classes.ACT_VERBS) == {"ack"}
@@ -408,7 +409,7 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
         "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo",
-        "personamem_v2", "scienceworld",
+        "memoryagentbench", "personamem_v2", "scienceworld",
         "tau_bench", "terminal_bench"}
 
 
@@ -418,7 +419,7 @@ def test_the_filters_select_what_they_say(classified):
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
         "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo",
-        "personamem_v2", "scienceworld",
+        "memoryagentbench", "personamem_v2", "scienceworld",
         "tau_bench", "terminal_bench"}
 
 
@@ -461,27 +462,3 @@ def test_the_table_view_prints_both_levels(capsys):
         assert "no adapter yet" in out
         for surface in surfaces:
             assert surface in out, f"{demand} plans {surface} but the table hides it"
-
-
-def test_underrepresented_demand_limit_matches_actual_coverage():
-    rows = _declared_rows()
-    dataset_classes._check_judged_axis(rows)
-    for demand, reason in dataset_classes.UNDERREPRESENTED_DEMANDS.items():
-        assert reason.strip()
-        count = sum(row["demand"] == demand for row in rows)
-        assert 0 < count < dataset_classes.MIN_MEMBERS_PER_DEMAND
-
-
-def test_unrecorded_underrepresented_demand_is_refused(monkeypatch):
-    monkeypatch.setattr(dataset_classes, "UNDERREPRESENTED_DEMANDS", {})
-    with pytest.raises(SystemExit, match="fewer than.*memory"):
-        dataset_classes._check_judged_axis(_declared_rows())
-
-
-def test_coverage_limit_must_be_removed_when_second_adapter_arrives(monkeypatch):
-    capability = {**dataset_classes.CAPABILITY, "second_memory_fixture": ("memory", "supplied_history")}
-    exercises = {**dataset_classes.EXERCISES, "second_memory_fixture": ("context", "memory")}
-    monkeypatch.setattr(dataset_classes, "CAPABILITY", capability)
-    monkeypatch.setattr(dataset_classes, "EXERCISES", exercises)
-    with pytest.raises(SystemExit, match="stale.*memory"):
-        dataset_classes._check_judged_axis(_declared_rows())
