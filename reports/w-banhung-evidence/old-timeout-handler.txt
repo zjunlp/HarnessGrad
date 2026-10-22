@@ -1,0 +1,3 @@
+Source: git show HEAD:eval/run/runner.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+540:         except subprocess.TimeoutExpired:
+541:             exit_code, stderr = -1, f"timeout after {timeout_s}s"

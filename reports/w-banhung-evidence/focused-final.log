@@ -1,0 +1,33 @@
+...........F................................................             [100%]
+=================================== FAILURES ===================================
+_________ test_real_launch_cleanup_and_score_boundary[orphan-sandbox] __________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/focused-final/test_real_launch_cleanup_and_s11')
+mode = 'sandbox', behavior = 'orphan'
+
+    @pytest.mark.parametrize("mode", ["host", "sandbox"])
+    @pytest.mark.parametrize("behavior", ["wait", "kill", "term", "crash", "zero", "orphan"])
+    def test_real_launch_cleanup_and_score_boundary(tmp_path, mode, behavior):
+        proc = subprocess.run([sys.executable, str(Path(__file__).with_name("banhung_timeout_control.py")),
+                               mode, str(tmp_path / "control"), behavior],
+                              capture_output=True, text=True, timeout=8,
+                              env={**os.environ, "TMPDIR": str(tmp_path)})
+        assert proc.returncode == 0, proc.stderr
+        observed = json.loads(proc.stdout.splitlines()[-1])
+        assert observed["elapsed_s"] < 2, observed
+        assert observed["task_trees"] == []
+        assert all(p["returncode"] == 1 and p["stdout"] == "" for p in observed["groups"]), observed
+        assert observed["token_probe"]["returncode"] == 1, observed
+        if behavior in ("crash", "zero") or (mode == "sandbox" and behavior == "orphan"):
+            # Ordinary crash after a valid artifact still scores; a completed wrong
+            # answer remains a real measured zero.
+>           assert observed["per_task"] == {"synthetic": 1.0 if behavior == "crash" else 0.0}
+E           AssertionError: assert {'synthetic': 1.0} == {'synthetic': 0.0}
+E             Differing items:
+E             {'synthetic': 1.0} != {'synthetic': 0.0}
+E             Use -v to get more diff
+
+tests/quality/test_timeout_w_banhung.py:35: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_timeout_w_banhung.py::test_real_launch_cleanup_and_score_boundary[orphan-sandbox]
+1 failed, 59 passed in 27.74s

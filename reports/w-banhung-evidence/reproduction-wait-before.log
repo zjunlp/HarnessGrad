@@ -1,0 +1,12 @@
+MODE host inner_timeout_s=0.3 outer_timeout_s=2
+RETURNED 0 outer_elapsed_s 0.464
+{"elapsed_s": 0.308, "result": {"task_id": "synthetic-timeout", "answer": "", "trace": "", "exit_code": -1, "stderr": "timeout after 0.3s", "verdict": {"kind": "answer", "passed": false, "detail": "answer '' vs 'completed'", "scorer_isolation_class": "in-process", "scorer_isolation_declared": "unknown"}, "env_usage": {}, "harness_runtime": {"source": "platform", "python": null, "note": "the platform's interpreter supplies the dependencies"}, "runtime_boundary": {"agent_timeout_s": 0.3, "verifier_timeout_s": 3600, "agent_network": "inherited", "agent_package_projected": false, "verifier_package": "trusted"}, "model_gateway": null, "web_gateway": null, "identity": null}}
+stderr ''
+POST_RUN pgrep -af banhung-f4ecccb4e0e24e86bf753a5bc05179cb rc= 0 stdout= '342736 /mnt/8t/xubuqiang/anaconda3/bin/python -c import time; time.sleep(30) banhung-f4ecccb4e0e24e86bf753a5bc05179cb\n'
+task_trees []
+MODE sandbox inner_timeout_s=0.3 outer_timeout_s=2
+RETURNED 0 outer_elapsed_s 0.465
+{"elapsed_s": 0.309, "result": {"task_id": "synthetic-timeout", "answer": "", "trace": "", "exit_code": -1, "stderr": "timeout after 0.3s", "verdict": {"kind": "answer", "passed": false, "detail": "answer '' vs 'completed'", "scorer_isolation_class": "in-process", "scorer_isolation_declared": "unknown"}, "env_usage": {}, "harness_runtime": {"source": "platform", "python": null, "note": "the platform's interpreter supplies the dependencies"}, "runtime_boundary": {"agent_timeout_s": 0.3, "verifier_timeout_s": 3600, "agent_network": "inherited", "agent_package_projected": false, "verifier_package": "trusted"}, "model_gateway": null, "web_gateway": null, "identity": null}}
+stderr ''
+POST_RUN pgrep -af banhung-18245930d17443348d8db90d0d665478 rc= 1 stdout= ''
+task_trees []

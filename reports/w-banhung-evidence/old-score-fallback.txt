@@ -1,0 +1,8 @@
+Source: git show HEAD:eval/run/runner.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+1273:         def _score_of(res: dict) -> float:
+1274:             """`score` first: a `reward_file` check returns a number and the platform must
+1275:             use it, not collapse it to "did it pass". A fractional reward is a score
+1276:             (INTERFACE.md §2.5.9), and discarding it would silently turn a 0.5 into a 1.
+1277:             """
+1278:             v = res.get("verdict") or {}
+1279:             return float(v.get("score", 1.0 if v.get("passed") else 0.0))

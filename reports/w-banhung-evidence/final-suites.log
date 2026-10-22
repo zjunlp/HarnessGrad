@@ -1,0 +1,799 @@
+COMMAND ['/mnt/8t/xubuqiang/anaconda3/bin/python3', '-m', 'pytest', '-q', '-ra', '--basetemp=/tmp/banhung-tmp/final-suites', 'tests/quality/test_sandbox.py', 'tests/quality/test_container.py', 'tests/quality/test_stop_semantics.py', 'tests/quality/test_unified_budget.py', 'tests/quality/test_services.py', 'tests/quality/test_verifier.py', 'tests/quality/test_cached_pilot_admission.py', 'tests/quality/test_container_state.py', 'tests/quality/test_ds1000_scratch_cleanup_w_scratch.py', 'tests/quality/test_gaia_snapshot_attestation.py', 'tests/quality/test_hotpot_timeout_admission_w_hotpot.py', 'tests/quality/test_jericho_control_tempdir.py', 'tests/quality/test_jericho_runtime_boundaries.py', 'tests/quality/test_measurement_coverage_hg_b3.py', 'tests/quality/test_native_model_route.py', 'tests/quality/test_prifix_regressions.py', 'tests/quality/test_progress.py', 'tests/quality/test_quiesce2_regressions.py', 'tests/quality/test_runner_admission.py', 'tests/quality/test_shared_admission_wiring_codex163.py', 'tests/quality/test_spreadsheetbench_classification_w_spread2.py', 'tests/quality/test_staged_receipt_audit_codex193.py', 'tests/quality/test_w_e6fix_adjacent.py', 'tests/quality/test_w_e6fix_cleanup.py', 'tests/runtime/test_eight_stage_runtime.py', 'tests/quality/test_timeout_w_banhung.py', 'tests/quality/test_trials_and_unmeasured.py', 'tests/quality/test_harness_failure_visible.py', 'tests/quality/test_eval_package_compat.py', 'tests/quality/test_import_direction.py', 'tests/quality/test_parallel_tasks.py', 'tests/quality/test_chessbench_stepwise_runner.py']
+FFFFFFF.....F.........FF.F.F......FF.................................... [  6%]
+.........FF............................................................. [ 13%]
+........................................................................ [ 19%]
+........................................................................ [ 26%]
+.....................................FF................................. [ 33%]
+.....................................................................ss. [ 39%]
+..s................s....................s............................... [ 46%]
+......................................s................................. [ 52%]
+........................................................................ [ 59%]
+........................................................................ [ 66%]
+........................................................................ [ 72%]
+........................................................................ [ 79%]
+...............................s.......................sss.............. [ 86%]
+........................................................................ [ 92%]
+........................................................................ [ 99%]
+........                                                                 [100%]
+=================================== FAILURES ===================================
+________________ test_the_platform_is_not_on_the_subjects_disk _________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_the_platform_is_not_on_th0')
+staged_harness = (PosixPath('/tmp/banhung-tmp/final-suites/test_the_platform_is_not_on_th0/workroot/run-id/workspace'), PosixPath('/tmp/banhung-tmp/final-suites/test_the_platform_is_not_on_th0/workroot/run-id/workspace/.state'))
+
+    @needs_bwrap
+    def test_the_platform_is_not_on_the_subjects_disk(tmp_path, staged_harness):
+        """The whole point: not "permission denied", but absent.
+    
+        This is the measurement that motivated the module, and it is asserted from
+        inside the namespace rather than inferred from the arguments handed to bwrap.
+        """
+        repo, _ = staged_harness
+>       seen = inside({}, tmp_path, (
+            "import json, os, pathlib\n"
+            f"p = pathlib.Path({str(PLATFORM)!r})\n"
+            "print(json.dumps({\n"
+            "  'env': (p / '.env').exists(),\n"
+            "  'driver': (p / 'driver.py').exists(),\n"
+            # The implementation moved out of `driver.py`; the rule is about the
+            # platform's code, so the package that holds it is probed too. A sandbox
+            # that hid the entrypoint and left the scorer readable would look fine.
+            "  'impl': (p / 'harnessgrad').exists(),\n"
+            "  'scorer': (p / 'eval' / 'run' / 'metrics.py').exists(),\n"
+            "  'methods': (p / 'methods').exists(),\n"
+            "  'listing': sorted(os.listdir(p)) if p.is_dir() else 'not-a-dir',\n"
+            "}))\n"), repo=repo)
+
+tests/quality/test_sandbox.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_the_platform_is_not_on_th0')
+script = "import json, os, pathlib\np = pathlib.Path('/mnt/20t/xubuqiang/hg-wt/w-banhung')\nprint(json.dumps({\n  'env': (p / '...(),\n  'methods': (p / 'methods').exists(),\n  'listing': sorted(os.listdir(p)) if p.is_dir() else 'not-a-dir',\n}))\n"
+repo = PosixPath('/tmp/banhung-tmp/final-suites/test_the_platform_is_not_on_th0/workroot/run-id/workspace')
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+__________________ test_the_subject_keeps_its_own_credentials __________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_the_subject_keeps_its_own0')
+
+    @needs_bwrap
+    def test_the_subject_keeps_its_own_credentials(tmp_path):
+        """A sandboxed harness with no API key is a broken instrument, not a result.
+    
+        Regression for the bug that deleted `HG_AGENT_API_KEY`: the platform passed
+        `HG_AGENT_MODEL=deepseek-flash` through a path check, `Path("deepseek-flash")`
+        resolved against the platform's cwd, and the value was judged to be inside the
+        hidden tree.
+        """
+        env = {"HG_AGENT_MODEL": "deepseek-flash",
+               "HG_AGENT_BASE_URL": "https://api.deepseek.com",
+               "HG_AGENT_API_KEY": "sk-not-a-real-key"}
+>       seen = inside(env, tmp_path, (
+            "import json, os\n"
+            "print(json.dumps({k: os.environ.get(k) for k in [\n"
+            "  'HG_AGENT_MODEL', 'HG_AGENT_BASE_URL', 'HG_AGENT_API_KEY']}))\n"))
+
+tests/quality/test_sandbox.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {'HG_AGENT_API_KEY': 'sk-not-a-real-key', 'HG_AGENT_BASE_URL': 'https://api.deepseek.com', 'HG_AGENT_MODEL': 'deepseek-flash'}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_the_subject_keeps_its_own0')
+script = "import json, os\nprint(json.dumps({k: os.environ.get(k) for k in [\n  'HG_AGENT_MODEL', 'HG_AGENT_BASE_URL', 'HG_AGENT_API_KEY']}))\n"
+repo = None
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+________________ test_host_variables_are_not_mistaken_for_paths ________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_host_variables_are_not_mi0')
+
+    @needs_bwrap
+    def test_host_variables_are_not_mistaken_for_paths(tmp_path):
+        """`false` is not a path. Neither is `0.1.5-rc.2`."""
+        env = {"npm_package_version": "0.1.5-rc.2",
+               "pnpm_config_verify_deps_before_run": "false"}
+>       seen = inside(env, tmp_path, (
+            "import json, os\n"
+            "print(json.dumps({k: os.environ.get(k) for k in [\n"
+            "  'npm_package_version', 'pnpm_config_verify_deps_before_run']}))\n"))
+
+tests/quality/test_sandbox.py:134: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {'npm_package_version': '0.1.5-rc.2', 'pnpm_config_verify_deps_before_run': 'false'}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_host_variables_are_not_mi0')
+script = "import json, os\nprint(json.dumps({k: os.environ.get(k) for k in [\n  'npm_package_version', 'pnpm_config_verify_deps_before_run']}))\n"
+repo = None
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+____________ test_the_work_root_survives_and_the_platform_does_not _____________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_the_work_root_survives_an0')
+staged_harness = (PosixPath('/tmp/banhung-tmp/final-suites/test_the_work_root_survives_an0/workroot/run-id/workspace'), PosixPath('/tmp/banhung-tmp/final-suites/test_the_work_root_survives_an0/workroot/run-id/workspace/.state'))
+
+    @needs_bwrap
+    def test_the_work_root_survives_and_the_platform_does_not(tmp_path, staged_harness):
+        """The harness's tree is reachable; the platform's is not.
+    
+        These two are siblings in a real run -- `harnessgrad_work/` next to
+        `HarnessGrad/` -- which makes this the case worth pinning: exposing one must not
+        expose the other, and hiding one must not take the other with it. The plan covers
+        the platform's own path rather than its parent precisely so the sibling survives.
+        """
+        repo, _ = staged_harness
+        env = {"HARNESSGRAD_WORK_ROOT": str(repo.parent.parent)}
+>       seen = inside(env, tmp_path, (
+            "import json, os, pathlib\n"
+            "w = pathlib.Path(os.environ['HARNESSGRAD_WORK_ROOT'])\n"
+            f"p = pathlib.Path({str(PLATFORM)!r})\n"
+            "print(json.dumps({\n"
+            "  'work_root': w.is_dir(),\n"
+            "  'harness_readable': (w / 'run-id' / 'workspace' / 'agent.py').exists(),\n"
+            "  'platform_readable': (p / 'driver.py').exists(),\n"
+            "  'impl_readable': (p / 'harnessgrad').exists(),\n"
+            "  'platform_listing': sorted(os.listdir(p)) if p.is_dir() else 'not-a-dir',\n"
+            "}))\n"), repo=repo)
+
+tests/quality/test_sandbox.py:152: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {'HARNESSGRAD_WORK_ROOT': '/tmp/banhung-tmp/final-suites/test_the_work_root_survives_an0/workroot'}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_the_work_root_survives_an0')
+script = "import json, os, pathlib\nw = pathlib.Path(os.environ['HARNESSGRAD_WORK_ROOT'])\np = pathlib.Path('/mnt/20t/xubuqiang...le': (p / 'harnessgrad').exists(),\n  'platform_listing': sorted(os.listdir(p)) if p.is_dir() else 'not-a-dir',\n}))\n"
+repo = PosixPath('/tmp/banhung-tmp/final-suites/test_the_work_root_survives_an0/workroot/run-id/workspace')
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+_______________ test_a_harness_can_actually_work_in_its_workdir ________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_a_harness_can_actually_wo0')
+
+    @needs_bwrap
+    def test_a_harness_can_actually_work_in_its_workdir(tmp_path):
+        """The sandbox must not break the thing a harness does all day: file I/O.
+    
+        Read-only applies to the harness's *own tree*, never to `--workdir`. The
+        reference harness executes model-issued shell commands with `cwd=workdir`, so a
+        read-only workdir would not be a stricter sandbox -- it would be a harness that
+        cannot do any task at all, scoring zero for a reason that looks like a harness
+        defect. Verified here in the shape the real one uses: nested mkdir, redirect,
+        read back, and a subprocess.
+    
+        Confirmed end to end separately: three tasks whose answers are only obtainable by
+        creating and re-reading a file scored 1.000/1.000 in the sandbox, with the
+        commands visible in the collected traces.
+        """
+        script = (
+            "import json, os, pathlib, subprocess, sys\n"
+            "wd = pathlib.Path(os.environ['TD'])\n"
+            "r = {}\n"
+            "def step(label, fn):\n"
+            "    try: r[label] = fn()\n"
+            "    except OSError as e: r[label] = type(e).__name__\n"
+            "step('mkdir', lambda: (wd / 'deep' / 'nested').mkdir(parents=True) or 'ok')\n"
+            "step('write', lambda: (wd / 'deep' / 'nested' / 'v.txt').write_text('gamma') and 'ok')\n"
+            "step('read', lambda: (wd / 'deep' / 'nested' / 'v.txt').read_text())\n"
+            "step('shell', lambda: subprocess.run(\n"
+            "    \"printf beta > notes.txt && cat notes.txt\", shell=True, cwd=wd,\n"
+            "    capture_output=True, text=True).stdout)\n"
+            "step('rmdir', lambda: (wd / 'deep').rename(wd / 'moved') and 'ok')\n"
+            "print(json.dumps(r))\n")
+>       seen = inside({"TD": str(tmp_path)}, tmp_path, script)
+
+tests/quality/test_sandbox.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {'TD': '/tmp/banhung-tmp/final-suites/test_a_harness_can_actually_wo0'}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_a_harness_can_actually_wo0')
+script = "import json, os, pathlib, subprocess, sys\nwd = pathlib.Path(os.environ['TD'])\nr = {}\ndef step(label, fn):\n    try...t=True, text=True).stdout)\nstep('rmdir', lambda: (wd / 'deep').rename(wd / 'moved') and 'ok')\nprint(json.dumps(r))\n"
+repo = None
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+____________________ test_the_harness_tree_stays_read_only _____________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_tree_stays_re0')
+
+    @needs_bwrap
+    def test_the_harness_tree_stays_read_only(tmp_path):
+        """The other half: the subject's own source is not scratch space.
+    
+        One copy of the harness scores every task in a round, so a subject that rewrote
+        its own `agent.py` while answering task 1 would be a different program by task 2.
+        """
+>       seen = inside({}, tmp_path, (
+            "import json, os, pathlib\n"
+            "results = {}\n"
+            "for label, victim in [\n"
+            f"    ('write_source', pathlib.Path({str(WORK_ROOT)!r})),\n"
+            "]:\n"
+            "    try:\n"
+            "        (victim / 'probe_write').write_text('x'); results[label] = 'wrote'\n"
+            "    except OSError as e:\n"
+            "        results[label] = type(e).__name__\n"
+            "print(json.dumps(results))\n"))
+
+tests/quality/test_sandbox.py:215: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_tree_stays_re0')
+script = "import json, os, pathlib\nresults = {}\nfor label, victim in [\n    ('write_source', pathlib.Path('/mnt/20t/xubuqiang...ts[label] = 'wrote'\n    except OSError as e:\n        results[label] = type(e).__name__\nprint(json.dumps(results))\n"
+repo = None
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+__________ test_the_harness_gets_a_writable_hole_in_a_read_only_tree ___________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0')
+staged_harness = (PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0/workroot/run-id/workspace'), PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0/workroot/run-id/workspace/.state'))
+
+    @needs_bwrap
+    def test_the_harness_gets_a_writable_hole_in_a_read_only_tree(tmp_path, staged_harness):
+        """The contract a harness actually needs: read its code, write its scratch.
+    
+        Read-only on the whole tree was too blunt. A harness legitimately wants to put a
+        cache, a session file or an intermediate artefact next to itself, and refusing
+        that would break working harnesses to prevent a failure that is better prevented
+        precisely -- by making the *code* unwritable and one named directory writable.
+    
+        A tmpfs rather than a shared directory, so what it writes is per-task: a score
+        must not depend on what an earlier task left behind.
+        """
+        repo, state = staged_harness
+>       seen = inside({"HARNESSGRAD_STATE": str(state), "TD": str(tmp_path)},
+                     tmp_path,
+            "import json, os, pathlib\nrepo = pathlib.Path(os.environ['HG_REPO'])\nstate = pathlib.Path(os.environ['HARNESSGRAD_STATE'])\ndef attempt(fn):\n    try:\n        fn(); return 'ok'\n    except OSError as exc:\n        return type(exc).__name__\nprint(json.dumps({\n  'read_source': attempt(lambda: repo.joinpath('agent.py').read_text() and 'ok'),\n  'write_source': attempt(lambda: repo.joinpath('agent.py').write_text('rewritten')),\n  'delete_manifest': attempt(lambda: repo.joinpath('harness.json').unlink()),\n  'write_state': attempt(lambda: state.joinpath('cache.json').write_text('{}')),\n  'mkdir_state': attempt(lambda: state.joinpath('nested').mkdir()),\n  'write_workdir': attempt(lambda: pathlib.Path(os.environ['TD']).joinpath('out.txt').write_text('x')),\n}))\n".replace("os.environ['HG_REPO']", repr(str(repo))),
+            repo=repo)
+
+tests/quality/test_sandbox.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {'HARNESSGRAD_STATE': '/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0/workroot/run-id/workspace/.state', 'TD': '/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0'}
+work_dir = PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0')
+script = "import json, os, pathlib\nrepo = pathlib.Path('/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0/workroot...ir()),\n  'write_workdir': attempt(lambda: pathlib.Path(os.environ['TD']).joinpath('out.txt').write_text('x')),\n}))\n"
+repo = PosixPath('/tmp/banhung-tmp/final-suites/test_the_harness_gets_a_writab0/workroot/run-id/workspace')
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+__________________ test_self_check_notices_a_plan_that_leaks ___________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_self_check_notices_a_plan0')
+
+    @needs_bwrap
+    def test_self_check_notices_a_plan_that_leaks(tmp_path):
+        """The self-check has to be able to fail, or it is decoration.
+    
+        A plan that actually exposes the platform must be caught. Note what does *not*
+        qualify: deleting every `--tmpfs` from the plan still leaves the platform
+        invisible, because bwrap starts from an empty root rather than inheriting the
+        host's. The first version of this test mutated the plan that way, saw the check
+        still pass, and would have been written off as a bug in the check -- it was a bug
+        in the mutation. The property under test is "can the subject see the platform",
+        so the mutation has to be one that makes the subject able to.
+    
+        The leaking plan binds the host root read-only, which is the realistic mistake:
+        it is the reflex fix for "my harness cannot find its interpreter".
+        """
+>       assert sandbox.self_check(PLATFORM, WORK_ROOT)["ok"] is True
+E       assert False is True
+
+tests/quality/test_sandbox.py:338: AssertionError
+____ test_a_working_exec_harness_is_unmeasured_without_backend_observations ____
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_a_working_exec_harness_is0')
+
+    def test_a_working_exec_harness_is_unmeasured_without_backend_observations(tmp_path):
+        """008348b: even a solving harness cannot authorize an unobserved backend."""
+        _require_docker()
+>       assert_driver_policy_refusal(_run(tmp_path, mode="solve"), tmp_path, ("e01", "e02"))
+
+tests/quality/test_container.py:261: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+____________ test_an_idle_exec_harness_is_invalid_rather_than_zero _____________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_an_idle_exec_harness_is_i0')
+
+    def test_an_idle_exec_harness_is_invalid_rather_than_zero(tmp_path):
+        _require_docker()
+>       assert_driver_policy_refusal(_run(tmp_path, mode="idle"), tmp_path, ("e01", "e02"))
+
+tests/quality/test_container.py:266: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+_________ test_a_cheating_exec_harness_cannot_bypass_policy_admission __________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_a_cheating_exec_harness_c0')
+
+    def test_a_cheating_exec_harness_cannot_bypass_policy_admission(tmp_path):
+        """The direct restored/cheated verifier control below still tests input integrity."""
+        _require_docker()
+>       assert_driver_policy_refusal(_run(tmp_path, mode="cheat"), tmp_path, ("e01", "e02"))
+
+tests/quality/test_container.py:308: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+_______ test_an_unmeasured_exec_environment_is_recorded_without_a_curve ________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_an_unmeasured_exec_enviro0')
+
+    def test_an_unmeasured_exec_environment_is_recorded_without_a_curve(tmp_path):
+        _require_docker()
+>       assert_driver_policy_refusal(_run(tmp_path, mode="idle"), tmp_path, ("e01", "e02"))
+
+tests/quality/test_container.py:347: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+_____________ test_a_refused_run_still_records_the_resolved_image ______________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_a_refused_run_still_recor0')
+
+    def test_a_refused_run_still_records_the_resolved_image(tmp_path):
+        """Image resolution precedes run metadata, including when no curve is authorized."""
+        _require_docker()
+>       assert_driver_policy_refusal(_run(tmp_path, mode="idle"), tmp_path, ("e01", "e02"))
+
+tests/quality/test_container.py:468: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+____________ test_no_sandbox_does_not_bypass_exec_policy_admission _____________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_no_sandbox_does_not_bypas0')
+
+    def test_no_sandbox_does_not_bypass_exec_policy_admission(tmp_path):
+        """--no-sandbox changes host bwrap; it cannot authorize container execution."""
+        _require_docker()
+        proc = _run(tmp_path, mode="solve", extra_argv=("--no-sandbox",))
+>       assert_driver_policy_refusal(proc, tmp_path, ("e01", "e02"))
+
+tests/quality/test_container.py:479: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+__________ test_a_refused_service_run_names_the_service_in_its_header __________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_a_refused_service_run_nam0')
+
+    def test_a_refused_service_run_names_the_service_in_its_header(tmp_path):
+        _require_docker()
+        proc = _run_driver(tmp_path, "verify_service", extra_env={"HG_AGENT_PROBE": "idle"})
+>       assert_driver_policy_refusal(proc, tmp_path, ("s01", "s02"))
+
+tests/quality/test_services.py:660: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+______ test_an_unmeasured_service_environment_is_recorded_without_a_curve ______
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_an_unmeasured_service_env0')
+
+    def test_an_unmeasured_service_environment_is_recorded_without_a_curve(tmp_path):
+        _require_docker()
+        proc = _run_driver(tmp_path, "verify_service", extra_env={"HG_AGENT_PROBE": "idle"})
+>       assert_driver_policy_refusal(proc, tmp_path, ("s01", "s02"))
+
+tests/quality/test_services.py:667: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:47: in assert_driver_policy_refusal
+    assert_invalid_policy(record["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...efaults', 'env.memory_mb', 'env.network'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s')
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+_________ test_the_oracle_cannot_authorize_unobserved_container_state __________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_the_oracle_cannot_authori0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7aa91f334c80>
+
+    def test_the_oracle_cannot_authorize_unobserved_container_state(tmp_path, monkeypatch):
+        """008348b: a reference solution is not a trusted backend observation."""
+        from eval.run import runner
+    
+        task, setup, verifier, env = _one_ready_task()
+        resolved, problem = __import__("driver")._resolve_envs({task["task_id"]: env})
+        assert problem is None, problem
+    
+        def unexpected(*a, **kw):
+            pytest.fail("a refused oracle must not allocate or snapshot a container")
+    
+        monkeypatch.setattr(runner, "_run_one_container_state", unexpected)
+        result = runner.run_one(ROOT / "base_harness/oracle", task, sandbox=True,
+                                setup=setup, verifier=verifier, env=resolved[task["task_id"]],
+                                run_id=f"oracle-test-{os.getpid()}", run_seed="s",
+                                recordings_root=tmp_path / "recordings")
+>       assert_policy_refusal(result, (*EXEC_POLICY_FIELDS, "env.state=container"))
+
+tests/quality/test_container_state.py:366: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:29: in assert_policy_refusal
+    assert_invalid_policy(result["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...b', 'env.network', 'env.state=container'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s', ...)
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+___________ test_a_refused_container_state_run_leaves_nothing_behind ___________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/final-suites/test_a_refused_container_state0')
+
+    def test_a_refused_container_state_run_leaves_nothing_behind(tmp_path):
+        """A snapshot image per task is a disk leak waiting to happen, and it is the platform
+        that made it."""
+        from eval.run.runner import run_one
+    
+        task, setup, verifier, env = _one_ready_task()
+        import importlib
+        tb = importlib.import_module("data.datasets.terminal_bench")
+        if not (TB_ROOT / task["task_id"] / "solution").is_dir():
+            pytest.skip("no solution to run")
+    
+        # **A unique run id, because a fixed one makes this test fail forever.** Measured
+        # 2026-10-06: a network named `hg-leak-test-cancel-async-tasks` survived an
+        # interrupted run, and from then on every execution of this test died with
+        # `ServiceUnavailable: network with name hg-leak-test-cancel-async-tasks already
+        # exists` -- a red test whose cause had nothing to do with the code under test.
+        #
+        # The same fixed id also made the snapshot assertion unusable next to a live run: it
+        # counted **every** `hg-snapshot` image on the daemon, including the ones a concurrent
+        # experiment was creating and removing, so this test could not pass while any
+        # experiment was in flight -- which is exactly when the platform is most in use.
+        # A per-process id makes both checks look only at this run's own namespace.
+        leak_run_id = f"leak-test-{os.getpid()}"
+        before = set(container.docker(
+            "images", "--format", "{{.Repository}}:{{.Tag}}").stdout.split())
+        old = os.environ.copy()
+        os.environ.update({"HG_AGENT_BACKEND": "mock",
+                           "HARNESSGRAD_WORK_ROOT": str(tmp_path / "work")})
+        try:
+            resolved, _ = __import__("driver")._resolve_envs({task["task_id"]: env})
+            result = run_one((ROOT / "base_harness" / "oracle"), task, sandbox=True,
+                    setup={"files": [{"path": ".oracle",
+                                      "from": str(TB_ROOT / task["task_id"] / "solution")}]},
+                    verifier=verifier, env=resolved[task["task_id"]],
+                    run_id=leak_run_id, run_seed="s",
+                    recordings_root=tmp_path / "recordings")
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+    
+>       assert_policy_refusal(result, (*EXEC_POLICY_FIELDS, "env.state=container"))
+
+tests/quality/test_container_state.py:410: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:29: in assert_policy_refusal
+    assert_invalid_policy(result["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...b', 'env.network', 'env.state=container'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s', ...)
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 190 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 96 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [2] tests/quality/test_hotpot_timeout_admission_w_hotpot.py:66: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+SKIPPED [1] tests/quality/test_hotpot_timeout_admission_w_hotpot.py:116: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+SKIPPED [1] tests/quality/test_jericho_runtime_boundaries.py:120: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+SKIPPED [1] tests/quality/conftest.py:26: site source packet absent from this clone: /site/w-alf-receipts.md
+SKIPPED [1] tests/quality/test_quiesce2_regressions.py:201: tests/fixtures/hg_wpristine/closure/sh is absent (untracked packet, recorded digest b3c1009e1b5c927e...); the preserved-packet audit cannot seal
+SKIPPED [1] tests/quality/test_spreadsheetbench_classification_w_spread2.py:285: opt-in authored real LibreOffice control (no dataset/model)
+SKIPPED [3] tests/quality/test_w_e6fix_adjacent.py:13: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+FAILED tests/quality/test_sandbox.py::test_the_platform_is_not_on_the_subjects_disk
+FAILED tests/quality/test_sandbox.py::test_the_subject_keeps_its_own_credentials
+FAILED tests/quality/test_sandbox.py::test_host_variables_are_not_mistaken_for_paths
+FAILED tests/quality/test_sandbox.py::test_the_work_root_survives_and_the_platform_does_not
+FAILED tests/quality/test_sandbox.py::test_a_harness_can_actually_work_in_its_workdir
+FAILED tests/quality/test_sandbox.py::test_the_harness_tree_stays_read_only
+FAILED tests/quality/test_sandbox.py::test_the_harness_gets_a_writable_hole_in_a_read_only_tree
+FAILED tests/quality/test_sandbox.py::test_self_check_notices_a_plan_that_leaks
+FAILED tests/quality/test_container.py::test_a_working_exec_harness_is_unmeasured_without_backend_observations
+FAILED tests/quality/test_container.py::test_an_idle_exec_harness_is_invalid_rather_than_zero
+FAILED tests/quality/test_container.py::test_a_cheating_exec_harness_cannot_bypass_policy_admission
+FAILED tests/quality/test_container.py::test_an_unmeasured_exec_environment_is_recorded_without_a_curve
+FAILED tests/quality/test_container.py::test_a_refused_run_still_records_the_resolved_image
+FAILED tests/quality/test_container.py::test_no_sandbox_does_not_bypass_exec_policy_admission
+FAILED tests/quality/test_services.py::test_a_refused_service_run_names_the_service_in_its_header
+FAILED tests/quality/test_services.py::test_an_unmeasured_service_environment_is_recorded_without_a_curve
+FAILED tests/quality/test_container_state.py::test_the_oracle_cannot_authorize_unobserved_container_state
+FAILED tests/quality/test_container_state.py::test_a_refused_container_state_run_leaves_nothing_behind
+18 failed, 1060 passed, 10 skipped, 286 warnings in 296.54s (0:04:56)

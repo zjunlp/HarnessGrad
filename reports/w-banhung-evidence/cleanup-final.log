@@ -1,0 +1,6 @@
+Scope: /tmp/banhung-tmp
+Before: ['hg-method-budget-batch-6yn1aojr_calls.txt', 'hg-method-budget-batch-t0b1rmfe_calls.txt', 'hg-method-budget-batch-vje3tcsv_calls.txt', 'hg-method-budget-single-9ilnzmpq_calls.txt', 'hg-method-budget-single-i51bnbih_calls.txt', 'hg-method-budget-single-wcix9v29_calls.txt']
+COMMAND ['pgrep', '-a', '-g', '942887,944533,946012,947219,948356,949519,951320']
+returncode 1 stdout '' stderr ''
+COMMAND shutil.rmtree("/tmp/banhung-tmp")
+Exists after cleanup: False

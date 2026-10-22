@@ -1,0 +1,15 @@
+Source: git show HEAD:eval/run/runner.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+573:         # The harness has exited. Grade the controller's completed live exchange,
+574:         # or its frozen artifacts on the existing offline path (§2.2 and §2.4).
+575:         with phases("verify"):
+576:             if stepwise_relay is not None:
+577:                 verdict = chess_stepwise.finish(stepwise_relay, exit_code)
+578:             else:
+579:                 verdict = _verify(workdir, verifier, answer, sandbox=sandbox, task_id=task["task_id"],
+580:                                   run_id=run_id, trial_id=trial_id,
+581:                                   timeout_s=verify_timeout_s, env=env_spec,
+582:                                   service_specs=service_specs, running=running,
+583:                                   immutable_runtimes=immutable_runtimes)
+584:                 if verdict.get("immutable_runtime_error"):
+585:                     return _invalid(task, verdict["unmeasured"],
+586:                                     stage="immutable runtime verification", service=None)

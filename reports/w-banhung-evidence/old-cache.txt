@@ -1,0 +1,15 @@
+Source: git show HEAD:eval/run/runner.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+1352:         cache[key] = {"score": score, "trace": result["trace"],
+1353:                       "per_task_trials": per_task_trials.get(tid),
+1354:                       "per_task_std": per_task_std.get(tid),
+1355:                       # The other trials travel with the score too. A cached round used to
+1356:                       # restore only the last trial's trace and verdict, so the round that
+1357:                       # *reused* a measurement was exactly the round whose 2/3 could not be
+1358:                       # explained.
+1359:                       "trial_traces": trial_traces.get(tid),
+1360:                       "trial_verdicts": trial_verdicts.get(tid),
+1361:                       "harness_failed": failure,
+1362:                       "harness_output": harness_output.get(tid),
+1363:                       # The verdict travels with the score. Without this, a cached round
+1364:                       # writes `score 0.0, kind null, detail ""` -- the exact "a number
+1365:                       # with no explanation" this record exists to prevent. Measured on

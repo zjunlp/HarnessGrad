@@ -1,0 +1,12 @@
+MODE host inner_timeout_s=0.3 outer_timeout_s=2
+RETURNED 0 outer_elapsed_s 0.48
+{"elapsed_s": 0.308, "result": {"task_id": "synthetic-timeout", "answer": "", "trace": "", "exit_code": -1, "stderr": "timeout after 0.3s", "verdict": {"kind": "harness", "passed": false, "stage": "agent", "outcome": "timeout", "detail": "timeout after 0.3s", "unmeasured": "timeout after 0.3s", "scorer_isolation_class": "unknown"}, "env_usage": {}, "harness_runtime": {"source": "platform", "python": null, "note": "the platform's interpreter supplies the dependencies"}, "runtime_boundary": {"agent_timeout_s": 0.3, "verifier_timeout_s": 3600, "agent_network": "inherited", "agent_package_projected": false, "verifier_package": "trusted"}, "model_gateway": null, "web_gateway": null, "identity": null}}
+stderr ''
+POST_RUN pgrep -af banhung-aeeb3c8f098841d1ac1546c1996c640c rc= 1 stdout= ''
+task_trees []
+MODE sandbox inner_timeout_s=0.3 outer_timeout_s=2
+RETURNED 0 outer_elapsed_s 0.426
+{"elapsed_s": 0.307, "result": {"task_id": "synthetic-timeout", "answer": "", "trace": "", "exit_code": -1, "stderr": "timeout after 0.3s", "verdict": {"kind": "harness", "passed": false, "stage": "agent", "outcome": "timeout", "detail": "timeout after 0.3s", "unmeasured": "timeout after 0.3s", "scorer_isolation_class": "unknown"}, "env_usage": {}, "harness_runtime": {"source": "platform", "python": null, "note": "the platform's interpreter supplies the dependencies"}, "runtime_boundary": {"agent_timeout_s": 0.3, "verifier_timeout_s": 3600, "agent_network": "inherited", "agent_package_projected": false, "verifier_package": "trusted"}, "model_gateway": null, "web_gateway": null, "identity": null}}
+stderr ''
+POST_RUN pgrep -af banhung-0e423a2bffaf45f38ab1d5340ec8af7c rc= 1 stdout= ''
+task_trees []

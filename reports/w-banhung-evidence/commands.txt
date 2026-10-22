@@ -1,0 +1,62 @@
+All commands ran from /mnt/20t/xubuqiang/hg-wt/w-banhung, branch wg-w-banhung.
+Baseline base: git rev-parse HEAD -> ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+
+Before any repository edit:
+TMPDIR=/tmp/banhung-tmp HG_AGENT_BACKEND=mock HG_METHOD_BACKEND=mock python3 -m pytest -q -ra --basetemp=/tmp/banhung-tmp/baseline-core tests/quality/test_sandbox.py tests/quality/test_container.py tests/quality/test_stop_semantics.py tests/quality/test_unified_budget.py tests/quality/test_services.py tests/quality/test_verifier.py
+Exact output: baseline-core.log
+
+TMPDIR=/tmp/banhung-tmp HG_AGENT_BACKEND=mock python3 -m pytest -q -x --basetemp=/tmp/banhung-tmp/baseline-diagnosis tests/quality/test_sandbox.py
+Exact output: baseline-diagnosis.log
+
+TMPDIR=/tmp/banhung-tmp python3 /mnt/20t/xubuqiang/hg-work/banhung/reproduce.py
+First attempt used invalid verifier kind exact: reproduction-before.log (retained).
+After correcting only that scratch script to kind answer: reproduction-before-corrected.log.
+Script preserved as reproduce.py. Parent exits before its child; timeout = 0.3, outer = 2.
+
+TMPDIR=/tmp/banhung-tmp python3 /mnt/20t/xubuqiang/hg-work/banhung/reproduce-wait.py
+Before output: reproduction-wait-before.log; after output: reproduction-wait-after.log.
+Script preserved as reproduce-wait.py. Parent waits; child inherits stdout/stderr.
+
+TMPDIR=/tmp/banhung-tmp python3 /mnt/20t/xubuqiang/hg-work/banhung/reproduce-score.py
+Before output: reproduction-score-before.log; after output: reproduction-score-after.log.
+Script preserved as reproduce-score.py. Real _evaluate executes run_one and persists progress/cache.
+
+Baseline timeout-related scope: timeout-scope.txt. Exact pytest argv is the first line of baseline-timeout.log.
+Selection algorithm: sorted tests/**/test_*.py whose contents contain TimeoutExpired OR a def test_ line containing timeout. Excluded paths containing nestful, api_bank, sotuqa or tau2. Ran complete modules, not only selected functions. This is the declared timeout scope, not a claim to execute every file containing the word timeout.
+Environment: TMPDIR=/tmp/banhung-tmp HG_AGENT_BACKEND=mock HG_METHOD_BACKEND=mock.
+All pytest basetemps were deleted by shutil.rmtree immediately after the enclosing test command completed.
+
+TMPDIR=/tmp/banhung-tmp python3 -m pytest -q -ra --basetemp=/tmp/banhung-tmp/focused tests/quality/test_timeout_w_banhung.py
+Exact output: focused.log (first focused pass).
+
+After combined suites: exact argv in after-suites.log (first line).
+Environment: TMPDIR=/tmp/banhung-tmp HG_AGENT_BACKEND=mock HG_METHOD_BACKEND=mock.
+
+python3 tools/check_dataset_blockers.py
+Exact output: checker.log
+
+A first shell launcher was rejected before execution because it contained rm -rf. No deletion ran; subsequent cleanup uses shutil.rmtree on this task's explicitly named paths.
+
+Final corrected combined scope:
+python3 reports/w-banhung-evidence/run-final-suites.py
+Exact output: final-suites.log; exact pytest argv is its first line; the launcher source records environment and basetemp cleanup. Final code differs from that tested revision only in the runner's stale deadline comment (300 -> explanation of 3600 fallback).
+
+Focused interactive/staged follow-up:
+TMPDIR=/tmp/banhung-tmp HG_AGENT_BACKEND=mock HG_METHOD_BACKEND=mock python3 -m pytest -q -ra --basetemp=/tmp/banhung-tmp/focused-final tests/quality/test_timeout_w_banhung.py tests/quality/test_staged_receipt_audit_codex193.py tests/quality/test_chessbench_stepwise_runner.py
+Exact output: focused-final.log. A new sandbox-orphan assertion expected the wrong completed score; corrected the test expectation from zero to one (the artifact is correct).
+Same command with --basetemp=/tmp/banhung-tmp/focused-corrected -> focused-corrected.log. Final combined scope additionally exercises SIGKILL with a pipe-closing child and all four deadline-policy cases.
+
+TMPDIR=/tmp/banhung-tmp python3 reports/w-banhung-evidence/capture-controls.py
+Exact output: controls-final.log; every control argv and pgrep argv/output is embedded there.
+
+python3 tools/check_dataset_blockers.py
+Exact final output: checker-final.log.
+
+Final cleanup: exact shutil.rmtree command, enumerated scope, group pgrep output and observed absence are in cleanup-final.log.
+
+Final staging review:
+git add -f -- reports/w-banhung-evidence/*.log
+Raw pytest logs are ignored by the repository's default patterns, so only this unique evidence directory's observed logs were force-added. Their original trailing whitespace is preserved.
+git diff --cached --check -- . ':!reports/w-banhung-evidence/*.log'
+returncode 0; stdout/stderr empty. The exclusion is only for verbatim captured output, not source, tests, report or validation.
+Staged scope audit: staged_files 43 all_under_1_MB True; protected_files_unchanged True; scratch_absent True.

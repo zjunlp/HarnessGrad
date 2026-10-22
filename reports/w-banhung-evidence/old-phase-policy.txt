@@ -1,0 +1,12 @@
+Source: git show HEAD:eval/policy/runtime_policy.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+21: def phase_timeout(*limits, default: float = 3600) -> float:
+22:     """Honor every explicit bound; an omitted caller limit is only a fallback."""
+23:     values = []
+24:     for limit in limits:
+25:         if limit is None:
+26:             continue
+27:         if isinstance(limit, bool) or not isinstance(limit, (int, float)) \
+28:                 or not math.isfinite(limit) or limit <= 0:
+29:             raise ValueError(f"invalid phase timeout: {limit!r}")
+30:         values.append(limit)
+31:     return min(values) if values else default

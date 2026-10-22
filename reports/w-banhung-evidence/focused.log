@@ -1,0 +1,4 @@
+...........s.......                                                      [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/quality/test_timeout_w_banhung.py:23: bwrap PID namespace tears down children when its init exits
+18 passed, 1 skipped in 11.94s

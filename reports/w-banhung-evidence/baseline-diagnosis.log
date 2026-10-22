@@ -1,0 +1,58 @@
+F
+=================================== FAILURES ===================================
+________________ test_the_platform_is_not_on_the_subjects_disk _________________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/baseline-diagnosis/test_the_platform_is_not_on_th0')
+staged_harness = (PosixPath('/tmp/banhung-tmp/baseline-diagnosis/test_the_platform_is_not_on_th0/workroot/run-id/workspace'), PosixPath('/tmp/banhung-tmp/baseline-diagnosis/test_the_platform_is_not_on_th0/workroot/run-id/workspace/.state'))
+
+    @needs_bwrap
+    def test_the_platform_is_not_on_the_subjects_disk(tmp_path, staged_harness):
+        """The whole point: not "permission denied", but absent.
+    
+        This is the measurement that motivated the module, and it is asserted from
+        inside the namespace rather than inferred from the arguments handed to bwrap.
+        """
+        repo, _ = staged_harness
+>       seen = inside({}, tmp_path, (
+            "import json, os, pathlib\n"
+            f"p = pathlib.Path({str(PLATFORM)!r})\n"
+            "print(json.dumps({\n"
+            "  'env': (p / '.env').exists(),\n"
+            "  'driver': (p / 'driver.py').exists(),\n"
+            # The implementation moved out of `driver.py`; the rule is about the
+            # platform's code, so the package that holds it is probed too. A sandbox
+            # that hid the entrypoint and left the scorer readable would look fine.
+            "  'impl': (p / 'harnessgrad').exists(),\n"
+            "  'scorer': (p / 'eval' / 'run' / 'metrics.py').exists(),\n"
+            "  'methods': (p / 'methods').exists(),\n"
+            "  'listing': sorted(os.listdir(p)) if p.is_dir() else 'not-a-dir',\n"
+            "}))\n"), repo=repo)
+
+tests/quality/test_sandbox.py:83: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+env = {}
+work_dir = PosixPath('/tmp/banhung-tmp/baseline-diagnosis/test_the_platform_is_not_on_th0')
+script = "import json, os, pathlib\np = pathlib.Path('/mnt/20t/xubuqiang/hg-wt/w-banhung')\nprint(json.dumps({\n  'env': (p / '...(),\n  'methods': (p / 'methods').exists(),\n  'listing': sorted(os.listdir(p)) if p.is_dir() else 'not-a-dir',\n}))\n"
+repo = PosixPath('/tmp/banhung-tmp/baseline-diagnosis/test_the_platform_is_not_on_th0/workroot/run-id/workspace')
+
+    def inside(env: dict[str, str], work_dir: Path, script: str,
+               repo: Path | None = None) -> dict:
+        """Run `script` in the sandbox and return what it saw."""
+        probe = work_dir / "probe.py"
+        probe.write_text(script)
+        proc = sandbox.run([sys.executable, str(probe)], platform=PLATFORM,
+                           work_root=WORK_ROOT, task_dir=work_dir, env=env,
+                           timeout_s=120, cwd=work_dir, repo=repo,
+                           state_dirs=(repo / ".state",) if repo else ())
+>       assert proc.returncode == 0, proc.stderr[-800:]
+E       AssertionError: bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--die-with-parent', '--unshare-pid', '--proc', '/proc', '--dev', '/dev', '--...dout='', stderr="bwrap: Can't find source path /mnt/20t/xubuqiang/hg-wt/harnessgrad_work: No such file or directory\n").returncode
+
+tests/quality/test_sandbox.py:52: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_sandbox.py::test_the_platform_is_not_on_the_subjects_disk
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed in 0.06s

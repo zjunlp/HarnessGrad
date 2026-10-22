@@ -1,0 +1,153 @@
+COMMAND ['/mnt/8t/xubuqiang/anaconda3/bin/python3', '-m', 'pytest', '-q', '-ra', '--basetemp=/tmp/banhung-tmp/baseline-timeout', 'tests/quality/test_cached_pilot_admission.py', 'tests/quality/test_container_state.py', 'tests/quality/test_ds1000_scratch_cleanup_w_scratch.py', 'tests/quality/test_gaia_snapshot_attestation.py', 'tests/quality/test_hotpot_timeout_admission_w_hotpot.py', 'tests/quality/test_jericho_control_tempdir.py', 'tests/quality/test_jericho_runtime_boundaries.py', 'tests/quality/test_measurement_coverage_hg_b3.py', 'tests/quality/test_native_model_route.py', 'tests/quality/test_prifix_regressions.py', 'tests/quality/test_progress.py', 'tests/quality/test_quiesce2_regressions.py', 'tests/quality/test_runner_admission.py', 'tests/quality/test_shared_admission_wiring_codex163.py', 'tests/quality/test_spreadsheetbench_classification_w_spread2.py', 'tests/quality/test_staged_receipt_audit_codex193.py', 'tests/quality/test_verifier.py', 'tests/quality/test_w_e6fix_adjacent.py', 'tests/quality/test_w_e6fix_cleanup.py', 'tests/runtime/test_eight_stage_runtime.py']
+........................................................................ [  8%]
+........................................................................ [ 16%]
+.....................................................................FF. [ 24%]
+........................................................................ [ 33%]
+.............................ss...s................s.................... [ 41%]
+s.....................................................................s. [ 49%]
+........................................................................ [ 58%]
+........................................................................ [ 66%]
+........................................................................ [ 74%]
+........................................................................ [ 82%]
+...............................................................s........ [ 91%]
+......................................sss............................... [ 99%]
+....                                                                     [100%]
+=================================== FAILURES ===================================
+_________ test_the_oracle_cannot_authorize_unobserved_container_state __________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/baseline-timeout/test_the_oracle_cannot_authori0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7546bf288710>
+
+    def test_the_oracle_cannot_authorize_unobserved_container_state(tmp_path, monkeypatch):
+        """008348b: a reference solution is not a trusted backend observation."""
+        from eval.run import runner
+    
+        task, setup, verifier, env = _one_ready_task()
+        resolved, problem = __import__("driver")._resolve_envs({task["task_id"]: env})
+        assert problem is None, problem
+    
+        def unexpected(*a, **kw):
+            pytest.fail("a refused oracle must not allocate or snapshot a container")
+    
+        monkeypatch.setattr(runner, "_run_one_container_state", unexpected)
+        result = runner.run_one(ROOT / "base_harness/oracle", task, sandbox=True,
+                                setup=setup, verifier=verifier, env=resolved[task["task_id"]],
+                                run_id=f"oracle-test-{os.getpid()}", run_seed="s",
+                                recordings_root=tmp_path / "recordings")
+>       assert_policy_refusal(result, (*EXEC_POLICY_FIELDS, "env.state=container"))
+
+tests/quality/test_container_state.py:366: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:29: in assert_policy_refusal
+    assert_invalid_policy(result["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...b', 'env.network', 'env.state=container'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s', ...)
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+___________ test_a_refused_container_state_run_leaves_nothing_behind ___________
+
+tmp_path = PosixPath('/tmp/banhung-tmp/baseline-timeout/test_a_refused_container_state0')
+
+    def test_a_refused_container_state_run_leaves_nothing_behind(tmp_path):
+        """A snapshot image per task is a disk leak waiting to happen, and it is the platform
+        that made it."""
+        from eval.run.runner import run_one
+    
+        task, setup, verifier, env = _one_ready_task()
+        import importlib
+        tb = importlib.import_module("data.datasets.terminal_bench")
+        if not (TB_ROOT / task["task_id"] / "solution").is_dir():
+            pytest.skip("no solution to run")
+    
+        # **A unique run id, because a fixed one makes this test fail forever.** Measured
+        # 2026-10-06: a network named `hg-leak-test-cancel-async-tasks` survived an
+        # interrupted run, and from then on every execution of this test died with
+        # `ServiceUnavailable: network with name hg-leak-test-cancel-async-tasks already
+        # exists` -- a red test whose cause had nothing to do with the code under test.
+        #
+        # The same fixed id also made the snapshot assertion unusable next to a live run: it
+        # counted **every** `hg-snapshot` image on the daemon, including the ones a concurrent
+        # experiment was creating and removing, so this test could not pass while any
+        # experiment was in flight -- which is exactly when the platform is most in use.
+        # A per-process id makes both checks look only at this run's own namespace.
+        leak_run_id = f"leak-test-{os.getpid()}"
+        before = set(container.docker(
+            "images", "--format", "{{.Repository}}:{{.Tag}}").stdout.split())
+        old = os.environ.copy()
+        os.environ.update({"HG_AGENT_BACKEND": "mock",
+                           "HARNESSGRAD_WORK_ROOT": str(tmp_path / "work")})
+        try:
+            resolved, _ = __import__("driver")._resolve_envs({task["task_id"]: env})
+            result = run_one((ROOT / "base_harness" / "oracle"), task, sandbox=True,
+                    setup={"files": [{"path": ".oracle",
+                                      "from": str(TB_ROOT / task["task_id"] / "solution")}]},
+                    verifier=verifier, env=resolved[task["task_id"]],
+                    run_id=leak_run_id, run_seed="s",
+                    recordings_root=tmp_path / "recordings")
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+    
+>       assert_policy_refusal(result, (*EXEC_POLICY_FIELDS, "env.state=container"))
+
+tests/quality/test_container_state.py:410: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/quality/policy_assertions.py:29: in assert_policy_refusal
+    assert_invalid_policy(result["invalid"], fields)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+invalid = {'detail': 'backend_observation_unavailable', 'receipt': {'measured': False, 'observation': 'unknown', 'policy_fields'...b', 'env.network', 'env.state=container'], 'production_authorized': False, ...}, 'service': None, 'stage': 'admission'}
+fields = ('env.agent_timeout_s', 'env.cpus', 'env.exec_defaults', 'env.memory_mb', 'env.network', 'env.verify_timeout_s', ...)
+
+    def assert_invalid_policy(invalid, fields):
+>       assert invalid == {
+            "stage": "admission", "service": None,
+            "detail": "backend_observation_unavailable",
+            "receipt": {
+                "schema": "harnessgrad.runner-policy-refusal.v1",
+                "stage": "admission", "status": "blocked",
+                "reason": "backend_observation_unavailable",
+                "measured": False, "production_authorized": False,
+                "observation": "unknown", "policy_fields": sorted(fields),
+            },
+        }
+E       AssertionError
+
+tests/quality/policy_assertions.py:15: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 190 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 96 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [2] tests/quality/test_hotpot_timeout_admission_w_hotpot.py:66: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+SKIPPED [1] tests/quality/test_hotpot_timeout_admission_w_hotpot.py:116: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+SKIPPED [1] tests/quality/test_jericho_runtime_boundaries.py:120: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+SKIPPED [1] tests/quality/conftest.py:26: site source packet absent from this clone: /site/w-alf-receipts.md
+SKIPPED [1] tests/quality/test_quiesce2_regressions.py:201: tests/fixtures/hg_wpristine/closure/sh is absent (untracked packet, recorded digest b3c1009e1b5c927e...); the preserved-packet audit cannot seal
+SKIPPED [1] tests/quality/test_spreadsheetbench_classification_w_spread2.py:285: opt-in authored real LibreOffice control (no dataset/model)
+SKIPPED [3] tests/quality/test_w_e6fix_adjacent.py:13: tests/fixtures/hg_wsnap is internal (see .gitignore) and absent from this clone
+FAILED tests/quality/test_container_state.py::test_the_oracle_cannot_authorize_unobserved_container_state
+FAILED tests/quality/test_container_state.py::test_a_refused_container_state_run_leaves_nothing_behind
+2 failed, 856 passed, 10 skipped, 286 warnings in 77.48s (0:01:17)

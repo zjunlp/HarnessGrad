@@ -1,0 +1,6 @@
+Source: git show HEAD:eval/run/runner.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+1193:                 # The score the platform computed for this task. Set on the holder so the
+1194:                 # task's closing record carries it: a panel showing "task 3/5 done" without
+1195:                 # the number is a progress bar; with it, it is the round forming.
+1196:                 held.score = float((result.get("verdict") or {}).get(
+1197:                     "score", 1.0 if (result.get("verdict") or {}).get("passed") else 0.0))

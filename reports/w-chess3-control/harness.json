@@ -1,0 +1,7 @@
+{
+  "name": "w-chess3-diagnostic-protocol-control",
+  "version": "1",
+  "role": "control",
+  "entrypoint": "actor.py",
+  "description": "Diagnostic transport control only; lexicographically first legal move, no model, no candidate method."
+}

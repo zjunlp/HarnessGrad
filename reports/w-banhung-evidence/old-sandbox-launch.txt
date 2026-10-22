@@ -1,0 +1,4 @@
+Source: git show HEAD:eval/containers/sandbox.py; base ed67ede38a47777ec3ad1381faef6f89c8ecbba5
+462:     try:
+463:         proc = subprocess.run(wrapped, input=input_text, capture_output=True, text=True,
+464:                               timeout=timeout_s, cwd=cwd, env=env)

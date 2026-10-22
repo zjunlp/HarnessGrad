@@ -1,0 +1,12 @@
+MODE host inner_timeout_s=0.3 outer_timeout_s=2
+RETURNED 0 outer_elapsed_s 1.19
+{"elapsed_s": 1.033, "per_task": {}, "invalid": {"synthetic-timeout": {"stage": "agent", "detail": "timeout after 0.3s", "outcome": "timeout"}}, "cache": {}, "progress": {"task_id": "synthetic-timeout", "round": 0, "invalid": {"stage": "agent", "detail": "timeout after 0.3s", "outcome": "timeout"}, "harness_output": {"exit_code": -1, "stderr": "timeout after 0.3s", "harness_runtime": {"source": "platform", "python": null, "note": "the platform's interpreter supplies the dependencies"}, "model_gateway": null}}}
+stderr ''
+POST_RUN pgrep -af banhung-1e0ca4fcdcd242428e29a848c7c83de7 rc= 1 stdout= ''
+task_trees []
+MODE sandbox inner_timeout_s=0.3 outer_timeout_s=2
+RETURNED 0 outer_elapsed_s 0.923
+{"elapsed_s": 0.811, "per_task": {}, "invalid": {"synthetic-timeout": {"stage": "agent", "detail": "timeout after 0.3s", "outcome": "timeout"}}, "cache": {}, "progress": {"task_id": "synthetic-timeout", "round": 0, "invalid": {"stage": "agent", "detail": "timeout after 0.3s", "outcome": "timeout"}, "harness_output": {"exit_code": -1, "stderr": "timeout after 0.3s", "harness_runtime": {"source": "platform", "python": null, "note": "the platform's interpreter supplies the dependencies"}, "model_gateway": null}}}
+stderr ''
+POST_RUN pgrep -af banhung-0fe6121a99144091bc507d3e96715222 rc= 1 stdout= ''
+task_trees []

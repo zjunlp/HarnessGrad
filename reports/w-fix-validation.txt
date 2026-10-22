@@ -1,0 +1,852 @@
+w-fix validation - 2026-10-15
+Worktree: /tmp/hg-fix; branch wg-fix
+Before/control main HEAD: 1d31ea8670ef140cdc1e2a885ab92f761f44623e
+All raw stdout/stderr below is copied verbatim from fresh command captures.
+Pytest used its default /tmp temporary roots, outside the platform tree.
+
+Results:
+- c2 before: 2 failed, 16 passed. After: 18 passed; both reported regressions fixed.
+- Full requested 14-file list before: 6 failed, 344 passed. Final: 4 failed, 349 passed.
+- Three added controls account for the increased test count (350 -> 353).
+- Four remaining failures are identical in pristine main control, using the same
+  parent execution environment. No regression repair or assertion changes were made
+  for them. Per the requested criterion, these are worktree/control artifacts:
+  default improver identity missing; parallel fixture missing scorer_isolation.py;
+  .env absent from snapshot; sandbox listing None rather than [].
+- Checker before and after: valid=true, 28 datasets, 2 shared blockers,
+  11 historical records, production_authorized=false.
+- An intermediate full run exposed one further stale unknown-cache aggregation
+  exception assertion. It is retained below and corrected in the final run.
+
+Assertion changes:
+- test_runtime_observations_w_obs.py: replaced bug-pinning runner/progress/curve
+  writer-refusal assertions with complete raw evidence + unknown class + false
+  comparability + continued comparison refusal. Existing legacy cache immutability
+  stays asserted; fresh raw facts may cache without acquiring observed topology.
+  Legacy read-only bytes remain unchanged; explicit rewrites add honest labels.
+- test_scorer_isolation_option_b.py: the analogous unknown-curve construction
+  exception asserted the same bug; now requires the label and comparison refusal.
+- test_shared_admission_wiring_codex163.py: the analogous legacy-cache aggregate
+  exception asserted the same bug; keep exact cache/selected-task assertions and
+  explicitly refuse comparison. All actual admission assertions remain intact.
+- c2 assertions are additive: complete progress, unknown class, false comparability.
+- No mixed-class or comparison-refusal assertion removed; no validator/gate weakened.
+- ChessBench stepwise implementation and its test have no diff.
+- Registry differs in exactly one descriptive review note, no gate/history changes.
+- Parent reviewed all diffs; independent agent reviewed semantics and assertion safety.
+- No repository runs/ or frozen receipts touched; no paid/model/GPU/benchmark run.
+
+=== BEFORE - c2 ===
+Cwd: /tmp/hg-fix
+Command: python3 -m pytest -q tests/quality/test_unobserved_diagnostic_c2.py
+Exit status: 1
+--- exact combined output ---
+.F.......F........                                                       [100%]
+=================================== FAILURES ===================================
+__ test_authorized_exec_runs_and_tags_every_result_without_cache_publication ___
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-62/test_authorized_exec_runs_and_0')
+synthetic_runtime = [((PosixPath('/tmp/pytest-of-xubuqiang/pytest-62/test_authorized_exec_runs_and_0'), {'goal': 'synthetic diagnostic', '...xec_runs_and_0'), {'goal': 'synthetic diagnostic', 'task_id': 'synthetic-task-193'}, None, True, None, None, ...), {})]
+
+    def test_authorized_exec_runs_and_tags_every_result_without_cache_publication(tmp_path, synthetic_runtime):
+        cache = {}
+        direct = runner.run_one(tmp_path, TASK, env=EXEC, run_id=AUTH.run_id,
+                                diagnostic_authorization=AUTH)
+        assert direct["enforcement"] == AUTH.record()
+>       result = runner.evaluate(tmp_path, [TASK], {}, cache, envs={TASK["task_id"]: EXEC},
+                                 run_id=AUTH.run_id, diagnostic_authorization=AUTH,
+                                 progress_dir=tmp_path / "records")
+
+tests/quality/test_unobserved_diagnostic_c2.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:771: in evaluate
+    result = _evaluate(repo, tasks, scorable, cache=cache, harness_sha=harness_sha,
+eval/run/runner.py:1202: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x79f3f99e0660>
+
+    def common_class(classes) -> str:
+        """Require one observed topology before aggregating nonempty score inputs.
+    
+        Empty inputs carry no measurement and retain the unknown sentinel. Historical
+        records stay readable through observed_class; absence is never an observation.
+        """
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+            raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+        if values == {"unknown"}:
+>           raise IsolationMismatch("scorer isolation class unknown: aggregation invalid")
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class unknown: aggregation invalid
+
+eval/verification/isolation.py:30: IsolationMismatch
+----------------------------- Captured stdout call -----------------------------
+  ✓ round 0 · 第 1/1 题 synthetic-task-193 — done (0s)
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-task-193: scorer isolation class unknown: aggregation invalid
+____ test_operator_authorized_driver_runs_once_but_cannot_publish_or_expand ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x79f3f9979490>
+diagnostic_driver = (<module 'driver' from '/tmp/hg-fix/driver.py'>, PosixPath('/tmp/pytest-of-xubuqiang/pytest-62/test_operator_authorized_drive0/runs/synthetic-driver-193'))
+synthetic_runtime = [((PosixPath('/tmp/pytest-of-xubuqiang/pytest-62/test_operator_authorized_drive0/work/synthetic-driver-193/workspace'), {'task_id': 'synthetic-task-193'}, None, True, None, None, ...), {})]
+
+    def test_operator_authorized_driver_runs_once_but_cannot_publish_or_expand(
+            monkeypatch, diagnostic_driver, synthetic_runtime):
+        import sys
+        driver, run_dir = diagnostic_driver
+        monkeypatch.setattr(sys, "argv", sys.argv + ["--authorize-unobserved-diagnostic", AUTH.operator_authorization])
+>       assert driver.main() == 2  # execution may finish, comparable publication must refuse
+
+tests/quality/test_unobserved_diagnostic_c2.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+driver.py:1291: in main
+    result = _main(attempt)
+driver.py:1121: in _main
+    base = evaluate(work, tasks_all, scorable, cache, harness_sha=h0_sha,
+eval/run/runner.py:771: in evaluate
+    result = _evaluate(repo, tasks, scorable, cache=cache, harness_sha=harness_sha,
+eval/run/runner.py:1202: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x79f3f99e1700>
+
+    def common_class(classes) -> str:
+        """Require one observed topology before aggregating nonempty score inputs.
+    
+        Empty inputs carry no measurement and retain the unknown sentinel. Historical
+        records stay readable through observed_class; absence is never an observation.
+        """
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+            raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+        if values == {"unknown"}:
+>           raise IsolationMismatch("scorer isolation class unknown: aggregation invalid")
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class unknown: aggregation invalid
+
+eval/verification/isolation.py:30: IsolationMismatch
+----------------------------- Captured stdout call -----------------------------
+  ✓ round 0 · 第 1/1 题 synthetic-task-193 — done (0s)
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-task-193: scorer isolation class unknown: aggregation invalid
+=========================== short test summary info ============================
+FAILED tests/quality/test_unobserved_diagnostic_c2.py::test_authorized_exec_runs_and_tags_every_result_without_cache_publication
+FAILED tests/quality/test_unobserved_diagnostic_c2.py::test_operator_authorized_driver_runs_once_but_cannot_publish_or_expand
+2 failed, 16 passed in 0.73s
+
+--- end exact output ---
+
+=== AFTER - c2 ===
+Cwd: /tmp/hg-fix
+Command: python3 -m pytest -q tests/quality/test_unobserved_diagnostic_c2.py
+Exit status: 0
+--- exact combined output ---
+..................                                                       [100%]
+18 passed in 0.48s
+
+--- end exact output ---
+
+=== BEFORE - complete focused list ===
+Cwd: /tmp/hg-fix
+Command: python3 -m pytest -q tests/quality/test_unobserved_diagnostic_c2.py tests/quality/test_runtime_observations_w_obs.py tests/quality/test_dataset_blockers.py tests/quality/test_scorer_isolation_option_b.py tests/quality/test_identity_and_verdicts.py tests/quality/test_trials_and_unmeasured.py tests/quality/test_method_channel.py tests/quality/test_aggregation_policies.py tests/quality/test_parallel_tasks.py tests/quality/test_provider_failure.py tests/quality/test_shared_admission_wiring_codex163.py tests/quality/test_appworld_trusted_trial_writer_codex183.py tests/quality/test_chessbench_stepwise_runner.py tests/quality/test_isolation.py
+Exit status: 1
+--- exact combined output ---
+.F.......F.............................................................. [ 20%]
+...............................................................F........ [ 41%]
+........................................................................ [ 61%]
+............F........................................................... [ 82%]
+................................................F.........F...           [100%]
+=================================== FAILURES ===================================
+__ test_authorized_exec_runs_and_tags_every_result_without_cache_publication ___
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_authorized_exec_runs_and_0')
+synthetic_runtime = [((PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_authorized_exec_runs_and_0'), {'goal': 'synthetic diagnostic', '...xec_runs_and_0'), {'goal': 'synthetic diagnostic', 'task_id': 'synthetic-task-193'}, None, True, None, None, ...), {})]
+
+    def test_authorized_exec_runs_and_tags_every_result_without_cache_publication(tmp_path, synthetic_runtime):
+        cache = {}
+        direct = runner.run_one(tmp_path, TASK, env=EXEC, run_id=AUTH.run_id,
+                                diagnostic_authorization=AUTH)
+        assert direct["enforcement"] == AUTH.record()
+>       result = runner.evaluate(tmp_path, [TASK], {}, cache, envs={TASK["task_id"]: EXEC},
+                                 run_id=AUTH.run_id, diagnostic_authorization=AUTH,
+                                 progress_dir=tmp_path / "records")
+
+tests/quality/test_unobserved_diagnostic_c2.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:771: in evaluate
+    result = _evaluate(repo, tasks, scorable, cache=cache, harness_sha=harness_sha,
+eval/run/runner.py:1202: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x76fb44453060>
+
+    def common_class(classes) -> str:
+        """Require one observed topology before aggregating nonempty score inputs.
+    
+        Empty inputs carry no measurement and retain the unknown sentinel. Historical
+        records stay readable through observed_class; absence is never an observation.
+        """
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+            raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+        if values == {"unknown"}:
+>           raise IsolationMismatch("scorer isolation class unknown: aggregation invalid")
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class unknown: aggregation invalid
+
+eval/verification/isolation.py:30: IsolationMismatch
+----------------------------- Captured stdout call -----------------------------
+  ✓ round 0 · 第 1/1 题 synthetic-task-193 — done (0s)
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-task-193: scorer isolation class unknown: aggregation invalid
+____ test_operator_authorized_driver_runs_once_but_cannot_publish_or_expand ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x76fb4406b6e0>
+diagnostic_driver = (<module 'driver' from '/tmp/hg-fix/driver.py'>, PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_operator_authorized_drive0/runs/synthetic-driver-193'))
+synthetic_runtime = [((PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_operator_authorized_drive0/work/synthetic-driver-193/workspace'), {'task_id': 'synthetic-task-193'}, None, True, None, None, ...), {})]
+
+    def test_operator_authorized_driver_runs_once_but_cannot_publish_or_expand(
+            monkeypatch, diagnostic_driver, synthetic_runtime):
+        import sys
+        driver, run_dir = diagnostic_driver
+        monkeypatch.setattr(sys, "argv", sys.argv + ["--authorize-unobserved-diagnostic", AUTH.operator_authorization])
+>       assert driver.main() == 2  # execution may finish, comparable publication must refuse
+
+tests/quality/test_unobserved_diagnostic_c2.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+driver.py:1291: in main
+    result = _main(attempt)
+driver.py:1121: in _main
+    base = evaluate(work, tasks_all, scorable, cache, harness_sha=h0_sha,
+eval/run/runner.py:771: in evaluate
+    result = _evaluate(repo, tasks, scorable, cache=cache, harness_sha=harness_sha,
+eval/run/runner.py:1202: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x76fb4410de00>
+
+    def common_class(classes) -> str:
+        """Require one observed topology before aggregating nonempty score inputs.
+    
+        Empty inputs carry no measurement and retain the unknown sentinel. Historical
+        records stay readable through observed_class; absence is never an observation.
+        """
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+            raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+        if values == {"unknown"}:
+>           raise IsolationMismatch("scorer isolation class unknown: aggregation invalid")
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class unknown: aggregation invalid
+
+eval/verification/isolation.py:30: IsolationMismatch
+----------------------------- Captured stdout call -----------------------------
+  ✓ round 0 · 第 1/1 题 synthetic-task-193 — done (0s)
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-task-193: scorer isolation class unknown: aggregation invalid
+____ test_the_default_improver_is_still_resolved_when_none_is_not_asked_for ____
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_the_default_improver_is_s0')
+
+    def test_the_default_improver_is_still_resolved_when_none_is_not_asked_for(tmp_path):
+        """反向的一半:不加 `--improver none` 时,默认改进器照旧要解析出来。
+    
+        否则这条修法就变成了"悄悄关掉记录 improver 的能力",而那会让真正用了改进器的
+        跑道失去归因。
+        """
+        runs = tmp_path / "runs"
+        argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+                "--rounds", "1", "--run-id", "default-improver", "--dataset", "demo",
+                "--sampling", "all",
+                "--runs-root", str(runs), "--work-root", str(tmp_path / "work"),
+                "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/noop/run.py'}"]
+        proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=300,
+                              env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+        assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+        points = [json.loads(l) for l in
+                  (runs / "default-improver" / "curve.jsonl").read_text().splitlines()
+                  if l.strip()]
+>       assert points and all("improver" in p["identity"] for p in points), (
+            "默认改进器没有被记录:" + str([p["identity"].get("improver") for p in points]))
+E       AssertionError: 默认改进器没有被记录:[None, None]
+E       assert ([{'cost': {'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...{'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...}, ...}] and False)
+E        +  where False = all(<generator object test_the_default_improver_is_still_resolved_when_none_is_not_asked_for.<locals>.<genexpr> at 0x76fb441686c0>)
+
+tests/quality/test_identity_and_verdicts.py:282: AssertionError
+_________________ test_jobs_reaches_the_run_through_the_driver _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_jobs_reaches_the_run_thro0')
+isolated_platform = PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_jobs_reaches_the_run_thro0/platform')
+
+    def test_jobs_reaches_the_run_through_the_driver(tmp_path, isolated_platform):
+        """端到端:`--jobs 2` 要能真的跑完一次,并且记在 run_meta 里。"""
+        import json
+        import os
+        import subprocess
+    
+        # Stage the actual runtime with only the demo adapter needed by this test. Full
+        # platform hashing and the sandbox still run, without importing or hashing the
+        # checkout's provisioned datasets or inheriting its .env.
+        platform = isolated_platform
+        shutil.copy2(ROOT / "driver.py", platform / "driver.py")
+        for name in ("ckpt", "eval", "harnessgrad", "tools", "methods", "improvers"):
+            shutil.copytree(ROOT / name, platform / name, symlinks=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        (platform / "data").mkdir()
+        # `aggregation.py` and its manifest are part of the runtime now: the driver reads
+        # the dataset's declared aggregation policy when it turns per-task rewards into the
+        # curve point, and it fails closed for an undeclared dataset. Staging `demo.py`
+        # without them made the staged platform incomplete rather than minimal.
+        for name in ("__init__.py", "demo.py", "aggregation_policies.json"):
+            shutil.copy2(ROOT / "data" / name, platform / "data" / name)
+        (platform / "data" / "scaffolds").mkdir()
+        for name in ("__init__.py", "registry.py", "aggregation.py"):
+            shutil.copy2(ROOT / "data/scaffolds" / name, platform / "data/scaffolds" / name)
+        shutil.copytree(ROOT / "base_harness" / "loop_plain",
+                        platform / "base_harness" / "loop_plain", symlinks=True,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    
+        runs = tmp_path / "runs"
+        env = {**os.environ, "HG_AGENT_BACKEND": "mock"}
+        proc = subprocess.run(
+            [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+             "--rounds", "0", "--jobs", "2", "--run-id", "jobs-check", "--dataset", "demo",
+             "--sampling", "all", "--runs-root", str(runs),
+             "--work-root", str(tmp_path / "work")],
+            cwd=platform, capture_output=True, text=True, timeout=1800, env=env)
+>       assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+E       AssertionError: 
+E         r.py", line 29, in <module>
+E             from eval.containers.container_state import _run_one_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-63/test_jobs_reaches_the_run_thro0/platform/eval/containers/container_state.py", line 33, in <module>
+E             from eval.verification.verifier import _verify_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-63/test_jobs_reaches_the_run_thro0/platform/eval/verification/verifier.py", line 30, in <module>
+E             from eval.verification.isolation import declared_class, record_class
+E           File "/tmp/pytest-of-xubuqiang/pytest-63/test_jobs_reaches_the_run_thro0/platform/eval/verification/isolation.py", line 8, in <module>
+E             from data.scaffolds.scorer_isolation import CLASSES, declared_class
+E         ModuleNotFoundError: No module named 'data.scaffolds.scorer_isolation'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/mnt/8t/xubuqiang/anaconda3/bin/python3', 'driver.py', '--harness', 'loop_plain', '--mode', 'A..._isolation import CLASSES, declared_class\nModuleNotFoundError: No module named \'data.scaffolds.scorer_isolation\'\n').returncode
+
+tests/quality/test_parallel_tasks.py:270: AssertionError
+______________ test_snapshot_covers_the_referee_not_the_candidate ______________
+
+    def test_snapshot_covers_the_referee_not_the_candidate():
+        """The scorer is watched; the artifact under improvement is not.
+    
+        `base_harness/` missing from the tuple is deliberate and load-bearing: every
+        run copies it into a workspace and edits the copy. Watching it would flag the
+        only write the platform exists to make.
+        """
+        snap = snapshot(ROOT)
+        assert "driver.py" in snap, "the driver decides what a curve means"
+        assert "eval/run/integrity.py" in snap, "the checker watches itself"
+        assert "eval/run/runner.py" in snap, "the runner runs the subject"
+>       assert ".env" in snap, "the credentials pay for the measurement"
+E       AssertionError: the credentials pay for the measurement
+E       assert '.env' in {'INTERFACE.md': '2d1a2a65280c4ca3499caa469486452955e14e23cf2e5d588c02763d3c6d8acd', 'ckpt/git_state.py': '85ce26bc78e...b4d3e2c5d6', 'data/aggregation_policies.json': '7ca0965b47dc8a6d654b3d86fd2ef699fd88e7c4e7ec061ee039943f0562f163', ...}
+
+tests/quality/test_isolation.py:156: AssertionError
+___________ test_the_harness_cannot_read_the_platform_or_its_answers ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-63/test_the_harness_cannot_read_t0')
+
+    def test_the_harness_cannot_read_the_platform_or_its_answers(tmp_path):
+        """harness 那一侧的实测清单。
+    
+        平台目录**存在但是空的**:bwrap 把平台盖成一个空 tmpfs,于是路径名留着(那是刻意的
+        停点:完全抹掉就得覆盖 work root 所在的整条分支),而里面什么都不剩。
+        """
+        probes = _run_probe_harness(tmp_path)
+        first = probes[0]
+        assert first["platform_visible"] is False, first
+>       assert first["platform_listing"] == [], (
+            f"平台的沙箱里还有东西:{first['platform_listing']}")
+E       AssertionError: 平台的沙箱里还有东西:None
+E       assert None == []
+
+tests/quality/test_isolation.py:639: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_unobserved_diagnostic_c2.py::test_authorized_exec_runs_and_tags_every_result_without_cache_publication
+FAILED tests/quality/test_unobserved_diagnostic_c2.py::test_operator_authorized_driver_runs_once_but_cannot_publish_or_expand
+FAILED tests/quality/test_identity_and_verdicts.py::test_the_default_improver_is_still_resolved_when_none_is_not_asked_for
+FAILED tests/quality/test_parallel_tasks.py::test_jobs_reaches_the_run_through_the_driver
+FAILED tests/quality/test_isolation.py::test_snapshot_covers_the_referee_not_the_candidate
+FAILED tests/quality/test_isolation.py::test_the_harness_cannot_read_the_platform_or_its_answers
+6 failed, 344 passed in 86.93s (0:01:26)
+
+--- end exact output ---
+
+=== INTERMEDIATE - complete focused list, before final stale cache assertion correction ===
+Cwd: /tmp/hg-fix
+Command: python3 -m pytest -q tests/quality/test_unobserved_diagnostic_c2.py tests/quality/test_runtime_observations_w_obs.py tests/quality/test_dataset_blockers.py tests/quality/test_scorer_isolation_option_b.py tests/quality/test_identity_and_verdicts.py tests/quality/test_trials_and_unmeasured.py tests/quality/test_method_channel.py tests/quality/test_aggregation_policies.py tests/quality/test_parallel_tasks.py tests/quality/test_provider_failure.py tests/quality/test_shared_admission_wiring_codex163.py tests/quality/test_appworld_trusted_trial_writer_codex183.py tests/quality/test_chessbench_stepwise_runner.py tests/quality/test_isolation.py
+Exit status: 1
+--- exact combined output ---
+........................................................................ [ 20%]
+..................................................................F..... [ 40%]
+........................................................................ [ 61%]
+...............F.....................................................F.. [ 81%]
+...................................................F.........F...        [100%]
+=================================== FAILURES ===================================
+____ test_the_default_improver_is_still_resolved_when_none_is_not_asked_for ____
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-69/test_the_default_improver_is_s0')
+
+    def test_the_default_improver_is_still_resolved_when_none_is_not_asked_for(tmp_path):
+        """反向的一半:不加 `--improver none` 时,默认改进器照旧要解析出来。
+    
+        否则这条修法就变成了"悄悄关掉记录 improver 的能力",而那会让真正用了改进器的
+        跑道失去归因。
+        """
+        runs = tmp_path / "runs"
+        argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+                "--rounds", "1", "--run-id", "default-improver", "--dataset", "demo",
+                "--sampling", "all",
+                "--runs-root", str(runs), "--work-root", str(tmp_path / "work"),
+                "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/noop/run.py'}"]
+        proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=300,
+                              env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+        assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+        points = [json.loads(l) for l in
+                  (runs / "default-improver" / "curve.jsonl").read_text().splitlines()
+                  if l.strip()]
+>       assert points and all("improver" in p["identity"] for p in points), (
+            "默认改进器没有被记录:" + str([p["identity"].get("improver") for p in points]))
+E       AssertionError: 默认改进器没有被记录:[None, None]
+E       assert ([{'cost': {'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...{'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...}, ...}] and False)
+E        +  where False = all(<generator object test_the_default_improver_is_still_resolved_when_none_is_not_asked_for.<locals>.<genexpr> at 0x7d4ef232d220>)
+
+tests/quality/test_identity_and_verdicts.py:282: AssertionError
+_________________ test_jobs_reaches_the_run_through_the_driver _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-69/test_jobs_reaches_the_run_thro0')
+isolated_platform = PosixPath('/tmp/pytest-of-xubuqiang/pytest-69/test_jobs_reaches_the_run_thro0/platform')
+
+    def test_jobs_reaches_the_run_through_the_driver(tmp_path, isolated_platform):
+        """端到端:`--jobs 2` 要能真的跑完一次,并且记在 run_meta 里。"""
+        import json
+        import os
+        import subprocess
+    
+        # Stage the actual runtime with only the demo adapter needed by this test. Full
+        # platform hashing and the sandbox still run, without importing or hashing the
+        # checkout's provisioned datasets or inheriting its .env.
+        platform = isolated_platform
+        shutil.copy2(ROOT / "driver.py", platform / "driver.py")
+        for name in ("ckpt", "eval", "harnessgrad", "tools", "methods", "improvers"):
+            shutil.copytree(ROOT / name, platform / name, symlinks=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        (platform / "data").mkdir()
+        # `aggregation.py` and its manifest are part of the runtime now: the driver reads
+        # the dataset's declared aggregation policy when it turns per-task rewards into the
+        # curve point, and it fails closed for an undeclared dataset. Staging `demo.py`
+        # without them made the staged platform incomplete rather than minimal.
+        for name in ("__init__.py", "demo.py", "aggregation_policies.json"):
+            shutil.copy2(ROOT / "data" / name, platform / "data" / name)
+        (platform / "data" / "scaffolds").mkdir()
+        for name in ("__init__.py", "registry.py", "aggregation.py"):
+            shutil.copy2(ROOT / "data/scaffolds" / name, platform / "data/scaffolds" / name)
+        shutil.copytree(ROOT / "base_harness" / "loop_plain",
+                        platform / "base_harness" / "loop_plain", symlinks=True,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    
+        runs = tmp_path / "runs"
+        env = {**os.environ, "HG_AGENT_BACKEND": "mock"}
+        proc = subprocess.run(
+            [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+             "--rounds", "0", "--jobs", "2", "--run-id", "jobs-check", "--dataset", "demo",
+             "--sampling", "all", "--runs-root", str(runs),
+             "--work-root", str(tmp_path / "work")],
+            cwd=platform, capture_output=True, text=True, timeout=1800, env=env)
+>       assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+E       AssertionError: 
+E         r.py", line 29, in <module>
+E             from eval.containers.container_state import _run_one_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-69/test_jobs_reaches_the_run_thro0/platform/eval/containers/container_state.py", line 33, in <module>
+E             from eval.verification.verifier import _verify_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-69/test_jobs_reaches_the_run_thro0/platform/eval/verification/verifier.py", line 30, in <module>
+E             from eval.verification.isolation import declared_class, record_class
+E           File "/tmp/pytest-of-xubuqiang/pytest-69/test_jobs_reaches_the_run_thro0/platform/eval/verification/isolation.py", line 8, in <module>
+E             from data.scaffolds.scorer_isolation import CLASSES, declared_class
+E         ModuleNotFoundError: No module named 'data.scaffolds.scorer_isolation'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/mnt/8t/xubuqiang/anaconda3/bin/python3', 'driver.py', '--harness', 'loop_plain', '--mode', 'A..._isolation import CLASSES, declared_class\nModuleNotFoundError: No module named \'data.scaffolds.scorer_isolation\'\n').returncode
+
+tests/quality/test_parallel_tasks.py:270: AssertionError
+___ test_only_selected_tasks_are_checked_and_legacy_cache_is_preserved[None] ___
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-69/test_only_selected_tasks_are_c0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7d4ef23e7890>
+class_ = None
+
+    @pytest.mark.parametrize("class_", [None, "in-process"])
+    def test_only_selected_tasks_are_checked_and_legacy_cache_is_preserved(tmp_path, monkeypatch, class_):
+        cache = {f"synthetic-sha:{TASK['task_id']}:1": {
+            "score": 1.0, "trace": "synthetic trace", "verdict": {"passed": True},
+        }}
+        if class_ is not None:
+            next(iter(cache.values()))["verdict"]["scorer_isolation_class"] = class_
+        before = deepcopy(cache)
+    
+        def refuse(*args, **kwargs):
+            raise AssertionError("legacy cache hit must not execute")
+    
+        monkeypatch.setattr(runner, "run_one", refuse)
+        if class_ is None:
+            # Legacy cache bytes remain valid evidence, but absent observations can
+            # no longer supply comparable scores (docs/w-obs-runtime-review.md).
+>           with pytest.raises(IsolationMismatch, match="unknown"):
+E           Failed: DID NOT RAISE <class 'eval.verification.isolation.IsolationMismatch'>
+
+tests/quality/test_shared_admission_wiring_codex163.py:176: Failed
+______________ test_snapshot_covers_the_referee_not_the_candidate ______________
+
+    def test_snapshot_covers_the_referee_not_the_candidate():
+        """The scorer is watched; the artifact under improvement is not.
+    
+        `base_harness/` missing from the tuple is deliberate and load-bearing: every
+        run copies it into a workspace and edits the copy. Watching it would flag the
+        only write the platform exists to make.
+        """
+        snap = snapshot(ROOT)
+        assert "driver.py" in snap, "the driver decides what a curve means"
+        assert "eval/run/integrity.py" in snap, "the checker watches itself"
+        assert "eval/run/runner.py" in snap, "the runner runs the subject"
+>       assert ".env" in snap, "the credentials pay for the measurement"
+E       AssertionError: the credentials pay for the measurement
+E       assert '.env' in {'INTERFACE.md': '2d1a2a65280c4ca3499caa469486452955e14e23cf2e5d588c02763d3c6d8acd', 'ckpt/git_state.py': '85ce26bc78e...b4d3e2c5d6', 'data/aggregation_policies.json': '7ca0965b47dc8a6d654b3d86fd2ef699fd88e7c4e7ec061ee039943f0562f163', ...}
+
+tests/quality/test_isolation.py:156: AssertionError
+___________ test_the_harness_cannot_read_the_platform_or_its_answers ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-69/test_the_harness_cannot_read_t0')
+
+    def test_the_harness_cannot_read_the_platform_or_its_answers(tmp_path):
+        """harness 那一侧的实测清单。
+    
+        平台目录**存在但是空的**:bwrap 把平台盖成一个空 tmpfs,于是路径名留着(那是刻意的
+        停点:完全抹掉就得覆盖 work root 所在的整条分支),而里面什么都不剩。
+        """
+        probes = _run_probe_harness(tmp_path)
+        first = probes[0]
+        assert first["platform_visible"] is False, first
+>       assert first["platform_listing"] == [], (
+            f"平台的沙箱里还有东西:{first['platform_listing']}")
+E       AssertionError: 平台的沙箱里还有东西:None
+E       assert None == []
+
+tests/quality/test_isolation.py:639: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_identity_and_verdicts.py::test_the_default_improver_is_still_resolved_when_none_is_not_asked_for
+FAILED tests/quality/test_parallel_tasks.py::test_jobs_reaches_the_run_through_the_driver
+FAILED tests/quality/test_shared_admission_wiring_codex163.py::test_only_selected_tasks_are_checked_and_legacy_cache_is_preserved[None]
+FAILED tests/quality/test_isolation.py::test_snapshot_covers_the_referee_not_the_candidate
+FAILED tests/quality/test_isolation.py::test_the_harness_cannot_read_the_platform_or_its_answers
+5 failed, 348 passed in 90.06s (0:01:30)
+
+--- end exact output ---
+
+=== AFTER - complete focused list, final ===
+Cwd: /tmp/hg-fix
+Command: python3 -m pytest -q tests/quality/test_unobserved_diagnostic_c2.py tests/quality/test_runtime_observations_w_obs.py tests/quality/test_dataset_blockers.py tests/quality/test_scorer_isolation_option_b.py tests/quality/test_identity_and_verdicts.py tests/quality/test_trials_and_unmeasured.py tests/quality/test_method_channel.py tests/quality/test_aggregation_policies.py tests/quality/test_parallel_tasks.py tests/quality/test_provider_failure.py tests/quality/test_shared_admission_wiring_codex163.py tests/quality/test_appworld_trusted_trial_writer_codex183.py tests/quality/test_chessbench_stepwise_runner.py tests/quality/test_isolation.py
+Exit status: 1
+--- exact combined output ---
+........................................................................ [ 20%]
+..................................................................F..... [ 40%]
+........................................................................ [ 61%]
+...............F........................................................ [ 81%]
+...................................................F.........F...        [100%]
+=================================== FAILURES ===================================
+____ test_the_default_improver_is_still_resolved_when_none_is_not_asked_for ____
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-71/test_the_default_improver_is_s0')
+
+    def test_the_default_improver_is_still_resolved_when_none_is_not_asked_for(tmp_path):
+        """反向的一半:不加 `--improver none` 时,默认改进器照旧要解析出来。
+    
+        否则这条修法就变成了"悄悄关掉记录 improver 的能力",而那会让真正用了改进器的
+        跑道失去归因。
+        """
+        runs = tmp_path / "runs"
+        argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+                "--rounds", "1", "--run-id", "default-improver", "--dataset", "demo",
+                "--sampling", "all",
+                "--runs-root", str(runs), "--work-root", str(tmp_path / "work"),
+                "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/noop/run.py'}"]
+        proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=300,
+                              env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+        assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+        points = [json.loads(l) for l in
+                  (runs / "default-improver" / "curve.jsonl").read_text().splitlines()
+                  if l.strip()]
+>       assert points and all("improver" in p["identity"] for p in points), (
+            "默认改进器没有被记录:" + str([p["identity"].get("improver") for p in points]))
+E       AssertionError: 默认改进器没有被记录:[None, None]
+E       assert ([{'cost': {'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...{'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...}, ...}] and False)
+E        +  where False = all(<generator object test_the_default_improver_is_still_resolved_when_none_is_not_asked_for.<locals>.<genexpr> at 0x7e3aae853510>)
+
+tests/quality/test_identity_and_verdicts.py:282: AssertionError
+_________________ test_jobs_reaches_the_run_through_the_driver _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-71/test_jobs_reaches_the_run_thro0')
+isolated_platform = PosixPath('/tmp/pytest-of-xubuqiang/pytest-71/test_jobs_reaches_the_run_thro0/platform')
+
+    def test_jobs_reaches_the_run_through_the_driver(tmp_path, isolated_platform):
+        """端到端:`--jobs 2` 要能真的跑完一次,并且记在 run_meta 里。"""
+        import json
+        import os
+        import subprocess
+    
+        # Stage the actual runtime with only the demo adapter needed by this test. Full
+        # platform hashing and the sandbox still run, without importing or hashing the
+        # checkout's provisioned datasets or inheriting its .env.
+        platform = isolated_platform
+        shutil.copy2(ROOT / "driver.py", platform / "driver.py")
+        for name in ("ckpt", "eval", "harnessgrad", "tools", "methods", "improvers"):
+            shutil.copytree(ROOT / name, platform / name, symlinks=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        (platform / "data").mkdir()
+        # `aggregation.py` and its manifest are part of the runtime now: the driver reads
+        # the dataset's declared aggregation policy when it turns per-task rewards into the
+        # curve point, and it fails closed for an undeclared dataset. Staging `demo.py`
+        # without them made the staged platform incomplete rather than minimal.
+        for name in ("__init__.py", "demo.py", "aggregation_policies.json"):
+            shutil.copy2(ROOT / "data" / name, platform / "data" / name)
+        (platform / "data" / "scaffolds").mkdir()
+        for name in ("__init__.py", "registry.py", "aggregation.py"):
+            shutil.copy2(ROOT / "data/scaffolds" / name, platform / "data/scaffolds" / name)
+        shutil.copytree(ROOT / "base_harness" / "loop_plain",
+                        platform / "base_harness" / "loop_plain", symlinks=True,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    
+        runs = tmp_path / "runs"
+        env = {**os.environ, "HG_AGENT_BACKEND": "mock"}
+        proc = subprocess.run(
+            [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+             "--rounds", "0", "--jobs", "2", "--run-id", "jobs-check", "--dataset", "demo",
+             "--sampling", "all", "--runs-root", str(runs),
+             "--work-root", str(tmp_path / "work")],
+            cwd=platform, capture_output=True, text=True, timeout=1800, env=env)
+>       assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+E       AssertionError: 
+E         r.py", line 29, in <module>
+E             from eval.containers.container_state import _run_one_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-71/test_jobs_reaches_the_run_thro0/platform/eval/containers/container_state.py", line 33, in <module>
+E             from eval.verification.verifier import _verify_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-71/test_jobs_reaches_the_run_thro0/platform/eval/verification/verifier.py", line 30, in <module>
+E             from eval.verification.isolation import declared_class, record_class
+E           File "/tmp/pytest-of-xubuqiang/pytest-71/test_jobs_reaches_the_run_thro0/platform/eval/verification/isolation.py", line 8, in <module>
+E             from data.scaffolds.scorer_isolation import CLASSES, declared_class
+E         ModuleNotFoundError: No module named 'data.scaffolds.scorer_isolation'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/mnt/8t/xubuqiang/anaconda3/bin/python3', 'driver.py', '--harness', 'loop_plain', '--mode', 'A..._isolation import CLASSES, declared_class\nModuleNotFoundError: No module named \'data.scaffolds.scorer_isolation\'\n').returncode
+
+tests/quality/test_parallel_tasks.py:270: AssertionError
+______________ test_snapshot_covers_the_referee_not_the_candidate ______________
+
+    def test_snapshot_covers_the_referee_not_the_candidate():
+        """The scorer is watched; the artifact under improvement is not.
+    
+        `base_harness/` missing from the tuple is deliberate and load-bearing: every
+        run copies it into a workspace and edits the copy. Watching it would flag the
+        only write the platform exists to make.
+        """
+        snap = snapshot(ROOT)
+        assert "driver.py" in snap, "the driver decides what a curve means"
+        assert "eval/run/integrity.py" in snap, "the checker watches itself"
+        assert "eval/run/runner.py" in snap, "the runner runs the subject"
+>       assert ".env" in snap, "the credentials pay for the measurement"
+E       AssertionError: the credentials pay for the measurement
+E       assert '.env' in {'INTERFACE.md': '2d1a2a65280c4ca3499caa469486452955e14e23cf2e5d588c02763d3c6d8acd', 'ckpt/git_state.py': '85ce26bc78e...b4d3e2c5d6', 'data/aggregation_policies.json': '7ca0965b47dc8a6d654b3d86fd2ef699fd88e7c4e7ec061ee039943f0562f163', ...}
+
+tests/quality/test_isolation.py:156: AssertionError
+___________ test_the_harness_cannot_read_the_platform_or_its_answers ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-71/test_the_harness_cannot_read_t0')
+
+    def test_the_harness_cannot_read_the_platform_or_its_answers(tmp_path):
+        """harness 那一侧的实测清单。
+    
+        平台目录**存在但是空的**:bwrap 把平台盖成一个空 tmpfs,于是路径名留着(那是刻意的
+        停点:完全抹掉就得覆盖 work root 所在的整条分支),而里面什么都不剩。
+        """
+        probes = _run_probe_harness(tmp_path)
+        first = probes[0]
+        assert first["platform_visible"] is False, first
+>       assert first["platform_listing"] == [], (
+            f"平台的沙箱里还有东西:{first['platform_listing']}")
+E       AssertionError: 平台的沙箱里还有东西:None
+E       assert None == []
+
+tests/quality/test_isolation.py:639: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_identity_and_verdicts.py::test_the_default_improver_is_still_resolved_when_none_is_not_asked_for
+FAILED tests/quality/test_parallel_tasks.py::test_jobs_reaches_the_run_through_the_driver
+FAILED tests/quality/test_isolation.py::test_snapshot_covers_the_referee_not_the_candidate
+FAILED tests/quality/test_isolation.py::test_the_harness_cannot_read_the_platform_or_its_answers
+4 failed, 349 passed in 89.10s (0:01:29)
+
+--- end exact output ---
+
+=== BEFORE - dataset blockers checker ===
+Cwd: /tmp/hg-fix
+Command: python3 tools/check_dataset_blockers.py
+Exit status: 0
+--- exact combined output ---
+{"valid": true, "datasets": 28, "shared_blockers": 2, "historical_records": 11, "production_authorized": false}
+
+--- end exact output ---
+
+=== AFTER - dataset blockers checker ===
+Cwd: /tmp/hg-fix
+Command: python3 tools/check_dataset_blockers.py
+Exit status: 0
+--- exact combined output ---
+{"valid": true, "datasets": 28, "shared_blockers": 2, "historical_records": 11, "production_authorized": false}
+
+--- end exact output ---
+
+=== PRISTINE MAIN CONTROL - all four residual failures ===
+Cwd: /tmp/hg-w-fix-control
+Command: python3 -m pytest -q tests/quality/test_identity_and_verdicts.py::test_the_default_improver_is_still_resolved_when_none_is_not_asked_for tests/quality/test_parallel_tasks.py::test_jobs_reaches_the_run_through_the_driver tests/quality/test_isolation.py::test_snapshot_covers_the_referee_not_the_candidate tests/quality/test_isolation.py::test_the_harness_cannot_read_the_platform_or_its_answers
+Exit status: 1
+--- exact combined output ---
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+____ test_the_default_improver_is_still_resolved_when_none_is_not_asked_for ____
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-70/test_the_default_improver_is_s0')
+
+    def test_the_default_improver_is_still_resolved_when_none_is_not_asked_for(tmp_path):
+        """反向的一半:不加 `--improver none` 时,默认改进器照旧要解析出来。
+    
+        否则这条修法就变成了"悄悄关掉记录 improver 的能力",而那会让真正用了改进器的
+        跑道失去归因。
+        """
+        runs = tmp_path / "runs"
+        argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+                "--rounds", "1", "--run-id", "default-improver", "--dataset", "demo",
+                "--sampling", "all",
+                "--runs-root", str(runs), "--work-root", str(tmp_path / "work"),
+                "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/noop/run.py'}"]
+        proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=300,
+                              env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+        assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+        points = [json.loads(l) for l in
+                  (runs / "default-improver" / "curve.jsonl").read_text().splitlines()
+                  if l.strip()]
+>       assert points and all("improver" in p["identity"] for p in points), (
+            "默认改进器没有被记录:" + str([p["identity"].get("improver") for p in points]))
+E       AssertionError: 默认改进器没有被记录:[None, None]
+E       assert ([{'cost': {'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...{'env_generation_tokens': None, 'env_services_reported': 0, 'evaluation_trials': 4, 'generation_tokens': 0, ...}, ...}] and False)
+E        +  where False = all(<generator object test_the_default_improver_is_still_resolved_when_none_is_not_asked_for.<locals>.<genexpr> at 0x71fbda74ef60>)
+
+tests/quality/test_identity_and_verdicts.py:282: AssertionError
+_________________ test_jobs_reaches_the_run_through_the_driver _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-70/test_jobs_reaches_the_run_thro0')
+isolated_platform = PosixPath('/tmp/pytest-of-xubuqiang/pytest-70/test_jobs_reaches_the_run_thro0/platform')
+
+    def test_jobs_reaches_the_run_through_the_driver(tmp_path, isolated_platform):
+        """端到端:`--jobs 2` 要能真的跑完一次,并且记在 run_meta 里。"""
+        import json
+        import os
+        import subprocess
+    
+        # Stage the actual runtime with only the demo adapter needed by this test. Full
+        # platform hashing and the sandbox still run, without importing or hashing the
+        # checkout's provisioned datasets or inheriting its .env.
+        platform = isolated_platform
+        shutil.copy2(ROOT / "driver.py", platform / "driver.py")
+        for name in ("ckpt", "eval", "harnessgrad", "tools", "methods", "improvers"):
+            shutil.copytree(ROOT / name, platform / name, symlinks=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        (platform / "data").mkdir()
+        # `aggregation.py` and its manifest are part of the runtime now: the driver reads
+        # the dataset's declared aggregation policy when it turns per-task rewards into the
+        # curve point, and it fails closed for an undeclared dataset. Staging `demo.py`
+        # without them made the staged platform incomplete rather than minimal.
+        for name in ("__init__.py", "demo.py", "aggregation_policies.json"):
+            shutil.copy2(ROOT / "data" / name, platform / "data" / name)
+        (platform / "data" / "scaffolds").mkdir()
+        for name in ("__init__.py", "registry.py", "aggregation.py"):
+            shutil.copy2(ROOT / "data/scaffolds" / name, platform / "data/scaffolds" / name)
+        shutil.copytree(ROOT / "base_harness" / "loop_plain",
+                        platform / "base_harness" / "loop_plain", symlinks=True,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    
+        runs = tmp_path / "runs"
+        env = {**os.environ, "HG_AGENT_BACKEND": "mock"}
+        proc = subprocess.run(
+            [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+             "--rounds", "0", "--jobs", "2", "--run-id", "jobs-check", "--dataset", "demo",
+             "--sampling", "all", "--runs-root", str(runs),
+             "--work-root", str(tmp_path / "work")],
+            cwd=platform, capture_output=True, text=True, timeout=1800, env=env)
+>       assert proc.returncode == 0, f"{proc.stdout[-800:]}\n{proc.stderr[-800:]}"
+E       AssertionError: 
+E         r.py", line 29, in <module>
+E             from eval.containers.container_state import _run_one_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-70/test_jobs_reaches_the_run_thro0/platform/eval/containers/container_state.py", line 33, in <module>
+E             from eval.verification.verifier import _verify_container_state
+E           File "/tmp/pytest-of-xubuqiang/pytest-70/test_jobs_reaches_the_run_thro0/platform/eval/verification/verifier.py", line 30, in <module>
+E             from eval.verification.isolation import declared_class, record_class
+E           File "/tmp/pytest-of-xubuqiang/pytest-70/test_jobs_reaches_the_run_thro0/platform/eval/verification/isolation.py", line 8, in <module>
+E             from data.scaffolds.scorer_isolation import CLASSES, declared_class
+E         ModuleNotFoundError: No module named 'data.scaffolds.scorer_isolation'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/mnt/8t/xubuqiang/anaconda3/bin/python3', 'driver.py', '--harness', 'loop_plain', '--mode', 'A..._isolation import CLASSES, declared_class\nModuleNotFoundError: No module named \'data.scaffolds.scorer_isolation\'\n').returncode
+
+tests/quality/test_parallel_tasks.py:270: AssertionError
+______________ test_snapshot_covers_the_referee_not_the_candidate ______________
+
+    def test_snapshot_covers_the_referee_not_the_candidate():
+        """The scorer is watched; the artifact under improvement is not.
+    
+        `base_harness/` missing from the tuple is deliberate and load-bearing: every
+        run copies it into a workspace and edits the copy. Watching it would flag the
+        only write the platform exists to make.
+        """
+        snap = snapshot(ROOT)
+        assert "driver.py" in snap, "the driver decides what a curve means"
+        assert "eval/run/integrity.py" in snap, "the checker watches itself"
+        assert "eval/run/runner.py" in snap, "the runner runs the subject"
+>       assert ".env" in snap, "the credentials pay for the measurement"
+E       AssertionError: the credentials pay for the measurement
+E       assert '.env' in {'INTERFACE.md': '2d1a2a65280c4ca3499caa469486452955e14e23cf2e5d588c02763d3c6d8acd', 'ckpt/git_state.py': '85ce26bc78e...b4d3e2c5d6', 'data/aggregation_policies.json': '7ca0965b47dc8a6d654b3d86fd2ef699fd88e7c4e7ec061ee039943f0562f163', ...}
+
+tests/quality/test_isolation.py:156: AssertionError
+___________ test_the_harness_cannot_read_the_platform_or_its_answers ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-xubuqiang/pytest-70/test_the_harness_cannot_read_t0')
+
+    def test_the_harness_cannot_read_the_platform_or_its_answers(tmp_path):
+        """harness 那一侧的实测清单。
+    
+        平台目录**存在但是空的**:bwrap 把平台盖成一个空 tmpfs,于是路径名留着(那是刻意的
+        停点:完全抹掉就得覆盖 work root 所在的整条分支),而里面什么都不剩。
+        """
+        probes = _run_probe_harness(tmp_path)
+        first = probes[0]
+        assert first["platform_visible"] is False, first
+>       assert first["platform_listing"] == [], (
+            f"平台的沙箱里还有东西:{first['platform_listing']}")
+E       AssertionError: 平台的沙箱里还有东西:None
+E       assert None == []
+
+tests/quality/test_isolation.py:639: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_identity_and_verdicts.py::test_the_default_improver_is_still_resolved_when_none_is_not_asked_for
+FAILED tests/quality/test_parallel_tasks.py::test_jobs_reaches_the_run_through_the_driver
+FAILED tests/quality/test_isolation.py::test_snapshot_covers_the_referee_not_the_candidate
+FAILED tests/quality/test_isolation.py::test_the_harness_cannot_read_the_platform_or_its_answers
+4 failed in 6.78s
+
+--- end exact output ---
+
+Control HEAD and cleanliness were verified before removal; targeted control is not a whole-main-suite claim.
