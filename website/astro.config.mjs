@@ -87,14 +87,7 @@ export default defineConfig({
 			sidebar: [
 				{
 					label: 'Start here',
-					items: [
-						{ label: 'Getting started', slug: 'getting-started' },
-						{ label: 'Status and limits', slug: 'status' },
-					],
-				},
-				{
-					label: 'Concepts',
-					items: [{ autogenerate: { directory: 'concepts' } }],
+					items: [{ label: 'Getting started', slug: 'getting-started' }],
 				},
 				{
 					label: 'Benchmarks',

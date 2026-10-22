@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-22T02:45:47Z",
+ "generated_at": "2026-10-22T06:19:31Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -69,6 +69,26 @@
         "valid_seen": 979442,
         "valid_train": 1921132
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 803809,
+         "output": 6970,
+         "tasks_reporting": 17,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 970427,
+         "output": 9015,
+         "tasks_reporting": 20,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 1902928,
+         "output": 18204,
+         "tasks_reporting": 43,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -90,6 +110,26 @@
         "valid_unseen": 2206346,
         "valid_seen": 733081,
         "valid_train": 772135
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 2194828,
+         "output": 11518,
+         "tasks_reporting": 16,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 728960,
+         "output": 4121,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 767427,
+         "output": 4708,
+         "tasks_reporting": 6,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -113,6 +153,32 @@
         "valid_seen": 0,
         "valid_train": 0
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -134,6 +200,32 @@
         "valid_unseen": 0,
         "valid_seen": 0,
         "valid_train": 0
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
        },
        "eval_n": 200
       },
@@ -157,6 +249,32 @@
         "valid_seen": 0,
         "valid_train": 0
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -178,6 +296,32 @@
         "valid_unseen": 0,
         "valid_seen": 0,
         "valid_train": 0
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
        },
        "eval_n": 200
       },
@@ -201,6 +345,32 @@
         "valid_seen": 0,
         "valid_train": 0
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -222,6 +392,32 @@
         "valid_unseen": 0,
         "valid_seen": 0,
         "valid_train": 0
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
        },
        "eval_n": 200
       },
@@ -245,6 +441,32 @@
         "valid_seen": 0,
         "valid_train": 0
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -266,6 +488,32 @@
         "valid_unseen": 0,
         "valid_seen": 0,
         "valid_train": 0
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 140,
+         "zero_model_calls": true,
+         "tasks_acted": 140
+        },
+        "valid_train": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 200,
+         "zero_model_calls": true,
+         "tasks_acted": 200
+        }
        },
        "eval_source": {
         "valid_unseen": "exam"
@@ -530,6 +778,26 @@
         "valid_seen": 25934040,
         "valid_train": 32270104
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 8510749,
+         "output": 50018,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 25844539,
+         "output": 89501,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 32150890,
+         "output": 119214,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -552,6 +820,26 @@
         "valid_seen": 3352161,
         "valid_train": 6290427
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 4200713,
+         "output": 33337,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3321385,
+         "output": 30776,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6240107,
+         "output": 50320,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -573,6 +861,26 @@
         "valid_unseen": 4234050,
         "valid_seen": 3352161,
         "valid_train": 6290427
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 4200713,
+         "output": 33337,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3321385,
+         "output": 30776,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6240107,
+         "output": 50320,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_source": {
         "valid_unseen": "exam",
@@ -687,6 +995,26 @@
         "valid_seen": 38103963,
         "valid_train": 47405111
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 33487036,
+         "output": 113372,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 37984364,
+         "output": 119599,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 47245179,
+         "output": 159932,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -708,6 +1036,26 @@
         "valid_unseen": 31110090,
         "valid_seen": 34616213,
         "valid_train": 46167372
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 31001056,
+         "output": 109034,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 34503529,
+         "output": 112684,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 46010162,
+         "output": 157210,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -731,6 +1079,26 @@
         "valid_seen": 20619422,
         "valid_train": 27796369
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 13355936,
+         "output": 65797,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 20539469,
+         "output": 79953,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 27684068,
+         "output": 112301,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -752,6 +1120,26 @@
         "valid_unseen": 11268423,
         "valid_seen": 13509095,
         "valid_train": 19366025
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 11207458,
+         "output": 60965,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 13444213,
+         "output": 64882,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 19272428,
+         "output": 93597,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -775,6 +1163,26 @@
         "valid_seen": 13097522,
         "valid_train": 19317816
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 11680161,
+         "output": 61964,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 13034209,
+         "output": 63313,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 19224626,
+         "output": 93190,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -796,6 +1204,26 @@
         "valid_unseen": 4156103,
         "valid_seen": 3428774,
         "valid_train": 6489803
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 4122417,
+         "output": 33686,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3396518,
+         "output": 32256,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6438179,
+         "output": 51624,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -819,6 +1247,26 @@
         "valid_seen": 3353710,
         "valid_train": 6642268
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 3987804,
+         "output": 33325,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3321963,
+         "output": 31747,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6590214,
+         "output": 52054,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -840,6 +1288,26 @@
         "valid_unseen": 3850639,
         "valid_seen": 3258567,
         "valid_train": 6157704
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 3818375,
+         "output": 32264,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3227525,
+         "output": 31042,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6107962,
+         "output": 49742,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -863,6 +1331,26 @@
         "valid_seen": 3224878,
         "valid_train": 6092951
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 3812504,
+         "output": 32216,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3194004,
+         "output": 30874,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6043327,
+         "output": 49624,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -884,6 +1372,26 @@
         "valid_unseen": 3824487,
         "valid_seen": 3266244,
         "valid_train": 6141211
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 3792353,
+         "output": 32134,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3235182,
+         "output": 31062,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6091464,
+         "output": 49747,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_source": {
         "valid_unseen": "exam"
@@ -1132,6 +1640,26 @@
         "valid_seen": 21518226,
         "valid_train": 32540196
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 17887476,
+         "output": 78147,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 21432749,
+         "output": 85477,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 32408806,
+         "output": 131390,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1153,6 +1681,26 @@
         "valid_unseen": 26418285,
         "valid_seen": 29596174,
         "valid_train": 42600285
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 26319660,
+         "output": 98625,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 29491369,
+         "output": 104805,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 42448462,
+         "output": 151823,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -1176,6 +1724,26 @@
         "valid_seen": 33010334,
         "valid_train": 45553770
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 34955170,
+         "output": 118311,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 32900184,
+         "output": 110150,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 45397711,
+         "output": 156059,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1197,6 +1765,26 @@
         "valid_unseen": 13834585,
         "valid_seen": 18940070,
         "valid_train": 24647454
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 13742778,
+         "output": 91807,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 18840432,
+         "output": 99638,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 24517167,
+         "output": 130287,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -1220,6 +1808,26 @@
         "valid_seen": 22666613,
         "valid_train": 32038450
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 18143703,
+         "output": 103840,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 22561985,
+         "output": 104628,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 31884794,
+         "output": 153656,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1241,6 +1849,26 @@
         "valid_unseen": 18044392,
         "valid_seen": 22501674,
         "valid_train": 30890812
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 17941954,
+         "output": 102438,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 22397905,
+         "output": 103769,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 30742895,
+         "output": 147917,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -1264,6 +1892,26 @@
         "valid_seen": 22879433,
         "valid_train": 33816035
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 19861734,
+         "output": 87820,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 22790429,
+         "output": 89004,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 33673824,
+         "output": 142211,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1285,6 +1933,26 @@
         "valid_unseen": 27976761,
         "valid_seen": 25844847,
         "valid_train": 40150185
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 27869813,
+         "output": 106948,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 25747283,
+         "output": 97564,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 39994957,
+         "output": 155228,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -1308,6 +1976,26 @@
         "valid_seen": 21598512,
         "valid_train": 31045308
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 19243196,
+         "output": 87371,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 21512148,
+         "output": 86364,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 30910338,
+         "output": 134970,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1329,6 +2017,26 @@
         "valid_unseen": 16411022,
         "valid_seen": 18239687,
         "valid_train": 26711086
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 16338130,
+         "output": 72892,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 18165883,
+         "output": 73804,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 26600105,
+         "output": 110981,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_source": {
         "valid_unseen": "exam"
@@ -1577,6 +2285,26 @@
         "valid_seen": 23648924,
         "valid_train": 30490180
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 23618947,
+         "output": 82062,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 23567978,
+         "output": 80946,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 30380760,
+         "output": 109420,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1598,6 +2326,26 @@
         "valid_unseen": 23214074,
         "valid_seen": 20861341,
         "valid_train": 31728039
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 23135902,
+         "output": 78172,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 20786606,
+         "output": 74735,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 31617165,
+         "output": 110874,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -1621,6 +2369,26 @@
         "valid_seen": 20098465,
         "valid_train": 24840205
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 15444739,
+         "output": 72582,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 20017356,
+         "output": 81109,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 24729644,
+         "output": 110561,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1643,6 +2411,28 @@
         "valid_seen": 1863485,
         "valid_train": 1376762
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 0,
+         "output": 0,
+         "tasks_reporting": 0,
+         "tasks": 134,
+         "zero_model_calls": true,
+         "tasks_acted": 134
+        },
+        "valid_seen": {
+         "input": 1853742,
+         "output": 9743,
+         "tasks_reporting": 14,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 1369601,
+         "output": 7161,
+         "tasks_reporting": 9,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1653,7 +2443,8 @@
        "train_n": 100,
        "eval": {
         "valid_unseen": 1.0,
-        "valid_seen": 0.992857
+        "valid_seen": 0.992857,
+        "valid_train": 0.975
        },
        "valid": true,
        "n_invalid": 0,
@@ -1661,9 +2452,30 @@
        "train_harness_failed": 0,
        "eval_tokens": {
         "valid_unseen": 5196284,
-        "valid_seen": 5010870
+        "valid_seen": 5010870,
+        "valid_train": 11005689
        },
-       "eval_n": 140
+       "eval_split": {
+        "valid_unseen": {
+         "input": 5160379,
+         "output": 35905,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 4976536,
+         "output": 34334,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 10945091,
+         "output": 60598,
+         "tasks_reporting": 199,
+         "tasks": 199
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 6,
@@ -1684,6 +2496,26 @@
         "valid_unseen": 13438556,
         "valid_seen": 8505526,
         "valid_train": 16712535
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 13384472,
+         "output": 54084,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 8462719,
+         "output": 42807,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 16637870,
+         "output": 74665,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
        },
        "eval_n": 200
       },
@@ -1707,6 +2539,26 @@
         "valid_seen": 28905139,
         "valid_train": 41801672
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 25184412,
+         "output": 96392,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 28805572,
+         "output": 99567,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 41654995,
+         "output": 146677,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1729,6 +2581,26 @@
         "valid_seen": 3186866,
         "valid_train": 5970353
        },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 4667397,
+         "output": 40703,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3153254,
+         "output": 33612,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 5913738,
+         "output": 56615,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
        "eval_n": 200
       },
       {
@@ -1748,6 +2620,20 @@
        "eval_tokens": {
         "valid_unseen": 5251951,
         "valid_seen": 3958136
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 5215945,
+         "output": 36006,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3926071,
+         "output": 32065,
+         "tasks_reporting": 140,
+         "tasks": 140
+        }
        },
        "eval_n": 140
       },
@@ -2589,17 +3475,7 @@
    ]
   }
  ],
- "excluded": [
-  {
-   "method": "dgm",
-   "round": 5,
-   "pool": "valid_train",
-   "score": 0.974874,
-   "n_tasks": 199,
-   "n_invalid": 1,
-   "n_harness_failed": 0
-  }
- ],
+ "excluded": [],
  "coverage": {
   "valid_unseen": {
    "measured": 42,
@@ -2613,7 +3489,7 @@
   },
   "valid_train": {
    "measured": 41,
-   "valid": 40,
+   "valid": 41,
    "planned": null
   }
  }

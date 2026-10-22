@@ -40,4 +40,3 @@ is not detectable from inside the framework, and is the largest known threat to 
 validity of any curve.
 
 [Getting started](/HarnessGrad/getting-started/) runs the demo.
-[Status and limits](/HarnessGrad/status/) is worth reading first.
