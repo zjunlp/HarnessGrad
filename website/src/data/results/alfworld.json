@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-22T06:30:07Z",
+ "generated_at": "2026-10-22T13:32:35Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -2005,7 +2005,7 @@
        "train": 0.93,
        "train_n": 100,
        "eval": {
-        "valid_unseen": 0.932836,
+        "valid_unseen": 0.91791,
         "valid_seen": 0.914286,
         "valid_train": 0.89
        },
@@ -2014,14 +2014,14 @@
        "train_invalid": 0,
        "train_harness_failed": 0,
        "eval_tokens": {
-        "valid_unseen": 16411022,
+        "valid_unseen": 17549967,
         "valid_seen": 18239687,
         "valid_train": 26711086
        },
        "eval_split": {
         "valid_unseen": {
-         "input": 16338130,
-         "output": 72892,
+         "input": 17474889,
+         "output": 75078,
          "tasks_reporting": 134,
          "tasks": 134
         },
@@ -2037,9 +2037,6 @@
          "tasks_reporting": 200,
          "tasks": 200
         }
-       },
-       "eval_source": {
-        "valid_unseen": "exam"
        },
        "eval_n": 200
       }
@@ -2643,11 +2640,33 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 1.0,
+        "valid_seen": 1.0
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 5114309,
+        "valid_seen": 3722414
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 5078753,
+         "output": 35556,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3691217,
+         "output": 31197,
+         "tasks_reporting": 140,
+         "tasks": 140
+        }
+       },
+       "eval_n": 140
       }
      ],
      "cost": {
@@ -2847,11 +2866,33 @@
        "steps": 1,
        "train": 0.97,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.932836,
+        "valid_train": 0.95
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 1291489,
+        "valid_train": 1208559
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 1285217,
+         "output": 6272,
+         "tasks_reporting": 10,
+         "tasks": 134
+        },
+        "valid_train": {
+         "input": 1202227,
+         "output": 6332,
+         "tasks_reporting": 14,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 3,
@@ -2859,11 +2900,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.977612,
+        "valid_seen": 0.978571,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 230052,
+        "valid_seen": 73420,
+        "valid_train": 666125
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 228835,
+         "output": 1217,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 72540,
+         "output": 880,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 662697,
+         "output": 3428,
+         "tasks_reporting": 7,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 4,
@@ -2871,11 +2942,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.977612,
+        "valid_seen": 0.985714,
+        "valid_train": 0.98
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 312324,
+        "valid_seen": 63522,
+        "valid_train": 634827
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 310753,
+         "output": 1571,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 62767,
+         "output": 755,
+         "tasks_reporting": 5,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 631793,
+         "output": 3034,
+         "tasks_reporting": 6,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 5,
@@ -2883,11 +2984,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.977612,
+        "valid_seen": 0.978571,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 224574,
+        "valid_seen": 67689,
+        "valid_train": 665473
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 223389,
+         "output": 1185,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 66831,
+         "output": 858,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 661979,
+         "output": 3494,
+         "tasks_reporting": 7,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 6,
@@ -2895,11 +3026,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.985075,
+        "valid_seen": 0.985714,
+        "valid_train": 0.975
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 156799,
+        "valid_seen": 65004,
+        "valid_train": 549271
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 155850,
+         "output": 949,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 64039,
+         "output": 965,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 546327,
+         "output": 2944,
+         "tasks_reporting": 7,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 7,
@@ -2907,11 +3068,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.985075,
+        "valid_seen": 0.978571,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 158264,
+        "valid_seen": 70769,
+        "valid_train": 615369
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 157255,
+         "output": 1009,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 69828,
+         "output": 941,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 612273,
+         "output": 3096,
+         "tasks_reporting": 7,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 8,
@@ -2919,11 +3110,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.977612,
+        "valid_seen": 0.971429,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 204528,
+        "valid_seen": 238235,
+        "valid_train": 622403
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 203307,
+         "output": 1221,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 236315,
+         "output": 1920,
+         "tasks_reporting": 7,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 618667,
+         "output": 3736,
+         "tasks_reporting": 8,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 9,
@@ -2931,11 +3152,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.977612,
+        "valid_seen": 0.985714,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 217893,
+        "valid_seen": 56592,
+        "valid_train": 649438
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 216705,
+         "output": 1188,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 55821,
+         "output": 771,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 645950,
+         "output": 3488,
+         "tasks_reporting": 7,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 10,
@@ -2943,11 +3194,41 @@
        "steps": 1,
        "train": 1.0,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.977612,
+        "valid_seen": 0.978571,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 219585,
+        "valid_seen": 110927,
+        "valid_train": 384561
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 218353,
+         "output": 1232,
+         "tasks_reporting": 3,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 109582,
+         "output": 1345,
+         "tasks_reporting": 6,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 379659,
+         "output": 4902,
+         "tasks_reporting": 7,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       }
      ],
      "cost": {
@@ -3193,11 +3474,41 @@
        "steps": 3,
        "train": 0.82,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.850746,
+        "valid_seen": 0.857143,
+        "valid_train": 0.835
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 20238015,
+        "valid_seen": 20422092,
+        "valid_train": 30614189
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 20156662,
+         "output": 81353,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 20343699,
+         "output": 78393,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 30494635,
+         "output": 119554,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 2,
@@ -3205,11 +3516,41 @@
        "steps": 3,
        "train": 0.81,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.798507,
+        "valid_seen": 0.792857,
+        "valid_train": 0.775
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 19935359,
+        "valid_seen": 19305735,
+        "valid_train": 27031571
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 19838844,
+         "output": 96515,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 19205089,
+         "output": 100646,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 26894145,
+         "output": 137426,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 3,
@@ -3217,11 +3558,41 @@
        "steps": 3,
        "train": 0.76,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.649254,
+        "valid_seen": 0.707143,
+        "valid_train": 0.69
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 31123209,
+        "valid_seen": 28979301,
+        "valid_train": 40547373
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 31014695,
+         "output": 108514,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 28880142,
+         "output": 99159,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 40406395,
+         "output": 140978,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 4,
@@ -3229,11 +3600,41 @@
        "steps": 3,
        "train": 0.99,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 1.0,
+        "valid_seen": 0.992857,
+        "valid_train": 0.975
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 3439931,
+        "valid_seen": 3806430,
+        "valid_train": 6448805
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 3399911,
+         "output": 40020,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 3764236,
+         "output": 42194,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 6383435,
+         "output": 65370,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 5,
@@ -3241,11 +3642,41 @@
        "steps": 3,
        "train": 0.92,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 1.0,
+        "valid_seen": 0.921429,
+        "valid_train": 0.935
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 10377063,
+        "valid_seen": 16302655,
+        "valid_train": 19907111
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 10323305,
+         "output": 53758,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 16237157,
+         "output": 65498,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 19817233,
+         "output": 89878,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 6,
@@ -3253,11 +3684,41 @@
        "steps": 3,
        "train": 0.77,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.873134,
+        "valid_seen": 0.828571,
+        "valid_train": 0.775
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 11165468,
+        "valid_seen": 13036753,
+        "valid_train": 21375064
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 11109851,
+         "output": 55617,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 12975767,
+         "output": 60986,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 21276103,
+         "output": 98961,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 7,
@@ -3265,11 +3726,41 @@
        "steps": 3,
        "train": 0.94,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.992537,
+        "valid_seen": 0.935714,
+        "valid_train": 0.97
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_tokens": {
+        "valid_unseen": 4830458,
+        "valid_seen": 5861108,
+        "valid_train": 7440692
+       },
+       "eval_split": {
+        "valid_unseen": {
+         "input": 4779667,
+         "output": 50791,
+         "tasks_reporting": 134,
+         "tasks": 134
+        },
+        "valid_seen": {
+         "input": 5803346,
+         "output": 57762,
+         "tasks_reporting": 140,
+         "tasks": 140
+        },
+        "valid_train": {
+         "input": 7362652,
+         "output": 78040,
+         "tasks_reporting": 200,
+         "tasks": 200
+        }
+       },
+       "eval_n": 200
       },
       {
        "round": 8,
@@ -3478,18 +3969,18 @@
  "excluded": [],
  "coverage": {
   "valid_unseen": {
-   "measured": 42,
-   "valid": 42,
+   "measured": 59,
+   "valid": 59,
    "planned": null
   },
   "valid_seen": {
-   "measured": 42,
-   "valid": 42,
+   "measured": 58,
+   "valid": 58,
    "planned": null
   },
   "valid_train": {
-   "measured": 41,
-   "valid": 41,
+   "measured": 57,
+   "valid": 57,
    "planned": null
   }
  }
