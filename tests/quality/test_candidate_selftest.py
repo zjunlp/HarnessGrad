@@ -157,3 +157,46 @@ def test_editor_cli_bridge_reuses_runtime_for_source_only_archive_parent(tmp_pat
     monkeypatch.setattr(editor, "cli_improver_identity", lambda _: {"kind":"cli", "argv_style":"codex"})
     editor.ask("offline only", base=base, parent=parent)
     assert seen and not calls
+
+
+@pytest.mark.parametrize("changed_lock", [False, True])
+def test_editor_cli_archive_base_keeps_source_dependencies_and_evidence(tmp_path, monkeypatch, changed_lock):
+    import cli_improver as bridge
+    from methods import editor
+    from ckpt.source_tree import copy_harness
+    incumbent, _, calls = prepared(tmp_path, monkeypatch)
+    channel = incumbent / editor.CHANNEL
+    channel.mkdir()
+    summary = {"identity": {"improver": {"kind": "cli", "path": "/unused", "argv_style": "codex"}}}
+    (channel / "round.json").write_text(json.dumps(summary))
+    archive = channel / "states/round-1"
+    archive.parent.mkdir()
+    copy_harness(incumbent, archive)
+    (archive / "engine/app/main.ts").write_text("export const n = 42")
+    if changed_lock:
+        (archive / "engine/bun.lock").write_text("incompatible archive lock")
+    seen = []
+    def run(argv, **kw):
+        if argv[0] != "git":
+            assert not changed_lock, "CLI launched with incompatible dependencies"
+            candidate = Path(kw["cwd"])
+            assert (candidate / "engine/node_modules/sample/index.js").is_file()
+            assert (candidate / "engine/app/main.ts").read_text() == "export const n = 42"
+            assert json.loads((candidate / "evidence/round.json").read_text()) == summary
+            (candidate / "engine/app/main.ts").write_text("export const n = 43")
+            seen.append(candidate)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    monkeypatch.setattr(bridge.subprocess, "run", run)
+    monkeypatch.setattr(bridge, "_improver_command", lambda req: ["local-probe"])
+    monkeypatch.setitem(sys.modules, "openai", None)
+    if changed_lock:
+        with pytest.raises(ValueError, match="dependency inputs changed"):
+            editor.ask("offline only", base=archive)
+        assert not seen
+    else:
+        result = editor.ask("offline only", base=archive)
+        assert {"path": "engine/app/main.ts", "content": "export const n = 43"} in result["files"]
+        assert seen
+    assert not calls
+    assert (incumbent / "engine/app/main.ts").read_text() == "export const n = 1"
+    assert (archive / "engine/app/main.ts").read_text() == "export const n = 42"

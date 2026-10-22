@@ -13,9 +13,14 @@ export default defineConfig({
 	base: '/HarnessGrad',
 	integrations: [
 		starlight({
-			title: 'HarnessGrad',
+			title: 'HarnessGrad: Harness as a Continual Learner',
+			// Site description is what a search result and every page's meta tag carry, so it has
+			// to say what the project claims now, not what it claimed under the old framing
+			// ("the gradient for harness self-improvement" named an instrument). Kept
+			// byte-identical to README.md's tagline: the site and the repository disagreeing
+			// about the project's own name is how a rename ends up half-done.
 			description:
-				'The gradient for harness self-improvement: measurable, attributable, comparable.',
+				'Harness as a Continual Learner — self-evolution measured as a plasticity/stability trade, not assumed.',
 			favicon: '/favicon.svg',
 			logo: { src: './src/assets/mark.svg', alt: '' },
 			customCss: ['./src/styles/custom.css'],
@@ -82,14 +87,7 @@ export default defineConfig({
 			sidebar: [
 				{
 					label: 'Start here',
-					items: [
-						{ label: 'Getting started', slug: 'getting-started' },
-						{ label: 'Status and limits', slug: 'status' },
-					],
-				},
-				{
-					label: 'Concepts',
-					items: [{ autogenerate: { directory: 'concepts' } }],
+					items: [{ label: 'Getting started', slug: 'getting-started' }],
 				},
 				{
 					label: 'Benchmarks',

@@ -46,7 +46,8 @@ def run(repo, task, *, worker, private, channel, timeout_s, run_id, trial_id, ru
             raise ValueError('observed workers require image dependencies or a configured harness overlay, not host runtime_paths')
         argv = [spec.get('python', '/usr/local/bin/python3'), str(repo / entry), '--task', work + '/task.json', '--workdir', work]
         if os.environ.get('HG_AGENT_BACKEND', 'mock') != 'mock':
-            route = ModelRoute(env.get('HG_AGENT_BASE_URL', ''), timeout_s=timeout_s).start()
+            route = ModelRoute(env.get('HG_AGENT_BASE_URL', ''), timeout_s=timeout_s,
+                               **worker.get('model_route', {})).start()
             mounts += [(route.path, '/run/harnessgrad-model/model.sock'),
                        (Path(__file__).parents[1] / 'service/native_model_forwarder.py', '/run/harnessgrad-model/forwarder.py')]
             argv = [spec.get('python', '/usr/local/bin/python3'), '-I', '-S', '/run/harnessgrad-model/forwarder.py',
@@ -56,8 +57,10 @@ def run(repo, task, *, worker, private, channel, timeout_s, run_id, trial_id, ru
         runtime = Runtime(spec, binding=binding, timeout_s=timeout_s, mounts=mounts, env=env)
         with runtime:
             proc = runtime.run(argv)
-            artifacts = runtime.collect(worker['artifacts'])
-            logs = runtime.collect(['answer.txt', 'trace.jsonl'], max_bytes=8 << 20)
+            artifacts = runtime.collect(worker['artifacts'], max_bytes=worker.get('artifact_max_bytes', 16 << 20))
+            logs = runtime.collect(['answer.txt', 'trace.jsonl'], max_bytes=8 << 20, truncate=True)
+            runtime.receipt['log_files'] = {name: {k: v for k, v in row.items() if k != 'base64'}
+                                             for name, row in logs.items()}
             def content(name):
                 return base64.b64decode(logs[name].get('base64', '')).decode(errors='replace')
             result = dict(task_id=task['task_id'], answer=content('answer.txt'), trace=content('trace.jsonl'),

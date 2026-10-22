@@ -15,6 +15,23 @@ those entries, run IDs, receipts, scores and incomplete statuses remain intact.
 AppWorld's successful measured task gate remains unresolved; its measured-zero
 smokes are retained, with no task tuning or budget increase authorized here.
 
+## Dataset integration summary
+
+KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT and CooperBench are registered
+adapters. Their READMEs define the current task scope, splits, scoring, preparation
+and controls:
+
+- [KUMO](../data/datasets/kumo/README.md)
+- [MemoryAgentBench](../data/datasets/memoryagentbench/README.md)
+- [PersonaMem-v2](../data/datasets/personamem_v2/README.md)
+- [StrongREJECT](../data/datasets/strongreject/README.md)
+- [CooperBench](../data/datasets/cooperbench/README.md)
+
+The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction
+records, judge/environment model channels, repeated trials and fixed peer execution.
+Dataset tests cover these integrations; API receipts and validation artifacts are
+kept outside the repository.
+
 ## `data/` split complete: scaffolds and datasets separated — 2026-10-14 — ds, ds2, ds3, ds4
 
 - Scope: the structural split in `docs/data-split-plan.md`, Stages A → C → D (Stage B landed earlier as `ad25c7d` and `5cb804e`). No dataset, model, endpoint or pilot execution. Every historical run and archive untouched.

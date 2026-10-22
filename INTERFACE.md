@@ -9,9 +9,24 @@
 
 ## 0. What this framework is
 
-HarnessGrad is a **standardized measurement layer for harness self-improvement**.
-It does not propose improvement methods. It defines how improvement is *measured*,
-so that two different methods produce comparable curves.
+HarnessGrad measures harnesses **as continual learners**. A harness that improves across rounds is
+a learner, and the question a learner raises is not only *how much it gained* but *what it kept*:
+measured here, a round can raise the score while silently breaking tasks an earlier round passed,
+and a candidate can be restored from a state and then credited with a measurement of the tree it
+never ran on (both are in `docs/`, both were real). The unit of comparison is therefore the
+**plasticity/stability pair over a curriculum of rounds**, not one before/after delta.
+
+It still does not propose improvement methods. It defines how improvement is *measured*, so that
+two different methods produce comparable curves, and it measures the cost of the gain, not only the
+gain.
+
+**This section is framing, not contract.** No rule below changes because of it, and a Trainer that
+implements the contract is unaffected by the reframing.
+
+**The measurement instrument is also a result.** The platform's own design — scoring that cannot be
+delegated, records that say which tree a number belongs to, a sandbox that keeps the subject from
+reading the referee — is part of the contribution and is documented as an appendix-level artefact
+(`docs/architecture.md`), not as the claim itself.
 
 **Division of labour — the whole design is this one table:**
 
@@ -29,8 +44,9 @@ subject.** A subject that can score itself makes every cross-method comparison
 meaningless, so scoring is not delegable.
 
 **Positioning sentence (use this in the README and the paper):**
-> We do not propose an RSI method. We build the instrument that makes RSI methods
-> comparable — and we are therefore not competing with the methods we measure.
+> A harness that improves is a learner, so what it *keeps* has to be measured as carefully as what
+> it gains. We build the instrument that does that — and we are therefore not competing with the
+> methods we measure.
 
 ---
 

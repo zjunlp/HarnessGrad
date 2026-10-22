@@ -170,8 +170,11 @@ def test_runtime_refuses_missing_isolation_and_enforcement(runtime, key, bad, re
     refused(admission.admit_runtime, policy, actual, reason)
 
 
-@pytest.mark.parametrize("key", sorted(admission.RESOURCE_KEYS))
-@pytest.mark.parametrize("bad", [-1, True, float("inf"), "64", None, 2**64])
+@pytest.mark.parametrize("key,bad", [
+    (key, bad) for key in sorted(admission.RESOURCE_KEYS)
+    for bad in [-1, True, float("inf"), "64", None, 2**64]
+    if not (key == "pids" and bad is None)
+])
 def test_resources_reject_invalid_policy_and_observations(runtime, key, bad):
     policy, actual = runtime
     actual["resources"][key] = bad
@@ -179,6 +182,22 @@ def test_resources_reject_invalid_policy_and_observations(runtime, key, bad):
     actual["resources"][key] = RESOURCES[key]
     policy["resources"][key] = bad
     refused(admission.admit_runtime, policy, actual, "invalid_resource_policy")
+
+
+@pytest.mark.parametrize("actual_pids", [None, 48, 2048])
+def test_undeclared_pid_cap_records_actual_host_ceiling(runtime, actual_pids):
+    policy, actual = runtime
+    policy["resources"]["pids"] = None
+    actual["resources"]["pids"] = actual_pids
+    receipt = admission.admit_runtime(BINDING, policy, actual)
+    assert receipt["evidence"]["resources"]["pids"] == actual_pids
+    assert policy["resources"]["pids"] is None
+
+
+def test_declared_pid_cap_cannot_admit_unlimited_observation(runtime):
+    policy, actual = runtime
+    actual["resources"]["pids"] = None
+    refused(admission.admit_runtime, policy, actual, "resource_limit_mismatch")
 
 
 @pytest.mark.parametrize("key", sorted(admission.RESOURCE_KEYS))

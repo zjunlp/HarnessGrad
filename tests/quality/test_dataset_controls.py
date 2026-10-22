@@ -25,6 +25,7 @@ arms against a generated scaffold, so the pattern itself stays proven.
 """
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -44,6 +45,28 @@ QUALITY = ROOT / "tests" / "quality"
 #: metric. An empty `control` with an `exempt` sentence is a dataset that has no oracle arm,
 #: and the sentence has to say why and what writing one would take.
 ROWS: dict[str, dict] = {
+    "personamem_v2": {
+        "control": ["data/datasets/personamem_v2/control.py", "--task-id",
+                    "personamem-v2-train-p0153-text32k"],
+        "metric_tests": ["test_personamem_v2.py"],
+        "json_scores": {"--oracle": 1, "--wrong": 0, "--noop": None},
+    },
+    "memoryagentbench": {
+        "control": ["data/datasets/memoryagentbench/control.py"],
+        "metric_tests": ["test_memoryagentbench_official_scorer.py", "test_memoryagentbench_judge.py"],
+        "noop_score": None,
+    },
+    "strongreject": {
+        "control": ["data/datasets/strongreject/control.py", "--task-id",
+                    "strongreject/disinformation_and_deception_0004_pap_logical_appeal"],
+        "metric_tests": ["test_strongreject_official_scorer.py", "test_strongreject_dataset.py"],
+        "requires_judge": True,
+        "noop_score": None,
+    },
+    "cooperbench": {
+        "control": ["data/datasets/cooperbench/control.py", "--task-id", "cooperbench/pallets_click_task/task2956/f1-2"],
+        "metric_tests": ["test_cooperbench_dataset.py", "test_cooperbench_harbor_scoring.py", "test_cooperbench_observed_controls.py"],
+    },
     "kumo": {"control": ["data/datasets/kumo/control.py"],
              "metric_tests": ["test_kumo_official_scorer.py", "test_kumo_dataset.py"]},
     "agentdojo": {
@@ -289,6 +312,10 @@ def test_the_control_reaches_one_and_the_noop_reaches_zero(name):
     if not _provisioned(name):
         pytest.skip(f"{name}: not provisioned on this machine")
     argv = ROWS[name]["control"]
+    if ROWS[name].get("requires_judge"):
+        from harnessgrad.config import current
+        if not current().judge.base_url:
+            pytest.skip(f"{name}: configure a judge endpoint for live controls; synthetic checks are in its dataset tests")
     if name in POLICY_REFUSED:
         # Both arms must be refused, and a refusal must never look like a score. The
         # do-nothing arm is the one this guards hardest: `None` compared as `0.0` used
@@ -306,11 +333,25 @@ def test_the_control_reaches_one_and_the_noop_reaches_zero(name):
             assert not re.search(r"reward\s+[01](?![\d.])", proc.stdout), (
                 f"{name} {arm} produced a reward for a refused task:\n{proc.stdout[-800:]}")
         return
-    for arm, expected in (("--oracle", "1"), ("--noop", "0")):
+    if "json_scores" in ROWS[name]:
+        for arm, expected in ROWS[name]["json_scores"].items():
+            proc = subprocess.run([sys.executable, *argv, arm], cwd=ROOT,
+                                  capture_output=True, text=True, timeout=900)
+            assert proc.returncode == 0, proc.stdout + proc.stderr
+            receipt = json.loads(proc.stdout)
+            assert receipt["score"] == expected, receipt
+            if expected is None:
+                assert receipt["reason"] == "incomplete_episode", receipt
+        return
+    for arm, expected in (("--oracle", "1"), ("--noop", ROWS[name].get("noop_score", "0"))):
         proc = subprocess.run([sys.executable, *argv, arm], cwd=ROOT,
                               capture_output=True, text=True, timeout=900)
         assert proc.returncode == 0, (
             f"{name} {arm} exited {proc.returncode}; a dataset whose own control fails is "
             f"not gradeable:\n{proc.stdout[-1200:]}\n{proc.stderr[-600:]}")
+        if expected is None:
+            assert "CONTROL UNMEASURED" in proc.stdout, proc.stdout
+            assert not re.search(r"reward\s+[-+0-9.]", proc.stdout), proc.stdout
+            continue
         assert re.search(rf"reward\s+{expected}(?![\d.])", proc.stdout), (
             f"{name} {arm} did not report reward {expected}:\n{proc.stdout[-1200:]}")

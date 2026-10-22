@@ -41,11 +41,9 @@ it. So the axes split into three kinds, and only the middle one is a judgement:
 The judged axis also carries a third level that answers a different question from the first
 two. `demand` and `surface` say what a *task* asks for; `exercises` says which *harness
 component* a dataset makes score-relevant, as a set, because a task can stress several at
-once. It exists because onboarding was ordered by scaffold cost (`docs/survey/README.md`), and
-scaffold cost is orthogonal to functional coverage: the two reusable scaffolds over-sample the
-functions they exercise and nothing ever checked the rest. Measured against the harness
-functions the experiment program names, that left `delegation`, `reliability` and `cost` with
-no dataset at all, and `safety` with one.
+once. Scaffold reuse does not establish functional coverage, so `EXERCISES` records
+which functions each dataset stresses and `UNCOVERED_FUNCTIONS` names those below
+the coverage floor.
 
 The function vocabulary is not invented here. It is the union of the decompositions the
 survey corpus already reports -- `2507.21504`'s Agent Capabilities, `2601.01743`'s agent
@@ -89,8 +87,7 @@ DEMANDS = ("evidence", "reasoning", "tool_use", "artifact", "environment", "memo
 #: Demands the vocabulary names but the registry does not cover yet, with the surfaces each is
 #: expected to need. A key here means "no adapter", and the check below holds both directions:
 #: a demand with no adapter must be declared here, and a demand declared here must have no
-#: adapter. The pair is what makes the gap self-clearing -- the first `memory` adapter to land
-#: breaks the second direction and the entry has to be deleted in the same change.
+#: adapter. A gap entry must be removed when adapters cover that demand.
 #:
 #: `memory` asks the Harness to maintain a representation of information that arrives over
 #: time and changes. That is not `evidence`, which asks it to select from a static set: no
@@ -101,17 +98,10 @@ DEMANDS = ("evidence", "reasoning", "tool_use", "artifact", "environment", "memo
 #: Harness has to provide: a Harness with no store cannot attempt these tasks at all, and can
 #: still attempt every evidence task ever onboarded.
 #:
-#: The two surfaces are `authored_store`, where the Harness builds and maintains the store
-#: itself, and `supplied_history`, where the interaction history is provided and the demand is
-#: to retain it. Five candidates were screened against the platform's hard constraints in
-#: `docs/survey/notes/harnessgrad_memory_domain_report.md` and none is onboarded as of this
-#: revision: LoCoMo-MC10, PersonaMem v1, LaMP, MemoryAgentBench (deterministic sub-tasks), and
-#: LongMemEval's retrieval-recall variant. LongMemEval's QA headline, HaluMem, StructMemEval
-#: and LaMP-QA stay refused: their headline is an LLM judge, or in HaluMem's case a product of
-#: two judge scores.
-UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {
-    "memory": ("authored_store", "supplied_history"),
-}
+#: MemoryAgentBench and PersonaMem-v2 use `supplied_history`: the platform provides an
+#: ordered stream, while the Harness chooses how to retain and use it for later questions.
+#: Neither adapter requires a particular store representation or memory algorithm.
+UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
 
 #: The harness functions a dataset can make score-relevant: if you changed that component in a
 #: harness, could this dataset's score move? A set per dataset rather than one value, because a
@@ -157,6 +147,7 @@ UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {
 from harnessgrad.components import COMPONENTS as FUNCTIONS  # noqa: E402
 
 EXERCISES: dict[str, tuple[str, ...]] = {
+    "cooperbench": ("context", "tools", "control", "verification"),
     "kumo": ("context", "tools", "control", "verification"),
     "alfworld": ("context", "tools", "control", "recovery"),
     "agentdojo": ("context", "tools", "control", "safety"),
@@ -178,6 +169,10 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     # Harbor delivers the complete conversation at task start; the score tests
     # selecting evidence from that static history, not incremental retention.
     "locomo": ("context",),
+    # Fixed next/ack/submit delivery advances state, but does not test action
+    # planning or stopping decisions. Closed-loop interaction alone is not control coverage.
+    "personamem_v2": ("context", "memory"),
+    "memoryagentbench": ("context", "memory"),
     "appworld": ("context", "tools", "control", "recovery"),
     "bird_minidev": ("context", "tools", "verification"),
     "physicsquestions": ("context", "verification"),
@@ -185,6 +180,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "sportsunderstanding": ("context", "verification"),
     "spreadsheetbench": ("context", "tools", "control", "verification"),
     "strategyqa": ("context", "verification"),
+    "strongreject": ("safety",),
     "tau_bench": ("context", "tools", "control", "memory", "recovery"),
     "terminal_bench": ("context", "tools", "control", "recovery", "verification"),
     "triviaqa": ("context",),
@@ -206,12 +202,9 @@ MIN_MEMBERS_PER_FUNCTION = 2
 #: `UNCOVERED_DEMANDS`: a function under the floor must appear here, and a function here must be
 #: under the floor, so closing a gap deletes the entry in the same change.
 #:
-#: The three at zero are not oversights and are not equally cheap to fix. `delegation` and
-#: `reliability` are *closable* -- a sub-agent benchmark and a pass^k protocol are both
-#: hostable on this platform. `cost` is only partly closable: the platform measures cost on
-#: every run, so what is missing is a task that is *budget-bounded*, where spending less changes
-#: the score rather than the ledger. `safety` has one adapter and deserves the note that
-#: agentdojo carries the condition as a flag, not as a surface.
+#: A function's coverage counts adapters across demands. Safety is covered by AgentDojo's
+#: adversarial tool dialogue and StrongREJECT's direct response judgment. The remaining
+#: gaps below distinguish missing task requirements from ordinary runtime accounting.
 #:
 #: Deliberately absent from `FUNCTIONS`: perception. Computer-use and GUI benchmarks need a
 #: browser or a VM (`docs/survey/README.md` excludes both), and the platform has no multimodal
@@ -219,14 +212,13 @@ MIN_MEMBERS_PER_FUNCTION = 2
 #: red entry for an infrastructure decision rather than a dataset gap.
 UNCOVERED_FUNCTIONS: dict[str, str] = {
     "delegation": "no adapter requires the harness to split work across sub-agents or route "
-                  "between models; tau2_bench needs an independent user simulator, which the "
+                  "between models; CooperBench assigns fixed peer roles through the platform, "
+                  "not dynamic harness delegation. tau2_bench needs an independent user simulator, which the "
                   "platform supplies rather than the harness",
     "reliability": "no adapter is built so that consistency across trials is what is scored; "
                    "the platform takes repeated trials, but no task is constructed for pass^k",
     "cost": "every run is costed, but no task is budget-bounded, so spending less changes the "
             "ledger rather than the score",
-    "safety": "one adapter (agentdojo), and it carries the adversary as a condition flag on an "
-              "ordinary tool-dialogue task rather than as a surface of its own",
 }
 
 #: Level 2 of the judged axis: the surface the demand is exercised on. Kept because a SQL task
@@ -239,6 +231,7 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
 #: forget its surface, which a second dict keyed by the same names would allow.
 CAPABILITY: dict[str, tuple[str, str]] = {
     "kumo": ("reasoning", "planning_and_search"),
+    "cooperbench": ("artifact", "code_generation"),
     "alfworld": ("environment", "embodied_text"),
     "agentdojo": ("tool_use", "tool_dialogue"),
     "bfcl_v3": ("tool_use", "tool_calling"),
@@ -256,6 +249,8 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "twowikimultihopqa": ("evidence", "information_seeking"),
     "livecodebench": ("artifact", "code_generation"),
     "locomo": ("evidence", "long_context"),
+    "personamem_v2": ("memory", "supplied_history"),
+    "memoryagentbench": ("memory", "supplied_history"),
     "appworld": ("tool_use", "tool_dialogue"),
     "bird_minidev": ("artifact", "text_to_sql"),
     "physicsquestions": ("reasoning", "reasoning"),
@@ -263,6 +258,9 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "sportsunderstanding": ("reasoning", "reasoning"),
     "spreadsheetbench": ("artifact", "spreadsheet"),
     "strategyqa": ("reasoning", "reasoning"),
+    # Interpret an adversarial request and judge the appropriate response.
+    # The safety function describes the scored behavior; no reasoning trace is required.
+    "strongreject": ("reasoning", "reasoning"),
     "tau_bench": ("tool_use", "tool_dialogue"),
     "terminal_bench": ("environment", "terminal"),
     "triviaqa": ("evidence", "information_seeking"),
@@ -286,22 +284,24 @@ CAPABILITY: dict[str, tuple[str, str]] = {
 #: As a flag it composes, and the claim it supports is the sharper one -- an improvement that
 #: survives the ordinary dialogue may still fail here, which is a transfer result rather than
 #: a category.
-ADVERSARIAL = frozenset({"agentdojo"})
+ADVERSARIAL = frozenset({"agentdojo", "strongreject"})
 
 #: A CLI verb that means "act, then observe the result". Its presence is the difference
 #: between a dataset a scaffold can iterate inside and one it can only answer once.
 #:
 #: The vocabulary is closed and each entry names where it came from: `alf`, `scw` and `jer`
-#: expose `do "<action>"`, and `dojo` exposes `call '<json>'`. A dataset that ships a *new*
+#: expose `do "<action>"`, and `dojo` exposes `call '<json>'`. Memory adapters expose `ack`,
+#: which advances the private input stream. A dataset that ships a *new*
 #: action verb therefore fails the check below rather than being silently misclassified --
 #: which is what happened to `agentdojo` when this list held only `do`.
-ACT_VERBS = ("do", "call")
+ACT_VERBS = ("do", "call", "send_message", "ack")
 
 #: The judged value, declared, and asserted equal to the derived one by `classify_all()`.
 #: Two independent sources that must agree: if a shipped CLI changes its surface, or someone
 #: edits this map, the tool stops and someone looks. A single source would have hidden the
 #: `agentdojo` mistake above; the derived side is what caught it.
 EXPECTED_INTERACTION = {
+    "cooperbench": "closed_loop",
     "agentdojo": "closed_loop",
     "kumo": "closed_loop",
     "alfworld": "closed_loop",
@@ -320,12 +320,15 @@ EXPECTED_INTERACTION = {
     "twowikimultihopqa": "single_shot",
     "livecodebench": "single_shot",
     "locomo": "single_shot",
+    "personamem_v2": "closed_loop",
+    "memoryagentbench": "closed_loop",
     "bird_minidev": "single_shot",
     "physicsquestions": "single_shot",
     "scienceworld": "closed_loop",
     "sportsunderstanding": "single_shot",
     "spreadsheetbench": "single_shot",
     "strategyqa": "single_shot",
+    "strongreject": "single_shot",
     "tau_bench": "closed_loop",
     "terminal_bench": "closed_loop",
     "appworld": "closed_loop",
@@ -341,13 +344,14 @@ MIN_MEMBERS_PER_DEMAND = 2
 _ACT_PATTERN = re.compile(
     r"^\s*(?:python3\s+\S+\s+)?(?:" + "|".join(ACT_VERBS) + r")\b", re.M)
 
-#: How a shipped CLI declares its verb set. Both spellings are declarations *in the program*,
+#: How a shipped CLI declares its verb set. These spellings are declarations *in the program*,
 #: which is why they are read instead of the prose in the module docstring: `dojo` documents
 #: "tools, call, and submit" in a sentence and lists them in `choices`, and the sentence is not
 #: a thing a program can rely on.
 _VERB_PATTERNS = (
     re.compile(r"choices\s*=\s*\[([^\]]*)\]"),
     re.compile(r"""command\s*==\s*["']([a-z_]+)["']"""),
+    re.compile(r"""\.add_parser\(\s*["']([a-z_]+)["']"""),
 )
 
 
@@ -379,7 +383,11 @@ def _cli_scripts(module, task_id: str) -> list[Path]:
     lives under a `cli/` directory or is materialized under a `bin/` directory.
     """
     out = []
-    for entry in (module.SETUP.get(task_id) or {}).get("files", []):
+    setup = module.SETUP.get(task_id) or {}
+    files = list(setup.get("files", []))
+    for worker in setup.get("workers", []):
+        files.extend(worker.get("files", []))
+    for entry in files:
         rel = entry.get("path", "")
         source = entry.get("from")
         if not source:

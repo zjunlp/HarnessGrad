@@ -144,6 +144,11 @@ RUN_META_ADDED_LATER: dict[str, str] = {
     "platform": "2026-10-05 (stage 1)",
     "improver": "2026-10-05 (stage 1): the improver the run resolved, not the one a "
                 "reader assumes from the method's name",
+    "platform_content_sha_started": "2026-10-20: the tree the curve *began* on. Every later "
+                                    "write moves `platform_content_sha` to the tree that is "
+                                    "running now, so a resumed run would otherwise read as one "
+                                    "platform; `platform-seams/` in the run directory carries "
+                                    "the review that allowed the crossing",
 }
 
 

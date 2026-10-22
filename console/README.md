@@ -1,14 +1,16 @@
 # HarnessGrad 实验台 · hg-console
 
-一个**只读**的 Web 控制台，用来在共享 Linux 机器上看真实的 run、真实的逐轮 diff、
-真实的方法注册表。它不启动实验、不修改实验、不碰 `Study/HarnessGrad/`。
+一个以**只读观察**为主的 Web 控制台，用来在共享 Linux 机器上看真实的 run、真实的逐轮
+diff 和轨迹。独立的 `/chat.html` 提供对话与一个受服务端守卫保护的实验启动器；观察页仍然
+不修改实验，也不碰 `Study/HarnessGrad/`。
 
-三屏：**实验 / 轨迹 / 版本**。每一屏上的每个控件现在都能真的用 —— 没有禁用的
-「启动」、没有写着「M4」的占位、没有要等下一版才生效的预览。
+主界面三屏：**实验 / 轨迹 / 版本**；另有独立的**对话 / 跑实验**页。构造 Harness 和构造
+RSI 方法没有对应的写入后端，因此不在当前界面中冒充可用能力。
 
-> **唯一硬规则：只读。**
-> 没有 POST/PUT/DELETE，没有“启动 run”，没有写 runs 目录的路径。界面里拿不到的
-> 数据一律显示 `—` 或错误；不显示 0 冒充未知，不编造分数、行号或文件内容。
+> **边界规则：观察面只读，启动面必须先过守卫。**
+> 实验、轨迹、版本没有写操作；`POST /api/runs` 只从 `/chat.html` 的确认弹窗调用，并在预览
+> 和真正起跑时共用同一套 driver、预算目录与参数守卫。界面里拿不到的数据一律显示 `—`
+> 或错误；不显示 0 冒充未知，不编造分数、行号或文件内容。
 
 ---
 
@@ -32,7 +34,7 @@ python3 server.py --port 4460
 如果端口已被占用，直接换 `--port 4461`；不要为了腾端口去 kill 别人的进程。
 静态文件在 `static/`，`index.html` 里的脚本标签是 `/console.js`。
 
-### 四屏与路由
+### 页面与路由
 
 ```
 实验     跑过的 / 正在跑的（列表 + 右栏：曲线、每轮表、eval 池）
@@ -42,6 +44,7 @@ python3 server.py --port 4460
 
 | 地址 | 内容 |
 | --- | --- |
+| `/chat.html` | 对话；模型配置可用时回答问题，并提供带预检查和二次确认的实验启动器 |
 | `/#/runs` | 实验列表：研究（多轮）/ 单点测量 / 无曲线 / 全部；benchmark、harness、状态、搜索筛选 |
 | `/#/runs/<id>` | 深链接到某个 run；刷新、新标签页都保持同一 run |
 | `/#/trace[?run=<id>&round=<n>]` | 轨迹视图（主界面；挂载 `trace-view.js`，与 `/trace.html` 同一条轨迹） |
@@ -49,7 +52,10 @@ python3 server.py --port 4460
 | `/#/version?start=base` | 版本的基线起点（`base_harness/loop` 的只读文件） |
 | `/#/harness[/<run>/<round>]` | `#/version` 的别名（旧深链接，验收套件按它读） |
 | `/trace.html?run=<id>&round=<n>` | 轨迹的独立页（`#/trace` 的别名）；数据只来自 `roundN_traces/` 与 `verdicts/round-N/` |
-| `/#/chat`、`/#/lab*`、`/#/methods`、`/#/compare` | 已删 → 一律 `replaceState` 到 `#/runs`，渲染实验列表（不留空白视图，也没有死路） |
+| `/#/chat`、`/#/lab*`、`/#/methods`、`/#/compare` | 旧 hash 路由 → 一律 `replaceState` 到 `#/runs`；对话入口是 `/chat.html` |
+
+侧栏的手动展开/收起偏好会跨页面保存；如果用户还没有选择过，宽度不超过 `640px` 的
+窄屏会默认收起侧栏，避免主内容被固定侧栏挤成不可用的窄列。
 
 `#/version` 与 `#/harness` 落到同一个视图；在版本屏里改 run/轮次会把地址写成
 `#/harness/<run>/<round>`（旧地址不失效）。
@@ -63,8 +69,8 @@ python3 server.py --port 4460
 
 | 删掉的东西 | 为什么 |
 | --- | --- |
-| 对话屏 + 两张技能卡（`造 harness`、`提方法`）+ composer + 技能启动器 | 没有对话后端、没有模型调用；卡片只能生成命令，点了也到不了任何地方 |
-| `送到实验` 面板、禁用的 `启动` 按钮、等效命令预览 | 只读台没有 `POST /api/runs`，一个永远禁用的按钮不是能力 |
+| 两张构造技能卡（`造 harness`、`提方法`）及其文件面板 | 没有创建/保存后端；只保留真正接通的对话与跑实验能力 |
+| 各观察屏里的 `送到实验` 面板和禁用启动按钮 | 启动入口统一放在 `/chat.html`，避免多个入口的参数和守卫漂移 |
 | `M1…M4` 徽章、所有「M4 之后 / 等 M4 / 预览，不会执行」的句子 | 界面不该承诺路线图 |
 | `这次改动想做什么` 解释卡（`/api/explain` 的 UI） | 未配置时只显示「未配置」；端点留在 `server.py`，但**不在任何屏上使用** |
 | 文件面板的行选择 / 锚点 chip（`agent.py:120-133 · 14 行`） | 它只为一件事存在：标注一个将来才会用的 patch。带行号的只读代码视图保留 |
@@ -89,7 +95,31 @@ python3 server.py --port 4460
 
 ## API
 
-全部是 `GET`，返回 JSON；读不到就是 `null`，不是 `0`。
+观察接口使用 `GET`，返回 JSON；读不到就是 `null`，不是 `0`。只有对话与经确认的实验启动
+使用 `POST`。
+
+### `GET /api/launch/form`、`GET /api/launch/preview`
+
+`form` 返回平台当前可选的数据集、基线 Harness、改进器和默认参数。`preview` 生成与真正
+起跑完全相同的 argv，并运行相同的服务端守卫，但不产生副作用：
+
+```json
+{
+  "argv": ["python3", "driver.py", "..."],
+  "form": {"dataset": "alfworld", "rounds": "10", "jobs": "12"},
+  "preflight": {"ok": false, "status": 400,
+                "error": "no-budget-dir", "detail": "GPU 预算目录不存在：..."}
+}
+```
+
+前端仅在 `preflight.ok=true` 时启用“确认启动”。服务端预检查 driver 占用、Python 3.10+、
+`driver.py`、可写 runs 根目录、GPU 预算目录和参数合法性；数字参数也会在浏览器中即时检查：
+轮数 `1..20`、并发 `1..64`、trials `1..3`。
+
+### `POST /api/runs`
+
+提交确认弹窗中的配置。服务端再次执行 `guard_launch()`；只有通过后才以独立进程启动 driver，
+返回 `202` 和 `run_id`。预检查不能替代这次最终守卫，因为两次请求之间运行状态可能变化。
 
 ### `GET /api/health`
 
@@ -451,20 +481,21 @@ python3 server.py --port 4460
 
 ## 刻意没有的东西
 
-- **任何写接口**：没有 `POST /api/runs`，没有编辑器，没有 `merge_guard` 之外的起跑路径。
-  服务端没有 `do_POST` / `do_PUT` / `do_DELETE`；要加就得先改这里和 README 的这条规则。
-- **模型调用**：四屏都不调用模型。`/api/explain` 还在服务端（见上），但没有任何界面用它。
+- **Harness / RSI 方法写入接口**：没有编辑器，也没有创建、保存或应用这些对象的 POST。
+- **观察屏里的模型调用**：实验、轨迹和版本页都不调用模型。`/api/explain` 仍未接界面；
+  只有 `/chat.html` 会在 `.local/llm.json` 已配置时调用模型。
 - **方法编辑 / 规则测试运行 / run 删除**：全部是写操作，不做。
 - **轨迹自动判定 / 分数重算**：只显示 `verdicts/` 里已有的判定，不在浏览器里重算。
 
 ---
 
-## 只读边界与安全
+## 边界与安全
 
-- 服务只监听 `127.0.0.1`，全部接口是 `GET`。
+- 服务只监听 `127.0.0.1`。观察接口是 `GET`；写接口只有 `/api/chat` 和 `/api/runs`。
 - `find_run` 拒绝 `.`、`..` 和含 `/` 的 id；`file`/`trace` 接口用 `resolve()` + 相对路径
   检查，路径穿越和符号链接逃逸返回 `404`。
-- 服务端不启动、不停止 driver，不写 runs 根目录，不写 `Study/HarnessGrad/`。
+- 观察页不启动、不停止 driver。`POST /api/runs` 只有在 `guard_launch()` 通过后才启动；
+  预览端点返回同一守卫的结果，前端未通过时禁用确认按钮。
 - 静态文件只从 `static/` 目录读；`/` 映射到 `index.html`。
 
 ## 自检
@@ -479,13 +510,12 @@ curl -s 'http://127.0.0.1:4460/api/compare?method=dream_rsi' | python3 -m json.t
 # 覆盖矩阵（仍在服务端，但**没有屏在读它**；totals.valid 必须等于 totals.expected）
 curl -s 'http://127.0.0.1:4460/api/coverage' | python3 -m json.tool
 
-# 只读约束（不应出现非 GET）
-grep -n "do_POST\|do_PUT\|do_DELETE" server.py   # 无输出
+# 写边界（只能看到 do_POST；没有 PUT / DELETE）
+grep -n "do_POST\|do_PUT\|do_DELETE" server.py
 ```
 
-`uat/smoke.py` 是工作区里的只读 UAT（浏览器实测）；它只发 GET，不启 driver。当前
-**36 项**（删掉了对话/技能卡、方法页、覆盖屏共 6 项；见
-`uat/uat-2026-10-19.md`）。没有它也可以直接用浏览器打开四屏检查。
+`uat/smoke.py` 是观察面的只读 UAT（浏览器实测）；它只发 GET、不启 driver。启动器另由
+服务端单元测试覆盖守卫与预检查，人工 UAT 只确认按钮状态，不真正起跑。
 
 > 注意：`static/` 是即改即生效的，`server.py` 不是。改了 `server.py` 以后，正在跑的那个
 > 实例要重启才会生效（静态文件不用）。

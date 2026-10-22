@@ -1,0 +1,3 @@
+#!/bin/sh
+# Isolate the wrapper itself before Python can load site, .pth or PYTHONPATH.
+exec @REAL_PYTHON@ -I -S /opt/hg-hf/launcher.py "$@"

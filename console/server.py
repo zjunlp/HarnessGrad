@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""实验台 · 只读 API 与静态文件服务。
+"""实验台 · 观察 API、对话与受守卫保护的实验启动器。
 
 三个刻意的限制，都是为了**不干扰正在跑的实验**：
 
-1. **只读**。没有一个写接口，没有"启动 run"。不要为了 UI 方便偷偷加一个 POST。
+1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/chat.html`
+   只有在服务端预检查通过且用户二次确认后才允许启动一次 run。
 2. **只绑 127.0.0.1**。它是这台机器上的工具，不是服务。
 3. **不缓存到磁盘**。列表只在内存里缓存 2 秒，避免边跑边看时反复读 299 个目录。
    唯一的例外是 `/api/explain` 的模型回复：它按
    `(run, round, harness_sha, model, prompt_sha)` 落在 `.cache/explain/*.json`，
    因为一次模型调用很贵，而同样的输入应该得到同样的答案（GET 仍然幂等、可缓存）。
 
-界面只有三屏（实验 / 轨迹 / 版本）。下面标了 **not surfaced** 的接口是**保留但没有任何
-界面在用**：删掉的那几张卡/面板（对话技能卡、方法页、解释面板）曾经读它们。端点留着是因为
-它们只读、幂等、边界清楚，重接时不必重写。
+主界面有三屏（实验 / 轨迹 / 版本），另有一个独立对话/启动页。下面标了
+**not surfaced** 的接口是保留但没有任何界面在用的只读端点。
 
-接口（全部 GET）：
+读取接口（GET）：
     /api/health                     平台 sha、在跑的 driver、磁盘余量、run 计数
     /api/runs?kind=study|eval|unknown|""  列表（派生字段：轮数、最好、状态、进度）
     /api/runs/<id>                  曲线 + identity + 每轮摘要
@@ -32,6 +32,10 @@
     /api/compare?method=<name>&dataset=  同一轮：train 分 vs 三个 eval 池的分（按 method+round 拼）
     /api/coverage                   round × pool 覆盖矩阵（8 个方法 × 每个已测轮次 × 3 个池）
     /api/explain?run=<id>&round=<n>[&force=1]  [not surfaced] LLM 解释这一轮改动（只读；缓存）
+
+显式写接口（POST）：
+    /api/chat                       调用配置好的模型；不启动实验
+    /api/runs                       经启动守卫检查后启动一次实验
 
 数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
 会显示成 "—"；`traces: 0` 只在目录存在且确实为空时出现。
@@ -454,6 +458,10 @@ BUDGET_DIR = pathlib.Path("/tmp/hg-rsi10-lb")
 DRIVER = PLATFORM / "driver.py"
 
 
+def python_supported() -> bool:
+    return sys.version_info >= (3, 10)
+
+
 def adapters() -> list[dict]:
     """可选数据集 = 平台自己发布的清单，不自己扫目录。
 
@@ -478,35 +486,119 @@ def adapters() -> list[dict]:
 
 
 def base_harnesses() -> list[str]:
+    """The task harnesses this console may launch.
+
+    `base_harness/` also holds the platform's own probes and the improver agents
+    (`cli_agent`, `codex_agent`, `dsh_agent`, `oracle`, …): they are harnesses, but they are not
+    task harnesses, and offering them in the launcher invited a run whose baseline was an
+    improver. The launchable set is declared in `base_harness/launchable.json`; when that file is
+    missing the console falls back to every directory, which keeps an older checkout usable.
+    """
     root = PLATFORM / "base_harness"
     if not root.is_dir():
         return []
+    declared = read_json(root / "launchable.json").get("harnesses")
+    if isinstance(declared, list) and declared:
+        return [str(name) for name in declared
+                if (root / str(name) / "harness.json").is_file()]
     return sorted(p.name for p in root.iterdir()
                   if p.is_dir() and (p / "harness.json").is_file())
 
 
+def task_models() -> list[str]:
+    """The task-agent models the launcher offers.
+
+    The driver takes the task model as `HG_AGENT_MODEL` on the process, not as a flag, so the
+    console has to know the value it will pass. `mock` is listed because the demo's whole point is
+    that it needs no endpoint; the rest comes from the platform's own configuration, so the two
+    cannot drift.
+    """
+    names = ["mock"]
+    settings = load_settings()
+    if settings["task"].get("model"):
+        names.append(settings["task"]["model"])
+    try:
+        sys.path.insert(0, str(PLATFORM))
+        from harnessgrad.config import current_config          # type: ignore
+        configured = current_config().agent.model
+        if configured:
+            names.append(str(configured))
+    except Exception:  # noqa: BLE001 - a console without the package still lists `mock`
+        pass
+    return list(dict.fromkeys(names))
+
+
+def meta_harnesses() -> list[dict]:
+    """The improver harnesses, each with the models it can drive. One choice per side."""
+    return improvers()
+
+
 def improvers() -> list[dict]:
+    """The meta side: which improver harness may drive an edit, and which models it can use.
+
+    `improvers.json` is the platform's full registry -- it also holds improvers this console is not
+    meant to launch (a bare OpenAI-compatible endpoint, a local stub). What the launcher offers is
+    declared in `improvers/launchable.json`: one entry per usable *harness*, with the name the
+    operator sees. The record still stores the registry id (`dsh`), because `--improver` and every
+    curve point use it -- only the label changes.
+    """
     data = read_json(PLATFORM / "improvers" / "improvers.json")
     wanted = data.get("improvers") if isinstance(data.get("improvers"), dict) else {}
+    declared = read_json(PLATFORM / "improvers" / "launchable.json").get("improvers")
     out = []
+    if isinstance(declared, list) and declared:
+        for row in declared:
+            name = str(row.get("name") or "") if isinstance(row, dict) else str(row or "")
+            spec = wanted.get(name) if isinstance(wanted.get(name), dict) else {}
+            if not name or not spec:
+                continue
+            out.append({"name": name,
+                        "label": str((row or {}).get("label") or name) if isinstance(row, dict) else name,
+                        "model": spec.get("model") or "", "kind": spec.get("kind") or ""})
+        return out
     for name, spec in sorted(wanted.items()):
         if not isinstance(spec, dict):
             continue
-        out.append({"name": name, "model": spec.get("model") or "", "kind": spec.get("kind") or ""})
+        out.append({"name": name, "label": name, "model": spec.get("model") or "",
+                    "kind": spec.get("kind") or ""})
     return out
+
+
+def procfs_readable() -> bool:
+    """能不能读 /proc —— 与"读到几个 driver"是两个问题。
+
+    `live_drivers_by_run()` 在 /proc 不可读时返回空字典(读接口应该降级而不是 500),但**启动守卫
+    不能把"看不见"当成"没有"**:那正好是这份守卫存在的理由。所以这里单独问一次,守卫拿它 fail
+    closed。
+    """
+    try:
+        next(iter(pathlib.Path("/proc").iterdir()))
+    except (OSError, StopIteration):
+        return False
+    return True
 
 
 def live_drivers_by_run() -> dict[str, dict]:
     """在跑的 driver：读 /proc，不 grep ps（`ps` 会截断 cmdline）。"""
     found: dict[str, dict] = {}
-    for entry in pathlib.Path("/proc").iterdir():
+    try:
+        entries = list(pathlib.Path("/proc").iterdir())
+    except OSError:
+        return found
+    for entry in entries:
         if not entry.name.isdigit():
             continue
         try:
             argv = [a.decode("utf-8", "replace") for a in (entry / "cmdline").read_bytes().split(b"\0") if a]
         except OSError:
             continue
-        if not any(a.endswith("driver.py") or a == "driver.py" for a in argv):
+        # **A driver, not a process that mentions one.** `bwrap` re-executes the driver's argv
+        # inside the namespace with `/proc/self/fd/N` as its argv[0], and those children were
+        # being reported as extra drivers -- measured: one 4-cell sweep produced 80 "live drivers"
+        # and a preflight that read like a wall of run ids.
+        if not any(a.endswith("driver.py") for a in argv):
+            continue
+        if not any(a in ("--dataset", "--run-id", "--from-run") for a in argv):
             continue
         run_id = ""
         if "--run-id" in argv:
@@ -520,6 +612,90 @@ def live_drivers_by_run() -> dict[str, dict]:
 #: key 只在服务端：浏览器拿到的是回复，不是凭证。缺这个文件时接口返回 503，
 #: 界面显示"未配置"，而不是假装能聊。
 LLM_CONFIG = ROOT / ".local" / "llm.json"
+#: The launcher's own configuration: the endpoint the *task agent* calls, and the endpoint the
+#: *chat* panel calls. Kept out of the repository (`.local/` is ignored) because both carry a key.
+SETTINGS = ROOT / ".local" / "settings.json"
+
+#: Two sides, two endpoints, and they are not the same thing: the task agent is the model the
+#: study's harness calls (a local VLLM server here), the chat panel is whatever model answers the
+#: operator (a hosted API). Merging them was how a launch could measure a different model than the
+#: form showed.
+SETTINGS_SIDES = ("task", "chat")
+
+
+def load_settings() -> dict:
+    """`{task: {...}, chat: {...}}`, file first, then the environment, then nothing.
+
+    Never returns a secret to a caller that is going to serialize it without thinking: the API
+    layer redacts `api_key` before a response (`settings_for_ui`).
+    """
+    data = read_json(SETTINGS)
+    chat_fallback = read_json(LLM_CONFIG)
+    out = {}
+    for side in SETTINGS_SIDES:
+        block = dict(data.get(side) or {})
+        if side == "chat" and not block.get("base_url"):
+            block = {**chat_fallback, **{k: v for k, v in block.items() if v}}
+        out[side] = {
+            "base_url": str(block.get("base_url") or "").strip(),
+            "api_key": str(block.get("api_key") or "").strip(),
+            "model": str(block.get("model") or "").strip(),
+        }
+    out["task"]["base_url"] = out["task"]["base_url"] or os.environ.get(
+        "HG_CONSOLE_TASK_BASE_URL", "").strip() or "http://127.0.0.1:8002/v1"
+    out["task"]["api_key"] = out["task"]["api_key"] or os.environ.get(
+        "HG_CONSOLE_TASK_API_KEY", "").strip() or "local"
+    return out
+
+
+def save_settings(payload: dict) -> dict:
+    """Write what the form sent, keeping a value the form left blank.
+
+    A blank field means "do not change it" -- a UI that echoed the redacted key back would
+    otherwise erase the key every time the operator changed only the model name.
+    """
+    current = load_settings()
+    merged = {}
+    for side in SETTINGS_SIDES:
+        incoming = payload.get(side) or {}
+        block = dict(current[side])
+        for key in ("base_url", "api_key", "model"):
+            value = str(incoming.get(key) or "").strip()
+            if value:
+                block[key] = value
+        merged[side] = block
+    SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS.write_text(json.dumps(merged, indent=1) + "\n", encoding="utf-8")
+    try:
+        SETTINGS.chmod(0o600)
+    except OSError:
+        pass
+    return merged
+
+
+def settings_for_ui() -> dict:
+    """What the form may see: the values, and whether a key is set -- never the key itself."""
+    data = load_settings()
+    return {side: {"base_url": data[side]["base_url"], "model": data[side]["model"],
+                   "api_key_set": bool(data[side]["api_key"])}
+            for side in SETTINGS_SIDES}
+
+
+def probe_endpoint(base_url: str, api_key: str) -> dict:
+    """`GET {base_url}/models` -- the cheapest question that distinguishes "wrong URL" from "no key"."""
+    if not base_url:
+        return {"ok": False, "detail": "base_url 为空"}
+    url = base_url.rstrip("/") + "/models"
+    request = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {api_key or 'none'}",
+        "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            body = json.loads(response.read().decode("utf-8", "replace"))
+    except Exception as exc:  # noqa: BLE001 - the message is the answer
+        return {"ok": False, "detail": f"{type(exc).__name__}: {str(exc)[:200]}"}
+    names = [row.get("id") for row in (body.get("data") or []) if isinstance(row, dict)]
+    return {"ok": True, "models": names[:40], "count": len(names)}
 
 CHAT_SYSTEM = """你是 HarnessGrad 实验台的助手。这个平台在一个共享机器上跑"改 harness"的实验:
 给定数据集与基线 harness,一个改进器(improver)多轮地改这个 harness,每轮用平台自己的
@@ -551,6 +727,10 @@ CHAT_SYSTEM = """你是 HarnessGrad 实验台的助手。这个平台在一个�
 
 
 def llm_config() -> dict | None:
+    """The chat side's endpoint: the settings file first, the old `.local/llm.json` as fallback."""
+    chat = load_settings()["chat"]
+    if chat.get("base_url") and chat.get("api_key"):
+        return chat
     data = read_json(LLM_CONFIG)
     if not data.get("api_key") or not data.get("base_url"):
         return None
@@ -614,10 +794,19 @@ def api_chat(messages: list[dict]) -> tuple[int, dict]:
 def launch_form() -> dict:
     """选择器的取值全部来自平台自己，不写死。"""
     names = adapters()
-    return {"datasets": names, "harnesses": base_harnesses(), "improvers": improvers(),
-            "pools": list(POOLS), "defaults": {"dataset": "alfworld", "harness": "loop",
-                                             "rounds": 10, "jobs": 12, "trials": 1,
-                                             "sampling": "all"}}
+    improver_rows = improvers()
+    return {"datasets": names, "harnesses": base_harnesses(),
+            "task_models": task_models(),
+            # The improver used to be one dropdown that packed "harness + model" into one value.
+            # They are two decisions -- which improver harness runs, and which model it drives --
+            # so the form asks for them separately and `launch_argv` maps them back onto the
+            # driver's `--improver` / `--improver-model`.
+            "improvers": improver_rows,
+            "meta_models": sorted({row["model"] for row in improver_rows if row["model"]}),
+            "pools": list(POOLS),
+            "defaults": {"dataset": "alfworld", "harness": "loop",
+                         "task_model": (task_models()[-1] if task_models() else "mock"),
+                         "rounds": 10, "jobs": 12, "trials": 1, "sampling": "all"}}
 
 
 def launch_argv(form: dict, run_id: str) -> list[str]:
@@ -640,6 +829,24 @@ def launch_argv(form: dict, run_id: str) -> list[str]:
             "--gpu-budget-dir", str(BUDGET_DIR)]
 
 
+def launch_env(form: dict) -> dict:
+    """Environment the driver needs that has no CLI flag.
+
+    `--harness` names the task harness; the *model* that harness calls is `HG_AGENT_MODEL`, read by
+    `harnessgrad.identity`. The console used to inherit whatever the server had, which is how a
+    launch could quietly measure a different model than the form showed.
+    """
+    task = load_settings()["task"]
+    env = {}
+    if form.get("task_model"):
+        env["HG_AGENT_MODEL"] = str(form["task_model"])
+    if task.get("base_url"):
+        env["HG_AGENT_BASE_URL"] = task["base_url"]
+    if task.get("api_key"):
+        env["HG_AGENT_API_KEY"] = task["api_key"]
+    return env
+
+
 def new_run_id(form: dict) -> str:
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     tag = re.sub(r"[^A-Za-z0-9]+", "_", str(form["dataset"])) or "run"
@@ -648,10 +855,25 @@ def new_run_id(form: dict) -> str:
 
 def guard_launch(form: dict) -> tuple[int, dict]:
     """返回 (状态码, 错误体)；200 表示可以起跑。判断顺序是有意的：先安全，再合法性。"""
+    if not procfs_readable():
+        # **Fail closed.** An unreadable /proc cannot answer "is a run in progress", and the one
+        # thing this guard must never do is start a second experiment beside a live one because
+        # it could not look. 503, not 400: the request is fine, the machine's answer is not.
+        return 503, {"error": "liveness-unknown",
+                     "detail": "读不到 /proc：无法确认是否有 driver 在跑，因此拒绝起跑"}
     live = live_drivers_by_run()
     if live:
         return 409, {"error": "driver-running", "detail": "已经有一个 driver 在跑，先等它结束",
                      "live": [{"run_id": k, **v} for k, v in live.items()]}
+    if not python_supported():
+        return 400, {"error": "unsupported-python",
+                     "detail": (f"当前 Python 是 {sys.version_info.major}.{sys.version_info.minor}，"
+                                "HarnessGrad 需要 Python 3.10+")}
+    if not DRIVER.is_file():
+        return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{DRIVER}"}
+    if not RUNS.is_dir() or not os.access(RUNS, os.W_OK):
+        return 400, {"error": "runs-root-not-writable",
+                     "detail": f"runs 根目录不存在或不可写：{RUNS}"}
     if not BUDGET_DIR.is_dir():
         return 400, {"error": "no-budget-dir",
                      "detail": f"GPU 预算目录不存在：{BUDGET_DIR}（要先排窗口）"}
@@ -660,9 +882,20 @@ def guard_launch(form: dict) -> tuple[int, dict]:
         return 400, {"error": "unknown-dataset",
                      "detail": f"{form.get('dataset')!r} 不是 KIND=dataset 的适配器"}
     if form.get("harness") not in set(base_harnesses()):
-        return 400, {"error": "unknown-harness", "detail": "基线 harness 不存在"}
+        return 400, {"error": "unknown-harness",
+                     "detail": f"task-harness {form.get('harness')!r} 不在可启动清单里"}
+    if not form.get("task_model"):
+        return 400, {"error": "no-task-model",
+                     "detail": "必须在「设置」里配置 task endpoint 的模型名"}
+    if form["task_model"] not in set(task_models()):
+        return 400, {"error": "unknown-task-model",
+                     "detail": f"task-model {form['task_model']!r} 不在设置里的模型清单中"}
     if not form.get("improver"):
-        return 400, {"error": "no-improver", "detail": "train 侧必须指定改进器"}
+        return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
+    if form.get("improver_model") and form["improver_model"] not in set(
+            row["model"] for row in improvers() if row["model"]):
+        return 400, {"error": "unknown-meta-model",
+                     "detail": f"meta-model {form['improver_model']!r} 不是任何改进器声明的模型"}
     for key, lo, hi in (("rounds", 1, 20), ("jobs", 1, 64), ("trials", 1, 3)):
         try:
             value = int(form[key])
@@ -683,12 +916,33 @@ def api_launch(form: dict) -> tuple[int, dict]:
     log_path = LAUNCH_DIR / f"{run_id}.log"
     with log_path.open("ab") as handle:
         subprocess.Popen(argv, stdout=handle, stderr=subprocess.STDOUT,
-                         start_new_session=True, cwd=str(PLATFORM))
+                         start_new_session=True, cwd=str(PLATFORM),
+                         env={**os.environ, **launch_env(form)})
     with LAUNCH_LOG.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                                  "run_id": run_id, "argv": argv, "by": "console chat"},
                                 ensure_ascii=False) + "\n")
     return 202, {"run_id": run_id, "argv": argv, "log": str(log_path.relative_to(ROOT))}
+
+
+def launch_preview(form: dict) -> dict:
+    """返回命令预览和与真正起跑相同的守卫结果，不产生任何副作用。"""
+    code, err = guard_launch(form)
+    try:
+        argv = launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train")
+    except (KeyError, TypeError, ValueError):
+        argv = []
+        if code == 200:
+            code = 400
+            err = {"error": "bad-value", "detail": "运行参数不完整或格式不正确"}
+    shown_env = {key: ("***" if "KEY" in key or "key" in key else value)
+                 for key, value in launch_env(form).items()}
+    return {
+        "argv": argv,
+        "env": shown_env,
+        "form": form,
+        "preflight": {"ok": code == 200, "status": code, **err},
+    }
 
 
 def api_health() -> dict:
@@ -2550,15 +2804,25 @@ class Handler(BaseHTTPRequestHandler):
                                    "base_url": (cfg or {}).get("base_url")})
             if parts[1:] == ["launch", "form"]:
                 return self._send(launch_form())
+            if parts[1:] == ["settings"]:
+                return self._send(settings_for_ui())
+            if parts[1:] == ["settings", "test"]:
+                body = self._json_body() or {}
+                side = str(body.get("side") or "task")
+                if side not in SETTINGS_SIDES:
+                    return self._send({"error": "unknown-side"}, 400)
+                current = load_settings().get(side, {})
+                base_url = str(body.get("base_url") or current.get("base_url") or "")
+                api_key = str(body.get("api_key") or current.get("api_key") or "")
+                return self._send(probe_endpoint(base_url, api_key))
             if parts[1:] == ["launch", "preview"]:
-                # 预览走**和起跑同一个** launch_argv()，只是 run_id 用占位符。
+                # 预览和起跑共用 launch_argv() 与 guard_launch()，只是 run_id 用占位符。
                 base = launch_form()["defaults"]
                 form = {k: (query.get(k) or [base[k]])[0] for k in
                         ("dataset", "harness", "rounds", "jobs", "trials", "sampling")}
                 form["improver"] = (query.get("improver") or ["dsh"])[0]
                 form["improver_model"] = (query.get("improver_model") or ["deepseek-flash"])[0]
-                return self._send({"argv": launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train"),
-                                   "form": form})
+                return self._send(launch_preview(form))
             if parts[1:] == ["methods"]:
                 return self._send({"rows": api_methods()})
             if len(parts) == 3 and parts[1] == "methods":
@@ -2622,8 +2886,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._send({"error": str(exc)}, 500)
         return self._error("unknown endpoint", 404)
 
+    def _json_body(self) -> dict | None:
+        """The request body as an object, or None when it is not one."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(length) if length else b"{}"
+            body = json.loads(raw.decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError):
+            return None
+        return body if isinstance(body, dict) else None
+
     def do_POST(self) -> None:  # noqa: N802
-        """控制台唯一的写接口：起一次实验。别的一律 404。"""
+        """The console's write surface: one launch, one chat, and the endpoint settings."""
         url = urlparse(self.path)
         route = url.path.strip("/")
         if route == "api/chat":
@@ -2637,6 +2911,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"error": "bad-json", "detail": str(exc)}, 400)
             code, payload = api_chat(messages)
             return self._send(payload, code)
+        if route == "api/settings":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            save_settings(body)
+            return self._send(settings_for_ui())
+        if route == "api/settings/test":
+            body = self._json_body() or {}
+            side = str(body.get("side") or "task")
+            if side not in SETTINGS_SIDES:
+                return self._send({"error": "unknown-side"}, 400)
+            current = load_settings().get(side, {})
+            base_url = str(body.get("base_url") or current.get("base_url") or "")
+            api_key = str(body.get("api_key") or current.get("api_key") or "")
+            return self._send(probe_endpoint(base_url, api_key))
         if route != "api/runs":
             return self._send({"error": "unknown endpoint"}, 404)
         try:

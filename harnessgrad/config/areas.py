@@ -299,9 +299,31 @@ class RunConfig:
 @dataclass(frozen=True)
 class JudgeConfig:
     """An independently configured verifier model; never forwarded to the actor."""
-    model: str | None = _var("HG_JUDGE_MODEL", None, "Explicit verifier judge model.", kind="opt")
+    model: str | None = _var("HG_JUDGE_MODEL", None, "Default verifier judge model; dataset overrides take precedence.", kind="opt")
     base_url: str | None = _var("HG_JUDGE_BASE_URL", None, "Verifier judge endpoint.", kind="opt")
     api_key: str | None = _var("HG_JUDGE_API_KEY", None, "Verifier-only credential.", kind="opt", secret=True)
+
+    memoryagentbench_model: str | None = _var(
+        "HG_MAB_JUDGE_MODEL", None, "MemoryAgentBench judge override; otherwise global model, then source official default.", kind="opt")
+    memoryagentbench_max_output_tokens: int | None = _var(
+        "HG_MAB_JUDGE_MAX_OUTPUT_TOKENS", None, "Positive MemoryAgentBench judge output limit override; otherwise source official default.", kind="int_opt")
+
+    strongreject_model: str | None = _var(
+        "HG_STRONGREJECT_JUDGE_MODEL", None,
+        "StrongREJECT judge override; otherwise global model, then official default.", kind="opt")
+
+    def resolve_model(self, *, override: str | None = None, default: str | None = None) -> str:
+        """Resolve an adapter override, global default, then official default.
+
+        Adapters own their override configuration and freeze this result in VERIFY.judge.
+        """
+        model = override or self.model or default
+        if model is None:
+            raise ValueError("configure a judge model override or HG_JUDGE_MODEL")
+        if (not isinstance(model, str) or not model.strip() or model != model.strip()
+                or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in model)):
+            raise ValueError("judge model must be a model ID without control characters or surrounding whitespace")
+        return model
 
 
 @dataclass(frozen=True)

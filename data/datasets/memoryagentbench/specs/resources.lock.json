@@ -1,0 +1,46 @@
+{
+  "encoding": "o200k_base",
+  "files": [
+    {
+      "archive_member": "punkt_tab/english/abbrev_types.txt",
+      "bytes": 619,
+      "path": "resources/nltk/tokenizers/punkt_tab/english/abbrev_types.txt",
+      "sha256": "92a3e070f43d9b4c5534758ca40ad7343b04e7e29bfe0c2eb658a39445a4f779",
+      "source_url": "https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip"
+    },
+    {
+      "archive_member": "punkt_tab/english/collocations.tab",
+      "bytes": 594,
+      "path": "resources/nltk/tokenizers/punkt_tab/english/collocations.tab",
+      "sha256": "8e2da1225e4dd2cc9dba261ee231ccb134859e21b46006e7f472c5ee269af0cf",
+      "source_url": "https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip"
+    },
+    {
+      "archive_member": "punkt_tab/english/ortho_context.tab",
+      "bytes": 236303,
+      "path": "resources/nltk/tokenizers/punkt_tab/english/ortho_context.tab",
+      "sha256": "4bbcca25ed3d3f06c02402abf8419b9f033b8adc06e7b482eca4e45f81a5dc4c",
+      "source_url": "https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip"
+    },
+    {
+      "archive_member": "punkt_tab/english/sent_starters.txt",
+      "bytes": 241,
+      "path": "resources/nltk/tokenizers/punkt_tab/english/sent_starters.txt",
+      "sha256": "f3f8535483e1dba487241b764945168123bca3209a9645e59acd1225dc76edac",
+      "source_url": "https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip"
+    },
+    {
+      "bytes": 3613922,
+      "path": "resources/tiktoken/fb374d419588a4632f3f557e76b4b70aebbca790",
+      "sha256": "446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d",
+      "source_url": "https://openaipublic.blob.core.windows.net/encodings/o200k_base.tiktoken"
+    }
+  ],
+  "language": "english",
+  "nltk_archive_sha256": "e57f64187974277726a3417ca6f181ec5403676c717672eef6a748a7b20e0106",
+  "nltk_archive_url": "https://raw.githubusercontent.com/nltk/nltk_data/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/tokenizers/punkt_tab.zip",
+  "nltk_data_revision": "550b6625bcef1f2abff2ff770a5a0d272c9c6b2a",
+  "nltk_version": "3.10.3",
+  "schema": "hg-mab-tokenizer-resources.v1",
+  "tiktoken_version": "0.14.0"
+}

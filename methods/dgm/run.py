@@ -313,7 +313,71 @@ def select_parent(history: list[dict], round_index: int) -> tuple[dict, dict]:
     return chosen, report
 
 
-def choose_target(parent: dict) -> tuple[str, str]:
+#: `trace` (the default since 2026-10-20) picks the group of failing tasks whose *episode*
+#: already names the failure -- see `_trace_signals`. `broad` is the rule this port used before
+#: that: one sentence describing how many tasks fail, which on a benchmark that fails most tasks
+#: is the same sentence every round (AppWorld: 56-89 of 90 failed, every round, so the editor was
+#: asked to fix "everything" fifteen times and traded 17-20 of the 34 solved tasks each round --
+#: findings §121). It stays reachable as `HG_DGM_TARGET_MODE=broad` because the fifteen-round
+#: AppWorld curve was measured with it, and a record that cannot say which rule produced it is
+#: the kind of record this platform exists to avoid.
+TARGET_MODE = os.environ.get("HG_DGM_TARGET_MODE", "trace")
+
+
+def _trace_signals(base: Path | None, round_no) -> dict[str, set[str]]:
+    """Failure categories the parent round's own traces already name.
+
+    Two of the four entries upstream DGM chooses from are properties of the *episode*, not of
+    the expected answer: `solve_contextlength` (the agent's context was trimmed) and
+    `solve_empty_patches` (the agent produced no patch at all). The platform withholds gold, but
+    it records both -- `usage.context_trims` per task and whether the trace ever shows a
+    `submitted` event -- so these two are reachable here and the other two are not.
+
+    Read from the channel rather than from the run directory: the incumbent's traces are
+    `traces/`, an earlier round's are `history/traces/round-<n>/` (the newest window only), and
+    a parent outside that window simply yields empty sets, which makes the caller fall back to
+    the rule it has always used.
+    """
+    signals: dict[str, set[str]] = {"no_submit": set(), "context_trim": set(), "missing_api": set()}
+    if base is None:
+        return signals
+    folder = editor.channel(base) / "traces"
+    if round_no is not None:
+        past = editor.channel(base) / "history" / "traces" / f"round-{round_no}"
+        if past.is_dir():
+            folder = past
+    if not folder.is_dir():
+        return signals
+    for path in sorted(folder.glob("*.jsonl")):
+        if ".trial" in path.name:
+            continue
+        task = path.name[:-len(".jsonl")]
+        submitted = False
+        trims = 0
+        for line in path.read_text(errors="replace").splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("submitted"):
+                submitted = True
+            usage = event.get("usage") or {}
+            try:
+                trims = max(trims, int(usage.get("context_trims") or 0))
+            except (TypeError, ValueError):
+                pass
+            if "missing" in event:
+                signals["missing_api"].add(task)
+        if not submitted:
+            signals["no_submit"].add(task)
+        if trims:
+            signals["context_trim"].add(task)
+    return signals
+
+
+def choose_target(parent: dict, base: Path | None = None) -> tuple[str, str]:
     """Which failure this round targets -- the shape of `DGM_outer.py:111-148`.
 
     DGM chooses between four concrete entries: `solve_empty_patches` (>=10% of
@@ -335,6 +399,23 @@ def choose_target(parent: dict) -> tuple[str, str]:
     failing = [tid for tid, s in sorted(per_task.items()) if not s]
     if not failing:
         return "the parent passes every task it is shown", "none"
+    if TARGET_MODE == "trace":
+        # The variant's whole point: a *specific* group instead of one sentence about the
+        # whole set. AppWorld fails >=50% of tasks at every round, so the broad rule below
+        # produces the same string every time and the editor rewrites broadly every time --
+        # measured: each round added a new code-rewriting layer and traded 17-20 of the 34
+        # tasks the best round had solved (findings §121).
+        signals = _trace_signals(base, parent.get("round"))
+        failing_set = set(failing)
+        no_submit = sorted(signals["no_submit"] & failing_set)
+        trimmed = sorted(signals["context_trim"] & failing_set)
+        tenth = max(1, int(0.1 * len(per_task)))
+        if len(no_submit) >= tenth:
+            return (f"target the {len(no_submit)} task(s) that never submitted: "
+                    f"{', '.join(no_submit[:6])}"), "no-submission"
+        if trimmed:
+            return (f"target the {len(trimmed)} task(s) whose context was trimmed: "
+                    f"{', '.join(trimmed[:6])}"), "context-length"
     share = len(failing) / max(len(per_task), 1)
     if share >= 0.5:
         return (f"{len(failing)}/{len(per_task)} tasks fail -- this is the broad "
@@ -392,7 +473,7 @@ def main() -> int:
                             "children_this_call": children,
                             "why": "no eligible parent; no edit submitted"})
             continue
-        target, target_kind = choose_target(parent)
+        target, target_kind = choose_target(parent, base)
         report["target"] = target
         report["target_kind"] = target_kind
         report["child"] = child + 1
@@ -525,10 +606,16 @@ def main() -> int:
         req, method="dgm", steps=steps,
         acceptance_rule=("DGM's archive is maintained by keep_better/keep_all inside "
                          "the method; the platform's measurement decides the score"),
-        # A batch is the method's own schedule, so it says what it had to say: the platform
-        # calls it again only if the budget has room and this says otherwise. (The
-        # nothing-usable case returned above with `stop: false`.)
-        stop=(not errors and len(measured) == children),
+        # **A finished batch ends the batch, not the run.** The platform's budget counts
+        # measured states (`mode_a.py`: "measured states, not method calls"), and
+        # `children = max(1, min(children, remaining))` above exists so one batch tiles
+        # the remaining budget. `stop` here therefore says only "this call has nothing
+        # more to add"; the macro iteration continues until the budget or a real
+        # convergence rule ends it. Measured 2026-10-20: `stop=True` on this path ended the
+        # run at its first complete batch (AppWorld r3 of 10; the archive was never reused,
+        # every child's `dgm_parent` was r0). The no-child case returns above with
+        # `stop: false` for the same reason.
+        stop=False,
         note=f"DGM: {len(steps)} child(ren) submitted in one call",
         extra={"children_this_call": len(steps),
                "children_requested": children,

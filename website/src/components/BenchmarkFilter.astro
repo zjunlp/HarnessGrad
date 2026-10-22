@@ -105,6 +105,20 @@ const first = "*";
   <button type="button" data-hg-reset>reset</button>
 </div>
 
+<!--
+  **One reveal rule per split this page actually carries.** This list used to be written by hand
+  (`train`, `valid_seen`, `valid_unseen`, `valid_train`), so any page with a split outside it had a
+  tab that hid everything and showed nothing: AppWorld's `dev` tab rendered blank while the section
+  sat in the DOM (reported by the operator 2026-10-22). Generating the pairs from `splits` makes a
+  new split impossible to ship without its rule.
+-->
+<style
+  is:inline
+  set:html={`[data-hg-active-split] > section[data-split] { display: none; }
+[data-hg-active-split="*"] > section[data-split] { display: block; }
+${splits.map((option) => `[data-hg-active-split="${option.value}"] > section[data-split="${option.value}"] { display: block; }`).join("\n")}`}
+></style>
+
 <script>
   const bar = document.querySelector<HTMLElement>("[data-hg-splits]");
   const sections = Array.from(document.querySelectorAll<HTMLElement>("section[data-split]"));
@@ -113,7 +127,11 @@ const first = "*";
     const tabs = Array.from(bar.querySelectorAll<HTMLAnchorElement>("[data-hg-split]"));
     const values = tabs.map((tab) => tab.dataset.hgSplit ?? "");
     const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-method-row]"));
-    const lines = Array.from(document.querySelectorAll<HTMLElement>("[data-method-line]"));
+    // Per-round charts mark their series `data-method-line`; the eval bar charts mark bars
+    // `data-method-bar`. Both must hide with the row, or the filter would show a bar whose row
+    // is filtered out.
+    const lines = Array.from(document.querySelectorAll<HTMLElement>(
+      "[data-method-line],[data-method-bar]"));
     const selects = Array.from(document.querySelectorAll<HTMLSelectElement>("[data-hg-filter]"));
 
     const showSplit = (value: string) => {
@@ -302,18 +320,6 @@ const first = "*";
     background: transparent;
     color: var(--sl-color-white);
     cursor: pointer;
-  }
-  [data-hg-active-split] > section[data-split] {
-    display: none;
-  }
-  [data-hg-active-split="*"] > section[data-split] {
-    display: block;
-  }
-  [data-hg-active-split="train"] > section[data-split="train"],
-  [data-hg-active-split="valid_seen"] > section[data-split="valid_seen"],
-  [data-hg-active-split="valid_unseen"] > section[data-split="valid_unseen"],
-  [data-hg-active-split="valid_train"] > section[data-split="valid_train"] {
-    display: block;
   }
   section[data-split][data-hg-filtered="out"] {
     display: none !important;

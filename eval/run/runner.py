@@ -396,7 +396,9 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     # absence of a declaration, not a separate code path invented for old datasets.
     env_spec = env or {"kind": "files"}
     is_exec = env_spec.get("kind") == "exec"
-    record_spec = ((setup or {}).get("tool_relay") or {}).get("record")
+    relay_decl = (setup or {}).get("tool_relay") or {}
+    record_spec = relay_decl.get("record")
+    model_trial_seed = (relay_decl.get("model") or {}).get("seed_source") == "trial"
     if record_spec is not None:
         try:
             tool_relay_mod.validate_record(record_spec)
@@ -720,7 +722,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 tool_relay = tool_relay_mod.start(setup, **({"context": {
                     "task_id": task["task_id"], "run_id": run_id or "direct",
                     "trial_id": trial_id or "trial-1", "seed": run_seed}}
-                    if record_spec is not None else {}))
+                    if record_spec is not None or model_trial_seed else {}))
             except RuntimeError as exc:
                 return _invalid(task, exc, stage="tool relay", service=None)
 
@@ -881,7 +883,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         if worker is not None:
             from eval.run.artifacts import collect
             try:
-                worker_artifacts = {"artifacts": collect(workdir, worker["artifacts"])}
+                worker_artifacts = {"artifacts": collect(workdir, worker["artifacts"],
+                    max_bytes=worker.get("artifact_max_bytes", 16 << 20))}
             except (ValueError, OSError) as exc:
                 return _invalid(task, exc, stage="worker artifacts", service=None)
         return {**worker_artifacts, "task_id": task["task_id"], "answer": answer,
@@ -1174,7 +1177,8 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              recordings_root: Path | None = None,
              round_no: int = 0, trials: int = 1, jobs: int = 1,
              progress_dir: Path | None = None,
-             diagnostic_authorization: Authorization | None = None) -> dict:
+             diagnostic_authorization: Authorization | None = None,
+             persist_trial_report: bool = True) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1191,6 +1195,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                          envs=envs, run_id=run_id, run_seed=run_seed,
                          recordings_root=recordings_root, round_no=round_no,
                          trials=trials, jobs=jobs, progress_dir=progress_dir,
+                         persist_trial_report=persist_trial_report,
                          diagnostic_authorization=diagnostic_authorization)
         if diagnostic_authorization is not None:
             result["enforcement"] = diagnostic_authorization.record()
@@ -1293,7 +1298,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               progress_dir: Path | None = None,
               recordings_root: Path | None = None,
               trials: int = 1, jobs: int = 1,
-              diagnostic_authorization: Authorization | None = None) -> dict:
+              diagnostic_authorization: Authorization | None = None,
+              persist_trial_report: bool = True) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1334,6 +1340,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         spec = (verifiers or {}).get(tid) or {}
         relay = ((setups or {}).get(tid) or {}).get("tool_relay") or {}
         return bool(trial_protocol or spec.get("judge") or spec.get("result_contract") or relay.get("record")
+                    or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
     from eval.containers import bun_runtime
@@ -1528,6 +1535,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # One task, `trials` times. See `evaluate` for why one is not enough.
         measured: list[dict] = []
         unmeasured: dict | None = None
+        trial_marker = None
+        if trial_protocol and progress_dir is not None:
+            trial_marker = repeated_trials.start_task(
+                repeated_trials.report_root(progress_dir, round_no, harness_sha),
+                repeated_trials.plan([task], trial_protocol, run_id=run_id,
+                                     round_no=round_no, harness_sha=harness_sha))
         for trial in range(trials):
             with progress_mod.task_progress(tid, round_no=round_no, index=task_index,
                                             total=len(tasks)) as held:
@@ -1632,6 +1645,13 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             if stopped is not None:
                 unmeasured = stopped
 
+        if trial_protocol and progress_dir is not None:
+            repeated_trials.save_task(
+                repeated_trials.report_root(progress_dir, round_no, harness_sha),
+                repeated_trials.plan([task], trial_protocol, run_id=run_id,
+                                     round_no=round_no, harness_sha=harness_sha),
+                trial_rows[tid])
+
         if unmeasured is not None:
             # Not cached, and deliberately: the cache key names the harness, and the reason
             # this task failed was not the harness, so caching it would carry a dataset bug
@@ -1642,6 +1662,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     "harness_runtime": (result or {}).get("harness_runtime"),
                     "runtime_services": (result or {}).get("runtime_services")}
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
+        if trial_marker is not None:
+            trial_marker.unlink()
         return {"task_id": tid, "measured": measured}
 
     outcomes = _in_parallel(tasks, _measure, jobs)
@@ -1898,8 +1920,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         report["round"] = round_no
         report["harness_sha"] = harness_sha
         repeated = {"repeated_trials": report}
-        if progress_dir is not None:
-            report_root = Path(progress_dir) / "protocols" / f"round-{round_no}" / hashlib.sha256(harness_sha.encode()).hexdigest()[:16]
+        if progress_dir is not None and persist_trial_report:
+            report_root = repeated_trials.report_root(progress_dir, round_no, harness_sha)
             repeated_trials.persist(report_root, report)
     return {**repeated, "per_task": per_task, "per_task_std": per_task_std, "score_std": score_std,
             "scorer_isolation_class": scorer_isolation_class,

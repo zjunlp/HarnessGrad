@@ -1593,14 +1593,17 @@ class Handler(BaseHTTPRequestHandler):
         path, query = u.path, u.query
 
         if path in ("/", "/index.html") or path.startswith("/ui/"):
-            # The console that lived here was deleted; the SPA in `web/` replaced it. Saying
-            # so is better than a bare 404, because the failure a reader actually hits is
-            # "I started the old server and got a blank page", and the answer is a URL.
+            # Two cockpits have been deleted from this spot: `tools/ui/`, then the SPA in
+            # `web/` (2026-10-19, when the repository dropped 22k lines of frontend and kept
+            # the console). Saying so is better than a bare 404: the failure a reader
+            # actually hits is "I started the old server and got a blank page", and the
+            # answer is a path that exists.
             return self._send(
-                b"The console at tools/ui/ was removed. The SPA replaced it:\n"
-                b"  cd web && pnpm build\n"
-                b"  python3 web/server/serve.py --port 8791 --runs-root runs --web-dist web/dist\n"
-                b"  then open http://127.0.0.1:8791/\n",
+                b"The UI that lived here is gone (tools/ui/, then web/). What reads the run\n"
+                b"records now is console/:\n"
+                b"  python3 console/server.py --port 4460\n"
+                b"  then open http://127.0.0.1:4460/\n"
+                b"This service still answers /api/settings and /api/providers; it serves no page.\n",
                 "text/plain; charset=utf-8", 410)
         if path == "/api/settings":
             return self._json(read_settings())

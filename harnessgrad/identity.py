@@ -141,6 +141,24 @@ def _improver_runtime(improver: dict | None) -> tuple[str, ...]:
     return tuple(str(path) for path in ((improver or {}).get("runtime") or []))
 
 
+
+#: The keys a tree may use to describe what it was copied from. Closed on purpose: the point
+#: is a lineage (which project, which revision), not a copy of the upstream manifest.
+_BASE_FIELDS = ("name", "version", "repo", "commit", "sha256", "manifest", "path")
+
+
+def _harness_base(man: dict) -> dict:
+    """The declared lineage of a candidate tree, or `{}` when it declares none.
+
+    Empty rather than `None`-valued: a point must not claim a lineage it did not have, and a
+    field whose value is `null` reads as "the platform looked and found nothing", which is a
+    different statement from "this harness was written here".
+    """
+    base = (man or {}).get("base")
+    if not isinstance(base, dict):
+        return {}
+    return {k: str(base[k]) for k in _BASE_FIELDS if isinstance(base.get(k), (str, int))}
+
 def _identity(man: dict, sha: str, mode: str, method_model: str = "n/a",
               declared: dict | None = None, improver: dict | None = None,
               method: str | None = None, jobs: int | None = None,
@@ -181,6 +199,23 @@ def _identity(man: dict, sha: str, mode: str, method_model: str = "n/a",
         # codex builds coexist on one machine (measured: 0.125.0 broken, 0.139.0, 0.156.1)
         # and `latest` is a request, not an identity.
         **({"improver": _improver_identity(improver)} if improver else {}),
+        # **Is the method the harness it edits?** HarnessX/harness²-style self-editing is a
+        # different claim from a method that edits somebody else's tree, and until this field
+        # existed a curve point could not say which one it was: `improver.name` and
+        # `harness_name` were both present, but a reader had to know to compare them, and the
+        # comparison is exactly the paper's independent variable (does the improver share the
+        # artefact's own surface?). Recorded as a boolean on every point so a table can group
+        # by it without re-deriving the rule.
+        "self_referential": bool(improver) and (
+            _improver_identity(improver).get("name") == man.get("name")),
+        # **What the candidate tree was copied from.** A harness we ship is a candidate, not a
+        # referee, and a candidate that started as a copy of a real framework has a lineage a
+        # reader needs in order to read its rounds: `dsh`-style trees copy an upstream checkout
+        # and are then edited in place, so "the harness got better" and "the harness started
+        # from a much larger codebase" have to be distinguishable. Declared by the tree itself
+        # in `harness.json` under `base`; restricted to the fields that identify a lineage, so
+        # a manifest cannot smuggle a whole tree through this field.
+        **({"harness_base": base} if (base := _harness_base(man)) else {}),
         # Which instructions the improver was given, kept apart from which improver it was.
         **({"skill_sha": s} if (s := _skill_sha()) else {}),
         # **Which method produced this candidate.** The point carried `method_model` and the

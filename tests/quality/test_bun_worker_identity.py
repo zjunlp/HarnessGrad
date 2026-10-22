@@ -90,6 +90,23 @@ def test_failed_bun_worker_preserves_execution_failure_and_peer_receipt(group, t
     assert result["runtime_services"]["workers"]["cleanup"]["complete"]
 
 
+def test_bun_workers_cannot_hide_mailbox_failure(group, tmp_path, monkeypatch):
+    actor(monkeypatch)
+    original_stop = cooperative.Relay.stop
+
+    def stop_with_refusal(relay):
+        original_stop(relay)
+        relay.receipt["refused"] = 1
+
+    monkeypatch.setattr(cooperative.Relay, "stop", stop_with_refusal)
+    result = run_group(group, tmp_path)
+    assert result["invalid"]["stage"] == "worker mailbox"
+    assert "verdict" not in result
+    assert not result.get("harness_runtime")
+    assert result["worker_group"]["workers"]["alice"]["harness_runtime"]["bun"] == group[1]
+    assert result["runtime_services"]["workers"]["cleanup"]["complete"]
+
+
 def test_evaluate_accepts_real_bun_worker_aggregate_and_diagnostics(group, monkeypatch):
     actor(monkeypatch, usage=opencode_worker_usage())
     repo, expected, setup, verifier = group

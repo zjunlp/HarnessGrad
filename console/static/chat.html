@@ -16,8 +16,14 @@
   .who3 { width: 26px; height: 26px; flex: none; border-radius: 8px; display: grid; place-items: center;
           font-size: 10.5px; font-weight: 700; background: var(--hg-alias-bg-layer-3); color: var(--hg-alias-label-secondary); }
   .turn[data-who="user"] .who3 { background: var(--hg-alias-label-primary); color: var(--hg-alias-bg-base); }
-  .bubble { max-width: 78%; padding: 10px 13px; border-radius: 14px; font-size: 13px; line-height: 1.65;
-            border: 1px solid var(--hg-alias-border-l2); background: var(--hg-alias-bg-layer-1); }
+  /* The bubble sits in an anonymous column beside the avatar. That column is the flex item, so the
+     width cap belongs on **it**: a `max-width: 78%` on the bubble is a percentage of a column that
+     has no definite width, and the column then shrank to one character per line (measured on
+     "你好": a vertical column of glyphs at the right edge). */
+  .turn > .col3 { min-width: 0; flex: 0 1 auto; max-width: 78%; }
+  .bubble { width: fit-content; max-width: 100%; padding: 10px 13px; border-radius: 14px; font-size: 13px;
+            line-height: 1.65; border: 1px solid var(--hg-alias-border-l2);
+            background: var(--hg-alias-bg-layer-1); }
   .turn[data-who="user"] .bubble { background: var(--hg-alias-bg-layer-3); border-color: transparent; }
   .bubble p { margin: 0 0 8px; } .bubble p:last-child { margin: 0; }
   .bubble code { background: var(--hg-alias-bg-base); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
@@ -64,6 +70,14 @@
   .state3 { font-size: 11.5px; } .state3[data-kind="ok"] { color: #2f7a4f; } .state3[data-kind="bad"] { color: #b4402f; }
   .empty3 { margin: auto; text-align: center; color: var(--hg-alias-label-secondary); font-size: 12.5px; padding: 40px 20px; }
   .empty3 b { color: var(--hg-alias-label-primary); }
+  .settings-side { border: 1px solid var(--hg-alias-border-l2); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .settings-side h4 { margin: 0 0 8px; font-size: 12.5px; }
+  .settings-side h4 span { font-weight: 400; color: var(--hg-alias-label-secondary); font-size: 11px; margin-left: 6px; }
+  .settings-side label { display: block; font-size: 11px; color: var(--hg-alias-label-secondary); margin: 6px 0 2px; }
+  .settings-side input { width: 100%; padding: 7px 9px; border-radius: 8px; font-size: 12px;
+                         border: 1px solid var(--hg-alias-border-l2); background: var(--hg-alias-bg-layer-1); color: inherit; }
+  .settings-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .settings-note { font-size: 11px; color: var(--hg-alias-label-secondary); margin: 2px 0 0; }
 </style>
 </head>
 <body>
@@ -77,6 +91,7 @@
       <a class="nav-item" href="/">实验 <span class="nav-badge" id="n3">—</span></a>
       <a class="nav-item" href="/#/trace">轨迹</a>
       <a class="nav-item" href="/#/version">版本</a>
+      <a class="nav-item" href="#" id="open-settings">设置</a>
     </nav>
     <div class="nav-group">
       <div class="nav-group-label">会话</div>
@@ -113,15 +128,57 @@
       <pre class="cmd3" id="cmd3">（生成中…）</pre>
     </div>
     <div class="foot3">
-      <span class="state3" id="state3"></span>
+      <span class="state3" id="state3" role="status" aria-live="polite">正在预检查…</span>
       <span style="margin-left:auto"></span>
       <button class="btn" id="close3">取消</button>
-      <button class="btn" data-variant="primary" id="confirm3">确认启动</button>
+      <button class="btn" data-variant="primary" id="confirm3" disabled>确认启动</button>
     </div>
   </div>
 </div>
 
-<script src="/chat.js"></script>
+<div class="mask3" id="mask4">
+  <div class="card3">
+    <h3>⚙️ 设置 <span style="font-weight:400;font-size:11.5px;color:var(--hg-alias-label-secondary)">跑实验用的 API，和这个对话用的 API</span></h3>
+    <div class="body3">
+      <div class="settings-side">
+        <h4>task endpoint <span>实验里 harness 调用的模型</span></h4>
+        <label for="s-task-url">base_url</label>
+        <input id="s-task-url" placeholder="http://127.0.0.1:8002/v1">
+        <label for="s-task-model">model</label>
+        <input id="s-task-model" placeholder="qwen3.5-9b-local">
+        <label for="s-task-key">api_key</label>
+        <input id="s-task-key" type="password" placeholder="留空 = 不修改">
+        <div class="settings-actions">
+          <button class="btn" data-probe="task">测试连接</button>
+          <span class="state3" id="s-task-state"></span>
+        </div>
+      </div>
+      <div class="settings-side">
+        <h4>chat endpoint <span>这个对话框调用的模型</span></h4>
+        <label for="s-chat-url">base_url</label>
+        <input id="s-chat-url" placeholder="https://api.example.com/v1">
+        <label for="s-chat-model">model</label>
+        <input id="s-chat-model" placeholder="deepseek-chat">
+        <label for="s-chat-key">api_key</label>
+        <input id="s-chat-key" type="password" placeholder="留空 = 不修改">
+        <div class="settings-actions">
+          <button class="btn" data-probe="chat">测试连接</button>
+          <span class="state3" id="s-chat-state"></span>
+        </div>
+      </div>
+      <p class="settings-note">密钥只写在 <code>.local/settings.json</code>（0600，已被 .gitignore 忽略），
+        页面只回显示“已配置”，不会把值发回浏览器。</p>
+    </div>
+    <div class="foot3">
+      <span class="state3" id="state4" role="status" aria-live="polite"></span>
+      <span style="margin-left:auto"></span>
+      <button class="btn" id="close4">取消</button>
+      <button class="btn" data-variant="primary" id="save4">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="/chat.js?v=20261022f"></script>
 <script src="/sidebar.js"></script>
 </body>
 </html>

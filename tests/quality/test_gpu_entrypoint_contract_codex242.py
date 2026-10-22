@@ -72,8 +72,8 @@ def ordinary_driver(monkeypatch, tmp_path):
     monkeypatch.setattr(driver.datasets, "load_split", lambda *a: (
         [dict(task_id="synthetic-task-242")], {}, None))
     monkeypatch.setattr(driver.datasets, "oracle_source", lambda *a: ("authored", 0))
-    monkeypatch.setattr(driver.datasets, "load_tasks", lambda *a: ([], {}, {}))
-    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a: {})
+    monkeypatch.setattr(driver.datasets, "load_tasks", lambda *a, **kwargs: ([], {}, {}))
+    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a, **kwargs: {})
     monkeypatch.setattr(driver, "_warn_missing_overlay", lambda *a: None)
     monkeypatch.setattr(driver, "manifest", lambda *a: dict(name="authored", version="test"))
     # Keep every scratch write inside the supplied worktree's pytest basetemp.

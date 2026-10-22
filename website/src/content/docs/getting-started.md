@@ -118,7 +118,6 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q 
 
 ## Next
 
-- [Status and limits](/HarnessGrad/status/) — read this before quoting any number.
 - [`docs/writing_a_harness.md`](https://github.com/zjunlp/HarnessGrad/blob/main/docs/writing_a_harness.md)
   — the harness contribution contract.
 - [`docs/architecture.md`](https://github.com/zjunlp/HarnessGrad/blob/main/docs/architecture.md)

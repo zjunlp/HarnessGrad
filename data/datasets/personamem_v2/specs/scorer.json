@@ -1,0 +1,14 @@
+{
+  "revision": "d29d91d016add354e459dfeb0d24af08bc402e2a",
+  "scorer": {
+    "path": "MemAgent/verl/utils/reward_score/implicit_persona.py",
+    "sha256": "7f9b03cdf148f598d48cda0d723d8ab0b9cbe54befb8c81aae72cab3d76ba192"
+  },
+  "preprocess": {
+    "path": "MemAgent/data/data_preprocess.py",
+    "sha256": "0acc1a168c0b91e9adce797cb6667a9d20ce0774f6a12c8edcfec0fd2dd2bbbb",
+    "fragment_start": 433,
+    "fragment_end": 462,
+    "fragment_sha256": "379f42e8ac3eea4a56604b238ebcc1acb8425bc4553d3eee8eb2659ed92c2baf"
+  }
+}

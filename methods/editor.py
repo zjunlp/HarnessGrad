@@ -109,9 +109,18 @@ SOURCE_TOTAL_LIMIT = int(os.environ.get("HG_METHOD_SOURCE_TOTAL", "60000"))
 #: guidance is worse than no guidance, because the round is spent and nothing says why.
 SKILL_LIMIT = int(os.environ.get("HG_METHOD_SKILL_LIMIT", "24000"))
 
-# Artifact transport is bounded in bytes and never truncates a method's card.
-CLI_ARTIFACT_FILE_LIMIT = 256 * 1024
-CLI_ARTIFACT_TOTAL_LIMIT = 1024 * 1024
+# **What these bound is the artifact *cards*, not the harness.** A method's edit reaches the
+# platform as a *directory* (`report(harness_dir=...)`), so a 200 KB harness moves without any
+# JSON size limit at all; the bytes read here are `workspace/artifacts/` -- the cards a CLI
+# improver writes back (TTHE's `proposal_card.json` is the one that exists today). Raised from
+# 256 KiB / 1 MiB on 2026-10-20 so an opencode-scale improver can leave a design document or a
+# patch file beside its candidate without the round dying on transport, and overridable so an
+# operator can tighten them. Exceeding either limit raises rather than truncates: a card that was
+# cut is a method decision made by the transport.
+CLI_ARTIFACT_FILE_LIMIT = int(os.environ.get("HG_METHOD_ARTIFACT_FILE_BYTES",
+                                             str(5 * 1024 * 1024)))
+CLI_ARTIFACT_TOTAL_LIMIT = int(os.environ.get("HG_METHOD_ARTIFACT_TOTAL_BYTES",
+                                              str(20 * 1024 * 1024)))
 
 
 # --------------------------------------------------------------- the channel ---
@@ -119,6 +128,27 @@ CLI_ARTIFACT_TOTAL_LIMIT = 1024 * 1024
 def channel(base: Path) -> Path:
     """Where the platform staged what this method may read."""
     return Path(base) / CHANNEL
+
+def _enclosing_channel(base: Path) -> Path | None:
+    """The channel a *staged state* belongs to, or None when `base` is already a channel root.
+
+    A state is staged as `<incumbent>/_harnessgrad/states/round-N`, and `git archive` leaves the
+    channel out of it on purpose -- a state is a harness commit, nothing else. So a method that
+    edits an older state passes a directory that has no `round.json`, and every lookup that reads
+    the improver resolution from the base (rather than from the run) silently finds nothing. The
+    channel the run has been using all along is an ancestor; this names it.
+
+    Measured 2026-10-20 (`dream_rsi` r12): with this missing, `cli_improver_identity` answered
+    None, `ask()` used the single-shot chat endpoint, the prompt carried 60,000 of the file's
+    200,631 characters, and the reply rebuilt the file from that third -- 3,443 lines deleted,
+    0/90 on 90 tasks. `meta_harness` hit the same thing on two of its four generations.
+    """
+    base = Path(base)
+    for parent in base.parents:
+        if parent.name == CHANNEL:
+            return parent
+    return None
+
 
 
 def load_history(base: Path) -> list[dict]:
@@ -280,7 +310,8 @@ def load_traces(base: Path, limit: int = 6, order: list[str] | None = None) -> s
 
 def load_sources(base: Path, limit: int = SOURCE_LIMIT,
                  total: int | None = None,
-                 entrypoint: str | None = None) -> dict[str, str]:
+                 entrypoint: str | None = None,
+                 strict: bool = True) -> dict[str, str]:
     """The harness's text files -- **whole**, so the model can see what it is changing.
 
     Walks the tree rather than naming files: a harness is a directory, and a
@@ -341,6 +372,12 @@ def load_sources(base: Path, limit: int = SOURCE_LIMIT,
         except (OSError, UnicodeDecodeError):
             continue
         if len(text) > limit:
+            if strict:
+                raise EvidenceTooLarge(
+                    f"{rel} is {len(text)} characters and the cap for this reader is {limit}. "
+                    f"A reader that can only be shown part of a file cannot be asked to rewrite "
+                    f"it: the part it never saw is what it deletes. Use a CLI improver, which "
+                    f"reads the file from disk instead of being shown a slice of it")
             # Head and tail, not head alone: the end of a file is where a loop stops and a
             # program answers, and that was the half the old cap removed.
             head, tail = limit * 2 // 3, limit // 3
@@ -354,6 +391,12 @@ def load_sources(base: Path, limit: int = SOURCE_LIMIT,
     size = sum(len(v) for v in out.values())
     if size <= total:
         return out
+    if strict:
+        raise EvidenceTooLarge(
+            f"the harness is {size} characters of source and this reader's budget is {total}. "
+            f"Showing a part of it and asking for the whole is how a model rebuilds a file from "
+            f"what it saw and silently drops the rest (measured: 3,443 lines deleted, 0/90). "
+            f"Use a CLI improver, which reads the tree from disk")
     # Non-entrypoint files first, largest first; the entrypoint last.
     entry = entrypoint if entrypoint is not None else (_read_manifest(base).get("entrypoint") or "")
     for rel in sorted(out, key=lambda r: (r == entry, -len(out[r]))):
@@ -409,7 +452,7 @@ def evidence_pointer(base: Path) -> str:
     )
 
 
-def evidence_content(base: Path, trace_limit: int = 6) -> str:
+def evidence_content(base: Path, trace_limit: int = 6, strict: bool = True) -> str:
     """The same material **inlined**, for an improver that cannot read files.
 
     The two layers are not the same reader. A CLI improver has a working directory and tools,
@@ -418,7 +461,8 @@ def evidence_content(base: Path, trace_limit: int = 6) -> str:
     under `load_sources`' total cap -- the cap is that reader's context window and the
     operating system's one-argument limit, not a curation choice.
     """
-    sources = "\n\n".join(f"### {k}\n```\n{v}\n```" for k, v in load_sources(base).items())
+    shown = load_sources(base, strict=strict)
+    sources = "\n\n".join(f"### {k}\n```\n{v}\n```" for k, v in shown.items())
     return ("## The harness's sources\n" + (sources or "(no text files)")
             + "\n\n## What the harness did, failing tasks first\n"
             + load_traces(base, limit=trace_limit, order=failing_first(base)))
@@ -1081,10 +1125,14 @@ def skill_block(base: Path | None) -> str:
         text = path.read_text(encoding="utf-8")
     except OSError:
         return ""
+    # **Not truncated.** A skill cut at its cap is a rule book with the ending
+    # missing, handed to the one reader that cannot look anything up for itself.
+    # Refuse instead of quietly showing a prefix (findings §117/§120).
     if len(text) > SKILL_LIMIT:
-        text = (text[:SKILL_LIMIT]
-                + f"\n\n[truncated: the skill is {len(text)} chars long, "
-                  f"limit {SKILL_LIMIT}] ...\n")
+        raise EvidenceTooLarge(
+            f"the platform's skill is {len(text)} characters and this reader's cap "
+            f"is {SKILL_LIMIT}; showing a prefix would be a rule book with its "
+            f"ending missing, so this call is refused instead")
     return ("## How to improve a harness (the platform's skill)\n" + text)
 
 
@@ -1110,9 +1158,16 @@ def cli_improver_identity(base: Path | None) -> dict | None:
         return {"name": os.environ["HG_IMPROVER"], "kind": "cli", "path": ""}
     if base is None:
         return None
-    try:
-        summary = json.loads((channel(base) / "round.json").read_text())
-    except (OSError, ValueError):
+    summary = None
+    for root in (channel(base), _enclosing_channel(base)):
+        if root is None:
+            continue
+        try:
+            summary = json.loads((root / "round.json").read_text())
+            break
+        except (OSError, ValueError):
+            continue
+    if summary is None:
         return None
     improver = (summary.get("identity") or {}).get("improver") or {}
     if improver.get("kind") == "cli":
@@ -1285,7 +1340,12 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
     # a bare task and had to open `evidence/round.json` itself to learn the backend, the
     # model, the score, and what the harness did on each task. The numbers are one line per
     # task and they are what a hypothesis is made of (`loop_facts_block`).
-    facts = "\n\n".join(b for b in (run_facts(base), loop_facts_block(base)) if b)
+    context_base = base
+    if not channel(base).is_dir():
+        enclosing = _enclosing_channel(base)
+        if enclosing is not None:
+            context_base = enclosing.parent
+    facts = "\n\n".join(b for b in (run_facts(context_base), loop_facts_block(context_base)) if b)
     # **The evidence is named, not compiled in.** `propose` has staged the whole channel as
     # `evidence/` beside the tree the improver edits, so the paths are enough and the prompt
     # stops growing with the dataset (`evidence_pointer` states the ceiling this removes).
@@ -1302,15 +1362,15 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
         "Absolute artifact keys, parent traversal and symlinks are forbidden.\n")
     req = {"platform_api_version": "0.1.0", "workspace": str(workspace),
            "base_harness": str(parent), "candidate": str(workspace / "candidate"),
-           "improver": improver, "channel": str(channel(base)),
+           "improver": improver, "channel": str(channel(context_base)),
            "trajectory_out": "", "task_ids": [], "train_task_ids": []}
-    runtime_receipt = base / ".state/bun-runtime.json"
+    runtime_receipt = context_base / ".state/bun-runtime.json"
     if runtime_receipt.is_file():
         # Trusted preparation is staged on the incumbent. Archive parents may
         # have no generated state; propose still validates their dependency inputs.
         req["harness_runtime"] = json.loads(runtime_receipt.read_text())
     result = cli_improver.propose(req, parent, prompt=prompt, facts=facts,
-                                   evidence=evidence_pointer(base))
+                                   evidence=evidence_pointer(context_base))
     _keep_improver_transcript(result, workspace)
     artifacts = _read_cli_artifacts(workspace)
     # **What the improver itself cost, as far as anyone can see.** `propose` returns a
@@ -1504,9 +1564,13 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         # to. Latent while every caller passes the incumbent as `parent`; wrong the moment
         # one selects an older state, which is the case the parameter exists for.
         source = Path(parent) if parent is not None else Path(base)
+        # **Strict when this call will produce edits.** The endpoint layer is reading the
+        # sources so the model can write them back; if the tree does not fit, there is no honest
+        # version of that request, so it fails here instead of letting the model rebuild a file
+        # from the part it was shown (findings §117).
         facts = "\n\n".join(
             b for b in (run_facts(base), loop_facts_block(base),
-                        evidence_content(source)) if b)
+                        evidence_content(source, strict=True)) if b)
         prompt = "\n\n".join(
             x for x in (cli_improver.CHANGE_REQUEST, cli_improver.HARD_RULES, facts, prompt) if x)
         if skill:
@@ -1546,6 +1610,15 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
 
 # ------------------------------------------------------------- the candidate ---
 
+class EvidenceTooLarge(Exception):
+    """The material does not fit the reader this call uses, so the call is not made.
+
+    Not a method bug and not a harness bug: a limit of the transport. It is raised rather than
+    truncated because a model shown part of a file and asked for the whole of it answers with a
+    file built from the part it saw, and nothing downstream can tell that apart from an edit.
+    """
+
+
 class CandidateInvalid(Exception):
     """The candidate is not a harness the platform can measure. Raised by `report`.
 
@@ -1572,7 +1645,41 @@ def apply_edits(base: Path, dest: Path, edits: list) -> tuple[bool, list[str], s
     applied, problems = candidate.apply(base, dest, edits)
     if not problems:
         problems = candidate.validate(dest)
-    return (not problems and bool(applied)), applied, "; ".join(problems)
+    if not problems:
+        # **A candidate that deletes most of the harness is not an edit.** Compiling is not the
+        # same claim as still being the thing that was measured: a rewrite built from a partial
+        # view compiles (measured 2026-10-20: 3,953 lines -> 980, importable, 0/90 on 90 tasks),
+        # and without this the platform pays a full round to find that out.
+        before, after = _source_bytes(base), _source_bytes(dest)
+        if before and after < before * 0.7:
+            # A **list**, because the caller joins it: `"; ".join(problems)` on a bare string
+            # yields one character per item, which is how a guard turns into gibberish.
+            problems = [f"the candidate keeps {after} of the {before} characters of harness "
+                        f"source ({after / before:.0%}) -- a rewrite that lost most of the "
+                        f"tree is a deletion, and it is measured only if a human says so"]
+    return (not problems and bool(applied), applied, "; ".join(problems))
+
+
+_SOURCE_SUFFIXES = {".py", ".json", ".md", ".txt", ".yaml", ".yml", ".toml"}
+
+
+def _source_bytes(root: Path) -> int:
+    """Characters of harness source under `root`, with the channel excluded.
+
+    Same set of files `load_sources` shows a reader, so "the candidate kept 40% of what the
+    parent had" means the same thing on both sides of the comparison.
+    """
+    total = 0
+    for path in Path(root).rglob("*"):
+        if not path.is_file() or CHANNEL in path.relative_to(root).parts:
+            continue
+        if path.suffix not in _SOURCE_SUFFIXES:
+            continue
+        try:
+            total += len(path.read_text())
+        except (OSError, UnicodeDecodeError):
+            continue
+    return total
 
 
 def _read_manifest(root: Path) -> dict:

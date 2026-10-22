@@ -9,6 +9,7 @@
   "broken_service": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "chessbench_puzzles": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "demo": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
+  "cooperbench": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "ds1000": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "fever": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "gaia": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
