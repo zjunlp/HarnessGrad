@@ -6042,3 +6042,24 @@ API spending claim is made. The
 links the per-cell counts, provenance, audits, cleanup and coverage-closure
 receipts. This closes the missing real-event coverage within the four single-event
 protocols; it is not a full-benchmark or cross-mode performance estimate.
+
+## CostBench registration and evidence locations — 2026-10-22
+
+The CLI and in-process closed-loop expectations now include both `costbench` and
+`costbench_dynamic`, alongside the existing adapters. Both READMEs retain the
+validation summaries and all receipt locations, explicitly identifying them as
+local records outside Git. CostBench execution, preparation, scoring, pinned
+resources and dedicated tests are unchanged.
+
+Validation on the shared-runtime and five-dataset stack: **158 CostBench tests**,
+**2 common controls** and **7 focused taxonomy checks** passed. The two CostBench
+adapters classify and filter as closed-loop; both complete expected-name sets
+match the declarations. Blocker registry validation passed for 38 datasets.
+The broader registration selection returned **178 passed, 3 failed**, plus
+38 passing subtests: one inventory failure concerns five unavailable existing
+adapters; two aggregation failures concern missing policies/inventory entries
+for `personamem_v2`, `memoryagentbench` and `strongreject`. The earlier import-edge
+failure is resolved by the stack's existing registrations. Both full-catalog
+filter tests stop on missing AgentDojo prepared data before their assertions
+(one failure, one setup error); a passing full-catalog run is not claimed.
+Validation used prepared local data and mock controls, with no model calls.

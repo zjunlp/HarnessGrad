@@ -176,26 +176,26 @@ output tokens per call, a 60,000-character history budget and the official
 and temporary work directories were archived and removed. Provider usage is
 recorded separately from simulated tool costs; no currency cost is claimed.
 
-The [summary][static-api-summary], [launch and source identities][static-api-launch],
-[split reports][static-api-train-report] ([test][static-api-test-report]) and
-[cleanup receipt][static-api-cleanup] are retained outside Git. This is a small
+The summary, launch and source identities, train/test reports and cleanup receipt
+are retained outside Git. This is a small
 integration diagnostic, not a full-benchmark estimate. Earlier model/display
 diagnostics remain preserved and are not pooled into these 24 measurements.
 
 | Earlier diagnostic on the same 24 selected tasks | Measured | Reference path matches | Correct answers | Display clipping events |
 | --- | --- | --- | --- | --- |
-| [Ling-3.0-flash, original display limit][static-api-original] | 24 | 0 | 0 | 97 |
-| [Ling-3.0-flash, temporary 50,000-character display limit][static-api-display50k] | 24 | 1 (train) | 0 | 0 |
+| Ling-3.0-flash, original display limit | 24 | 0 | 0 | 97 |
+| Ling-3.0-flash, temporary 50,000-character display limit | 24 | 1 (train) | 0 | 0 |
 
 The original-display report combines valid measurements from fresh recovery
 runs; earlier mount, network and interrupted attempts are excluded and preserved
 in that report. The 50,000-character Ling-3.0 run ended in parsing retry exhaustion
 on all 24 tasks. These histories distinguish display coverage from model outcomes.
 
-[static-api-summary]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/summary.json
-[static-api-launch]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/launch.json
-[static-api-train-report]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/official-train-report.json
-[static-api-test-report]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/official-test-report.json
-[static-api-cleanup]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling31-24-display50k-20261021-01/cleanup.json
-[static-api-original]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling24-20261021-summary/summary.json
-[static-api-display50k]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-static-ling24-display50k-20261021-01/summary.json
+The evidence files below are retained only in the author's local workspace,
+under `/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/`. They are not
+checked into this repository and are not accessible through GitHub links.
+The validation results and their limitations are summarized above.
+
+- `costbench-static-ling31-24-display50k-20261021-01/`: `summary.json`, `launch.json`, `official-train-report.json`, `official-test-report.json`, `cleanup.json`.
+- `costbench-static-ling24-20261021-summary/`: `summary.json`.
+- `costbench-static-ling24-display50k-20261021-01/`: `summary.json`.
