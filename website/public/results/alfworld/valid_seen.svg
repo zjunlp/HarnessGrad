@@ -80,5 +80,20 @@
 <line x1="586" y1="92" x2="608" y2="92" stroke="#9467bd" stroke-width="2"/>
 <text x="614" y="96" font-size="11" fill="#111827">tthe</text>
 </g>
+<g data-method-line="dgm">
+<path d="M56.0,307.6 L107.4,93.2 L158.8,79.3 L210.2,286.9 L261.6,131.2 L313.0,27.5 L364.4,51.7 L415.8,221.2 L467.2,24.0 L518.6,24.0" fill="none" stroke="#ff7f0e" stroke-width="2"/>
+<circle cx="56.0" cy="307.6" r="2.8" fill="#ff7f0e"/>
+<circle cx="107.4" cy="93.2" r="2.8" fill="#ff7f0e"/>
+<circle cx="158.8" cy="79.3" r="2.8" fill="#ff7f0e"/>
+<circle cx="210.2" cy="286.9" r="2.8" fill="#ff7f0e"/>
+<circle cx="261.6" cy="131.2" r="2.8" fill="#ff7f0e"/>
+<circle cx="313.0" cy="27.5" r="2.8" fill="#ff7f0e"/>
+<circle cx="364.4" cy="51.7" r="2.8" fill="#ff7f0e"/>
+<circle cx="415.8" cy="221.2" r="2.8" fill="#ff7f0e"/>
+<circle cx="467.2" cy="24.0" r="2.8" fill="#ff7f0e"/>
+<circle cx="518.6" cy="24.0" r="2.8" fill="#ff7f0e"/>
+<line x1="586" y1="110" x2="608" y2="110" stroke="#ff7f0e" stroke-width="2"/>
+<text x="614" y="114" font-size="11" fill="#111827">dgm</text>
+</g>
 <text x="313" y="374" font-size="11" fill="#374151" text-anchor="middle">checkpoint round</text>
 </svg>

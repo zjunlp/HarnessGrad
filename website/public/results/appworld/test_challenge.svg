@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" role="img" aria-label="test_challenge score per method">
+<rect width="760" height="380" fill="#ffffff"/>
+<line x1="64" y1="316.0" x2="736" y2="316.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="56" y="320.0" font-size="11" fill="#6b7280" text-anchor="end">0.00</text>
+<line x1="64" y1="244.0" x2="736" y2="244.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="56" y="248.0" font-size="11" fill="#6b7280" text-anchor="end">0.09</text>
+<line x1="64" y1="172.0" x2="736" y2="172.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="56" y="176.0" font-size="11" fill="#6b7280" text-anchor="end">0.18</text>
+<line x1="64" y1="100.0" x2="736" y2="100.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="56" y="104.0" font-size="11" fill="#6b7280" text-anchor="end">0.27</text>
+<line x1="64" y1="28.0" x2="736" y2="28.0" stroke="#e5e7eb" stroke-width="1"/>
+<text x="56" y="32.0" font-size="11" fill="#6b7280" text-anchor="end">0.36</text>
+<g data-method-bar="hyperagents">
+<rect x="85.6" y="65.6" width="52.8" height="250.4" fill="#1f77b4" rx="2"/>
+<text x="112.0" y="59.6" font-size="11" fill="#111827" text-anchor="middle">0.316</text>
+<text x="112.0" y="334" font-size="11" fill="#374151" text-anchor="middle">hyperagents</text>
+</g>
+<g data-method-bar="dream_rsi">
+<rect x="181.6" y="106.7" width="52.8" height="209.3" fill="#d62728" rx="2"/>
+<text x="208.0" y="100.7" font-size="11" fill="#111827" text-anchor="middle">0.264</text>
+<text x="208.0" y="334" font-size="11" fill="#374151" text-anchor="middle">dream_rsi</text>
+</g>
+<g data-method-bar="ahe">
+<rect x="277.6" y="111.0" width="52.8" height="205.0" fill="#2ca02c" rx="2"/>
+<text x="304.0" y="105.0" font-size="11" fill="#111827" text-anchor="middle">0.259</text>
+<text x="304.0" y="334" font-size="11" fill="#374151" text-anchor="middle">ahe</text>
+</g>
+<g data-method-bar="sica_ci">
+<rect x="373.6" y="152.8" width="52.8" height="163.2" fill="#9467bd" rx="2"/>
+<text x="400.0" y="146.8" font-size="11" fill="#111827" text-anchor="middle">0.206</text>
+<text x="400.0" y="334" font-size="11" fill="#374151" text-anchor="middle">sica_ci</text>
+</g>
+<g data-method-bar="harnessx">
+<rect x="469.6" y="164.2" width="52.8" height="151.8" fill="#ff7f0e" rx="2"/>
+<text x="496.0" y="158.2" font-size="11" fill="#111827" text-anchor="middle">0.192</text>
+<text x="496.0" y="334" font-size="11" fill="#374151" text-anchor="middle">harnessx</text>
+</g>
+<g data-method-bar="dgm">
+<rect x="565.6" y="192.6" width="52.8" height="123.4" fill="#17becf" rx="2"/>
+<text x="592.0" y="186.6" font-size="11" fill="#111827" text-anchor="middle">0.156</text>
+<text x="592.0" y="334" font-size="11" fill="#374151" text-anchor="middle">dgm</text>
+</g>
+<g data-method-bar="tthe">
+<rect x="661.6" y="217.3" width="52.8" height="98.7" fill="#8c564b" rx="2"/>
+<text x="688.0" y="211.3" font-size="11" fill="#111827" text-anchor="middle">0.125</text>
+<text x="688.0" y="334" font-size="11" fill="#374151" text-anchor="middle">tthe</text>
+</g>
+</svg>
