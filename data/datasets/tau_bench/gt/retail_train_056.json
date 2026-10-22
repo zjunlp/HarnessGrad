@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6065192424"
+    ],
+    "new_item_ids": [
+     "4913411651"
+    ],
+    "order_id": "#W3586556",
+    "payment_method_id": "credit_card_1640996"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 56,
+ "instruction": "Your name is Aarav Lee and your email is aarav.lee6460@example.com. You are optimistic, happy, independent, patient. For #W3586556, modify Tablet {'screen size': '8-inch', 'storage': '128GB', 'color': 'gold'} to {'screen size': '7-inch', 'color': 'black'}; via credit_card_1640996. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_056",
+ "user_id": "aarav_lee_1982"
+}

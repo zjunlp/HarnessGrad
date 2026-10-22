@@ -1,0 +1,29 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2185126308",
+     "4875647558"
+    ],
+    "order_id": "#W1335809",
+    "payment_method_id": "paypal_3728317"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2989580",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 241,
+ "instruction": "Your name is Anya Lee and your zip code is 78227. You are outgoing, polite, patient, logical, independent. Return #W1335809 via paypal_3728317: Hiking Boots; Espresso Machine; Cancel order #W2989580 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_241",
+ "user_id": "anya_lee_8315"
+}

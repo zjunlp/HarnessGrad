@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9025753381"
+    ],
+    "new_item_ids": [
+     "8484921793"
+    ],
+    "order_id": "#W7293142",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8645374",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 134,
+ "instruction": "Your name is Noah Sanchez and your email is noah.sanchez7461@example.com. You are pessimistic, shy, happy, creative, messy. For #W7293142, exchange Mechanical Keyboard {'switch type': 'clicky', 'backlight': 'RGB', 'size': 'full size'} to {'switch type': 'linear', 'size': '80%'}; via gift_card_9909795. Cancel order #W8645374 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_134",
+ "user_id": "noah_sanchez_2690"
+}

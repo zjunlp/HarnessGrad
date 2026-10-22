@@ -1,0 +1,1113 @@
+w-spreadcache validation: authored controls only; no dataset measurement.
+All COMMAND arrays below are exact argv. Commands ran from /mnt/20t/xubuqiang/hg-wt/w-spreadcache unless argv specifies otherwise.
+The outer Python launchers captured subprocess output verbatim; generated work IDs and temporary directories are retained in argv.
+
+===== REPRODUCTION BEFORE EDIT =====
+COMMAND=["/usr/bin/bwrap", "--unshare-net", "--ro-bind", "/", "/", "--bind", "/mnt/20t/xubuqiang/hg-work/spreadcache", "/mnt/20t/xubuqiang/hg-work/spreadcache", "--bind", "/tmp/spreadcache-repro-cll06z9c", "/tmp", "--proc", "/proc", "--", "/usr/bin/strace", "-f", "-s", "2000", "-e", "trace=execve", "-o", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0.trace", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0"]
+ENV_OVERRIDES={"TMPDIR": "/tmp", "PYTHONDONTWRITEBYTECODE": "1", "SPREADRT_PARENT_NETNS": "net:[4026531840]"}
+EXIT=1
+STDOUT:
+label=synthetic offline control; not dataset measurement or official scorer execution
+work=/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0
+netns=net:[4026535625]
+parent_netns=net:[4026531840]
+route_table='Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \n'
+network_probe family=AF_INET errno=101 message=Network is unreachable
+network_probe family=AF_INET6 errno=101 message=Network is unreachable
+engine_version_stdout='LibreOffice 7.3.7.2 30(Build:2)\n\n'
+engine_version_stderr="\n(process:849495): dconf-CRITICAL **: 19:29:23.533: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n"
+authored_formulas=["=SUM(A1:A2)", "=B1*2"]
+stale_cached_values=[999, 888]
+before_compare=(False, 'value difference at B1: golden has 5, result has 999')
+scorer_argv=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "8edab4b06f6367691b11c4c78aa4a463edec7a9aaef02e9a66ef446a1ea26e2c", "--scorer-input-files", "{\"golden.xlsx\": \"90c90a33c415ff944fc88ab328805dc7155182aaa4380a8c0dc442948873c128\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"]
+scorer_exit=1
+scorer_stdout='reward 0: workbook differs: value difference at B1: golden has 5, result has 999\n'
+scorer_stderr=''
+scorer_evidence={"answer_file": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/answer.txt", "answer_position": "Synthetic!B1:B2", "correct": false, "golden": "/tmp/hg-scorer-input-shtcrjpp/golden.xlsx", "instruction_type": "synthetic", "measured": true, "named_result": "result.xlsx", "recalculated": true, "result_exists": true, "reward": 0.0, "score": 0.0, "scorer_input": {"expected_sha256": "8edab4b06f6367691b11c4c78aa4a463edec7a9aaef02e9a66ef446a1ea26e2c", "files": {"golden.xlsx": "90c90a33c415ff944fc88ab328805dc7155182aaa4380a8c0dc442948873c128", "task.json": "db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf"}, "path": "native-inputs", "sha256": "8edab4b06f6367691b11c4c78aa4a463edec7a9aaef02e9a66ef446a1ea26e2c", "task_id": "spreadrt-authored-formulas", "verified": true}, "task_id": "spreadrt-authored-formulas", "why": "workbook differs: value difference at B1: golden has 5, result has 999"}
+reward_file='0\n'
+recalculated_cached_values=[999, 888]
+
+STDERR:
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/tests/fixtures/hg_spreadrt/synthetic_control.py", line 112, in <module>
+    main()
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/tests/fixtures/hg_spreadrt/synthetic_control.py", line 104, in main
+    assert proc.returncode == 0 and after == [5, 10]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+
+===== DISCRIMINATING ENGINE EXPERIMENT =====
+COMMAND=["/usr/bin/bwrap", "--unshare-net", "--ro-bind", "/", "/", "--bind", "/mnt/20t/xubuqiang/hg-work/spreadcache", "/mnt/20t/xubuqiang/hg-work/spreadcache", "--bind", "/tmp/spreadcache-probe-net-t_mfi43r", "/tmp", "--proc", "/proc", "--", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-work/spreadcache/probe.py"]
+EXIT=0
+STDOUT:
+openpyxl_version=3.1.2
+mode=default command=["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/spreadcache-probe-lrzjtmn_/profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/spreadcache-probe-lrzjtmn_/conv", "/tmp/spreadcache-probe-lrzjtmn_/probe.xlsx"] exit=0 stdout='convert /tmp/spreadcache-probe-lrzjtmn_/probe.xlsx -> /tmp/spreadcache-probe-lrzjtmn_/conv/probe.xlsx using filter : Calc MS Excel 2007 XML\n' stderr="Warning: failed to launch javaldx - java may not function correctly\n\n(process:857939): dconf-CRITICAL **: 19:30:54.500: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n\n(process:857967): dconf-CRITICAL **: 19:30:54.800: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\nsh: 1: cannot create /dev/null: Permission denied\n"
+independent_converted_values=[999, 888]
+converted_formula_xml=['<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B1" s="0" t="n"><ns0:f aca="false">SUM(A1:A2)</ns0:f><ns0:v>999</ns0:v></ns0:c>', '<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B2" s="0" t="n"><ns0:f aca="false">B1*2</ns0:f><ns0:v>888</ns0:v></ns0:c>']
+mode=always command=["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/spreadcache-probe-vz4vue2b/profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/spreadcache-probe-vz4vue2b/conv", "/tmp/spreadcache-probe-vz4vue2b/probe.xlsx"] exit=0 stdout='convert /tmp/spreadcache-probe-vz4vue2b/probe.xlsx -> /tmp/spreadcache-probe-vz4vue2b/conv/probe.xlsx using filter : Calc MS Excel 2007 XML\n' stderr="Warning: failed to launch javaldx - java may not function correctly\n\n(process:858242): dconf-CRITICAL **: 19:30:56.197: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n\n(process:858265): dconf-CRITICAL **: 19:30:56.445: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\nsh: 1: cannot create /dev/null: Permission denied\n"
+independent_converted_values=[5, 10]
+converted_formula_xml=['<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B1" s="0" t="n"><ns0:f aca="false">SUM(A1:A2)</ns0:f><ns0:v>5</ns0:v></ns0:c>', '<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B2" s="0" t="n"><ns0:f aca="false">B1*2</ns0:f><ns0:v>10</ns0:v></ns0:c>']
+mode=never command=["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/spreadcache-probe-_b7tfzbd/profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/spreadcache-probe-_b7tfzbd/conv", "/tmp/spreadcache-probe-_b7tfzbd/probe.xlsx"] exit=0 stdout='convert /tmp/spreadcache-probe-_b7tfzbd/probe.xlsx -> /tmp/spreadcache-probe-_b7tfzbd/conv/probe.xlsx using filter : Calc MS Excel 2007 XML\n' stderr="Warning: failed to launch javaldx - java may not function correctly\n\n(process:858562): dconf-CRITICAL **: 19:30:57.924: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n\n(process:858588): dconf-CRITICAL **: 19:30:58.196: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\nsh: 1: cannot create /dev/null: Permission denied\n"
+independent_converted_values=[999, 888]
+converted_formula_xml=['<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B1" s="0" t="n"><ns0:f aca="false">SUM(A1:A2)</ns0:f><ns0:v>999</ns0:v></ns0:c>', '<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B2" s="0" t="n"><ns0:f aca="false">B1*2</ns0:f><ns0:v>888</ns0:v></ns0:c>']
+mode=no-caches command=["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/spreadcache-probe-e2rsji3q/profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/spreadcache-probe-e2rsji3q/conv", "/tmp/spreadcache-probe-e2rsji3q/probe.xlsx"] exit=0 stdout='convert /tmp/spreadcache-probe-e2rsji3q/probe.xlsx -> /tmp/spreadcache-probe-e2rsji3q/conv/probe.xlsx using filter : Calc MS Excel 2007 XML\n' stderr="Warning: failed to launch javaldx - java may not function correctly\n\n(process:858914): dconf-CRITICAL **: 19:30:59.803: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n\n(process:858934): dconf-CRITICAL **: 19:31:00.106: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\nsh: 1: cannot create /dev/null: Permission denied\n"
+independent_converted_values=[5, 10]
+converted_formula_xml=['<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B1" s="0" t="n"><ns0:f aca="false">SUM(A1:A2)</ns0:f><ns0:v>5</ns0:v></ns0:c>', '<ns0:c xmlns:ns0="http://schemas.openxmlformats.org/spreadsheetml/2006/main" r="B2" s="0" t="n"><ns0:f aca="false">B1*2</ns0:f><ns0:v>10</ns0:v></ns0:c>']
+
+STDERR:
+
+
+===== PROBE SOURCE (invoked inside the preceding bwrap argv) =====
+import json, os, pathlib, subprocess, tempfile, zipfile
+from xml.etree import ElementTree as ET
+import openpyxl
+root=pathlib.Path('/mnt/20t/xubuqiang/hg-work/spreadcache')
+source=pathlib.Path((root/'repro-path.txt').read_text())/'result.xlsx'
+print('openpyxl_version='+openpyxl.__version__,flush=True)
+ns={'s':'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+for mode in ('default','always','never','no-caches'):
+ with tempfile.TemporaryDirectory(prefix='spreadcache-probe-',dir='/tmp') as tmp:
+  work=pathlib.Path(tmp); profile=work/'profile'; out=work/'conv'; out.mkdir(); (profile/'user').mkdir(parents=True)
+  candidate=work/'probe.xlsx'; candidate.write_bytes(source.read_bytes())
+  if mode in ('always','never'):
+   (profile/'user/registrymodifications.xcu').write_text('<oor:items xmlns:oor="http://openoffice.org/2001/registry"><item oor:path="/org.openoffice.Office.Calc/Formula/Load"><prop oor:name="OOXMLRecalcMode" oor:op="fuse"><value>'+('0' if mode=='always' else '1')+'</value></prop></item></oor:items>')
+  if mode=='no-caches':
+   with zipfile.ZipFile(candidate) as z: entries={n:z.read(n) for n in z.namelist()}
+   for n in entries:
+    if n.startswith('xl/worksheets/') and n.endswith('.xml'):
+     sheet=ET.fromstring(entries[n])
+     for c in sheet.findall('.//s:c',ns):
+      if c.find('s:f',ns) is not None:
+       for v in c.findall('s:v',ns): c.remove(v)
+     entries[n]=ET.tostring(sheet)
+   with zipfile.ZipFile(candidate,'w',zipfile.ZIP_DEFLATED) as z:
+    for n,b in entries.items(): z.writestr(n,b)
+  cmd=['/usr/bin/soffice','--headless','--calc','--norestore','--nolockcheck','-env:UserInstallation='+profile.as_uri(),'--convert-to','xlsx:Calc MS Excel 2007 XML','--outdir',str(out),str(candidate)]
+  proc=subprocess.run(cmd,capture_output=True,text=True,env=dict(os.environ,HOME=tmp,TMPDIR=tmp),timeout=180)
+  print('mode='+mode+' command='+json.dumps(cmd)+' exit='+str(proc.returncode)+' stdout='+repr(proc.stdout)+' stderr='+repr(proc.stderr),flush=True)
+  wb=openpyxl.load_workbook(out/'probe.xlsx',data_only=True); print('independent_converted_values='+json.dumps([wb.active['B1'].value,wb.active['B2'].value]),flush=True); wb.close()
+  with zipfile.ZipFile(out/'probe.xlsx') as z:
+   sheet=ET.fromstring(z.read('xl/worksheets/sheet1.xml')); print('converted_formula_xml='+str([ET.tostring(c,encoding='unicode') for c in sheet.findall('.//s:c',ns) if c.find('s:f',ns) is not None]),flush=True)
+  (root/('probe-'+mode+'.xlsx')).write_bytes((out/'probe.xlsx').read_bytes())
+
+
+===== ORIGINAL CONTROL AFTER FIX =====
+COMMAND=["/usr/bin/bwrap", "--unshare-net", "--ro-bind", "/", "/", "--bind", "/mnt/20t/xubuqiang/hg-work/spreadcache", "/mnt/20t/xubuqiang/hg-work/spreadcache", "--bind", "/tmp/spreadcache-fixed-bfjqk5ss", "/tmp", "--proc", "/proc", "--", "/usr/bin/strace", "-f", "-s", "2000", "-e", "trace=execve", "-o", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204.trace", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204"]
+ENV_OVERRIDES={"TMPDIR": "/tmp", "PYTHONDONTWRITEBYTECODE": "1", "SPREADRT_PARENT_NETNS": "net:[4026531840]"}
+EXIT=0
+STDOUT:
+label=synthetic offline control; not dataset measurement or official scorer execution
+work=/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204
+netns=net:[4026535625]
+parent_netns=net:[4026531840]
+route_table='Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \n'
+network_probe family=AF_INET errno=101 message=Network is unreachable
+network_probe family=AF_INET6 errno=101 message=Network is unreachable
+engine_version_stdout='LibreOffice 7.3.7.2 30(Build:2)\n\n'
+engine_version_stderr="\n(process:874118): dconf-CRITICAL **: 19:35:02.029: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n"
+authored_formulas=["=SUM(A1:A2)", "=B1*2"]
+stale_cached_values=[999, 888]
+before_compare=(False, 'value difference at B1: golden has 5, result has 999')
+scorer_argv=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "497a19fc51002264582b81cfbea3cac4ec03b013f790a66d31468fac94273e20", "--scorer-input-files", "{\"golden.xlsx\": \"c87fde0117fd4df08dc04984fe85edfbe69f9f89ef71a923c4b7314a2baca91d\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"]
+scorer_exit=0
+scorer_stdout='reward 1: the named cells hold the reference values\n'
+scorer_stderr=''
+scorer_evidence={"answer_file": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/answer.txt", "answer_position": "Synthetic!B1:B2", "correct": true, "golden": "/tmp/hg-scorer-input-zz55j4mn/golden.xlsx", "instruction_type": "synthetic", "measured": true, "named_result": "result.xlsx", "recalculated": true, "result_exists": true, "reward": 1.0, "score": 1.0, "scorer_input": {"expected_sha256": "497a19fc51002264582b81cfbea3cac4ec03b013f790a66d31468fac94273e20", "files": {"golden.xlsx": "c87fde0117fd4df08dc04984fe85edfbe69f9f89ef71a923c4b7314a2baca91d", "task.json": "db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf"}, "path": "native-inputs", "sha256": "497a19fc51002264582b81cfbea3cac4ec03b013f790a66d31468fac94273e20", "task_id": "spreadrt-authored-formulas", "verified": true}, "task_id": "spreadrt-authored-formulas", "why": "the named cells hold the reference values"}
+reward_file='1\n'
+recalculated_cached_values=[5, 10]
+synthetic_control=PASSED
+
+STDERR:
+
+
+===== OLD CODE REGRESSION (mathematical failure) =====
+COMMAND=["/usr/bin/bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--ro-bind", "/mnt/20t/xubuqiang/hg-work/spreadcache/old-check.py", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--bind", "/tmp/spreadcache-old-zorxhemm", "/tmp", "--", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp=/tmp/pytest", "tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches"]
+ENV_OVERRIDES={"TMPDIR": "/tmp", "PYTHONDONTWRITEBYTECODE": "1", "HG_SPREADCACHE_ENGINE_CONTROL": "1"}
+EXIT=1
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________ test_real_engine_replaces_authored_stale_caches ________________
+
+tmp_path = PosixPath('/tmp/pytest/test_real_engine_replaces_auth0')
+
+    @pytest.mark.skipif(os.environ.get("HG_SPREADCACHE_ENGINE_CONTROL") != "1",
+                        reason="opt-in authored real LibreOffice control (no dataset/model)")
+    def test_real_engine_replaces_authored_stale_caches(tmp_path):
+        """The original failing mathematical assertion, under explicit network isolation."""
+        assert shutil.which("bwrap") and shutil.which("soffice")
+        wb = openpyxl.Workbook()
+        wb.active.title = "Synthetic"
+        wb.active["A1"], wb.active["A2"] = 2, 3
+        wb.active["B1"], wb.active["B2"] = "=SUM(A1:A2)", "=B1*2"
+        candidate = tmp_path / "result.xlsx"
+        wb.save(candidate)
+        with zipfile.ZipFile(candidate) as src:
+            entries = {n: src.read(n) for n in src.namelist()}
+        ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+        sheet = ET.fromstring(entries["xl/worksheets/sheet1.xml"])
+        for name, stale in (("B1", 999), ("B2", 888)):
+            sheet.find(f".//{ns}c[@r='{name}']/{ns}v").text = str(stale)
+        entries["xl/worksheets/sheet1.xml"] = ET.tostring(sheet)
+        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as dst:
+            for name, content in entries.items():
+                dst.writestr(name, content)
+        wb.active["B1"], wb.active["B2"] = 5, 10
+        wb.save(tmp_path / "golden.xlsx")
+        wb.close()
+        cached = openpyxl.load_workbook(candidate, data_only=True)
+        assert [cached.active["B1"].value, cached.active["B2"].value] == [999, 888]
+        cached.close()
+        (tmp_path / "task.json").write_text(json.dumps({
+            "task_id": "spreadcache-authored", "answer_position": "Synthetic!B1:B2"}))
+        (tmp_path / "answer.txt").write_text("result.xlsx\n")
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        cmd = [shutil.which("bwrap"), "--unshare-net", "--ro-bind", "/", "/",
+               "--bind", str(tmp_path), "/tmp",
+               "--proc", "/proc", "--", sys.executable,
+               str(ROOT / "data/datasets/spreadsheetbench/verify/check.py"),
+               "--workdir", "/tmp", "--reward-file", "/tmp/reward.txt",
+               "--evidence-file", "/tmp/evidence.json"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240,
+                              env=dict(os.environ, TMPDIR="/tmp/scratch", PYTHONDONTWRITEBYTECODE="1"))
+>       assert proc.returncode == 0, (proc.stdout, proc.stderr)
+E       AssertionError: ('reward 0: workbook differs: value difference at B1: golden has 5, result has 999
+E         ', '')
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--unshare-net', '--ro-bind', '/', '/', '--bind', '/tmp/pytest/test_real_engi..., returncode=1, stdout='reward 0: workbook differs: value difference at B1: golden has 5, result has 999\n', stderr='').returncode
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:313: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+1 failed, 5 warnings in 2.27s
+
+
+===== CLASSIFICATION FINAL =====
+COMMAND=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp=/tmp/spreadcache-quality-him3i8jg/pytest", "tests/quality/test_spreadsheetbench_classification_w_spread2.py"]
+ENV_OVERRIDES={"TMPDIR": "/tmp/spreadcache-quality-him3i8jg", "PYTHONDONTWRITEBYTECODE": "1", "HG_SPREADCACHE_ENGINE_CONTROL": "1"}
+EXIT=0
+.................................................                        [100%]
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 195 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 98 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+49 passed, 293 warnings in 12.25s
+
+SSD_SCRATCH_EXISTS=False
+
+
+===== SUBMISSION FINAL =====
+COMMAND=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp=/tmp/spreadcache-quality-5wzt6tdp/pytest", "tests/quality/test_spreadsheetbench_control_submit.py"]
+ENV_OVERRIDES={"TMPDIR": "/tmp/spreadcache-quality-5wzt6tdp", "PYTHONDONTWRITEBYTECODE": "1", "HG_SPREADCACHE_ENGINE_CONTROL": "1"}
+EXIT=0
+..                                                                       [100%]
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_control_submit.py::test_materialized_oracle_submits_and_scores_one
+tests/quality/test_spreadsheetbench_control_submit.py::test_failed_submission_prints_both_streams
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_control_submit.py::test_materialized_oracle_submits_and_scores_one
+tests/quality/test_spreadsheetbench_control_submit.py::test_materialized_oracle_submits_and_scores_one
+tests/quality/test_spreadsheetbench_control_submit.py::test_failed_submission_prints_both_streams
+tests/quality/test_spreadsheetbench_control_submit.py::test_failed_submission_prints_both_streams
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2 passed, 6 warnings in 0.59s
+
+SSD_SCRATCH_EXISTS=False
+
+
+===== ENGINE IDENTITIES AND CHECKER =====
+COMMAND=["/usr/bin/soffice", "--version"]
+EXIT=0
+STDOUT:
+LibreOffice 7.3.7.2 30(Build:2)
+
+
+STDERR:
+
+COMMAND=["sha256sum", "/usr/lib/libreoffice/program/soffice", "/usr/lib/libreoffice/program/soffice.bin", "/usr/lib/libreoffice/program/oosplash"]
+EXIT=0
+STDOUT:
+eb926ee03b6ba1b18e89b4a94cbb7a060ceac31f171b4bf9db5677e848451f86  /usr/lib/libreoffice/program/soffice
+a6d7b5183e47afc5e104cf7101f735d7c97b1569778df9269667983abb275622  /usr/lib/libreoffice/program/soffice.bin
+2568e315a86f738cdd8ff0a1ad7bed28cbc51a52db7ee6962ca659f9a8d43fa9  /usr/lib/libreoffice/program/oosplash
+
+STDERR:
+
+COMMAND=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "-c", "import openpyxl,sys; print(sys.version); print(openpyxl.__version__)"]
+EXIT=0
+STDOUT:
+3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 15:12:24) [GCC 11.2.0]
+3.1.2
+
+STDERR:
+
+COMMAND=["python3", "tools/check_dataset_blockers.py"]
+EXIT=0
+STDOUT:
+{"valid": true, "datasets": 28, "shared_blockers": 0, "historical_records": 11, "production_authorized": false}
+
+STDERR:
+
+COMMAND=["git", "diff", "--check"]
+EXIT=0
+STDOUT:
+
+STDERR:
+
+COMMAND=["git", "diff", "--name-only"]
+EXIT=0
+STDOUT:
+data/datasets/spreadsheetbench/verify/check.py
+tests/quality/test_spreadsheetbench_classification_w_spread2.py
+
+STDERR:
+
+
+===== INITIAL QUALITY HARNESS FAILURE (not a pass) =====
+COMMAND=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp=/tmp/spreadcache-quality-odbtwfbk/pytest", "tests/quality/test_spreadsheetbench_classification_w_spread2.py", "tests/quality/test_spreadsheetbench_control_submit.py"]
+ENV_OVERRIDES={"TMPDIR": "/tmp/spreadcache-quality-odbtwfbk", "PYTHONDONTWRITEBYTECODE": "1", "HG_SPREADCACHE_ENGINE_CONTROL": "1"}
+EXIT=1
+..............................................F..                        [100%]
+=================================== FAILURES ===================================
+_______________ test_real_engine_replaces_authored_stale_caches ________________
+
+tmp_path = PosixPath('/tmp/spreadcache-quality-odbtwfbk/pytest/test_real_engine_replaces_auth0')
+
+    @pytest.mark.skipif(os.environ.get("HG_SPREADCACHE_ENGINE_CONTROL") != "1",
+                        reason="opt-in authored real LibreOffice control (no dataset/model)")
+    def test_real_engine_replaces_authored_stale_caches(tmp_path):
+        """The original failing mathematical assertion, under explicit network isolation."""
+        assert shutil.which("bwrap") and shutil.which("soffice")
+        wb = openpyxl.Workbook()
+        wb.active.title = "Synthetic"
+        wb.active["A1"], wb.active["A2"] = 2, 3
+        wb.active["B1"], wb.active["B2"] = "=SUM(A1:A2)", "=B1*2"
+        candidate = tmp_path / "result.xlsx"
+        wb.save(candidate)
+        with zipfile.ZipFile(candidate) as src:
+            entries = {n: src.read(n) for n in src.namelist()}
+        ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+        sheet = ET.fromstring(entries["xl/worksheets/sheet1.xml"])
+        for name, stale in (("B1", 999), ("B2", 888)):
+            sheet.find(f".//{ns}c[@r='{name}']/{ns}v").text = str(stale)
+        entries["xl/worksheets/sheet1.xml"] = ET.tostring(sheet)
+        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as dst:
+            for name, content in entries.items():
+                dst.writestr(name, content)
+        wb.active["B1"], wb.active["B2"] = 5, 10
+        wb.save(tmp_path / "golden.xlsx")
+        wb.close()
+        cached = openpyxl.load_workbook(candidate, data_only=True)
+        assert [cached.active["B1"].value, cached.active["B2"].value] == [999, 888]
+        cached.close()
+        (tmp_path / "task.json").write_text(json.dumps({
+            "task_id": "spreadcache-authored", "answer_position": "Synthetic!B1:B2"}))
+        (tmp_path / "answer.txt").write_text("result.xlsx\n")
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        cmd = [shutil.which("bwrap"), "--unshare-net", "--ro-bind", "/", "/",
+               "--bind", str(tmp_path), "/control", "--bind", str(scratch), "/tmp",
+               "--proc", "/proc", "--", sys.executable,
+               str(ROOT / "data/datasets/spreadsheetbench/verify/check.py"),
+               "--workdir", "/control", "--reward-file", "/control/reward.txt",
+               "--evidence-file", "/control/evidence.json"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240,
+                              env=dict(os.environ, TMPDIR="/tmp", PYTHONDONTWRITEBYTECODE="1"))
+>       assert proc.returncode == 0, (proc.stdout, proc.stderr)
+E       AssertionError: ('', "bwrap: Can't mkdir /control: Read-only file system
+E         ")
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--unshare-net', '--ro-bind', '/', '/', '--bind', '/tmp/spreadcache-quality-o...le', '/control/evidence.json'], returncode=1, stdout='', stderr="bwrap: Can't mkdir /control: Read-only file system\n").returncode
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:305: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 185 warnings
+tests/quality/test_spreadsheetbench_control_submit.py: 2 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 92 warnings
+tests/quality/test_spreadsheetbench_control_submit.py: 4 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+1 failed, 48 passed, 283 warnings in 14.93s
+
+
+===== INITIAL OLD-CODE HARNESS FAILURE: /dev/null (not mathematical evidence) =====
+COMMAND=["/usr/bin/bwrap", "--ro-bind", "/", "/", "--ro-bind", "/mnt/20t/xubuqiang/hg-work/spreadcache/old-check.py", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--bind", "/tmp/spreadcache-old-620i7h2x", "/tmp", "--", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp=/tmp/pytest", "tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches"]
+ENV_OVERRIDES={"TMPDIR": "/tmp", "PYTHONDONTWRITEBYTECODE": "1", "HG_SPREADCACHE_ENGINE_CONTROL": "1"}
+EXIT=1
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pytest/__main__.py", line 5, in <module>
+    raise SystemExit(pytest.console_main())
+                     ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py", line 192, in console_main
+    code = main()
+           ^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py", line 150, in main
+    config = _prepareconfig(args, plugins)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py", line 331, in _prepareconfig
+    config = pluginmanager.hook.pytest_cmdline_parse(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_hooks.py", line 265, in __call__
+    return self._hookexec(self.name, self.get_hookimpls(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_manager.py", line 80, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_callers.py", line 55, in _multicall
+    gen.send(outcome)
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/helpconfig.py", line 104, in pytest_cmdline_parse
+    config: Config = outcome.get_result()
+                     ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_result.py", line 60, in get_result
+    raise ex[1].with_traceback(ex[2])
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_callers.py", line 39, in _multicall
+    res = hook_impl.function(*args)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py", line 1075, in pytest_cmdline_parse
+    self.parse(args)
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py", line 1425, in parse
+    self._preparse(args, addopts=addopts)
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/config/__init__.py", line 1327, in _preparse
+    self.hook.pytest_load_initial_conftests(
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_hooks.py", line 265, in __call__
+    return self._hookexec(self.name, self.get_hookimpls(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_manager.py", line 80, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_callers.py", line 60, in _multicall
+    return outcome.get_result()
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_result.py", line 60, in get_result
+    raise ex[1].with_traceback(ex[2])
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pluggy/_callers.py", line 34, in _multicall
+    next(gen)  # first yield
+    ^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/capture.py", line 149, in pytest_load_initial_conftests
+    capman.start_global_capturing()
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/capture.py", line 750, in start_global_capturing
+    self._global_capturing = _get_multicapture(self._method)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/capture.py", line 692, in _get_multicapture
+    return MultiCapture(in_=FDCapture(0), out=FDCapture(1), err=FDCapture(2))
+                            ^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/_pytest/capture.py", line 462, in __init__
+    self.tmpfile = open(os.devnull, encoding="utf-8")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PermissionError: [Errno 13] Permission denied: '/dev/null'
+
+
+===== SECOND OLD-CODE HARNESS FAILURE: uid map (not mathematical evidence) =====
+COMMAND=["/usr/bin/bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--ro-bind", "/mnt/20t/xubuqiang/hg-work/spreadcache/old-check.py", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--bind", "/tmp/spreadcache-old-jh7ucmda", "/tmp", "--", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp=/tmp/pytest", "tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches"]
+ENV_OVERRIDES={"TMPDIR": "/tmp", "PYTHONDONTWRITEBYTECODE": "1", "HG_SPREADCACHE_ENGINE_CONTROL": "1"}
+EXIT=1
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______________ test_real_engine_replaces_authored_stale_caches ________________
+
+tmp_path = PosixPath('/tmp/pytest/test_real_engine_replaces_auth0')
+
+    @pytest.mark.skipif(os.environ.get("HG_SPREADCACHE_ENGINE_CONTROL") != "1",
+                        reason="opt-in authored real LibreOffice control (no dataset/model)")
+    def test_real_engine_replaces_authored_stale_caches(tmp_path):
+        """The original failing mathematical assertion, under explicit network isolation."""
+        assert shutil.which("bwrap") and shutil.which("soffice")
+        wb = openpyxl.Workbook()
+        wb.active.title = "Synthetic"
+        wb.active["A1"], wb.active["A2"] = 2, 3
+        wb.active["B1"], wb.active["B2"] = "=SUM(A1:A2)", "=B1*2"
+        candidate = tmp_path / "result.xlsx"
+        wb.save(candidate)
+        with zipfile.ZipFile(candidate) as src:
+            entries = {n: src.read(n) for n in src.namelist()}
+        ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+        sheet = ET.fromstring(entries["xl/worksheets/sheet1.xml"])
+        for name, stale in (("B1", 999), ("B2", 888)):
+            sheet.find(f".//{ns}c[@r='{name}']/{ns}v").text = str(stale)
+        entries["xl/worksheets/sheet1.xml"] = ET.tostring(sheet)
+        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as dst:
+            for name, content in entries.items():
+                dst.writestr(name, content)
+        wb.active["B1"], wb.active["B2"] = 5, 10
+        wb.save(tmp_path / "golden.xlsx")
+        wb.close()
+        cached = openpyxl.load_workbook(candidate, data_only=True)
+        assert [cached.active["B1"].value, cached.active["B2"].value] == [999, 888]
+        cached.close()
+        (tmp_path / "task.json").write_text(json.dumps({
+            "task_id": "spreadcache-authored", "answer_position": "Synthetic!B1:B2"}))
+        (tmp_path / "answer.txt").write_text("result.xlsx\n")
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        cmd = [shutil.which("bwrap"), "--unshare-net", "--ro-bind", "/", "/",
+               "--bind", str(tmp_path), "/tmp",
+               "--proc", "/proc", "--", sys.executable,
+               str(ROOT / "data/datasets/spreadsheetbench/verify/check.py"),
+               "--workdir", "/tmp", "--reward-file", "/tmp/reward.txt",
+               "--evidence-file", "/tmp/evidence.json"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240,
+                              env=dict(os.environ, TMPDIR="/tmp/scratch", PYTHONDONTWRITEBYTECODE="1"))
+>       assert proc.returncode == 0, (proc.stdout, proc.stderr)
+E       AssertionError: ('', 'bwrap: setting up uid map: Read-only file system
+E         ')
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/bin/bwrap', '--unshare-net', '--ro-bind', '/', '/', '--bind', '/tmp/pytest/test_real_engi...nce-file', '/tmp/evidence.json'], returncode=1, stdout='', stderr='bwrap: setting up uid map: Read-only file system\n').returncode
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:313: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+1 failed, 5 warnings in 0.34s
+
+
+===== RETAINED AUTHORED ARTIFACTS: hashlib.sha256(path.read_bytes()).hexdigest(), Path.stat().st_size =====
+[
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/answer.txt",
+    "bytes": 12,
+    "sha256": "29b174cd437e4b06d4f12a1e8a045268f77646d8cd0fe6a6b1a44b9daa4d9989"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/evidence.json",
+    "bytes": 980,
+    "sha256": "edaee748e9831e6651c530a669c2bf30adbeae631c1060844dc8b98c36a3bba6"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/golden.xlsx",
+    "bytes": 4820,
+    "sha256": "90c90a33c415ff944fc88ab328805dc7155182aaa4380a8c0dc442948873c128"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/result.xlsx",
+    "bytes": 4777,
+    "sha256": "b94516102a824e25a3cd0c417f9d7723beecf18e72ef83dda1b2b273b9b395be"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/reward.txt",
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/task.json",
+    "bytes": 112,
+    "sha256": "db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0.trace",
+    "bytes": 15069,
+    "sha256": "dbbf921b2db62cf7d2cbcd3308bd6748445d79ae22be0d0907a685f14944ecbc"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/answer.txt",
+    "bytes": 12,
+    "sha256": "29b174cd437e4b06d4f12a1e8a045268f77646d8cd0fe6a6b1a44b9daa4d9989"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/evidence.json",
+    "bytes": 950,
+    "sha256": "8fcfde0f6e07720861c0cebb8d99d73f2f28e524a521781ced6f289d1c6f6bdc"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/golden.xlsx",
+    "bytes": 4820,
+    "sha256": "c87fde0117fd4df08dc04984fe85edfbe69f9f89ef71a923c4b7314a2baca91d"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/result.xlsx",
+    "bytes": 4774,
+    "sha256": "0b41cad70a487e59edbdd6e161de7ea56ca4759fe1367f81933d301614fdc741"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/reward.txt",
+    "bytes": 2,
+    "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/task.json",
+    "bytes": 112,
+    "sha256": "db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf"
+  },
+  {
+    "path": "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204.trace",
+    "bytes": 15055,
+    "sha256": "1131fd35bc65286a4ff8453f4b080f4ccc00ff2bcadd2ae001193aaf4bf6c54f"
+  }
+]
+
+
+===== EXACT EXEC TRACE repro; command: cat /mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0.trace =====
+849448 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0"], 0x7ffc508e9c58 /* 78 vars */) = 0
+849480 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--version"], 0xe299fc0 /* 79 vars */) = 0
+849481 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849481, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849482 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x5aed9bf80b98 /* 80 vars */) = 0
+849482 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849482, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849484 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x5aed9bf80c68 /* 80 vars */) = 0
+849484 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849484, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849486 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x5aed9bf80ce8 /* 80 vars */) = 0
+849487 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x5aed9bf80d18 /* 80 vars */) = 0
+849486 +++ exited with 0 +++
+849485 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849486, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849487 +++ exited with 0 +++
+849485 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849487, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849485 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849485, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849488 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x5aed9bf80c98 /* 80 vars */) = 0
+849488 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849488, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849489 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849489, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849490 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849490, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849491 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x5aed9bf804e8 /* 80 vars */) = 0
+849491 +++ exited with 1 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849491, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+849492 execve("/usr/bin/uname", ["uname", "-s"], 0x5aed9bf80f08 /* 80 vars */) = 0
+849492 +++ exited with 0 +++
+849480 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849492, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849480 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--version"], 0x5aed9bf804e8 /* 80 vars */) = 0
+849495 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "--version"], 0x7ffe134428a0 /* 80 vars */) = 0
+849505 +++ exited with 1 +++
+849495 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849505, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+849495 +++ exited with 0 +++
+849494 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849495, si_uid=1026, si_status=0, si_utime=9, si_stime=4} ---
+849494 +++ exited with 0 +++
+849480 +++ exited with 0 +++
+849448 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849480, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849527 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "8edab4b06f6367691b11c4c78aa4a463edec7a9aaef02e9a66ef446a1ea26e2c", "--scorer-input-files", "{\"golden.xlsx\": \"90c90a33c415ff944fc88ab328805dc7155182aaa4380a8c0dc442948873c128\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"], 0xe299fc0 /* 79 vars */) = 0
+849568 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/sb-recalc-urikx93o/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-urikx93o/conv", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/result.xlsx"], 0x8adc320 /* 79 vars */) = 0
+849570 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849570, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849571 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x57b8266c0b98 /* 80 vars */) = 0
+849571 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849571, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849572 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x57b8266c0c68 /* 80 vars */) = 0
+849572 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849572, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849574 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x57b8266c0ce8 /* 80 vars */) = 0
+849575 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x57b8266c0d18 /* 80 vars */) = 0
+849574 +++ exited with 0 +++
+849573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849574, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849575 +++ exited with 0 +++
+849573 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849575, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849573 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849573, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849577 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x57b8266c0c98 /* 80 vars */) = 0
+849577 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849577, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849578 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849578, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849579 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849579, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849580 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x57b8266c04e8 /* 80 vars */) = 0
+849580 +++ exited with 1 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849580, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+849581 execve("/usr/bin/uname", ["uname", "-s"], 0x57b8266c0f08 /* 80 vars */) = 0
+849581 +++ exited with 0 +++
+849568 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849581, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849568 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/sb-recalc-urikx93o/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-urikx93o/conv", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/result.xlsx"], 0x57b8266c04e8 /* 80 vars */) = 0
+849584 execve("/usr/lib/libreoffice/program/javaldx", ["/usr/lib/libreoffice/program/javaldx", "-env:UserInstallation=file:///tmp/sb-recalc-urikx93o/lo-profile", "-env:INIFILENAME=vnd.sun.star.pathname:/usr/lib/libreoffice/program/redirectrc"], 0x7ffdbafbeee8 /* 80 vars */) = -1 ENOENT (没有那个文件或目录)
+849584 +++ exited with 255 +++
+849583 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849584, si_uid=1026, si_status=255, si_utime=0, si_stime=0} ---
+849583 +++ exited with 0 +++
+849586 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "-env:UserInstallation=file:///tmp/sb-recalc-urikx93o/lo-profile", "--headless", "--calc", "--norestore", "--nolockcheck", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-urikx93o/conv", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/result.xlsx"], 0x7ffdbafbeee8 /* 80 vars */) = 0
+849594 +++ exited with 1 +++
+849586 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849594, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+849633 +++ exited with 0 +++
+849634 +++ exited with 0 +++
+849586 +++ exited with 81 +++
+849585 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849586, si_uid=1026, si_status=81, si_utime=20, si_stime=18} ---
+849585 +++ exited with 0 +++
+849666 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "-env:UserInstallation=file:///tmp/sb-recalc-urikx93o/lo-profile", "--headless", "--calc", "--norestore", "--nolockcheck", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-urikx93o/conv", "/mnt/20t/xubuqiang/hg-work/spreadcache/repro-28788df865b14dbb93e5c82ac5a6e3d0/result.xlsx"], 0x7ffdbafbeee8 /* 80 vars */) = 0
+849676 +++ exited with 1 +++
+849666 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849676, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+849683 +++ exited with 0 +++
+849818 execve("/bin/sh", ["sh", "-c", "paperconf 2>/dev/null"], 0x5f082c0ad140 /* 82 vars */) = 0
+849818 +++ exited with 2 +++
+849666 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849818, si_uid=1026, si_status=2, si_utime=0, si_stime=0} ---
+849822 +++ exited with 0 +++
+849823 +++ exited with 0 +++
+849824 +++ exited with 0 +++
+849827 +++ exited with 0 +++
+849666 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849827, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849828 +++ exited with 8 +++
+849830 +++ exited with 0 +++
+849666 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849830, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849831 +++ exited with 8 +++
+849832 +++ exited with 0 +++
+849666 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849832, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+849833 +++ exited with 8 +++
+849877 +++ exited with 0 +++
+849867 +++ exited with 0 +++
+849981 +++ exited with 0 +++
+849980 +++ exited with 0 +++
+849977 +++ exited with 0 +++
+849976 +++ exited with 0 +++
+849975 +++ exited with 0 +++
+849974 +++ exited with 0 +++
+849972 +++ exited with 0 +++
+849971 +++ exited with 0 +++
+849970 +++ exited with 0 +++
+849969 +++ exited with 0 +++
+849966 +++ exited with 0 +++
+849965 +++ exited with 0 +++
+849963 +++ exited with 0 +++
+849960 +++ exited with 0 +++
+849955 +++ exited with 0 +++
+849954 +++ exited with 0 +++
+849952 +++ exited with 0 +++
+849948 +++ exited with 0 +++
+849945 +++ exited with 0 +++
+849941 +++ exited with 0 +++
+849938 +++ exited with 0 +++
+849927 +++ exited with 0 +++
+849917 +++ exited with 0 +++
+849916 +++ exited with 0 +++
+849915 +++ exited with 0 +++
+849905 +++ exited with 0 +++
+849898 +++ exited with 0 +++
+849897 +++ exited with 0 +++
+849895 +++ exited with 0 +++
+849894 +++ exited with 0 +++
+849890 +++ exited with 0 +++
+849889 +++ exited with 0 +++
+849869 +++ exited with 0 +++
+849858 +++ exited with 0 +++
+849842 +++ exited with 0 +++
+849841 +++ exited with 0 +++
+849957 +++ exited with 0 +++
+849943 +++ exited with 0 +++
+849935 +++ exited with 0 +++
+849934 +++ exited with 0 +++
+849926 +++ exited with 0 +++
+849922 +++ exited with 0 +++
+849921 +++ exited with 0 +++
+849909 +++ exited with 0 +++
+849902 +++ exited with 0 +++
+849892 +++ exited with 0 +++
+849888 +++ exited with 0 +++
+849886 +++ exited with 0 +++
+849876 +++ exited with 0 +++
+849873 +++ exited with 0 +++
+849864 +++ exited with 0 +++
+849862 +++ exited with 0 +++
+849865 +++ exited with 0 +++
+849870 +++ exited with 0 +++
+849878 +++ exited with 0 +++
+849875 +++ exited with 0 +++
+849874 +++ exited with 0 +++
+849872 +++ exited with 0 +++
+849863 +++ exited with 0 +++
+849861 +++ exited with 0 +++
+849857 +++ exited with 0 +++
+849856 +++ exited with 0 +++
+849854 +++ exited with 0 +++
+849853 +++ exited with 0 +++
+849852 +++ exited with 0 +++
+849851 +++ exited with 0 +++
+849849 +++ exited with 0 +++
+849848 +++ exited with 0 +++
+849846 +++ exited with 0 +++
+849845 +++ exited with 0 +++
+849843 +++ exited with 0 +++
+849868 +++ exited with 0 +++
+849979 +++ exited with 0 +++
+849973 +++ exited with 0 +++
+849967 +++ exited with 0 +++
+849964 +++ exited with 0 +++
+849959 +++ exited with 0 +++
+849958 +++ exited with 0 +++
+849953 +++ exited with 0 +++
+849950 +++ exited with 0 +++
+849949 +++ exited with 0 +++
+849947 +++ exited with 0 +++
+849946 +++ exited with 0 +++
+849942 +++ exited with 0 +++
+849940 +++ exited with 0 +++
+849937 +++ exited with 0 +++
+849933 +++ exited with 0 +++
+849932 +++ exited with 0 +++
+849931 +++ exited with 0 +++
+849930 +++ exited with 0 +++
+849929 +++ exited with 0 +++
+849928 +++ exited with 0 +++
+849924 +++ exited with 0 +++
+849919 +++ exited with 0 +++
+849923 +++ exited with 0 +++
+849920 +++ exited with 0 +++
+849918 +++ exited with 0 +++
+849914 +++ exited with 0 +++
+849913 +++ exited with 0 +++
+849911 +++ exited with 0 +++
+849908 +++ exited with 0 +++
+849907 +++ exited with 0 +++
+849906 +++ exited with 0 +++
+849904 +++ exited with 0 +++
+849901 +++ exited with 0 +++
+849900 +++ exited with 0 +++
+849961 +++ exited with 0 +++
+849893 +++ exited with 0 +++
+849891 +++ exited with 0 +++
+849887 +++ exited with 0 +++
+849885 +++ exited with 0 +++
+849884 +++ exited with 0 +++
+849883 +++ exited with 0 +++
+849882 +++ exited with 0 +++
+849871 +++ exited with 0 +++
+849879 +++ exited with 0 +++
+849860 +++ exited with 0 +++
+849855 +++ exited with 0 +++
+849925 +++ exited with 0 +++
+849978 +++ exited with 0 +++
+849962 +++ exited with 0 +++
+849956 +++ exited with 0 +++
+849951 +++ exited with 0 +++
+849944 +++ exited with 0 +++
+849936 +++ exited with 0 +++
+849910 +++ exited with 0 +++
+849903 +++ exited with 0 +++
+849899 +++ exited with 0 +++
+849896 +++ exited with 0 +++
+849881 +++ exited with 0 +++
+849859 +++ exited with 0 +++
+849850 +++ exited with 0 +++
+849847 +++ exited with 0 +++
+849985 +++ exited with 0 +++
+849685 +++ exited with 0 +++
+849666 +++ exited with 0 +++
+849665 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849666, si_uid=1026, si_status=0, si_utime=68, si_stime=94} ---
+849665 +++ exited with 0 +++
+849568 +++ exited with 0 +++
+849527 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849568, si_uid=1026, si_status=0, si_utime=0, si_stime=1} ---
+849527 +++ exited with 1 +++
+849448 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=849527, si_uid=1026, si_status=1, si_utime=36, si_stime=13} ---
+849448 +++ exited with 1 +++
+
+
+===== EXACT EXEC TRACE fixed; command: cat /mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204.trace =====
+874083 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204"], 0x7ffdc1c0f9c8 /* 78 vars */) = 0
+874102 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--version"], 0x38d6dfc0 /* 79 vars */) = 0
+874103 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874103, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874104 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x6358e2d18b98 /* 80 vars */) = 0
+874104 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874104, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874105 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x6358e2d18c68 /* 80 vars */) = 0
+874105 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874105, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874109 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x6358e2d18ce8 /* 80 vars */) = 0
+874110 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x6358e2d18d18 /* 80 vars */) = 0
+874109 +++ exited with 0 +++
+874107 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874109, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874110 +++ exited with 0 +++
+874107 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874110, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874107 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874107, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874111 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x6358e2d18c98 /* 80 vars */) = 0
+874111 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874111, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874112 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874112, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874113 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874113, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874114 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x6358e2d184e8 /* 80 vars */) = 0
+874114 +++ exited with 1 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874114, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+874115 execve("/usr/bin/uname", ["uname", "-s"], 0x6358e2d18f08 /* 80 vars */) = 0
+874115 +++ exited with 0 +++
+874102 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874115, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874102 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--version"], 0x6358e2d184e8 /* 80 vars */) = 0
+874118 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "--version"], 0x7ffdd82353b0 /* 80 vars */) = 0
+874123 +++ exited with 1 +++
+874118 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874123, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+874118 +++ exited with 0 +++
+874117 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874118, si_uid=1026, si_status=0, si_utime=10, si_stime=4} ---
+874117 +++ exited with 0 +++
+874102 +++ exited with 0 +++
+874083 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874102, si_uid=1026, si_status=0, si_utime=0, si_stime=1} ---
+874124 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadcache/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadcache/fixed-14be3d8377a74e56a9d34b10208b7204/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "497a19fc51002264582b81cfbea3cac4ec03b013f790a66d31468fac94273e20", "--scorer-input-files", "{\"golden.xlsx\": \"c87fde0117fd4df08dc04984fe85edfbe69f9f89ef71a923c4b7314a2baca91d\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"], 0x38d6dfc0 /* 79 vars */) = 0
+874128 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/sb-recalc-m_rkinn_/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-m_rkinn_/conv", "/tmp/sb-recalc-m_rkinn_/input/result.xlsx"], 0x3bd825d0 /* 79 vars */) = 0
+874129 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874129, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874130 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x5fdae46e0b98 /* 80 vars */) = 0
+874130 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874130, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874131 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x5fdae46e0c68 /* 80 vars */) = 0
+874131 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874131, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874134 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x5fdae46e0ce8 /* 80 vars */) = 0
+874135 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x5fdae46e0d18 /* 80 vars */) = 0
+874134 +++ exited with 0 +++
+874132 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874134, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874135 +++ exited with 0 +++
+874132 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874135, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874132 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874132, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874136 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x5fdae46e0c98 /* 80 vars */) = 0
+874136 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874136, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874137 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874137, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874138 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874138, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874139 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x5fdae46e04e8 /* 80 vars */) = 0
+874139 +++ exited with 1 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874139, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+874141 execve("/usr/bin/uname", ["uname", "-s"], 0x5fdae46e0f08 /* 80 vars */) = 0
+874141 +++ exited with 0 +++
+874128 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874141, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874128 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///tmp/sb-recalc-m_rkinn_/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-m_rkinn_/conv", "/tmp/sb-recalc-m_rkinn_/input/result.xlsx"], 0x5fdae46e04e8 /* 80 vars */) = 0
+874143 execve("/usr/lib/libreoffice/program/javaldx", ["/usr/lib/libreoffice/program/javaldx", "-env:UserInstallation=file:///tmp/sb-recalc-m_rkinn_/lo-profile", "-env:INIFILENAME=vnd.sun.star.pathname:/usr/lib/libreoffice/program/redirectrc"], 0x7ffcba261128 /* 80 vars */) = -1 ENOENT (没有那个文件或目录)
+874143 +++ exited with 255 +++
+874142 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874143, si_uid=1026, si_status=255, si_utime=0, si_stime=0} ---
+874142 +++ exited with 0 +++
+874145 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "-env:UserInstallation=file:///tmp/sb-recalc-m_rkinn_/lo-profile", "--headless", "--calc", "--norestore", "--nolockcheck", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-m_rkinn_/conv", "/tmp/sb-recalc-m_rkinn_/input/result.xlsx"], 0x7ffcba261128 /* 80 vars */) = 0
+874146 +++ exited with 1 +++
+874145 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874146, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+874150 +++ exited with 0 +++
+874152 +++ exited with 0 +++
+874145 +++ exited with 81 +++
+874144 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874145, si_uid=1026, si_status=81, si_utime=18, si_stime=15} ---
+874144 +++ exited with 0 +++
+874162 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "-env:UserInstallation=file:///tmp/sb-recalc-m_rkinn_/lo-profile", "--headless", "--calc", "--norestore", "--nolockcheck", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/tmp/sb-recalc-m_rkinn_/conv", "/tmp/sb-recalc-m_rkinn_/input/result.xlsx"], 0x7ffcba261128 /* 80 vars */) = 0
+874163 +++ exited with 1 +++
+874162 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874163, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+874167 +++ exited with 0 +++
+874184 execve("/bin/sh", ["sh", "-c", "paperconf 2>/dev/null"], 0x58bb6cfa3140 /* 82 vars */) = 0
+874184 +++ exited with 2 +++
+874162 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874184, si_uid=1026, si_status=2, si_utime=0, si_stime=0} ---
+874185 +++ exited with 0 +++
+874186 +++ exited with 0 +++
+874188 +++ exited with 0 +++
+874192 +++ exited with 0 +++
+874162 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874192, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874193 +++ exited with 8 +++
+874194 +++ exited with 0 +++
+874162 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874194, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874195 +++ exited with 8 +++
+874196 +++ exited with 0 +++
+874162 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874196, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874197 +++ exited with 8 +++
+874352 +++ exited with 0 +++
+874351 +++ exited with 0 +++
+874350 +++ exited with 0 +++
+874349 +++ exited with 0 +++
+874348 +++ exited with 0 +++
+874347 +++ exited with 0 +++
+874346 +++ exited with 0 +++
+874344 +++ exited with 0 +++
+874343 +++ exited with 0 +++
+874342 +++ exited with 0 +++
+874341 +++ exited with 0 +++
+874338 +++ exited with 0 +++
+874337 +++ exited with 0 +++
+874334 +++ exited with 0 +++
+874329 +++ exited with 0 +++
+874328 +++ exited with 0 +++
+874324 +++ exited with 0 +++
+874322 +++ exited with 0 +++
+874316 +++ exited with 0 +++
+874313 +++ exited with 0 +++
+874310 +++ exited with 0 +++
+874308 +++ exited with 0 +++
+874288 +++ exited with 0 +++
+874285 +++ exited with 0 +++
+874284 +++ exited with 0 +++
+874281 +++ exited with 0 +++
+874262 +++ exited with 0 +++
+874255 +++ exited with 0 +++
+874250 +++ exited with 0 +++
+874245 +++ exited with 0 +++
+874239 +++ exited with 0 +++
+874225 +++ exited with 0 +++
+874210 +++ exited with 0 +++
+874340 +++ exited with 0 +++
+874332 +++ exited with 0 +++
+874326 +++ exited with 0 +++
+874320 +++ exited with 0 +++
+874319 +++ exited with 0 +++
+874315 +++ exited with 0 +++
+874305 +++ exited with 0 +++
+874303 +++ exited with 0 +++
+874299 +++ exited with 0 +++
+874295 +++ exited with 0 +++
+874293 +++ exited with 0 +++
+874279 +++ exited with 0 +++
+874269 +++ exited with 0 +++
+874277 +++ exited with 0 +++
+874266 +++ exited with 0 +++
+874265 +++ exited with 0 +++
+874261 +++ exited with 0 +++
+874259 +++ exited with 0 +++
+874251 +++ exited with 0 +++
+874241 +++ exited with 0 +++
+874238 +++ exited with 0 +++
+874226 +++ exited with 0 +++
+874222 +++ exited with 0 +++
+874221 +++ exited with 0 +++
+874218 +++ exited with 0 +++
+874215 +++ exited with 0 +++
+874213 +++ exited with 0 +++
+874345 +++ exited with 0 +++
+874339 +++ exited with 0 +++
+874336 +++ exited with 0 +++
+874335 +++ exited with 0 +++
+874333 +++ exited with 0 +++
+874330 +++ exited with 0 +++
+874327 +++ exited with 0 +++
+874323 +++ exited with 0 +++
+874321 +++ exited with 0 +++
+874318 +++ exited with 0 +++
+874317 +++ exited with 0 +++
+874314 +++ exited with 0 +++
+874312 +++ exited with 0 +++
+874309 +++ exited with 0 +++
+874307 +++ exited with 0 +++
+874304 +++ exited with 0 +++
+874302 +++ exited with 0 +++
+874301 +++ exited with 0 +++
+874297 +++ exited with 0 +++
+874298 +++ exited with 0 +++
+874300 +++ exited with 0 +++
+874294 +++ exited with 0 +++
+874296 +++ exited with 0 +++
+874292 +++ exited with 0 +++
+874291 +++ exited with 0 +++
+874289 +++ exited with 0 +++
+874287 +++ exited with 0 +++
+874282 +++ exited with 0 +++
+874278 +++ exited with 0 +++
+874280 +++ exited with 0 +++
+874276 +++ exited with 0 +++
+874275 +++ exited with 0 +++
+874274 +++ exited with 0 +++
+874272 +++ exited with 0 +++
+874271 +++ exited with 0 +++
+874270 +++ exited with 0 +++
+874268 +++ exited with 0 +++
+874267 +++ exited with 0 +++
+874264 +++ exited with 0 +++
+874263 +++ exited with 0 +++
+874260 +++ exited with 0 +++
+874258 +++ exited with 0 +++
+874257 +++ exited with 0 +++
+874256 +++ exited with 0 +++
+874252 +++ exited with 0 +++
+874249 +++ exited with 0 +++
+874247 +++ exited with 0 +++
+874242 +++ exited with 0 +++
+874240 +++ exited with 0 +++
+874237 +++ exited with 0 +++
+874236 +++ exited with 0 +++
+874235 +++ exited with 0 +++
+874233 +++ exited with 0 +++
+874232 +++ exited with 0 +++
+874231 +++ exited with 0 +++
+874230 +++ exited with 0 +++
+874229 +++ exited with 0 +++
+874228 +++ exited with 0 +++
+874227 +++ exited with 0 +++
+874224 +++ exited with 0 +++
+874223 +++ exited with 0 +++
+874220 +++ exited with 0 +++
+874219 +++ exited with 0 +++
+874217 +++ exited with 0 +++
+874214 +++ exited with 0 +++
+874212 +++ exited with 0 +++
+874211 +++ exited with 0 +++
+874331 +++ exited with 0 +++
+874311 +++ exited with 0 +++
+874306 +++ exited with 0 +++
+874286 +++ exited with 0 +++
+874290 +++ exited with 0 +++
+874273 +++ exited with 0 +++
+874283 +++ exited with 0 +++
+874254 +++ exited with 0 +++
+874248 +++ exited with 0 +++
+874244 +++ exited with 0 +++
+874243 +++ exited with 0 +++
+874216 +++ exited with 0 +++
+874253 +++ exited with 0 +++
+874246 +++ exited with 0 +++
+874353 +++ exited with 0 +++
+874168 +++ exited with 0 +++
+874162 +++ exited with 0 +++
+874161 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874162, si_uid=1026, si_status=0, si_utime=68, si_stime=91} ---
+874161 +++ exited with 0 +++
+874128 +++ exited with 0 +++
+874124 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874128, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+874124 +++ exited with 0 +++
+874083 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=874124, si_uid=1026, si_status=0, si_utime=50, si_stime=11} ---
+874083 +++ exited with 0 +++
+
+
+===== SSD SCRATCH CLEANUP ENUMERATION =====
+COMMAND=["python3", "-c", "from pathlib import Path; print(sorted(str(p) for p in Path('/tmp').glob('spreadcache-*')))"]
+EXIT=0
+[]
+
+
+===== NOT VERIFIED / UNKNOWN =====
+No dataset rows, released workbooks, official upstream evaluator, diagnostic, pilot, model, GPU or paid endpoint was executed.
+UNKNOWN (not searched/executed): full Excel/LibreOffice formula semantic equivalence; external-link/UDF/volatile formulas; multi-sheet XML remapping; shared/array/data-table calculation support; production verifier read-only candidate lifecycle; offline reinstall/native closure; any other engine version.
+The guard observes cache regeneration after removing scalar-formula caches, not arbitrary mathematical correctness; the authored arithmetic control independently requires [5, 10]. Non-scalar formula caches are refused, not claimed supported.
+No registry closure/proposal is made: this bounded authored result does not authorize a production diagnostic or pilot.
+ABSENT is claimed only for the exact final git diff names and SSD scratch enumeration above; no whole-machine absence claim is made.
+Frozen historical fixture files were read, never rewritten. The original run_synthetic.py was not executed because it writes frozen receipts.
+The registry checker cannot be affected by this checker/test-only fix; report creation also does not alter registry data.
+Initial failing launch attempts above are preserved and excluded from the successful result count.
+
+===== FINAL FILE SIZES (bytes) =====
+Command: for each enumerated path below: print(Path(path).stat().st_size, path)
+20735 data/datasets/spreadsheetbench/verify/check.py
+16519 tests/quality/test_spreadsheetbench_classification_w_spread2.py
+6935 data/datasets/spreadsheetbench/w-spreadcache.md
+77855 data/datasets/spreadsheetbench/w-spreadcache-validation.txt

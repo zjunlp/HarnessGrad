@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9653558",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 281,
+ "instruction": "Your name is Liam Li and your zip code is 94120. You are happy, busy, direct, independent, impatient. Cancel order #W9653558 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_281",
+ "user_id": "liam_li_5260"
+}

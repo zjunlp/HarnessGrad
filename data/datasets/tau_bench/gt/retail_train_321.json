@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7866854614"
+    ],
+    "new_item_ids": [
+     "7866854614"
+    ],
+    "order_id": "#W6717215",
+    "payment_method_id": "gift_card_5501047"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 321,
+ "instruction": "Your name is Isabella Taylor and your zip code is 60646. You are creative, cautious, outgoing, insecure, rigid. For #W6717215, exchange Portable Charger {'capacity': '5000mAh', 'output': 'USB-C', 'color': 'white'} to {}; via gift_card_5501047. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_321",
+ "user_id": "isabella_taylor_7478"
+}

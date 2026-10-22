@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1569829406"
+    ],
+    "new_item_ids": [
+     "8470360507"
+    ],
+    "order_id": "#W5457973",
+    "payment_method_id": "gift_card_1679693"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 199,
+ "instruction": "Your name is Daiki Davis and your zip code is 94102. You are curious, pessimistic, flexible, relaxing, independent. For #W5457973, exchange Indoor Security Camera {'resolution': '1080p', 'field of view': '160 degrees', 'connectivity': 'Ethernet'} to {'resolution': '2K', 'field of view': '130 degrees'}; via gift_card_1679693. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_199",
+ "user_id": "daiki_davis_5031"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "alfworld-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files"
+  ],
+  "install": null,
+  "notes": "A CONTROL, NOT A HARNESS. It replays a scripted action list (ALFWorld's own `walkthrough`) through the `alf` CLI and is used only by data/datasets/alfworld/control.py --platform to prove the adapter's SETUP -> harness -> VERIFY path produces reward 1 without Docker. It reasons about nothing and must never be reported as a curve row.",
+  "role": "control"
+}

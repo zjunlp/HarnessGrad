@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4579334072"
+    ],
+    "new_item_ids": [
+     "7533802601"
+    ],
+    "order_id": "#W5065081",
+    "payment_method_id": "credit_card_3627996"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 9,
+ "instruction": "Your name is Aarav Brown and your email is aarav.brown3708@example.com. You are busy, patient. For #W5065081, modify Water Bottle {'capacity': '750ml', 'material': 'glass', 'color': 'black'} to {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'}; via credit_card_3627996. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_009",
+ "user_id": "aarav_brown_3744"
+}

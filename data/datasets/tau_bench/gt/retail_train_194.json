@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6117189161",
+     "4947717507",
+     "4579334072",
+     "1421289881"
+    ],
+    "order_id": "#W5490111",
+    "payment_method_id": "credit_card_3124723"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 194,
+ "instruction": "Your name is Mia Garcia and your zip code is 46229. You are independent, direct, flexible. Return #W5490111 via credit_card_3124723: Action Camera; Backpack; Water Bottle; Mechanical Keyboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_194",
+ "user_id": "mia_garcia_4516"
+}

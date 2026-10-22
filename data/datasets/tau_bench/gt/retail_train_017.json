@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8964750292",
+     "6130713659"
+    ],
+    "new_item_ids": [
+     "7160999700",
+     "3333391894"
+    ],
+    "order_id": "#W6026015",
+    "payment_method_id": "credit_card_6361025"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 17,
+ "instruction": "Your name is Ethan Moore and your email is ethan.moore4109@example.com. You are logical, independent, direct, curious, impatient. For #W6026015, exchange Luggage Set {'piece count': '2-piece', 'color': 'red', 'material': 'hardshell'} to {'material': 'softshell'}; Dumbbell Set {'weight range': '55-75 lbs', 'material': 'urethane', 'set type': 'adjustable'} to {'weight range': '30-50 lbs', 'material': 'iron', 'set type': 'fixed'}; via credit_card_6361025. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_017",
+ "user_id": "ethan_moore_9003"
+}

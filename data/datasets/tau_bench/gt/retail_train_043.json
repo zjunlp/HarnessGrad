@@ -1,0 +1,45 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9132840",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "address1": "558 Cedar Street",
+    "address2": "Suite 298",
+    "city": "Houston",
+    "country": "USA",
+    "order_id": "#W6724985",
+    "state": "TX",
+    "zip": "77158"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7533802601",
+     "8895454203"
+    ],
+    "new_item_ids": [
+     "2439754078",
+     "1768466237"
+    ],
+    "order_id": "#W6724985",
+    "payment_method_id": "credit_card_3593714"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 43,
+ "instruction": "Your name is Lei Ahmed and your email is lei.ahmed1696@example.com. You are relaxing, independent. Cancel order #W9132840 because ordered by mistake. For #W6724985, change address to {'order_id': '#W6724985', 'address1': '558 Cedar Street', 'address2': 'Suite 298', 'city': 'Houston', 'country': 'USA', 'state': 'TX', 'zip': '77158'} (same as #W9015076). For #W6724985, modify Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'} to {'capacity': '1000ml', 'color': 'red'}; Bookshelf {'material': 'glass', 'color': 'white', 'height': '5 ft'} to {'color': 'black', 'height': '3 ft'}; via credit_card_3593714. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_043",
+ "user_id": "lei_ahmed_1705"
+}

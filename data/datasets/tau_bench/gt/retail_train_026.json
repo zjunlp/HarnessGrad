@@ -1,0 +1,40 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "411 Park Avenue",
+    "address2": "Suite 987",
+    "city": "Phoenix",
+    "country": "USA",
+    "order_id": "#W3386832",
+    "state": "AZ",
+    "zip": "85060"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3339188619",
+     "3709608322",
+     "8249784860"
+    ],
+    "new_item_ids": [
+     "9013366374",
+     "7407838442",
+     "4024196380"
+    ],
+    "order_id": "#W3386832",
+    "payment_method_id": "paypal_6729210"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 26,
+ "instruction": "Your name is Juan Lopez and your zip code is 85060. You are organized, direct, sad, optimistic, curious. For #W3386832, change address to {'order_id': '#W3386832', 'address1': '411 Park Avenue', 'address2': 'Suite 987', 'city': 'Phoenix', 'country': 'USA', 'state': 'AZ', 'zip': '85060'} (same as #W3700848). For #W3386832, modify Cycling Helmet {'size': 'M', 'color': 'blue', 'ventilation': 'low'} to {'ventilation': 'high'}; Espresso Machine {'pressure': '9 bar', 'capacity': '2L', 'type': 'automatic'} to {'capacity': '1L', 'type': 'manual'}; Garden Hose {'length': '50ft', 'material': 'vinyl', 'color': 'green'} to {'material': 'latex', 'color': 'black'}; via paypal_6729210. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_026",
+ "user_id": "juan_lopez_5820"
+}

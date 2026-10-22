@@ -1,0 +1,51 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "cabin": "economy",
+    "destination": "SEA",
+    "flight_type": "one_way",
+    "flights": [
+     {
+      "date": "2024-05-20",
+      "flight_number": "HAT136"
+     },
+     {
+      "date": "2024-05-20",
+      "flight_number": "HAT039"
+     }
+    ],
+    "insurance": "no",
+    "nonfree_baggages": 0,
+    "origin": "JFK",
+    "passengers": [
+     {
+      "dob": "1990-04-05",
+      "first_name": "Mia",
+      "last_name": "Li"
+     }
+    ],
+    "payment_methods": [
+     {
+      "amount": 250,
+      "payment_id": "certificate_7504069"
+     },
+     {
+      "amount": 5,
+      "payment_id": "credit_card_4421486"
+     }
+    ],
+    "total_baggages": 3,
+    "user_id": "mia_li_3668"
+   },
+   "name": "book_reservation"
+  }
+ ],
+ "domain": "airline",
+ "index": 0,
+ "instruction": "Your user id is mia_li_3668. You want to fly from New York to Seattle on May 20 (one way). You do not want to fly before 11am est. You want to fly in economy. You prefer direct flights but one stopover also fine. If there are multiple options, you prefer the one with the lowest price. You have 3 baggages. You do not want insurance. You want to use your two certificates to pay. If only one certificate can be used, you prefer using the larger one, and pay the rest with your 7447 card. You are reactive to the agent and will not say anything that is not asked. Your birthday is in your user profile so you do not prefer to provide it.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_000",
+ "user_id": "mia_li_3668"
+}

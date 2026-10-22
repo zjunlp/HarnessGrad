@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6477915553"
+    ],
+    "new_item_ids": [
+     "2509076505"
+    ],
+    "order_id": "#W7449508",
+    "payment_method_id": "gift_card_7711863"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 219,
+ "instruction": "Your name is Olivia Lopez and your zip code is 76171. You are outgoing, messy. For #W7449508, exchange Sneakers {'size': '6', 'color': 'black', 'material': 'synthetic'} to {'size': '10', 'color': 'gray', 'material': 'leather'}; via gift_card_7711863. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_219",
+ "user_id": "olivia_lopez_3865"
+}

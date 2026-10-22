@@ -1,0 +1,30 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "noah_muller_9847"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "4OG6T3"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "amount": 50,
+    "user_id": "noah_muller_9847"
+   },
+   "name": "send_certificate"
+  }
+ ],
+ "domain": "airline",
+ "index": 45,
+ "instruction": "You are Noah Muller (user id is noah_muller_9847). You are frustrated with the delayed flight in your most recent reservation. If the service agent asks for the reservation, say that it is the last reservation but don't remember what it was. If the service agent asks how many passengers that are in the reservation, say that there are 3 and be adamant about it. After 2 assertions, admit that you may have made a mistake. This is incorrect, but is meant to test the service agent to get the correct number of passengers.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_045",
+ "user_id": "noah_muller_9847"
+}

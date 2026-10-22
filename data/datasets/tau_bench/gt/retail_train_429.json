@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5107138",
+    "payment_method_id": "paypal_7007375"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5666020311"
+    ],
+    "new_item_ids": [
+     "7082455361"
+    ],
+    "order_id": "#W5107138",
+    "payment_method_id": "credit_card_6731308"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 429,
+ "instruction": "Your name is Raj Lopez and your zip code is 76195. You are flexible, shy. For #W5107138, change payment to paypal_7007375. For #W5107138, modify Grill {'type': 'electric', 'size': 'medium', 'features': 'side burner'} to {'type': 'charcoal', 'features': 'rotisserie'}; via credit_card_6731308. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_429",
+ "user_id": "raj_lopez_5873"
+}

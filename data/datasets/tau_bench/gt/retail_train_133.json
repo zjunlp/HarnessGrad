@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6401214406"
+    ],
+    "new_item_ids": [
+     "1665571435"
+    ],
+    "order_id": "#W9892169",
+    "payment_method_id": "credit_card_2327218"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 133,
+ "instruction": "Your name is Mason Lopez and your email is mason.lopez8921@example.com. You are independent, happy, optimistic, messy. For #W9892169, modify Cycling Helmet {'size': 'M', 'color': 'red', 'ventilation': 'low'} to {'size': 'L', 'color': 'black', 'ventilation': 'high'}; via credit_card_2327218. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_133",
+ "user_id": "mason_lopez_8519"
+}

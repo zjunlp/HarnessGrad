@@ -1,0 +1,39 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9805150490",
+     "4806644905"
+    ],
+    "new_item_ids": [
+     "7493556126",
+     "4806644905"
+    ],
+    "order_id": "#W7109609",
+    "payment_method_id": "gift_card_9246707"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9447903288"
+    ],
+    "new_item_ids": [
+     "1325156478"
+    ],
+    "order_id": "#W6554908",
+    "payment_method_id": "gift_card_9246707"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 154,
+ "instruction": "Your name is Emma Kovacs and your email is emma.kovacs5723@example.com. You are direct, happy, rigid. For #W7109609, modify Headphones {'type': 'on-ear', 'connectivity': 'wireless', 'color': 'white'} to {'type': 'over-ear', 'color': 'black'}; Vacuum Cleaner {'type': 'robotic', 'bagged/bagless': 'bagless', 'features': 'cordless'} to {}; via gift_card_9246707. For #W6554908, modify Perfume {'scent family': 'fresh', 'size': '30ml', 'gender': 'men'} to {'scent family': 'oriental'}; via gift_card_9246707. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_154",
+ "user_id": "emma_kovacs_5477"
+}

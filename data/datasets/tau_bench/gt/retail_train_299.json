@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3502364",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5107138",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 299,
+ "instruction": "Your name is Raj Lopez and your email is raj.lopez2997@example.com. You are relaxing, messy, happy. Cancel order #W3502364 because no longer needed. Cancel order #W5107138 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_299",
+ "user_id": "raj_lopez_5873"
+}

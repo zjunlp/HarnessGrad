@@ -1,0 +1,32 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1242543",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9232383",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8367380",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 29,
+ "instruction": "Your name is Ava Nguyen and your zip code is 94128. You are logical, confident, busy. Cancel order #W1242543 because no longer needed. Cancel order #W9232383 because no longer needed. Cancel order #W8367380 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_029",
+ "user_id": "ava_nguyen_6646"
+}

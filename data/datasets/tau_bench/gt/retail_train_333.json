@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4920090458",
+     "1586641416"
+    ],
+    "new_item_ids": [
+     "9408160950",
+     "7523669277"
+    ],
+    "order_id": "#W2156941",
+    "payment_method_id": "paypal_5589935"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 333,
+ "instruction": "Your name is Yara Hernandez and your email is yara.hernandez7166@example.com. You are relaxing, rigid, happy. For #W2156941, exchange Smart Watch {'color': 'black', 'band material': 'silicone', 'display': 'AMOLED'} to {'color': 'gold', 'band material': 'leather', 'display': 'LCD'}; Action Camera {'resolution': '5K', 'waterproof': 'yes', 'color': 'silver'} to {'waterproof': 'no', 'color': 'black'}; via paypal_5589935. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_333",
+ "user_id": "yara_hernandez_3670"
+}

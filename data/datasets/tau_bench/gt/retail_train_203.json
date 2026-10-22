@@ -1,0 +1,58 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8323284863"
+    ],
+    "order_id": "#W8660475",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2366567022",
+     "4900661478",
+     "3614853563"
+    ],
+    "order_id": "#W6239298",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "921 Park Avenue",
+    "address2": "Suite 892",
+    "city": "Chicago",
+    "country": "USA",
+    "order_id": "#W4860251",
+    "state": "IL",
+    "zip": "60612"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5209958006"
+    ],
+    "new_item_ids": [
+     "8759627937"
+    ],
+    "order_id": "#W4860251",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 203,
+ "instruction": "Your name is Lucas Brown and your zip code is 60612. You are rigid, polite, cautious, confident. Return #W8660475 via credit_card_2112420: Office Chair; Return #W6239298 via credit_card_2112420: Water Bottle; Bookshelf; Jigsaw Puzzle; For #W4860251, change address to {'order_id': '#W4860251', 'address1': '921 Park Avenue', 'address2': 'Suite 892', 'city': 'Chicago', 'country': 'USA', 'state': 'IL', 'zip': '60612'} (same as #W6239298). For #W4860251, modify Luggage Set {'piece count': '2-piece', 'color': 'silver', 'material': 'hardshell'} to {'piece count': '4-piece', 'color': 'blue', 'material': 'softshell'}; via credit_card_2112420. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_203",
+ "user_id": "lucas_brown_6720"
+}

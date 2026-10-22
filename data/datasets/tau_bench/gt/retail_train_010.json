@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5570660360",
+     "1793929609"
+    ],
+    "new_item_ids": [
+     "7445824652",
+     "1793929609"
+    ],
+    "order_id": "#W5564375",
+    "payment_method_id": "paypal_2299608"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 10,
+ "instruction": "Your name is Mei Martin and your zip code is 32124. You are messy, creative, outgoing, rigid, cautious. For #W5564375, exchange LED Light Bulb {'brightness': '60W equivalent', 'color temperature': 'daylight', 'connectivity': 'none'} to {'brightness': '75W equivalent', 'connectivity': 'Wi-Fi'}; Office Chair {'material': 'fabric', 'color': 'black', 'armrest': 'none', 'backrest height': 'high-back'} to {}; via paypal_2299608. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_010",
+ "user_id": "mei_martin_4260"
+}

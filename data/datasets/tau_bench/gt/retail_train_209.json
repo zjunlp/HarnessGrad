@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6697922351",
+     "9570044148"
+    ],
+    "new_item_ids": [
+     "9013366374",
+     "6342039236"
+    ],
+    "order_id": "#W1483350",
+    "payment_method_id": "paypal_2319812"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 209,
+ "instruction": "Your name is Noah Khan and your email is noah.khan7453@example.com. You are pessimistic, creative, insecure, messy. For #W1483350, exchange Cycling Helmet {'size': 'L', 'color': 'white', 'ventilation': 'medium'} to {'size': 'M', 'color': 'blue', 'ventilation': 'high'}; Mechanical Keyboard {'switch type': 'linear', 'backlight': 'none', 'size': 'full size'} to {'switch type': 'clicky', 'backlight': 'white'}; via paypal_2319812. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_209",
+ "user_id": "noah_khan_5763"
+}

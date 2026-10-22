@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9647374798"
+    ],
+    "new_item_ids": [
+     "3312883418"
+    ],
+    "order_id": "#W5801125",
+    "payment_method_id": "paypal_5543657"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 33,
+ "instruction": "Your name is Ivan Santos and your email is ivan.santos5925@example.com. You are happy, independent, polite, patient, busy. For #W5801125, modify Tea Kettle {'material': 'glass', 'capacity': '1.5 liters', 'stovetop compatibility': 'gas'} to {'material': 'ceramic', 'stovetop compatibility': 'induction'}; via paypal_5543657. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_033",
+ "user_id": "ivan_santos_7021"
+}

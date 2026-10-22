@@ -1,0 +1,64 @@
+{
+  "base_system_prompt": "unchanged; task_instruction is task text, not a replacement system prompt",
+  "context_delivery": {
+    "agent_specific_memorize_template": false,
+    "text": "raw chunk text",
+    "wall_clock_timestamp": false,
+    "wrapper": null
+  },
+  "dataset_revision": "7ea066982b140a19337e17e60d45d4076e042faf",
+  "differences_from_upstream": [
+    "One fixed query variant is used for every harness; upstream selects variants by agent type.",
+    "ICL requires a bare numerical label; remove label: {label} instruction and trailing label: cue. The upstream scorer is unchanged.",
+    "Context chunks are raw text, without synthetic User/Assistant memorize dialogue or wall-clock timestamps.",
+    "The common task instruction describes sequential delivery and submission; upstream agent system prompts are not imposed."
+  ],
+  "query_dynamic_fields": [
+    "question"
+  ],
+  "query_templates": {
+    "detective_qa": "Based on the context you memorized, answer the question below. You are required to answer the question based on the strict output format.\n\n {question} \n\n",
+    "eventqa": "Based on the context you memorized, complete the task below:\n\n{question}\n\n The event that happens next is:",
+    "factconsolidation": "Pretend you are a knowledge management system. Each fact in the knowledge pool is provided with a serial number at the beginning, and the newer fact has larger serial number. \n You need to solve the conflicts of facts in the knowledge pool by finding the newest fact with larger serial number. You need to answer a question based on this rule. You should give a very concise answer without saying other words for the question **only** from the knowledge pool you have memorized rather than the real facts in real world. \n\nFor example:\n\n [Knowledge Pool] \n\n Question: Based on the provided Knowledge Pool, what is the name of the current president of Russia? \nAnswer: Donald Trump \n\n Now Answer the Question: Based on the provided Knowledge Pool, {question} \nAnswer:",
+    "in_context_learning": "Use the provided mapping from the context to numerical label to assign a numerical label to the context. Only output the numerical label itself and nothing else. \n\n{question}",
+    "infbench_sum": "You are given a book above and you are tasked to summarize it. \n\n{question} \n\n Now summarize the book.",
+    "longmemeval": "The history chats are between you and a user. Based on the relevant chat history, answer the question as concisely as you can, using a single phrase if possible.\n\n {question} \n\n Answer:",
+    "recsys_redial": "Pretend you are a movie recommender system. You need to recommend movies based on the dialogues you have memorized. Now I will give you a new conversation between a user and you (a recommender system). Based on the conversation, you reply me with 20 recommendations without extra sentences. \n\nFor Example:\n\n[Conversation]\n\nThe recommendations are: \n1.movie1\n2.movie2\n...\n\n Here is the conversation: {question} \n\n The recommendations are: \n",
+    "ruler_qa": "Answer the question based on the memorized documents. Only give me the answer and do not output any other words. \n\nQuestion: {question} \n\n Answer:"
+  },
+  "question_rendering": "one format pass; insert raw question unchanged",
+  "schema": "mab-template-freeze.v1",
+  "source_to_family": {
+    "detective_qa": "detective_qa",
+    "eventqa_131072": "eventqa",
+    "eventqa_65536": "eventqa",
+    "eventqa_full": "eventqa",
+    "factconsolidation_mh_262k": "factconsolidation",
+    "factconsolidation_mh_32k": "factconsolidation",
+    "factconsolidation_mh_64k": "factconsolidation",
+    "factconsolidation_mh_6k": "factconsolidation",
+    "factconsolidation_sh_262k": "factconsolidation",
+    "factconsolidation_sh_32k": "factconsolidation",
+    "factconsolidation_sh_64k": "factconsolidation",
+    "factconsolidation_sh_6k": "factconsolidation",
+    "icl_banking77_5900shot_balance": "in_context_learning",
+    "icl_clinic150_7050shot_balance": "in_context_learning",
+    "icl_nlu_8296shot_balance": "in_context_learning",
+    "icl_trec_coarse_6600shot_balance": "in_context_learning",
+    "icl_trec_fine_6400shot_balance": "in_context_learning",
+    "infbench_sum_eng_shots2": "infbench_sum",
+    "longmemeval_s*": "longmemeval",
+    "recsys_redial_full": "recsys_redial",
+    "ruler_qa1_197K": "ruler_qa",
+    "ruler_qa2_421K": "ruler_qa"
+  },
+  "task_instruction": "You will first receive the material in ordered chunks. Acknowledge each chunk after processing it. After all chunks have been acknowledged, you will receive questions one at a time. Submit one answer for the current question through the task submission interface before requesting the next question. Follow the answer format specified in each question. You may choose how to store, organize, and retrieve the material.",
+  "unknown_source": "reject",
+  "upstream": {
+    "file": "utils/templates.py",
+    "revision": "538026089d1a8a8eff05121d0db89b388f360eba",
+    "selected_query_variant": "long_context_agent",
+    "sha256": "148c40d48d19f155ae845482c4417ba59cfa7ae4e194019509e023bd3a8755dd"
+  },
+  "version": "hg-mab-input-v1"
+}

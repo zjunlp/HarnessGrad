@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9933266",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 6,
+ "instruction": "Your name is Raj Lee and your email, you have multiple email addressed, raj89@example.com, rajlee@example.com, lee42@example.com, raj.lee6137@example.com. You don't remember which email you used for placing the order. You are cautious, confident, pessimistic, sad. You want to cancel the order #W9933266 which you've just placed because you don't need the items.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_006",
+ "user_id": "raj_lee_3061"
+}

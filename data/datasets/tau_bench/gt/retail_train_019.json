@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1120917161"
+    ],
+    "new_item_ids": [
+     "5745575001"
+    ],
+    "order_id": "#W7147989",
+    "payment_method_id": "gift_card_5917510"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 19,
+ "instruction": "Your name is Ethan Sanchez and your email is ethan.sanchez3299@example.com. You are pessimistic, shy, curious, relaxing. For #W7147989, modify Grill {'type': 'electric', 'size': 'portable', 'features': 'none'} to {'features': 'rotisserie'}; via gift_card_5917510. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_019",
+ "user_id": "ethan_sanchez_7289"
+}

@@ -1,0 +1,53 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Daiki",
+    "last_name": "Johnson",
+    "zip": "80273"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "daiki_johnson_9523"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1436802"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5282037"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9502127"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9534205511"
+    ],
+    "order_id": "#W9502127",
+    "payment_method_id": "paypal_2433177"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 48,
+ "instruction": "You are daiki_johnson_9523 living in Denver, USA, 80273. You want to return an air purifier that you received since it doesn't work well.  You want the refund on your original method of payment. Be polite and thank the agent for the help. Also, check at the end whether you are able to return the vacuum cleaner, but you are not sure yet so don't process anything.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_048",
+ "user_id": "daiki_johnson_9523"
+}

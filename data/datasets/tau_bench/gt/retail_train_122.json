@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4772738468"
+    ],
+    "new_item_ids": [
+     "5645314103"
+    ],
+    "order_id": "#W7623533",
+    "payment_method_id": "credit_card_8278346"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 122,
+ "instruction": "Your name is Olivia Davis and your zip code is 77244. You are rigid, shy, insecure. For #W7623533, exchange Jigsaw Puzzle {'pieces': '1000', 'theme': 'animals', 'difficulty level': 'beginner'} to {'pieces': '2000', 'difficulty level': 'intermediate'}; via credit_card_8278346. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_122",
+ "user_id": "olivia_davis_3316"
+}

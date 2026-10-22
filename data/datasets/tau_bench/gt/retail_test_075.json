@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8555936349"
+    ],
+    "new_item_ids": [
+     "4063058357"
+    ],
+    "order_id": "#W6908222",
+    "payment_method_id": "paypal_4518393"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 75,
+ "instruction": "You name is Liam Moore and your email is liam.moore6985@example.com. You are direct, patient, organized, optimistic. For #W6908222, exchange Wireless Earbuds {'color': 'blue', 'battery life': '8 hours', 'water resistance': 'IPX4'} to {'color': 'black', 'battery life': '4 hours', 'water resistance': 'not resistant'}; ",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_075",
+ "user_id": "liam_moore_4057"
+}

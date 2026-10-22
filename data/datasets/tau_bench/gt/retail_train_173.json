@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3453331371"
+    ],
+    "new_item_ids": [
+     "6777246137"
+    ],
+    "order_id": "#W8661412",
+    "payment_method_id": "credit_card_7239357"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 173,
+ "instruction": "Your name is Emma Kovacs and your email is emma.kovacs2974@example.com. You are pessimistic, impatient, sad, flexible, outgoing. For #W8661412, modify Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'black'} to {'capacity': '750ml', 'color': 'red'}; via credit_card_7239357. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_173",
+ "user_id": "emma_kovacs_9839"
+}

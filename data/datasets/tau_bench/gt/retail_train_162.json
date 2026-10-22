@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3377900078"
+    ],
+    "new_item_ids": [
+     "9480266227"
+    ],
+    "order_id": "#W6378322",
+    "payment_method_id": "gift_card_6662365"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 162,
+ "instruction": "Your name is Raj Anderson and your email is raj.anderson6756@example.com. You are polite, outgoing, impatient. For #W6378322, exchange Smart Thermostat {'compatibility': 'Apple HomeKit', 'color': 'white'} to {'color': 'stainless steel'}; via gift_card_6662365. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_162",
+ "user_id": "raj_anderson_3167"
+}

@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9237024510"
+    ],
+    "order_id": "#W5797164",
+    "payment_method_id": "gift_card_3406421"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 223,
+ "instruction": "Your name is Chen Johnson and your email is chen.johnson3889@example.com. You are happy, flexible, impatient, shy, messy. Return #W5797164 via gift_card_3406421: Jigsaw Puzzle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_223",
+ "user_id": "chen_johnson_4204"
+}

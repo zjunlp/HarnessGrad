@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6117189161"
+    ],
+    "new_item_ids": [
+     "7523669277"
+    ],
+    "order_id": "#W8296441",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3815173328",
+     "1199058591"
+    ],
+    "order_id": "#W1763367",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 441,
+ "instruction": "Your name is Ethan Kim and your email is ethan.kim3231@example.com. You are pessimistic, independent, happy. For #W8296441, modify Action Camera {'resolution': '4K', 'waterproof': 'yes', 'color': 'silver'} to {'resolution': '5K', 'waterproof': 'no', 'color': 'black'}; via gift_card_5701566. Return #W1763367 via gift_card_5701566: Espresso Machine; Notebook; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_441",
+ "user_id": "ethan_kim_8860"
+}

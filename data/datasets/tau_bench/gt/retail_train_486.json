@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7903094618"
+    ],
+    "new_item_ids": [
+     "8349903180"
+    ],
+    "order_id": "#W5765741",
+    "payment_method_id": "paypal_6840891"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 486,
+ "instruction": "Your name is Sofia Kovacs and your zip code is 19049. You are organized, patient, independent, outgoing, pessimistic. For #W5765741, modify Portable Charger {'capacity': '5000mAh', 'output': 'USB-A', 'color': 'white'} to {'capacity': '20000mAh', 'output': 'Wireless', 'color': 'black'}; via paypal_6840891. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_486",
+ "user_id": "sofia_kovacs_7075"
+}

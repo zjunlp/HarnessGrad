@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2872451762",
+     "7824298782"
+    ],
+    "order_id": "#W9218746",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 478,
+ "instruction": "Your name is Lucas Brown and your email is lucas.brown9344@example.com. You are happy, optimistic, outgoing, relaxing. Return #W9218746 via credit_card_2112420: Vacuum Cleaner; Backpack; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_478",
+ "user_id": "lucas_brown_6720"
+}

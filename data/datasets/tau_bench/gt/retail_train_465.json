@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3826449",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 465,
+ "instruction": "Your name is Lei Wilson and your email is lei.wilson1253@example.com. You are patient, rigid, happy, outgoing, curious. Cancel order #W3826449 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_465",
+ "user_id": "lei_wilson_4541"
+}

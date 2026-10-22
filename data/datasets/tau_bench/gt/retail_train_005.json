@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7425646",
+    "payment_method_id": "credit_card_1199336"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4983901480"
+    ],
+    "new_item_ids": [
+     "4983901480"
+    ],
+    "order_id": "#W7425646",
+    "payment_method_id": "credit_card_1283450"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 5,
+ "instruction": "Your name is Harper Thomas and your email is harper.thomas1454@example.com. You are logical, dependent, impatient, busy. For #W7425646, change payment to credit_card_1199336. For #W7425646, modify Smart Thermostat {'compatibility': 'Apple HomeKit', 'color': 'black'} to {}; via credit_card_1283450. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_005",
+ "user_id": "harper_thomas_9402"
+}

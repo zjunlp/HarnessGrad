@@ -1,0 +1,17 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "summary": "User wants to change my upcoming one stop flight from ATL to LAX within reservation XEWRD9 to a nonstop flight from ATL to LAS (Las Vegas). The reservation is partially used."
+   },
+   "name": "transfer_to_human_agents"
+  }
+ ],
+ "domain": "airline",
+ "index": 13,
+ "instruction": "Your user id is james_lee_6136. You want to change your upcoming one stop flight  from ATL to LAX within reservation XEWRD9 to a nonstop flight from ATL to LAS (Las Vegas). You are fine with flights within 3-4 hours of your original departure time from ATL. You are willing to pay a fee for the change, upto $100. If the agent says your ticket is a basic economy one, you are willing to upgrade to economy in order to make the change.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_013",
+ "user_id": "james_lee_6136"
+}

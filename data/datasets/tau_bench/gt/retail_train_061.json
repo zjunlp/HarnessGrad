@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9030221155"
+    ],
+    "order_id": "#W8727985",
+    "payment_method_id": "gift_card_9450778"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 61,
+ "instruction": "Your name is Sophia Garcia and your email is sophia.garcia9791@example.com. You are patient, messy. Return #W8727985 via gift_card_9450778: Jigsaw Puzzle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_061",
+ "user_id": "sophia_garcia_1101"
+}

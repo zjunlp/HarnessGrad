@@ -1,0 +1,57 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Lucas",
+    "last_name": "Santos",
+    "zip": "80239"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "lucas_santos_6600"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1588712"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7895761"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "address1": "943 Maple Drive",
+    "address2": "Suite 356",
+    "city": "Chicago",
+    "country": "USA",
+    "state": "IL",
+    "user_id": "lucas_santos_6600",
+    "zip": "60621"
+   },
+   "name": "modify_user_address"
+  }
+ ],
+ "domain": "retail",
+ "index": 43,
+ "instruction": "You are Lucas (lucas_santos_6600), you live in Denver CO 80239, and your daughter lives in Chicago. You order some things for her but she has not received, so you want to know which address the order was sent to, the tracking number, and if the order is still in transit. You also want to check if the storage of the tablet you ordered. Lastly, you want to change your default address to your daughter's address so that you don't have to change it every time you order something for her. You are a lonely man and you want to talk to the agent for a while.",
+ "outputs": [
+  "840887978435",
+  "943 Maple Drive",
+  "Suite 356",
+  "Chicago",
+  "IL",
+  "60621",
+  "64GB"
+ ],
+ "split": "test",
+ "task_id": "retail_test_043",
+ "user_id": "lucas_santos_6600"
+}

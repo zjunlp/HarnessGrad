@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9799386954",
+     "4274709903"
+    ],
+    "new_item_ids": [
+     "7579176349",
+     "2386562819"
+    ],
+    "order_id": "#W2052757",
+    "payment_method_id": "credit_card_4387170"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 294,
+ "instruction": "Your name is Mei Gonzalez and your zip code is 95170. You are patient, busy, polite. For #W2052757, modify Notebook {'size': 'A5', 'cover type': 'soft cover'} to {'size': 'A4'}; Office Chair {'material': 'mesh', 'color': 'red', 'armrest': 'none', 'backrest height': 'standard'} to {'color': 'gray', 'armrest': 'fixed', 'backrest height': 'high-back'}; via credit_card_4387170. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_294",
+ "user_id": "mei_gonzalez_4785"
+}

@@ -1,0 +1,63 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "505 Cedar Avenue",
+    "address2": "Suite 539",
+    "city": "Jacksonville",
+    "country": "USA",
+    "order_id": "#W6689278",
+    "state": "FL",
+    "zip": "32117"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2243454707"
+    ],
+    "new_item_ids": [
+     "9624127908"
+    ],
+    "order_id": "#W6689278",
+    "payment_method_id": "paypal_7732922"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "295 Elm Avenue",
+    "address2": "Suite 793",
+    "city": "Los Angeles",
+    "country": "USA",
+    "order_id": "#W7398274",
+    "state": "CA",
+    "zip": "90320"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1199058591",
+     "1355937109"
+    ],
+    "new_item_ids": [
+     "1199058591",
+     "4510078629"
+    ],
+    "order_id": "#W7398274",
+    "payment_method_id": "paypal_7732922"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 464,
+ "instruction": "Your name is Evelyn Kovacs and your zip code is 32117. You are optimistic, cautious, dependent, direct. For #W6689278, change address to {'order_id': '#W6689278', 'address1': '505 Cedar Avenue', 'address2': 'Suite 539', 'city': 'Jacksonville', 'country': 'USA', 'state': 'FL', 'zip': '32117'} (same as #W5694685). For #W6689278, modify Electric Kettle {'capacity': '1L', 'material': 'plastic', 'color': 'white'} to {'capacity': '1.5L', 'color': 'silver'}; via paypal_7732922. For #W7398274, change address to {'order_id': '#W7398274', 'address1': '295 Elm Avenue', 'address2': 'Suite 793', 'city': 'Los Angeles', 'country': 'USA', 'state': 'CA', 'zip': '90320'} (same as #W2768683). For #W7398274, modify Notebook {'size': 'A4', 'cover type': 'hard cover'} to {}; Wristwatch {'strap material': 'leather', 'dial color': 'white'} to {'strap material': 'metal', 'dial color': 'black'}; via paypal_7732922. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_464",
+ "user_id": "evelyn_kovacs_6742"
+}

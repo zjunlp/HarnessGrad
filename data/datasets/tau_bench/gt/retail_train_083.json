@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6509212169"
+    ],
+    "new_item_ids": [
+     "1763705424"
+    ],
+    "order_id": "#W3239882",
+    "payment_method_id": "credit_card_5902940"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3098764622"
+    ],
+    "new_item_ids": [
+     "8176740019"
+    ],
+    "order_id": "#W7553978",
+    "payment_method_id": "credit_card_5902940"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 83,
+ "instruction": "Your name is Mei Ahmed and your email is mei.ahmed4901@example.com. You are flexible, messy, curious, direct, dependent. For #W3239882, exchange Makeup Kit {'skin tone': 'light', 'kit size': 'professional', 'brand': 'Brand A'} to {'skin tone': 'dark', 'brand': 'Brand C'}; via credit_card_5902940. For #W7553978, exchange Skateboard {'deck material': 'plastic', 'length': '34 inch', 'design': 'plain'} to {'deck material': 'bamboo', 'length': '28 inch'}; via credit_card_5902940. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_083",
+ "user_id": "mei_ahmed_4909"
+}

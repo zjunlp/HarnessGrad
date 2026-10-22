@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2444431651"
+    ],
+    "order_id": "#W3232025",
+    "payment_method_id": "gift_card_4543462"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 284,
+ "instruction": "Your name is Yara Santos and your zip code is 91163. You are pessimistic, creative. Return #W3232025 via gift_card_4543462: Dumbbell Set; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_284",
+ "user_id": "yara_santos_1202"
+}

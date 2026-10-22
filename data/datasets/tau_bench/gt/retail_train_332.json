@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7430166",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 332,
+ "instruction": "Your name is Aarav Davis and your zip code is 76150. You are flexible, sad, patient, optimistic, polite. Cancel order #W7430166 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_332",
+ "user_id": "aarav_davis_4756"
+}

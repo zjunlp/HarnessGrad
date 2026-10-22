@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8645374",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2185126308",
+     "9025753381"
+    ],
+    "new_item_ids": [
+     "5676696062",
+     "9570044148"
+    ],
+    "order_id": "#W7293142",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 201,
+ "instruction": "Your name is Noah Sanchez and your email is noah.sanchez7461@example.com. You are flexible, busy. Cancel order #W8645374 because ordered by mistake. For #W7293142, exchange Hiking Boots {'size': '10', 'material': 'leather', 'waterproof': 'no'} to {'size': '11'}; Mechanical Keyboard {'switch type': 'clicky', 'backlight': 'RGB', 'size': 'full size'} to {'switch type': 'linear', 'backlight': 'none'}; via gift_card_9909795. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_201",
+ "user_id": "noah_sanchez_2690"
+}

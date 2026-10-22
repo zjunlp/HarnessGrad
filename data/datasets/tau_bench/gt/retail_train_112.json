@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8170914468"
+    ],
+    "new_item_ids": [
+     "9879255677"
+    ],
+    "order_id": "#W2119065",
+    "payment_method_id": "credit_card_9185943"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 112,
+ "instruction": "Your name is Liam Anderson and your email is liam.anderson5932@example.com. You are shy, cautious. For #W2119065, exchange Patio Umbrella {'size': '6 ft', 'color': 'red', 'material': 'olefin', 'tilt mechanism': 'manual tilt'} to {'color': 'green', 'tilt mechanism': 'auto tilt'}; via credit_card_9185943. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_112",
+ "user_id": "liam_anderson_5973"
+}

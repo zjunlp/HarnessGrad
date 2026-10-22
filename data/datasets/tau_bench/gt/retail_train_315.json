@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5669664287"
+    ],
+    "new_item_ids": [
+     "1327854740"
+    ],
+    "order_id": "#W9694847",
+    "payment_method_id": "credit_card_2902980"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 315,
+ "instruction": "Your name is Mei Moore and your email is mei.moore6624@example.com. You are rigid, relaxing. For #W9694847, exchange Air Purifier {'room size': 'small', 'filter type': 'ionic', 'features': 'quiet operation'} to {'room size': 'medium', 'filter type': 'HEPA', 'features': 'night mode'}; via credit_card_2902980. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_315",
+ "user_id": "mei_moore_8248"
+}

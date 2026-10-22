@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5199551",
+    "payment_method_id": "gift_card_1675628"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5537798301",
+     "1994478369"
+    ],
+    "new_item_ids": [
+     "3358616356",
+     "2407258246"
+    ],
+    "order_id": "#W5199551",
+    "payment_method_id": "paypal_5364164"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 27,
+ "instruction": "Your name is Fatima Johnson and your email is fatima.johnson2300@example.com. You are creative, happy, curious, polite, impatient. For #W5199551, change payment to gift_card_1675628. For #W5199551, modify Cycling Helmet {'size': 'S', 'color': 'black', 'ventilation': 'medium'} to {'color': 'red', 'ventilation': 'low'}; Wristwatch {'strap material': 'silicone', 'dial color': 'black'} to {'strap material': 'metal', 'dial color': 'white'}; via paypal_5364164. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_027",
+ "user_id": "fatima_johnson_7581"
+}

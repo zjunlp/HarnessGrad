@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "137 Willow Lane",
+    "address2": "Suite 127",
+    "city": "Charlotte",
+    "country": "USA",
+    "order_id": "#W3746173",
+    "state": "NC",
+    "zip": "28249"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3746173",
+    "payment_method_id": "credit_card_7898168"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2882812427"
+    ],
+    "new_item_ids": [
+     "2882812427"
+    ],
+    "order_id": "#W3746173",
+    "payment_method_id": "credit_card_7898168"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1416704",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 130,
+ "instruction": "Your name is Evelyn Ahmed and your email is evelyn.ahmed2006@example.com. You are creative, sad, patient, polite, organized. For #W3746173, change address to {'order_id': '#W3746173', 'address1': '137 Willow Lane', 'address2': 'Suite 127', 'city': 'Charlotte', 'country': 'USA', 'state': 'NC', 'zip': '28249'} (same as #W1416704). For #W3746173, change payment to credit_card_7898168. For #W3746173, modify Makeup Kit {'skin tone': 'medium', 'kit size': 'professional', 'brand': 'Brand A'} to {}; via credit_card_7898168. Cancel order #W1416704 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_130",
+ "user_id": "evelyn_ahmed_3960"
+}

@@ -1,0 +1,50 @@
+{
+  "harbor": {
+    "repository": "https://github.com/harbor-framework/harbor",
+    "commit": "3e9f14a7c1033896cc600d27de69d6948bcb3410",
+    "license": "Apache-2.0",
+    "files": {
+      "adapter.py": {
+        "upstream_path": "adapters/locomo/src/locomo/adapter.py",
+        "sha256": "cc591e9952b8c76886870f3a196486ccf978c5d5a4fe6b0d610f1e27c8f1e112",
+        "git_blob": "4769968e4351b12dd3fa40047f6ca0ffccf7ae08"
+      },
+      "metric.py": {
+        "upstream_path": "adapters/locomo/src/locomo/metric.py",
+        "sha256": "49f80b8ab409a6499bfd7f487aade20ad02c37214d2c1f79a5093441f43c9ede",
+        "git_blob": "a7f4f30156d23cf46652b9027aa8264997a6ecc7"
+      },
+      "task-template/instruction.md": {
+        "upstream_path": "adapters/locomo/src/locomo/task-template/instruction.md",
+        "sha256": "91dfcb23e46c266e4e4d425c39e52bc8bccf6a01ad9ef17fdb40984d0e56e003",
+        "git_blob": "06950a5cf1dd67bcf77740fabe8c2d8860cbff06"
+      },
+      "task-template/tests/verifier.py": {
+        "upstream_path": "adapters/locomo/src/locomo/task-template/tests/verifier.py",
+        "sha256": "1c7dde895051360579f99cff109e4b29149b900c6f147b4797e5d25bdb37d8cb",
+        "git_blob": "a885bd905f1465e07bc3de7c60f360473309de17"
+      },
+      "LICENSE": {
+        "upstream_path": "LICENSE",
+        "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "parity_experiment.json": {
+        "upstream_path": "adapters/locomo/parity_experiment.json",
+        "sha256": "b6ddd75738d833f62bcde9a7ded25c54ffa4bc8bb9cff08672e8dda8d3f25b75"
+      }
+    }
+  },
+  "data": {
+    "repository": "https://github.com/snap-research/locomo",
+    "commit": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376",
+    "path": "data/locomo10.json",
+    "url": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "bytes": 2805274
+  },
+  "metric": "locomo.harbor.question_micro_mean.v1",
+  "dependency": {
+    "nltk": "3.10.3",
+    "nltk_corpora_required": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6477915553",
+     "6200867091"
+    ],
+    "new_item_ids": [
+     "6477915553",
+     "1157853815"
+    ],
+    "order_id": "#W7449508",
+    "payment_method_id": "gift_card_7711863"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 288,
+ "instruction": "Your name is Olivia Lopez and your email is olivia.lopez4535@example.com. You are happy, organized, curious. For #W7449508, exchange Sneakers {'size': '6', 'color': 'black', 'material': 'synthetic'} to {}; Espresso Machine {'pressure': '19 bar', 'capacity': '1L', 'type': 'capsule'} to {'capacity': '2L'}; via gift_card_7711863. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_288",
+ "user_id": "olivia_lopez_3865"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4127323219"
+    ],
+    "new_item_ids": [
+     "3613716226"
+    ],
+    "order_id": "#W1762492",
+    "payment_method_id": "gift_card_2611937"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 300,
+ "instruction": "Your name is Amelia Gonzalez and your email is amelia.gonzalez4271@example.com. You are outgoing, relaxing. For #W1762492, exchange Hiking Boots {'size': '10', 'material': 'synthetic', 'waterproof': 'no'} to {'size': '8'}; via gift_card_2611937. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_300",
+ "user_id": "amelia_gonzalez_4098"
+}

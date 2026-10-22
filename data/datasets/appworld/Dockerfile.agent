@@ -1,0 +1,7 @@
+# Minimal agent image.  It deliberately carries no AppWorld data, evaluator, or
+# ground-truth artifacts; the action service is the only source of task state.
+FROM docker.m.daocloud.io/library/python:3.11-slim
+COPY cli/aw /usr/local/bin/aw
+RUN chmod 0555 /usr/local/bin/aw
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1

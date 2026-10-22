@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "159 Hickory Lane",
+    "address2": "Suite 995",
+    "city": "Charlotte",
+    "country": "USA",
+    "order_id": "#W5270061",
+    "state": "NC",
+    "zip": "28243"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2492465580"
+    ],
+    "new_item_ids": [
+     "5917587651"
+    ],
+    "order_id": "#W5270061",
+    "payment_method_id": "paypal_7729105"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 71,
+ "instruction": "You name is Ivan Khan and your zip code is 28243. You are polite, optimistic, organized. You made some mistake and ordered an order sent to your son's address in Washington DC, and you want to modify it to your default address in Charlotte (you do not want to mention it, but it is in your user profile the agent can look up) because he is coming back home. You also want to adjust the desk lamp to be black color, and the backpack to be medium size and polyester material instead. If multiple colors are available for the backpack, you prefer grey. If the agent asks for payment method, you say GC initially, but if the agent does not allow it or asks you to confirm it, you change your mind to PayPal, and decide to only modify the backpack.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_071",
+ "user_id": "ivan_khan_7475"
+}

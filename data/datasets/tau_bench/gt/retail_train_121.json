@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8302289002"
+    ],
+    "new_item_ids": [
+     "9534205511"
+    ],
+    "order_id": "#W6797115",
+    "payment_method_id": "gift_card_5979071"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 121,
+ "instruction": "Your name is Aarav Gonzalez and your email is aarav.gonzalez9269@example.com. You are impatient, rigid. For #W6797115, exchange Air Purifier {'room size': 'large', 'filter type': 'HEPA', 'features': 'night mode'} to {'filter type': 'ionic', 'features': 'smart sensors'}; via gift_card_5979071. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_121",
+ "user_id": "aarav_gonzalez_5113"
+}

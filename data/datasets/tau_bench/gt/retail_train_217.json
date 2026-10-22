@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6979932",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9160732",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 217,
+ "instruction": "Your name is Aarav Gonzalez and your email is aarav.gonzalez9269@example.com. You are relaxing, creative, happy, pessimistic. Cancel order #W6979932 because ordered by mistake. Cancel order #W9160732 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_217",
+ "user_id": "aarav_gonzalez_5113"
+}

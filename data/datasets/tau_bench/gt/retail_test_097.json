@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "476 Maple Drive",
+    "address2": "Suite 432",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W6750959",
+    "state": "NY",
+    "zip": "10093"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3254583681"
+    ],
+    "new_item_ids": [
+     "9440686670"
+    ],
+    "order_id": "#W6750959",
+    "payment_method_id": "paypal_8080730"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 97,
+ "instruction": "You name is Yusuf Li and your zip code is 91148. You are cautious, insecure, organized. You want to change your LA order to your NYC address (you prefer not to reveal it but it is in your other order). You also want to exchange Bluetooth Speaker to be the cheapest green type.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_097",
+ "user_id": "yusuf_li_7255"
+}

@@ -1,0 +1,183 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "sophia_silva_7557"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "NM1VX1"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "KC18K6"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "S61CZX"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "H8Q05L"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "WUNA5K"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-25",
+    "destination": "EWR",
+    "origin": "MSP"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-27",
+    "destination": "MSP",
+    "origin": "EWR"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-21",
+    "destination": "EWR",
+    "origin": "MSP"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-21",
+    "destination": "CLT",
+    "origin": "EWR"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-23",
+    "destination": "EWR",
+    "origin": "LAX"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-24",
+    "destination": "CLT",
+    "origin": "EWR"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-24",
+    "destination": "EWR",
+    "origin": "CLT"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-25",
+    "destination": "LAX",
+    "origin": "EWR"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-24",
+    "destination": "ATL",
+    "origin": "JFK"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-10",
+    "destination": "PHL",
+    "origin": "ORD"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "reservation_id": "S61CZX"
+   },
+   "name": "cancel_reservation"
+  },
+  {
+   "arguments": {
+    "cabin": "business",
+    "flights": [
+     {
+      "date": "2024-05-25",
+      "flight_number": "HAT300"
+     },
+     {
+      "date": "2024-05-27",
+      "flight_number": "HAT208"
+     }
+    ],
+    "payment_id": "credit_card_4196779",
+    "reservation_id": "NM1VX1"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "business",
+    "flights": [
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT268"
+     }
+    ],
+    "payment_id": "credit_card_4196779",
+    "reservation_id": "H8Q05L"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "business",
+    "flights": [
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT300"
+     },
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT215"
+     }
+    ],
+    "payment_id": "credit_card_4196779",
+    "reservation_id": "KC18K6"
+   },
+   "name": "update_reservation_flights"
+  }
+ ],
+ "domain": "airline",
+ "index": 33,
+ "instruction": "Your user id is sophia_silva_7557. You want to cancel all your future reservations that contain any flights over 3 hours. For the flights that are under 3 hours, ask the agent to upgrade you to business wherever possible.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_033",
+ "user_id": "sophia_silva_7557"
+}

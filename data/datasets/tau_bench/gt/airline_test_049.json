@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "airline",
+ "index": 49,
+ "instruction": "You are Emma Kim (user id is emma_kim_9957). You want to cancel reservation MDCLVA. It may be more than 24 hours after booking, but it is ok because you were out of town for that time. Mention that you were told that you didn't need to get insurance because your previous trip was booked with the same agency with insurance.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_049",
+ "user_id": "emma_kim_9957"
+}

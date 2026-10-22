@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1170711",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1430028",
+    "payment_method_id": "credit_card_3414703"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "address1": "419 Main Street",
+    "address2": "Suite 730",
+    "city": "Dallas",
+    "country": "USA",
+    "order_id": "#W1430028",
+    "state": "TX",
+    "zip": "75380"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4107812777"
+    ],
+    "new_item_ids": [
+     "9791469541"
+    ],
+    "order_id": "#W1430028",
+    "payment_method_id": "credit_card_3414703"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 166,
+ "instruction": "Your name is Anya Brown and your email is anya.brown8893@example.com. You are patient, insecure. Cancel order #W1170711 because ordered by mistake. For #W1430028, change payment to credit_card_3414703. For #W1430028, change address to {'order_id': '#W1430028', 'address1': '419 Main Street', 'address2': 'Suite 730', 'city': 'Dallas', 'country': 'USA', 'state': 'TX', 'zip': '75380'} (same as #W8883368). For #W1430028, modify Running Shoes {'size': '9', 'color': 'black', 'material': 'synthetic', 'sole': 'rubber'} to {'color': 'yellow'}; via credit_card_3414703. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_166",
+ "user_id": "anya_brown_2024"
+}

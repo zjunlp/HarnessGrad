@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6443279",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 291,
+ "instruction": "Your name is Ivan Kim and your zip code is 60636. You are messy, happy, polite, relaxing, optimistic. Cancel order #W6443279 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_291",
+ "user_id": "ivan_kim_7727"
+}

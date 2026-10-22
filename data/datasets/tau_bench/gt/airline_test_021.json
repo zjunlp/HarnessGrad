@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "airline",
+ "index": 21,
+ "instruction": "Your user id is daiki_lee_6144. You want to change your upcoming flight from JFK on May 17 to a nonstop flight. Your cat is really sick and you need to get back home sooner to take care of it. You are willing to pay a fee for the flight change only, upto $100.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_021",
+ "user_id": "daiki_lee_6144"
+}

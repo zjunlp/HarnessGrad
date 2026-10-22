@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7497340597"
+    ],
+    "new_item_ids": [
+     "7292993796"
+    ],
+    "order_id": "#W2806889",
+    "payment_method_id": "credit_card_7918119"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9612497925"
+    ],
+    "new_item_ids": [
+     "8349118980"
+    ],
+    "order_id": "#W1679211",
+    "payment_method_id": "credit_card_7918119"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 374,
+ "instruction": "Your name is Yusuf Gonzalez and your email is yusuf.gonzalez2399@example.com. You are polite, rigid, insecure. For #W2806889, modify Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'gas'} to {'material': 'glass', 'capacity': '2 liters', 'stovetop compatibility': 'induction'}; via credit_card_7918119. For #W1679211, exchange T-Shirt {'color': 'blue', 'size': 'M', 'material': 'cotton', 'style': 'crew neck'} to {'size': 'S', 'style': 'v-neck'}; via credit_card_7918119. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_374",
+ "user_id": "yusuf_gonzalez_8900"
+}

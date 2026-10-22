@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2554056026"
+    ],
+    "new_item_ids": [
+     "2681513500"
+    ],
+    "order_id": "#W5560533",
+    "payment_method_id": "gift_card_5917510"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 225,
+ "instruction": "Your name is Ethan Sanchez and your email is ethan.sanchez3299@example.com. You are flexible, dependent, happy, cautious, polite. For #W5560533, exchange Smart Watch {'color': 'gold', 'band material': 'metal', 'display': 'AMOLED'} to {'band material': 'silicone'}; via gift_card_5917510. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_225",
+ "user_id": "ethan_sanchez_7289"
+}

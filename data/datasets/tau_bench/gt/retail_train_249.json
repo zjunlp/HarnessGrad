@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7274158061",
+     "9314474252",
+     "6826843914",
+     "3229676465"
+    ],
+    "order_id": "#W8496475",
+    "payment_method_id": "paypal_4751854"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 249,
+ "instruction": "Your name is Aarav Moore and your zip code is 85041. You are independent, rigid, creative, confident. Return #W8496475 via paypal_4751854: Tea Kettle; Headphones; Perfume; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_249",
+ "user_id": "aarav_moore_6923"
+}

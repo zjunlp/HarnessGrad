@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1719127154"
+    ],
+    "new_item_ids": [
+     "3358616356"
+    ],
+    "order_id": "#W2982823",
+    "payment_method_id": "gift_card_5245016"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 114,
+ "instruction": "Your name is Lei Hernandez and your email is lei.hernandez7247@example.com. You are organized, busy, polite, optimistic, sad. For #W2982823, exchange Cycling Helmet {'size': 'M', 'color': 'red', 'ventilation': 'medium'} to {'size': 'S', 'ventilation': 'low'}; via gift_card_5245016. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_114",
+ "user_id": "lei_hernandez_8500"
+}

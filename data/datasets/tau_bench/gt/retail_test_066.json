@@ -1,0 +1,44 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Aarav",
+    "last_name": "Lee",
+    "zip": "85025"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "aarav_lee_1982"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3361211"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3586556"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3361211",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 66,
+ "instruction": "You are Aarav Lee. You want to change the luggage set in your order for a coat. You live in Phoenix, AZ 85025. Your goal is to change the order. If there is no way to do that, return the item specifically. If there are any issues, cancel the entire order.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_066",
+ "user_id": "aarav_lee_1982"
+}

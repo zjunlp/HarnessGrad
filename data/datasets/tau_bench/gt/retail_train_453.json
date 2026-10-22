@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6259501109",
+     "2652637226"
+    ],
+    "new_item_ids": [
+     "4806644905",
+     "6704763132"
+    ],
+    "order_id": "#W7128968",
+    "payment_method_id": "gift_card_7037673"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 453,
+ "instruction": "Your name is Yusuf Jackson and your email is yusuf.jackson4654@example.com. You are curious, impatient. For #W7128968, exchange Vacuum Cleaner {'type': 'robotic', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'} to {'bagged/bagless': 'bagless', 'features': 'cordless'}; Bluetooth Speaker {'color': 'green', 'battery life': '20 hours', 'water resistance': 'yes'} to {'color': 'blue', 'battery life': '10 hours', 'water resistance': 'no'}; via gift_card_7037673. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_453",
+ "user_id": "yusuf_jackson_7865"
+}

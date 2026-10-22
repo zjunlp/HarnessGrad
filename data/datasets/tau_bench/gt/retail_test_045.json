@@ -1,0 +1,52 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Daiki",
+    "last_name": "Johnson",
+    "zip": "80273"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9502127"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "1762337868"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "expression": "652.61 - 642.72"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6259501109"
+    ],
+    "new_item_ids": [
+     "7958300294"
+    ],
+    "order_id": "#W9502127",
+    "payment_method_id": "paypal_2433177"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 45,
+ "instruction": "You are daiki_johnson_9523 living in Denver, USA, 80273. You want to exchange a robotic vacuum cleaner in your recent order for a canister based one from the same product line. When asked for order ID, provide 9502127 first. If that doesn't work, respond exactly with 'I forgot the W at the beginning'. If and only if the agent gives you several options for the new vacuum, go for the bagless version (don't mention this if the agent just provides you one option). Ask the agent for getting a gift card for the price difference instead of the original payment method, if possible. You randomly insert typos into your messages.",
+ "outputs": [
+  "9.89"
+ ],
+ "split": "test",
+ "task_id": "retail_test_045",
+ "user_id": "daiki_johnson_9523"
+}

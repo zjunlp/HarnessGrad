@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4860251",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4900661478",
+     "2366567022",
+     "9494281769"
+    ],
+    "new_item_ids": [
+     "7154215719",
+     "7199146548",
+     "4273929280"
+    ],
+    "order_id": "#W6239298",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7824298782",
+     "2872451762"
+    ],
+    "new_item_ids": [
+     "6309044598",
+     "4602305039"
+    ],
+    "order_id": "#W9218746",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 69,
+ "instruction": "Your name is Lucas Brown and your email is lucas.brown9344@example.com. You are creative, cautious, happy. Cancel order #W4860251 because ordered by mistake. For #W6239298, exchange Bookshelf {'material': 'glass', 'color': 'black', 'height': '5 ft'} to {'material': 'wood', 'color': 'brown', 'height': '6 ft'}; Water Bottle {'capacity': '1000ml', 'material': 'stainless steel', 'color': 'blue'} to {'capacity': '750ml', 'material': 'plastic', 'color': 'black'}; E-Reader {'screen size': '8-inch', 'connectivity': 'Wi-Fi', 'storage': '8GB'} to {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular', 'storage': '32GB'}; via credit_card_2112420. For #W9218746, exchange Backpack {'color': 'black', 'size': 'small', 'material': 'nylon', 'compartment': 'laptop'} to {'color': 'grey', 'size': 'large', 'material': 'polyester', 'compartment': 'hydration'}; Vacuum Cleaner {'type': 'canister', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'} to {'type': 'robotic', 'features': 'cordless'}; via credit_card_2112420. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_069",
+ "user_id": "lucas_brown_6720"
+}

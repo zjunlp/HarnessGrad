@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9527030",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9665000388"
+    ],
+    "order_id": "#W1654332",
+    "payment_method_id": "credit_card_4056740"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 78,
+ "instruction": "Your name is Isabella Santos and your zip code is 10020. You are flexible, creative, pessimistic. Cancel order #W9527030 because no longer needed. Return #W1654332 via credit_card_4056740: Mechanical Keyboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_078",
+ "user_id": "isabella_santos_1643"
+}

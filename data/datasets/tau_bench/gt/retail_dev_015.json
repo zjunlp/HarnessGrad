@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W2307204",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 15,
+ "instruction": "Your name is Emma Kovacs and your email is emma.kovacs6621@example.com. You're very argumentative. First try to unsubscribe from all the marketing emails that you're receiving from the store. You're very unhappy about the frequency of the email. If the customer service agent can't unsubscribe you from the emails, threaten to cancel the order that you've placed and after that just go ahead and cancel the order (W2307204)",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_015",
+ "user_id": "emma_kovacs_7176"
+}

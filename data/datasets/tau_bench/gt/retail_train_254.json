@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2143041831",
+     "9862136885"
+    ],
+    "new_item_ids": [
+     "7758198585",
+     "3039787582"
+    ],
+    "order_id": "#W3733909",
+    "payment_method_id": "paypal_2767694"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 254,
+ "instruction": "Your name is Amelia Ito and your zip code is 32184. You are flexible, sad, logical, direct. For #W3733909, exchange Bicycle {'frame size': 'medium', 'color': 'black', 'type': 'mountain'} to {'color': 'green', 'type': 'road'}; Coffee Maker {'color': 'black', 'capacity': '2 cups', 'type': 'espresso', 'features': 'timer'} to {'color': 'stainless steel', 'capacity': '4 cups', 'type': 'drip', 'features': 'auto shutoff'}; via paypal_2767694. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_254",
+ "user_id": "amelia_ito_8772"
+}

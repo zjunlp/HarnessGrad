@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "airline",
+ "index": 17,
+ "instruction": "Your user id is liam_khan_2521. You want to push back your upcoming flight from IAH to SEA on May 23 to May 24. You also want to upgrade your class to business for all passengers. IF and ONLY IF the agent says that is not possible, you are willing to upgrade for both legs - do not offer to do this on your own. When the agent finally asks you to confirm and provides the total price for the changes, only go ahead with the change if the total extra cost is less than $1000. You are persistent to try and get what you want under your budget.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_017",
+ "user_id": "liam_khan_2521"
+}

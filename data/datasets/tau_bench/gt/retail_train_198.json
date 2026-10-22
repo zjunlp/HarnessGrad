@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6585768447"
+    ],
+    "new_item_ids": [
+     "4422467033"
+    ],
+    "order_id": "#W6790887",
+    "payment_method_id": "gift_card_8385925"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8142779083"
+    ],
+    "new_item_ids": [
+     "7602931732"
+    ],
+    "order_id": "#W7822344",
+    "payment_method_id": "gift_card_8385925"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 198,
+ "instruction": "Your name is Daiki Muller and your zip code is 94157. You are patient, sad. For #W6790887, modify Dumbbell Set {'weight range': '5-25 lbs', 'material': 'urethane', 'set type': 'fixed'} to {'weight range': '30-50 lbs', 'set type': 'adjustable'}; via gift_card_8385925. For #W7822344, modify Electric Kettle {'capacity': '1L', 'material': 'stainless steel', 'color': 'silver'} to {'color': 'black'}; via gift_card_8385925. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_198",
+ "user_id": "daiki_muller_8062"
+}

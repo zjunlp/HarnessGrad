@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3709608322",
+     "3339188619"
+    ],
+    "new_item_ids": [
+     "7774234341",
+     "1719127154"
+    ],
+    "order_id": "#W3386832",
+    "payment_method_id": "paypal_6729210"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 466,
+ "instruction": "Your name is Juan Lopez and your zip code is 85060. You are patient, dependent, shy, rigid, busy. For #W3386832, modify Espresso Machine {'pressure': '9 bar', 'capacity': '2L', 'type': 'automatic'} to {'type': 'manual'}; Cycling Helmet {'size': 'M', 'color': 'blue', 'ventilation': 'low'} to {'color': 'red', 'ventilation': 'medium'}; via paypal_6729210. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_466",
+ "user_id": "juan_lopez_5820"
+}

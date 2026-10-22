@@ -1,0 +1,91 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W2918688",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4274709903"
+    ],
+    "new_item_ids": [
+     "1071497737"
+    ],
+    "order_id": "#W3113816",
+    "payment_method_id": "gift_card_6023546"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1620235",
+    "payment_method_id": "gift_card_6023546"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6690069155",
+     "9132333852"
+    ],
+    "new_item_ids": [
+     "9956648681",
+     "2323972008"
+    ],
+    "order_id": "#W1620235",
+    "payment_method_id": "gift_card_6023546"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2860956907",
+     "7597543861"
+    ],
+    "order_id": "#W1539823",
+    "payment_method_id": "gift_card_6023546"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "399 Maple Drive",
+    "address2": "Suite 470",
+    "city": "Phoenix",
+    "country": "USA",
+    "order_id": "#W9655299",
+    "state": "AZ",
+    "zip": "85039"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9672174103",
+     "3019027053"
+    ],
+    "new_item_ids": [
+     "4329558751",
+     "4806644905"
+    ],
+    "order_id": "#W9655299",
+    "payment_method_id": "gift_card_6023546"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 351,
+ "instruction": "Your name is Emma Santos and your email is emma.santos7683@example.com. You are impatient, messy, independent, happy, logical. Cancel order #W2918688 because no longer needed. For #W3113816, exchange Office Chair {'material': 'mesh', 'color': 'red', 'armrest': 'none', 'backrest height': 'standard'} to {'material': 'leather', 'color': 'gray', 'armrest': 'fixed', 'backrest height': 'high-back'}; via gift_card_6023546. For #W1620235, change payment to gift_card_6023546. For #W1620235, modify Luggage Set {'piece count': '3-piece', 'color': 'silver', 'material': 'softshell'} to {'piece count': '4-piece', 'color': 'red', 'material': 'hardshell'}; Electric Kettle {'capacity': '1L', 'material': 'plastic', 'color': 'silver'} to {'material': 'glass', 'color': 'black'}; via gift_card_6023546. Return #W1539823 via gift_card_6023546: Smart Watch; Bluetooth Speaker; For #W9655299, change address to {'order_id': '#W9655299', 'address1': '399 Maple Drive', 'address2': 'Suite 470', 'city': 'Phoenix', 'country': 'USA', 'state': 'AZ', 'zip': '85039'} (same as #W2918688). For #W9655299, modify Sunglasses {'frame color': 'brown', 'lens color': 'brown', 'lens type': 'polarized', 'frame material': 'plastic'} to {'frame color': 'silver', 'lens color': 'blue', 'lens type': 'non-polarized'}; Vacuum Cleaner {'type': 'upright', 'bagged/bagless': 'bagless', 'features': 'cordless'} to {'type': 'robotic'}; via gift_card_6023546. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_351",
+ "user_id": "emma_santos_9753"
+}

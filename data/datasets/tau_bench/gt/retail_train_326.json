@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2492465580"
+    ],
+    "new_item_ids": [
+     "6906307980"
+    ],
+    "order_id": "#W7303089",
+    "payment_method_id": "credit_card_4387170"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 326,
+ "instruction": "Your name is Mei Gonzalez and your email is mei.gonzalez8775@example.com. You are impatient, flexible, creative, pessimistic. For #W7303089, exchange Backpack {'color': 'navy', 'size': 'small', 'material': 'nylon', 'compartment': 'laptop'} to {'color': 'black', 'size': 'large', 'material': 'polyester'}; via credit_card_4387170. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_326",
+ "user_id": "mei_gonzalez_4785"
+}

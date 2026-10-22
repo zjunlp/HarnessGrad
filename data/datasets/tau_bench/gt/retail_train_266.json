@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6436609",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 266,
+ "instruction": "Your name is Anya Garcia and your zip code is 19036. You are dependent, cautious. Cancel order #W6436609 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_266",
+ "user_id": "anya_garcia_3271"
+}

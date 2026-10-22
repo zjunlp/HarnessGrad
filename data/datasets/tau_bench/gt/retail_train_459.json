@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6245746168"
+    ],
+    "new_item_ids": [
+     "9665100170"
+    ],
+    "order_id": "#W2598834",
+    "payment_method_id": "gift_card_7250692"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9747045638",
+     "9791469541"
+    ],
+    "order_id": "#W8171054",
+    "payment_method_id": "gift_card_7250692"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 459,
+ "instruction": "Your name is Chen Silva and your email is chen.silva2698@example.com. You are organized, busy. For #W2598834, exchange Jigsaw Puzzle {'pieces': '1500', 'theme': 'animals', 'difficulty level': 'intermediate'} to {'difficulty level': 'beginner'}; via gift_card_7250692. Return #W8171054 via gift_card_7250692: Tea Kettle; Running Shoes; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_459",
+ "user_id": "chen_silva_7485"
+}

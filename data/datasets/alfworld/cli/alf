@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+"""`alf` -- the command line the agent uses to act in an ALFWorld TextWorld episode.
+
+There is no chat and no interactive user. The agent is inside a text adventure, and the
+only way to act is to run a command:
+
+    python3 alf look            print the current observation and the admissible actions
+    python3 alf do "<action>"   apply one action and print what happened
+    python3 alf done            declare the episode over and stop acting
+    python3 alf help            print this text
+
+The environment is not in this directory
+---------------------------------------
+This program used to *be* the environment: it rebuilt TextWorld from `game.tw-pddl` in
+the working directory, which meant the game file -- and with it the whole PDDL initial
+state, the object layout included -- had to travel with the task. It does not any more.
+The environment lives in a host process (`data/datasets/alfworld/relay.py`) that the
+agent's sandbox cannot read, and this program is a client of it over the platform's
+transport (`eval/service/tool_transport.py`), published read-only into the sandbox at
+`/run/harnessgrad-tool/{tool.sock, tool_transport.py}` by `eval/containers/tool_route.py`.
+The path is fixed and is not a setting: the sandbox publishes it at that one place, so
+this program does not look anywhere else and does not read a copy of its own.
+
+Nothing this program prints comes from a file the agent can open. It comes from the
+environment's own answer to a question the agent asked.
+
+Why a CLI, and why a log
+------------------------
+The platform runs a task by starting a harness and then grading whatever it left
+behind. An interactive benchmark has no single artifact to grade -- the *episode* is
+the artifact -- so the task is turned into one: every action the agent takes goes
+through this command, and every action is appended to `alf_actions.jsonl`. The check
+then replays that log from the beginning in a fresh environment and reads the
+environment's own `won` flag. Nothing this program prints is trusted as a verdict; the
+log holds actions, and actions are re-executed rather than believed.
+
+Why the log is still the state
+------------------------------
+The relay holds a live episode, so the O(n^2) rebuild this program used to do is gone
+from the *observation* path -- but the log is still what the check grades, and it is
+still written only after the environment accepted the step. The two are kept in step by
+a counter: every call carries the step the client is acting from, and the relay refuses
+a call whose step does not match its own. A disagreement is a failed call, never an
+observation from a different episode.
+
+What the log looks like (one JSON object per line):
+    {"kind": "action", "step": 0, "action": "go to desk 2"}
+    {"kind": "done", "step": 4}
+
+Exit codes
+----------
+    0   the command did what it says
+    2   a refusal the agent can see: bad usage, the budget is spent, or the environment
+        did not accept the action. Nothing was appended to the log for a refused `do`.
+    3   the relay could not be reached, or a reply could not be used. This is a
+        **platform** failure, not a step: the agent did not act, and the task is not
+        measurable from this call. (Turning that into "unmeasured rather than 0" is the
+        runner's job and is not wired here.)
+
+Where things live (the log has a `--log` flag; the socket is the platform's, not this
+program's):
+    /run/harnessgrad-tool/tool.sock   the relay serving this episode's environment
+    <workdir>/alf_actions.jsonl       this program's append-only output
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+# `gym_env.py` is copied in beside this file by the dataset's `SETUP`. Import it from
+# this file's own directory rather than the current directory, so `alf` works no matter
+# where the harness invokes it from.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gym_env  # noqa: E402
+
+#: Where the platform publishes the tool socket and the transport client: one fixed
+#: directory, read-only, inside every sandbox that carries a relay
+#: (`eval/containers/tool_route.py`, which mounts exactly `tool.sock` and
+#: `tool_transport.py` there). The agent's directory does not hold a copy, because the
+#: sandbox publishes it and a copy the agent can edit would be a copy the agent can lie
+#: with. This constant is the contract, not a setting.
+TOOL_DIR = Path("/run/harnessgrad-tool")
+SOCKET_NAME = "tool.sock"
+TRANSPORT_NAME = "tool_transport.py"
+
+#: **Test and local-control override only.** A test runs the CLI on the host, where
+#: nothing has mounted `/run/harnessgrad-tool`; it builds a directory laid out the same
+#: way and names it here. Nothing inside a real task sets this, and the fixed path above
+#: is what an unset variable means.
+TOOL_DIR_ENV = "HG_ALF_TOOL_DIR"
+
+#: The two ops the relay serves, and the exact keys a reply carries. A reply of any
+#: other shape is a relay fault: printing it would be inventing an observation.
+OP_LOOK = "look"
+OP_DO = "do"
+REPLY_KEYS = frozenset({"obs", "admissible", "won", "done", "step"})
+
+EXIT_OK = 0
+EXIT_REFUSED = 2
+EXIT_RELAY = 3
+
+
+class RelayFault(RuntimeError):
+    """The environment could not be asked. Never an observation, never a step."""
+
+
+def _fail(message: str, code: int = EXIT_REFUSED) -> "int":
+    print(f"error: {message}", file=sys.stderr)
+    return code
+
+
+def _tool_dir() -> Path:
+    override = (os.environ.get(TOOL_DIR_ENV) or "").strip()
+    return Path(override) if override else TOOL_DIR
+
+
+def _transport():
+    """The published transport module, imported the way the sandbox publishes it.
+
+    Lazy on purpose: `alf help`, a refusal and a missing socket all work without it, and
+    a transport that is not there is a relay fault the caller turns into a clear message
+    rather than an import-time traceback.
+    """
+    directory = str(_tool_dir())
+    if directory not in sys.path:
+        sys.path.insert(0, directory)
+    try:
+        import tool_transport
+    except ImportError as exc:  # noqa: BLE001 - the published module is missing
+        raise RelayFault(
+            f"the transport client is not published at {directory} "
+            f"({TRANSPORT_NAME}): {exc}") from exc
+    return tool_transport
+
+
+def _actions(records: list[dict]) -> list[str]:
+    """The actions in a log, in order. Anything that is not an action is skipped."""
+    return [str(r["action"]) for r in records
+            if r.get("kind") == "action" and isinstance(r.get("action"), str)]
+
+
+def _append(log: Path, record: dict) -> None:
+    """Append one JSON record. A log that cannot be written must fail loudly.
+
+    Unlike tau-bench's CLI -- where the log is evidence beside a database that is the
+    real state -- here the log *is* the state. A silently dropped append would make the
+    episode the agent saw and the episode the check replays diverge, so this raises
+    rather than swallowing the error.
+    """
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open("a") as handle:
+        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _socket() -> str:
+    """The published socket. The path is the platform's, not this program's."""
+    path = _tool_dir() / SOCKET_NAME
+    if not path.exists():
+        raise RelayFault(
+            f"there is no environment socket at {path}: this episode's environment is "
+            f"served by a host process and the platform publishes it there, so either "
+            f"the task was started without one or it has stopped. The episode cannot be "
+            f"acted in, and nothing was logged.")
+    return str(path)
+
+
+def _ask(socket_path: str, budget: int, op: str, args: dict) -> dict:
+    """One call against the relay, with the reply shape enforced.
+
+    Any transport failure and any malformed reply become `RelayFault`; nothing here
+    invents an observation, and nothing here appends to the log -- the caller does that
+    only after a step was actually applied.
+    """
+    transport = _transport()
+    try:
+        reply = transport.call(socket_path, op, dict(args, budget=budget))
+    except transport.ToolTransportError as exc:
+        raise RelayFault(f"`{op}` did not reach the environment: {exc} "
+                         f"(socket {socket_path})") from exc
+    if not isinstance(reply, dict) or set(reply) != REPLY_KEYS:
+        raise RelayFault(f"`{op}` returned {sorted(reply) if isinstance(reply, dict) else type(reply).__name__}"
+                         f", which is not an episode step; refusing to print it")
+    return reply
+
+
+def _print_state(state: dict, budget: int, steps: int, won: bool, done: bool) -> None:
+    print(state["observation"].strip())
+    print()
+    print("Admissible actions:")
+    for command in state["admissible"]:
+        print(f"  {command}")
+    print()
+    status = "SOLVED" if won else ("episode over" if done else "in progress")
+    print(f"[alf] step {steps}/{budget}; {status}")
+    if done and not won:
+        print("[alf] TextWorld ended the episode without the goal; the run continues to "
+              "count only if no earlier step satisfied it.")
+
+
+def _reply_state(reply: dict) -> dict:
+    """The relay's reply spelled the way `_print_state` has always taken it."""
+    return {"observation": reply["obs"], "admissible": list(reply["admissible"])}
+
+
+def cmd_look(args) -> int:
+    """Print the current observation. Not an action: it does not consume the budget.
+
+    The observation is the **last applied step's**, not a fresh look at the room: a look
+    would describe where the agent is even when the last command was `take mug 3`. That
+    is the behaviour this program has always had (it printed
+    `replay(...)["records"][-1]`), and it is preserved rather than improved.
+    """
+    records = gym_env.action_log_records(args.log)
+    actions = _actions(records)
+    try:
+        reply = _ask(_socket(), args.budget, OP_LOOK, {"step": len(actions)})
+    except RelayFault as exc:
+        return _fail(str(exc), EXIT_RELAY)
+    # The relay refuses a call whose `step` disagrees with its own, so there is no
+    # "the log names actions but none replayed" state left to report here: that case is
+    # now a refused call, above, because it means the log and the episode have parted.
+    _print_state(_reply_state(reply), args.budget, len(actions), reply["won"],
+                 reply["done"])
+    return EXIT_OK
+
+
+def cmd_do(args) -> int:
+    """Apply one action, append it to the log, and print the result."""
+    if not args.action:
+        return _fail('usage: alf do "<action>"')
+    action = " ".join(args.action).strip()
+    if not action:
+        return _fail('usage: alf do "<action>"')
+    records = gym_env.action_log_records(args.log)
+    actions = _actions(records)
+    if len(actions) >= args.budget:
+        print(f"error: the episode budget of {args.budget} actions is spent; the "
+              f"episode is over. Use `alf look` to see the final state.", file=sys.stderr)
+        return EXIT_REFUSED
+    try:
+        reply = _ask(_socket(), args.budget, OP_DO,
+                     {"step": len(actions), "action": action})
+    except RelayFault as exc:
+        return _fail(str(exc), EXIT_RELAY)
+    if reply["step"] <= len(actions):
+        # The environment is over (a win, TextWorld's own ending, or the cap): the
+        # action was not applied and must not reach the log.
+        return _fail(f"the environment did not accept a step for {action!r}")
+    _append(args.log, {"kind": "action", "step": len(actions), "action": action})
+    _print_state(_reply_state(reply), args.budget, reply["step"], reply["won"],
+                 reply["done"])
+    return EXIT_OK
+
+
+def cmd_done(args) -> int:
+    """Mark the episode finished. Recorded; it is not an action and is not replayed.
+
+    It writes no observation and asks the environment nothing, but it does require the
+    relay to be there: with the environment gone the episode is not measurable, and a
+    `done` marker written over a missing environment is exactly the quiet zero this
+    dataset must never produce -- a log with a `done` and no actions replays as 0.
+    """
+    try:
+        _socket()
+    except RelayFault as exc:
+        return _fail(str(exc), EXIT_RELAY)
+    records = gym_env.action_log_records(args.log)
+    if not any(r.get("kind") == "done" for r in records):
+        _append(args.log, {"kind": "done", "step": len(_actions(records))})
+    print("Noted. The episode is marked done.")
+    return EXIT_OK
+
+
+def _parse_global(argv: list) -> tuple[dict, list]:
+    """Pull the path/budget flags out wherever they appear; leave the subcommand."""
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--workdir", default=os.environ.get("ALFWORLD_WORKDIR", "."))
+    parser.add_argument("--log", default=None)
+    parser.add_argument("--budget", type=int, default=gym_env.STEP_BUDGET)
+    known, rest = parser.parse_known_args(argv)
+    workdir = Path(known.workdir)
+    known.log = Path(known.log) if known.log else workdir / gym_env.LOG_FILENAME
+    return known, rest
+
+
+USAGE = """alf -- act in an ALFWorld text episode
+
+  python3 alf look            show the current observation and admissible actions
+  python3 alf do "<action>"   apply one action; it costs one of the {budget} steps
+  python3 alf done            declare the episode over
+
+Options (anywhere on the line): --workdir DIR --log FILE --budget N
+The episode's environment is served by the host process at {socket}; the action log is
+{log}.
+""".format(budget=gym_env.STEP_BUDGET, socket=TOOL_DIR / SOCKET_NAME,
+           log=gym_env.LOG_FILENAME)
+
+
+def main(argv: list) -> int:
+    args, rest = _parse_global(list(argv))
+    if not rest or rest[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return EXIT_OK
+    command, rest = rest[0], rest[1:]
+    if command == "look":
+        args.action = None
+        return cmd_look(args)
+    if command == "do":
+        args.action = rest
+        return cmd_do(args)
+    if command == "done":
+        return cmd_done(args)
+    print(f"error: unknown command {command!r}", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
+    return EXIT_REFUSED
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

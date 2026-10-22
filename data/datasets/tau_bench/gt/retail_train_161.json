@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7658724607",
+     "9132333852",
+     "4107812777"
+    ],
+    "new_item_ids": [
+     "9665000388",
+     "4064702754",
+     "9635758562"
+    ],
+    "order_id": "#W6151519",
+    "payment_method_id": "gift_card_5193172"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 161,
+ "instruction": "Your name is Omar Silva and your zip code is 98141. You are polite, happy, shy, dependent, patient. For #W6151519, modify Mechanical Keyboard {'switch type': 'tactile', 'backlight': 'none', 'size': '80%'} to {'switch type': 'clicky'}; Electric Kettle {'capacity': '1L', 'material': 'plastic', 'color': 'silver'} to {'capacity': '2L', 'material': 'glass', 'color': 'white'}; Running Shoes {'size': '9', 'color': 'black', 'material': 'synthetic', 'sole': 'rubber'} to {'color': 'white', 'material': 'mesh'}; via gift_card_5193172. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_161",
+ "user_id": "omar_silva_9907"
+}

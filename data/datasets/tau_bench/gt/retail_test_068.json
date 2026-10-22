@@ -1,0 +1,41 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Noah",
+    "last_name": "Ito",
+    "zip": "98178"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "first_name": "Noah",
+    "last_name": "Ito",
+    "zip": "98187"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "noah_ito_3850"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6729841"
+   },
+   "name": "get_order_details"
+  }
+ ],
+ "domain": "retail",
+ "index": 68,
+ "instruction": "You are user noah_ito_3850 living in Seattle WA 98187. If asked for your zip code, say that it is 98178 first (common mistake), then correct yourself and say 98187 if an error is found. You want to check how much you paid for the order that you most recently placed. You are not sure how long ago the order was placed.",
+ "outputs": [
+  "829.43"
+ ],
+ "split": "test",
+ "task_id": "retail_test_068",
+ "user_id": "noah_ito_3850"
+}

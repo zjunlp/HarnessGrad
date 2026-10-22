@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1790752",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 313,
+ "instruction": "Your name is Chen Lopez and your email is chen.lopez1681@example.com. You are independent, optimistic, creative, patient, confident. Cancel order #W1790752 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_313",
+ "user_id": "chen_lopez_3345"
+}

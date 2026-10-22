@@ -1,0 +1,98 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Mei",
+    "last_name": "Patel",
+    "zip": "76165"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "mei_patel_7272"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9583042"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4082615"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "address1": "445 Maple Drive",
+    "address2": "Suite 394",
+    "city": "Fort Worth",
+    "country": "USA",
+    "order_id": "#W9583042",
+    "state": "TX",
+    "zip": "76165"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "445 Maple Drive",
+    "address2": "Suite 394",
+    "city": "Fort Worth",
+    "country": "USA",
+    "order_id": "#W4082615",
+    "state": "TX",
+    "zip": "76165"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "445 Maple Drive",
+    "address2": "Suite 394",
+    "city": "Fort Worth",
+    "country": "USA",
+    "state": "TX",
+    "user_id": "mei_patel_7272",
+    "zip": "76165"
+   },
+   "name": "modify_user_address"
+  },
+  {
+   "arguments": {
+    "product_id": "1808611083"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4082615"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9779102705"
+    ],
+    "new_item_ids": [
+     "1096508426"
+    ],
+    "order_id": "#W4082615",
+    "payment_method_id": "paypal_4768213"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 41,
+ "instruction": "Your name is Mei Patel, and you live in 445 Maple Drive, Suite 394, Fort Worth, Texas, 76165. You just created your user id mei_patel_7272 and ordered some things, but you have two problems: first, the 1000-piece intermediate jigsaw might be too hard for your little kid, you wonder if you can change it to the easiest one with fewest pieces; second, you might have typed your address wrong. You want to check it, and potentially correct all order addresses and your user address. Make sure you mention these two problems at the same time in the same order. You are brief and your memory is not too good sometimes, but you are polite.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_041",
+ "user_id": "mei_patel_7272"
+}

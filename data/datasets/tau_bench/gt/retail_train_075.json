@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6508153405"
+    ],
+    "order_id": "#W6798117",
+    "payment_method_id": "paypal_9734841"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 75,
+ "instruction": "Your name is Evelyn Davis and your zip code is 32136. You are confident, sad. Return #W6798117 via paypal_9734841: Wall Clock; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_075",
+ "user_id": "evelyn_davis_7541"
+}

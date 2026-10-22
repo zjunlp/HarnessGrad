@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5796612084"
+    ],
+    "new_item_ids": [
+     "3330317167"
+    ],
+    "order_id": "#W8296441",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1775591963",
+     "9779102705",
+     "2366567022"
+    ],
+    "order_id": "#W3942875",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 339,
+ "instruction": "Your name is Ethan Kim and your zip code is 78286. You are messy, polite, optimistic, patient. For #W8296441, modify Gaming Mouse {'color': 'RGB', 'sensor type': 'optical', 'connectivity': 'wired'} to {'color': 'black'}; via gift_card_5701566. Return #W3942875 via gift_card_5701566: Running Shoes; Jigsaw Puzzle; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_339",
+ "user_id": "ethan_kim_8860"
+}

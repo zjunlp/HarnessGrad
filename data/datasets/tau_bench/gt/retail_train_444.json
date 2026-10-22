@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1507389580",
+     "6704763132",
+     "3399869890"
+    ],
+    "new_item_ids": [
+     "1507389580",
+     "6704763132",
+     "1325156478"
+    ],
+    "order_id": "#W8336711",
+    "payment_method_id": "credit_card_7161839"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 444,
+ "instruction": "Your name is Yara Moore and your email is yara.moore6859@example.com. You are busy, organized, cautious, confident, outgoing. For #W8336711, exchange Smartphone {'color': 'black', 'storage': '128GB', 'RAM': '8GB', 'screen size': '5.8-inch'} to {}; Bluetooth Speaker {'color': 'blue', 'battery life': '10 hours', 'water resistance': 'no'} to {}; Perfume {'scent family': 'woody', 'size': '100ml', 'gender': 'men'} to {'scent family': 'oriental', 'size': '30ml'}; via credit_card_7161839. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_444",
+ "user_id": "yara_moore_6466"
+}

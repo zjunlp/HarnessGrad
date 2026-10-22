@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4326528037",
+     "6164262152"
+    ],
+    "new_item_ids": [
+     "1804581713",
+     "1583904702"
+    ],
+    "order_id": "#W6711349",
+    "payment_method_id": "paypal_3296755"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 352,
+ "instruction": "Your name is Ethan Smith and your zip code is 10280. You are flexible, dependent, sad, patient, insecure. For #W6711349, modify Digital Camera {'resolution': '24MP', 'zoom': '5x', 'storage': 'CF card'} to {'resolution': '30MP', 'zoom': '3x', 'storage': 'SD card'}; Electric Toothbrush {'color': 'white', 'speed settings': 'low', 'battery type': 'rechargeable'} to {'color': 'blue', 'battery type': 'AA batteries'}; via paypal_3296755. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_352",
+ "user_id": "ethan_smith_9087"
+}

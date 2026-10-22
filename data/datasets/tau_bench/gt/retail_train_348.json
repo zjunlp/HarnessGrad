@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5537798301"
+    ],
+    "order_id": "#W1355800",
+    "payment_method_id": "credit_card_3566337"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5666020311",
+     "1775591963"
+    ],
+    "new_item_ids": [
+     "3876764226",
+     "9635758562"
+    ],
+    "order_id": "#W3007862",
+    "payment_method_id": "credit_card_3566337"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 348,
+ "instruction": "Your name is Evelyn Lopez and your zip code is 92195. You are creative, organized. Return #W1355800 via credit_card_3566337: Cycling Helmet; For #W3007862, modify Grill {'type': 'electric', 'size': 'medium', 'features': 'side burner'} to {'size': 'portable'}; Running Shoes {'size': '10', 'color': 'white', 'material': 'leather', 'sole': 'EVA'} to {'size': '9', 'material': 'mesh', 'sole': 'rubber'}; via credit_card_3566337. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_348",
+ "user_id": "evelyn_lopez_5487"
+}

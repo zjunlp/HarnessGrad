@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9121070",
+    "payment_method_id": "credit_card_8992222"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8030558068"
+    ],
+    "new_item_ids": [
+     "9851293632"
+    ],
+    "order_id": "#W9121070",
+    "payment_method_id": "gift_card_3895897"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 424,
+ "instruction": "Your name is Omar Santos and your email is omar.santos1752@example.com. You are flexible, patient. For #W9121070, change payment to credit_card_8992222. For #W9121070, modify Backpack {'color': 'black', 'size': 'medium', 'material': 'nylon', 'compartment': 'hydration'} to {'color': 'green', 'size': 'small', 'material': 'polyester', 'compartment': 'camera'}; via gift_card_3895897. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_424",
+ "user_id": "omar_santos_4830"
+}

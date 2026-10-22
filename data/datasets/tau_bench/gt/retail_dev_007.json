@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5120532699"
+    ],
+    "order_id": "#W8512927",
+    "payment_method_id": "credit_card_7933535"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 7,
+ "instruction": "Your name is Liam Li and your email is liam.li2557@example.com. You are insecure, outgoing, sad, impatient. You received the skateboard that you've ordered a week ago but you used the skateboard only once, and the board is already chipped. You wanna make sure that you're still eligible to receive a full refund even though you've used the skateboard once.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_007",
+ "user_id": "liam_li_5260"
+}

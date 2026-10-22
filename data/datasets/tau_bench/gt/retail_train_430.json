@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2106335193"
+    ],
+    "order_id": "#W5777276",
+    "payment_method_id": "credit_card_4147840"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 430,
+ "instruction": "Your name is Sophia Garcia and your zip code is 20156. You are messy, curious, relaxing, direct, patient. Return #W5777276 via credit_card_4147840: Tablet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_430",
+ "user_id": "sophia_garcia_5025"
+}

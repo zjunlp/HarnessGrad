@@ -1,0 +1,32 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7918497119",
+     "7902309762"
+    ],
+    "order_id": "#W1701126",
+    "payment_method_id": "credit_card_9389219"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1176194968"
+    ],
+    "order_id": "#W5332101",
+    "payment_method_id": "gift_card_3434432"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 477,
+ "instruction": "Your name is Chen Anderson and your email is chen.anderson4495@example.com. You are insecure, patient. Return #W1701126 via credit_card_9389219: Water Bottle; Makeup Kit; Return #W5332101 via gift_card_3434432: T-Shirt; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_477",
+ "user_id": "chen_anderson_8078"
+}

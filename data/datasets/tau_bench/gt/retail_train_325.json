@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6301799585"
+    ],
+    "order_id": "#W4840405",
+    "payment_method_id": "gift_card_4710915"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 325,
+ "instruction": "Your name is Mohamed Santos and your zip code is 76188. You are pessimistic, sad, shy, rigid. Return #W4840405 via gift_card_4710915: Luggage Set; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_325",
+ "user_id": "mohamed_santos_2427"
+}

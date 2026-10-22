@@ -1,0 +1,45 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1355937109",
+     "2698416822"
+    ],
+    "new_item_ids": [
+     "1355937109",
+     "4064702754"
+    ],
+    "order_id": "#W9810810",
+    "payment_method_id": "gift_card_7252880"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7907773809",
+     "4422467033",
+     "5537798301"
+    ],
+    "order_id": "#W3964602",
+    "payment_method_id": "gift_card_7252880"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3730488",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 290,
+ "instruction": "Your name is Yara Silva and your zip code is 77159. You are dependent, relaxing, creative. For #W9810810, modify Wristwatch {'strap material': 'leather', 'dial color': 'white'} to {}; Electric Kettle {'capacity': '1.5L', 'material': 'plastic', 'color': 'white'} to {'capacity': '2L', 'material': 'glass'}; via gift_card_7252880. Return #W3964602 via gift_card_7252880: Cycling Helmet {'size': 'L', 'color': 'blue', 'ventilation': 'low'}; Dumbbell Set; Cycling Helmet {'size': 'S', 'color': 'black', 'ventilation': 'medium'}; Cancel order #W3730488 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_290",
+ "user_id": "yara_silva_7567"
+}

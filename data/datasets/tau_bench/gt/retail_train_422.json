@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3730488",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9179378709"
+    ],
+    "new_item_ids": [
+     "1689914594"
+    ],
+    "order_id": "#W3964602",
+    "payment_method_id": "gift_card_7252880"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 422,
+ "instruction": "Your name is Yara Silva and your zip code is 77159. You are dependent, pessimistic. Cancel order #W3730488 because no longer needed. For #W3964602, exchange Bluetooth Speaker {'color': 'green', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'red'}; via gift_card_7252880. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_422",
+ "user_id": "yara_silva_7567"
+}

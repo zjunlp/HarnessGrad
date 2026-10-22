@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7902309762"
+    ],
+    "new_item_ids": [
+     "2882812427"
+    ],
+    "order_id": "#W1701126",
+    "payment_method_id": "credit_card_9389219"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1348788",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 309,
+ "instruction": "Your name is Chen Anderson and your email is chen.anderson4495@example.com. You are independent, cautious. For #W1701126, exchange Makeup Kit {'skin tone': 'light', 'kit size': 'professional', 'brand': 'Brand B'} to {'skin tone': 'medium', 'brand': 'Brand A'}; via credit_card_9389219. Cancel order #W1348788 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_309",
+ "user_id": "chen_anderson_8078"
+}

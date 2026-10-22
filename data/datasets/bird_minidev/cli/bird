@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""BIRD Mini-Dev's task interface: read the task, submit a query.
+
+    python3 bird/bin/bird show
+    python3 bird/bin/bird submit "SELECT ... FROM ..."
+    echo "SELECT ..." | python3 bird/bin/bird submit
+
+The verbs are declared in an argparse `choices` list because they are read: a program can
+rely on them (`tools/dataset_classes.py` derives the dataset's interaction axis from that
+list and refuses to guess when a CLI declares nothing it can read), while a sentence in a
+docstring is not something a program can rely on. Writing the list's *shape* into this
+docstring -- as the first draft did -- put a phantom `...` verb into the derivation, which is
+the prose-versus-declaration confusion the derivation exists to avoid. The first version of this file used
+`sys.argv[1] == "submit"`, which no reader could parse -- and it was never shipped in
+`SETUP` either, so the axis was derived from an empty list and the file was dead code.
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="BIRD Mini-Dev task interface")
+    parser.add_argument("command", choices=["show", "submit"])
+    parser.add_argument("sql", nargs="?",
+                        help="the query; read from stdin when omitted")
+    args = parser.parse_args(argv)
+    if args.command == "show":
+        print(Path("TASK.md").read_text(encoding="utf-8"))
+        print(Path("schema.sql").read_text(encoding="utf-8"))
+    else:
+        sql = args.sql if args.sql is not None else sys.stdin.read()
+        Path("answer.sql").write_text(sql if sql.endswith("\n") else sql + "\n",
+                                      encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

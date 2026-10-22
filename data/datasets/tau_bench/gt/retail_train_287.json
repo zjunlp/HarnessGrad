@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4716977452",
+     "7445824652"
+    ],
+    "order_id": "#W6872071",
+    "payment_method_id": "paypal_2977884"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 287,
+ "instruction": "Your name is Mia Thomas and your zip code is 60654. You are independent, confident. Return #W6872071 via paypal_2977884: Bluetooth Speaker; LED Light Bulb; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_287",
+ "user_id": "mia_thomas_4629"
+}

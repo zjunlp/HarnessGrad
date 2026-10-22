@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6777246137"
+    ],
+    "order_id": "#W4435622",
+    "payment_method_id": "gift_card_1725971"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 2,
+ "instruction": "Your name is James Li and your email is james.li4495@example.com. You are rigid, confident, happy, curious, pessimistic. Return #W4435622 via gift_card_1725971: Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_002",
+ "user_id": "james_li_5688"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9228757377",
+     "9580569596"
+    ],
+    "new_item_ids": [
+     "5996159312",
+     "8555936349"
+    ],
+    "order_id": "#W4864669",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 235,
+ "instruction": "Your name is Noah Sanchez and your zip code is 20056. You are patient, flexible, outgoing, pessimistic, dependent. For #W4864669, exchange Digital Camera {'resolution': '30MP', 'zoom': '10x', 'storage': 'SD card'} to {'resolution': '24MP', 'zoom': '3x'}; Wireless Earbuds {'color': 'black', 'battery life': '4 hours', 'water resistance': 'IPX7'} to {'color': 'blue', 'battery life': '8 hours', 'water resistance': 'IPX4'}; via gift_card_9909795. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_235",
+ "user_id": "noah_sanchez_2690"
+}

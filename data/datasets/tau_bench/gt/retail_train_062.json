@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9929635042",
+     "4920090458"
+    ],
+    "new_item_ids": [
+     "1507389580",
+     "2681513500"
+    ],
+    "order_id": "#W8465042",
+    "payment_method_id": "paypal_6982172"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 62,
+ "instruction": "Your name is Ethan Thomas and your email is ethan.thomas7730@example.com. You are patient, relaxing, rigid, logical, messy. For #W8465042, modify Smartphone {'color': 'gold', 'storage': '128GB', 'RAM': '4GB', 'screen size': '5.8-inch'} to {'color': 'black', 'RAM': '8GB'}; Smart Watch {'color': 'black', 'band material': 'silicone', 'display': 'AMOLED'} to {'color': 'gold'}; via paypal_6982172. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_062",
+ "user_id": "ethan_thomas_1791"
+}

@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7407609582"
+    ],
+    "new_item_ids": [
+     "4602305039"
+    ],
+    "order_id": "#W2297866",
+    "payment_method_id": "paypal_5334408"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7619352",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 191,
+ "instruction": "Your name is Sofia Thomas and your zip code is 75307. You are creative, independent, cautious, rigid, organized. For #W2297866, modify Vacuum Cleaner {'type': 'upright', 'bagged/bagless': 'bagless', 'features': 'HEPA filter'} to {'type': 'robotic', 'bagged/bagless': 'bagged', 'features': 'cordless'}; via paypal_5334408. Cancel order #W7619352 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_191",
+ "user_id": "sofia_thomas_1518"
+}

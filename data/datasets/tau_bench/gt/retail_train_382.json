@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5917587651"
+    ],
+    "order_id": "#W8632528",
+    "payment_method_id": "gift_card_7219486"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 382,
+ "instruction": "Your name is Ethan Lopez and your email is ethan.lopez8943@example.com. You are shy, cautious. Return #W8632528 via gift_card_7219486: Backpack; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_382",
+ "user_id": "ethan_lopez_6291"
+}

@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6447372",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 338,
+ "instruction": "Your name is Sophia Garcia and your zip code is 28212. You are cautious, relaxing. Cancel order #W6447372 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_338",
+ "user_id": "sophia_garcia_5795"
+}

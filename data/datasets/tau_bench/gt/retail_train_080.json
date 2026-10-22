@@ -1,0 +1,46 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3111466194",
+     "2648909398"
+    ],
+    "new_item_ids": [
+     "2001307871",
+     "6159919747"
+    ],
+    "order_id": "#W5442520",
+    "payment_method_id": "gift_card_7794233"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3657213",
+    "payment_method_id": "credit_card_9753331"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5996159312"
+    ],
+    "new_item_ids": [
+     "1804581713"
+    ],
+    "order_id": "#W3657213",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 80,
+ "instruction": "Your name is Olivia Ito and your email is olivia.ito5204@example.com. You are dependent, organized, insecure. For #W5442520, modify Patio Umbrella {'size': '7 ft', 'color': 'red', 'material': 'polyester', 'tilt mechanism': 'manual tilt'} to {'size': '6 ft', 'color': 'blue', 'material': 'sunbrella', 'tilt mechanism': 'auto tilt'}; Hiking Boots {'size': '8', 'material': 'leather', 'waterproof': 'yes'} to {'size': '11'}; via gift_card_7794233. For #W3657213, change payment to credit_card_9753331. For #W3657213, modify Digital Camera {'resolution': '24MP', 'zoom': '3x', 'storage': 'SD card'} to {'resolution': '30MP'}; via paypal_8049766. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_080",
+ "user_id": "olivia_ito_3591"
+}

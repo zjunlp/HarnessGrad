@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5606522780"
+    ],
+    "new_item_ids": [
+     "2143041831"
+    ],
+    "order_id": "#W7017301",
+    "payment_method_id": "paypal_2299608"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 82,
+ "instruction": "Your name is Mei Martin and your zip code is 32124. You are busy, rigid, insecure. For #W7017301, modify Bicycle {'frame size': 'large', 'color': 'red', 'type': 'mountain'} to {'frame size': 'medium', 'color': 'black'}; via paypal_2299608. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_082",
+ "user_id": "mei_martin_4260"
+}

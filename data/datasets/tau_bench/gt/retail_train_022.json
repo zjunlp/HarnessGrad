@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1345513440"
+    ],
+    "new_item_ids": [
+     "1345513440"
+    ],
+    "order_id": "#W9672333",
+    "payment_method_id": "paypal_7664977"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 22,
+ "instruction": "Your name is Aarav Santos and your email is aarav.santos8320@example.com. You are insecure, polite, happy. For #W9672333, modify Vacuum Cleaner {'type': 'canister', 'bagged/bagless': 'bagged', 'features': 'cordless'} to {}; via paypal_7664977. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_022",
+ "user_id": "aarav_santos_2259"
+}

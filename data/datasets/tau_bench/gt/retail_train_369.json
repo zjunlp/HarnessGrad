@@ -1,0 +1,43 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6979932",
+    "payment_method_id": "gift_card_5979071"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "address1": "270 River Road",
+    "address2": "Suite 611",
+    "city": "San Diego",
+    "country": "USA",
+    "order_id": "#W6979932",
+    "state": "CA",
+    "zip": "92194"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3339188619"
+    ],
+    "new_item_ids": [
+     "1665571435"
+    ],
+    "order_id": "#W6979932",
+    "payment_method_id": "paypal_6121064"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 369,
+ "instruction": "Your name is Aarav Gonzalez and your zip code is 78268. You are direct, organized, patient. For #W6979932, change payment to gift_card_5979071. For #W6979932, change address to {'order_id': '#W6979932', 'address1': '270 River Road', 'address2': 'Suite 611', 'city': 'San Diego', 'country': 'USA', 'state': 'CA', 'zip': '92194'} (same as #W6797115). For #W6979932, modify Cycling Helmet {'size': 'M', 'color': 'blue', 'ventilation': 'low'} to {'size': 'L', 'color': 'black', 'ventilation': 'high'}; via paypal_6121064. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_369",
+ "user_id": "aarav_gonzalez_5113"
+}

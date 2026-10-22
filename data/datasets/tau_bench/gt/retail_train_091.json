@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5992316252",
+     "2733768059",
+     "1810466394"
+    ],
+    "new_item_ids": [
+     "8590708195",
+     "1794273251",
+     "7523669277"
+    ],
+    "order_id": "#W2421430",
+    "payment_method_id": "credit_card_4420174"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 91,
+ "instruction": "Your name is Omar Khan and your zip code is 75203. You are independent, outgoing, sad. For #W2421430, exchange Fleece Jacket {'size': 'S', 'color': 'red', 'zipper': 'half'} to {'size': 'XL', 'color': 'navy'}; Yoga Mat {'thickness': '6mm', 'material': 'natural rubber', 'color': 'pink'} to {'thickness': '5mm', 'material': 'TPE'}; Action Camera {'resolution': '1080p', 'waterproof': 'no', 'color': 'silver'} to {'resolution': '5K', 'color': 'black'}; via credit_card_4420174. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_091",
+ "user_id": "omar_khan_2363"
+}

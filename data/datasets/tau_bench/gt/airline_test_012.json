@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "airline",
+ "index": 12,
+ "instruction": "Your user id is amelia_sanchez_4739 and you want to cancel your flights from MCO to CLT. You insist to cancel and have the refund.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_012",
+ "user_id": "amelia_sanchez_4739"
+}

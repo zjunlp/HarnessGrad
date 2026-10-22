@@ -1,0 +1,40 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6975922",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5663445",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1157853815",
+     "2989722512"
+    ],
+    "new_item_ids": [
+     "7774234341",
+     "6735339143"
+    ],
+    "order_id": "#W2090453",
+    "payment_method_id": "paypal_3999493"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 462,
+ "instruction": "Your name is Olivia Jackson and your zip code is 95119. You are outgoing, polite, busy, organized. Cancel order #W6975922 because no longer needed. Cancel order #W5663445 because ordered by mistake. For #W2090453, modify Espresso Machine {'pressure': '19 bar', 'capacity': '2L', 'type': 'capsule'} to {'pressure': '9 bar', 'type': 'manual'}; Bookshelf {'material': 'glass', 'color': 'white', 'height': '3 ft'} to {'material': 'metal', 'color': 'brown', 'height': '6 ft'}; via paypal_3999493. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_462",
+ "user_id": "olivia_jackson_1219"
+}

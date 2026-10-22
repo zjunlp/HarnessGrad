@@ -1,0 +1,73 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6272294",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9805150490"
+    ],
+    "new_item_ids": [
+     "9805150490"
+    ],
+    "order_id": "#W9232383",
+    "payment_method_id": "credit_card_5683823"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7717598293",
+     "7199146548",
+     "1120917161"
+    ],
+    "order_id": "#W8668939",
+    "payment_method_id": "credit_card_5683823"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9594745976"
+    ],
+    "new_item_ids": [
+     "5038485381"
+    ],
+    "order_id": "#W1242543",
+    "payment_method_id": "gift_card_1994993"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2444431651",
+     "1689914594",
+     "8733974883"
+    ],
+    "new_item_ids": [
+     "7896397433",
+     "4716977452",
+     "7528037711"
+    ],
+    "order_id": "#W8367380",
+    "payment_method_id": "gift_card_1994993"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 305,
+ "instruction": "Your name is Ava Nguyen and your zip code is 94128. You are outgoing, happy, direct. Cancel order #W6272294 because no longer needed. For #W9232383, modify Headphones {'type': 'on-ear', 'connectivity': 'wireless', 'color': 'white'} to {}; via credit_card_5683823. Return #W8668939 via credit_card_5683823: Grill {'type': 'electric', 'size': 'medium', 'features': 'rotisserie'}; Water Bottle; Grill {'type': 'electric', 'size': 'portable', 'features': 'none'}; For #W1242543, modify Skateboard {'deck material': 'plastic', 'length': '34 inch', 'design': 'custom'} to {'length': '31 inch'}; via gift_card_1994993. For #W8367380, modify Dumbbell Set {'weight range': '55-75 lbs', 'material': 'iron', 'set type': 'fixed'} to {'weight range': '5-25 lbs', 'material': 'rubber', 'set type': 'adjustable'}; Bluetooth Speaker {'color': 'red', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'blue', 'water resistance': 'yes'}; Fleece Jacket {'size': 'L', 'color': 'red', 'zipper': 'half'} to {'size': 'XL', 'color': 'navy', 'zipper': 'full'}; via gift_card_1994993. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_305",
+ "user_id": "ava_nguyen_6646"
+}

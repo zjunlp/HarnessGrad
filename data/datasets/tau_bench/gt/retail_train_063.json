@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5796612084"
+    ],
+    "new_item_ids": [
+     "2193628750"
+    ],
+    "order_id": "#W7800651",
+    "payment_method_id": "paypal_7644869"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 63,
+ "instruction": "Your name is Mei Kovacs and your zip code is 28236. You are dependent, rigid, relaxing. For #W7800651, modify Gaming Mouse {'color': 'RGB', 'sensor type': 'optical', 'connectivity': 'wired'} to {'color': 'black', 'sensor type': 'laser'}; via paypal_7644869. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_063",
+ "user_id": "mei_kovacs_8020"
+}

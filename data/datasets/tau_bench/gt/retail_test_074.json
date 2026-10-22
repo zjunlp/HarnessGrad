@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3189752",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3334537816"
+    ],
+    "new_item_ids": [
+     "3265035808"
+    ],
+    "order_id": "#W5166363",
+    "payment_method_id": "credit_card_4466831"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 74,
+ "instruction": "You name is Lei Li and your zip code is 85033. You are insecure, shy. You recently bought a laptop, but you want to exchange it to i9 CPU. If multiple storage options are available, you prefer 256GB SSD. If multiple colors are available, you prefer silver. You also have a pending order with five items (you don't remember order ID), and you want to cancel it because you no longer need them.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_074",
+ "user_id": "lei_li_6575"
+}

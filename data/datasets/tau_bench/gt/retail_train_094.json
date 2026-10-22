@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7751905257"
+    ],
+    "order_id": "#W9158156",
+    "payment_method_id": "paypal_3704667"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 94,
+ "instruction": "Your name is Evelyn Patel and your email is evelyn.patel2010@example.com. You are direct, insecure, logical, dependent. Return #W9158156 via paypal_3704667: Bluetooth Speaker; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_094",
+ "user_id": "evelyn_patel_8882"
+}

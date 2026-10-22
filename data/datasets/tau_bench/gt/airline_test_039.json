@@ -1,0 +1,17 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "H8Q05L"
+   },
+   "name": "get_reservation_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 39,
+ "instruction": "You are Sophia Silva (with ID: sophia_silva_7557), you want to cancel your flight (confirmation: H8Q05L) because the flight coincides with your best friend's birthday, be persistent and don't provide more information than necessary. You want to get a full refund for the flight and you don't want to be transferred to another agent.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_039",
+ "user_id": "sophia_silva_7557"
+}

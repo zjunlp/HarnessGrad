@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2193628750"
+    ],
+    "new_item_ids": [
+     "8896479688"
+    ],
+    "order_id": "#W7678072",
+    "payment_method_id": "paypal_5727330"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 426,
+ "instruction": "Your name is Noah Brown and your zip code is 80279. You are impatient, logical, sad, confident. For #W7678072, exchange Gaming Mouse {'color': 'black', 'sensor type': 'laser', 'connectivity': 'wired'} to {'color': 'white', 'sensor type': 'optical', 'connectivity': 'wireless'}; via paypal_5727330. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_426",
+ "user_id": "noah_brown_6181"
+}

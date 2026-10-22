@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4983901480",
+     "9408160950",
+     "4602305039",
+     "1151293680"
+    ],
+    "order_id": "#W2378156",
+    "payment_method_id": "credit_card_9513926"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6324294385"
+    ],
+    "new_item_ids": [
+     "3815173328"
+    ],
+    "order_id": "#W4776164",
+    "payment_method_id": "credit_card_9513926"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 215,
+ "instruction": "Your name is Yusuf Rossi and your zip code is 19122. You are sad, logical, polite, independent. Return #W2378156 via credit_card_9513926: Smart Thermostat; Smart Watch; Vacuum Cleaner; Mechanical Keyboard; For #W4776164, modify Espresso Machine {'pressure': '9 bar', 'capacity': '1L', 'type': 'automatic'} to {'capacity': '1.5L', 'type': 'capsule'}; via credit_card_9513926. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_215",
+ "user_id": "yusuf_rossi_9620"
+}

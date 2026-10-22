@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6958840",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 456,
+ "instruction": "Your name is Daiki Li and your zip code is 75201. You are insecure, direct. Cancel order #W6958840 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_456",
+ "user_id": "daiki_li_8218"
+}

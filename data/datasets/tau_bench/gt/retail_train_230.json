@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2492465580"
+    ],
+    "new_item_ids": [
+     "6906307980"
+    ],
+    "order_id": "#W7584328",
+    "payment_method_id": "credit_card_6173085"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 230,
+ "instruction": "Your name is Ethan Moore and your email is ethan.moore4935@example.com. You are happy, insecure. For #W7584328, modify Backpack {'color': 'navy', 'size': 'small', 'material': 'nylon', 'compartment': 'laptop'} to {'color': 'black', 'size': 'large', 'material': 'polyester'}; via credit_card_6173085. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_230",
+ "user_id": "ethan_moore_3587"
+}

@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3334537816",
+     "6735339143",
+     "7195021808"
+    ],
+    "order_id": "#W7450915",
+    "payment_method_id": "gift_card_6892585"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 458,
+ "instruction": "Your name is Ethan Johnson and your email is ethan.johnson2557@example.com. You are impatient, direct, rigid, pessimistic, outgoing. Return #W7450915 via gift_card_6892585: Laptop; Bookshelf; Digital Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_458",
+ "user_id": "ethan_johnson_7053"
+}

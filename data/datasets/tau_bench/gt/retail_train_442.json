@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3698202",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 442,
+ "instruction": "Your name is Emma Kim and your zip code is 46214. You are cautious, insecure, creative, direct, flexible. Cancel order #W3698202 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_442",
+ "user_id": "emma_kim_1076"
+}

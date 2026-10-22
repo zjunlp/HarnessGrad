@@ -1,0 +1,47 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "cabin": "economy",
+    "destination": "SFO",
+    "flight_type": "one_way",
+    "flights": [
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT069"
+     },
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT258"
+     }
+    ],
+    "insurance": "no",
+    "nonfree_baggages": 0,
+    "origin": "JFK",
+    "passengers": [
+     {
+      "dob": "1985-04-04",
+      "first_name": "Aarav",
+      "last_name": "Ahmed"
+     }
+    ],
+    "payment_methods": [
+     {
+      "amount": 290,
+      "payment_id": "credit_card_9074831"
+     }
+    ],
+    "total_baggages": 0,
+    "user_id": "aarav_ahmed_6699"
+   },
+   "name": "book_reservation"
+  }
+ ],
+ "domain": "airline",
+ "index": 25,
+ "instruction": "Your user id is aarav_ahmed_6699. You want to first cancel your upcoming flight on May 22 from JFK to MCO. Insist that you are a silver member, hence must get full refund. Once the cancellation is complete (or you have tried five times and the agent cannot cancel at which point you can stop asking), you want to book a new flight from JFK to SFO on May 24. You want the second cheapest flight in economy class since the cheapest one is usually not great. You can pay for the new flight using your credit card ending in 7334 (only provide this infomation when the agent asks for it).",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_025",
+ "user_id": "aarav_ahmed_6699"
+}

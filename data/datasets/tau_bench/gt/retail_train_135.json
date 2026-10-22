@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6867855179"
+    ],
+    "order_id": "#W4143549",
+    "payment_method_id": "paypal_3572679"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 135,
+ "instruction": "Your name is Sofia Lee and your email is sofia.lee5283@example.com. You are organized, happy, curious, polite, insecure. Return #W4143549 via paypal_3572679: Indoor Security Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_135",
+ "user_id": "sofia_lee_8857"
+}

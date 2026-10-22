@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5120532699"
+    ],
+    "new_item_ids": [
+     "3541421151"
+    ],
+    "order_id": "#W5911118",
+    "payment_method_id": "gift_card_4529075"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 220,
+ "instruction": "Your name is Harper Ahmed and your email is harper.ahmed7911@example.com. You are organized, dependent, happy, insecure, impatient. For #W5911118, exchange Skateboard {'deck material': 'maple', 'length': '31 inch', 'design': 'graphic'} to {'deck material': 'bamboo', 'length': '34 inch'}; via gift_card_4529075. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_220",
+ "user_id": "harper_ahmed_4844"
+}

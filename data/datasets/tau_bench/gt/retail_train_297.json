@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6599568",
+    "payment_method_id": "credit_card_8296913"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1052700637"
+    ],
+    "new_item_ids": [
+     "2635605237"
+    ],
+    "order_id": "#W6599568",
+    "payment_method_id": "credit_card_8296913"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 297,
+ "instruction": "Your name is Sofia Li and your zip code is 75390. You are flexible, organized, relaxing. For #W6599568, change payment to credit_card_8296913. For #W6599568, modify Bluetooth Speaker {'color': 'red', 'battery life': '20 hours', 'water resistance': 'no'} to {'color': 'blue'}; via credit_card_8296913. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_297",
+ "user_id": "sofia_li_8235"
+}

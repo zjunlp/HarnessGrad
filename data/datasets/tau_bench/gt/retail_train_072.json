@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4510078629"
+    ],
+    "new_item_ids": [
+     "1355937109"
+    ],
+    "order_id": "#W2092674",
+    "payment_method_id": "paypal_2499655"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 72,
+ "instruction": "Your name is Emma Nguyen and your email is emma.nguyen8892@example.com. You are rigid, optimistic, impatient, relaxing, organized. For #W2092674, exchange Wristwatch {'strap material': 'metal', 'dial color': 'black'} to {'strap material': 'leather', 'dial color': 'white'}; via paypal_2499655. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_072",
+ "user_id": "emma_nguyen_6662"
+}

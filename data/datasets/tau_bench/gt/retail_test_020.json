@@ -1,0 +1,86 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Ethan",
+    "last_name": "Garcia",
+    "zip": "80280"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "ethan_garcia_1261"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4967593"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9911714"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "8310926033"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "1656367028"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "6938111410"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "5149340237"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2366567022",
+     "1340995114",
+     "9791469541",
+     "1763705424"
+    ],
+    "new_item_ids": [
+     "4579334072",
+     "1151293680",
+     "4107812777",
+     "2882812427"
+    ],
+    "order_id": "#W9911714",
+    "payment_method_id": "gift_card_4332117"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5733668"
+   },
+   "name": "get_order_details"
+  }
+ ],
+ "domain": "retail",
+ "index": 20,
+ "instruction": "You are Ethan Garcia, and you live in Denver, 80280. You just won a lottery, and you want to upgrade all your items to the most expensive options (but make sure the shoe is still the same size). You want to pay the difference with your GC, but if it is impossible, PayPal is fine. You are a mysterious person and do not want to reveal much about yourself.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_020",
+ "user_id": "ethan_garcia_1261"
+}

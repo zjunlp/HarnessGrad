@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1355937109"
+    ],
+    "new_item_ids": [
+     "9949163720"
+    ],
+    "order_id": "#W7941031",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6700049080"
+    ],
+    "new_item_ids": [
+     "5925362855"
+    ],
+    "order_id": "#W3657213",
+    "payment_method_id": "gift_card_7794233"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 119,
+ "instruction": "Your name is Olivia Ito and your zip code is 80218. You are polite, relaxing, curious, sad. For #W7941031, modify Wristwatch {'strap material': 'leather', 'dial color': 'white'} to {'dial color': 'black'}; via paypal_8049766. For #W3657213, modify Action Camera {'resolution': '4K', 'waterproof': 'yes', 'color': 'black'} to {'resolution': '1080p'}; via gift_card_7794233. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_119",
+ "user_id": "olivia_ito_3591"
+}

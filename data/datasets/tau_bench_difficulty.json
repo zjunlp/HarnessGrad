@@ -1,0 +1,462 @@
+{
+ "bands": [
+  "easy",
+  "medium",
+  "hard"
+ ],
+ "dataset": "tau_bench",
+ "definition": "difficulty(x) = 1 - mean over states of score(x); a state is one measured curve point (run, round, harness, model)",
+ "generated_at": "2026-10-06T17:27:23+00:00",
+ "model_filter": null,
+ "states": [
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "tau-a-r10",
+   "side": "train",
+   "tasks": 20
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "343d8ce34f9d0e10aee1b0e69356b6481e273162",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "tau-a-r10",
+   "side": "train",
+   "tasks": 19
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "tau-calib",
+   "side": "train",
+   "tasks": 10
+  }
+ ],
+ "tasks": {
+  "retail_000": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_004": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 1,
+   "perf": 1.0
+  },
+  "retail_005": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_011": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 2,
+   "perf": 1.0
+  },
+  "retail_017": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 2,
+   "perf": 1.0
+  },
+  "retail_018": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_022": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 2,
+   "perf": 1.0
+  },
+  "retail_024": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_028": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_030": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_033": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 1,
+   "perf": 1.0
+  },
+  "retail_038": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_043": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_044": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 1,
+   "perf": 1.0
+  },
+  "retail_048": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 2,
+   "perf": 1.0
+  },
+  "retail_052": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_054": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_060": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 2,
+   "perf": 1.0
+  },
+  "retail_061": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_066": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_070": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 1,
+   "perf": 1.0
+  },
+  "retail_071": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_076": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 3,
+   "n_states": 3,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_081": {
+   "band": "medium",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    }
+   },
+   "difficulty": 0.5,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 1,
+   "perf": 0.5
+  },
+  "retail_086": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_091": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "retail_096": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 3,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 3,
+   "n_states": 3,
+   "passed": 3,
+   "perf": 1.0
+  },
+  "retail_101": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  }
+ }
+}

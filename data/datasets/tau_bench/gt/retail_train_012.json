@@ -1,0 +1,52 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3525030",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3282177",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "address1": "953 Park Avenue",
+    "address2": "Suite 613",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W2912646",
+    "state": "NY",
+    "zip": "10064"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9672174103",
+     "6301799585"
+    ],
+    "new_item_ids": [
+     "4358482460",
+     "8759627937"
+    ],
+    "order_id": "#W2912646",
+    "payment_method_id": "paypal_4820484"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 12,
+ "instruction": "Your name is Harper Johansson and your zip code is 80281. You are happy, direct, confident, optimistic. Cancel order #W3525030 because no longer needed. Cancel order #W3282177 because ordered by mistake. For #W2912646, change address to {'order_id': '#W2912646', 'address1': '953 Park Avenue', 'address2': 'Suite 613', 'city': 'New York', 'country': 'USA', 'state': 'NY', 'zip': '10064'} (same as #W1780552). For #W2912646, modify Sunglasses {'frame color': 'brown', 'lens color': 'brown', 'lens type': 'polarized', 'frame material': 'plastic'} to {'frame color': 'black'}; Luggage Set {'piece count': '3-piece', 'color': 'blue', 'material': 'softshell'} to {'piece count': '4-piece'}; via paypal_4820484. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_012",
+ "user_id": "harper_johansson_2663"
+}

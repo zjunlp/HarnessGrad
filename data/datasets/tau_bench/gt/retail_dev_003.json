@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4068787148"
+    ],
+    "order_id": "#W7752779",
+    "payment_method_id": "paypal_2143483"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 3,
+ "instruction": "Your name is Isabella Brown and your zip code is 80257. You are patient, shy, insecure, rigid. The jigsaw puzzle that you've recently received is missing pieces and you're very disappointed. You're sure that the piece was missing on delivery. Because of the missing piece, you don't want to keep the puzzle and wanna get a full refund via paypal. Try your best to get a coupon for the next purchase you make because of the inconvenience. If you can't get a coupon, try to talk to the supervisor and insist on getting a coupon for the hassle that you've been through.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_003",
+ "user_id": "isabella_brown_3584"
+}

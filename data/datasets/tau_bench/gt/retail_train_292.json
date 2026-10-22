@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "320 Cedar Avenue",
+    "address2": "Suite 116",
+    "city": "San Antonio",
+    "country": "USA",
+    "order_id": "#W9722559",
+    "state": "TX",
+    "zip": "78219"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8964750292"
+    ],
+    "new_item_ids": [
+     "6301799585"
+    ],
+    "order_id": "#W9722559",
+    "payment_method_id": "paypal_8963303"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 292,
+ "instruction": "Your name is James Kim and your zip code is 92199. You are curious, patient, shy, dependent, organized. For #W9722559, change address to {'order_id': '#W9722559', 'address1': '320 Cedar Avenue', 'address2': 'Suite 116', 'city': 'San Antonio', 'country': 'USA', 'state': 'TX', 'zip': '78219'} (same as #W9154975). For #W9722559, modify Luggage Set {'piece count': '2-piece', 'color': 'red', 'material': 'hardshell'} to {'piece count': '3-piece', 'color': 'blue', 'material': 'softshell'}; via paypal_8963303. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_292",
+ "user_id": "james_kim_7213"
+}

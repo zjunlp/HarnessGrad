@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4293355847"
+    ],
+    "new_item_ids": [
+     "5038485381"
+    ],
+    "order_id": "#W2286993",
+    "payment_method_id": "gift_card_5354170"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 23,
+ "instruction": "Your name is Noah Taylor and your zip code is 85010. You are relaxing, impatient, insecure, direct. For #W2286993, modify Skateboard {'deck material': 'bamboo', 'length': '31 inch', 'design': 'plain'} to {'deck material': 'plastic', 'design': 'custom'}; via gift_card_5354170. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_023",
+ "user_id": "noah_taylor_8533"
+}

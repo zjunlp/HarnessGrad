@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4111999",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 359,
+ "instruction": "Your name is Chen Taylor and your email is chen.taylor8995@example.com. You are insecure, dependent. Cancel order #W4111999 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_359",
+ "user_id": "chen_taylor_6919"
+}

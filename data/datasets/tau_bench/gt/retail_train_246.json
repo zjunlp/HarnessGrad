@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2698416822",
+     "8098621301",
+     "7441167885"
+    ],
+    "new_item_ids": [
+     "2243454707",
+     "2645006275",
+     "3379843752"
+    ],
+    "order_id": "#W5272531",
+    "payment_method_id": "credit_card_6824399"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 246,
+ "instruction": "Your name is Fatima Wilson and your zip code is 92183. You are patient, dependent, flexible, creative, optimistic. For #W5272531, exchange Electric Kettle {'capacity': '1.5L', 'material': 'plastic', 'color': 'white'} to {'capacity': '1L'}; Electric Toothbrush {'color': 'black', 'speed settings': 'high', 'battery type': 'rechargeable'} to {'color': 'white', 'battery type': 'AA batteries'}; Espresso Machine {'pressure': '15 bar', 'capacity': '1.5L', 'type': 'capsule'} to {'pressure': '19 bar', 'capacity': '2L', 'type': 'manual'}; via credit_card_6824399. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_246",
+ "user_id": "fatima_wilson_7472"
+}

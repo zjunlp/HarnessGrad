@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7420906769"
+    ],
+    "new_item_ids": [
+     "8896479688"
+    ],
+    "order_id": "#W1267569",
+    "payment_method_id": "credit_card_1061405"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 97,
+ "instruction": "Your name is Mei Davis and your email is mei.davis6811@example.com. You are busy, cautious, rigid, direct, optimistic. For #W1267569, modify Gaming Mouse {'color': 'white', 'sensor type': 'laser', 'connectivity': 'wireless'} to {'sensor type': 'optical'}; via credit_card_1061405. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_097",
+ "user_id": "mei_davis_8935"
+}

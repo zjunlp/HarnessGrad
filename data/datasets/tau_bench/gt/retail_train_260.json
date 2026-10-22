@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1176194968"
+    ],
+    "order_id": "#W5332101",
+    "payment_method_id": "gift_card_3434432"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1348788",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 260,
+ "instruction": "Your name is Chen Anderson and your email is chen.anderson4495@example.com. You are dependent, insecure, organized, impatient. Return #W5332101 via gift_card_3434432: T-Shirt; Cancel order #W1348788 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_260",
+ "user_id": "chen_anderson_8078"
+}

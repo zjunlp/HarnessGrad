@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Emma",
+    "last_name": "Smith",
+    "zip": "10192"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "emma_smith_8564"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2417020"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2417020",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 69,
+ "instruction": "You are emma_smith_8564 living in New York, New York, 10192. You want to return an item you just received: a laptop. You think that you ordered it around April 2023 but are not sure. You want to return it because you found a better deal elsewhere. You want to return it for a full refund. If it cannot be returned, see if it can be canceled. You are polite and friendly.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_069",
+ "user_id": "emma_smith_8564"
+}

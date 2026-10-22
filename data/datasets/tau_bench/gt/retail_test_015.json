@@ -1,0 +1,62 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Fatima",
+    "last_name": "Johnson",
+    "zip": "78712"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "fatima_johnson_7581"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9389413"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8665881"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5199551"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "7363354090"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1615379700"
+    ],
+    "new_item_ids": [
+     "3613716226"
+    ],
+    "order_id": "#W5199551",
+    "payment_method_id": "paypal_5364164"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 15,
+ "instruction": "You are Fatima Johnson in 78712. You want to modify the pending boots to a size 8, and want the material, but do not care about waterproof or not. You are a private person that does not want to reveal much about yourself.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_015",
+ "user_id": "fatima_johnson_7581"
+}

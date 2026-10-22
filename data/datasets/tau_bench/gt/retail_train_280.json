@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9440076",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9179378709"
+    ],
+    "new_item_ids": [
+     "1689914594"
+    ],
+    "order_id": "#W3002300",
+    "payment_method_id": "gift_card_2486551"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 280,
+ "instruction": "Your name is Noah Kovacs and your zip code is 20566. You are patient, dependent, cautious, creative, relaxing. Cancel order #W9440076 because ordered by mistake. For #W3002300, exchange Bluetooth Speaker {'color': 'green', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'red'}; via gift_card_2486551. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_280",
+ "user_id": "noah_kovacs_1216"
+}

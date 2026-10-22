@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6948061616"
+    ],
+    "new_item_ids": [
+     "4615543240"
+    ],
+    "order_id": "#W7242815",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 140,
+ "instruction": "Your name is Lei Anderson and your zip code is 76192. You are happy, independent, optimistic, direct, rigid. For #W7242815, exchange Tablet {'screen size': '10-inch', 'storage': '128GB', 'color': 'gold'} to {'screen size': '7-inch', 'storage': '32GB', 'color': 'silver'}; via paypal_1808675. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_140",
+ "user_id": "lei_anderson_8271"
+}

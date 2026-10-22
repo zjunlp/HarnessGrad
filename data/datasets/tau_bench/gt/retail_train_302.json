@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6589665742"
+    ],
+    "order_id": "#W5463717",
+    "payment_method_id": "gift_card_8006222"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 302,
+ "instruction": "Your name is Raj Davis and your email is raj.davis3587@example.com. You are busy, patient, dependent, messy, sad. Return #W5463717 via gift_card_8006222: Grill; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_302",
+ "user_id": "raj_davis_2615"
+}

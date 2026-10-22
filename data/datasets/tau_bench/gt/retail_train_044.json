@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9956648681"
+    ],
+    "new_item_ids": [
+     "6301799585"
+    ],
+    "order_id": "#W2818151",
+    "payment_method_id": "credit_card_5051208"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5500815",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 44,
+ "instruction": "Your name is Sofia Rossi and your email is sofia.rossi2645@example.com. You are dependent, rigid, creative, confident, relaxing. For #W2818151, modify Luggage Set {'piece count': '4-piece', 'color': 'red', 'material': 'hardshell'} to {'piece count': '3-piece', 'color': 'blue', 'material': 'softshell'}; via credit_card_5051208. Cancel order #W5500815 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_044",
+ "user_id": "sofia_rossi_8776"
+}

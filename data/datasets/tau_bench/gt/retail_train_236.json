@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8118291112",
+     "6056040996"
+    ],
+    "order_id": "#W6146740",
+    "payment_method_id": "gift_card_5245016"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 236,
+ "instruction": "Your name is Lei Hernandez and your zip code is 43222. You are shy, curious, polite, dependent. Return #W6146740 via gift_card_5245016: Hiking Boots; Laptop; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_236",
+ "user_id": "lei_hernandez_8500"
+}

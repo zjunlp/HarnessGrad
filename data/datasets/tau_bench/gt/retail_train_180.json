@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7441167885"
+    ],
+    "new_item_ids": [
+     "7806008610"
+    ],
+    "order_id": "#W5272531",
+    "payment_method_id": "credit_card_6824399"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 180,
+ "instruction": "Your name is Fatima Wilson and your email is fatima.wilson5721@example.com. You are curious, happy, patient, flexible, confident. For #W5272531, exchange Espresso Machine {'pressure': '15 bar', 'capacity': '1.5L', 'type': 'capsule'} to {'pressure': '9 bar', 'capacity': '1L'}; via credit_card_6824399. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_180",
+ "user_id": "fatima_wilson_7472"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3877188862"
+    ],
+    "new_item_ids": [
+     "4293355847"
+    ],
+    "order_id": "#W2974929",
+    "payment_method_id": "paypal_7916550"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 19,
+ "instruction": "Your name is Fatima Anderson and your zip code is 32100. You are relaxing, logical, shy, polite. For the #W2974929 that you've just placed, you realize that you've picked the wrong deck material, change it to 'bamboo' deck material.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_019",
+ "user_id": "fatima_anderson_2157"
+}

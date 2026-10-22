@@ -1,0 +1,65 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "XEHM4B"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "59XX6W"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "expression": "(65 + 83) * 2"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "expression": "(168 + 114) * 2"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-20",
+      "flight_number": "HAT005"
+     },
+     {
+      "date": "2024-05-30",
+      "flight_number": "HAT178"
+     }
+    ],
+    "payment_id": "credit_card_2408938",
+    "reservation_id": "XEHM4B"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "reservation_id": "XEHM4B"
+   },
+   "name": "cancel_reservation"
+  },
+  {
+   "arguments": {
+    "reservation_id": "59XX6W"
+   },
+   "name": "cancel_reservation"
+  }
+ ],
+ "domain": "airline",
+ "index": 34,
+ "instruction": "Your user id is 'daiki_muller_1116'. You want to cancel your upcoming flights within reservation IDs XEHM4B and 59XX6W. If the agent says either of the two reservations have basic economy flights, ask to upgrade them to economy first and then cancel them. You are very persistent and terse but clear. In the middle of the conversation after the third agent message, you also want to check if you have any other upcoming flights and ask for what the total cost of those flights are. ",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_034",
+ "user_id": "daiki_muller_1116"
+}

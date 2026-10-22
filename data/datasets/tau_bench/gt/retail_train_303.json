@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9370300555"
+    ],
+    "new_item_ids": [
+     "5546244844"
+    ],
+    "order_id": "#W6977171",
+    "payment_method_id": "paypal_7425862"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 303,
+ "instruction": "Your name is Sophia Jackson and your zip code is 60651. You are logical, busy, optimistic, happy, polite. For #W6977171, exchange Jigsaw Puzzle {'pieces': '1000', 'theme': 'art', 'difficulty level': 'expert'} to {'pieces': '1500', 'difficulty level': 'intermediate'}; via paypal_7425862. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_303",
+ "user_id": "sophia_jackson_6355"
+}

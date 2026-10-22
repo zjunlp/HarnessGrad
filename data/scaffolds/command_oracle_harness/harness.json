@@ -1,0 +1,12 @@
+{
+  "name": "command-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files"
+  ],
+  "install": null,
+  "notes": "A CONTROL, NOT A HARNESS. It copies the reference artefact a `command` dataset stages at `.oracle/` into the workdir and stops. Shared by every dataset generated with `tools/new_dataset.py --kind command`, so that `--platform` proves the dataset's VERIFY path reaches reward 1 through eval.runner.run_one. Never report a curve row for this control.",
+  "role": "control"
+}

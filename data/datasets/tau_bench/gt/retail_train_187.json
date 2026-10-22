@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4615543240"
+    ],
+    "new_item_ids": [
+     "6948061616"
+    ],
+    "order_id": "#W1605168",
+    "payment_method_id": "credit_card_7161839"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 187,
+ "instruction": "Your name is Yara Moore and your zip code is 92162. You are shy, cautious, relaxing, independent. For #W1605168, exchange Tablet {'screen size': '7-inch', 'storage': '32GB', 'color': 'silver'} to {'screen size': '10-inch', 'storage': '128GB', 'color': 'gold'}; via credit_card_7161839. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_187",
+ "user_id": "yara_moore_6466"
+}

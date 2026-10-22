@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "retail",
+ "index": 17,
+ "instruction": "Your name is Juan Smith and your zip code is 78770. You are logical, cautious, dependent. Tell the customer service agent that you're unhappy with the order #W3547545. The tea kettle does not look at all like the pictures from the website. Try to figure out what options are available so they can make it right. In the end decide to just keep all the items anyway.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_017",
+ "user_id": "juan_smith_9901"
+}

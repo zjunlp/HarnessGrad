@@ -1,0 +1,13 @@
+{
+  "name": "scienceworld-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files"
+  ],
+  "install": null,
+  "runtime_paths": [],
+  "notes": "A CONTROL, NOT A HARNESS. It reads the reference action list the dataset stages at `.oracle/actions.json` and replays it through the `scw` CLI, then stops. It exists so `data/datasets/scienceworld/control.py --platform` can prove the dataset's VERIFY path reaches reward 1 through eval.runner.run_one. `runtime_paths` is empty on purpose: the JVM this needs is materialized into the workdir by SETUP, not declared as a host path, because the verification namespace and the harness share the workdir and nothing else. Never report a curve row for this control.",
+  "role": "control"
+}

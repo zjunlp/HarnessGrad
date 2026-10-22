@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9370300555"
+    ],
+    "new_item_ids": [
+     "4068787148"
+    ],
+    "order_id": "#W5356919",
+    "payment_method_id": "paypal_2684483"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 316,
+ "instruction": "Your name is James Lee and your zip code is 95161. You are busy, polite, cautious, impatient, insecure. For #W5356919, modify Jigsaw Puzzle {'pieces': '1000', 'theme': 'art', 'difficulty level': 'expert'} to {'pieces': '500', 'difficulty level': 'intermediate'}; via paypal_2684483. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_316",
+ "user_id": "james_lee_5010"
+}

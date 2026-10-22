@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9811090008"
+    ],
+    "new_item_ids": [
+     "5694328282"
+    ],
+    "order_id": "#W7808613",
+    "payment_method_id": "credit_card_7801956"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 218,
+ "instruction": "Your name is Mohamed Smith and your email is mohamed.smith3152@example.com. You are curious, busy. For #W7808613, exchange Smart Watch {'color': 'silver', 'band material': 'leather', 'display': 'LCD'} to {'color': 'gold', 'display': 'AMOLED'}; via credit_card_7801956. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_218",
+ "user_id": "mohamed_smith_9224"
+}

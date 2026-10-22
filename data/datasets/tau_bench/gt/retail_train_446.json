@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W2912646",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 446,
+ "instruction": "Your name is Harper Johansson and your email is harper.johansson4006@example.com. You are independent, organized, rigid. Cancel order #W2912646 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_446",
+ "user_id": "harper_johansson_2663"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1804581713",
+     "7602931732"
+    ],
+    "new_item_ids": [
+     "8363011723",
+     "2323972008"
+    ],
+    "order_id": "#W3414433",
+    "payment_method_id": "gift_card_8049813"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 257,
+ "instruction": "Your name is Lei Li and your zip code is 85033. You are outgoing, rigid. For #W3414433, modify Digital Camera {'resolution': '30MP', 'zoom': '3x', 'storage': 'SD card'} to {'resolution': '20MP'}; Electric Kettle {'capacity': '1L', 'material': 'stainless steel', 'color': 'black'} to {'material': 'glass'}; via gift_card_8049813. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_257",
+ "user_id": "lei_li_6575"
+}

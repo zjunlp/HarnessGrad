@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6501071631"
+    ],
+    "order_id": "#W9495141",
+    "payment_method_id": "gift_card_8862145"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 242,
+ "instruction": "Your name is Harper Li and your zip code is 32253. You are happy, pessimistic. Return #W9495141 via gift_card_8862145: Tablet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_242",
+ "user_id": "harper_li_7655"
+}

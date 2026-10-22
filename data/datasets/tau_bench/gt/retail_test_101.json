@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8926329222",
+     "5312063289"
+    ],
+    "new_item_ids": [
+     "7160999700",
+     "6956751343"
+    ],
+    "order_id": "#W3295833",
+    "payment_method_id": "credit_card_3261838"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5676696062"
+    ],
+    "order_id": "#W8488728",
+    "payment_method_id": "paypal_3650980"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 101,
+ "instruction": "You name is Liam Thomas and your zip code is 85049. You are pessimistic, insecure. You want to return your luggage set and get the exact same item but with red color, and reutrn you skateboard in the same order to {'length': '34 inch', 'design': 'custom'}; You also want to return the hiking boots.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_101",
+ "user_id": "liam_thomas_7882"
+}

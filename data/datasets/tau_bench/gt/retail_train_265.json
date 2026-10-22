@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9132840",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3931703",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7533802601"
+    ],
+    "new_item_ids": [
+     "3229676465"
+    ],
+    "order_id": "#W6724985",
+    "payment_method_id": "credit_card_3593714"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 265,
+ "instruction": "Your name is Lei Ahmed and your email is lei.ahmed1696@example.com. You are pessimistic, organized. Cancel order #W9132840 because ordered by mistake. Cancel order #W3931703 because ordered by mistake. For #W6724985, modify Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'} to {'material': 'plastic', 'color': 'black'}; via credit_card_3593714. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_265",
+ "user_id": "lei_ahmed_1705"
+}

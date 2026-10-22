@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5995614",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 165,
+ "instruction": "Your name is Yara Muller and your zip code is 85041. You are creative, relaxing, rigid, curious. Cancel order #W5995614 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_165",
+ "user_id": "yara_muller_8652"
+}

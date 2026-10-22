@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6508153405",
+     "5311660992"
+    ],
+    "new_item_ids": [
+     "6534134392",
+     "1507389580"
+    ],
+    "order_id": "#W7613749",
+    "payment_method_id": "paypal_9379149"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 306,
+ "instruction": "Your name is Olivia Silva and your zip code is 32240. You are patient, flexible, organized, optimistic, cautious. For #W7613749, modify Wall Clock {'diameter': '12 inches', 'color': 'white', 'type': 'analog'} to {'diameter': '10 inches', 'color': 'wood'}; Smartphone {'color': 'rose gold', 'storage': '64GB', 'RAM': '8GB', 'screen size': '5.8-inch'} to {'color': 'black', 'storage': '128GB'}; via paypal_9379149. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_306",
+ "user_id": "olivia_silva_7273"
+}

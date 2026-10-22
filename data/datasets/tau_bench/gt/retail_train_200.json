@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1620235",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2918688",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 200,
+ "instruction": "Your name is Emma Santos and your zip code is 78228. You are dependent, impatient, relaxing. Cancel order #W1620235 because no longer needed. Cancel order #W2918688 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_200",
+ "user_id": "emma_santos_9753"
+}

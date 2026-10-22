@@ -1,0 +1,12 @@
+{
+  "name": "spreadsheetbench-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files"
+  ],
+  "install": null,
+  "notes": "A CONTROL, NOT A HARNESS. It copies the reference workbook the dataset stages at `.oracle/result.xlsx` into the contract's filename and records it in `answer.txt`, then stops. It exists so `data/datasets/spreadsheetbench/control.py --platform` can prove the dataset's VERIFY path reaches reward 1 through eval.runner.run_one. Never report a curve row for this control.",
+  "role": "control"
+}

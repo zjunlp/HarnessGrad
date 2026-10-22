@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9385662952",
+     "7583936705"
+    ],
+    "new_item_ids": [
+     "9385662952",
+     "9644439410"
+    ],
+    "order_id": "#W6874763",
+    "payment_method_id": "credit_card_4046723"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 64,
+ "instruction": "Your name is Sofia Li and your zip code is 10199. You are flexible, outgoing, dependent, impatient, messy. For #W6874763, exchange Fleece Jacket {'size': 'L', 'color': 'black', 'zipper': 'full'} to {}; Digital Camera {'resolution': '20MP', 'zoom': '10x', 'storage': 'CF card'} to {'zoom': '5x'}; via credit_card_4046723. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_064",
+ "user_id": "sofia_li_3261"
+}

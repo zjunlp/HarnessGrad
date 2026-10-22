@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9884666842"
+    ],
+    "new_item_ids": [
+     "3714494375"
+    ],
+    "order_id": "#W9673784",
+    "payment_method_id": "paypal_2192303"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 312,
+ "instruction": "Your name is Omar Silva and your email is omar.silva4147@example.com. You are confident, logical, happy. For #W9673784, modify Espresso Machine {'pressure': '19 bar', 'capacity': '1L', 'type': 'manual'} to {'pressure': '15 bar'}; via paypal_2192303. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_312",
+ "user_id": "omar_silva_7446"
+}

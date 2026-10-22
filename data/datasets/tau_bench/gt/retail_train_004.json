@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7602708",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 4,
+ "instruction": "Your name is Juan Rossi and your zip code is 77209. You are cautious, logical, organized, flexible, shy. Cancel order #W7602708 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_004",
+ "user_id": "juan_rossi_6696"
+}

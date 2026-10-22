@@ -1,0 +1,69 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3525030",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "address1": "953 Park Avenue",
+    "address2": "Suite 613",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W4866703",
+    "state": "NY",
+    "zip": "10064"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8142779083",
+     "8426249116",
+     "1793929609"
+    ],
+    "new_item_ids": [
+     "5268233322",
+     "4648362606",
+     "1071497737"
+    ],
+    "order_id": "#W4866703",
+    "payment_method_id": "paypal_4820484"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9677982",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1096508426",
+     "6301799585"
+    ],
+    "new_item_ids": [
+     "9237024510",
+     "9956648681"
+    ],
+    "order_id": "#W2912646",
+    "payment_method_id": "paypal_4820484"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 248,
+ "instruction": "Your name is Harper Johansson and your zip code is 80281. You are sad, pessimistic, busy, creative, curious. Cancel order #W3525030 because no longer needed. For #W4866703, change address to {'order_id': '#W4866703', 'address1': '953 Park Avenue', 'address2': 'Suite 613', 'city': 'New York', 'country': 'USA', 'state': 'NY', 'zip': '10064'} (same as #W1780552). For #W4866703, modify Electric Kettle {'capacity': '1L', 'material': 'stainless steel', 'color': 'silver'} to {'material': 'glass', 'color': 'white'}; Office Chair {'material': 'fabric', 'color': 'black', 'armrest': 'fixed', 'backrest height': 'standard'} to {'material': 'leather', 'armrest': 'adjustable', 'backrest height': 'high-back'}; Office Chair {'material': 'fabric', 'color': 'black', 'armrest': 'none', 'backrest height': 'high-back'} to {'material': 'leather', 'color': 'gray', 'armrest': 'fixed'}; via paypal_4820484. Cancel order #W9677982 because no longer needed. For #W2912646, modify Jigsaw Puzzle {'pieces': '500', 'theme': 'art', 'difficulty level': 'beginner'} to {'theme': 'animals', 'difficulty level': 'expert'}; Luggage Set {'piece count': '3-piece', 'color': 'blue', 'material': 'softshell'} to {'piece count': '4-piece', 'color': 'red', 'material': 'hardshell'}; via paypal_4820484. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_248",
+ "user_id": "harper_johansson_2663"
+}

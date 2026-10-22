@@ -1,0 +1,78 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5270061",
+    "payment_method_id": "paypal_7729105"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7453605304"
+    ],
+    "new_item_ids": [
+     "5370728469"
+    ],
+    "order_id": "#W5270061",
+    "payment_method_id": "gift_card_1711656"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "584 Sunset Drive",
+    "address2": "Suite 270",
+    "city": "Washington",
+    "country": "USA",
+    "order_id": "#W5782623",
+    "state": "DC",
+    "zip": "20353"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5782623",
+    "payment_method_id": "paypal_7729105"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1002370030"
+    ],
+    "new_item_ids": [
+     "9007697085"
+    ],
+    "order_id": "#W5782623",
+    "payment_method_id": "paypal_7729105"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9472539378",
+     "1646531091"
+    ],
+    "new_item_ids": [
+     "7602931732",
+     "1646531091"
+    ],
+    "order_id": "#W1519594",
+    "payment_method_id": "gift_card_1711656"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 331,
+ "instruction": "Your name is Ivan Khan and your email is ivan.khan6479@example.com. You are organized, confident, logical, sad. For #W5270061, change payment to paypal_7729105. For #W5270061, modify Desk Lamp {'color': 'silver', 'brightness': 'low', 'power source': 'battery'} to {'brightness': 'medium', 'power source': 'USB'}; via gift_card_1711656. For #W5782623, change address to {'order_id': '#W5782623', 'address1': '584 Sunset Drive', 'address2': 'Suite 270', 'city': 'Washington', 'country': 'USA', 'state': 'DC', 'zip': '20353'} (same as #W5270061). For #W5782623, change payment to paypal_7729105. For #W5782623, modify Perfume {'scent family': 'woody', 'size': '50ml', 'gender': 'women'} to {'scent family': 'fresh', 'gender': 'men'}; via paypal_7729105. For #W1519594, exchange Electric Kettle {'capacity': '1.5L', 'material': 'glass', 'color': 'white'} to {'capacity': '1L', 'material': 'stainless steel', 'color': 'black'}; Wireless Earbuds {'color': 'blue', 'battery life': '6 hours', 'water resistance': 'IPX4'} to {}; via gift_card_1711656. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_331",
+ "user_id": "ivan_khan_7475"
+}

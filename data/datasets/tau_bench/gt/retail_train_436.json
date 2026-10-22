@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5996159312"
+    ],
+    "new_item_ids": [
+     "1804581713"
+    ],
+    "order_id": "#W7807988",
+    "payment_method_id": "gift_card_5328393"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 436,
+ "instruction": "Your name is Harper Kim and your zip code is 78222. You are polite, creative, messy, confident. For #W7807988, modify Digital Camera {'resolution': '24MP', 'zoom': '3x', 'storage': 'SD card'} to {'resolution': '30MP'}; via gift_card_5328393. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_436",
+ "user_id": "harper_kim_2998"
+}

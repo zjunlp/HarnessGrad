@@ -1,0 +1,42 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "536 Cedar Street",
+    "address2": "Suite 916",
+    "city": "Charlotte",
+    "country": "USA",
+    "order_id": "#W4958652",
+    "state": "NC",
+    "zip": "28212"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1665571435",
+     "1906487464",
+     "8323284863",
+     "2791467853"
+    ],
+    "new_item_ids": [
+     "5886093635",
+     "7292993796",
+     "4274709903",
+     "4983901480"
+    ],
+    "order_id": "#W4958652",
+    "payment_method_id": "credit_card_9467292"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 202,
+ "instruction": "Your name is Sophia Garcia and your zip code is 28212. You are organized, curious, impatient. For #W4958652, change address to {'order_id': '#W4958652', 'address1': '536 Cedar Street', 'address2': 'Suite 916', 'city': 'Charlotte', 'country': 'USA', 'state': 'NC', 'zip': '28212'} (same as #W6447372). For #W4958652, modify Cycling Helmet {'size': 'L', 'color': 'black', 'ventilation': 'high'} to {'size': 'S', 'color': 'blue', 'ventilation': 'low'}; Tea Kettle {'material': 'stainless steel', 'capacity': '2 liters', 'stovetop compatibility': 'induction'} to {'material': 'glass'}; Office Chair {'material': 'fabric', 'color': 'blue', 'armrest': 'adjustable', 'backrest height': 'standard'} to {'material': 'mesh', 'color': 'red', 'armrest': 'none'}; Smart Thermostat {'compatibility': 'Google Assistant', 'color': 'stainless steel'} to {'compatibility': 'Apple HomeKit', 'color': 'black'}; via credit_card_9467292. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_202",
+ "user_id": "sophia_garcia_5795"
+}

@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4296426",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 50,
+ "instruction": "Your name is Chen Brown and your zip code is 95190. You are impatient, logical. Cancel order #W4296426 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_050",
+ "user_id": "chen_brown_8075"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3369928769",
+     "3377900078"
+    ],
+    "new_item_ids": [
+     "8481719475",
+     "9480266227"
+    ],
+    "order_id": "#W2002395",
+    "payment_method_id": "gift_card_6117300"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 86,
+ "instruction": "Your name is Sofia Ahmed and your zip code is 90819. You are rigid, polite, confident. For #W2002395, exchange Garden Hose {'length': '25ft', 'material': 'vinyl', 'color': 'green'} to {'length': '100ft', 'material': 'latex', 'color': 'blue'}; Smart Thermostat {'compatibility': 'Apple HomeKit', 'color': 'white'} to {'color': 'stainless steel'}; via gift_card_6117300. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_086",
+ "user_id": "sofia_ahmed_9514"
+}

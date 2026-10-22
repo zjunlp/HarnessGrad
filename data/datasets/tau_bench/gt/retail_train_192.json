@@ -1,0 +1,48 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W2273069",
+    "payment_method_id": "paypal_2306935"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2681513500",
+     "8098621301",
+     "2185126308"
+    ],
+    "new_item_ids": [
+     "9408160950",
+     "8098621301",
+     "6159919747"
+    ],
+    "order_id": "#W2273069",
+    "payment_method_id": "paypal_2306935"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7255224608"
+    ],
+    "new_item_ids": [
+     "5996159312"
+    ],
+    "order_id": "#W2693718",
+    "payment_method_id": "credit_card_3240550"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 192,
+ "instruction": "Your name is Harper Brown and your zip code is 76112. You are organized, patient, sad, dependent, cautious. For #W2273069, change payment to paypal_2306935. For #W2273069, modify Smart Watch {'color': 'gold', 'band material': 'silicone', 'display': 'AMOLED'} to {'band material': 'leather', 'display': 'LCD'}; Electric Toothbrush {'color': 'black', 'speed settings': 'high', 'battery type': 'rechargeable'} to {}; Hiking Boots {'size': '10', 'material': 'leather', 'waterproof': 'no'} to {'size': '11', 'waterproof': 'yes'}; via paypal_2306935. For #W2693718, exchange Digital Camera {'resolution': '30MP', 'zoom': '3x', 'storage': 'CF card'} to {'resolution': '24MP', 'storage': 'SD card'}; via credit_card_3240550. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_192",
+ "user_id": "harper_brown_7363"
+}

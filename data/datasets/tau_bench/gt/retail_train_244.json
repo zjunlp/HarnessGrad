@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4728397765",
+     "7510236436"
+    ],
+    "new_item_ids": [
+     "5992316252",
+     "7510236436"
+    ],
+    "order_id": "#W6075915",
+    "payment_method_id": "credit_card_7039111"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 244,
+ "instruction": "Your name is Sofia Ito and your email is sofia.ito7258@example.com. You are busy, independent, flexible. For #W6075915, exchange Fleece Jacket {'size': 'M', 'color': 'black', 'zipper': 'full'} to {'size': 'S', 'color': 'red', 'zipper': 'half'}; Yoga Mat {'thickness': '6mm', 'material': 'PVC', 'color': 'green'} to {}; via credit_card_7039111. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_244",
+ "user_id": "sofia_ito_7804"
+}

@@ -1,0 +1,61 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "178 Lakeview Drive",
+    "address2": "Suite 576",
+    "city": "Fort Worth",
+    "country": "USA",
+    "order_id": "#W3196599",
+    "state": "TX",
+    "zip": "76150"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6171242004"
+    ],
+    "new_item_ids": [
+     "2444431651"
+    ],
+    "order_id": "#W3196599",
+    "payment_method_id": "gift_card_9708163"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "808 Chestnut Street",
+    "address2": "Suite 832",
+    "city": "Phoenix",
+    "country": "USA",
+    "order_id": "#W7430166",
+    "state": "AZ",
+    "zip": "85072"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1240311797"
+    ],
+    "new_item_ids": [
+     "5268233322"
+    ],
+    "order_id": "#W7430166",
+    "payment_method_id": "gift_card_9708163"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 314,
+ "instruction": "Your name is Aarav Davis and your email is aarav.davis1165@example.com. You are organized, patient, independent, logical. For #W3196599, change address to {'order_id': '#W3196599', 'address1': '178 Lakeview Drive', 'address2': 'Suite 576', 'city': 'Fort Worth', 'country': 'USA', 'state': 'TX', 'zip': '76150'} (same as #W7430166). For #W3196599, modify Dumbbell Set {'weight range': '30-50 lbs', 'material': 'rubber', 'set type': 'fixed'} to {'weight range': '55-75 lbs', 'material': 'iron'}; via gift_card_9708163. For #W7430166, change address to {'order_id': '#W7430166', 'address1': '808 Chestnut Street', 'address2': 'Suite 832', 'city': 'Phoenix', 'country': 'USA', 'state': 'AZ', 'zip': '85072'} (same as #W2403075). For #W7430166, modify Electric Kettle {'capacity': '1L', 'material': 'glass', 'color': 'silver'} to {'color': 'white'}; via gift_card_9708163. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_314",
+ "user_id": "aarav_davis_4756"
+}

@@ -1,0 +1,29 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8593894906",
+     "3913310464"
+    ],
+    "order_id": "#W1523776",
+    "payment_method_id": "gift_card_2748512"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3206099",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 212,
+ "instruction": "Your name is Lucas Muller and your zip code is 78763. You are shy, messy, patient. Return #W1523776 via gift_card_2748512: Smart Thermostat; Makeup Kit; Cancel order #W3206099 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_212",
+ "user_id": "lucas_muller_4380"
+}

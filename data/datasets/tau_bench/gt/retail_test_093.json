@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2216662955"
+    ],
+    "new_item_ids": [
+     "9844888101"
+    ],
+    "order_id": "#W4073673",
+    "payment_method_id": "credit_card_3677959"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 93,
+ "instruction": "You name is Lei Wilson and your zip code is 32255. You are confident, organized, creative, impatient. You received a laptop and you want to exchange it to i7 processor, 8GB, 1TB SSD. If the agent asks for which laptop, it is 15-inch, 32GB.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_093",
+ "user_id": "lei_wilson_4541"
+}

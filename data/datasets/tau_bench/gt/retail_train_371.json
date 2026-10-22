@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5796612084"
+    ],
+    "new_item_ids": [
+     "8896479688"
+    ],
+    "order_id": "#W1302858",
+    "payment_method_id": "credit_card_2167533"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 371,
+ "instruction": "Your name is Yusuf Ahmed and your zip code is 91075. You are patient, optimistic, creative. For #W1302858, modify Gaming Mouse {'color': 'RGB', 'sensor type': 'optical', 'connectivity': 'wired'} to {'color': 'white', 'connectivity': 'wireless'}; via credit_card_2167533. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_371",
+ "user_id": "yusuf_ahmed_6232"
+}

@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2757705742",
+     "1684786391"
+    ],
+    "order_id": "#W2923184",
+    "payment_method_id": "credit_card_6419343"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 153,
+ "instruction": "Your name is Sophia Patel and your email is sophia.patel9841@example.com. You are organized, optimistic, confident. Return #W2923184 via credit_card_6419343: Wireless Earbuds; Laptop; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_153",
+ "user_id": "sophia_patel_6833"
+}

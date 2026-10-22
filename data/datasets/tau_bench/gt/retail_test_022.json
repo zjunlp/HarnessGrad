@@ -1,0 +1,73 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Ethan",
+    "last_name": "Garcia",
+    "zip": "80280"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "address1": "101 Highway",
+    "address2": "",
+    "city": "New York",
+    "country": "USA",
+    "state": "NY",
+    "user_id": "ethan_garcia_1261",
+    "zip": "10001"
+   },
+   "name": "modify_user_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4967593"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9911714"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5733668"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "address1": "101 Highway",
+    "address2": "",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W9911714",
+    "state": "NY",
+    "zip": "10001"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "667 Highland Drive",
+    "address2": "Suite 865",
+    "city": "Denver",
+    "country": "USA",
+    "state": "CO",
+    "user_id": "ethan_garcia_1261",
+    "zip": "80280"
+   },
+   "name": "modify_user_address"
+  }
+ ],
+ "domain": "retail",
+ "index": 22,
+ "instruction": "You are Ethan Garcia, and you live in Denver, 80280. You want to change your user address and all possible order addresses to be 101 Highway, New York, 10001. Then you regret and want to change the user address back to the original address. You are a mysterious person and do not want to reveal much about yourself.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_022",
+ "user_id": "ethan_garcia_1261"
+}

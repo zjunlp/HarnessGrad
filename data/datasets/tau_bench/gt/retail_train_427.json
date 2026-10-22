@@ -1,0 +1,69 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5911003",
+    "payment_method_id": "gift_card_4855547"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1518544029",
+     "4274709903",
+     "2185126308"
+    ],
+    "new_item_ids": [
+     "5206946487",
+     "8069050545",
+     "4582956489"
+    ],
+    "order_id": "#W5911003",
+    "payment_method_id": "credit_card_7772870"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "836 Hickory Lane",
+    "address2": "Suite 848",
+    "city": "San Diego",
+    "country": "USA",
+    "order_id": "#W8327915",
+    "state": "CA",
+    "zip": "92168"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8327915",
+    "payment_method_id": "credit_card_7772870"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4358482460",
+     "6956751343"
+    ],
+    "new_item_ids": [
+     "9672174103",
+     "6673921677"
+    ],
+    "order_id": "#W8327915",
+    "payment_method_id": "gift_card_4855547"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 427,
+ "instruction": "Your name is Ava Lopez and your email is ava.lopez3569@example.com. You are optimistic, direct. For #W5911003, change payment to gift_card_4855547. For #W5911003, modify Garden Hose {'length': '100ft', 'material': 'rubber', 'color': 'black'} to {'length': '50ft', 'material': 'vinyl'}; Office Chair {'material': 'mesh', 'color': 'red', 'armrest': 'none', 'backrest height': 'standard'} to {'material': 'leather', 'color': 'blue', 'backrest height': 'high-back'}; Hiking Boots {'size': '10', 'material': 'leather', 'waterproof': 'no'} to {'size': '12', 'material': 'synthetic'}; via credit_card_7772870. For #W8327915, change address to {'order_id': '#W8327915', 'address1': '836 Hickory Lane', 'address2': 'Suite 848', 'city': 'San Diego', 'country': 'USA', 'state': 'CA', 'zip': '92168'} (same as #W5911003). For #W8327915, change payment to credit_card_7772870. For #W8327915, modify Sunglasses {'frame color': 'black', 'lens color': 'brown', 'lens type': 'polarized', 'frame material': 'plastic'} to {'frame color': 'brown'}; Skateboard {'deck material': 'bamboo', 'length': '34 inch', 'design': 'custom'} to {'length': '28 inch'}; via gift_card_4855547. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_427",
+ "user_id": "ava_lopez_2676"
+}

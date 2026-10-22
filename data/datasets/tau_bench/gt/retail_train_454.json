@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "654 Spruce Street",
+    "address2": "Suite 503",
+    "city": "Denver",
+    "country": "USA",
+    "order_id": "#W5320242",
+    "state": "CO",
+    "zip": "80278"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5966895767",
+     "7160999700"
+    ],
+    "new_item_ids": [
+     "6901578702",
+     "9956648681"
+    ],
+    "order_id": "#W5320242",
+    "payment_method_id": "credit_card_9784468"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 454,
+ "instruction": "Your name is Ethan Santos and your email is ethan.santos9082@example.com. You are outgoing, pessimistic, independent. For #W5320242, change address to {'order_id': '#W5320242', 'address1': '654 Spruce Street', 'address2': 'Suite 503', 'city': 'Denver', 'country': 'USA', 'state': 'CO', 'zip': '80278'} (same as #W4642822). For #W5320242, modify Indoor Security Camera {'resolution': '2K', 'field of view': '160 degrees', 'connectivity': 'Ethernet'} to {'resolution': '4K', 'field of view': '130 degrees'}; Luggage Set {'piece count': '2-piece', 'color': 'red', 'material': 'softshell'} to {'piece count': '4-piece', 'material': 'hardshell'}; via credit_card_9784468. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_454",
+ "user_id": "ethan_santos_6104"
+}

@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1725100896",
+     "5546244844"
+    ],
+    "new_item_ids": [
+     "3399869890",
+     "5546244844"
+    ],
+    "order_id": "#W4398027",
+    "payment_method_id": "credit_card_5721095"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3952176596",
+     "4241599783"
+    ],
+    "order_id": "#W3155037",
+    "payment_method_id": "credit_card_5721095"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 402,
+ "instruction": "Your name is Ethan Muller and your zip code is 98128. You are creative, confident, happy, cautious. For #W4398027, exchange Perfume {'scent family': 'oriental', 'size': '30ml', 'gender': 'unisex'} to {'scent family': 'woody', 'size': '100ml', 'gender': 'men'}; Jigsaw Puzzle {'pieces': '1500', 'theme': 'art', 'difficulty level': 'intermediate'} to {}; via credit_card_5721095. Return #W3155037 via credit_card_5721095: Smartphone; Laptop; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_402",
+ "user_id": "ethan_muller_6097"
+}

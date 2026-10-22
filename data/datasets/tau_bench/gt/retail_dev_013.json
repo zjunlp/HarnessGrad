@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1178356107",
+     "2244749153",
+     "6697922351"
+    ],
+    "order_id": "#W9552705",
+    "payment_method_id": "gift_card_8922351"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 13,
+ "instruction": "Your name is Aarav Sanchez and your email is aarav.sanchez5467@example.com. You are patient, shy. Return the Portable Charger of your order. But before confirming, decide to return the Bookshelf and the Cycling Helmet as well. You wanna get website credit for the return.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_013",
+ "user_id": "aarav_sanchez_6636"
+}

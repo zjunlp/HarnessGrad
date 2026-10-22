@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8886009523"
+    ],
+    "new_item_ids": [
+     "8886009523"
+    ],
+    "order_id": "#W1974181",
+    "payment_method_id": "credit_card_7971769"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 337,
+ "instruction": "Your name is Olivia Smith and your zip code is 80216. You are curious, confident. For #W1974181, modify Wristwatch {'strap material': 'silicone', 'dial color': 'blue'} to {}; via credit_card_7971769. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_337",
+ "user_id": "olivia_smith_5265"
+}

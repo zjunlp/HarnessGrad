@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8955613",
+    "payment_method_id": "credit_card_6044108"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6309044598",
+     "2554056026"
+    ],
+    "new_item_ids": [
+     "9851293632",
+     "2681513500"
+    ],
+    "order_id": "#W8955613",
+    "payment_method_id": "credit_card_6044108"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 322,
+ "instruction": "Your name is Olivia Lopez and your email is olivia.lopez8783@example.com. You are cautious, organized, creative, impatient, busy. For #W8955613, change payment to credit_card_6044108. For #W8955613, modify Backpack {'color': 'grey', 'size': 'large', 'material': 'polyester', 'compartment': 'hydration'} to {'color': 'green', 'size': 'small', 'compartment': 'camera'}; Smart Watch {'color': 'gold', 'band material': 'metal', 'display': 'AMOLED'} to {'band material': 'silicone'}; via credit_card_6044108. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_322",
+ "user_id": "olivia_lopez_9494"
+}

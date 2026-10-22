@@ -1,0 +1,34 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3330317167"
+    ],
+    "new_item_ids": [
+     "3330317167"
+    ],
+    "order_id": "#W3206099",
+    "payment_method_id": "gift_card_2748512"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8593894906"
+    ],
+    "order_id": "#W1523776",
+    "payment_method_id": "gift_card_2748512"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 8,
+ "instruction": "Your name is Lucas Muller and your email is lucas.muller7899@example.com. You are patient, cautious. For #W3206099, modify Gaming Mouse {'color': 'black', 'sensor type': 'optical', 'connectivity': 'wired'} to {}; via gift_card_2748512. Return #W1523776 via gift_card_2748512: Smart Thermostat; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_008",
+ "user_id": "lucas_muller_4380"
+}

@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4683557",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1725100896"
+    ],
+    "order_id": "#W4398027",
+    "payment_method_id": "credit_card_5721095"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 205,
+ "instruction": "Your name is Ethan Muller and your email is ethan.muller6617@example.com. You are relaxing, sad. Cancel order #W4683557 because ordered by mistake. Return #W4398027 via credit_card_5721095: Perfume; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_205",
+ "user_id": "ethan_muller_6097"
+}

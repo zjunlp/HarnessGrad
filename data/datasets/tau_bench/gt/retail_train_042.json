@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7866854614",
+     "8124970213"
+    ],
+    "new_item_ids": [
+     "7866854614",
+     "3234800602"
+    ],
+    "order_id": "#W6717215",
+    "payment_method_id": "gift_card_5501047"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 42,
+ "instruction": "Your name is Isabella Taylor and your email is isabella.taylor7762@example.com. You are outgoing, organized, patient. For #W6717215, exchange Portable Charger {'capacity': '5000mAh', 'output': 'USB-C', 'color': 'white'} to {}; T-Shirt {'color': 'purple', 'size': 'XL', 'material': 'cotton', 'style': 'crew neck'} to {'color': 'red', 'size': 'L', 'style': 'v-neck'}; via gift_card_5501047. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_042",
+ "user_id": "isabella_taylor_7478"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9624127908"
+    ],
+    "new_item_ids": [
+     "5428723833"
+    ],
+    "order_id": "#W1971958",
+    "payment_method_id": "paypal_7383471"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 347,
+ "instruction": "Your name is Noah Martin and your zip code is 43090. You are dependent, creative, pessimistic, polite, messy. For #W1971958, exchange Electric Kettle {'capacity': '1.5L', 'material': 'plastic', 'color': 'silver'} to {'color': 'black'}; via paypal_7383471. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_347",
+ "user_id": "noah_martin_5764"
+}

@@ -1,0 +1,75 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "James",
+    "last_name": "Sanchez",
+    "zip": "60623"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "james_sanchez_3954"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7464385"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8499625"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1279004"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "3377618313"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1810466394"
+    ],
+    "new_item_ids": [
+     "6700049080"
+    ],
+    "order_id": "#W7464385",
+    "payment_method_id": "paypal_1261484"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1810466394"
+    ],
+    "new_item_ids": [
+     "6700049080"
+    ],
+    "order_id": "#W7464385",
+    "payment_method_id": "paypal_1261484"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 64,
+ "instruction": "You are James Sanchez. You live in Chicago 60623. You want to exchange the camera for the highest resolution, waterproof camera that you can get with the previous purchaced price.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_064",
+ "user_id": "harper_moore_6183"
+}

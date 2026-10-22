@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7441167885"
+    ],
+    "order_id": "#W5321777",
+    "payment_method_id": "gift_card_6892585"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 95,
+ "instruction": "Your name is Ethan Johnson and your email is ethan.johnson2557@example.com. You are shy, rigid, dependent. Return #W5321777 via gift_card_6892585: Espresso Machine; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_095",
+ "user_id": "ethan_johnson_7053"
+}

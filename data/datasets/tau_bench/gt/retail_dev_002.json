@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3942868",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 2,
+ "instruction": "Your name is Harper Moore and your email is harper.moore2816@example.com. You are independent, rigid, messy, patient. After placing an order for a tea kettle you started Googling around and found that you can buy the same exact tea kettle for half the price. Express disappointment in the prices and that you're going to buy the item from the other store and want a full refund immediately unless they can match the price with the 50% discount",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_002",
+ "user_id": "harper_moore_3210"
+}

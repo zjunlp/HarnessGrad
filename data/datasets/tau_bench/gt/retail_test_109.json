@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9612497925",
+     "7127170374",
+     "6268080249"
+    ],
+    "order_id": "#W1679211",
+    "payment_method_id": "paypal_3022415"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 109,
+ "instruction": "You name is Yusuf Gonzalez and your zip code is 91455. You want to return everything but a tablet in a recently delivered order. You want to know how much you can get back.",
+ "outputs": [
+  "346.93"
+ ],
+ "split": "test",
+ "task_id": "retail_test_109",
+ "user_id": "yusuf_gonzalez_8900"
+}

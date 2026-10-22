@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "JMO1MG"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "user_id": "anya_garcia_5901"
+   },
+   "name": "get_user_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 44,
+ "instruction": "You are Anya Garcia (with ID: anya_garcia_5901). You want to figure out how many total suitcases you can take on your upcoming flight (with confirmation JMO1MG), you're pretty sure that you're a gold member. Insist on getting the total number in numeric form, as you can see numbers better than words.",
+ "outputs": [
+  "4"
+ ],
+ "split": "test",
+ "task_id": "airline_test_044",
+ "user_id": "anya_garcia_5901"
+}

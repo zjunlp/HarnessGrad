@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2185126308"
+    ],
+    "order_id": "#W2274128",
+    "payment_method_id": "gift_card_3372949"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 381,
+ "instruction": "Your name is Yusuf Patel and your zip code is 94117. You are curious, organized, independent, confident, relaxing. Return #W2274128 via gift_card_3372949: Hiking Boots; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_381",
+ "user_id": "yusuf_patel_7767"
+}

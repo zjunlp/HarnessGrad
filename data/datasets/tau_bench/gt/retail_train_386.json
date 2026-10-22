@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5911003",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 386,
+ "instruction": "Your name is Ava Lopez and your email is ava.lopez3569@example.com. You are sad, shy, direct. Cancel order #W5911003 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_386",
+ "user_id": "ava_lopez_2676"
+}

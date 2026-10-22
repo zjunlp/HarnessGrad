@@ -1,0 +1,34 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9665000388"
+    ],
+    "order_id": "#W1654332",
+    "payment_method_id": "credit_card_4056740"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9408160950"
+    ],
+    "new_item_ids": [
+     "9408160950"
+    ],
+    "order_id": "#W9527030",
+    "payment_method_id": "credit_card_4056740"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 267,
+ "instruction": "Your name is Isabella Santos and your email is isabella.santos9317@example.com. You are dependent, sad. Return #W1654332 via credit_card_4056740: Mechanical Keyboard; For #W9527030, modify Smart Watch {'color': 'gold', 'band material': 'leather', 'display': 'LCD'} to {}; via credit_card_4056740. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_267",
+ "user_id": "isabella_santos_1643"
+}

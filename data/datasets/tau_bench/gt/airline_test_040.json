@@ -1,0 +1,47 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "sophia_silva_7557"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "NM1VX1"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "KC18K6"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "S61CZX"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "H8Q05L"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "WUNA5K"
+   },
+   "name": "get_reservation_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 40,
+ "instruction": "You are Sophia Silva (with ID: sophia_silva_7557). Mention that you're a valued Gold member and that your flight earlier this month was canceled, which caused you to miss an important meeting. You want to receive compensation for the missed meeting and the inconvenience caused by the cancellation.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_040",
+ "user_id": "sophia_silva_7557"
+}

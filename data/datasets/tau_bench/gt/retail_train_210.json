@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3007862",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 210,
+ "instruction": "Your name is Evelyn Lopez and your zip code is 92195. You are impatient, busy. Cancel order #W3007862 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_210",
+ "user_id": "evelyn_lopez_5487"
+}

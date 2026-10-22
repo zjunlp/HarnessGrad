@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8293778132"
+    ],
+    "order_id": "#W1748126",
+    "payment_method_id": "gift_card_1139567"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4614740",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 367,
+ "instruction": "Your name is Sophia Hernandez and your zip code is 76197. You are shy, creative, independent, pessimistic. Return #W1748126 via gift_card_1139567: Tea Kettle; Cancel order #W4614740 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_367",
+ "user_id": "sophia_hernandez_2054"
+}

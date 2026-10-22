@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5782623",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7453605304"
+    ],
+    "new_item_ids": [
+     "5320792178"
+    ],
+    "order_id": "#W5270061",
+    "payment_method_id": "paypal_7729105"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 365,
+ "instruction": "Your name is Ivan Khan and your zip code is 28243. You are confident, organized, creative, busy. Cancel order #W5782623 because ordered by mistake. For #W5270061, modify Desk Lamp {'color': 'silver', 'brightness': 'low', 'power source': 'battery'} to {'color': 'black', 'brightness': 'medium', 'power source': 'AC adapter'}; via paypal_7729105. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_365",
+ "user_id": "ivan_khan_7475"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9690244451"
+    ],
+    "order_id": "#W4680753",
+    "payment_method_id": "paypal_2417743"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 89,
+ "instruction": "You name is Raj Santos and your zip code is 98157. You are dependent, flexible. You want to know what is the cheapest availabe mechanical keyboard right now and its options. If it is less than 200 bucks you want to exchange your current one to it. If not, return your current one.",
+ "outputs": [
+  "226.11",
+  "tactile",
+  "white",
+  "full"
+ ],
+ "split": "test",
+ "task_id": "retail_test_089",
+ "user_id": "raj_santos_9079"
+}

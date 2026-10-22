@@ -1,0 +1,41 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3478699712"
+    ],
+    "new_item_ids": [
+     "9844888101"
+    ],
+    "order_id": "#W2905754",
+    "payment_method_id": "credit_card_3677959"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2216662955"
+    ],
+    "new_item_ids": [
+     "9844888101"
+    ],
+    "order_id": "#W4073673",
+    "payment_method_id": "credit_card_3677959"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 96,
+ "instruction": "You name is Lei Wilson and your zip code is 32255. You are confident, organized, creative, impatient. You received a laptop and you want to exchange it to i7 processor, 8GB, 1TB SSD. If the agent asks for which laptop, it is 15-inch, and it is actually two laptops that you want to exchange. You want to know how much you need to pay today in total.",
+ "outputs": [
+  "167.87",
+  "60.78",
+  "107.09"
+ ],
+ "split": "test",
+ "task_id": "retail_test_096",
+ "user_id": "lei_wilson_4541"
+}

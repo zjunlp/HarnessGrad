@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1725100896"
+    ],
+    "new_item_ids": [
+     "5081446110"
+    ],
+    "order_id": "#W8448267",
+    "payment_method_id": "credit_card_6480285"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 240,
+ "instruction": "Your name is Raj Ito and your zip code is 60641. You are rigid, relaxing, creative, shy. For #W8448267, exchange Perfume {'scent family': 'oriental', 'size': '30ml', 'gender': 'unisex'} to {'scent family': 'woody', 'gender': 'men'}; via credit_card_6480285. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_240",
+ "user_id": "raj_ito_1740"
+}

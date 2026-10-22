@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5966895767",
+     "8293778132"
+    ],
+    "order_id": "#W1748126",
+    "payment_method_id": "gift_card_1139567"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6501071631"
+    ],
+    "new_item_ids": [
+     "6501071631"
+    ],
+    "order_id": "#W1326557",
+    "payment_method_id": "gift_card_1139567"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 410,
+ "instruction": "Your name is Sophia Hernandez and your zip code is 76197. You are busy, direct. Return #W1748126 via gift_card_1139567: Indoor Security Camera; Tea Kettle; For #W1326557, exchange Tablet {'screen size': '7-inch', 'storage': '32GB', 'color': 'gold'} to {}; via gift_card_1139567. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_410",
+ "user_id": "sophia_hernandez_2054"
+}

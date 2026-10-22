@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8323284863"
+    ],
+    "new_item_ids": [
+     "8323284863"
+    ],
+    "order_id": "#W1845024",
+    "payment_method_id": "paypal_3169710"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 473,
+ "instruction": "Your name is Noah Patel and your zip code is 10108. You are polite, messy. For #W1845024, modify Office Chair {'material': 'fabric', 'color': 'blue', 'armrest': 'adjustable', 'backrest height': 'standard'} to {}; via paypal_3169710. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_473",
+ "user_id": "noah_patel_6952"
+}

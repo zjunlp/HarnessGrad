@@ -1,0 +1,63 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Fatima",
+    "last_name": "Taylor",
+    "zip": "85033"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "first_name": "Fatima",
+    "last_name": "Taylor",
+    "zip": "32169"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "fatima_taylor_3452"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5285031"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "address1": "157 Oak Street",
+    "address2": "Suite 258",
+    "city": "Phoenix",
+    "country": "USA",
+    "state": "AZ",
+    "user_id": "fatima_taylor_3452",
+    "zip": "85033"
+   },
+   "name": "modify_user_address"
+  },
+  {
+   "arguments": {},
+   "name": "list_all_product_types"
+  },
+  {
+   "arguments": {
+    "product_id": "9523456873"
+   },
+   "name": "get_product_details"
+  }
+ ],
+ "domain": "retail",
+ "index": 39,
+ "instruction": "You are fatima_taylor_3452, and you just moved from Florida (32169) to Phoenix (85033). Unfortunately your address is still the old one, and you want to update it. Your current address should be in your order, and you do not want to reveal it. Also, you want to know what is the price of the cheapest available t-shirt right now, and if you can order it through the agent. You are a funny person with lots of jokes, and you want to make the agent laugh.",
+ "outputs": [
+  "46.66"
+ ],
+ "split": "test",
+ "task_id": "retail_test_039",
+ "user_id": "fatima_taylor_3452"
+}

@@ -1,0 +1,51 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "cabin": "economy",
+    "destination": "SEA",
+    "flight_type": "one_way",
+    "flights": [
+     {
+      "date": "2024-05-17",
+      "flight_number": "HAT097"
+     },
+     {
+      "date": "2024-05-17",
+      "flight_number": "HAT251"
+     }
+    ],
+    "insurance": "no",
+    "nonfree_baggages": 0,
+    "origin": "DTW",
+    "passengers": [
+     {
+      "dob": "1986-03-14",
+      "first_name": "Ivan",
+      "last_name": "Smith"
+     }
+    ],
+    "payment_methods": [
+     {
+      "amount": 128,
+      "payment_id": "gift_card_8516878"
+     },
+     {
+      "amount": 247,
+      "payment_id": "credit_card_3563913"
+     }
+    ],
+    "total_baggages": 0,
+    "user_id": "ivan_muller_7015"
+   },
+   "name": "book_reservation"
+  }
+ ],
+ "domain": "airline",
+ "index": 11,
+ "instruction": "Your user id is ivan_muller_7015 and you want to book the same flights as your current reservation for your friend Ivan in your user profile (Ivan Smith, DOB you can't remember but in your profile). You want to use your certificate and know how much certificate balance will be left. If more than $100 is wasted, you want to instead use your GC and CC. No baggage and insurance.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_011",
+ "user_id": "ivan_muller_7015"
+}

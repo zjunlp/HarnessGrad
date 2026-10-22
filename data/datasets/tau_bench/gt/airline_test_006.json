@@ -1,0 +1,29 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT110"
+     },
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT172"
+     }
+    ],
+    "payment_id": "gift_card_8887175",
+    "reservation_id": "M05KNL"
+   },
+   "name": "update_reservation_flights"
+  }
+ ],
+ "domain": "airline",
+ "index": 6,
+ "instruction": "Your user id is aarav_garcia_1177. For your upcoming trip from ATL to PHL, you want to change for the cheapest economy flight and for the day after the original reservation. You are happy with original payment for refund.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_006",
+ "user_id": "aarav_garcia_1177"
+}

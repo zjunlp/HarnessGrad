@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8193934556"
+    ],
+    "new_item_ids": [
+     "6056040996"
+    ],
+    "order_id": "#W7007896",
+    "payment_method_id": "credit_card_2167533"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 282,
+ "instruction": "Your name is Yusuf Ahmed and your email is yusuf.ahmed5476@example.com. You are messy, confident, busy, direct. For #W7007896, modify Laptop {'screen size': '13-inch', 'processor': 'i9', 'ram': '8GB', 'storage': '1TB SSD', 'color': 'space grey'} to {'processor': 'i5', 'ram': '16GB', 'storage': '512GB SSD'}; via credit_card_2167533. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_282",
+ "user_id": "yusuf_ahmed_6232"
+}

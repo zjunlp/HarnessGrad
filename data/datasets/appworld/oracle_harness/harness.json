@@ -1,0 +1,12 @@
+{
+  "name": "appworld-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "exec"
+  ],
+  "install": null,
+  "notes": "A control harness for checking the AppWorld released oracle and verifier through eval.runner.run_one. Never report a curve row for this control.",
+  "role": "control"
+}

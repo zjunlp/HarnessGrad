@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/linhaowei1/kumo",
+  "revision": "576748764f7d72634654d0784944a485eca9047c",
+  "path": "env/engine.py",
+  "sha256": "6cd2bf798fbe53fc3122a4c2420e08e9534050aecd147d757aa98b4a556b0f05",
+  "scorer_lines": [
+    20,
+    34
+  ],
+  "license": "Apache-2.0",
+  "modifications": []
+}

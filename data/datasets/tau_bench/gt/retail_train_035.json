@@ -1,0 +1,65 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "812 Cedar Avenue",
+    "address2": "Suite 500",
+    "city": "Houston",
+    "country": "USA",
+    "order_id": "#W2575533",
+    "state": "TX",
+    "zip": "77129"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9494281769",
+     "8349903180",
+     "5206946487"
+    ],
+    "new_item_ids": [
+     "4273929280",
+     "8349903180",
+     "3369928769"
+    ],
+    "order_id": "#W2575533",
+    "payment_method_id": "paypal_3024827"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7602931732",
+     "9570044148",
+     "6857426243"
+    ],
+    "order_id": "#W5565470",
+    "payment_method_id": "paypal_3024827"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4293355847"
+    ],
+    "new_item_ids": [
+     "3877188862"
+    ],
+    "order_id": "#W3792453",
+    "payment_method_id": "paypal_3024827"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 35,
+ "instruction": "Your name is Isabella Johansson and your email is isabella.johansson9391@example.com. You are polite, pessimistic, organized, rigid. For #W2575533, change address to {'order_id': '#W2575533', 'address1': '812 Cedar Avenue', 'address2': 'Suite 500', 'city': 'Houston', 'country': 'USA', 'state': 'TX', 'zip': '77129'} (same as #W5565470). For #W2575533, modify E-Reader {'screen size': '8-inch', 'connectivity': 'Wi-Fi', 'storage': '8GB'} to {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular', 'storage': '32GB'}; Portable Charger {'capacity': '20000mAh', 'output': 'Wireless', 'color': 'black'} to {}; Garden Hose {'length': '50ft', 'material': 'vinyl', 'color': 'black'} to {'length': '25ft', 'color': 'green'}; via paypal_3024827. Return #W5565470 via paypal_3024827: Electric Kettle; Mechanical Keyboard; Pet Bed; For #W3792453, exchange Skateboard {'deck material': 'bamboo', 'length': '31 inch', 'design': 'plain'} to {'deck material': 'plastic'}; via paypal_3024827. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_035",
+ "user_id": "isabella_johansson_2152"
+}

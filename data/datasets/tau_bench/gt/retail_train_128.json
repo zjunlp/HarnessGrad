@@ -1,0 +1,34 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8293778132",
+     "6906307980",
+     "9190635437"
+    ],
+    "order_id": "#W5220869",
+    "payment_method_id": "credit_card_7971769"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8426249116",
+     "4859937227"
+    ],
+    "order_id": "#W5202795",
+    "payment_method_id": "credit_card_7971769"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 128,
+ "instruction": "Your name is Olivia Smith and your zip code is 80216. You are flexible, relaxing, insecure, patient, direct. Return #W5220869 via credit_card_7971769: Tea Kettle; Backpack; Desk Lamp; Return #W5202795 via credit_card_7971769: Office Chair; Action Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_128",
+ "user_id": "olivia_smith_5265"
+}

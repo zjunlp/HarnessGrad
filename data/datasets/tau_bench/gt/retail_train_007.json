@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9318778",
+    "payment_method_id": "credit_card_7862034"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2143041831",
+     "3076708684"
+    ],
+    "new_item_ids": [
+     "5606522780",
+     "3076708684"
+    ],
+    "order_id": "#W9318778",
+    "payment_method_id": "credit_card_7862034"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 7,
+ "instruction": "Your name is Lucas Martin and your email is lucas.martin5733@example.com. You are patient, cautious, organized. For #W9318778, change payment to credit_card_7862034. For #W9318778, modify Bicycle {'frame size': 'medium', 'color': 'black', 'type': 'mountain'} to {'frame size': 'large', 'color': 'red'}; Air Purifier {'room size': 'medium', 'filter type': 'HEPA', 'features': 'quiet operation'} to {}; via credit_card_7862034. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_007",
+ "user_id": "lucas_martin_4549"
+}

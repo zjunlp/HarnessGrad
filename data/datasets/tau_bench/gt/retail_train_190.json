@@ -1,0 +1,46 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6948061616"
+    ],
+    "order_id": "#W7242815",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "544 Sunset Drive",
+    "address2": "Suite 337",
+    "city": "Jacksonville",
+    "country": "USA",
+    "order_id": "#W6002467",
+    "state": "FL",
+    "zip": "32205"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8140269513"
+    ],
+    "new_item_ids": [
+     "7159180318"
+    ],
+    "order_id": "#W6002467",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 190,
+ "instruction": "Your name is Lei Anderson and your zip code is 76192. You are shy, impatient, curious, insecure. Return #W7242815 via paypal_1808675: Tablet; For #W6002467, change address to {'order_id': '#W6002467', 'address1': '544 Sunset Drive', 'address2': 'Suite 337', 'city': 'Jacksonville', 'country': 'USA', 'state': 'FL', 'zip': '32205'} (same as #W1866533). For #W6002467, modify Dumbbell Set {'weight range': '55-75 lbs', 'material': 'rubber', 'set type': 'adjustable'} to {'weight range': '30-50 lbs', 'material': 'urethane', 'set type': 'fixed'}; via paypal_1808675. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_190",
+ "user_id": "lei_anderson_8271"
+}

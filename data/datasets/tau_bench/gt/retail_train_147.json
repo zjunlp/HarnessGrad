@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5666020311"
+    ],
+    "new_item_ids": [
+     "7848293342"
+    ],
+    "order_id": "#W3482034",
+    "payment_method_id": "credit_card_3631888"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9045948550",
+     "8140269513"
+    ],
+    "order_id": "#W9628587",
+    "payment_method_id": "credit_card_3631888"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 147,
+ "instruction": "Your name is Evelyn Hernandez and your zip code is 92139. You are rigid, insecure, pessimistic, outgoing, impatient. For #W3482034, modify Grill {'type': 'electric', 'size': 'medium', 'features': 'side burner'} to {'type': 'charcoal'}; via credit_card_3631888. Return #W9628587 via credit_card_3631888: Sunglasses; Dumbbell Set; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_147",
+ "user_id": "evelyn_hernandez_1701"
+}

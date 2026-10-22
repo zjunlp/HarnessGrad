@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "raj_sanchez_7340"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "MZDDS4"
+   },
+   "name": "get_reservation_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 47,
+ "instruction": "You are Raj Sanchez (user id is raj_sanchez_7340). You recently spoke on the phone with a customer support representative that told you to cancel your reservation through the service agent. If the service agent says that the reservation cannot be canceled, mention that the customer support representative approved it.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_047",
+ "user_id": "raj_sanchez_7340"
+}

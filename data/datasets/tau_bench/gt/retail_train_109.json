@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "144 Lakeview Drive",
+    "address2": "Suite 925",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W6729841",
+    "state": "NY",
+    "zip": "10228"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5855700373"
+    ],
+    "new_item_ids": [
+     "1052700637"
+    ],
+    "order_id": "#W6729841",
+    "payment_method_id": "credit_card_1620755"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 109,
+ "instruction": "Your name is Noah Ito and your email is noah.ito4296@example.com. You are logical, cautious, organized, sad. For #W6729841, change address to {'order_id': '#W6729841', 'address1': '144 Lakeview Drive', 'address2': 'Suite 925', 'city': 'New York', 'country': 'USA', 'state': 'NY', 'zip': '10228'} (same as #W3445693). For #W6729841, modify Bluetooth Speaker {'color': 'black', 'battery life': '10 hours', 'water resistance': 'yes'} to {'color': 'red', 'battery life': '20 hours', 'water resistance': 'no'}; via credit_card_1620755. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_109",
+ "user_id": "noah_ito_3850"
+}

@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9727387530",
+     "6242772310"
+    ],
+    "order_id": "#W5866402",
+    "payment_method_id": "gift_card_7794233"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 8,
+ "instruction": "Your name is Olivia Ito and your zip code is 80218. You are relaxing, impatient, direct, organized, curious. Return the all the items from the order (the order contained Sneakers and a Espresso Machine). You're initially unsure which payment method to use for the refund, try to get more information about the payment methods available for the refund. You eventually decide to get a gift card for the refund.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_008",
+ "user_id": "olivia_ito_3591"
+}

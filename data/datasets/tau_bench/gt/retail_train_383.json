@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2343503231",
+     "8798690242"
+    ],
+    "new_item_ids": [
+     "6313971174",
+     "6164262152"
+    ],
+    "order_id": "#W4172216",
+    "payment_method_id": "credit_card_6450011"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 383,
+ "instruction": "Your name is Lei Patel and your email is lei.patel3765@example.com. You are optimistic, messy, relaxing, creative, shy. For #W4172216, modify Skateboard {'deck material': 'maple', 'length': '34 inch', 'design': 'graphic'} to {'deck material': 'bamboo', 'length': '31 inch', 'design': 'custom'}; Electric Toothbrush {'color': 'black', 'speed settings': 'high', 'battery type': 'AA batteries'} to {'color': 'white', 'speed settings': 'low', 'battery type': 'rechargeable'}; via credit_card_6450011. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_383",
+ "user_id": "lei_patel_5376"
+}

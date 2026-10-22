@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "870 Oak Street",
+    "address2": "Suite 766",
+    "city": "San Jose",
+    "country": "USA",
+    "order_id": "#W5356919",
+    "state": "CA",
+    "zip": "95161"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9370300555"
+    ],
+    "new_item_ids": [
+     "4068787148"
+    ],
+    "order_id": "#W5356919",
+    "payment_method_id": "paypal_2684483"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 472,
+ "instruction": "Your name is James Lee and your zip code is 95161. You are messy, confident, direct, shy, busy. For #W5356919, change address to {'order_id': '#W5356919', 'address1': '870 Oak Street', 'address2': 'Suite 766', 'city': 'San Jose', 'country': 'USA', 'state': 'CA', 'zip': '95161'} (same as #W8520591). For #W5356919, modify Jigsaw Puzzle {'pieces': '1000', 'theme': 'art', 'difficulty level': 'expert'} to {'pieces': '500', 'difficulty level': 'intermediate'}; via paypal_2684483. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_472",
+ "user_id": "james_lee_5010"
+}

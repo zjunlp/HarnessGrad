@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7729002517",
+     "6259501109"
+    ],
+    "new_item_ids": [
+     "7917269097",
+     "2872451762"
+    ],
+    "order_id": "#W7128968",
+    "payment_method_id": "gift_card_7037673"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 307,
+ "instruction": "Your name is Yusuf Jackson and your email is yusuf.jackson4654@example.com. You are outgoing, organized, polite, confident, curious. For #W7128968, exchange Pet Bed {'size': 'large', 'material': 'polyester', 'color': 'brown'} to {'color': 'grey'}; Vacuum Cleaner {'type': 'robotic', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'} to {'type': 'canister'}; via gift_card_7037673. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_307",
+ "user_id": "yusuf_jackson_7865"
+}

@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "320 Cedar Avenue",
+    "address2": "Suite 116",
+    "city": "San Antonio",
+    "country": "USA",
+    "order_id": "#W3289292",
+    "state": "TX",
+    "zip": "78219"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9025753381"
+    ],
+    "new_item_ids": [
+     "1151293680"
+    ],
+    "order_id": "#W3289292",
+    "payment_method_id": "paypal_8963303"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 14,
+ "instruction": "Your name is James Kim and your zip code is 92199. You are relaxing, polite, independent, pessimistic, confident. For #W3289292, change address to {'order_id': '#W3289292', 'address1': '320 Cedar Avenue', 'address2': 'Suite 116', 'city': 'San Antonio', 'country': 'USA', 'state': 'TX', 'zip': '78219'} (same as #W9154975). For #W3289292, exchange Mechanical Keyboard {'switch type': 'clicky', 'backlight': 'RGB', 'size': 'full size'} to {'switch type': 'linear'}; ",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_014",
+ "user_id": "james_kim_7213"
+}

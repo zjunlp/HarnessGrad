@@ -1,0 +1,44 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9884666842"
+    ],
+    "new_item_ids": [
+     "7774234341"
+    ],
+    "order_id": "#W7111824",
+    "payment_method_id": "credit_card_3577130"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1080318",
+    "payment_method_id": "gift_card_3749819"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8349118980"
+    ],
+    "new_item_ids": [
+     "2060066974"
+    ],
+    "order_id": "#W1080318",
+    "payment_method_id": "gift_card_3749819"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 319,
+ "instruction": "Your name is Omar Kim and your zip code is 32214. You are busy, happy, optimistic. For #W7111824, modify Espresso Machine {'pressure': '19 bar', 'capacity': '1L', 'type': 'manual'} to {'pressure': '9 bar', 'capacity': '2L'}; via credit_card_3577130. For #W1080318, change payment to gift_card_3749819. For #W1080318, modify T-Shirt {'color': 'blue', 'size': 'S', 'material': 'cotton', 'style': 'v-neck'} to {'color': 'black', 'size': 'XL', 'style': 'crew neck'}; via gift_card_3749819. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_319",
+ "user_id": "omar_kim_3528"
+}

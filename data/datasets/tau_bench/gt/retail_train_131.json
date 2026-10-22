@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "964 Sunset Drive",
+    "address2": "Suite 782",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W4386313",
+    "state": "NY",
+    "zip": "10199"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8176740019"
+    ],
+    "new_item_ids": [
+     "3541421151"
+    ],
+    "order_id": "#W4386313",
+    "payment_method_id": "paypal_8516781"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 131,
+ "instruction": "Your name is Isabella Sanchez and your zip code is 85093. You are relaxing, logical, shy. For #W4386313, change address to {'order_id': '#W4386313', 'address1': '964 Sunset Drive', 'address2': 'Suite 782', 'city': 'New York', 'country': 'USA', 'state': 'NY', 'zip': '10199'} (same as #W1713682). For #W4386313, modify Skateboard {'deck material': 'bamboo', 'length': '28 inch', 'design': 'plain'} to {'length': '34 inch', 'design': 'graphic'}; via paypal_8516781. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_131",
+ "user_id": "isabella_sanchez_2068"
+}

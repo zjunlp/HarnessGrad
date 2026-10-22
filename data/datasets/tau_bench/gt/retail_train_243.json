@@ -1,0 +1,43 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7807323",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "address1": "816 Spruce Street",
+    "address2": "Suite 114",
+    "city": "Indianapolis",
+    "country": "USA",
+    "order_id": "#W2618034",
+    "state": "IN",
+    "zip": "46227"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5745575001"
+    ],
+    "new_item_ids": [
+     "7848293342"
+    ],
+    "order_id": "#W2618034",
+    "payment_method_id": "gift_card_5715854"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 243,
+ "instruction": "Your name is Mia Jackson and your email is mia.jackson5798@example.com. You are busy, polite, independent, insecure, shy. Cancel order #W7807323 because ordered by mistake. For #W2618034, change address to {'order_id': '#W2618034', 'address1': '816 Spruce Street', 'address2': 'Suite 114', 'city': 'Indianapolis', 'country': 'USA', 'state': 'IN', 'zip': '46227'} (same as #W7807323). For #W2618034, modify Grill {'type': 'electric', 'size': 'portable', 'features': 'rotisserie'} to {'type': 'charcoal', 'size': 'medium', 'features': 'side burner'}; via gift_card_5715854. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_243",
+ "user_id": "mia_jackson_2250"
+}

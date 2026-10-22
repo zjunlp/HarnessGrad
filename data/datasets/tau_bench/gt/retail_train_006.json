@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9421195098"
+    ],
+    "new_item_ids": [
+     "9799386954"
+    ],
+    "order_id": "#W1504875",
+    "payment_method_id": "paypal_6262583"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 6,
+ "instruction": "Your name is Ava Nguyen and your email is ava.nguyen3664@example.com. You are outgoing, flexible, pessimistic, cautious, messy. For #W1504875, exchange Notebook {'size': 'A6', 'cover type': 'soft cover'} to {'size': 'A5'}; via paypal_6262583. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_006",
+ "user_id": "ava_nguyen_2175"
+}

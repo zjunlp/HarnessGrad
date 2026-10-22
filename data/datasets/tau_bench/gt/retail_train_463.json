@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4604258",
+    "payment_method_id": "credit_card_4142574"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5855700373",
+     "7497340597",
+     "2648909398"
+    ],
+    "new_item_ids": [
+     "1052700637",
+     "9747045638",
+     "5676696062"
+    ],
+    "order_id": "#W4604258",
+    "payment_method_id": "credit_card_4142574"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 463,
+ "instruction": "Your name is Anya Patel and your email is anya.patel9309@example.com. You are rigid, organized. For #W4604258, change payment to credit_card_4142574. For #W4604258, modify Bluetooth Speaker {'color': 'black', 'battery life': '10 hours', 'water resistance': 'yes'} to {'color': 'red', 'battery life': '20 hours', 'water resistance': 'no'}; Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'gas'} to {'material': 'glass', 'capacity': '1 liter', 'stovetop compatibility': 'electric'}; Hiking Boots {'size': '8', 'material': 'leather', 'waterproof': 'yes'} to {'size': '11', 'waterproof': 'no'}; via credit_card_4142574. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_463",
+ "user_id": "anya_patel_3710"
+}

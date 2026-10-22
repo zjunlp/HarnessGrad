@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3788616824"
+    ],
+    "new_item_ids": [
+     "2106335193"
+    ],
+    "order_id": "#W8727985",
+    "payment_method_id": "gift_card_9450778"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 394,
+ "instruction": "Your name is Sophia Garcia and your zip code is 78263. You are optimistic, direct, independent, flexible. For #W8727985, exchange Tablet {'screen size': '10-inch', 'storage': '128GB', 'color': 'black'} to {'storage': '64GB', 'color': 'silver'}; via gift_card_9450778. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_394",
+ "user_id": "sophia_garcia_1101"
+}

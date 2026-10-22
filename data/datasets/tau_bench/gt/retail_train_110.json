@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8302289002"
+    ],
+    "new_item_ids": [
+     "9375701158"
+    ],
+    "order_id": "#W6797115",
+    "payment_method_id": "paypal_6121064"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 110,
+ "instruction": "Your name is Aarav Gonzalez and your email is aarav.gonzalez9269@example.com. You are rigid, confident, messy. For #W6797115, exchange Air Purifier {'room size': 'large', 'filter type': 'HEPA', 'features': 'night mode'} to {'room size': 'medium', 'filter type': 'carbon', 'features': 'quiet operation'}; via paypal_6121064. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_110",
+ "user_id": "aarav_gonzalez_5113"
+}

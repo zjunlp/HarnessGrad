@@ -1,0 +1,41 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4068787148",
+     "7758198585"
+    ],
+    "order_id": "#W3916020",
+    "payment_method_id": "credit_card_8105988"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6942241102",
+     "6401214406",
+     "1631806422"
+    ],
+    "order_id": "#W5416052",
+    "payment_method_id": "credit_card_8105988"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8855135",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 345,
+ "instruction": "Your name is Sofia Li and your zip code is 78260. You are independent, insecure, pessimistic, sad. Return #W3916020 via credit_card_8105988: Jigsaw Puzzle; Bicycle; Return #W5416052 via credit_card_8105988: Pet Bed; Cycling Helmet; Smart Watch; Cancel order #W8855135 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_345",
+ "user_id": "sofia_li_9219"
+}

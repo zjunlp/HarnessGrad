@@ -1,0 +1,45 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "894 Hickory Lane",
+    "address2": "Suite 665",
+    "city": "San Diego",
+    "country": "USA",
+    "order_id": "#W4284542",
+    "state": "CA",
+    "zip": "92133"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4284542",
+    "payment_method_id": "gift_card_9368765"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8302289002",
+     "1689914594"
+    ],
+    "new_item_ids": [
+     "9375701158",
+     "4716977452"
+    ],
+    "order_id": "#W4284542",
+    "payment_method_id": "gift_card_9368765"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 148,
+ "instruction": "Your name is Ivan Hernandez and your email is ivan.hernandez1120@example.com. You are flexible, patient, outgoing, messy, insecure. For #W4284542, change address to {'order_id': '#W4284542', 'address1': '894 Hickory Lane', 'address2': 'Suite 665', 'city': 'San Diego', 'country': 'USA', 'state': 'CA', 'zip': '92133'} (same as #W5838674). For #W4284542, change payment to gift_card_9368765. For #W4284542, modify Air Purifier {'room size': 'large', 'filter type': 'HEPA', 'features': 'night mode'} to {'room size': 'medium', 'filter type': 'carbon', 'features': 'quiet operation'}; Bluetooth Speaker {'color': 'red', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'blue', 'water resistance': 'yes'}; via gift_card_9368765. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_148",
+ "user_id": "ivan_hernandez_6923"
+}

@@ -1,0 +1,2593 @@
+{
+ "bands": [
+  "easy",
+  "medium",
+  "hard"
+ ],
+ "dataset": "terminal_bench",
+ "definition": "difficulty(x) = 1 - mean over states of score(x); a state is one measured curve point (run, round, harness, model)",
+ "generated_at": "2026-10-06T17:27:23+00:00",
+ "model_filter": null,
+ "states": [
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "B2-llm",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "d7b9eec7c58bcf6df94bc37f9b68bd02e13e9223",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "B2-llm",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "d7b9eec7c58bcf6df94bc37f9b68bd02e13e9223",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "B2-llm",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "d7b9eec7c58bcf6df94bc37f9b68bd02e13e9223",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "B2-llm",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "B2-noop",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "B2-noop",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "B2-rrsi",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "B2-rrsi",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "B2-rrsi",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "B2-rrsi",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "codex-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "644a17c91ffb773e55bd6374644a9d58119ab142",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "codex-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "3c70d67701771120481943e93a44b4fc618160d7",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "codex-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "codex-local-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "codex-local-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "codex-local-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "codex-local-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "codex-local-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "codex-local-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "codex-local-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "codex-local-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "codex-nearwin-1",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "codex-nearwin-2",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-cwe-1",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "f3601fa9e2a6c6173c91c3c0475bf2cf8f0c9f0e",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "deepseek-cwe-1",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "e96ffdab6fefca0ebfff7c8ea652c52f87003158",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "deepseek-cwe-1",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "1234da36ed352f48f9da55b64d3a3ddebf5efa8d",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "deepseek-cwe-1",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-cwe-2",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "593fd7f4e028aaebc4fecadb583f9930c1c606bf",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "deepseek-cwe-2",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "5bad14db8ca4dc2cba2dcb94cd9affdb53918c16",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "deepseek-cwe-2",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "5506b4f1a67c922d32bef42828eb543d71ebdf37",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "deepseek-cwe-2",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-eigen-1",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "bea009832bbd774ae5adfccbd41d2474b3e4f393",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "deepseek-eigen-1",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-eigen-2",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c08e700def58a26c2f63e8244becffd3de21a481",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "deepseek-eigen-2",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-focus-1",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-focus-2",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "e0223d95a39eeaa4bceaddc901311714e5b0c957",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "deepseek-focus-2",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "deepseek-nearwin-2",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ba8ec02f83581a5c66c022cc0a4e6de34db56fae",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "deepseek-nearwin-2",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "e456ed3419af6d5bd5fc9213bc142f97b1a17a89",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "deepseek-nearwin-2",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "direct-deepseek",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "052f57fc59c46b855efe9f8326e833f82b896539",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "direct-deepseek",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "ds-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "29bf3affc3484c1b11a9da1947583d8e16009b15",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "ds-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "3d5bfa412f3e14900f994f2c68a4a7ef3c7e2689",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "ds-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "ds-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "17b4315dfc1719c93a0acf8f328a666fdd603484",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "ds-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "7fd408c3106c1f032867301b3e87f4cb4ae1db39",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "ds-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "6f08150ffceffb59490d7dc3b18d646fdc9ac2b7",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-flash-base",
+   "side": "train",
+   "tasks": 36
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "07c30d800226632955dc1b1970128c06cca9b9d9",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-inspect",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "48e68058a105c2f2c904b89a8e91ce7935ce8280",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-mounts",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "35b0d68780f721949f8c26dae3bafd0a8b14b483",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-probe",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "7a96098f34602dfb6b21e7d4777256794d63082f",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-probe2",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "4e056b90cd697a359c812a449afed227ce746afb",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-probe3",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "6f08150ffceffb59490d7dc3b18d646fdc9ac2b7",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "dsh-probe4",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "dsh-agent",
+   "harness_sha": "1b489978df0efc9621e1336065ab86f4e9747f68",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "dsh-qwen-base",
+   "side": "train",
+   "tasks": 41
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "5a805465e92cd40295636ebaa6afbc9bdbb5cd2b",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "eval-flash-three-2",
+   "side": "eval",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "flash-three-1",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "12c76fba2e7b6bf56ddbb0385564f39b97ba374d",
+   "model": "deepseek-flash",
+   "round": 1,
+   "run_id": "flash-three-1",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "2e17c723947388a3ac2580a30251218a12534422",
+   "model": "deepseek-flash",
+   "round": 2,
+   "run_id": "flash-three-1",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "flash-three-2",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "5a805465e92cd40295636ebaa6afbc9bdbb5cd2b",
+   "model": "deepseek-flash",
+   "round": 1,
+   "run_id": "flash-three-2",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ebcf957af5539e23fd743f70e9fb02bd46a710ca",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "flash-verify-1",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "full-a",
+   "side": "train",
+   "tasks": 41
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c935c2b709e8ebfbdfd2eb7c563ab824b79a92c1",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "full-a",
+   "side": "train",
+   "tasks": 45
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "full-b",
+   "side": "train",
+   "tasks": 40
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "b13e3d7306fb3a83afd15a8ab8648a885e951a82",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "full-b",
+   "side": "train",
+   "tasks": 45
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "handfix-1",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9aa6979873e4d33dc8f00be69737c81384a50fd2",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "handfix-1",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "d14780292b526de1f8767084fe982b6ba316ae92",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "local-cap12",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "74c45493365e2849cf31f1dde63fa40dd31dbbcb",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "local-fix-smoke",
+   "side": "train",
+   "tasks": 2
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "74c45493365e2849cf31f1dde63fa40dd31dbbcb",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "local-fix-smoke",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "134a6ccf88c415a90e932c21f69b42e859084e02",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "local-floor-7",
+   "side": "train",
+   "tasks": 3
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "134a6ccf88c415a90e932c21f69b42e859084e02",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "local-floor-8",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "eaf594e581e4a8f36c39ea0f5dca53b0de998bfc",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "local-floor-9",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "74c45493365e2849cf31f1dde63fa40dd31dbbcb",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "local-screen-1",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "74c45493365e2849cf31f1dde63fa40dd31dbbcb",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "local-screen-1",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "88046acff07ceab7cc6497d97b565180413d54cf",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "logcheck-tb",
+   "side": "eval",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "deepseek-flash",
+   "round": 0,
+   "run_id": "loop-flash-base",
+   "side": "train",
+   "tasks": 39
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "f4cc69d1ed8996811eab9d4a8c1c9fe374150626",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-26452",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "f2092721ef4e591e4393138230c627619173bfa6",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-26452",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c2fbd2f5ead414114bc26e33e0757d82419930ad",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-26452c",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "b622e1bab24e1d52277bc166ba79c419ce98ee2b",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-26452c",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "fd5a0e592bd87a058e992b80004d7c6784f234e8",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "loop-terminal_bench-26452c",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "ff7beb56307bd16f8a0931d244e0c09b20bb6dec",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "loop-terminal_bench-26452c",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "6284989c69f0694be063fde4c39907210cd1dc5e",
+   "model": "qwen3.5-9b-local",
+   "round": 4,
+   "run_id": "loop-terminal_bench-26452c",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "807eeac78909f4e97bbd14592e5aa56d80caca66",
+   "model": "qwen3.5-9b-local",
+   "round": 5,
+   "run_id": "loop-terminal_bench-26452c",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c50e81fba282510f74c8dc794a99f0a68cc83fdb",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-41133",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c50e81fba282510f74c8dc794a99f0a68cc83fdb",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-41133",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c50e81fba282510f74c8dc794a99f0a68cc83fdb",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "loop-terminal_bench-41133",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "71de44933619c37c9e81f63cdf983bed17d05eb9",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "loop-terminal_bench-41133",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "71de44933619c37c9e81f63cdf983bed17d05eb9",
+   "model": "qwen3.5-9b-local",
+   "round": 4,
+   "run_id": "loop-terminal_bench-41133",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "71de44933619c37c9e81f63cdf983bed17d05eb9",
+   "model": "qwen3.5-9b-local",
+   "round": 5,
+   "run_id": "loop-terminal_bench-41133",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "1fb06a790caf232b16a13e62676056bd2bff6ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-48401",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "1fb06a790caf232b16a13e62676056bd2bff6ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-48401",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "1fb06a790caf232b16a13e62676056bd2bff6ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "loop-terminal_bench-48401",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "1fb06a790caf232b16a13e62676056bd2bff6ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "loop-terminal_bench-48401",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "faa99cc43ad513ef11ab4ae0995b3f436ed96dc3",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-51682",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "301f7a7d193d9bc0f64174d7a7a3885b3872f604",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-54460",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9b2fa3b29f017e48ba045277770474011fd63497",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-58172",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9b2fa3b29f017e48ba045277770474011fd63497",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-58172",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9b2fa3b29f017e48ba045277770474011fd63497",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "loop-terminal_bench-58172",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9b2fa3b29f017e48ba045277770474011fd63497",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "loop-terminal_bench-58172",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "284d2790b4ca66dac81626194147525f2e333a09",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-90815",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "284d2790b4ca66dac81626194147525f2e333a09",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-90815",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "284d2790b4ca66dac81626194147525f2e333a09",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "loop-terminal_bench-90815",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "284d2790b4ca66dac81626194147525f2e333a09",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "loop-terminal_bench-90815",
+   "side": "train",
+   "tasks": 1
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "a845d8c013d180541342f29797bf105f70dd9d81",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-clean-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "255cbd5d293e79850639a13abae9b0c8c54eda74",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "loop-terminal_bench-submit-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "255cbd5d293e79850639a13abae9b0c8c54eda74",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "loop-terminal_bench-submit-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "255cbd5d293e79850639a13abae9b0c8c54eda74",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "loop-terminal_bench-submit-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "255cbd5d293e79850639a13abae9b0c8c54eda74",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "loop-terminal_bench-submit-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "255cbd5d293e79850639a13abae9b0c8c54eda74",
+   "model": "qwen3.5-9b-local",
+   "round": 4,
+   "run_id": "loop-terminal_bench-submit-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "255cbd5d293e79850639a13abae9b0c8c54eda74",
+   "model": "qwen3.5-9b-local",
+   "round": 5,
+   "run_id": "loop-terminal_bench-submit-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "noise-1",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "noise-2",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "noise-3",
+   "side": "train",
+   "tasks": 5
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v10-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v10-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v10-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "e6cb1db2c37f4a3f53f6183238221626453c9ccc",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v10-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v10-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v10-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v10-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v10-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v11-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v11-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v12-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v12-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v12-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v12-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v12-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v12-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v12-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v12-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v2-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v3-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c6b34611d0e211322c6313a0a2f49bce794c9ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v3-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c6b34611d0e211322c6313a0a2f49bce794c9ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v3-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v4-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "1e7217146c2902acb0eb7d609c952fb63f5db208",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v4-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "c6b34611d0e211322c6313a0a2f49bce794c9ba4",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v4-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v4-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v4-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v4-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v4-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v5-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v5-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "b51c20dafb1ac80c8ee6470b670bd408fcdf58a3",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v5-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v5-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v5-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v5-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v5-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v6-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9c6ad8fdd51dac422f4b18d2bd365e73e8d62dbd",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v6-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v6-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v6-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v6-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v6-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v7-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v7-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v7-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v7-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v7-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v7-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v7-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v7-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v8-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "d8760530d84b8876d8777574118ea6a271ad04f3",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v8-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v9-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "8628f6977e02015de40597ba503fda1d29d9f6ca",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v9-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "399c43b39d569c408a4ae9ae7c7f6edce2b12542",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v9-dgm",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 0,
+   "run_id": "v9-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 1,
+   "run_id": "v9-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 2,
+   "run_id": "v9-rrsi",
+   "side": "train",
+   "tasks": 10
+  },
+  {
+   "harness": "loop",
+   "harness_sha": "9746711132c33f6020340d55082111431f9a04ef",
+   "model": "qwen3.5-9b-local",
+   "round": 3,
+   "run_id": "v9-rrsi",
+   "side": "train",
+   "tasks": 10
+  }
+ ],
+ "tasks": {
+  "adaptive-rejection-sampler": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "bn-fit-modify": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 34,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9444444444444444,
+   "measured": 36,
+   "n_states": 36,
+   "passed": 2,
+   "perf": 0.05555555555555555
+  },
+  "break-filter-js-from-html": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5714285714285714,
+     "n_states": 7,
+     "perf": 0.42857142857142855
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 127,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9776119402985075,
+   "measured": 134,
+   "n_states": 134,
+   "passed": 3,
+   "perf": 0.022388059701492536
+  },
+  "build-pmars": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5714285714285714,
+     "n_states": 7,
+     "perf": 0.42857142857142855
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.9166666666666666,
+     "n_states": 60,
+     "perf": 0.08333333333333333
+    }
+   },
+   "difficulty": 0.8805970149253731,
+   "measured": 67,
+   "n_states": 67,
+   "passed": 4,
+   "perf": 0.11940298507462686
+  },
+  "cancel-async-tasks": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.7142857142857143,
+     "n_states": 7,
+     "perf": 0.2857142857142857
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 123,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9846153846153847,
+   "measured": 130,
+   "n_states": 130,
+   "passed": 2,
+   "perf": 0.015384615384615385
+  },
+  "chess-best-move": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 34,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 36,
+   "n_states": 36,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "cobol-modernization": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.6666666666666667,
+     "n_states": 6,
+     "perf": 0.3333333333333333
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.20999999999999996,
+     "n_states": 100,
+     "perf": 0.79
+    }
+   },
+   "difficulty": 0.23584905660377353,
+   "measured": 106,
+   "n_states": 106,
+   "passed": 79,
+   "perf": 0.7641509433962265
+  },
+  "compile-compcert": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 3,
+   "n_states": 3,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "configure-git-webserver": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "constraints-scheduling": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.8,
+     "n_states": 5,
+     "perf": 0.2
+    }
+   },
+   "difficulty": 0.5714285714285714,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 3,
+   "perf": 0.42857142857142855
+  },
+  "extract-elf": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.7142857142857143,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 2,
+   "perf": 0.2857142857142857
+  },
+  "extract-moves-from-video": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8571428571428572,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 1,
+   "perf": 0.14285714285714285
+  },
+  "feal-linear-cryptanalysis": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.6,
+   "measured": 5,
+   "n_states": 5,
+   "passed": 2,
+   "perf": 0.4
+  },
+  "filter-js-from-html": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 86,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9886363636363636,
+   "measured": 88,
+   "n_states": 88,
+   "passed": 1,
+   "perf": 0.011363636363636364
+  },
+  "financial-document-processor": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8571428571428572,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 1,
+   "perf": 0.14285714285714285
+  },
+  "fix-code-vulnerability": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.33333333333333337,
+     "n_states": 3,
+     "perf": 0.6666666666666666
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 96,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9797979797979798,
+   "measured": 99,
+   "n_states": 99,
+   "passed": 2,
+   "perf": 0.020202020202020204
+  },
+  "fix-git": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 6,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.75,
+     "n_states": 100,
+     "perf": 0.25
+    }
+   },
+   "difficulty": 0.7358490566037736,
+   "measured": 106,
+   "n_states": 106,
+   "passed": 25,
+   "perf": 0.2641509433962264
+  },
+  "fix-ocaml-gc": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 3,
+   "n_states": 3,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "gcode-to-text": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 100,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 101,
+   "n_states": 101,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "git-leak-recovery": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "git-multibranch": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 86,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 88,
+   "n_states": 88,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "gpt2-codegolf": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8,
+   "measured": 5,
+   "n_states": 5,
+   "passed": 1,
+   "perf": 0.2
+  },
+  "headless-terminal": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 14,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9375,
+   "measured": 16,
+   "n_states": 16,
+   "passed": 1,
+   "perf": 0.0625
+  },
+  "hf-model-inference": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "kv-store-grpc": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "large-scale-text-editing": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 99,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9900990099009901,
+   "measured": 101,
+   "n_states": 101,
+   "passed": 1,
+   "perf": 0.009900990099009901
+  },
+  "largest-eigenval": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.25,
+     "n_states": 4,
+     "perf": 0.75
+    }
+   },
+   "difficulty": 0.25,
+   "measured": 4,
+   "n_states": 4,
+   "passed": 3,
+   "perf": 0.75
+  },
+  "log-summary-date-ranges": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 87,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.9775280898876404,
+   "measured": 89,
+   "n_states": 89,
+   "passed": 2,
+   "perf": 0.02247191011235955
+  },
+  "mailman": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "make-doom-for-mips": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "mcmc-sampling-stan": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.8,
+     "n_states": 5,
+     "perf": 0.2
+    }
+   },
+   "difficulty": 0.8333333333333334,
+   "measured": 6,
+   "n_states": 6,
+   "passed": 1,
+   "perf": 0.16666666666666666
+  },
+  "modernize-scientific-stack": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.0,
+     "n_states": 5,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 7,
+   "perf": 1.0
+  },
+  "mteb-retrieve": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8571428571428572,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 1,
+   "perf": 0.14285714285714285
+  },
+  "multi-source-data-merger": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.6,
+     "n_states": 5,
+     "perf": 0.4
+    }
+   },
+   "difficulty": 0.5714285714285714,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 3,
+   "perf": 0.42857142857142855
+  },
+  "nginx-request-logging": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "openssl-selfsigned-cert": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8333333333333334,
+   "measured": 6,
+   "n_states": 6,
+   "passed": 1,
+   "perf": 0.16666666666666666
+  },
+  "password-recovery": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8571428571428572,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 1,
+   "perf": 0.14285714285714285
+  },
+  "portfolio-optimization": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 0.6,
+     "n_states": 5,
+     "perf": 0.4
+    }
+   },
+   "difficulty": 0.7142857142857143,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 2,
+   "perf": 0.2857142857142857
+  },
+  "protein-assembly": {
+   "band": "medium",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.8333333333333334,
+   "measured": 6,
+   "n_states": 6,
+   "passed": 1,
+   "perf": 0.16666666666666666
+  },
+  "prove-plus-comm": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 1,
+     "perf": 1.0
+    }
+   },
+   "difficulty": 0.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 1,
+   "perf": 1.0
+  },
+  "query-optimize": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 6,
+   "n_states": 6,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "raman-fitting": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "regex-chess": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 6,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "rstan-to-pystan": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "sam-cell-seg": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 4,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 6,
+   "n_states": 6,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "sanitize-git-repo": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 1,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 1,
+   "n_states": 1,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "schemelike-metacircular-eval": {
+   "band": "easy",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 0.0,
+     "n_states": 2,
+     "perf": 1.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 5,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 0.7142857142857143,
+   "measured": 7,
+   "n_states": 7,
+   "passed": 2,
+   "perf": 0.2857142857142857
+  },
+  "sqlite-db-truncate": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 3,
+   "n_states": 3,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "sqlite-with-gcov": {
+   "band": "easy",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 0.5,
+     "n_states": 2,
+     "perf": 0.5
+    }
+   },
+   "difficulty": 0.5,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 1,
+   "perf": 0.5
+  },
+  "train-fasttext": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 2,
+   "n_states": 2,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "winning-avg-corewars": {
+   "band": "hard",
+   "by_model": {
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 3,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 3,
+   "n_states": 3,
+   "passed": 0,
+   "perf": 0.0
+  },
+  "write-compressor": {
+   "band": "hard",
+   "by_model": {
+    "deepseek-flash": {
+     "difficulty": 1.0,
+     "n_states": 2,
+     "perf": 0.0
+    },
+    "qwen3.5-9b-local": {
+     "difficulty": 1.0,
+     "n_states": 4,
+     "perf": 0.0
+    }
+   },
+   "difficulty": 1.0,
+   "measured": 6,
+   "n_states": 6,
+   "passed": 0,
+   "perf": 0.0
+  }
+ }
+}

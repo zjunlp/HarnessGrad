@@ -1,0 +1,12 @@
+{
+  "name": "qa-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files"
+  ],
+  "install": null,
+  "notes": "A CONTROL, NOT A HARNESS. It reads the reference answer the dataset stages at `.oracle/answer.txt` and submits it through the same `qa` CLI an agent would use, then stops. It exists so `data/datasets/<name>/control.py --platform` can prove a QA dataset's VERIFY path reaches reward 1 through eval.runner.run_one. It contains no reasoning and is never offered to a method.",
+  "role": "control"
+}

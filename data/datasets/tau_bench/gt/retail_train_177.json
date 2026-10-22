@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1583904702"
+    ],
+    "new_item_ids": [
+     "6164262152"
+    ],
+    "order_id": "#W5544629",
+    "payment_method_id": "paypal_5181300"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 177,
+ "instruction": "Your name is Mia Moore and your email is mia.moore8091@example.com. You are happy, rigid, pessimistic, confident. For #W5544629, exchange Electric Toothbrush {'color': 'blue', 'speed settings': 'low', 'battery type': 'AA batteries'} to {'color': 'white', 'battery type': 'rechargeable'}; via paypal_5181300. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_177",
+ "user_id": "mia_moore_8366"
+}

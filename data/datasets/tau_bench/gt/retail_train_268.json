@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3254583681",
+     "8323284863",
+     "6254646215"
+    ],
+    "new_item_ids": [
+     "3254583681",
+     "8426249116",
+     "5012998807"
+    ],
+    "order_id": "#W5061109",
+    "payment_method_id": "paypal_3742148"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 268,
+ "instruction": "Your name is Chen Johnson and your email is chen.johnson3889@example.com. You are patient, happy, messy, independent, cautious. For #W5061109, modify Bluetooth Speaker {'color': 'blue', 'battery life': '20 hours', 'water resistance': 'yes'} to {}; Office Chair {'material': 'fabric', 'color': 'blue', 'armrest': 'adjustable', 'backrest height': 'standard'} to {'color': 'black', 'armrest': 'fixed'}; Makeup Kit {'skin tone': 'dark', 'kit size': 'basic', 'brand': 'Brand B'} to {'kit size': 'professional'}; via paypal_3742148. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_268",
+ "user_id": "chen_johnson_4204"
+}

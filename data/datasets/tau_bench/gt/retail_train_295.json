@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1810466394"
+    ],
+    "new_item_ids": [
+     "6117189161"
+    ],
+    "order_id": "#W8461477",
+    "payment_method_id": "gift_card_2491643"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 295,
+ "instruction": "Your name is Daiki Khan and your email is daiki.khan2146@example.com. You are shy, sad, dependent, confident, organized. For #W8461477, modify Action Camera {'resolution': '1080p', 'waterproof': 'no', 'color': 'silver'} to {'resolution': '4K', 'waterproof': 'yes'}; via gift_card_2491643. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_295",
+ "user_id": "daiki_khan_6856"
+}

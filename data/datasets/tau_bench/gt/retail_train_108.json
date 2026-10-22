@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8106223139",
+     "5436236388"
+    ],
+    "order_id": "#W4072946",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 108,
+ "instruction": "Your name is Lei Anderson and your zip code is 76192. You are direct, rigid, optimistic, insecure. Return #W4072946 via paypal_1808675: Hiking Boots; Action Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_108",
+ "user_id": "lei_anderson_8271"
+}

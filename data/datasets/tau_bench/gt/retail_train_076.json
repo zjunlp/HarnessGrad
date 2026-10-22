@@ -1,0 +1,49 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2733768059"
+    ],
+    "new_item_ids": [
+     "7510236436"
+    ],
+    "order_id": "#W2702727",
+    "payment_method_id": "credit_card_3599838"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "227 Oak Street",
+    "address2": "Suite 699",
+    "city": "Washington",
+    "country": "USA",
+    "order_id": "#W8268610",
+    "state": "DC",
+    "zip": "20564"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9083642334"
+    ],
+    "new_item_ids": [
+     "1569765161"
+    ],
+    "order_id": "#W8268610",
+    "payment_method_id": "credit_card_3599838"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 76,
+ "instruction": "Your name is Yusuf Taylor and your zip code is 95154. You are rigid, confident, independent, cautious, direct. For #W2702727, modify Yoga Mat {'thickness': '6mm', 'material': 'natural rubber', 'color': 'pink'} to {'material': 'PVC', 'color': 'green'}; via credit_card_3599838. For #W8268610, change address to {'order_id': '#W8268610', 'address1': '227 Oak Street', 'address2': 'Suite 699', 'city': 'Washington', 'country': 'USA', 'state': 'DC', 'zip': '20564'} (same as #W5690487). For #W8268610, modify Desk Lamp {'color': 'white', 'brightness': 'high', 'power source': 'USB'} to {'color': 'silver', 'brightness': 'low', 'power source': 'AC adapter'}; via credit_card_3599838. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_076",
+ "user_id": "yusuf_taylor_7149"
+}

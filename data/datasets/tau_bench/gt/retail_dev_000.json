@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5442520",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 0,
+ "instruction": "Your name is Olivia Ito and your zip code is 80218. You are outgoing, flexible, pessimistic, organized, logical. You've ordered an item (#W5442520) from this shop. You've realized that you'll be traveling by the time the item arrives and you won't be able to receive it, so you'd want to not receive the item and you'll place a new order when you return. You do't want to place the new order right now, and you simply want to not receive the current order and get a full refund.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_000",
+ "user_id": "olivia_ito_3591"
+}

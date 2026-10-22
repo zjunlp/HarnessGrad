@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7195021808"
+    ],
+    "order_id": "#W8161562",
+    "payment_method_id": "gift_card_6767859"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 232,
+ "instruction": "Your name is Mason Wilson and your email is mason.wilson6954@example.com. You are dependent, cautious, shy. Return #W8161562 via gift_card_6767859: Digital Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_232",
+ "user_id": "mason_wilson_4597"
+}

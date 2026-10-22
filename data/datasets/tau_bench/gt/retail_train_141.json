@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2658930189"
+    ],
+    "new_item_ids": [
+     "3812493782"
+    ],
+    "order_id": "#W3972714",
+    "payment_method_id": "credit_card_9698900"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8056198669"
+    ],
+    "new_item_ids": [
+     "6942241102"
+    ],
+    "order_id": "#W2609687",
+    "payment_method_id": "gift_card_1044904"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4579334072",
+     "7866854614",
+     "4982943126",
+     "7184044281"
+    ],
+    "order_id": "#W1579621",
+    "payment_method_id": "credit_card_9698900"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 141,
+ "instruction": "Your name is Olivia Ahmed and your zip code is 94152. You are confident, messy. For #W3972714, exchange Hiking Boots {'size': '9', 'material': 'synthetic', 'waterproof': 'yes'} to {'size': '7', 'material': 'leather'}; via credit_card_9698900. For #W2609687, modify Pet Bed {'size': 'small', 'material': 'polyester', 'color': 'brown'} to {'size': 'large', 'material': 'memory foam', 'color': 'beige'}; via gift_card_1044904. Return #W1579621 via credit_card_9698900: Water Bottle; Portable Charger; Pet Bed; Headphones; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_141",
+ "user_id": "olivia_ahmed_6778"
+}

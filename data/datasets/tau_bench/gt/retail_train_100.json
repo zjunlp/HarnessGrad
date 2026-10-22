@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7639559",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3691773",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 100,
+ "instruction": "Your name is Yusuf Garcia and your zip code is 46202. You are curious, outgoing, busy. Cancel order #W7639559 because no longer needed. Cancel order #W3691773 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_100",
+ "user_id": "yusuf_garcia_1670"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9013366374"
+    ],
+    "new_item_ids": [
+     "9013366374"
+    ],
+    "order_id": "#W6818211",
+    "payment_method_id": "paypal_3976765"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 389,
+ "instruction": "Your name is Liam Muller and your zip code is 60642. You are impatient, curious, outgoing. For #W6818211, exchange Cycling Helmet {'size': 'M', 'color': 'blue', 'ventilation': 'high'} to {}; via paypal_3976765. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_389",
+ "user_id": "liam_muller_2272"
+}

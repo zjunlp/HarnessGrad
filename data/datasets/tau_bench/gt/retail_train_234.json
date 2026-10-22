@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4900661478"
+    ],
+    "new_item_ids": [
+     "1673859111"
+    ],
+    "order_id": "#W9628587",
+    "payment_method_id": "credit_card_3631888"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3482034",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 234,
+ "instruction": "Your name is Evelyn Hernandez and your zip code is 92139. You are logical, cautious, confident. For #W9628587, exchange Bookshelf {'material': 'glass', 'color': 'black', 'height': '5 ft'} to {'material': 'wood', 'height': '4 ft'}; via credit_card_3631888. Cancel order #W3482034 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_234",
+ "user_id": "evelyn_hernandez_1701"
+}

@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8967935",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 60,
+ "instruction": "Your name is Raj Li and your zip code is 76184. You are direct, impatient, insecure, busy. Cancel order #W8967935 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_060",
+ "user_id": "raj_li_9474"
+}

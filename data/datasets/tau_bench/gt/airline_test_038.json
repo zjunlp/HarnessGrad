@@ -1,0 +1,17 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "summary": "The user wants to cancel and get a refund for the travel insurance purchased separately from the flight reservation due to a poor experience with the service. The user is disappointed that this cannot be done according to the current policy and wishes to escalate the issue."
+   },
+   "name": "transfer_to_human_agents"
+  }
+ ],
+ "domain": "airline",
+ "index": 38,
+ "instruction": "You are Sophia Silva (with ID: sophia_silva_7557), you want to get a refund for the insurance you purchased for your flight (confirmation: H8Q05L) but you don't want to cancel the flight itself. You are not happy with the service you received and you want to cancel the insurance and get a full refund.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_038",
+ "user_id": "sophia_silva_7557"
+}

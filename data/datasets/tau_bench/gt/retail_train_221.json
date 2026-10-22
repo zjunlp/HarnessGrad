@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7941031",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5917587651"
+    ],
+    "new_item_ids": [
+     "8054888773"
+    ],
+    "order_id": "#W7941031",
+    "payment_method_id": "gift_card_7794233"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 221,
+ "instruction": "Your name is Olivia Ito and your zip code is 80218. You are logical, curious. For #W7941031, change payment to paypal_8049766. For #W7941031, modify Backpack {'color': 'grey', 'size': 'medium', 'material': 'polyester', 'compartment': 'laptop'} to {'size': 'small', 'material': 'nylon'}; via gift_card_7794233. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_221",
+ "user_id": "olivia_ito_3591"
+}

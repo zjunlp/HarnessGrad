@@ -1,0 +1,44 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5206946487"
+    ],
+    "order_id": "#W6397299",
+    "payment_method_id": "credit_card_3261838"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5676696062"
+    ],
+    "order_id": "#W8488728",
+    "payment_method_id": "paypal_3650980"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5312063289"
+    ],
+    "new_item_ids": [
+     "8176740019"
+    ],
+    "order_id": "#W3295833",
+    "payment_method_id": "paypal_3650980"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 275,
+ "instruction": "Your name is Liam Thomas and your zip code is 85049. You are organized, polite, flexible, busy, cautious. Return #W6397299 via credit_card_3261838: Garden Hose; Return #W8488728 via paypal_3650980: Hiking Boots; For #W3295833, modify Skateboard {'deck material': 'bamboo', 'length': '31 inch', 'design': 'graphic'} to {'length': '28 inch', 'design': 'plain'}; via paypal_3650980. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_275",
+ "user_id": "liam_thomas_7882"
+}

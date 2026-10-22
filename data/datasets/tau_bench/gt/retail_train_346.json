@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7848293342",
+     "9672174103"
+    ],
+    "order_id": "#W7366745",
+    "payment_method_id": "gift_card_7803378"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 346,
+ "instruction": "Your name is Sophia Lee and your email is sophia.lee4144@example.com. You are cautious, logical. Return #W7366745 via gift_card_7803378: Grill; Sunglasses; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_346",
+ "user_id": "sophia_lee_8294"
+}

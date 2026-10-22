@@ -1,0 +1,28 @@
+{
+  "allowed_special": [
+    "<|endoftext|>"
+  ],
+  "chunk_sentence_token_threshold": 4096,
+  "dependencies": {
+    "nltk": "3.10.3",
+    "regex": "2026.9.29",
+    "tiktoken": "0.14.0"
+  },
+  "encoding": "o200k_base",
+  "hard_token_limit": false,
+  "implementation_sha256": "b74e5e04eb6076b8ba4890ed7569949eebcf2fd10a67998ca15da3c6cd63b80b",
+  "inject_memorize_wrapper": false,
+  "input_protocol": "hg-mab-input-v1",
+  "language": "english",
+  "preserve_empty_chunks": true,
+  "protocol": "hg-mab-chunk-v1",
+  "resources_lock_sha256": "9f89826ef63c636ac81874f5ec96ac92d4feb0a215d8cc53f2b460cfce4f0a53",
+  "schema": "hg-mab-chunk-policy.v1",
+  "sentence_join": "single ASCII space",
+  "split_oversized_sentence": false,
+  "tokenizer_model_alias": "gpt-4o-mini",
+  "truncate_context": false,
+  "upstream_delta": "Replace nltk.download(punkt) with verified pinned punkt_tab English tables; no grouping change.",
+  "upstream_module_sha256": "d77976be409298970614d477a9d8003850caddb0510e56a7e821a037d98493a2",
+  "upstream_revision": "538026089d1a8a8eff05121d0db89b388f360eba"
+}

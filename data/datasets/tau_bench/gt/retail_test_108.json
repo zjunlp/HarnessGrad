@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1615379700"
+    ],
+    "new_item_ids": [
+     "1615379700"
+    ],
+    "order_id": "#W1304208",
+    "payment_method_id": "paypal_1679017"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6245746168"
+    ],
+    "new_item_ids": [
+     "3112842858"
+    ],
+    "order_id": "#W8353027",
+    "payment_method_id": "paypal_1679017"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 108,
+ "instruction": "You name is Yara Ito and your zip code is 75284. You are happy, messy. Your received hiking boots but seem like already worn, you are unhappy about it and want to send for a new pair with the same specs. You also want to exchange your jigsaw to a more fancy theme, with 500 pieces less. But you want to keep the same difficulty level.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_108",
+ "user_id": "yara_ito_8499"
+}

@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Mei",
+    "last_name": "Davis",
+    "zip": "80217"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "mei_davis_8935"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2890441"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "4794339885"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8069050545"
+    ],
+    "new_item_ids": [
+     "8069050545"
+    ],
+    "order_id": "#W2890441",
+    "payment_method_id": "credit_card_1061405"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 18,
+ "instruction": "You are Mei Davis in 80217. You want to return the office chair because it came with some broken pieces. But if the agent asks you for confirm, you say you want to rethink for a while, and then change your mind to exchange for the same item. You are in debt and sad today, but very brief.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_018",
+ "user_id": "mei_davis_8935"
+}

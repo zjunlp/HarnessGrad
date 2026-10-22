@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6065192424"
+    ],
+    "order_id": "#W9571698",
+    "payment_method_id": "gift_card_7250692"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 84,
+ "instruction": "You name is Chen Silva and your zip code is 46281. You are messy, flexible, outgoing. You received two tablets and you only need one. You want to return the less expensive one and refund to credit card. But if the agent asks for confirmation, you change your mind and return the more expensive one and refund to GC.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_084",
+ "user_id": "chen_silva_7485"
+}

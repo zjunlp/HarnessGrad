@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3015420423",
+     "3799046073",
+     "3230708338"
+    ],
+    "order_id": "#W3223435",
+    "payment_method_id": "gift_card_9708163"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 116,
+ "instruction": "Your name is Aarav Davis and your zip code is 76150. You are insecure, flexible, sad, organized. Return #W3223435 via gift_card_9708163: Electric Kettle; T-Shirt; Garden Hose; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_116",
+ "user_id": "aarav_davis_4756"
+}

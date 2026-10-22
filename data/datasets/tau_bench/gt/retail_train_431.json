@@ -1,0 +1,75 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3260419",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8098621301",
+     "7523669277",
+     "5421902839"
+    ],
+    "order_id": "#W2286012",
+    "payment_method_id": "gift_card_7588375"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9647292434"
+    ],
+    "new_item_ids": [
+     "8349118980"
+    ],
+    "order_id": "#W4794911",
+    "payment_method_id": "credit_card_8405687"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "690 Broadway",
+    "address2": "Suite 737",
+    "city": "Indianapolis",
+    "country": "USA",
+    "order_id": "#W6885344",
+    "state": "IN",
+    "zip": "46226"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6885344",
+    "payment_method_id": "gift_card_7588375"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5917587651"
+    ],
+    "new_item_ids": [
+     "8084436579"
+    ],
+    "order_id": "#W6885344",
+    "payment_method_id": "paypal_7503218"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 431,
+ "instruction": "Your name is Yusuf Garcia and your email is yusuf.garcia2909@example.com. You are independent, organized, outgoing, sad, insecure. Cancel order #W3260419 because no longer needed. Return #W2286012 via gift_card_7588375: Electric Toothbrush; Action Camera; Perfume; For #W4794911, exchange T-Shirt {'color': 'purple', 'size': 'S', 'material': 'polyester', 'style': 'v-neck'} to {'color': 'blue', 'material': 'cotton'}; via credit_card_8405687. For #W6885344, change address to {'order_id': '#W6885344', 'address1': '690 Broadway', 'address2': 'Suite 737', 'city': 'Indianapolis', 'country': 'USA', 'state': 'IN', 'zip': '46226'} (same as #W2564042). For #W6885344, change payment to gift_card_7588375. For #W6885344, modify Backpack {'color': 'grey', 'size': 'medium', 'material': 'polyester', 'compartment': 'laptop'} to {'color': 'navy', 'size': 'large'}; via paypal_7503218. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_431",
+ "user_id": "yusuf_garcia_3055"
+}

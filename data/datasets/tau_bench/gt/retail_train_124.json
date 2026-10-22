@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9030221155"
+    ],
+    "new_item_ids": [
+     "4068787148"
+    ],
+    "order_id": "#W8727985",
+    "payment_method_id": "gift_card_9450778"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 124,
+ "instruction": "Your name is Sophia Garcia and your zip code is 78263. You are messy, busy, outgoing. For #W8727985, exchange Jigsaw Puzzle {'pieces': '2000', 'theme': 'art', 'difficulty level': 'beginner'} to {'pieces': '500', 'difficulty level': 'intermediate'}; via gift_card_9450778. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_124",
+ "user_id": "sophia_garcia_1101"
+}

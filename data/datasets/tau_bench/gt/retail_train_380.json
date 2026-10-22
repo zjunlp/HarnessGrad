@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3714494375"
+    ],
+    "new_item_ids": [
+     "1157853815"
+    ],
+    "order_id": "#W8660475",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5209958006"
+    ],
+    "new_item_ids": [
+     "8926329222"
+    ],
+    "order_id": "#W4860251",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2872451762"
+    ],
+    "new_item_ids": [
+     "4806644905"
+    ],
+    "order_id": "#W9218746",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 380,
+ "instruction": "Your name is Lucas Brown and your email is lucas.brown9344@example.com. You are dependent, pessimistic, patient, outgoing, cautious. For #W8660475, exchange Espresso Machine {'pressure': '15 bar', 'capacity': '1L', 'type': 'manual'} to {'pressure': '19 bar', 'capacity': '2L', 'type': 'capsule'}; via credit_card_2112420. For #W4860251, modify Luggage Set {'piece count': '2-piece', 'color': 'silver', 'material': 'hardshell'} to {'color': 'black', 'material': 'softshell'}; via credit_card_2112420. For #W9218746, exchange Vacuum Cleaner {'type': 'canister', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'} to {'type': 'robotic', 'bagged/bagless': 'bagless', 'features': 'cordless'}; via credit_card_2112420. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_380",
+ "user_id": "lucas_brown_6720"
+}

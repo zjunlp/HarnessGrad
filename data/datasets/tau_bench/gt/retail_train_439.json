@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5537798301",
+     "7255224608"
+    ],
+    "new_item_ids": [
+     "3358616356",
+     "5996159312"
+    ],
+    "order_id": "#W3883329",
+    "payment_method_id": "paypal_2767694"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 439,
+ "instruction": "Your name is Amelia Ito and your email is amelia.ito8974@example.com. You are polite, logical, sad, impatient, busy. For #W3883329, modify Cycling Helmet {'size': 'S', 'color': 'black', 'ventilation': 'medium'} to {'color': 'red', 'ventilation': 'low'}; Digital Camera {'resolution': '30MP', 'zoom': '3x', 'storage': 'CF card'} to {'resolution': '24MP', 'storage': 'SD card'}; via paypal_2767694. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_439",
+ "user_id": "amelia_ito_8772"
+}

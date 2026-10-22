@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "3RK2T9"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "passengers": [
+     {
+      "dob": "1992-11-12",
+      "first_name": "Anya",
+      "last_name": "Garcia"
+     },
+     {
+      "dob": "1989-12-13",
+      "first_name": "Mei",
+      "last_name": "Garcia"
+     }
+    ],
+    "reservation_id": "3RK2T9"
+   },
+   "name": "update_reservation_passengers"
+  }
+ ],
+ "domain": "airline",
+ "index": 43,
+ "instruction": "You are Anya Garcia (with ID: anya_garcia_5901). Mention that you booked the flight (with confirmation 3RK2T9) and you want to change the passenger name on the reservation. You want to change the name from Mei Lee to Mei Garcia. Be insistent and don't provide more information than necessary.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_043",
+ "user_id": "anya_garcia_5901"
+}

@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8277474082"
+    ],
+    "order_id": "#W7773202",
+    "payment_method_id": "gift_card_3491931"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 408,
+ "instruction": "Your name is Amelia Silva and your email is amelia.silva7872@example.com. You are shy, direct. Return #W7773202 via gift_card_3491931: Hiking Boots; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_408",
+ "user_id": "amelia_silva_7726"
+}

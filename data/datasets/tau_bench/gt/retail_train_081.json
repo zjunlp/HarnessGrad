@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "386 Cedar Avenue",
+    "address2": "Suite 683",
+    "city": "Columbus",
+    "country": "USA",
+    "order_id": "#W7147989",
+    "state": "OH",
+    "zip": "43119"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1120917161",
+     "3609437808"
+    ],
+    "new_item_ids": [
+     "5745575001",
+     "2386562819"
+    ],
+    "order_id": "#W7147989",
+    "payment_method_id": "gift_card_5917510"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 81,
+ "instruction": "Your name is Ethan Sanchez and your email is ethan.sanchez3299@example.com. You are optimistic, messy, confident, cautious, impatient. For #W7147989, change address to {'order_id': '#W7147989', 'address1': '386 Cedar Avenue', 'address2': 'Suite 683', 'city': 'Columbus', 'country': 'USA', 'state': 'OH', 'zip': '43119'} (same as #W5560533). For #W7147989, modify Grill {'type': 'electric', 'size': 'portable', 'features': 'none'} to {'features': 'rotisserie'}; Office Chair {'material': 'leather', 'color': 'red', 'armrest': 'none', 'backrest height': 'high-back'} to {'material': 'mesh', 'color': 'gray', 'armrest': 'fixed'}; via gift_card_5917510. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_081",
+ "user_id": "ethan_sanchez_7289"
+}

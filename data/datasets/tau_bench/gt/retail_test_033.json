@@ -1,0 +1,55 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Noah",
+    "last_name": "Patel",
+    "zip": "10108"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "noah_patel_6952"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6111398"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7043598"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1845024"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "address1": "517 Lakeview Drive",
+    "address2": "Suite 183",
+    "city": "Seattle",
+    "country": "USA",
+    "state": "WA",
+    "user_id": "noah_patel_6952",
+    "zip": "98195"
+   },
+   "name": "modify_user_address"
+  }
+ ],
+ "domain": "retail",
+ "index": 33,
+ "instruction": "You are an interesting guy called Noah Patel, living in the Big Apple in 10108. You had a work-from-home situation and ordered three home office items along with some hiking items, so that you can go back to your parent's place at Seattle to remote work and enjoy outdoor life. But your company just announced that you will be back to the office soon. If cancelling partial items is possible with the agent, you want to return the office items (your forgot what) and keep the hiking items. You want to know the total amount you will get back, and you want to get the refund on your original payment method. If cancelling partial items is not possible, just keep the order and forget about it, but change your default user profile address to the Seattle parent house shown in your order (you do not want to reveal it in chat). You are a funny guy but recently the WFH situation made you a bit anxious.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_033",
+ "user_id": "noah_patel_6952"
+}

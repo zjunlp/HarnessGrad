@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4772738468"
+    ],
+    "order_id": "#W7623533",
+    "payment_method_id": "paypal_8673863"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 414,
+ "instruction": "Your name is Olivia Davis and your email is olivia.davis4495@example.com. You are sad, independent, busy, polite, patient. Return #W7623533 via paypal_8673863: Jigsaw Puzzle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_414",
+ "user_id": "olivia_davis_3316"
+}

@@ -1,0 +1,52 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Aarav",
+    "last_name": "Anderson",
+    "zip": "19031"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9300146"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "6817146515"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "expression": "135.24 - 153.23"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9190635437"
+    ],
+    "new_item_ids": [
+     "5320792178"
+    ],
+    "order_id": "#W9300146",
+    "payment_method_id": "gift_card_7245904"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 44,
+ "instruction": "You are Aarav Anderson, residing in Philadelphia 19031. You're a private person and are reluctant to share information unless it's absolutely necessary. You want to change the Desk Lamp in order #W9300146 that you've placed for the cheapest Desk Lamp that's available. Any price difference should go to a gift card. You also want to know how much you get back in total.",
+ "outputs": [
+  "17.99"
+ ],
+ "split": "test",
+ "task_id": "retail_test_044",
+ "user_id": "aarav_anderson_8794"
+}

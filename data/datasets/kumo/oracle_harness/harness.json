@@ -1,0 +1,10 @@
+{
+  "name": "kumo-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": ["files"],
+  "install": null,
+  "role": "control",
+  "notes": "Control only. Queries the private relay and submits the staged released answer through the KUMO CLI. Without a staged answer it performs the no-op arm. No model calls or reasoning."
+}

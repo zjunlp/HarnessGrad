@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5081446110"
+    ],
+    "order_id": "#W1671835",
+    "payment_method_id": "paypal_6918118"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 378,
+ "instruction": "Your name is Ivan Johnson and your email is ivan.johnson5749@example.com. You are rigid, happy, optimistic, insecure. Return #W1671835 via paypal_6918118: Perfume; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_378",
+ "user_id": "ivan_johnson_6036"
+}

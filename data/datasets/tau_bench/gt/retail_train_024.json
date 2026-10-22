@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7602708",
+    "payment_method_id": "gift_card_8893815"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3369928769"
+    ],
+    "new_item_ids": [
+     "9829827210"
+    ],
+    "order_id": "#W7602708",
+    "payment_method_id": "gift_card_8893815"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 24,
+ "instruction": "Your name is Juan Rossi and your zip code is 77209. You are independent, shy, curious, relaxing. For #W7602708, change payment to gift_card_8893815. For #W7602708, modify Garden Hose {'length': '25ft', 'material': 'vinyl', 'color': 'green'} to {'color': 'blue'}; via gift_card_8893815. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_024",
+ "user_id": "juan_rossi_6696"
+}

@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6368178",
+    "payment_method_id": "gift_card_8070316"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2243454707"
+    ],
+    "new_item_ids": [
+     "2698416822"
+    ],
+    "order_id": "#W6368178",
+    "payment_method_id": "gift_card_8070316"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 253,
+ "instruction": "Your name is Fatima Anderson and your zip code is 78786. You are pessimistic, rigid, sad, shy, messy. For #W6368178, change payment to gift_card_8070316. For #W6368178, modify Electric Kettle {'capacity': '1L', 'material': 'plastic', 'color': 'white'} to {'capacity': '1.5L'}; via gift_card_8070316. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_253",
+ "user_id": "fatima_anderson_7445"
+}

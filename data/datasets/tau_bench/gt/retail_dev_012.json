@@ -1,0 +1,71 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5442520",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3111466194"
+    ],
+    "new_item_ids": [
+     "2001307871"
+    ],
+    "order_id": "#W5442520",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7941031",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1355937109"
+    ],
+    "new_item_ids": [
+     "8886009523"
+    ],
+    "order_id": "#W7941031",
+    "payment_method_id": "credit_card_9753331"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3657213",
+    "payment_method_id": "credit_card_9753331"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5996159312"
+    ],
+    "new_item_ids": [
+     "6384525445"
+    ],
+    "order_id": "#W3657213",
+    "payment_method_id": "credit_card_9753331"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 12,
+ "instruction": "Your name is Olivia Ito and your zip code is 80218. You are optimistic, creative, busy, messy, outgoing. For #W5442520, change payment to paypal_8049766. For #W5442520, exchange Patio Umbrella {'size': '7 ft', 'color': 'red', 'material': 'polyester', 'tilt mechanism': 'manual tilt'} to {'size': '6 ft', 'color': 'blue', 'material': 'sunbrella', 'tilt mechanism': 'auto tilt'}; For #W7941031, change payment to paypal_8049766. For #W7941031, exchange Wristwatch {'strap material': 'leather', 'dial color': 'white'} to {'strap material': 'silicone', 'dial color': 'blue'}, but you want to use credit card to pay or refund; For #W3657213, change payment to credit_card_9753331. For #W3657213, exchange Digital Camera {'resolution': '24MP', 'zoom': '3x', 'storage': 'SD card'} to {'resolution': '30MP', 'zoom': '5x', 'storage': 'CF card'}; ",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_012",
+ "user_id": "olivia_ito_3591"
+}

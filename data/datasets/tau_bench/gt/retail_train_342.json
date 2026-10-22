@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2989722512"
+    ],
+    "new_item_ids": [
+     "7154215719"
+    ],
+    "order_id": "#W7826235",
+    "payment_method_id": "credit_card_7871433"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 342,
+ "instruction": "Your name is James Wilson and your email is james.wilson1461@example.com. You are curious, flexible, insecure. For #W7826235, exchange Bookshelf {'material': 'glass', 'color': 'white', 'height': '3 ft'} to {'material': 'wood', 'color': 'brown', 'height': '6 ft'}; via credit_card_7871433. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_342",
+ "user_id": "james_wilson_1842"
+}

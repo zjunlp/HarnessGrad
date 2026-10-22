@@ -1,0 +1,95 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Isabella",
+    "last_name": "Johansson",
+    "zip": "32286"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "isabella_johansson_2152"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3792453"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7181492"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5565470"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2575533"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4293355847"
+    ],
+    "order_id": "#W3792453",
+    "payment_method_id": "paypal_3024827"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5753502325",
+     "9851293632"
+    ],
+    "order_id": "#W7181492",
+    "payment_method_id": "paypal_3024827"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9570044148",
+     "6857426243"
+    ],
+    "order_id": "#W5565470",
+    "payment_method_id": "paypal_3024827"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2575533"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "expression": "200.8 + 96.35 + 193.38 + 231.37 + 196.53"
+   },
+   "name": "calculate"
+  }
+ ],
+ "domain": "retail",
+ "index": 28,
+ "instruction": "You are Isabella Johansson, and you live in 32286. You want to return the skateboard, garden hose, backpack, keyboard, bed, and also cancel the hose you just ordered (if cancelling one item is not possible, forget about it, you just want to cancel the hose and nothing else). You want to know how much you can get in total as refund. You are extremely brief but patient.",
+ "outputs": [
+  "918.43"
+ ],
+ "split": "test",
+ "task_id": "retail_test_028",
+ "user_id": "isabella_johansson_2152"
+}

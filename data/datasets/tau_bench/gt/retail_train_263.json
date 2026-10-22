@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9421195098"
+    ],
+    "new_item_ids": [
+     "1199058591"
+    ],
+    "order_id": "#W2307204",
+    "payment_method_id": "paypal_1038468"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 263,
+ "instruction": "Your name is Emma Kovacs and your zip code is 32254. You are happy, rigid, creative, polite. For #W2307204, modify Notebook {'size': 'A6', 'cover type': 'soft cover'} to {'size': 'A4', 'cover type': 'hard cover'}; via paypal_1038468. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_263",
+ "user_id": "emma_kovacs_7176"
+}

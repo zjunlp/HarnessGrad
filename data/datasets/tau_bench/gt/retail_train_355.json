@@ -1,0 +1,34 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1199058591",
+     "3815173328",
+     "6017636844"
+    ],
+    "order_id": "#W1763367",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9779102705",
+     "2366567022"
+    ],
+    "order_id": "#W3942875",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 355,
+ "instruction": "Your name is Ethan Kim and your email is ethan.kim3231@example.com. You are curious, impatient. Return #W1763367 via gift_card_5701566: Notebook; Espresso Machine; Laptop; Return #W3942875 via gift_card_5701566: Jigsaw Puzzle; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_355",
+ "user_id": "ethan_kim_8860"
+}

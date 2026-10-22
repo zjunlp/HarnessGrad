@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4725115",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 320,
+ "instruction": "Your name is Harper Khan and your zip code is 85063. You are logical, organized, shy, curious, happy. Cancel order #W4725115 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_320",
+ "user_id": "harper_khan_8862"
+}

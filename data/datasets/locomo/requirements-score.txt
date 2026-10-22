@@ -1,0 +1,4 @@
+# PorterStemmer needs no downloaded corpus or model -- only `nltk.stem.porter`, never the
+# artifact-download path that GHSA-8mgp-746c-j5xp is about. 3.10.4 is the first release outside
+# that advisory's range (`<= 3.10.3`); 3.10.3 was the earlier floor that cleared the 3.9.x cluster.
+nltk==3.10.4

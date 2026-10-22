@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9665000388",
+     "5067898160",
+     "3909704820"
+    ],
+    "order_id": "#W7764382",
+    "payment_method_id": "gift_card_2519457"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 259,
+ "instruction": "Your name is Ethan Thomas and your email is ethan.thomas7730@example.com. You are direct, outgoing, impatient. Return #W7764382 via gift_card_2519457: Mechanical Keyboard; Pet Bed; Indoor Security Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_259",
+ "user_id": "ethan_thomas_1791"
+}

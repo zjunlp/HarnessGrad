@@ -1,0 +1,64 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7758198585",
+     "4068787148"
+    ],
+    "new_item_ids": [
+     "7758198585",
+     "9237024510"
+    ],
+    "order_id": "#W3916020",
+    "payment_method_id": "paypal_8194385"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "285 Elm Street",
+    "address2": "Suite 121",
+    "city": "Fort Worth",
+    "country": "USA",
+    "order_id": "#W8855135",
+    "state": "TX",
+    "zip": "76155"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1437889264"
+    ],
+    "new_item_ids": [
+     "3613716226"
+    ],
+    "order_id": "#W8855135",
+    "payment_method_id": "credit_card_8105988"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6942241102"
+    ],
+    "new_item_ids": [
+     "6499892866"
+    ],
+    "order_id": "#W5416052",
+    "payment_method_id": "credit_card_8105988"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 451,
+ "instruction": "Your name is Sofia Li and your zip code is 78260. You are insecure, independent, organized, optimistic. For #W3916020, exchange Bicycle {'frame size': 'medium', 'color': 'green', 'type': 'road'} to {}; Jigsaw Puzzle {'pieces': '500', 'theme': 'art', 'difficulty level': 'intermediate'} to {'theme': 'animals', 'difficulty level': 'expert'}; via paypal_8194385. For #W8855135, change address to {'order_id': '#W8855135', 'address1': '285 Elm Street', 'address2': 'Suite 121', 'city': 'Fort Worth', 'country': 'USA', 'state': 'TX', 'zip': '76155'} (same as #W3916020). For #W8855135, modify Hiking Boots {'size': '7', 'material': 'synthetic', 'waterproof': 'no'} to {'size': '8'}; via credit_card_8105988. For #W5416052, exchange Pet Bed {'size': 'large', 'material': 'memory foam', 'color': 'beige'} to {'size': 'medium', 'material': 'polyester'}; via credit_card_8105988. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_451",
+ "user_id": "sofia_li_9219"
+}

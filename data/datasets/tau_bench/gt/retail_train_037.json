@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6735339143"
+    ],
+    "new_item_ids": [
+     "2244749153"
+    ],
+    "order_id": "#W7450915",
+    "payment_method_id": "gift_card_6892585"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 37,
+ "instruction": "Your name is Ethan Johnson and your zip code is 80298. You are logical, confident, shy, organized, dependent. For #W7450915, exchange Bookshelf {'material': 'metal', 'color': 'brown', 'height': '6 ft'} to {'material': 'wood', 'height': '5 ft'}; via gift_card_6892585. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_037",
+ "user_id": "ethan_johnson_7053"
+}

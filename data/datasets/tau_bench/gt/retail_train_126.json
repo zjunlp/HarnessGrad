@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3909406921",
+     "9472539378",
+     "7407609582"
+    ],
+    "new_item_ids": [
+     "7292993796",
+     "4064702754",
+     "2872451762"
+    ],
+    "order_id": "#W1579160",
+    "payment_method_id": "paypal_2233507"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 126,
+ "instruction": "Your name is Daiki Silva and your zip code is 28268. You are happy, shy, independent, curious. For #W1579160, modify Tea Kettle {'material': 'glass', 'capacity': '1 liter', 'stovetop compatibility': 'gas'} to {'capacity': '2 liters', 'stovetop compatibility': 'induction'}; Electric Kettle {'capacity': '1.5L', 'material': 'glass', 'color': 'white'} to {'capacity': '2L'}; Vacuum Cleaner {'type': 'upright', 'bagged/bagless': 'bagless', 'features': 'HEPA filter'} to {'type': 'canister', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'}; via paypal_2233507. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_126",
+ "user_id": "daiki_silva_5033"
+}

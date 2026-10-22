@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5428723833"
+    ],
+    "new_item_ids": [
+     "2698416822"
+    ],
+    "order_id": "#W3579467",
+    "payment_method_id": "paypal_5796936"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 336,
+ "instruction": "Your name is Yusuf Khan and your zip code is 75313. You are dependent, patient. For #W3579467, modify Electric Kettle {'capacity': '1.5L', 'material': 'plastic', 'color': 'black'} to {'color': 'white'}; via paypal_5796936. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_336",
+ "user_id": "yusuf_khan_7091"
+}

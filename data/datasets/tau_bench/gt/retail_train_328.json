@@ -1,0 +1,41 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3358616356"
+    ],
+    "new_item_ids": [
+     "3358616356"
+    ],
+    "order_id": "#W3947049",
+    "payment_method_id": "credit_card_7901829"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1345513440",
+     "6200867091",
+     "3234800602"
+    ],
+    "new_item_ids": [
+     "7958300294",
+     "7774234341",
+     "9647292434"
+    ],
+    "order_id": "#W6876713",
+    "payment_method_id": "credit_card_7901829"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 328,
+ "instruction": "Your name is Sofia Hernandez and your email is sofia.hernandez3039@example.com. You are optimistic, logical, flexible, outgoing, insecure. For #W3947049, exchange Cycling Helmet {'size': 'S', 'color': 'red', 'ventilation': 'low'} to {}; via credit_card_7901829. For #W6876713, exchange Vacuum Cleaner {'type': 'canister', 'bagged/bagless': 'bagged', 'features': 'cordless'} to {'bagged/bagless': 'bagless', 'features': 'pet hair removal'}; Espresso Machine {'pressure': '19 bar', 'capacity': '1L', 'type': 'capsule'} to {'pressure': '9 bar', 'capacity': '2L', 'type': 'manual'}; T-Shirt {'color': 'red', 'size': 'L', 'material': 'cotton', 'style': 'v-neck'} to {'color': 'purple', 'size': 'S', 'material': 'polyester'}; via credit_card_7901829. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_328",
+ "user_id": "sofia_hernandez_5364"
+}

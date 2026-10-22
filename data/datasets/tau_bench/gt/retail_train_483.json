@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5418781403"
+    ],
+    "new_item_ids": [
+     "4273929280"
+    ],
+    "order_id": "#W3897284",
+    "payment_method_id": "gift_card_3410768"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 483,
+ "instruction": "Your name is Noah Hernandez and your email is noah.hernandez4161@example.com. You are insecure, pessimistic, relaxing, patient. For #W3897284, modify E-Reader {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular', 'storage': '8GB'} to {'storage': '32GB'}; via gift_card_3410768. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_483",
+ "user_id": "noah_hernandez_4232"
+}

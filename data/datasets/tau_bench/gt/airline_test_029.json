@@ -1,0 +1,59 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "amelia_davis_8890"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "8C8K4E"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "UDMOP1"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "XAZ3C0"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "LU15PA"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "MSJ4OA"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "I6M8JQ"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "4XGCCM"
+   },
+   "name": "get_reservation_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 29,
+ "instruction": "Your user id is amelia_davis_8890. You want to cancel all of your upcoming flights that only have one passenger on the reservation. Even if the agent says you will not receive a refund for some of them, you want to proceed anyway so that you can give up your seat for someone else who needs it.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_029",
+ "user_id": "amelia_davis_8890"
+}

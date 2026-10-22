@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1775591963",
+     "2366567022"
+    ],
+    "order_id": "#W3942875",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 400,
+ "instruction": "Your name is Ethan Kim and your email is ethan.kim3231@example.com. You are messy, relaxing, independent. Return #W3942875 via gift_card_5701566: Running Shoes; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_400",
+ "user_id": "ethan_kim_8860"
+}

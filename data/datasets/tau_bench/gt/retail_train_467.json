@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3746173",
+    "payment_method_id": "credit_card_7898168"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2882812427"
+    ],
+    "new_item_ids": [
+     "1763705424"
+    ],
+    "order_id": "#W3746173",
+    "payment_method_id": "gift_card_5683713"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 467,
+ "instruction": "Your name is Evelyn Ahmed and your zip code is 80256. You are messy, creative, direct, outgoing, sad. For #W3746173, change payment to credit_card_7898168. For #W3746173, modify Makeup Kit {'skin tone': 'medium', 'kit size': 'professional', 'brand': 'Brand A'} to {'skin tone': 'dark', 'brand': 'Brand C'}; via gift_card_5683713. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_467",
+ "user_id": "evelyn_ahmed_3960"
+}

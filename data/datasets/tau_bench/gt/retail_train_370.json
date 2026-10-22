@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5966895767",
+     "8293778132"
+    ],
+    "new_item_ids": [
+     "6901578702",
+     "4238115171"
+    ],
+    "order_id": "#W1748126",
+    "payment_method_id": "gift_card_1139567"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 370,
+ "instruction": "Your name is Sophia Hernandez and your email is sophia.hernandez3499@example.com. You are relaxing, insecure. For #W1748126, exchange Indoor Security Camera {'resolution': '2K', 'field of view': '160 degrees', 'connectivity': 'Ethernet'} to {'resolution': '4K', 'field of view': '130 degrees'}; Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'electric'} to {'material': 'stainless steel', 'capacity': '2 liters', 'stovetop compatibility': 'gas'}; via gift_card_1139567. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_370",
+ "user_id": "sophia_hernandez_2054"
+}

@@ -1,0 +1,39 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3952176596"
+    ],
+    "new_item_ids": [
+     "1507389580"
+    ],
+    "order_id": "#W3155037",
+    "payment_method_id": "credit_card_5721095"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7533802601",
+     "3526747930"
+    ],
+    "new_item_ids": [
+     "7661609223",
+     "2872451762"
+    ],
+    "order_id": "#W4683557",
+    "payment_method_id": "credit_card_5721095"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 92,
+ "instruction": "Your name is Ethan Muller and your email is ethan.muller6617@example.com. You are optimistic, polite, rigid. For #W3155037, exchange Smartphone {'color': 'rose gold', 'storage': '64GB', 'RAM': '8GB', 'screen size': '6.1-inch'} to {'color': 'black', 'storage': '128GB', 'screen size': '5.8-inch'}; via credit_card_5721095. For #W4683557, modify Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'} to {'capacity': '1000ml', 'color': 'black'}; Vacuum Cleaner {'type': 'upright', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'} to {'type': 'canister'}; via credit_card_5721095. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_092",
+ "user_id": "ethan_muller_6097"
+}

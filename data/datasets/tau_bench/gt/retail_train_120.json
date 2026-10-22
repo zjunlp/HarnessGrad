@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8917609800"
+    ],
+    "new_item_ids": [
+     "8610532516"
+    ],
+    "order_id": "#W9093821",
+    "payment_method_id": "credit_card_7422485"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 120,
+ "instruction": "Your name is Harper Kovacs and your zip code is 95154. You are sad, busy, confident. For #W9093821, modify Wall Clock {'diameter': '10 inches', 'color': 'white', 'type': 'digital'} to {'color': 'black'}; via credit_card_7422485. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_120",
+ "user_id": "harper_kovacs_8617"
+}

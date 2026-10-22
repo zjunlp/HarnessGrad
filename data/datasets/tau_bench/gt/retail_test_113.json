@@ -1,0 +1,49 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1355937109"
+    ],
+    "new_item_ids": [
+     "9949163720"
+    ],
+    "order_id": "#W9810810",
+    "payment_method_id": "gift_card_7252880"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "555 Highland Drive",
+    "address2": "Suite 872",
+    "city": "New York",
+    "country": "USA",
+    "order_id": "#W3730488",
+    "state": "NY",
+    "zip": "10116"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2913673670"
+    ],
+    "new_item_ids": [
+     "9844888101"
+    ],
+    "order_id": "#W3730488",
+    "payment_method_id": "gift_card_7252880"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 113,
+ "instruction": "You name is Yara Silva and your zip code is 77159. You are sad and cautious. You want to modify the laptop order to your NYC address (you don't want to reveal it but should be in your orders profile). You also like to modify the laptop to be 9844888101. You also want to exchange your watch to be black dial color but keep the leather strap. You like to say things piecewise.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_113",
+ "user_id": "yara_silva_7567"
+}

@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7425646",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 289,
+ "instruction": "Your name is Harper Thomas and your zip code is 90891. You are messy, logical, sad, optimistic. Cancel order #W7425646 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_289",
+ "user_id": "harper_thomas_9402"
+}

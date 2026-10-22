@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4537595158",
+     "5586947715"
+    ],
+    "new_item_ids": [
+     "6857426243",
+     "7510236436"
+    ],
+    "order_id": "#W9933266",
+    "payment_method_id": "paypal_4133936"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 38,
+ "instruction": "Your name is Raj Lee and your zip code is 75368. You are rigid, busy, logical, confident, happy. For #W9933266, modify Pet Bed {'size': 'small', 'material': 'fleece', 'color': 'brown'} to {'size': 'medium', 'color': 'grey'}; Yoga Mat {'thickness': '4mm', 'material': 'PVC', 'color': 'blue'} to {'thickness': '6mm', 'color': 'green'}; via paypal_4133936. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_038",
+ "user_id": "raj_lee_3061"
+}

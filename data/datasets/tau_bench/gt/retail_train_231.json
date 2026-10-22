@@ -1,0 +1,49 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "808 Chestnut Street",
+    "address2": "Suite 832",
+    "city": "Phoenix",
+    "country": "USA",
+    "order_id": "#W7430166",
+    "state": "AZ",
+    "zip": "85072"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1133777903"
+    ],
+    "new_item_ids": [
+     "3104857380"
+    ],
+    "order_id": "#W7430166",
+    "payment_method_id": "gift_card_9708163"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3230708338"
+    ],
+    "new_item_ids": [
+     "3369928769"
+    ],
+    "order_id": "#W3223435",
+    "payment_method_id": "gift_card_9708163"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 231,
+ "instruction": "Your name is Aarav Davis and your zip code is 76150. You are busy, happy, direct, impatient, dependent. For #W7430166, change address to {'order_id': '#W7430166', 'address1': '808 Chestnut Street', 'address2': 'Suite 832', 'city': 'Phoenix', 'country': 'USA', 'state': 'AZ', 'zip': '85072'} (same as #W2403075). For #W7430166, modify Headphones {'type': 'in-ear', 'connectivity': 'wired', 'color': 'red'} to {'type': 'on-ear', 'connectivity': 'wireless'}; via gift_card_9708163. For #W3223435, exchange Garden Hose {'length': '25ft', 'material': 'latex', 'color': 'green'} to {'material': 'vinyl'}; via gift_card_9708163. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_231",
+ "user_id": "aarav_davis_4756"
+}

@@ -1,0 +1,81 @@
+{
+  "schema": "kumo.integration.validation.v1",
+  "date": "2026-10-17",
+  "source_revision": "576748764f7d72634654d0784944a485eca9047c",
+  "manifest_sha256": "c16adfd53737065020e2d517aeb35f96800cfc66309bbb15d95dd32971fa4d57",
+  "eligible_tasks": 5290,
+  "source_tasks": 5300,
+  "excluded_unsatisfiable": 10,
+  "multi_answer_cases": 35,
+  "source_files": 5846,
+  "source_bytes": 127892007,
+  "controls": {
+    "local_oracle": 1,
+    "local_noop": 0,
+    "platform_oracle": 1,
+    "platform_noop": 0
+  },
+  "tests": {
+    "relevant_passed": 184,
+    "subtests_passed": 38,
+    "deselected": 26,
+    "kumo_tests": 20,
+    "wide_files": 167,
+    "wide_passed_files": 120,
+    "wide_nonzero_files": 47,
+    "wide_note": "Attempted before final chooser/inventory fixes. Includes missing external data/dependencies, historical evidence drift, and source changes during parallel tests. --no-rerun was used: the runner summary wording about running alone is inaccurate. Seven integrity-related files were rechecked without generator/edit concurrency: five pass, identity/isolation retain failures. Full suite is not green."
+  },
+  "diagnostic": {
+    "run_id": "kumo-api-20261017T133337819410Z",
+    "selected_tasks": [
+      "kumo/easy/CookingEnv/42"
+    ],
+    "selected_side": "train",
+    "split_sha256": "342d832299dec8405a18d1a68e9303776c27637e73d74c9b47085e280c5127e4",
+    "model": "gpt-5.6-terra",
+    "base_url": "https://kuaipao.ai/v1",
+    "completed": true,
+    "score": 0.0,
+    "queries_used": 3,
+    "usage": {
+      "calls": 12,
+      "input_tokens": 42300,
+      "output_tokens": 1141,
+      "retries": 0,
+      "context_trims": 0
+    },
+    "wall_time_s": 163.102,
+    "relay_cleaned_up": true,
+    "work_root_cleaned": true,
+    "invalid_count": 0,
+    "unmeasured_count": 0
+  },
+  "prior_attempt": {
+    "directory": "diagnostic-20261017-01",
+    "api_requests": 0,
+    "effective_score": null,
+    "reason": "zero total attempts configured; preserved and corrected with fresh run ID"
+  },
+  "limitations": [
+    "single train-task diagnostic, not a benchmark",
+    "inherited network",
+    "no CPU/memory/filesystem quotas",
+    "existing actor-workdir scorer isolation",
+    "remaining broad regression failures"
+  ],
+  "artifact_root": "/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/datasets/kumo",
+  "artifacts": {
+    "controls.json": "4a8ff10a2a00a83d915b738792191b09d1475cd890fb7769bdf99a0a2881ed18",
+    "gold-audit.json": "16b667e924cfd88f9b872b5595a9c49e252872dd63622d605b71ae39a7f158ca",
+    "official-audit.json": "c06e46e4faa2677b4334f0b67740c0ccb9afe4dd65cab80cbd73d23234dd92d0",
+    "delivery-tests.log": "cf0e482ddfde59cd49d9bae225f06d616781206984557d47d1b86ceafcbb5284",
+    "validation-suite-final.log": "8293f335c94f7c2f06e2cf05eb57f0029e6e8d705beb019fdec89752483813c2",
+    "integrity-recheck.log": "798a163f02267b475fba81e12b54230e1ec42b8a2132ca41e762d6c29e2961c3",
+    "diagnostic-20261017-01/assessment.json": "f28abd024cca62ac9bba994d03e4350a47730a5e81ccc5b2daed1cb79e58aab0",
+    "diagnostic-20261017-02/plan.json": "5801f74e9d03dd190a42453c8693a0586fff360ab5942f23af6f860912b1dcee",
+    "diagnostic-20261017-02/receipt.json": "4fedb5a25b666a9cd176ae4ae77e3b1bd84ab9b136430d2a723677b8d6d322c6",
+    "diagnostic-20261017-02/result.json": "92e90640ba3a5140b097862e75ae53e2a05ba9fbedec383d6ca322044ecf4a17",
+    "diagnostic-20261017-02/evidence.json": "5401a1e6654bb62417c7dff92a71ee78b5ad151b7abc66ba287c12c617692ce1"
+  },
+  "whitespace_check": "Pass excluding verbatim vendor/engine.py; upstream trailing whitespace retained to preserve SHA256 and exact source identity."
+}

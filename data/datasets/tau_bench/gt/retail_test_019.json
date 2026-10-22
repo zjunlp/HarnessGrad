@@ -1,0 +1,62 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Mei",
+    "last_name": "Davis",
+    "zip": "80217"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "mei_davis_8935"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2890441"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1267569"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "2747247837"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "4794339885"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2366567022"
+    ],
+    "order_id": "#W2890441",
+    "payment_method_id": "credit_card_1061405"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 19,
+ "instruction": "You are Mei Davis in 80217. You want to return the water bottle, and exchange the pet bed and office chair to the cheapest version. Mention the two things together. If you can only do one of the two things, you prefer to do whatever saves you most money, but you want to know the money you can save in both ways. You are in debt and sad today, but very brief.",
+ "outputs": [
+  "54.04",
+  "41.64"
+ ],
+ "split": "test",
+ "task_id": "retail_test_019",
+ "user_id": "mei_davis_8935"
+}

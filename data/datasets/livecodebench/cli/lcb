@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""LiveCodeBench's task interface: read the task, submit a solution.
+
+    python3 lcb/bin/lcb show
+    python3 lcb/bin/lcb submit < solution.py
+    python3 lcb/bin/lcb submit "$(cat solution.py)"
+
+The verbs are declared in an argparse `choices` list because they are read:
+`tools/dataset_classes.py` derives the dataset's interaction axis from that list and refuses to
+guess when a CLI declares nothing it can read.
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="LiveCodeBench task interface")
+    parser.add_argument("command", choices=["show", "submit"])
+    parser.add_argument("code", nargs="?", help="the solution; read from stdin when omitted")
+    args = parser.parse_args(argv)
+    if args.command == "show":
+        print(Path("TASK.md").read_text(encoding="utf-8"))
+        print(Path("task.json").read_text(encoding="utf-8"))
+    else:
+        code = args.code if args.code is not None else sys.stdin.read()
+        Path("solution.py").write_text(code if code.endswith("\n") else code + "\n",
+                                      encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

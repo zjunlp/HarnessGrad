@@ -1,0 +1,64 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "aarav.santos8321@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "email": "aarav.santos8320@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "user_id": "aarav_santos_2259"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9672333"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "4760268021"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6704763132"
+    ],
+    "order_id": "#W8528674",
+    "payment_method_id": "paypal_7664977"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1684786391"
+    ],
+    "new_item_ids": [
+     "5052031638"
+    ],
+    "order_id": "#W9672333",
+    "payment_method_id": "paypal_7664977"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 35,
+ "instruction": "You are aarav_santos_2259 and aarav.santos8321@example.com and aarav.santos8320@example.com. You want to return the speaker that is more expensive yet not resistent to water. Also, You want to modify the 17-inch laptop to the 13-inch version in another order. If no exact item is available, you want to know all available 13-inch options, and you prefer i5 over i7, and prefer silver and black than other colors. You are a rude person.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_035",
+ "user_id": "aarav_santos_2259"
+}

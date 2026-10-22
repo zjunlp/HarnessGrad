@@ -1,0 +1,17 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "3RK2T9"
+   },
+   "name": "get_reservation_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 42,
+ "instruction": "You are Anya Garcia (with ID: anya_garcia_5901). Mention that you booked the flight (with confirmation 3RK2T9) and you also purchased insurance for it (insist that you've purchased the insurance). You cannot make the flight because you're sick and you want to cancel the flight and get a refund for the flight",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_042",
+ "user_id": "anya_garcia_5901"
+}

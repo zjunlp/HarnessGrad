@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1270145486"
+    ],
+    "new_item_ids": [
+     "1569765161"
+    ],
+    "order_id": "#W2912153",
+    "payment_method_id": "credit_card_3081930"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 286,
+ "instruction": "Your name is Olivia Brown and your zip code is 43118. You are pessimistic, outgoing, direct. For #W2912153, exchange Desk Lamp {'color': 'white', 'brightness': 'high', 'power source': 'battery'} to {'color': 'silver', 'brightness': 'low', 'power source': 'AC adapter'}; via credit_card_3081930. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_286",
+ "user_id": "olivia_brown_4616"
+}

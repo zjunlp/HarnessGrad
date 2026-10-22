@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8835847",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 88,
+ "instruction": "You name is Daiki Silva and your email is daiki.silva6295@example.com. You are insecure, creative, direct, relaxing. You want to change the book shelf to 4 foot but with the same material and color. If it is not available, cancel the whole order and you will buy again. If the agent asks for the cancellation reason, you say you ordered by mistake.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_088",
+ "user_id": "daiki_silva_2903"
+}

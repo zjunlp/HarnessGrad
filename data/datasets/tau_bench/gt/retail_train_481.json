@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8798690242"
+    ],
+    "new_item_ids": [
+     "8098621301"
+    ],
+    "order_id": "#W5101035",
+    "payment_method_id": "paypal_3388537"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 481,
+ "instruction": "Your name is Olivia Sanchez and your email is olivia.sanchez1894@example.com. You are flexible, logical, sad. For #W5101035, modify Electric Toothbrush {'color': 'black', 'speed settings': 'high', 'battery type': 'AA batteries'} to {'battery type': 'rechargeable'}; via paypal_3388537. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_481",
+ "user_id": "olivia_sanchez_2914"
+}

@@ -1,0 +1,96 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Ethan",
+    "last_name": "Garcia",
+    "zip": "80280"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "ethan_garcia_1261"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4967593"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9911714"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5733668"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "4107812777"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "1421289881"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "1656367028"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "4107812777"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "6938111410"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "expression": "155.33 - 147.05 + 268.77 - 235.13"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9791469541",
+     "1340995114"
+    ],
+    "new_item_ids": [
+     "4107812777",
+     "1421289881"
+    ],
+    "order_id": "#W9911714",
+    "payment_method_id": "gift_card_4332117"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 21,
+ "instruction": "You are Ethan Garcia, and you live in Denver, 80280. You want to exchange your shoes to 4107812777, and use GC to cover possible charges. But if the agent asks for confirmation, you change you mind and also want to change product 1656367028 to 1421289881. You are not familiar with the domain and might confuse product and item ids, so ask the agent to figure out the details on its own if needed. You want to know your GC balance after all these. You are a mysterious person and do not want to reveal much about yourself.",
+ "outputs": [
+  "44.08"
+ ],
+ "split": "test",
+ "task_id": "retail_test_021",
+ "user_id": "ethan_garcia_1261"
+}

@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7007896",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4404981319",
+     "8054888773"
+    ],
+    "new_item_ids": [
+     "9724317332",
+     "6309044598"
+    ],
+    "order_id": "#W7756209",
+    "payment_method_id": "credit_card_2167533"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 491,
+ "instruction": "Your name is Yusuf Ahmed and your email is yusuf.ahmed5476@example.com. You are organized, confident, busy, dependent, logical. Cancel order #W7007896 because ordered by mistake. For #W7756209, modify Grill {'type': 'electric', 'size': 'large', 'features': 'rotisserie'} to {'type': 'gas', 'size': 'portable', 'features': 'side burner'}; Backpack {'color': 'grey', 'size': 'small', 'material': 'nylon', 'compartment': 'laptop'} to {'size': 'large', 'material': 'polyester', 'compartment': 'hydration'}; via credit_card_2167533. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_491",
+ "user_id": "yusuf_ahmed_6232"
+}

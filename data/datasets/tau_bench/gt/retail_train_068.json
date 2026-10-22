@@ -1,0 +1,57 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6236251",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2618034",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "address1": "629 Sunset Drive",
+    "address2": "Suite 581",
+    "city": "San Diego",
+    "country": "USA",
+    "order_id": "#W1205816",
+    "state": "CA",
+    "zip": "92159"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1205816",
+    "payment_method_id": "gift_card_5715854"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3312883418"
+    ],
+    "new_item_ids": [
+     "7292993796"
+    ],
+    "order_id": "#W1205816",
+    "payment_method_id": "gift_card_5715854"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 68,
+ "instruction": "Your name is Mia Jackson and your email is mia.jackson5798@example.com. You are patient, insecure, shy, curious, logical. Cancel order #W6236251 because ordered by mistake. Cancel order #W2618034 because ordered by mistake. For #W1205816, change address to {'order_id': '#W1205816', 'address1': '629 Sunset Drive', 'address2': 'Suite 581', 'city': 'San Diego', 'country': 'USA', 'state': 'CA', 'zip': '92159'} (same as #W6236251). For #W1205816, change payment to gift_card_5715854. For #W1205816, modify Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'induction'} to {'material': 'glass', 'capacity': '2 liters'}; via gift_card_5715854. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_068",
+ "user_id": "mia_jackson_2250"
+}

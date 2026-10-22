@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8214883393",
+     "8018699955"
+    ],
+    "new_item_ids": [
+     "2880340443",
+     "4894369688"
+    ],
+    "order_id": "#W7273336",
+    "payment_method_id": "paypal_1530316"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 1,
+ "instruction": "Your name is Omar Lopez and your email is omar.lopez1868@example.com. You are rigid, creative. You've received a black laser gaming mouse and a metal bookshelf as part of your #W7273336 order. But you realize that the color, of the mouse doesn't go well with your computer setup and you'd like to exchange it for a white mouse, you also prefer an optical mouse over a laser mouse. You don't care about wired or not though, whichever is cheaper. You also realize that the 4 feet metal bookshelf is too short for the space you have in mind and you'd like to exchange it for a taller 5-feet Glass glass bookshelf. Emphasize that you want a 5-feet tall bookshelf made of glass. You're unsure what color of the glass bookshelf you'd like, so try to get figure out what color options are available. Be initially indecisive about the color of the glass bookshelf, but eventually decide on the brown color.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_001",
+ "user_id": "omar_lopez_3107"
+}

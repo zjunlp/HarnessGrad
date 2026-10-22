@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2193628750"
+    ],
+    "order_id": "#W7678072",
+    "payment_method_id": "paypal_5727330"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 425,
+ "instruction": "Your name is Noah Brown and your email is noah.brown7922@example.com. You are happy, messy, confident, cautious. Return #W7678072 via paypal_5727330: Gaming Mouse; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_425",
+ "user_id": "noah_brown_6181"
+}

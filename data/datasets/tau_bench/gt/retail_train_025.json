@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7533802601"
+    ],
+    "new_item_ids": [
+     "5758737025"
+    ],
+    "order_id": "#W3977493",
+    "payment_method_id": "credit_card_6748580"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 25,
+ "instruction": "Your name is Sophia Jackson and your email is sophia.jackson9875@example.com. You are pessimistic, outgoing, sad. For #W3977493, exchange Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'} to {'material': 'glass'}; via credit_card_6748580. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_025",
+ "user_id": "sophia_jackson_7119"
+}

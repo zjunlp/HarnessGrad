@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4273929280",
+     "6313971174"
+    ],
+    "new_item_ids": [
+     "9494281769",
+     "2177997696"
+    ],
+    "order_id": "#W8455874",
+    "payment_method_id": "gift_card_7032928"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 384,
+ "instruction": "Your name is Raj Kovacs and your zip code is 19104. You are happy, logical, independent, outgoing. For #W8455874, exchange E-Reader {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular', 'storage': '32GB'} to {'screen size': '8-inch', 'connectivity': 'Wi-Fi', 'storage': '8GB'}; Skateboard {'deck material': 'bamboo', 'length': '31 inch', 'design': 'custom'} to {'deck material': 'plastic', 'length': '28 inch'}; via gift_card_7032928. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_384",
+ "user_id": "raj_kovacs_9155"
+}

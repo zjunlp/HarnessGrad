@@ -1,0 +1,56 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "419 Main Street",
+    "address2": "Suite 730",
+    "city": "Dallas",
+    "country": "USA",
+    "order_id": "#W1430028",
+    "state": "TX",
+    "zip": "75380"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1430028",
+    "payment_method_id": "credit_card_3414703"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4107812777",
+     "4965355367"
+    ],
+    "new_item_ids": [
+     "4153505238",
+     "4725166838"
+    ],
+    "order_id": "#W1430028",
+    "payment_method_id": "paypal_5206520"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5745575001",
+     "4913411651"
+    ],
+    "order_id": "#W2922433",
+    "payment_method_id": "credit_card_3414703"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 329,
+ "instruction": "Your name is Anya Brown and your zip code is 10121. You are insecure, optimistic, direct. For #W1430028, change address to {'order_id': '#W1430028', 'address1': '419 Main Street', 'address2': 'Suite 730', 'city': 'Dallas', 'country': 'USA', 'state': 'TX', 'zip': '75380'} (same as #W8883368). For #W1430028, change payment to credit_card_3414703. For #W1430028, modify Running Shoes {'size': '9', 'color': 'black', 'material': 'synthetic', 'sole': 'rubber'} to {'size': '8', 'color': 'red', 'material': 'leather', 'sole': 'EVA'}; Vacuum Cleaner {'type': 'robotic', 'bagged/bagless': 'bagless', 'features': 'pet hair removal'} to {'features': 'HEPA filter'}; via paypal_5206520. Return #W2922433 via credit_card_3414703: Grill; Tablet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_329",
+ "user_id": "anya_brown_2024"
+}

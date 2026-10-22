@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9385662952"
+    ],
+    "new_item_ids": [
+     "7528037711"
+    ],
+    "order_id": "#W2989580",
+    "payment_method_id": "paypal_3728317"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 163,
+ "instruction": "Your name is Anya Lee and your zip code is 78227. You are relaxing, messy, polite, happy. For #W2989580, modify Fleece Jacket {'size': 'L', 'color': 'black', 'zipper': 'full'} to {'size': 'XL', 'color': 'navy'}; via paypal_3728317. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_163",
+ "user_id": "anya_lee_8315"
+}

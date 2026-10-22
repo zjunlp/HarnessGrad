@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3330317167"
+    ],
+    "new_item_ids": [
+     "8214883393"
+    ],
+    "order_id": "#W4500945",
+    "payment_method_id": "paypal_6069934"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 138,
+ "instruction": "Your name is Evelyn Gonzalez and your email is evelyn.gonzalez7152@example.com. You are insecure, flexible, polite. For #W4500945, exchange Gaming Mouse {'color': 'black', 'sensor type': 'optical', 'connectivity': 'wired'} to {'sensor type': 'laser', 'connectivity': 'wireless'}; via paypal_6069934. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_138",
+ "user_id": "evelyn_gonzalez_8209"
+}

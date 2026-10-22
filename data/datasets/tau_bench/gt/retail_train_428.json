@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6697922351",
+     "2244749153"
+    ],
+    "order_id": "#W9552705",
+    "payment_method_id": "gift_card_8922351"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 428,
+ "instruction": "Your name is Aarav Sanchez and your zip code is 60653. You are patient, busy, messy. Return #W9552705 via gift_card_8922351: Cycling Helmet; Bookshelf; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_428",
+ "user_id": "aarav_sanchez_6636"
+}

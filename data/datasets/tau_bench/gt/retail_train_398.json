@@ -1,0 +1,32 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2492465580",
+     "9644439410",
+     "7824298782",
+     "2244749153",
+     "9127591879"
+    ],
+    "order_id": "#W8951014",
+    "payment_method_id": "gift_card_8168843"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4135875",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 398,
+ "instruction": "Your name is Ava Moore and your zip code is 78234. You are dependent, flexible. Return #W8951014 via gift_card_8168843: Backpack {'color': 'navy', 'size': 'small', 'material': 'nylon', 'compartment': 'laptop'}; Digital Camera; Backpack {'color': 'black', 'size': 'small', 'material': 'nylon', 'compartment': 'laptop'}; Bookshelf; Water Bottle; Cancel order #W4135875 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_398",
+ "user_id": "ava_moore_2033"
+}

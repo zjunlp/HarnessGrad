@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4545791457"
+    ],
+    "new_item_ids": [
+     "6956751343"
+    ],
+    "order_id": "#W6344370",
+    "payment_method_id": "paypal_7443913"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 271,
+ "instruction": "Your name is Ava Kovacs and your email is ava.kovacs4827@example.com. You are relaxing, polite, patient, organized. For #W6344370, exchange Skateboard {'deck material': 'plastic', 'length': '28 inch', 'design': 'plain'} to {'deck material': 'bamboo', 'length': '34 inch', 'design': 'custom'}; via paypal_7443913. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_271",
+ "user_id": "ava_kovacs_3448"
+}

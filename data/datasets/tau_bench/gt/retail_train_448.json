@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9480266227"
+    ],
+    "new_item_ids": [
+     "6243148452"
+    ],
+    "order_id": "#W6519831",
+    "payment_method_id": "credit_card_5353742"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 448,
+ "instruction": "Your name is Yara Sanchez and your email is yara.sanchez9547@example.com. You are insecure, sad, logical, independent, pessimistic. For #W6519831, exchange Smart Thermostat {'compatibility': 'Apple HomeKit', 'color': 'stainless steel'} to {'compatibility': 'Amazon Alexa'}; via credit_card_5353742. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_448",
+ "user_id": "yara_sanchez_9145"
+}

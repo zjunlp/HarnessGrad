@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1323134954"
+    ],
+    "new_item_ids": [
+     "9862136885"
+    ],
+    "order_id": "#W9653558",
+    "payment_method_id": "credit_card_7933535"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 498,
+ "instruction": "Your name is Liam Li and your email is liam.li2557@example.com. You are curious, relaxing, insecure, creative, outgoing. For #W9653558, modify Coffee Maker {'color': 'stainless steel', 'capacity': '4 cups', 'type': 'drip', 'features': 'built-in grinder'} to {'color': 'black', 'capacity': '2 cups', 'type': 'espresso', 'features': 'timer'}; via credit_card_7933535. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_498",
+ "user_id": "liam_li_5260"
+}

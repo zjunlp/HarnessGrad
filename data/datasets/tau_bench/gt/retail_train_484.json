@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W2230795",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 484,
+ "instruction": "Your name is Yusuf Gonzalez and your zip code is 91455. You are busy, messy, patient. Cancel order #W2230795 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_484",
+ "user_id": "yusuf_gonzalez_8900"
+}

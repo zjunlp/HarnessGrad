@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3289292",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9722559",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 81,
+ "instruction": "You name is James Kim and your email is james.kim1995@example.com. You are sad, independent, polite. Due to some life changes, you no longer need hiking boots, watch, keyboard, charger, jacket, and running shoes. If cancelling part of the order is not possible, you don't care, just cancel the whole order.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_081",
+ "user_id": "james_kim_7213"
+}

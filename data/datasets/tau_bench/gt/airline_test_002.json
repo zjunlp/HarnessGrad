@@ -1,0 +1,111 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT028"
+     },
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT277"
+     }
+    ],
+    "payment_id": "credit_card_2929732",
+    "reservation_id": "JG7FMM"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-28",
+      "flight_number": "HAT080"
+     },
+     {
+      "date": "2024-05-28",
+      "flight_number": "HAT076"
+     },
+     {
+      "date": "2024-05-30",
+      "flight_number": "HAT255"
+     },
+     {
+      "date": "2024-05-30",
+      "flight_number": "HAT148"
+     }
+    ],
+    "payment_id": "gift_card_3481935",
+    "reservation_id": "2FBBAH"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT232"
+     },
+     {
+      "date": "2024-05-24",
+      "flight_number": "HAT228"
+     }
+    ],
+    "payment_id": "credit_card_2929732",
+    "reservation_id": "X7BYG1"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-23",
+      "flight_number": "HAT084"
+     },
+     {
+      "date": "2024-05-23",
+      "flight_number": "HAT175"
+     }
+    ],
+    "payment_id": "gift_card_6847880",
+    "reservation_id": "EQ1G6C"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT276"
+     },
+     {
+      "date": "2024-05-22",
+      "flight_number": "HAT279"
+     }
+    ],
+    "payment_id": "credit_card_9525117",
+    "reservation_id": "BOH180"
+   },
+   "name": "update_reservation_flights"
+  }
+ ],
+ "domain": "airline",
+ "index": 2,
+ "instruction": "Your user id is omar_davis_3817, you just faced some money issue and want to downgrade all business flights to economy, without changing the flights or passengers. You are fine with refunding to original payment for each reservation. You want to know how much money you have saved in total. You are emotional and a bit angry, but you are willing to cooperate with the agent.",
+ "outputs": [
+  "23553"
+ ],
+ "split": "test",
+ "task_id": "airline_test_002",
+ "user_id": "omar_davis_3817"
+}

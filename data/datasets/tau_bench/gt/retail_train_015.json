@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7127170374",
+     "9612497925"
+    ],
+    "new_item_ids": [
+     "4068787148",
+     "3234800602"
+    ],
+    "order_id": "#W1679211",
+    "payment_method_id": "paypal_3022415"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 15,
+ "instruction": "Your name is Yusuf Gonzalez and your zip code is 91455. You are logical, busy, outgoing, independent, pessimistic. For #W1679211, exchange Jigsaw Puzzle {'pieces': '2000', 'theme': 'fantasy', 'difficulty level': 'beginner'} to {'pieces': '500', 'theme': 'art', 'difficulty level': 'intermediate'}; T-Shirt {'color': 'blue', 'size': 'M', 'material': 'cotton', 'style': 'crew neck'} to {'color': 'red', 'size': 'L', 'style': 'v-neck'}; via paypal_3022415. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_015",
+ "user_id": "yusuf_gonzalez_8900"
+}

@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4941028",
+    "payment_method_id": "credit_card_7507679"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5726859009",
+     "3265035808",
+     "9480266227"
+    ],
+    "new_item_ids": [
+     "3557711149",
+     "2216662955",
+     "9480266227"
+    ],
+    "order_id": "#W4941028",
+    "payment_method_id": "credit_card_7507679"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 150,
+ "instruction": "Your name is Harper Santos and your zip code is 46237. You are direct, independent, happy, messy, busy. For #W4941028, change payment to credit_card_7507679. For #W4941028, modify Backpack {'color': 'grey', 'size': 'large', 'material': 'nylon', 'compartment': 'hydration'} to {'color': 'green', 'size': 'small', 'material': 'polyester', 'compartment': 'laptop'}; Laptop {'screen size': '17-inch', 'processor': 'i9', 'ram': '8GB', 'storage': '256GB SSD', 'color': 'silver'} to {'screen size': '15-inch', 'processor': 'i5', 'ram': '32GB', 'color': 'space grey'}; Smart Thermostat {'compatibility': 'Apple HomeKit', 'color': 'stainless steel'} to {}; via credit_card_7507679. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_150",
+ "user_id": "harper_santos_8115"
+}

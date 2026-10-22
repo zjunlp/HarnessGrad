@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6159919747"
+    ],
+    "new_item_ids": [
+     "6159919747"
+    ],
+    "order_id": "#W5881725",
+    "payment_method_id": "paypal_8305620"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 412,
+ "instruction": "Your name is Mei Jackson and your email is mei.jackson3801@example.com. You are patient, cautious, polite, sad, busy. For #W5881725, exchange Hiking Boots {'size': '11', 'material': 'leather', 'waterproof': 'yes'} to {}; via paypal_8305620. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_412",
+ "user_id": "mei_jackson_1214"
+}

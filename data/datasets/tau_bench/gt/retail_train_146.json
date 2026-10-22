@@ -1,0 +1,53 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W2806889",
+    "payment_method_id": "paypal_3022415"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7497340597",
+     "5339029584"
+    ],
+    "new_item_ids": [
+     "3738831434",
+     "1507389580"
+    ],
+    "order_id": "#W2806889",
+    "payment_method_id": "paypal_3022415"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2230795",
+    "payment_method_id": "credit_card_7918119"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6948061616"
+    ],
+    "new_item_ids": [
+     "2106335193"
+    ],
+    "order_id": "#W2230795",
+    "payment_method_id": "credit_card_7918119"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 146,
+ "instruction": "Your name is Yusuf Gonzalez and your email is yusuf.gonzalez2399@example.com. You are outgoing, sad, flexible, cautious, pessimistic. For #W2806889, change payment to paypal_3022415. For #W2806889, modify Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'gas'} to {'material': 'stainless steel', 'stovetop compatibility': 'induction'}; Smartphone {'color': 'black', 'storage': '128GB', 'RAM': '4GB', 'screen size': '6.5-inch'} to {'RAM': '8GB', 'screen size': '5.8-inch'}; via paypal_3022415. For #W2230795, change payment to credit_card_7918119. For #W2230795, modify Tablet {'screen size': '10-inch', 'storage': '128GB', 'color': 'gold'} to {'storage': '64GB', 'color': 'silver'}; via credit_card_7918119. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_146",
+ "user_id": "yusuf_gonzalez_8900"
+}

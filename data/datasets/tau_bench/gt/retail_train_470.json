@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8090061879"
+    ],
+    "new_item_ids": [
+     "6254646215"
+    ],
+    "order_id": "#W1052399",
+    "payment_method_id": "gift_card_3372949"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2236333",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 470,
+ "instruction": "Your name is Yusuf Patel and your email is yusuf.patel5348@example.com. You are happy, cautious. For #W1052399, exchange Makeup Kit {'skin tone': 'light', 'kit size': 'basic', 'brand': 'Brand B'} to {'skin tone': 'dark'}; via gift_card_3372949. Cancel order #W2236333 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_470",
+ "user_id": "yusuf_patel_7767"
+}

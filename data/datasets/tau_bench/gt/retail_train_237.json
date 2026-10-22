@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5047954489"
+    ],
+    "new_item_ids": [
+     "9647292434"
+    ],
+    "order_id": "#W9389413",
+    "payment_method_id": "gift_card_1675628"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 237,
+ "instruction": "Your name is Fatima Johnson and your email is fatima.johnson2300@example.com. You are busy, sad. For #W9389413, exchange T-Shirt {'color': 'blue', 'size': 'S', 'material': 'polyester', 'style': 'v-neck'} to {'color': 'purple'}; via gift_card_1675628. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_237",
+ "user_id": "fatima_johnson_7581"
+}

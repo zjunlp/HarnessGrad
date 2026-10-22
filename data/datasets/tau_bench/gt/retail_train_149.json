@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5666020311"
+    ],
+    "new_item_ids": [
+     "9724317332"
+    ],
+    "order_id": "#W3007862",
+    "payment_method_id": "credit_card_3566337"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1890669",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 149,
+ "instruction": "Your name is Evelyn Lopez and your email is evelyn.lopez6910@example.com. You are organized, sad, confident. For #W3007862, modify Grill {'type': 'electric', 'size': 'medium', 'features': 'side burner'} to {'type': 'gas', 'size': 'portable'}; via credit_card_3566337. Cancel order #W1890669 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_149",
+ "user_id": "evelyn_lopez_5487"
+}

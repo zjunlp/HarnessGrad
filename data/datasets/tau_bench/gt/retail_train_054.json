@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5111440845",
+     "9805150490",
+     "2860956907"
+    ],
+    "order_id": "#W3467101",
+    "payment_method_id": "gift_card_6009199"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 54,
+ "instruction": "Your name is Raj Moore and your zip code is 20566. You are happy, outgoing, rigid, optimistic. Return #W3467101 via gift_card_6009199: LED Light Bulb; Headphones; Smart Watch; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_054",
+ "user_id": "raj_moore_7909"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8124970213",
+     "5992316252"
+    ],
+    "new_item_ids": [
+     "9612497925",
+     "8733974883"
+    ],
+    "order_id": "#W6385395",
+    "payment_method_id": "paypal_3704667"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 420,
+ "instruction": "Your name is Evelyn Patel and your email is evelyn.patel2010@example.com. You are independent, cautious, relaxing, happy, messy. For #W6385395, modify T-Shirt {'color': 'purple', 'size': 'XL', 'material': 'cotton', 'style': 'crew neck'} to {'color': 'blue', 'size': 'M'}; Fleece Jacket {'size': 'S', 'color': 'red', 'zipper': 'half'} to {'size': 'L'}; via paypal_3704667. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_420",
+ "user_id": "evelyn_patel_8882"
+}

@@ -1,0 +1,45 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4107812777",
+     "4965355367"
+    ],
+    "new_item_ids": [
+     "9791469541",
+     "4806644905"
+    ],
+    "order_id": "#W1430028",
+    "payment_method_id": "paypal_5206520"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4913411651",
+     "5745575001",
+     "1709726483"
+    ],
+    "order_id": "#W2922433",
+    "payment_method_id": "credit_card_3414703"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8883368",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 222,
+ "instruction": "Your name is Anya Brown and your zip code is 10121. You are insecure, logical, sad, messy. For #W1430028, modify Running Shoes {'size': '9', 'color': 'black', 'material': 'synthetic', 'sole': 'rubber'} to {'color': 'yellow'}; Vacuum Cleaner {'type': 'robotic', 'bagged/bagless': 'bagless', 'features': 'pet hair removal'} to {'features': 'cordless'}; via paypal_5206520. Return #W2922433 via credit_card_3414703: Tablet; Grill; Makeup Kit; Cancel order #W8883368 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_222",
+ "user_id": "anya_brown_2024"
+}

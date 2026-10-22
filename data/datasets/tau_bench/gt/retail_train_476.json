@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3196599",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2403075",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 476,
+ "instruction": "Your name is Aarav Davis and your email is aarav.davis1165@example.com. You are optimistic, flexible, relaxing, logical. Cancel order #W3196599 because no longer needed. Cancel order #W2403075 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_476",
+ "user_id": "aarav_davis_4756"
+}

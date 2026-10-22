@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4458619711"
+    ],
+    "new_item_ids": [
+     "9472539378"
+    ],
+    "order_id": "#W1630030",
+    "payment_method_id": "paypal_2417743"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 18,
+ "instruction": "Your name is Raj Santos and your email is raj.santos4322@example.com. You are patient, organized, direct, logical. For #W1630030, initially you decide to exchange Electric Kettle purchase to a 1L black one, but after the customer service agent confirms that the 1L black electric kettle is available, you decide to change your mind and exchange it for '1.5L' 'glass' electric kettle instead.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_018",
+ "user_id": "raj_santos_9079"
+}

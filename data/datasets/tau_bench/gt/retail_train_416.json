@@ -1,0 +1,54 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2860956907",
+     "4900990404"
+    ],
+    "new_item_ids": [
+     "2860956907",
+     "9408160950"
+    ],
+    "order_id": "#W3260419",
+    "payment_method_id": "paypal_7503218"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5917587651"
+    ],
+    "new_item_ids": [
+     "6906307980"
+    ],
+    "order_id": "#W6885344",
+    "payment_method_id": "paypal_7503218"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5421902839",
+     "6455132774"
+    ],
+    "new_item_ids": [
+     "8316205423",
+     "3254583681"
+    ],
+    "order_id": "#W2286012",
+    "payment_method_id": "credit_card_8405687"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 416,
+ "instruction": "Your name is Yusuf Garcia and your email is yusuf.garcia2909@example.com. You are dependent, rigid. For #W3260419, modify Smart Watch {'color': 'black', 'band material': 'silicone', 'display': 'LCD'} to {}; Smart Watch {'color': 'silver', 'band material': 'metal', 'display': 'AMOLED'} to {'color': 'gold', 'band material': 'leather', 'display': 'LCD'}; via paypal_7503218. For #W6885344, modify Backpack {'color': 'grey', 'size': 'medium', 'material': 'polyester', 'compartment': 'laptop'} to {'color': 'black', 'size': 'large'}; via paypal_7503218. For #W2286012, exchange Perfume {'scent family': 'oriental', 'size': '100ml', 'gender': 'men'} to {'scent family': 'woody', 'size': '30ml', 'gender': 'women'}; Bluetooth Speaker {'color': 'black', 'battery life': '20 hours', 'water resistance': 'yes'} to {'color': 'blue'}; via credit_card_8405687. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_416",
+ "user_id": "yusuf_garcia_3055"
+}

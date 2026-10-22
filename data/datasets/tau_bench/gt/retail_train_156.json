@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3746173",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1416704",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 156,
+ "instruction": "Your name is Evelyn Ahmed and your email is evelyn.ahmed2006@example.com. You are patient, rigid, busy. Cancel order #W3746173 because no longer needed. Cancel order #W1416704 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_156",
+ "user_id": "evelyn_ahmed_3960"
+}

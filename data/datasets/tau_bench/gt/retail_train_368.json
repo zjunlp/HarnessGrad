@@ -1,0 +1,46 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6851636",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7583936705"
+    ],
+    "new_item_ids": [
+     "9228757377"
+    ],
+    "order_id": "#W2435638",
+    "payment_method_id": "paypal_5541158"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1421289881",
+     "4238115171"
+    ],
+    "new_item_ids": [
+     "9665000388",
+     "4238115171"
+    ],
+    "order_id": "#W9962383",
+    "payment_method_id": "paypal_5541158"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 368,
+ "instruction": "Your name is Fatima Muller and your zip code is 60644. You are logical, messy, insecure, polite, curious. Cancel order #W6851636 because no longer needed. For #W2435638, exchange Digital Camera {'resolution': '20MP', 'zoom': '10x', 'storage': 'CF card'} to {'resolution': '30MP', 'storage': 'SD card'}; via paypal_5541158. For #W9962383, modify Mechanical Keyboard {'switch type': 'linear', 'backlight': 'none', 'size': '80%'} to {'switch type': 'clicky'}; Tea Kettle {'material': 'stainless steel', 'capacity': '2 liters', 'stovetop compatibility': 'gas'} to {}; via paypal_5541158. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_368",
+ "user_id": "fatima_muller_6713"
+}

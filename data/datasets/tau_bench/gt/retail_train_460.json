@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5796612084"
+    ],
+    "new_item_ids": [
+     "2880340443"
+    ],
+    "order_id": "#W7387996",
+    "payment_method_id": "credit_card_3124723"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 460,
+ "instruction": "Your name is Mia Garcia and your email is mia.garcia2723@example.com. You are pessimistic, outgoing, creative, confident. For #W7387996, exchange Gaming Mouse {'color': 'RGB', 'sensor type': 'optical', 'connectivity': 'wired'} to {'color': 'white'}; via credit_card_3124723. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_460",
+ "user_id": "mia_garcia_4516"
+}

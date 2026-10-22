@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8426249116",
+     "3453331371"
+    ],
+    "new_item_ids": [
+     "9459890810",
+     "7199146548"
+    ],
+    "order_id": "#W8661412",
+    "payment_method_id": "credit_card_7239357"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 73,
+ "instruction": "Your name is Emma Kovacs and your zip code is 32190. You are dependent, relaxing, curious. For #W8661412, modify Office Chair {'material': 'fabric', 'color': 'black', 'armrest': 'fixed', 'backrest height': 'standard'} to {'color': 'gray', 'armrest': 'none', 'backrest height': 'high-back'}; Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'black'} to {'capacity': '750ml', 'material': 'plastic'}; via credit_card_7239357. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_073",
+ "user_id": "emma_kovacs_9839"
+}

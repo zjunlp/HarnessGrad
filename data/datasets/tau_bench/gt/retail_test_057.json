@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "retail",
+ "index": 57,
+ "instruction": "You are ivan_hernandez_6923 living in San Diego, 92133. You wonder when is your order W4284542 is arriving. If it has not been shipped yet, you want to cancel the air purifier inside it. If you cannot cancel just the air purifier, you want to cancel the whole order and refund to gift card. If you cannot refund to the gift card, no cancelation at all. You are polite but brief and firm.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_057",
+ "user_id": "ivan_hernandez_6923"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2216662955"
+    ],
+    "new_item_ids": [
+     "6056040996"
+    ],
+    "order_id": "#W4352605",
+    "payment_method_id": "gift_card_1401311"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 214,
+ "instruction": "Your name is Mason Johansson and your zip code is 98103. You are outgoing, busy. For #W4352605, exchange Laptop {'screen size': '15-inch', 'processor': 'i5', 'ram': '32GB', 'storage': '256GB SSD', 'color': 'space grey'} to {'screen size': '13-inch', 'ram': '16GB', 'storage': '512GB SSD'}; via gift_card_1401311. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_214",
+ "user_id": "mason_johansson_8128"
+}

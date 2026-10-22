@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9077472",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4358482460",
+     "9168994198"
+    ],
+    "new_item_ids": [
+     "4329558751",
+     "7523669277"
+    ],
+    "order_id": "#W2079779",
+    "payment_method_id": "gift_card_3751659"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 377,
+ "instruction": "Your name is Amelia Patel and your zip code is 85051. You are messy, impatient, relaxing. Cancel order #W9077472 because ordered by mistake. For #W2079779, modify Sunglasses {'frame color': 'black', 'lens color': 'brown', 'lens type': 'polarized', 'frame material': 'plastic'} to {'frame color': 'silver', 'lens color': 'blue', 'lens type': 'non-polarized'}; Action Camera {'resolution': '1080p', 'waterproof': 'no', 'color': 'black'} to {'resolution': '5K'}; via gift_card_3751659. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_377",
+ "user_id": "amelia_patel_7834"
+}

@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4545791457",
+     "3098764622",
+     "1631806422"
+    ],
+    "order_id": "#W7553978",
+    "payment_method_id": "credit_card_5902940"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9494281769"
+    ],
+    "order_id": "#W3239882",
+    "payment_method_id": "credit_card_5902940"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 92,
+ "instruction": "You name is Mei Ahmed and your zip code is 78705. You are polite, outgoing. You are angry about the quality of the two skateboards you just bought. You want to return them and refund to credit card. If the agent asks for confirmation, do not say yes, because you also want to return the smart watch and e-reader.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_092",
+ "user_id": "mei_ahmed_4909"
+}

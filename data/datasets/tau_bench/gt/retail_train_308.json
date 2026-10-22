@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3609437808"
+    ],
+    "new_item_ids": [
+     "3704016729"
+    ],
+    "order_id": "#W3320020",
+    "payment_method_id": "credit_card_6680679"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 308,
+ "instruction": "Your name is Yara Lee and your zip code is 77243. You are pessimistic, insecure, rigid, outgoing, direct. For #W3320020, modify Office Chair {'material': 'leather', 'color': 'red', 'armrest': 'none', 'backrest height': 'high-back'} to {'material': 'mesh', 'color': 'blue', 'armrest': 'fixed', 'backrest height': 'standard'}; via credit_card_6680679. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_308",
+ "user_id": "yara_lee_7701"
+}

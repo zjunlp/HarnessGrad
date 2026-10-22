@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1814268",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 285,
+ "instruction": "Your name is Lucas Silva and your email is lucas.silva5146@example.com. You are rigid, sad, cautious. Cancel order #W1814268 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_285",
+ "user_id": "lucas_silva_7435"
+}

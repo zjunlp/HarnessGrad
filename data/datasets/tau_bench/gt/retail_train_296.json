@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1151293680"
+    ],
+    "new_item_ids": [
+     "8484921793"
+    ],
+    "order_id": "#W6977171",
+    "payment_method_id": "credit_card_8041020"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 296,
+ "instruction": "Your name is Sophia Jackson and your email is sophia.jackson1954@example.com. You are confident, shy, cautious, flexible. For #W6977171, exchange Mechanical Keyboard {'switch type': 'linear', 'backlight': 'RGB', 'size': 'full size'} to {'size': '80%'}; via credit_card_8041020. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_296",
+ "user_id": "sophia_jackson_6355"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7510236436",
+     "4983901480"
+    ],
+    "new_item_ids": [
+     "5586947715",
+     "4983901480"
+    ],
+    "order_id": "#W7425646",
+    "payment_method_id": "credit_card_1283450"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 136,
+ "instruction": "Your name is Harper Thomas and your email is harper.thomas1454@example.com. You are pessimistic, creative, messy, shy, dependent. For #W7425646, modify Yoga Mat {'thickness': '6mm', 'material': 'PVC', 'color': 'green'} to {'thickness': '4mm', 'color': 'blue'}; Smart Thermostat {'compatibility': 'Apple HomeKit', 'color': 'black'} to {}; via credit_card_1283450. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_136",
+ "user_id": "harper_thomas_9402"
+}

@@ -1,0 +1,48 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8106223139"
+    ],
+    "order_id": "#W4072946",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "544 Sunset Drive",
+    "address2": "Suite 337",
+    "city": "Jacksonville",
+    "country": "USA",
+    "order_id": "#W6002467",
+    "state": "FL",
+    "zip": "32205"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7907773809",
+     "7843064651"
+    ],
+    "new_item_ids": [
+     "6697922351",
+     "2439754078"
+    ],
+    "order_id": "#W6002467",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 127,
+ "instruction": "Your name is Lei Anderson and your zip code is 76192. You are creative, direct, pessimistic, patient, happy. Return #W4072946 via paypal_1808675: Hiking Boots; For #W6002467, change address to {'order_id': '#W6002467', 'address1': '544 Sunset Drive', 'address2': 'Suite 337', 'city': 'Jacksonville', 'country': 'USA', 'state': 'FL', 'zip': '32205'} (same as #W1866533). For #W6002467, modify Cycling Helmet {'size': 'L', 'color': 'blue', 'ventilation': 'low'} to {'color': 'white', 'ventilation': 'medium'}; Water Bottle {'capacity': '750ml', 'material': 'stainless steel', 'color': 'blue'} to {'capacity': '1000ml', 'color': 'red'}; via paypal_1808675. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_127",
+ "user_id": "lei_anderson_8271"
+}

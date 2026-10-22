@@ -1,0 +1,57 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "H9ZU1C"
+   },
+   "name": "cancel_reservation"
+  },
+  {
+   "arguments": {
+    "cabin": "basic_economy",
+    "destination": "SEA",
+    "flight_type": "round_trip",
+    "flights": [
+     {
+      "date": "2024-05-20",
+      "flight_number": "HAT069"
+     },
+     {
+      "date": "2024-05-25",
+      "flight_number": "HAT276"
+     }
+    ],
+    "insurance": "no",
+    "nonfree_baggages": 0,
+    "origin": "JFK",
+    "passengers": [
+     {
+      "dob": "1965-06-09",
+      "first_name": "Mia",
+      "last_name": "Kim"
+     }
+    ],
+    "payment_methods": [
+     {
+      "amount": 39,
+      "payment_id": "gift_card_7359776"
+     },
+     {
+      "amount": 67,
+      "payment_id": "gift_card_7773485"
+     }
+    ],
+    "total_baggages": 1,
+    "user_id": "mia_kim_4397"
+   },
+   "name": "book_reservation"
+  }
+ ],
+ "domain": "airline",
+ "index": 10,
+ "instruction": "Your user id is mia_kim_4397 and you want to remove Ethan from you reservation H9ZU1C. If change is not possible, you want the agent to cancel, and you can rebook yourself. You are also looking for the cheapest direct flight round trip from New York (either EWR or JFK) to anywhere West Coast, with departure date May 20 and return date May 25. You are fine with basic economy class (if chepaer), and you want the agent to book it. You want to first use up your smaller GC and then the larger one. Would want to use all your free baggage allowance but no insurance. Your DOB is in your user profile and you do not want to speak it. You also wonder why cancellation does not refund to GC now.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_010",
+ "user_id": "mia_kim_4397"
+}

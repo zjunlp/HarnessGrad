@@ -1,0 +1,59 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "565 Maple Drive",
+    "address2": "Suite 501",
+    "city": "Washington",
+    "country": "USA",
+    "order_id": "#W2166301",
+    "state": "DC",
+    "zip": "20307"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "565 Maple Drive",
+    "address2": "Suite 501",
+    "city": "Washington",
+    "country": "USA",
+    "order_id": "#W2466703",
+    "state": "DC",
+    "zip": "20307"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "565 Maple Drive",
+    "address2": "Suite 501",
+    "city": "Washington",
+    "country": "USA",
+    "order_id": "#W6832752",
+    "state": "DC",
+    "zip": "20307"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "565 Maple Drive",
+    "address2": "Suite 501",
+    "city": "Washington",
+    "country": "USA",
+    "state": "DC",
+    "user_id": "yusuf_hernandez_6785",
+    "zip": "20307"
+   },
+   "name": "modify_user_address"
+  }
+ ],
+ "domain": "retail",
+ "index": 87,
+ "instruction": "You name is Yusuf Hernandez and your email is yusuf.hernandez8836@example.com. You are shy, rigid. You want to modify all your pending order address to the Washington DC address (which you do not want to reveal but is in one of the orders), along with your user default address.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_087",
+ "user_id": "yusuf_hernandez_6785"
+}

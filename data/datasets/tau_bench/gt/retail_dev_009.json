@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9884666842"
+    ],
+    "new_item_ids": [
+     "7806008610"
+    ],
+    "order_id": "#W9673784",
+    "payment_method_id": "paypal_2192303"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 9,
+ "instruction": "Your name is Omar Silva and your zip code is 92107. You are messy, curious, busy. For #W9673784 order that you've placed you'd like to exchange 19 bar Espresso Machine that you've placed to a 9 bar capsule espresso machine. If the agent asks for payment or refund method, you prefer paypal than GC.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_009",
+ "user_id": "omar_silva_7446"
+}

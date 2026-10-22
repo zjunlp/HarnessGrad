@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2106335193"
+    ],
+    "new_item_ids": [
+     "2235648106"
+    ],
+    "order_id": "#W5673917",
+    "payment_method_id": "paypal_1053133"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 169,
+ "instruction": "Your name is Harper Ito and your email is harper.ito2682@example.com. You are insecure, patient, organized, pessimistic, relaxing. For #W5673917, exchange Tablet {'screen size': '10-inch', 'storage': '64GB', 'color': 'silver'} to {'storage': '32GB', 'color': 'black'}; via paypal_1053133. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_169",
+ "user_id": "harper_ito_4653"
+}

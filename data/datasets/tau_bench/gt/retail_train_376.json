@@ -1,0 +1,41 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5966895767",
+     "8293778132"
+    ],
+    "new_item_ids": [
+     "8470360507",
+     "8293778132"
+    ],
+    "order_id": "#W1748126",
+    "payment_method_id": "gift_card_1139567"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9112290483",
+     "8551474201"
+    ],
+    "new_item_ids": [
+     "2226219750",
+     "4615543240"
+    ],
+    "order_id": "#W4614740",
+    "payment_method_id": "gift_card_1139567"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 376,
+ "instruction": "Your name is Sophia Hernandez and your email is sophia.hernandez3499@example.com. You are optimistic, sad, flexible, curious, relaxing. For #W1748126, exchange Indoor Security Camera {'resolution': '2K', 'field of view': '160 degrees', 'connectivity': 'Ethernet'} to {'field of view': '130 degrees'}; Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'electric'} to {}; via gift_card_1139567. For #W4614740, modify Wristwatch {'strap material': 'metal', 'dial color': 'blue'} to {'strap material': 'silicone', 'dial color': 'white'}; Tablet {'screen size': '8-inch', 'storage': '64GB', 'color': 'silver'} to {'screen size': '7-inch', 'storage': '32GB'}; via gift_card_1139567. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_376",
+ "user_id": "sophia_hernandez_2054"
+}

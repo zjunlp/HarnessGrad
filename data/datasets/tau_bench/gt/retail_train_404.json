@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3019027053",
+     "3709608322"
+    ],
+    "new_item_ids": [
+     "7958300294",
+     "7806008610"
+    ],
+    "order_id": "#W3761872",
+    "payment_method_id": "credit_card_7287775"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 404,
+ "instruction": "Your name is Liam Thomas and your email is liam.thomas4271@example.com. You are direct, relaxing, pessimistic. For #W3761872, modify Vacuum Cleaner {'type': 'upright', 'bagged/bagless': 'bagless', 'features': 'cordless'} to {'type': 'canister', 'features': 'pet hair removal'}; Espresso Machine {'pressure': '9 bar', 'capacity': '2L', 'type': 'automatic'} to {'capacity': '1L', 'type': 'capsule'}; via credit_card_7287775. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_404",
+ "user_id": "liam_thomas_8833"
+}

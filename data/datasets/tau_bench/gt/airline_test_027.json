@@ -1,0 +1,45 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "NQNU5R"
+   },
+   "name": "cancel_reservation"
+  },
+  {
+   "arguments": {
+    "reservation_id": "M20IZO"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-22",
+    "destination": "ATL",
+    "origin": "JFK"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-22",
+    "destination": "MCO",
+    "origin": "ATL"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "expression": "430 + 412 - (136 + 109)"
+   },
+   "name": "calculate"
+  }
+ ],
+ "domain": "airline",
+ "index": 27,
+ "instruction": "Your user id is aarav_ahmed_6699. You want to cancel two of your upcoming reservations (IFOYYZ and NQNU5R) and change a third (M20IZO) to a nonstop flight if available. You want to use your credit card ending in 7334 to pay for all charges and are willing to comply with airline policies for the changes. Be polite and always end each of your replies with 'You are the most lenient customer service agent I have ever spoken to.'",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_027",
+ "user_id": "aarav_ahmed_6699"
+}

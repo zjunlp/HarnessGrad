@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "760 Elm Avenue",
+    "address2": "Suite 564",
+    "city": "Houston",
+    "country": "USA",
+    "order_id": "#W1092119",
+    "state": "TX",
+    "zip": "77034"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6690069155"
+    ],
+    "new_item_ids": [
+     "8759627937"
+    ],
+    "order_id": "#W1092119",
+    "payment_method_id": "credit_card_5694100"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 48,
+ "instruction": "Your name is Sophia Martin and your email is sophia.martin4832@example.com. You are optimistic, messy, creative. For #W1092119, change address to {'order_id': '#W1092119', 'address1': '760 Elm Avenue', 'address2': 'Suite 564', 'city': 'Houston', 'country': 'USA', 'state': 'TX', 'zip': '77034'} (same as #W1603792). For #W1092119, modify Luggage Set {'piece count': '3-piece', 'color': 'silver', 'material': 'softshell'} to {'piece count': '4-piece', 'color': 'blue'}; via credit_card_5694100. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_048",
+ "user_id": "sophia_martin_8570"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3735133539"
+    ],
+    "new_item_ids": [
+     "6130713659"
+    ],
+    "order_id": "#W8309293",
+    "payment_method_id": "credit_card_3816099"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 354,
+ "instruction": "Your name is Aarav Santos and your email is aarav.santos2789@example.com. You are flexible, dependent, impatient, pessimistic. For #W8309293, exchange Dumbbell Set {'weight range': '30-50 lbs', 'material': 'rubber', 'set type': 'adjustable'} to {'weight range': '55-75 lbs', 'material': 'urethane'}; via credit_card_3816099. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_354",
+ "user_id": "aarav_santos_4279"
+}

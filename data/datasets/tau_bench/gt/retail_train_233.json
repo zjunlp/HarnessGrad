@@ -1,0 +1,49 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "580 Broadway",
+    "address2": "Suite 162",
+    "city": "Denver",
+    "country": "USA",
+    "order_id": "#W6832752",
+    "state": "CO",
+    "zip": "80265"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3812493782"
+    ],
+    "new_item_ids": [
+     "1437889264"
+    ],
+    "order_id": "#W6832752",
+    "payment_method_id": "paypal_7529813"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1775591963"
+    ],
+    "new_item_ids": [
+     "4153505238"
+    ],
+    "order_id": "#W2166301",
+    "payment_method_id": "paypal_7529813"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 233,
+ "instruction": "Your name is Yusuf Hernandez and your zip code is 80265. You are confident, flexible. For #W6832752, change address to {'order_id': '#W6832752', 'address1': '580 Broadway', 'address2': 'Suite 162', 'city': 'Denver', 'country': 'USA', 'state': 'CO', 'zip': '80265'} (same as #W2166301). For #W6832752, modify Hiking Boots {'size': '7', 'material': 'leather', 'waterproof': 'yes'} to {'material': 'synthetic', 'waterproof': 'no'}; via paypal_7529813. For #W2166301, modify Running Shoes {'size': '10', 'color': 'white', 'material': 'leather', 'sole': 'EVA'} to {'size': '8', 'color': 'red'}; via paypal_7529813. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_233",
+ "user_id": "yusuf_hernandez_6785"
+}

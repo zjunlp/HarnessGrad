@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7184044281"
+    ],
+    "order_id": "#W7190291",
+    "payment_method_id": "credit_card_7120747"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 278,
+ "instruction": "Your name is Liam Johnson and your zip code is 46244. You are messy, pessimistic, relaxing. Return #W7190291 via credit_card_7120747: Headphones; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_278",
+ "user_id": "liam_johnson_5676"
+}

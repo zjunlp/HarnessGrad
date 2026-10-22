@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7583936705",
+     "1775591963"
+    ],
+    "order_id": "#W5564375",
+    "payment_method_id": "paypal_2299608"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 71,
+ "instruction": "Your name is Mei Martin and your zip code is 32124. You are curious, creative, patient, relaxing, polite. Return #W5564375 via paypal_2299608: Digital Camera; Running Shoes; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_071",
+ "user_id": "mei_martin_4260"
+}

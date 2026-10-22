@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3714494375",
+     "7497340597"
+    ],
+    "new_item_ids": [
+     "3815173328",
+     "2820119811"
+    ],
+    "order_id": "#W2541482",
+    "payment_method_id": "gift_card_3377580"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 229,
+ "instruction": "Your name is Sofia Davis and your zip code is 98151. You are pessimistic, insecure, messy, direct, curious. For #W2541482, modify Espresso Machine {'pressure': '15 bar', 'capacity': '1L', 'type': 'manual'} to {'pressure': '9 bar', 'capacity': '1.5L', 'type': 'capsule'}; Tea Kettle {'material': 'ceramic', 'capacity': '1.5 liters', 'stovetop compatibility': 'gas'} to {'material': 'glass', 'capacity': '2 liters', 'stovetop compatibility': 'electric'}; via gift_card_3377580. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_229",
+ "user_id": "sofia_davis_2103"
+}

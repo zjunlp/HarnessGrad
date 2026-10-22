@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7401244629",
+     "1631373418"
+    ],
+    "new_item_ids": [
+     "1596993217",
+     "1507389580"
+    ],
+    "order_id": "#W8268544",
+    "payment_method_id": "gift_card_1402922"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 455,
+ "instruction": "Your name is Chen Ahmed and your zip code is 46210. You are independent, flexible, curious, impatient, direct. For #W8268544, modify Cycling Helmet {'size': 'L', 'color': 'red', 'ventilation': 'high'} to {'size': 'S', 'color': 'white', 'ventilation': 'low'}; Smartphone {'color': 'gold', 'storage': '128GB', 'RAM': '6GB', 'screen size': '6.1-inch'} to {'color': 'black', 'RAM': '8GB', 'screen size': '5.8-inch'}; via gift_card_1402922. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_455",
+ "user_id": "chen_ahmed_3232"
+}

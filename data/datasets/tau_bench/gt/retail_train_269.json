@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8997785118"
+    ],
+    "new_item_ids": [
+     "2216662955"
+    ],
+    "order_id": "#W8209112",
+    "payment_method_id": "credit_card_6428848"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 269,
+ "instruction": "Your name is Sophia Wilson and your zip code is 78775. You are direct, creative, relaxing, independent. For #W8209112, exchange Laptop {'screen size': '13-inch', 'processor': 'i7', 'ram': '32GB', 'storage': '256GB SSD', 'color': 'space grey'} to {'screen size': '15-inch', 'processor': 'i5'}; via credit_card_6428848. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_269",
+ "user_id": "sophia_wilson_7936"
+}

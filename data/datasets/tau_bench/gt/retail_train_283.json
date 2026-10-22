@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6501071631",
+     "1689914594"
+    ],
+    "new_item_ids": [
+     "4913411651",
+     "4716977452"
+    ],
+    "order_id": "#W9941744",
+    "payment_method_id": "paypal_4439305"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 283,
+ "instruction": "Your name is Omar Muller and your email is omar.muller2208@example.com. You are logical, rigid, sad, direct. For #W9941744, exchange Tablet {'screen size': '7-inch', 'storage': '32GB', 'color': 'gold'} to {'storage': '128GB', 'color': 'black'}; Bluetooth Speaker {'color': 'red', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'blue', 'water resistance': 'yes'}; via paypal_4439305. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_283",
+ "user_id": "omar_muller_8833"
+}

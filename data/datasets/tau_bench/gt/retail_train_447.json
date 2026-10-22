@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6735339143",
+     "4947717507",
+     "7127170374"
+    ],
+    "order_id": "#W7133840",
+    "payment_method_id": "paypal_9426036"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 447,
+ "instruction": "Your name is Yusuf Hernandez and your email is yusuf.hernandez6086@example.com. You are creative, dependent, patient, confident. Return #W7133840 via paypal_9426036: Bookshelf; Backpack; Jigsaw Puzzle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_447",
+ "user_id": "yusuf_hernandez_6467"
+}

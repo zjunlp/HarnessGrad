@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9647292434"
+    ],
+    "order_id": "#W5257743",
+    "payment_method_id": "paypal_6882355"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 67,
+ "instruction": "Your name is Sofia Ito and your zip code is 19169. You are relaxing, confident, rigid. Return #W5257743 via paypal_6882355: T-Shirt; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_067",
+ "user_id": "sofia_ito_5484"
+}

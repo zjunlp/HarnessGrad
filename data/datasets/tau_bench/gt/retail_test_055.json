@@ -1,0 +1,102 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "silva7872@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "email": "amelia.silva7872@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "user_id": "amelia_silva_7726"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2586676"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5400801"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4597054"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4836353"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7773202"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7342738"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4836353",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7342738",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5669664287",
+     "4900990404",
+     "9862136885",
+     "6777246137"
+    ],
+    "order_id": "#W4597054",
+    "payment_method_id": "gift_card_3491931"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8277474082"
+    ],
+    "order_id": "#W7773202",
+    "payment_method_id": "gift_card_3491931"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 55,
+ "instruction": "You are Amelia, and you have two emails: silva7872@example.com and amelia.silva7872@example.com. You live in Philadelphia, and you are a loyal customer. But you just faced a fincinal issue and want to cancel or return all possible orders. You are now emotional and a bit stress out. You like to talk a lot and explain your situation.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_055",
+ "user_id": "amelia_silva_7726"
+}

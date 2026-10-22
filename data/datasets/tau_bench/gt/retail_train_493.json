@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9354168549"
+    ],
+    "order_id": "#W2787996",
+    "payment_method_id": "gift_card_6786837"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 493,
+ "instruction": "Your name is Lei Khan and your zip code is 92182. You are organized, cautious, confident, shy, busy. Return #W2787996 via gift_card_6786837: T-Shirt; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_493",
+ "user_id": "lei_khan_6353"
+}

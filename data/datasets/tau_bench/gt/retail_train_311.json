@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2658930189"
+    ],
+    "new_item_ids": [
+     "5676696062"
+    ],
+    "order_id": "#W3972714",
+    "payment_method_id": "gift_card_1044904"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 311,
+ "instruction": "Your name is Olivia Ahmed and your zip code is 94152. You are happy, outgoing. For #W3972714, exchange Hiking Boots {'size': '9', 'material': 'synthetic', 'waterproof': 'yes'} to {'size': '11', 'material': 'leather', 'waterproof': 'no'}; via gift_card_1044904. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_311",
+ "user_id": "olivia_ahmed_6778"
+}

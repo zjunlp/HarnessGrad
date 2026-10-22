@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4572024853",
+     "5810561222"
+    ],
+    "new_item_ids": [
+     "1096508426",
+     "8470360507"
+    ],
+    "order_id": "#W3638028",
+    "payment_method_id": "gift_card_1725971"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 74,
+ "instruction": "Your name is James Li and your zip code is 10083. You are insecure, organized, relaxing, sad. For #W3638028, exchange Jigsaw Puzzle {'pieces': '1000', 'theme': 'animals', 'difficulty level': 'expert'} to {'pieces': '500', 'theme': 'art', 'difficulty level': 'beginner'}; Indoor Security Camera {'resolution': '4K', 'field of view': '130 degrees', 'connectivity': 'Wi-Fi'} to {'resolution': '2K', 'connectivity': 'Ethernet'}; via gift_card_1725971. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_074",
+ "user_id": "james_li_5688"
+}

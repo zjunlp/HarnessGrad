@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5917587651"
+    ],
+    "order_id": "#W7209932",
+    "payment_method_id": "gift_card_2611937"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 106,
+ "instruction": "Your name is Amelia Gonzalez and your email is amelia.gonzalez4271@example.com. You are rigid, busy, patient, pessimistic. Return #W7209932 via gift_card_2611937: Backpack; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_106",
+ "user_id": "amelia_gonzalez_4098"
+}

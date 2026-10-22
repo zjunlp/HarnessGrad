@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5669664287"
+    ],
+    "order_id": "#W9694847",
+    "payment_method_id": "credit_card_2902980"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 495,
+ "instruction": "Your name is Mei Moore and your zip code is 90980. You are pessimistic, rigid, busy, insecure. Return #W9694847 via credit_card_2902980: Air Purifier; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_495",
+ "user_id": "mei_moore_8248"
+}

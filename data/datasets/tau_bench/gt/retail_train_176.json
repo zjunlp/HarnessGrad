@@ -1,0 +1,65 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2185126308"
+    ],
+    "new_item_ids": [
+     "8106223139"
+    ],
+    "order_id": "#W8632528",
+    "payment_method_id": "credit_card_9789590"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8277474082",
+     "9929635042",
+     "5886093635"
+    ],
+    "new_item_ids": [
+     "6159919747",
+     "1507389580",
+     "8573379326"
+    ],
+    "order_id": "#W8073920",
+    "payment_method_id": "gift_card_7219486"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6779827",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2177997696",
+     "1507389580",
+     "7373893106"
+    ],
+    "new_item_ids": [
+     "3541421151",
+     "5339029584",
+     "1768466237"
+    ],
+    "order_id": "#W6426438",
+    "payment_method_id": "gift_card_7219486"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 176,
+ "instruction": "Your name is Ethan Lopez and your zip code is 43275. You are cautious, messy, creative, direct. For #W8632528, exchange Hiking Boots {'size': '10', 'material': 'leather', 'waterproof': 'no'} to {'size': '9', 'waterproof': 'yes'}; via credit_card_9789590. For #W8073920, modify Hiking Boots {'size': '12', 'material': 'leather', 'waterproof': 'yes'} to {'size': '11'}; Smartphone {'color': 'gold', 'storage': '128GB', 'RAM': '4GB', 'screen size': '5.8-inch'} to {'color': 'black', 'RAM': '8GB'}; Cycling Helmet {'size': 'S', 'color': 'blue', 'ventilation': 'low'} to {'size': 'M', 'color': 'red', 'ventilation': 'high'}; via gift_card_7219486. Cancel order #W6779827 because ordered by mistake. For #W6426438, modify Skateboard {'deck material': 'plastic', 'length': '28 inch', 'design': 'custom'} to {'deck material': 'bamboo', 'length': '34 inch', 'design': 'graphic'}; Smartphone {'color': 'black', 'storage': '128GB', 'RAM': '8GB', 'screen size': '5.8-inch'} to {'RAM': '4GB', 'screen size': '6.5-inch'}; Bookshelf {'material': 'glass', 'color': 'white', 'height': '4 ft'} to {'color': 'black', 'height': '3 ft'}; via gift_card_7219486. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_176",
+ "user_id": "ethan_lopez_6291"
+}

@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7109609",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6554908",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 13,
+ "instruction": "Your name is Emma Kovacs and your email is emma.kovacs5723@example.com. You are direct, sad. Cancel order #W7109609 because ordered by mistake. Cancel order #W6554908 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_013",
+ "user_id": "emma_kovacs_5477"
+}

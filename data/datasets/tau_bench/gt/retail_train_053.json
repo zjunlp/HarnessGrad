@@ -1,0 +1,40 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1430028",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1170711",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9320099340",
+     "5510402676"
+    ],
+    "new_item_ids": [
+     "9811090008",
+     "5510402676"
+    ],
+    "order_id": "#W8883368",
+    "payment_method_id": "credit_card_3414703"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 53,
+ "instruction": "Your name is Anya Brown and your email is anya.brown8893@example.com. You are insecure, shy. Cancel order #W1430028 because no longer needed. Cancel order #W1170711 because no longer needed. For #W8883368, modify Smart Watch {'color': 'black', 'band material': 'leather', 'display': 'AMOLED'} to {'color': 'silver', 'display': 'LCD'}; E-Reader {'screen size': '6-inch', 'connectivity': 'Wi-Fi', 'storage': '8GB'} to {}; via credit_card_3414703. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_053",
+ "user_id": "anya_brown_2024"
+}

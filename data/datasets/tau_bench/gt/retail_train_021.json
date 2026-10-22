@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2757705742"
+    ],
+    "new_item_ids": [
+     "8555936349"
+    ],
+    "order_id": "#W6111820",
+    "payment_method_id": "credit_card_3816099"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 21,
+ "instruction": "Your name is Aarav Santos and your email is aarav.santos2789@example.com. You are patient, pessimistic, insecure. For #W6111820, modify Wireless Earbuds {'color': 'blue', 'battery life': '4 hours', 'water resistance': 'IPX7'} to {'battery life': '8 hours', 'water resistance': 'IPX4'}; via credit_card_3816099. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_021",
+ "user_id": "aarav_santos_4279"
+}

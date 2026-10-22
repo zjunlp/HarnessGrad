@@ -1,0 +1,63 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "111 Sunset Drive",
+    "address2": "Suite 183",
+    "city": "San Diego",
+    "country": "USA",
+    "order_id": "#W6554908",
+    "state": "CA",
+    "zip": "92179"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2819462352",
+     "9447903288"
+    ],
+    "new_item_ids": [
+     "4545791457",
+     "1325156478"
+    ],
+    "order_id": "#W6554908",
+    "payment_method_id": "gift_card_9246707"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "111 Sunset Drive",
+    "address2": "Suite 183",
+    "city": "San Diego",
+    "country": "USA",
+    "order_id": "#W7109609",
+    "state": "CA",
+    "zip": "92179"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4806644905"
+    ],
+    "new_item_ids": [
+     "4965355367"
+    ],
+    "order_id": "#W7109609",
+    "payment_method_id": "gift_card_9246707"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 415,
+ "instruction": "Your name is Emma Kovacs and your zip code is 95111. You are shy, creative. For #W6554908, change address to {'order_id': '#W6554908', 'address1': '111 Sunset Drive', 'address2': 'Suite 183', 'city': 'San Diego', 'country': 'USA', 'state': 'CA', 'zip': '92179'} (same as #W3618959). For #W6554908, modify Skateboard {'deck material': 'maple', 'length': '28 inch', 'design': 'graphic'} to {'deck material': 'plastic', 'design': 'plain'}; Perfume {'scent family': 'fresh', 'size': '30ml', 'gender': 'men'} to {'scent family': 'oriental'}; via gift_card_9246707. For #W7109609, change address to {'order_id': '#W7109609', 'address1': '111 Sunset Drive', 'address2': 'Suite 183', 'city': 'San Diego', 'country': 'USA', 'state': 'CA', 'zip': '92179'} (same as #W3618959). For #W7109609, modify Vacuum Cleaner {'type': 'robotic', 'bagged/bagless': 'bagless', 'features': 'cordless'} to {'features': 'pet hair removal'}; via gift_card_9246707. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_415",
+ "user_id": "emma_kovacs_5477"
+}

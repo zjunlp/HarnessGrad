@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7533802601",
+     "7144237253",
+     "2216662955"
+    ],
+    "order_id": "#W3977493",
+    "payment_method_id": "credit_card_6748580"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 189,
+ "instruction": "Your name is Sophia Jackson and your email is sophia.jackson9875@example.com. You are outgoing, confident. Return #W3977493 via credit_card_6748580: Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'}; Electric Toothbrush; Laptop; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_189",
+ "user_id": "sophia_jackson_7119"
+}

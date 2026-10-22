@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9480266227",
+     "9991484137"
+    ],
+    "order_id": "#W7597893",
+    "payment_method_id": "gift_card_8640626"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 58,
+ "instruction": "Your name is Ava Nguyen and your email is ava.nguyen1860@example.com. You are confident, cautious, direct, messy. Return #W7597893 via gift_card_8640626: Smart Thermostat; Mechanical Keyboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_058",
+ "user_id": "ava_nguyen_6971"
+}

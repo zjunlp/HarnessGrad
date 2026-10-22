@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8555936349",
+     "4716977452"
+    ],
+    "new_item_ids": [
+     "1646531091",
+     "7617930199"
+    ],
+    "order_id": "#W4556683",
+    "payment_method_id": "credit_card_9557278"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 41,
+ "instruction": "Your name is Fatima Wilson and your email is fatima.wilson5906@example.com. You are happy, impatient, messy, confident. For #W4556683, exchange Wireless Earbuds {'color': 'blue', 'battery life': '8 hours', 'water resistance': 'IPX4'} to {'battery life': '6 hours'}; Bluetooth Speaker {'color': 'blue', 'battery life': '10 hours', 'water resistance': 'yes'} to {'color': 'red', 'battery life': '20 hours'}; via credit_card_9557278. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_041",
+ "user_id": "fatima_wilson_6873"
+}

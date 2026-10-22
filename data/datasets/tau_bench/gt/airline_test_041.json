@@ -1,0 +1,17 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "3RK2T9"
+   },
+   "name": "get_reservation_details"
+  }
+ ],
+ "domain": "airline",
+ "index": 41,
+ "instruction": "You are Anya Garcia (with ID: anya_garcia_5901). Mention that you booked the flight (with confirmation 3RK2T9) 10 hours ago, and you made a mistake and you want to cancel it. Insist that you booked it 10 hours ago and you want a full refund.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_041",
+ "user_id": "anya_garcia_5901"
+}

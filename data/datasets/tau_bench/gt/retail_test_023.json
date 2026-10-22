@@ -1,0 +1,106 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Sofia",
+    "last_name": "Hernandez",
+    "zip": "98193"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "sofia_hernandez_5364"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3561391"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6876713"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9609649"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3947049"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "7765186836"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3358616356"
+    ],
+    "new_item_ids": [
+     "8573379326"
+    ],
+    "order_id": "#W3947049",
+    "payment_method_id": "credit_card_7901829"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "product_id": "5426915165"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6301799585"
+    ],
+    "new_item_ids": [
+     "8926329222"
+    ],
+    "order_id": "#W6876713",
+    "payment_method_id": "credit_card_7901829"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "product_id": "6819683148"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5946177616"
+    ],
+    "new_item_ids": [
+     "7082455361"
+    ],
+    "order_id": "#W3561391",
+    "payment_method_id": "credit_card_7901829"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 23,
+ "instruction": "You are Sofia Hernandez, and you live in Seattle, WA, 98193. You want to exchange the helmet for a medium sized, red, high ventilation type, and you want to exchange the luggage set (in another order) to a two-piece black one with soft material. Lastly, you want to modify the grill you just ordered to the same type as the one you already received.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_023",
+ "user_id": "sofia_hernandez_5364"
+}

@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2860956907"
+    ],
+    "new_item_ids": [
+     "2681513500"
+    ],
+    "order_id": "#W1539823",
+    "payment_method_id": "gift_card_6023546"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1620235",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9903153",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 252,
+ "instruction": "Your name is Emma Santos and your zip code is 78228. You are creative, sad, pessimistic, impatient, busy. For #W1539823, exchange Smart Watch {'color': 'black', 'band material': 'silicone', 'display': 'LCD'} to {'color': 'gold', 'display': 'AMOLED'}; via gift_card_6023546. Cancel order #W1620235 because ordered by mistake. Cancel order #W9903153 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_252",
+ "user_id": "emma_santos_9753"
+}

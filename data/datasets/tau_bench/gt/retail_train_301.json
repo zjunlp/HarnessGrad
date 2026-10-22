@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6805564527"
+    ],
+    "order_id": "#W9178204",
+    "payment_method_id": "paypal_3846161"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 301,
+ "instruction": "Your name is Ava Johnson and your zip code is 92171. You are relaxing, insecure, creative, independent. Return #W9178204 via paypal_3846161: Desk Lamp; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_301",
+ "user_id": "ava_johnson_5052"
+}

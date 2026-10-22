@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3339188619"
+    ],
+    "order_id": "#W3794101",
+    "payment_method_id": "paypal_2076152"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 52,
+ "instruction": "Your name is Olivia Smith and your email is olivia.smith9157@example.com. You are organized, happy. Return #W3794101 via paypal_2076152: Cycling Helmet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_052",
+ "user_id": "olivia_smith_8953"
+}

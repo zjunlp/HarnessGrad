@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8895454203"
+    ],
+    "new_item_ids": [
+     "4894369688"
+    ],
+    "order_id": "#W6724985",
+    "payment_method_id": "credit_card_3593714"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9132840",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9015076",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 434,
+ "instruction": "Your name is Lei Ahmed and your email is lei.ahmed1696@example.com. You are dependent, messy, direct. For #W6724985, modify Bookshelf {'material': 'glass', 'color': 'white', 'height': '5 ft'} to {'color': 'brown'}; via credit_card_3593714. Cancel order #W9132840 because no longer needed. Cancel order #W9015076 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_434",
+ "user_id": "lei_ahmed_1705"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7187199153"
+    ],
+    "new_item_ids": [
+     "4913411651"
+    ],
+    "order_id": "#W4840405",
+    "payment_method_id": "gift_card_4710915"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 392,
+ "instruction": "Your name is Mohamed Santos and your zip code is 76188. You are relaxing, optimistic, confident, organized. For #W4840405, exchange Tablet {'screen size': '8-inch', 'storage': '128GB', 'color': 'black'} to {'screen size': '7-inch'}; via gift_card_4710915. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_392",
+ "user_id": "mohamed_santos_2427"
+}

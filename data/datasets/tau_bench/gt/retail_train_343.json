@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4572024853"
+    ],
+    "order_id": "#W3638028",
+    "payment_method_id": "gift_card_1725971"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 343,
+ "instruction": "Your name is James Li and your zip code is 10083. You are pessimistic, confident, relaxing. Return #W3638028 via gift_card_1725971: Jigsaw Puzzle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_343",
+ "user_id": "james_li_5688"
+}

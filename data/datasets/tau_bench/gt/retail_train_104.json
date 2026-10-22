@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9791469541"
+    ],
+    "order_id": "#W1842597",
+    "payment_method_id": "gift_card_8070316"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 104,
+ "instruction": "Your name is Fatima Anderson and your email is fatima.anderson1082@example.com. You are impatient, sad, rigid, pessimistic. Return #W1842597 via gift_card_8070316: Running Shoes; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_104",
+ "user_id": "fatima_anderson_7445"
+}

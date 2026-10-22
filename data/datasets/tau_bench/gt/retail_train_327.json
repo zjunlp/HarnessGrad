@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1199058591"
+    ],
+    "order_id": "#W1763367",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8296441",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 327,
+ "instruction": "Your name is Ethan Kim and your email is ethan.kim3231@example.com. You are rigid, cautious, polite, confident. Return #W1763367 via gift_card_5701566: Notebook; Cancel order #W8296441 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_327",
+ "user_id": "ethan_kim_8860"
+}

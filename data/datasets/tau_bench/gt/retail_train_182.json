@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5158064",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 182,
+ "instruction": "Your name is Aarav Thomas and your zip code is 32175. You are logical, outgoing, independent. Cancel order #W5158064 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_182",
+ "user_id": "aarav_thomas_2711"
+}

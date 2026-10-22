@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2206116040",
+     "4913411651"
+    ],
+    "new_item_ids": [
+     "7811981098",
+     "2106335193"
+    ],
+    "order_id": "#W5320242",
+    "payment_method_id": "credit_card_9784468"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 437,
+ "instruction": "Your name is Ethan Santos and your zip code is 80278. You are insecure, happy. For #W5320242, modify Cycling Helmet {'size': 'L', 'color': 'blue', 'ventilation': 'high'} to {'size': 'S', 'color': 'white', 'ventilation': 'medium'}; Tablet {'screen size': '7-inch', 'storage': '128GB', 'color': 'black'} to {'screen size': '10-inch', 'storage': '64GB', 'color': 'silver'}; via credit_card_9784468. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_437",
+ "user_id": "ethan_santos_6104"
+}

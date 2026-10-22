@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4836353",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8277474082"
+    ],
+    "new_item_ids": [
+     "3812493782"
+    ],
+    "order_id": "#W7773202",
+    "payment_method_id": "gift_card_3491931"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 57,
+ "instruction": "Your name is Amelia Silva and your zip code is 19117. You are cautious, independent, patient. Cancel order #W4836353 because no longer needed. For #W7773202, exchange Hiking Boots {'size': '12', 'material': 'leather', 'waterproof': 'yes'} to {'size': '7'}; via gift_card_3491931. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_057",
+ "user_id": "amelia_silva_7726"
+}

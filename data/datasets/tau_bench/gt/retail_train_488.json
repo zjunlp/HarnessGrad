@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6779827",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 488,
+ "instruction": "Your name is Ethan Lopez and your email is ethan.lopez8943@example.com. You are organized, independent, polite, curious. Cancel order #W6779827 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_488",
+ "user_id": "ethan_lopez_6291"
+}

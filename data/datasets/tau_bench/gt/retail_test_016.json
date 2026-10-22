@@ -1,0 +1,75 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Fatima",
+    "last_name": "Johnson",
+    "zip": "78712"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "fatima_johnson_7581"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5199551"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8665881"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9389413"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "expression": "3131.1 + 4777.75 + 367.38"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5199551",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8665881",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2554056026"
+    ],
+    "order_id": "#W9389413",
+    "payment_method_id": "paypal_5364164"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 16,
+ "instruction": "You are Fatima Johnson in 78712. You want to cancel all pending orders (since they are no longer needed) and return the watch you have received (but nothing else), and you want to know the total amount you can get back. You are a private person that does not want to reveal much about yourself.",
+ "outputs": [
+  "8276.23"
+ ],
+ "split": "test",
+ "task_id": "retail_test_016",
+ "user_id": "fatima_johnson_7581"
+}

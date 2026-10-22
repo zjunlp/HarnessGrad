@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+"""`qa` -- the shared command for plain-text and structured QA predictions.
+
+    python3 qa submit "Paris"        write the answer to answer.txt
+    python3 qa submit @answer.md     write the contents of a file as the answer
+    python3 qa submit < answer.md    same, from stdin
+    python3 qa submit-json @prediction.json  validate a structured prediction
+    python3 qa show                  print what has been submitted
+    python3 qa help                  this text
+
+Why this exists at all
+----------------------
+The platform's answer contract is a file -- `eval/runner.py` reads `answer.txt` -- so a
+harness that can write a file needs nothing from this program. A harness that can only
+*run commands* (`base_harness/cli_agent`, a shell loop, a code agent) otherwise has no
+way to say "this is my final answer" that is distinguishable from "I am still working".
+This gives it one, and gives every QA dataset the same one, so the goal text does not
+have to teach a different incantation per dataset.
+
+What it refuses, and why that matters
+-------------------------------------
+An empty answer is refused (exit 2) rather than written. A blank `answer.txt` is
+indistinguishable from no answer at all, and the two cases are *not* the same thing:
+one is an agent that decided the answer was empty, the other is an agent that never
+spoke. Refusing to write keeps the file's existence meaningful.
+
+JSON object submissions must be syntactically complete before they are written.
+`submit` leaves schema validation to the dataset's verifier; `submit-json` validates
+the shared prediction schema. Neither command repairs or fills prediction fields.
+
+Where the answer goes
+---------------------
+`<cwd>/answer.txt`. Not a dataset-specific name: the check reads the same file, and the
+platform already collects it for every harness that writes one.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from prediction import validate_prediction  # noqa: E402
+
+#: Overridable for the same reason every other path in this repository is: a reader
+#: debugging a workdir should be able to point it somewhere else without editing code.
+ANSWER_ENV = "HG_QA_ANSWER"
+PREDICTION_ENV = "HG_QA_PREDICTION"
+
+
+def answer_path() -> Path:
+    return Path(os.environ.get(ANSWER_ENV) or "answer.txt")
+
+
+def prediction_path() -> Path:
+    return Path(os.environ.get(PREDICTION_ENV) or "prediction.json")
+
+
+def cmd_submit_json(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="qa submit-json", add_help=True)
+    parser.add_argument("source", help="JSON file using @file syntax")
+    args = parser.parse_args(argv)
+    if not args.source.startswith("@") or len(args.source) == 1:
+        print("error: submit-json requires @file", file=sys.stderr)
+        return 2
+    source = Path(args.source[1:])
+    try:
+        value = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"error: invalid prediction JSON: {exc}", file=sys.stderr)
+        return 2
+    _, error = validate_prediction(value)
+    if error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    path = prediction_path()
+    path.write_text(json.dumps(value, ensure_ascii=False, separators=(",", ":")) + "\n",
+                    encoding="utf-8")
+    print(f"submitted structured prediction to {path}")
+    return 0
+
+
+def cmd_submit(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="qa submit", add_help=True)
+    parser.add_argument("answer", nargs="?",
+                        help="the answer; `@file` reads a file, absent reads stdin")
+    args = parser.parse_args(argv)
+
+    if args.answer is None:
+        text = sys.stdin.read()
+    elif args.answer.startswith("@"):
+        path = Path(args.answer[1:])
+        if not path.is_file():
+            print(f"error: no file at {path}", file=sys.stderr)
+            return 2
+        text = path.read_text(encoding="utf-8")
+    else:
+        text = args.answer
+
+    if not text.strip():
+        print("error: refusing to submit an empty answer -- a blank answer.txt cannot "
+              "be told apart from no answer at all", file=sys.stderr)
+        return 2
+
+    # `submit` is also the transport for adapter-specific JSON contracts. Check
+    # syntax without imposing submit-json's shared evidence schema or reading gold.
+    if text.lstrip().startswith("{"):
+        try:
+            json.loads(text)
+        except ValueError as exc:
+            print(f"error: invalid submission JSON: {exc}; submit a complete JSON object",
+                  file=sys.stderr)
+            return 2
+
+    path = answer_path()
+    path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+    first = text.strip().splitlines()[0]
+    print(f"submitted {len(text.strip())} character(s) to {path}")
+    print(f"first line: {first[:200]}")
+    return 0
+
+
+def cmd_show(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="qa show")
+    parser.parse_args(argv)
+    path = answer_path()
+    if not path.is_file():
+        print(f"no answer submitted yet ({path} does not exist)")
+        return 0
+    print(path.read_text(encoding="utf-8"), end="")
+    return 0
+
+
+USAGE = """qa -- answer a plain-text task
+
+  python3 qa submit "Paris"      write the answer to {answer}
+  python3 qa submit @notes.md    write a file's contents as the answer
+  python3 qa submit < notes.md   read the answer from stdin
+  python3 qa submit-json @prediction.json  answer plus optional evidence
+  python3 qa show                print what has been submitted
+
+The answer file is what is graded: nothing printed here is read. An empty answer is
+refused; write real text or write nothing at all.
+""".format(answer=answer_path())
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return 0
+    command, rest = argv[0], argv[1:]
+    if command == "submit":
+        return cmd_submit(rest)
+    if command == "submit-json":
+        return cmd_submit_json(rest)
+    if command == "show":
+        return cmd_show(rest)
+    print(f"error: unknown command {command!r}", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

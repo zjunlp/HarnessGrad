@@ -1,0 +1,50 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8886009523"
+    ],
+    "new_item_ids": [
+     "9949163720"
+    ],
+    "order_id": "#W6426438",
+    "payment_method_id": "gift_card_7219486"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3379843752"
+    ],
+    "new_item_ids": [
+     "2190871011"
+    ],
+    "order_id": "#W6779827",
+    "payment_method_id": "credit_card_9789590"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2185126308"
+    ],
+    "new_item_ids": [
+     "4582956489"
+    ],
+    "order_id": "#W8632528",
+    "payment_method_id": "gift_card_7219486"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 20,
+ "instruction": "Your name is Ethan Lopez and your email is ethan.lopez8943@example.com. You are pessimistic, patient, confident, organized. For #W6426438, modify Wristwatch {'strap material': 'silicone', 'dial color': 'blue'} to {'strap material': 'leather', 'dial color': 'black'}; via gift_card_7219486. For #W6779827, modify Espresso Machine {'pressure': '19 bar', 'capacity': '2L', 'type': 'manual'} to {'pressure': '9 bar', 'capacity': '1.5L'}; via credit_card_9789590. For #W8632528, exchange Hiking Boots {'size': '10', 'material': 'leather', 'waterproof': 'no'} to {'size': '12', 'material': 'synthetic'}; via gift_card_7219486. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_020",
+ "user_id": "ethan_lopez_6291"
+}

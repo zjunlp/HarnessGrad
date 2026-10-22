@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4273929280"
+    ],
+    "new_item_ids": [
+     "4273929280"
+    ],
+    "order_id": "#W3338814",
+    "payment_method_id": "credit_card_1893409"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7791931443"
+    ],
+    "new_item_ids": [
+     "6508153405"
+    ],
+    "order_id": "#W1812830",
+    "payment_method_id": "credit_card_1893409"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 361,
+ "instruction": "Your name is Sofia Moore and your email is sofia.moore4274@example.com. You are cautious, direct, patient, messy. For #W3338814, exchange E-Reader {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular', 'storage': '32GB'} to {}; via credit_card_1893409. For #W1812830, modify Wall Clock {'diameter': '14 inches', 'color': 'black', 'type': 'analog'} to {'diameter': '12 inches', 'color': 'white'}; via credit_card_1893409. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_361",
+ "user_id": "sofia_moore_9773"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8470360507"
+    ],
+    "new_item_ids": [
+     "6901578702"
+    ],
+    "order_id": "#W3279695",
+    "payment_method_id": "gift_card_4584785"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 101,
+ "instruction": "Your name is Olivia Garcia and your email is olivia.garcia6676@example.com. You are creative, flexible, shy, sad, polite. For #W3279695, modify Indoor Security Camera {'resolution': '2K', 'field of view': '130 degrees', 'connectivity': 'Ethernet'} to {'resolution': '4K'}; via gift_card_4584785. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_101",
+ "user_id": "olivia_garcia_4691"
+}

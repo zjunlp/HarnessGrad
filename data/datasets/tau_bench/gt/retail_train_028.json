@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5650803029"
+    ],
+    "new_item_ids": [
+     "1052700637"
+    ],
+    "order_id": "#W6030855",
+    "payment_method_id": "credit_card_4314033"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 28,
+ "instruction": "Your name is Mason Kovacs and your zip code is 98137. You are direct, logical. For #W6030855, modify Bluetooth Speaker {'color': 'black', 'battery life': '20 hours', 'water resistance': 'no'} to {'color': 'red'}; via credit_card_4314033. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_028",
+ "user_id": "mason_kovacs_7590"
+}

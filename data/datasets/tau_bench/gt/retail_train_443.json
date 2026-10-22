@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W9440076",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9179378709",
+     "7597543861"
+    ],
+    "new_item_ids": [
+     "7617930199",
+     "2635605237"
+    ],
+    "order_id": "#W3002300",
+    "payment_method_id": "gift_card_2486551"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 443,
+ "instruction": "Your name is Noah Kovacs and your email is noah.kovacs8240@example.com. You are patient, shy. Cancel order #W9440076 because no longer needed. For #W3002300, exchange Bluetooth Speaker {'color': 'green', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'red', 'battery life': '20 hours', 'water resistance': 'yes'}; Bluetooth Speaker {'color': 'black', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'blue', 'battery life': '20 hours'}; via gift_card_2486551. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_443",
+ "user_id": "noah_kovacs_1216"
+}

@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8895454203",
+     "9354168549",
+     "7420906769"
+    ],
+    "new_item_ids": [
+     "8920458606",
+     "8349118980",
+     "8214883393"
+    ],
+    "order_id": "#W8835847",
+    "payment_method_id": "gift_card_2652153"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 349,
+ "instruction": "Your name is Daiki Silva and your email is daiki.silva6295@example.com. You are pessimistic, insecure, creative, dependent, outgoing. For #W8835847, modify Bookshelf {'material': 'glass', 'color': 'white', 'height': '5 ft'} to {'material': 'wood', 'height': '4 ft'}; T-Shirt {'color': 'red', 'size': 'XXL', 'material': 'cotton', 'style': 'crew neck'} to {'color': 'blue', 'size': 'S', 'style': 'v-neck'}; Gaming Mouse {'color': 'white', 'sensor type': 'laser', 'connectivity': 'wireless'} to {'color': 'black'}; via gift_card_2652153. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_349",
+ "user_id": "daiki_silva_2903"
+}

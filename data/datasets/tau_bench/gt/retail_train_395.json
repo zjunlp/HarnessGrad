@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4273929280"
+    ],
+    "new_item_ids": [
+     "4273929280"
+    ],
+    "order_id": "#W8295890",
+    "payment_method_id": "paypal_4755504"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 395,
+ "instruction": "Your name is Yusuf Moore and your email is yusuf.moore9422@example.com. You are creative, independent. For #W8295890, exchange E-Reader {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular', 'storage': '32GB'} to {}; via paypal_4755504. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_395",
+ "user_id": "yusuf_moore_6437"
+}

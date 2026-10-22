@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3453331371"
+    ],
+    "new_item_ids": [
+     "2439754078"
+    ],
+    "order_id": "#W8661412",
+    "payment_method_id": "credit_card_7239357"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 79,
+ "instruction": "You name is Emma Kovacs and your zip code is 32190. You are insecure, rigid, sad, logical. You just bought a water bottle with 500ml but you regret it, and you want to change it to the other bottle you just placed with 1000ml capacity. If the exact item is not available any more, you can allow the material to be different.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_079",
+ "user_id": "emma_kovacs_9839"
+}

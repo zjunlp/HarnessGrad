@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9013366374"
+    ],
+    "order_id": "#W2002172",
+    "payment_method_id": "paypal_5061070"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 183,
+ "instruction": "Your name is Juan Kim and your email is juan.kim2574@example.com. You are flexible, dependent. Return #W2002172 via paypal_5061070: Cycling Helmet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_183",
+ "user_id": "juan_kim_6026"
+}

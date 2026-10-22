@@ -1,0 +1,43 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9690244451"
+    ],
+    "new_item_ids": [
+     "8484921793"
+    ],
+    "order_id": "#W8969494",
+    "payment_method_id": "paypal_1009053"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7154215719",
+     "5537798301",
+     "1327854740",
+     "9179378709"
+    ],
+    "new_item_ids": [
+     "8479046075",
+     "9013366374",
+     "8302289002",
+     "7751905257"
+    ],
+    "order_id": "#W8068454",
+    "payment_method_id": "paypal_1009053"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 193,
+ "instruction": "Your name is Daiki Patel and your zip code is 94111. You are organized, flexible, optimistic, happy. For #W8969494, exchange Mechanical Keyboard {'switch type': 'clicky', 'backlight': 'RGB', 'size': '60%'} to {'switch type': 'linear', 'size': '80%'}; via paypal_1009053. For #W8068454, exchange Bookshelf {'material': 'wood', 'color': 'brown', 'height': '6 ft'} to {'color': 'white', 'height': '5 ft'}; Cycling Helmet {'size': 'S', 'color': 'black', 'ventilation': 'medium'} to {'size': 'M', 'color': 'blue', 'ventilation': 'high'}; Air Purifier {'room size': 'medium', 'filter type': 'HEPA', 'features': 'night mode'} to {'room size': 'large'}; Bluetooth Speaker {'color': 'green', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'red', 'water resistance': 'yes'}; via paypal_1009053. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_193",
+ "user_id": "daiki_patel_5953"
+}

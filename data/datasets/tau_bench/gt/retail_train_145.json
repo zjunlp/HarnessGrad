@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3230708338"
+    ],
+    "new_item_ids": [
+     "3230708338"
+    ],
+    "order_id": "#W5671546",
+    "payment_method_id": "credit_card_2583849"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 145,
+ "instruction": "Your name is Olivia Hernandez and your email is olivia.hernandez9440@example.com. You are cautious, relaxing, flexible. For #W5671546, exchange Garden Hose {'length': '25ft', 'material': 'latex', 'color': 'green'} to {}; via credit_card_2583849. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_145",
+ "user_id": "olivia_hernandez_5066"
+}

@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4063401924"
+    ],
+    "new_item_ids": [
+     "7866854614"
+    ],
+    "order_id": "#W9373487",
+    "payment_method_id": "gift_card_7711863"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3788616824"
+    ],
+    "new_item_ids": [
+     "6065192424"
+    ],
+    "order_id": "#W2692684",
+    "payment_method_id": "gift_card_7711863"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 31,
+ "instruction": "Your name is Olivia Lopez and your zip code is 76171. You are dependent, happy, confident, optimistic, cautious. For #W9373487, modify Portable Charger {'capacity': '20000mAh', 'output': 'Wireless', 'color': 'blue'} to {'capacity': '5000mAh', 'output': 'USB-C', 'color': 'white'}; via gift_card_7711863. For #W2692684, exchange Tablet {'screen size': '10-inch', 'storage': '128GB', 'color': 'black'} to {'screen size': '8-inch', 'color': 'gold'}; via gift_card_7711863. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_031",
+ "user_id": "olivia_lopez_3865"
+}

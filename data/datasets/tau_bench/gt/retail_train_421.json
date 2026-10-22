@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4716977452"
+    ],
+    "new_item_ids": [
+     "2635605237"
+    ],
+    "order_id": "#W4318885",
+    "payment_method_id": "gift_card_6767859"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 421,
+ "instruction": "Your name is Mason Wilson and your zip code is 85028. You are confident, optimistic, polite. For #W4318885, modify Bluetooth Speaker {'color': 'blue', 'battery life': '10 hours', 'water resistance': 'yes'} to {'battery life': '20 hours', 'water resistance': 'no'}; via gift_card_6767859. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_421",
+ "user_id": "mason_wilson_4597"
+}

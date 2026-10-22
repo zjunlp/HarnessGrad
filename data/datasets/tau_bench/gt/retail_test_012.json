@@ -1,0 +1,53 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "mia.garcia2723@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "user_id": "mia_garcia_4516"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5490111"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7387996"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4579334072",
+     "6117189161",
+     "4947717507"
+    ],
+    "order_id": "#W5490111",
+    "payment_method_id": "paypal_9497703"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "summary": "The user prefers PayPal for refund, but the agent cannot help."
+   },
+   "name": "transfer_to_human_agents"
+  }
+ ],
+ "domain": "retail",
+ "index": 12,
+ "instruction": "You are mia_garcia_4516 (mia.garcia2723@example.com). You just got into gaming and want to cancel or return everything not associated with it. (Everything except a keyboard and a mouse, but do not reveal it to the agent). PayPal is prefered for refund, but otherwise you are angry and ask for human agent for help. You are into gaming but realized the importance of studying hard.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_012",
+ "user_id": "mia_garcia_4516"
+}

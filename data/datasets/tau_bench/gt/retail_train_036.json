@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3379843752"
+    ],
+    "new_item_ids": [
+     "6200867091"
+    ],
+    "order_id": "#W2598324",
+    "payment_method_id": "credit_card_5902940"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2106335193"
+    ],
+    "new_item_ids": [
+     "4913411651"
+    ],
+    "order_id": "#W3239882",
+    "payment_method_id": "credit_card_5902940"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 36,
+ "instruction": "Your name is Mei Ahmed and your email is mei.ahmed4901@example.com. You are busy, impatient, organized, rigid, optimistic. For #W2598324, modify Espresso Machine {'pressure': '19 bar', 'capacity': '2L', 'type': 'manual'} to {'capacity': '1L', 'type': 'capsule'}; via credit_card_5902940. For #W3239882, exchange Tablet {'screen size': '10-inch', 'storage': '64GB', 'color': 'silver'} to {'screen size': '7-inch', 'storage': '128GB', 'color': 'black'}; via credit_card_5902940. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_036",
+ "user_id": "mei_ahmed_4909"
+}

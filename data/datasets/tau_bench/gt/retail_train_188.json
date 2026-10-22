@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3877188862"
+    ],
+    "new_item_ids": [
+     "5489028872"
+    ],
+    "order_id": "#W2974929",
+    "payment_method_id": "paypal_7916550"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 188,
+ "instruction": "Your name is Fatima Anderson and your zip code is 32100. You are impatient, organized. For #W2974929, modify Skateboard {'deck material': 'plastic', 'length': '31 inch', 'design': 'plain'} to {'length': '34 inch', 'design': 'graphic'}; via paypal_7916550. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_188",
+ "user_id": "fatima_anderson_2157"
+}

@@ -1,0 +1,39 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4274709903"
+    ],
+    "new_item_ids": [
+     "8426249116"
+    ],
+    "order_id": "#W5911003",
+    "payment_method_id": "gift_card_4855547"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1804581713",
+     "7843064651"
+    ],
+    "new_item_ids": [
+     "7255224608",
+     "5758737025"
+    ],
+    "order_id": "#W2941275",
+    "payment_method_id": "credit_card_7772870"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 208,
+ "instruction": "Your name is Ava Lopez and your zip code is 92168. You are polite, messy, busy, patient, flexible. For #W5911003, modify Office Chair {'material': 'mesh', 'color': 'red', 'armrest': 'none', 'backrest height': 'standard'} to {'material': 'fabric', 'color': 'black', 'armrest': 'fixed'}; via gift_card_4855547. For #W2941275, exchange Digital Camera {'resolution': '30MP', 'zoom': '3x', 'storage': 'SD card'} to {'storage': 'CF card'}; Water Bottle {'capacity': '750ml', 'material': 'stainless steel', 'color': 'blue'} to {'capacity': '500ml', 'material': 'glass', 'color': 'green'}; via credit_card_7772870. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_208",
+ "user_id": "ava_lopez_2676"
+}

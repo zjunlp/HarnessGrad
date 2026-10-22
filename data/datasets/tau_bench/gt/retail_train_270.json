@@ -1,0 +1,35 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7597543861"
+    ],
+    "new_item_ids": [
+     "6704763132"
+    ],
+    "order_id": "#W9160732",
+    "payment_method_id": "gift_card_5979071"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8302289002",
+     "7658724607"
+    ],
+    "order_id": "#W6797115",
+    "payment_method_id": "gift_card_5979071"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 270,
+ "instruction": "Your name is Aarav Gonzalez and your email is aarav.gonzalez9269@example.com. You are direct, pessimistic, shy, dependent. For #W9160732, modify Bluetooth Speaker {'color': 'black', 'battery life': '10 hours', 'water resistance': 'no'} to {'color': 'blue'}; via gift_card_5979071. Return #W6797115 via gift_card_5979071: Air Purifier; Mechanical Keyboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_270",
+ "user_id": "aarav_gonzalez_5113"
+}

@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8808563",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 159,
+ "instruction": "Your name is Fatima Nguyen and your zip code is 43211. You are happy, cautious, pessimistic, impatient, creative. Cancel order #W8808563 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_159",
+ "user_id": "fatima_nguyen_7539"
+}

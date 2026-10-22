@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "707 Maple Drive",
+    "address2": "Suite 817",
+    "city": "San Antonio",
+    "country": "USA",
+    "order_id": "#W1130240",
+    "state": "TX",
+    "zip": "78202"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7159180318"
+    ],
+    "new_item_ids": [
+     "8068777068"
+    ],
+    "order_id": "#W1130240",
+    "payment_method_id": "gift_card_5427896"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 485,
+ "instruction": "Your name is Liam Li and your zip code is 28226. You are insecure, logical, cautious, independent, shy. For #W1130240, change address to {'order_id': '#W1130240', 'address1': '707 Maple Drive', 'address2': 'Suite 817', 'city': 'San Antonio', 'country': 'USA', 'state': 'TX', 'zip': '78202'} (same as #W8838515). For #W1130240, modify Dumbbell Set {'weight range': '30-50 lbs', 'material': 'urethane', 'set type': 'fixed'} to {'weight range': '5-25 lbs', 'material': 'rubber'}; via gift_card_5427896. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_485",
+ "user_id": "liam_li_8526"
+}

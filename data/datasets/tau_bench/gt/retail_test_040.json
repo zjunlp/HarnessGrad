@@ -1,0 +1,39 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "isabella.lopez3271@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "user_id": "isabella_lopez_6490"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4923227"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4923227",
+    "payment_method_id": "credit_card_8897086"
+   },
+   "name": "modify_pending_order_payment"
+  }
+ ],
+ "domain": "retail",
+ "index": 40,
+ "instruction": "You are Isabella Lopez, and your email address is isabella.lopez3271@example.com. You want to know how much balance does your gift card have. Also, for your recent order, whether you used your visa, mastercard, or amex credit card. You also wonder if you can apply the gift card balance to the order. If not, you want to change your payment method to visa, because the other two cards have a lot of balance. You are a yound college student under the pressure of final exams and student loans, so you are a bit anxious and want to get things done quickly.",
+ "outputs": [
+  "60",
+  "mastercard"
+ ],
+ "split": "test",
+ "task_id": "retail_test_040",
+ "user_id": "isabella_lopez_6490"
+}

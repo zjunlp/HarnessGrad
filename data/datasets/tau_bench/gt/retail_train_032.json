@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2235648106"
+    ],
+    "order_id": "#W5285031",
+    "payment_method_id": "credit_card_7952624"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 32,
+ "instruction": "Your name is Fatima Taylor and your zip code is 32169. You are rigid, curious, sad. Return #W5285031 via credit_card_7952624: Tablet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_032",
+ "user_id": "fatima_taylor_3452"
+}

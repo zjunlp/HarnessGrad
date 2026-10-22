@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W4923227",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 89,
+ "instruction": "Your name is Isabella Lopez and your email is isabella.lopez3271@example.com. You are curious, polite, shy. Cancel order #W4923227 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_089",
+ "user_id": "isabella_lopez_6490"
+}

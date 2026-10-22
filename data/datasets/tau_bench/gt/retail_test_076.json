@@ -1,0 +1,27 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8367380",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W1242543",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 76,
+ "instruction": "You name is Ava Nguyen and your zip code is 94128. You are polite, optimistic, busy. You ordered a fleece jacket by mistake and want to remove it from your pending order. If removing one item is not possible, cancel the whole order. You also want to modify the skateboard to maple material, 34 inch, graphic. If not availabe, cancel the order so that you can order again. You also want to know the total prices for the grills you have paid for.",
+ "outputs": [
+  "1939.05"
+ ],
+ "split": "test",
+ "task_id": "retail_test_076",
+ "user_id": "ava_nguyen_6646"
+}

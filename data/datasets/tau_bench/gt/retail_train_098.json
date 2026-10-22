@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5645314103"
+    ],
+    "new_item_ids": [
+     "4572024853"
+    ],
+    "order_id": "#W6975922",
+    "payment_method_id": "paypal_3999493"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 98,
+ "instruction": "Your name is Olivia Jackson and your email is olivia.jackson2465@example.com. You are logical, dependent, pessimistic, impatient. For #W6975922, modify Jigsaw Puzzle {'pieces': '2000', 'theme': 'animals', 'difficulty level': 'intermediate'} to {'pieces': '1000', 'difficulty level': 'expert'}; via paypal_3999493. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_098",
+ "user_id": "olivia_jackson_1219"
+}

@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4035304400",
+     "7843064651",
+     "1725100896"
+    ],
+    "new_item_ids": [
+     "5669664287",
+     "6777246137",
+     "3399869890"
+    ],
+    "order_id": "#W6221400",
+    "payment_method_id": "gift_card_5087631"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 407,
+ "instruction": "Your name is Harper Kovacs and your email is harper.kovacs6209@example.com. You are pessimistic, curious, organized, impatient. For #W6221400, exchange Air Purifier {'room size': 'medium', 'filter type': 'HEPA', 'features': 'smart sensors'} to {'room size': 'small', 'filter type': 'ionic', 'features': 'quiet operation'}; Water Bottle {'capacity': '750ml', 'material': 'stainless steel', 'color': 'blue'} to {'color': 'red'}; Perfume {'scent family': 'oriental', 'size': '30ml', 'gender': 'unisex'} to {'scent family': 'woody', 'size': '100ml', 'gender': 'men'}; via gift_card_5087631. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_407",
+ "user_id": "harper_kovacs_9747"
+}

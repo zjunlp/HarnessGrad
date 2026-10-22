@@ -1,0 +1,28 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9779102705",
+     "2366567022",
+     "1775591963"
+    ],
+    "new_item_ids": [
+     "5645314103",
+     "7199146548",
+     "1775591963"
+    ],
+    "order_id": "#W3942875",
+    "payment_method_id": "gift_card_5701566"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 353,
+ "instruction": "Your name is Ethan Kim and your email is ethan.kim3231@example.com. You are direct, patient, independent, logical, curious. For #W3942875, exchange Jigsaw Puzzle {'pieces': '1000', 'theme': 'art', 'difficulty level': 'intermediate'} to {'pieces': '2000', 'theme': 'animals'}; Water Bottle {'capacity': '1000ml', 'material': 'stainless steel', 'color': 'blue'} to {'capacity': '750ml', 'material': 'plastic', 'color': 'black'}; Running Shoes {'size': '10', 'color': 'white', 'material': 'leather', 'sole': 'EVA'} to {}; via gift_card_5701566. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_353",
+ "user_id": "ethan_kim_8860"
+}

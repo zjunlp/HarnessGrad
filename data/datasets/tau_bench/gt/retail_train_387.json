@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5073920",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 387,
+ "instruction": "Your name is Lucas Johansson and your zip code is 94147. You are patient, direct, logical, cautious, happy. Cancel order #W5073920 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_387",
+ "user_id": "lucas_johansson_1090"
+}

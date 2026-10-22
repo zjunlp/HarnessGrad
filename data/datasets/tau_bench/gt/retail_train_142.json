@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5206946487"
+    ],
+    "new_item_ids": [
+     "5206946487"
+    ],
+    "order_id": "#W2905754",
+    "payment_method_id": "credit_card_3677959"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 142,
+ "instruction": "Your name is Lei Wilson and your zip code is 32255. You are confident, shy, patient, creative, sad. For #W2905754, exchange Garden Hose {'length': '50ft', 'material': 'vinyl', 'color': 'black'} to {}; via credit_card_3677959. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_142",
+ "user_id": "lei_wilson_4541"
+}

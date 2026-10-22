@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3557711149",
+     "2323972008"
+    ],
+    "order_id": "#W7678072",
+    "payment_method_id": "paypal_5727330"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 490,
+ "instruction": "Your name is Noah Brown and your zip code is 80279. You are polite, rigid. Return #W7678072 via paypal_5727330: Backpack; Electric Kettle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_490",
+ "user_id": "noah_brown_6181"
+}

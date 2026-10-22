@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4035304400"
+    ],
+    "order_id": "#W5254379",
+    "payment_method_id": "paypal_3839332"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 475,
+ "instruction": "Your name is Mia Smith and your email is mia.smith4644@example.com. You are outgoing, dependent, rigid, happy, patient. Return #W5254379 via paypal_3839332: Air Purifier; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_475",
+ "user_id": "mia_smith_1623"
+}

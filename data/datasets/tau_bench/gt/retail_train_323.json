@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8955613",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 323,
+ "instruction": "Your name is Olivia Lopez and your zip code is 92107. You are busy, sad, impatient, rigid. Cancel order #W8955613 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_323",
+ "user_id": "olivia_lopez_9494"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7407609582"
+    ],
+    "new_item_ids": [
+     "4965355367"
+    ],
+    "order_id": "#W2297866",
+    "payment_method_id": "paypal_5334408"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 405,
+ "instruction": "Your name is Sofia Thomas and your zip code is 75307. You are curious, shy. For #W2297866, modify Vacuum Cleaner {'type': 'upright', 'bagged/bagless': 'bagless', 'features': 'HEPA filter'} to {'type': 'robotic', 'features': 'pet hair removal'}; via paypal_5334408. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_405",
+ "user_id": "sofia_thomas_1518"
+}

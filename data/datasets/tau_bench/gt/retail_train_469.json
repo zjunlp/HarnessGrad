@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6958840",
+    "payment_method_id": "gift_card_5730441"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6048672633"
+    ],
+    "new_item_ids": [
+     "5537798301"
+    ],
+    "order_id": "#W6958840",
+    "payment_method_id": "credit_card_1687024"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 469,
+ "instruction": "Your name is Daiki Li and your zip code is 75201. You are creative, impatient, curious. For #W6958840, change payment to gift_card_5730441. For #W6958840, modify Cycling Helmet {'size': 'L', 'color': 'black', 'ventilation': 'low'} to {'size': 'S', 'ventilation': 'medium'}; via credit_card_1687024. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_469",
+ "user_id": "daiki_li_8218"
+}

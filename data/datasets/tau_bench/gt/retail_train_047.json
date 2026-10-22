@@ -1,0 +1,30 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7800651",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1615379700",
+     "8384507844",
+     "8538875209"
+    ],
+    "order_id": "#W6390527",
+    "payment_method_id": "paypal_7644869"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 47,
+ "instruction": "Your name is Mei Kovacs and your email is mei.kovacs8232@example.com. You are dependent, busy, outgoing, impatient, sad. Cancel order #W7800651 because ordered by mistake. Return #W6390527 via paypal_7644869: Hiking Boots; Desk Lamp; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_047",
+ "user_id": "mei_kovacs_8020"
+}

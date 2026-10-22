@@ -1,0 +1,89 @@
+{
+  "schema": "hg-locomo-validation-v1",
+  "date": "2026-10-17",
+  "base_commit": "9cb3bc5858e37860fb22d24fb41d454f31b2a2d1",
+  "environment": {
+    "kind": "conda",
+    "python": "3.12.15",
+    "nltk": "3.9.2"
+  },
+  "data": {
+    "conversations": 10,
+    "questions": 1986,
+    "categories": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+  },
+  "tests": {
+    "passed": 150,
+    "subtests_passed": 38,
+    "failed": 1,
+    "deselected": 23,
+    "released_data_harbor_differential_enabled": true,
+    "failure": {
+      "test": "test_every_published_dataset_has_a_row",
+      "reason": "Runtime discovery omits unrelated unprovisioned/unimportable appworld, chessbench_puzzles, ds1000, livecodebench and terminal_bench adapters.",
+      "reproduced_without_locomo_on_base": true
+    },
+    "deselected_scope": "One all-adapter import inventory plus 22 dataset control cases; LoCoMo sandbox controls executed separately."
+  },
+  "controls": {
+    "task_id": "locomo/conv-26",
+    "questions": 199,
+    "sandbox": true,
+    "oracle": 1.0,
+    "noop": 0.0,
+    "per_question_records": 199,
+    "manual_summary_function_and_cli_match": true,
+    "runtime_imports_passed": true,
+    "work_root_cleaned": true
+  },
+  "model_calls": 0,
+  "limits": [
+    "No real local-model inference or target-host validation.",
+    "No full-model benchmark or staged production admission.",
+    "No study/evaluation split declared."
+  ],
+  "source_files": {
+    "data/datasets/locomo.py": "4a3fdcd58b604ed129f39a7bf7c472f47bb19b28faac50a1540d03b178b5cb8c",
+    "data/datasets/locomo/control.py": "273ecc32b8e075c6a0d3da8e97c17bbdceb489f8231263c1141ac850d60fa70a",
+    "data/datasets/locomo/lib/inputs.py": "b871ed04da9a4b419f5782b3ff69526e8b7a71fcbbd676dd5fdbed7fddb5e5a4",
+    "data/datasets/locomo/lib/scoring.py": "39cd3cdca590e95c603f036c2c463dd21c30d70b671847569bfcec639eb421e7",
+    "data/datasets/locomo/report.py": "1bb0a24b604351989cc8ad6f28b80de5a7534021a55177d1b02931a7e8b2cdd8",
+    "data/datasets/locomo/verify/check.py": "b7c2b1bd03e05437b159901764b6efeb07516b1bbbb0ee751241fb395100e11a",
+    "tests/fixtures/locomo_harbor/adapter.py": "cc591e9952b8c76886870f3a196486ccf978c5d5a4fe6b0d610f1e27c8f1e112",
+    "tests/fixtures/locomo_harbor/metric.py": "49f80b8ab409a6499bfd7f487aade20ad02c37214d2c1f79a5093441f43c9ede",
+    "tests/fixtures/locomo_harbor/task-template/tests/verifier.py": "1c7dde895051360579f99cff109e4b29149b900c6f147b4797e5d25bdb37d8cb",
+    "tests/quality/test_aggregation_policies.py": "97c2581c9f81dfbc62e90db1a40fde5b475bfd6036d8f897e85a068b5cba5f90",
+    "tests/quality/test_data_layout.py": "81e2c8aa7fed997f555b8b51eead8ba9dacff0fc94daf8194da04fa9c06773cb",
+    "tests/quality/test_dataset_controls.py": "8f679e3879de7c8df2c8230af10f3c969db7149f066addf04e7e8e1bb9856560",
+    "tests/quality/test_import_direction.py": "62ce6a0987c3fd1216518a3953f82137bc13642d28470cef94f08c6bba59cb7f",
+    "tests/quality/test_launch_options_chooser.py": "0d056eb78ac1cdd627d183efbeed12d2a99a8266b67638af18d57ed621e7d600",
+    "tests/quality/test_locomo_dataset.py": "a36637133a1f57d1d39e953dabf316dd10fc4affa4d85520df5a631432e7953e",
+    "tests/quality/test_locomo_harbor_scoring.py": "b79ed7cdaa2e8c6581c5abd91be11c0728527737dfbdd700acd1e5d963c6a059",
+    "tests/quality/test_registry_discovery_order.py": "a63a10456b9710bc2baaa1c32ffc118e4248ed8d9c546ffa0311c96e3d53000f",
+    "tools/dataset_classes.py": "5b4e2a102853e19f3d1a3aadd9530ed0b854972964d75535af9d76428d22d6f0",
+    "tools/locomo_diagnostic.py": "0f8cf5070359a1db4aae37f0817d3305864fdf478256d3d408728834baabc458"
+  },
+  "local_evidence_directory": "datasets/locomo/audit-20261017/pr-cleanup-01",
+  "evidence_sha256": {
+    "oracle-manual-report.json": "e55babe671e00062d3afaa17e1419634e459767ff1db44efa8284e2cf2e1b9cc",
+    "receipt.json": "c2a3ee57fccc137127c9ffe385e1156f1aab62ba71147464c78b1f37640c18ea",
+    "oracle.json": "a8f67e9d6c813936716a713e68a33865217fc1d36b1d55103315bad4061ca41c",
+    "oracle-evidence.json": "6561070aef33df56a7d7608b66a7a61a3ea52bc2785af6bae4f7e7902245366f",
+    "pytest.xml": "93c564696cf59a603eebaadd481e79e269ee7ce6acdd729e7d5229bd9a4a9339",
+    "noop-evidence.json": "0c961a0034cfa9ba1c653eefd7c369032f91f4a798bbaac5ea3efcbee05211d3",
+    "oracle-cli-report.json": "e55babe671e00062d3afaa17e1419634e459767ff1db44efa8284e2cf2e1b9cc",
+    "noop-manual-report.json": "ba4c5aba670c7e821cd69b7d38e18c9df15837041b7a27b8998f3c5882d4dbc9",
+    "baseline_sandbox.py": "4cc07b1756402837ac649d4459e52b2ac746585c66470e7b59a25ff9ef33c0ef",
+    "run_smoke.py": "9d6286480fb173bc8949981716b2048f530ebb96a2b1e14962138cf2e0e4e215",
+    "noop-cli-report.json": "ba4c5aba670c7e821cd69b7d38e18c9df15837041b7a27b8998f3c5882d4dbc9",
+    "noop.json": "db087f97823a1b8ee49b329817bd6a0f5fb70dfd8636340615a35a4169146972",
+    "baseline-inventory.xml": "e4fa2dea04a3981fc8069307ff9baf7226f6ff44816c86de6ded3355a65a8930"
+  }
+}

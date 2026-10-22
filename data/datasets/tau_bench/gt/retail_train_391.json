@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1654931",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 391,
+ "instruction": "Your name is Liam Thomas and your zip code is 85049. You are shy, logical. Cancel order #W1654931 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_391",
+ "user_id": "liam_thomas_7882"
+}

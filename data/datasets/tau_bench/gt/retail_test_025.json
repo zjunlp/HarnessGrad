@@ -1,0 +1,49 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Isabella",
+    "last_name": "Johansson",
+    "zip": "32286"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "isabella_johansson_2152"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3792453"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7181492"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5565470"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2575533"
+   },
+   "name": "get_order_details"
+  }
+ ],
+ "domain": "retail",
+ "index": 25,
+ "instruction": "You are Isabella Johansson, and you live in 32286. You have an order sent to Texas by accident, and you want to know the tracking number of the order, and return all items in it except the pet bed. You want the refund to your amex credit card, and if the agent cannot help, transfer to a human. You don't remember the order number. It is urgent.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_025",
+ "user_id": "isabella_johansson_2152"
+}

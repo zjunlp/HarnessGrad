@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5952720925"
+    ],
+    "new_item_ids": [
+     "1323134954"
+    ],
+    "order_id": "#W7736983",
+    "payment_method_id": "paypal_6840891"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5765741",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 3,
+ "instruction": "Your name is Sofia Kovacs and your zip code is 19049. You are patient, confident. For #W7736983, exchange Coffee Maker {'color': 'black', 'capacity': '4 cups', 'type': 'espresso', 'features': 'timer'} to {'color': 'stainless steel', 'type': 'drip', 'features': 'built-in grinder'}; via paypal_6840891. Cancel order #W5765741 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_003",
+ "user_id": "sofia_kovacs_7075"
+}

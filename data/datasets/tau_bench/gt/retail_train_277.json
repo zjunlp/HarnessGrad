@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W8005719",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3510092",
+    "payment_method_id": "paypal_6366157"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6056040996"
+    ],
+    "new_item_ids": [
+     "1657832319"
+    ],
+    "order_id": "#W3510092",
+    "payment_method_id": "credit_card_2713802"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 277,
+ "instruction": "Your name is Fatima Li and your email is fatima.li1185@example.com. You are logical, sad, organized. Cancel order #W8005719 because no longer needed. For #W3510092, change payment to paypal_6366157. For #W3510092, modify Laptop {'screen size': '13-inch', 'processor': 'i5', 'ram': '16GB', 'storage': '512GB SSD', 'color': 'space grey'} to {'processor': 'i7', 'ram': '32GB', 'color': 'black'}; via credit_card_2713802. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_277",
+ "user_id": "fatima_li_5040"
+}

@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3062096",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 207,
+ "instruction": "Your name is Amelia Wilson and your email is amelia.wilson1598@example.com. You are confident, cautious, dependent, shy, pessimistic. Cancel order #W3062096 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_207",
+ "user_id": "amelia_wilson_4614"
+}

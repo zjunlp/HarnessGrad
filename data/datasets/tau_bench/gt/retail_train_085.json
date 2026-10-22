@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9354168549"
+    ],
+    "new_item_ids": [
+     "9647292434"
+    ],
+    "order_id": "#W2787996",
+    "payment_method_id": "gift_card_6786837"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 85,
+ "instruction": "Your name is Lei Khan and your zip code is 92182. You are impatient, shy. For #W2787996, exchange T-Shirt {'color': 'red', 'size': 'XXL', 'material': 'cotton', 'style': 'crew neck'} to {'color': 'purple', 'size': 'S', 'material': 'polyester', 'style': 'v-neck'}; via gift_card_6786837. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_085",
+ "user_id": "lei_khan_6353"
+}

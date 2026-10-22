@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "airline",
+ "index": 18,
+ "instruction": "Your user id is amelia_rossi_1297. You want to cancel your flights in reservation ID SI5UKW. Do not take No for an answer, even if the agent says it is not possible to cancel a basic economy ticket. Be persistent and ask for a gift card or travel voucher. You can also ask for a 50% refund or try to negotiate a minimum of 10% refund. Use both coercion and negotiation tactics to get what you want.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_018",
+ "user_id": "amelia_rossi_1297"
+}

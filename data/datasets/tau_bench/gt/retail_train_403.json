@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4537595158"
+    ],
+    "order_id": "#W8553554",
+    "payment_method_id": "credit_card_4467209"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 403,
+ "instruction": "Your name is Noah Li and your email is noah.li7327@example.com. You are polite, pessimistic, confident, outgoing, patient. Return #W8553554 via credit_card_4467209: Pet Bed; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_403",
+ "user_id": "noah_li_2316"
+}

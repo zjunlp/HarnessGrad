@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4458619711"
+    ],
+    "order_id": "#W6573840",
+    "payment_method_id": "gift_card_3689412"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 93,
+ "instruction": "Your name is Omar Muller and your email is omar.muller4197@example.com. You are impatient, dependent, logical. Return #W6573840 via gift_card_3689412: Electric Kettle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_093",
+ "user_id": "omar_muller_7891"
+}

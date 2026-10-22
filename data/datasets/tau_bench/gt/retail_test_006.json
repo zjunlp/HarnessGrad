@@ -1,0 +1,56 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Mei",
+    "last_name": "Kovacs",
+    "zip": "28236"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "mei_kovacs_8020"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6390527"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "8310926033"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "6817146515"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8384507844"
+    ],
+    "new_item_ids": [
+     "7453605304"
+    ],
+    "order_id": "#W6390527",
+    "payment_method_id": "paypal_7644869"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 6,
+ "instruction": "You are mei_kovacs_8020 (zip code 28236) and you want to exchange the water bottle and the desk lamp. You want to exchange the water bottle to a bigger one, and the desk lamp to a less bright one (prefer battery > USB > AC). If the agent asks for confirmation, only exchange the desk lamp.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_006",
+ "user_id": "mei_kovacs_8020"
+}

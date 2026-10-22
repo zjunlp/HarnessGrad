@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3333391894",
+     "7902309762"
+    ],
+    "order_id": "#W3952055",
+    "payment_method_id": "credit_card_1248375"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 279,
+ "instruction": "Your name is Yara Davis and your zip code is 92122. You are curious, logical, insecure. Return #W3952055 via credit_card_1248375: Dumbbell Set; Makeup Kit; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_279",
+ "user_id": "yara_davis_8348"
+}

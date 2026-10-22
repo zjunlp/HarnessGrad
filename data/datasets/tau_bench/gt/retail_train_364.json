@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2554056026",
+     "5047954489"
+    ],
+    "new_item_ids": [
+     "9811090008",
+     "2060066974"
+    ],
+    "order_id": "#W9389413",
+    "payment_method_id": "paypal_5364164"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 364,
+ "instruction": "Your name is Fatima Johnson and your email is fatima.johnson2300@example.com. You are flexible, optimistic, patient, organized, dependent. For #W9389413, exchange Smart Watch {'color': 'gold', 'band material': 'metal', 'display': 'AMOLED'} to {'color': 'silver', 'band material': 'leather', 'display': 'LCD'}; T-Shirt {'color': 'blue', 'size': 'S', 'material': 'polyester', 'style': 'v-neck'} to {'color': 'black', 'size': 'XL', 'material': 'cotton', 'style': 'crew neck'}; via paypal_5364164. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_364",
+ "user_id": "fatima_johnson_7581"
+}

@@ -1,0 +1,70 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4153505238"
+    ],
+    "new_item_ids": [
+     "1775591963"
+    ],
+    "order_id": "#W6851636",
+    "payment_method_id": "paypal_5541158"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8895454203",
+     "7583936705",
+     "8896479688",
+     "1518544029",
+     "7441167885"
+    ],
+    "order_id": "#W2435638",
+    "payment_method_id": "paypal_5541158"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "377 River Road",
+    "address2": "Suite 307",
+    "city": "Chicago",
+    "country": "USA",
+    "order_id": "#W2040365",
+    "state": "IL",
+    "zip": "60644"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3709608322"
+    ],
+    "new_item_ids": [
+     "3714494375"
+    ],
+    "order_id": "#W2040365",
+    "payment_method_id": "paypal_5541158"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9962383",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 197,
+ "instruction": "Your name is Fatima Muller and your zip code is 60644. You are confident, optimistic, polite, messy, independent. For #W6851636, modify Running Shoes {'size': '8', 'color': 'red', 'material': 'leather', 'sole': 'EVA'} to {'size': '10', 'color': 'white'}; via paypal_5541158. Return #W2435638 via paypal_5541158: Bookshelf; Digital Camera; Gaming Mouse; Garden Hose; Espresso Machine; For #W2040365, change address to {'order_id': '#W2040365', 'address1': '377 River Road', 'address2': 'Suite 307', 'city': 'Chicago', 'country': 'USA', 'state': 'IL', 'zip': '60644'} (same as #W9962383). For #W2040365, modify Espresso Machine {'pressure': '9 bar', 'capacity': '2L', 'type': 'automatic'} to {'pressure': '15 bar', 'capacity': '1L', 'type': 'manual'}; via paypal_5541158. Cancel order #W9962383 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_197",
+ "user_id": "fatima_muller_6713"
+}

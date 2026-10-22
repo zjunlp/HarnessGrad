@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""GAIA's task interface: read the task, submit an answer.
+
+    python3 bin/ask show
+    python3 bin/ask submit "egalitarian"
+    cat answer.txt | python3 bin/ask submit
+
+The verbs are declared in an argparse `choices` list because they are read:
+`tools/dataset_classes.py` derives the dataset's interaction axis from that list and refuses to
+guess when a CLI declares nothing it can read.
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+WORKDIR = Path("/app")
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="GAIA task interface")
+    parser.add_argument("command", choices=["show", "submit"])
+    parser.add_argument("answer", nargs="?", help="the answer; read from stdin when omitted")
+    args = parser.parse_args(argv)
+    if args.command == "show":
+        print(Path("TASK.md").read_text(encoding="utf-8"))
+        for path in sorted(Path("attachments").glob("*")) if Path("attachments").is_dir() else []:
+            print(f"[attachment] {path} ({path.stat().st_size} bytes)")
+    else:
+        answer = args.answer if args.answer is not None else sys.stdin.read()
+        target = WORKDIR / "answer.txt"
+        target.write_text(answer if answer.endswith("\n") else answer + "\n", encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

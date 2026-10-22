@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1768466237"
+    ],
+    "new_item_ids": [
+     "4894369688"
+    ],
+    "order_id": "#W6319233",
+    "payment_method_id": "credit_card_9308469"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 18,
+ "instruction": "Your name is Mia Silva and your zip code is 95173. You are dependent, flexible. For #W6319233, exchange Bookshelf {'material': 'glass', 'color': 'black', 'height': '3 ft'} to {'color': 'brown', 'height': '5 ft'}; via credit_card_9308469. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_018",
+ "user_id": "mia_silva_4504"
+}

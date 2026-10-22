@@ -1,0 +1,47 @@
+{
+  "schema": "kumo.integration.validation.v1",
+  "date": "2026-10-18",
+  "revision_of": "b8899205",
+  "scope": "Minimal integration using existing files/tool_relay/command contracts",
+  "source_revision": "576748764f7d72634654d0784944a485eca9047c",
+  "manifest_sha256": "c16adfd53737065020e2d517aeb35f96800cfc66309bbb15d95dd32971fa4d57",
+  "controls": {
+    "local_oracle": 1,
+    "local_noop": 0,
+    "platform_oracle": 1,
+    "platform_noop": 0
+  },
+  "tests": {
+    "relevant_passed": 183,
+    "subtests_passed": 38,
+    "deselected": 26,
+    "kumo_tests": 19,
+    "selection_note": "KUMO, registry discovery, aggregation, blockers, controls, import direction, data layout and launcher chooser. Deselected unrelated controls and existing host-dependent inventory checks; not a full-suite claim."
+  },
+  "checks": {
+    "dataset_lint": "pass",
+    "source_file_sha256": "5846 files pass",
+    "classification": "closed_loop",
+    "train": 3515,
+    "eval": 1775
+  },
+  "shared_runtime_changes_retained": [
+    "Stop relay processes on exceptional runner exit",
+    "Remove relay staging on startup failure and runner completion",
+    "Propagate cleanup failure instead of returning a measured result"
+  ],
+  "api_requests": 0,
+  "historical_api_evidence": "validation.json describes b8899205; not rerun for this revision",
+  "limitations": [
+    "No exported trusted episode/query count",
+    "Existing native filesystem sandbox required for private case isolation",
+    "Inherited network and no filesystem quotas",
+    "Existing actor-workdir scorer isolation"
+  ],
+  "artifact_root": "/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/datasets/kumo",
+  "artifacts": {
+    "minimal-tests-20261018.log": "92758a7c9a1041a99643977a9dcd789bf2bdf207e87db9b6e2ecaa4edd74b562",
+    "minimal-suite-20261018.log": "f7d042ab0185085b91eeb30f33112b33dfdf66e785ea1e1d6789e45ef4c58349",
+    "minimal-controls-20261018.json": "6337ffbbeadf789b683e06179fdab8630d7c298c67ccc183969159972c31ea65"
+  }
+}

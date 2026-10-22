@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4579334072",
+     "6439196450"
+    ],
+    "order_id": "#W1579621",
+    "payment_method_id": "credit_card_9698900"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 274,
+ "instruction": "Your name is Olivia Ahmed and your email is olivia.ahmed5620@example.com. You are organized, happy, creative. Return #W1579621 via credit_card_9698900: Water Bottle; Mechanical Keyboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_274",
+ "user_id": "olivia_ahmed_6778"
+}

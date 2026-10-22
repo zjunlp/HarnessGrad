@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6509212169"
+    ],
+    "new_item_ids": [
+     "5012998807"
+    ],
+    "order_id": "#W6131421",
+    "payment_method_id": "credit_card_4142574"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "8590708195",
+     "9970989750",
+     "6130713659"
+    ],
+    "order_id": "#W6174054",
+    "payment_method_id": "gift_card_6566420"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 59,
+ "instruction": "Your name is Anya Patel and your email is anya.patel9309@example.com. You are direct, sad, curious, logical, patient. For #W6131421, exchange Makeup Kit {'skin tone': 'light', 'kit size': 'professional', 'brand': 'Brand A'} to {'skin tone': 'dark', 'brand': 'Brand B'}; via credit_card_4142574. Return #W6174054 via gift_card_6566420: Fleece Jacket; Vacuum Cleaner; Dumbbell Set; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_059",
+ "user_id": "anya_patel_3710"
+}

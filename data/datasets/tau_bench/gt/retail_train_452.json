@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5996159312"
+    ],
+    "order_id": "#W6679257",
+    "payment_method_id": "credit_card_9513926"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 452,
+ "instruction": "Your name is Yusuf Rossi and your email is yusuf.rossi7301@example.com. You are patient, happy. Return #W6679257 via credit_card_9513926: Digital Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_452",
+ "user_id": "yusuf_rossi_9620"
+}

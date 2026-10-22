@@ -1,0 +1,68 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9644439410"
+    ],
+    "new_item_ids": [
+     "8363011723"
+    ],
+    "order_id": "#W9651773",
+    "payment_method_id": "paypal_7732922"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6242772310",
+     "8649999816",
+     "7583936705"
+    ],
+    "order_id": "#W2768683",
+    "payment_method_id": "paypal_7732922"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "505 Cedar Avenue",
+    "address2": "Suite 539",
+    "city": "Jacksonville",
+    "country": "USA",
+    "order_id": "#W6689278",
+    "state": "FL",
+    "zip": "32117"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2243454707"
+    ],
+    "new_item_ids": [
+     "9472539378"
+    ],
+    "order_id": "#W6689278",
+    "payment_method_id": "paypal_7732922"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5694685",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 139,
+ "instruction": "Your name is Evelyn Kovacs and your email is evelyn.kovacs5369@example.com. You are rigid, sad, shy, independent. For #W9651773, modify Digital Camera {'resolution': '20MP', 'zoom': '5x', 'storage': 'CF card'} to {'zoom': '3x', 'storage': 'SD card'}; via paypal_7732922. Return #W2768683 via paypal_7732922: Espresso Machine; Bookshelf; Digital Camera; For #W6689278, change address to {'order_id': '#W6689278', 'address1': '505 Cedar Avenue', 'address2': 'Suite 539', 'city': 'Jacksonville', 'country': 'USA', 'state': 'FL', 'zip': '32117'} (same as #W5694685). For #W6689278, modify Electric Kettle {'capacity': '1L', 'material': 'plastic', 'color': 'white'} to {'capacity': '1.5L', 'material': 'glass'}; via paypal_7732922. Cancel order #W5694685 because ordered by mistake. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_139",
+ "user_id": "evelyn_kovacs_6742"
+}

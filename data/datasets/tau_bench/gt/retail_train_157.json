@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2185126308"
+    ],
+    "new_item_ids": [
+     "8106223139"
+    ],
+    "order_id": "#W1335809",
+    "payment_method_id": "paypal_3728317"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7843064651"
+    ],
+    "new_item_ids": [
+     "7533802601"
+    ],
+    "order_id": "#W3176007",
+    "payment_method_id": "paypal_3728317"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 157,
+ "instruction": "Your name is Anya Lee and your email is anya.lee3013@example.com. You are busy, direct, happy, organized, outgoing. For #W1335809, exchange Hiking Boots {'size': '10', 'material': 'leather', 'waterproof': 'no'} to {'size': '9', 'waterproof': 'yes'}; via paypal_3728317. For #W3176007, modify Water Bottle {'capacity': '750ml', 'material': 'stainless steel', 'color': 'blue'} to {'capacity': '500ml', 'color': 'green'}; via paypal_3728317. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_157",
+ "user_id": "anya_lee_8315"
+}

@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5635439102",
+     "8106223139"
+    ],
+    "order_id": "#W4824466",
+    "payment_method_id": "gift_card_9919420"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 471,
+ "instruction": "Your name is Daiki Kim and your email is daiki.kim7376@example.com. You are relaxing, logical, shy. Return #W4824466 via gift_card_9919420: Headphones; Hiking Boots; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_471",
+ "user_id": "daiki_kim_2165"
+}

@@ -1,0 +1,102 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Olivia",
+    "last_name": "Lopez",
+    "zip": "76171"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "olivia_lopez_3865"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9319364"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9373487"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2692684"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "8024098596"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3788616824"
+    ],
+    "order_id": "#W2692684",
+    "payment_method_id": "gift_card_7711863"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9373487"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9373487",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W2692684"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5481803"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7449508"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6477915553"
+    ],
+    "order_id": "#W7449508",
+    "payment_method_id": "gift_card_7711863"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 30,
+ "instruction": "You are Olivia Lopez, and you live in Texas in 76171. You just received your tablet and it is damaged when you opened the package. You want to know the tracking number of the order. Also if the agent can help you exchange or return the tablet (you prefer exchange for the same item, but if it is not available just return). If tablet returned, also cancel the charger you just bought, because it goes with the tablet... And return the sneaker. You like to do one thing at a time, and reveal minimal information about yourself.",
+ "outputs": [
+  "746342064230"
+ ],
+ "split": "test",
+ "task_id": "retail_test_030",
+ "user_id": "olivia_lopez_3865"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5886093635"
+    ],
+    "new_item_ids": [
+     "8573379326"
+    ],
+    "order_id": "#W9994227",
+    "payment_method_id": "credit_card_4582364"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 45,
+ "instruction": "Your name is Yara Johansson and your zip code is 76114. You are relaxing, optimistic, rigid, outgoing, happy. For #W9994227, exchange Cycling Helmet {'size': 'S', 'color': 'blue', 'ventilation': 'low'} to {'size': 'M', 'color': 'red', 'ventilation': 'high'}; via credit_card_4582364. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_045",
+ "user_id": "yara_johansson_1629"
+}

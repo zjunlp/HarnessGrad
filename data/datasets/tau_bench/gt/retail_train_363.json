@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2244749153",
+     "1178356107"
+    ],
+    "order_id": "#W9552705",
+    "payment_method_id": "gift_card_8922351"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 363,
+ "instruction": "Your name is Aarav Sanchez and your email is aarav.sanchez5467@example.com. You are direct, outgoing, optimistic, flexible. Return #W9552705 via gift_card_8922351: Bookshelf; Portable Charger; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_363",
+ "user_id": "aarav_sanchez_6636"
+}

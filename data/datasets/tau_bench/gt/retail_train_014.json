@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5268233322"
+    ],
+    "new_item_ids": [
+     "7602931732"
+    ],
+    "order_id": "#W1166549",
+    "payment_method_id": "credit_card_1289579"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 14,
+ "instruction": "Your name is Daiki Hernandez and your zip code is 91203. You are sad, outgoing, messy, polite. For #W1166549, exchange Electric Kettle {'capacity': '1L', 'material': 'glass', 'color': 'white'} to {'material': 'stainless steel', 'color': 'black'}; via credit_card_1289579. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_014",
+ "user_id": "daiki_hernandez_1356"
+}

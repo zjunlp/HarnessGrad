@@ -1,0 +1,44 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5952720925"
+    ],
+    "new_item_ids": [
+     "3020722515"
+    ],
+    "order_id": "#W9571698",
+    "payment_method_id": "gift_card_7250692"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4545791457"
+    ],
+    "order_id": "#W3069600",
+    "payment_method_id": "credit_card_1565124"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6245746168"
+    ],
+    "order_id": "#W2598834",
+    "payment_method_id": "gift_card_7250692"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 255,
+ "instruction": "Your name is Chen Silva and your zip code is 46281. You are messy, optimistic, insecure, cautious. For #W9571698, exchange Coffee Maker {'color': 'black', 'capacity': '4 cups', 'type': 'espresso', 'features': 'timer'} to {'capacity': '1 cup', 'type': 'french press', 'features': 'auto shutoff'}; via gift_card_7250692. Return #W3069600 via credit_card_1565124: Skateboard; Return #W2598834 via gift_card_7250692: Jigsaw Puzzle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_255",
+ "user_id": "chen_silva_7485"
+}

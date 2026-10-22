@@ -1,0 +1,48 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "297 Highland Drive",
+    "address2": "Suite 550",
+    "city": "Washington",
+    "country": "USA",
+    "order_id": "#W8645374",
+    "state": "DC",
+    "zip": "20056"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9644439410"
+    ],
+    "new_item_ids": [
+     "1804581713"
+    ],
+    "order_id": "#W8645374",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3694871183",
+     "2185126308",
+     "6956751343"
+    ],
+    "order_id": "#W7293142",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 99,
+ "instruction": "Your name is Noah Sanchez and your zip code is 20056. You are polite, curious. For #W8645374, change address to {'order_id': '#W8645374', 'address1': '297 Highland Drive', 'address2': 'Suite 550', 'city': 'Washington', 'country': 'USA', 'state': 'DC', 'zip': '20056'} (same as #W4864669). For #W8645374, modify Digital Camera {'resolution': '20MP', 'zoom': '5x', 'storage': 'CF card'} to {'resolution': '30MP', 'zoom': '3x', 'storage': 'SD card'}; via gift_card_9909795. Return #W7293142 via gift_card_9909795: Wireless Earbuds; Hiking Boots; Skateboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_099",
+ "user_id": "noah_sanchez_2690"
+}

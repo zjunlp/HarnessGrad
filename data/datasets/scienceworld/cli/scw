@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+r"""`scw` -- the command line the agent uses to act inside a ScienceWorld episode.
+
+    python3 scw look                 where you are now (free: no move) and the score
+    python3 scw do "<action>"        apply one action; it costs one budgeted step
+    python3 scw inventory            what the agent is carrying
+    python3 scw task                 the task description
+    python3 scw done                 declare the episode over and stop acting
+    python3 scw help                 this text
+
+The default is the paper's 100-step budget, declared in `scw_env.STEP_BUDGET`.
+
+Why a CLI, and why the log is replayed
+--------------------------------------
+The platform grades what a harness *left behind*. A ScienceWorld episode is a transcript,
+not an artifact, so the task is turned into one: every action goes through this command and
+is appended to `scw_actions.jsonl`, exactly as ALFWorld's `alf` does
+(`docs/dataset-onboarding-skill.md` §6). The check then rebuilds the world from the trusted
+task file and replays the log, reading the JVM's own score.
+
+A fresh process per command means the world is rebuilt and the log replayed every time.
+That is deliberate and it is the same argument ALFWorld records: the world the agent sees
+and the world being scored are then built by **exactly one** code path
+(`data/datasets/scienceworld/lib/scw_env.py`), so "the same trajectory" is a fact rather than a
+hope. The cost is real -- a JVM start plus one step per replayed action -- and it is
+bounded by the 100-step budget.
+
+Where things live (override with the matching flag):
+    <workdir>/scw_task.json       the task and variation, written by the platform's SETUP
+    <workdir>/scw_actions.jsonl   this program's append-only output
+    <workdir>/jre/                the pinned JVM, unpacked on first use
+
+What `look` prints, and why it is not the last step's observation
+-----------------------------------------------------------------
+`look` prints the room the agent is standing in now: `env.look()` after the replay, which
+is ScienceWorld's own free action (`AgentInterface.freeActionLook`; the Python wrapper's
+docstring is "This is a 'free' action in that it consumes no time"). Measured, repeated
+calls leave the move counter and the score untouched, and this command writes nothing to
+the log, so looking is free in every sense the episode can observe.
+
+The last action's feedback is a **different** string -- `"You open the door."`, not the
+room -- and it used to be printed *instead of* the room whenever the log held any action.
+The agent ran `look` in 271 of the 311 archived traces, so those numbers were measured
+under that degraded interface. The feedback is still printed, one labelled line at the end,
+so a reader gets both and can tell them apart.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scw_env  # noqa: E402
+
+
+def _fail(message: str, code: int = 2) -> int:
+    print(f"error: {message}", file=sys.stderr)
+    return code
+
+
+def _replay(workdir: Path, actions: list[str], budget: int):
+    """Build the world and apply `actions`, returning `(env, last_step)`.
+
+    `last_step` is the `(observation, reward, done, info)` of the final action, or None
+    when there were none. Both this and the check call it, so the two cannot disagree
+    about what an action does.
+    """
+    env = scw_env.load_task(workdir, step_budget=budget)
+    last = None
+    for action in actions:
+        last = env.step(action)
+        if last[2]:                     # done: textworld-equivalent stop condition
+            break
+    return env, last
+
+
+def _print_status(step, *, moves: int, budget: int, env) -> None:
+    """Print the **current** room, the score readout, and the last action's feedback.
+
+    The room always comes from `env.look()`, never from `step[0]`. `_replay` has already
+    applied every logged action, so `env` is at the current state; `step[0]` is the
+    *previous* action's feedback ("You open the door."), which is a different thing and
+    used to be printed in place of the room. Measured in ScienceWorld 1.2.3: five calls to
+    `look()` leave `get_num_moves()` and `getScore()` unchanged, so reading the room
+    cannot cost a move or move the grade -- and it appends nothing to the log, because
+    only `cmd_do` writes there.
+    """
+    if step is None:
+        score = 0
+        done = False
+    else:
+        _observation, _reward, done, info = step
+        score = info.get("score", 0)
+    print(str(env.look()).strip())
+    print()
+    print(f"[scw] move {moves}/{budget}; score {score}/100"
+          + ("; episode over" if done else "; in progress"))
+    if step is not None:
+        feedback = str(step[0]).strip()
+        if feedback:
+            print(f"[scw] last action (move {moves}): {feedback}")
+
+
+def cmd_look(args) -> int:
+    records = scw_env.action_log_records(args.log)
+    actions = scw_env.actions_in(records)
+    env, last = _replay(args.workdir, actions, args.budget)
+    _print_status(last, moves=len(actions), budget=args.budget, env=env)
+    return 0
+
+
+def cmd_do(args) -> int:
+    action = " ".join(args.action).strip()
+    if not action:
+        return _fail('usage: scw do "<action>"')
+    records = scw_env.action_log_records(args.log)
+    actions = scw_env.actions_in(records)
+    if len(actions) >= args.budget:
+        print(f"error: the {args.budget}-step budget is spent; the episode is over. "
+              f"Use `scw look` to see the final state.", file=sys.stderr)
+        return 2
+    env, last = _replay(args.workdir, actions + [action], args.budget)
+    scw_env.append_action(args.log, action, len(actions))
+    _print_status(last, moves=len(actions) + 1, budget=args.budget, env=env)
+    return 0
+
+
+def cmd_inventory(args) -> int:
+    records = scw_env.action_log_records(args.log)
+    env, _ = _replay(args.workdir, scw_env.actions_in(records), args.budget)
+    print(str(env.inventory()).strip())
+    return 0
+
+
+def cmd_task(args) -> int:
+    records = scw_env.action_log_records(args.log)
+    env, _ = _replay(args.workdir, scw_env.actions_in(records), args.budget)
+    print(str(env.get_task_description()).strip())
+    return 0
+
+
+def cmd_done(args) -> int:
+    records = scw_env.action_log_records(args.log)
+    if not any(r.get("kind") == "done" for r in records):
+        path = args.log
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a") as handle:
+            handle.write(json.dumps({"kind": "done",
+                                     "step": len(scw_env.actions_in(records))}) + "\n")
+    print("Noted. The episode is marked done.")
+    return 0
+
+
+def _parse_global(argv: list) -> tuple[argparse.Namespace, list]:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--workdir", default=".")
+    parser.add_argument("--log", default=None)
+    parser.add_argument("--budget", type=int, default=scw_env.STEP_BUDGET)
+    known, rest = parser.parse_known_args(argv)
+    known.workdir = Path(known.workdir)
+    known.log = Path(known.log) if known.log else known.workdir / scw_env.LOG_FILENAME
+    return known, rest
+
+
+USAGE = """scw -- act in a ScienceWorld episode
+
+  python3 scw look            the room you are in now (free: costs no move) and the score
+  python3 scw do "<action>"   apply one action; it costs one of the {budget} moves
+  python3 scw inventory       what you are carrying
+  python3 scw task            the task description
+  python3 scw done            declare the episode over
+
+Options (anywhere on the line): --workdir DIR --log FILE --budget N
+The task is {task}; the action log is {log}.
+""".format(budget=scw_env.STEP_BUDGET, task=scw_env.TASK_FILENAME,
+           log=scw_env.LOG_FILENAME)
+
+
+def main(argv: list) -> int:
+    args, rest = _parse_global(list(argv))
+    if not rest or rest[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return 0
+    command, rest = rest[0], rest[1:]
+    if command == "look":
+        return cmd_look(args)
+    if command == "do":
+        args.action = rest
+        return cmd_do(args)
+    if command == "inventory":
+        return cmd_inventory(args)
+    if command == "task":
+        return cmd_task(args)
+    if command == "done":
+        return cmd_done(args)
+    print(f"error: unknown command {command!r}", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

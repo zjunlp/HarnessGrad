@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9472539378",
+     "1270145486"
+    ],
+    "order_id": "#W2912153",
+    "payment_method_id": "credit_card_3081930"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 417,
+ "instruction": "Your name is Olivia Brown and your zip code is 43118. You are relaxing, sad, organized, flexible, curious. Return #W2912153 via credit_card_3081930: Electric Kettle; Desk Lamp; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_417",
+ "user_id": "olivia_brown_4616"
+}

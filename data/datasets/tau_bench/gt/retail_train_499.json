@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5669664287"
+    ],
+    "order_id": "#W2582045",
+    "payment_method_id": "gift_card_3767667"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 499,
+ "instruction": "Your name is Juan Santos and your email is juan.santos3161@example.com. You are outgoing, impatient, independent, cautious. Return #W2582045 via gift_card_3767667: Air Purifier; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_499",
+ "user_id": "juan_santos_1448"
+}

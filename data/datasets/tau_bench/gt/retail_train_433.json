@@ -1,0 +1,51 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "580 Broadway",
+    "address2": "Suite 162",
+    "city": "Denver",
+    "country": "USA",
+    "order_id": "#W2466703",
+    "state": "CO",
+    "zip": "80265"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9385662952",
+     "7848293342"
+    ],
+    "new_item_ids": [
+     "8161321868",
+     "7082455361"
+    ],
+    "order_id": "#W2466703",
+    "payment_method_id": "paypal_7529813"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1573035764"
+    ],
+    "new_item_ids": [
+     "1763705424"
+    ],
+    "order_id": "#W7739115",
+    "payment_method_id": "paypal_7529813"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 433,
+ "instruction": "Your name is Yusuf Hernandez and your zip code is 80265. You are confident, cautious. For #W2466703, change address to {'order_id': '#W2466703', 'address1': '580 Broadway', 'address2': 'Suite 162', 'city': 'Denver', 'country': 'USA', 'state': 'CO', 'zip': '80265'} (same as #W2166301). For #W2466703, modify Fleece Jacket {'size': 'L', 'color': 'black', 'zipper': 'full'} to {'size': 'XS', 'color': 'navy'}; Grill {'type': 'charcoal', 'size': 'medium', 'features': 'side burner'} to {'features': 'rotisserie'}; via paypal_7529813. For #W7739115, exchange Makeup Kit {'skin tone': 'dark', 'kit size': 'professional', 'brand': 'Brand A'} to {'brand': 'Brand C'}; via paypal_7529813. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_433",
+ "user_id": "yusuf_hernandez_6785"
+}

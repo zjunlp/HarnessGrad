@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7717598293"
+    ],
+    "new_item_ids": [
+     "7848293342"
+    ],
+    "order_id": "#W8353027",
+    "payment_method_id": "paypal_1679017"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 11,
+ "instruction": "Your name is Yara Ito and your email is yara.ito7353@example.com. You are cautious, flexible, patient, happy. For #W8353027, exchange Grill {'type': 'electric', 'size': 'medium', 'features': 'rotisserie'} to {'type': 'charcoal', 'features': 'side burner'}; via paypal_1679017. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_011",
+ "user_id": "yara_ito_8499"
+}

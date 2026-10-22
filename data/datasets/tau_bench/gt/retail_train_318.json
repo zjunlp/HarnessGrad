@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "441 Hillcrest Drive",
+    "address2": "Suite 386",
+    "city": "Austin",
+    "country": "USA",
+    "order_id": "#W6794581",
+    "state": "TX",
+    "zip": "78762"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1906487464",
+     "1719127154"
+    ],
+    "new_item_ids": [
+     "3909406921",
+     "1665571435"
+    ],
+    "order_id": "#W6794581",
+    "payment_method_id": "credit_card_1055108"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 318,
+ "instruction": "Your name is Liam Santos and your zip code is 78762. You are polite, organized. For #W6794581, change address to {'order_id': '#W6794581', 'address1': '441 Hillcrest Drive', 'address2': 'Suite 386', 'city': 'Austin', 'country': 'USA', 'state': 'TX', 'zip': '78762'} (same as #W4011814). For #W6794581, modify Tea Kettle {'material': 'stainless steel', 'capacity': '2 liters', 'stovetop compatibility': 'induction'} to {'material': 'glass', 'capacity': '1 liter', 'stovetop compatibility': 'gas'}; Cycling Helmet {'size': 'M', 'color': 'red', 'ventilation': 'medium'} to {'size': 'L', 'color': 'black', 'ventilation': 'high'}; via credit_card_1055108. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_318",
+ "user_id": "liam_santos_5468"
+}

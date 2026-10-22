@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Agent-visible AgentDojo CLI: the interaction environment is not on this disk.
+
+``tools`` asks the host-side relay for the catalogue; ``call`` asks it to run one tool;
+``submit`` records the final answer. The relay is ``agentdojo/relay.py``, served outside the
+sandbox by the trusted dataset runtime, and it is the only way to the environment: the socket
+serves a closed set of two ops, and neither can return the environment object, a state dump,
+or a ``model_dump``. There is no prepared snapshot on this disk to read -- this CLI no longer
+has a ``dojo.initial.json``/``dojo.state.json`` path.
+
+**Where the relay is.** The platform publishes one directory into the sandbox,
+``/run/harnessgrad-tool``, holding exactly ``tool.sock`` (the relay's socket) and
+``tool_transport.py`` (the platform's one transport). This program reads no other path: it
+imports the transport from beside the socket and calls it. ``HG_DOJO_SOCKET`` is a **test
+override** for that socket path, not the contract -- when it is set the transport is expected
+beside the overridden socket.
+
+``action.json`` is the replay transcript the trusted verifier consumes, and it is written
+exactly as before: one ``{"function", "args"}`` appended per call, ``output`` set on submit.
+
+A missing or unreachable relay is a platform fault, not an empty observation: every command
+exits nonzero with a message saying so and appends nothing to ``action.json``.
+"""
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import os
+import sys
+from pathlib import Path
+
+#: The published relay directory inside the sandbox. Fixed by the platform, not per task.
+TOOL_DIR = '/run/harnessgrad-tool'
+TOOL_SOCKET = TOOL_DIR + '/tool.sock'
+#: Test override only: point the client at a socket served elsewhere on this host.
+SOCKET_ENV = 'HG_DOJO_SOCKET'
+ACTION_FILE = 'action.json'
+
+
+def _transport(socket_path):
+    """The platform's transport, published beside the socket -- imported, never copied."""
+    directory = str(Path(socket_path).parent)
+    if directory not in sys.path:
+        sys.path.insert(0, directory)
+    try:
+        import tool_transport
+    except ImportError as exc:
+        raise SystemExit(f'dojo: the tool transport is not published at {directory} ({exc}); '
+                         'nothing was recorded')
+    return tool_transport
+
+
+def _relay(transport, socket_path, op, args=None):
+    try:
+        return transport.call(socket_path, op, args or {})
+    except transport.ToolTransportError as exc:
+        raise SystemExit(f'dojo: the AgentDojo environment relay failed ({op}): {exc}')
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('command', choices=['tools', 'call', 'submit'])
+    ap.add_argument('value', nargs='?')
+    args = ap.parse_args()
+    socket_path = os.environ.get(SOCKET_ENV) or TOOL_SOCKET
+    if not Path(socket_path).exists():
+        raise SystemExit(f'dojo: the AgentDojo environment relay socket is absent: {socket_path}'
+                         ' -- nothing was recorded')
+    transport = _transport(socket_path)
+    if args.command == 'tools':
+        print(json.dumps(_relay(transport, socket_path, 'tools'), ensure_ascii=False))
+        return
+    action_file = Path(ACTION_FILE)
+    # Hold a stable sidecar lock across the relay call as well as the file update:
+    # locking only the append can record successful calls in a different order from
+    # their state changes. Submit must use the same lock to preserve both fields.
+    with Path(ACTION_FILE + '.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        actions = json.loads(action_file.read_text()) if action_file.exists() else {'calls': [], 'output': ''}
+        if args.command == 'submit':
+            actions['output'] = args.value or ''
+        else:
+            raw = json.loads(args.value)
+            payload = _relay(transport, socket_path, 'call',
+                             {'function': raw['function'], 'arguments': raw['args']})
+            actions['calls'].append({'function': raw['function'], 'args': raw['args']})
+        action_file.write_text(json.dumps(actions, ensure_ascii=False))
+    if args.command == 'call':
+        print(json.dumps(payload, ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7806008610"
+    ],
+    "new_item_ids": [
+     "3951031513"
+    ],
+    "order_id": "#W8008214",
+    "payment_method_id": "paypal_8445813"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 450,
+ "instruction": "Your name is Fatima Brown and your email is fatima.brown8196@example.com. You are flexible, direct, cautious. For #W8008214, modify Espresso Machine {'pressure': '9 bar', 'capacity': '1L', 'type': 'capsule'} to {'pressure': '19 bar', 'capacity': '1.5L', 'type': 'automatic'}; via paypal_8445813. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_450",
+ "user_id": "fatima_brown_2588"
+}

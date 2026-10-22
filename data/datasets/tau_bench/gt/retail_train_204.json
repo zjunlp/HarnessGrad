@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6200867091"
+    ],
+    "new_item_ids": [
+     "3714494375"
+    ],
+    "order_id": "#W3919881",
+    "payment_method_id": "paypal_3226997"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 204,
+ "instruction": "Your name is Liam Nguyen and your zip code is 95184. You are organized, independent, creative. For #W3919881, exchange Espresso Machine {'pressure': '19 bar', 'capacity': '1L', 'type': 'capsule'} to {'pressure': '15 bar', 'type': 'manual'}; via paypal_3226997. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_204",
+ "user_id": "liam_nguyen_9081"
+}

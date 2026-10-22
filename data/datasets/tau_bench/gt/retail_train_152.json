@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3778705663",
+     "2698416822"
+    ],
+    "new_item_ids": [
+     "2244749153",
+     "5428723833"
+    ],
+    "order_id": "#W9810810",
+    "payment_method_id": "gift_card_7252880"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 152,
+ "instruction": "Your name is Yara Silva and your email is yara.silva2443@example.com. You are dependent, confident, optimistic. For #W9810810, modify Bookshelf {'material': 'metal', 'color': 'black', 'height': '6 ft'} to {'material': 'wood', 'color': 'brown', 'height': '5 ft'}; Electric Kettle {'capacity': '1.5L', 'material': 'plastic', 'color': 'white'} to {'color': 'black'}; via gift_card_7252880. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_152",
+ "user_id": "yara_silva_7567"
+}

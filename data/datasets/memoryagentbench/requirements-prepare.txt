@@ -1,0 +1,10 @@
+# Preparation and official differential tests only; runtime scoring uses stdlib.
+# 3.10.4: the first release outside GHSA-8mgp-746c-j5xp's range (`<= 3.10.3`). Only punkt +
+# `nltk.tabdata` are used, never the artifact-download API the advisory is about.
+nltk==3.10.4
+regex==2026.9.29
+tiktoken==0.14.0
+pyarrow==23.0.1
+rouge-score==0.1.2
+editdistance==0.8.1
+numpy==2.5.4

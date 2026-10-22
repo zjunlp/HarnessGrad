@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7162915",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1437889264"
+    ],
+    "new_item_ids": [
+     "1437889264"
+    ],
+    "order_id": "#W5107138",
+    "payment_method_id": "paypal_7007375"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 55,
+ "instruction": "Your name is Raj Lopez and your email is raj.lopez2997@example.com. You are polite, logical, dependent. Cancel order #W7162915 because ordered by mistake. For #W5107138, modify Hiking Boots {'size': '7', 'material': 'synthetic', 'waterproof': 'no'} to {}; via paypal_7007375. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_055",
+ "user_id": "raj_lopez_5873"
+}

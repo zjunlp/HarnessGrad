@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6130713659"
+    ],
+    "order_id": "#W6026015",
+    "payment_method_id": "credit_card_6361025"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 396,
+ "instruction": "Your name is Ethan Moore and your zip code is 75339. You are direct, independent, outgoing. Return #W6026015 via credit_card_6361025: Dumbbell Set; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_396",
+ "user_id": "ethan_moore_9003"
+}

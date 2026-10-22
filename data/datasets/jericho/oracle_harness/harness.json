@@ -1,0 +1,13 @@
+{
+  "name": "jericho-oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files"
+  ],
+  "install": null,
+  "runtime_paths": [],
+  "notes": "A CONTROL, NOT A HARNESS. It reads the reference command list the dataset stages at `.oracle/actions.json` and replays it through the `jer` CLI, then stops. It exists so `data/datasets/jericho/control.py --platform` can prove the dataset's VERIFY path reaches reward 1 through eval.runner.run_one. Never report a curve row for this control.",
+  "role": "control"
+}

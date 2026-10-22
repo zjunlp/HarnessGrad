@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3557711149"
+    ],
+    "new_item_ids": [
+     "6906307980"
+    ],
+    "order_id": "#W4840405",
+    "payment_method_id": "gift_card_4710915"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 39,
+ "instruction": "Your name is Mohamed Santos and your zip code is 76188. You are pessimistic, creative. For #W4840405, exchange Backpack {'color': 'green', 'size': 'small', 'material': 'polyester', 'compartment': 'laptop'} to {'color': 'black', 'size': 'large'}; via gift_card_4710915. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_039",
+ "user_id": "mohamed_santos_2427"
+}

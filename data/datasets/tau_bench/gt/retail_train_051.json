@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5645314103",
+     "8886009523"
+    ],
+    "new_item_ids": [
+     "5546244844",
+     "1994478369"
+    ],
+    "order_id": "#W1544028",
+    "payment_method_id": "credit_card_9185943"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 51,
+ "instruction": "Your name is Liam Anderson and your email is liam.anderson5932@example.com. You are patient, polite, sad. For #W1544028, exchange Jigsaw Puzzle {'pieces': '2000', 'theme': 'animals', 'difficulty level': 'intermediate'} to {'pieces': '1500', 'theme': 'art'}; Wristwatch {'strap material': 'silicone', 'dial color': 'blue'} to {'dial color': 'black'}; via credit_card_9185943. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_051",
+ "user_id": "liam_anderson_5973"
+}

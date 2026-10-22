@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3333391894"
+    ],
+    "new_item_ids": [
+     "6585768447"
+    ],
+    "order_id": "#W3206099",
+    "payment_method_id": "gift_card_2748512"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 482,
+ "instruction": "Your name is Lucas Muller and your zip code is 78763. You are patient, direct, relaxing, flexible, pessimistic. For #W3206099, modify Dumbbell Set {'weight range': '30-50 lbs', 'material': 'iron', 'set type': 'fixed'} to {'weight range': '5-25 lbs', 'material': 'urethane'}; via gift_card_2748512. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_482",
+ "user_id": "lucas_muller_4380"
+}

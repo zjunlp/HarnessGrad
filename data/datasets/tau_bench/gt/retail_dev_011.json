@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7430166",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 11,
+ "instruction": "Your name is Aarav Davis and your email is aarav.davis1165@example.com. You are busy, curious, impatient, organized, dependent. You just wanted to check the final shipping price before placing the order, but you accidentally placed the order. You know that the order number ends in 66. You want to cancel the order immediately. Complain that the website is very confusing to navigate and you want to make sure that the order is canceled immediately.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_011",
+ "user_id": "aarav_davis_4756"
+}

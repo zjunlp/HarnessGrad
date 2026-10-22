@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3735133539",
+     "6195938807"
+    ],
+    "order_id": "#W6619432",
+    "payment_method_id": "paypal_3738584"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 1,
+ "instruction": "Your name is Sophia Nguyen and your zip code is 20171. You are confident, organized. Return #W6619432 via paypal_3738584: Dumbbell Set; Yoga Mat; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_001",
+ "user_id": "sophia_nguyen_2370"
+}

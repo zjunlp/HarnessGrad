@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8590708195",
+     "2386562819",
+     "6048672633"
+    ],
+    "order_id": "#W6821773",
+    "payment_method_id": "credit_card_4829249"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 340,
+ "instruction": "Your name is Anya Kovacs and your zip code is 95132. You are busy, polite, dependent, outgoing, curious. Return #W6821773 via credit_card_4829249: Fleece Jacket; Office Chair; Cycling Helmet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_340",
+ "user_id": "anya_kovacs_9542"
+}

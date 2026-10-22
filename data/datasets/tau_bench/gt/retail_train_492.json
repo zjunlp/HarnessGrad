@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5067898160"
+    ],
+    "new_item_ids": [
+     "3360679910"
+    ],
+    "order_id": "#W1023987",
+    "payment_method_id": "gift_card_9450778"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 492,
+ "instruction": "Your name is Sophia Garcia and your email is sophia.garcia9791@example.com. You are impatient, rigid, direct, organized, happy. For #W1023987, exchange Pet Bed {'size': 'medium', 'material': 'memory foam', 'color': 'brown'} to {'color': 'beige'}; via gift_card_9450778. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_492",
+ "user_id": "sophia_garcia_1101"
+}

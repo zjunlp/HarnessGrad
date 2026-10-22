@@ -1,0 +1,46 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6948061616"
+    ],
+    "order_id": "#W7242815",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "544 Sunset Drive",
+    "address2": "Suite 337",
+    "city": "Jacksonville",
+    "country": "USA",
+    "order_id": "#W6002467",
+    "state": "FL",
+    "zip": "32205"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7907773809"
+    ],
+    "new_item_ids": [
+     "5886093635"
+    ],
+    "order_id": "#W6002467",
+    "payment_method_id": "paypal_1808675"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 46,
+ "instruction": "Your name is Lei Anderson and your zip code is 76192. You are impatient, confident, dependent. Return #W7242815 via paypal_1808675: Tablet; For #W6002467, change address to {'order_id': '#W6002467', 'address1': '544 Sunset Drive', 'address2': 'Suite 337', 'city': 'Jacksonville', 'country': 'USA', 'state': 'FL', 'zip': '32205'} (same as #W1866533). For #W6002467, modify Cycling Helmet {'size': 'L', 'color': 'blue', 'ventilation': 'low'} to {'size': 'S'}; via paypal_1808675. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_046",
+ "user_id": "lei_anderson_8271"
+}

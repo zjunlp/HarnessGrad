@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4404981319"
+    ],
+    "new_item_ids": [
+     "7082455361"
+    ],
+    "order_id": "#W1759614",
+    "payment_method_id": "credit_card_8398849"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 419,
+ "instruction": "Your name is Mei Martin and your zip code is 78270. You are sad, flexible. For #W1759614, exchange Grill {'type': 'electric', 'size': 'large', 'features': 'rotisserie'} to {'type': 'charcoal', 'size': 'medium'}; via credit_card_8398849. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_419",
+ "user_id": "mei_martin_6103"
+}

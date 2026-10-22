@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9494281769"
+    ],
+    "order_id": "#W6874763",
+    "payment_method_id": "credit_card_4046723"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 151,
+ "instruction": "Your name is Sofia Li and your zip code is 10199. You are optimistic, outgoing, logical, messy, direct. Return #W6874763 via credit_card_4046723: E-Reader; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_151",
+ "user_id": "sofia_li_3261"
+}

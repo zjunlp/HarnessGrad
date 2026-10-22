@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5206946487",
+     "1646531091"
+    ],
+    "order_id": "#W6893533",
+    "payment_method_id": "paypal_6151711"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 10,
+ "instruction": "Your name is Ivan Santos and your email is ivan.santos3158@example.com. You are pessimistic, cautious, patient, dependent, shy. The packaging of the order that you received (#W6893533) was damaged and left in rain and it was all wet when you received it. You're worried that the items inside the package might be damaged. You want to return the items and get a full refund. You're also worried that the return process might be complicated and you want to make sure that the return process is easy.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_010",
+ "user_id": "ivan_santos_6635"
+}

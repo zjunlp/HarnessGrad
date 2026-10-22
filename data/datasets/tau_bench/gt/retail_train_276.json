@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4716977452"
+    ],
+    "new_item_ids": [
+     "6704763132"
+    ],
+    "order_id": "#W9929926",
+    "payment_method_id": "gift_card_6009199"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2860956907"
+    ],
+    "new_item_ids": [
+     "9408160950"
+    ],
+    "order_id": "#W3467101",
+    "payment_method_id": "gift_card_6009199"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 276,
+ "instruction": "Your name is Raj Moore and your zip code is 20566. You are curious, messy. For #W9929926, modify Bluetooth Speaker {'color': 'blue', 'battery life': '10 hours', 'water resistance': 'yes'} to {'water resistance': 'no'}; via gift_card_6009199. For #W3467101, exchange Smart Watch {'color': 'black', 'band material': 'silicone', 'display': 'LCD'} to {'color': 'gold', 'band material': 'leather'}; via gift_card_6009199. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_276",
+ "user_id": "raj_moore_7909"
+}

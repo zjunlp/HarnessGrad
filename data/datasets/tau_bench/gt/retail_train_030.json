@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "967 Sunset Drive",
+    "address2": "Suite 613",
+    "city": "Fort Worth",
+    "country": "USA",
+    "order_id": "#W9667707",
+    "state": "TX",
+    "zip": "76176"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9635758562",
+     "7609274509"
+    ],
+    "new_item_ids": [
+     "4107812777",
+     "4273929280"
+    ],
+    "order_id": "#W9667707",
+    "payment_method_id": "credit_card_4056740"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 30,
+ "instruction": "Your name is Isabella Santos and your email is isabella.santos9317@example.com. You are optimistic, confident, flexible. For #W9667707, change address to {'order_id': '#W9667707', 'address1': '967 Sunset Drive', 'address2': 'Suite 613', 'city': 'Fort Worth', 'country': 'USA', 'state': 'TX', 'zip': '76176'} (same as #W1654332). For #W9667707, modify Running Shoes {'size': '9', 'color': 'white', 'material': 'mesh', 'sole': 'rubber'} to {'color': 'black', 'material': 'synthetic'}; E-Reader {'screen size': '8-inch', 'connectivity': 'Wi-Fi', 'storage': '32GB'} to {'screen size': '7-inch', 'connectivity': 'Wi-Fi + Cellular'}; via credit_card_4056740. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_030",
+ "user_id": "isabella_santos_1643"
+}

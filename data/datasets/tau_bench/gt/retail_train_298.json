@@ -1,0 +1,46 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3657213",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3330317167"
+    ],
+    "new_item_ids": [
+     "2193628750"
+    ],
+    "order_id": "#W5442520",
+    "payment_method_id": "credit_card_9753331"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6242772310",
+     "9727387530"
+    ],
+    "new_item_ids": [
+     "7806008610",
+     "2509076505"
+    ],
+    "order_id": "#W5866402",
+    "payment_method_id": "paypal_8049766"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 298,
+ "instruction": "Your name is Olivia Ito and your zip code is 80218. You are independent, rigid. Cancel order #W3657213 because no longer needed. For #W5442520, modify Gaming Mouse {'color': 'black', 'sensor type': 'optical', 'connectivity': 'wired'} to {'sensor type': 'laser'}; via credit_card_9753331. For #W5866402, exchange Espresso Machine {'pressure': '19 bar', 'capacity': '1L', 'type': 'automatic'} to {'pressure': '9 bar', 'type': 'capsule'}; Sneakers {'size': '11', 'color': 'black', 'material': 'synthetic'} to {'size': '10', 'color': 'gray', 'material': 'leather'}; via paypal_8049766. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_298",
+ "user_id": "olivia_ito_3591"
+}

@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "reservation_id": "PEP4E0"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "summary": "User Sophia Taylor (user_id: sophia_taylor_9065) has a reservation (PEP4E0) and believes she added travel insurance during booking, but it is not showing up. She requests to have the insurance added to her existing booking."
+   },
+   "name": "transfer_to_human_agents"
+  }
+ ],
+ "domain": "airline",
+ "index": 36,
+ "instruction": "Your user id is sophia_taylor_9065. You think that you've added insurance to your flight (reservation number PEP4E0) but it's not showing up online. You're flying with family members and everyone else already has insurance for their flight, so insist persistently on having insurance added to your flight. Under no circumstances do you want to be transferred to another agent.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_036",
+ "user_id": "sophia_taylor_9065"
+}

@@ -1,0 +1,51 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "604 Pine Lane",
+    "address2": "Suite 907",
+    "city": "Phoenix",
+    "country": "USA",
+    "order_id": "#W5166363",
+    "state": "AZ",
+    "zip": "85033"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3334537816"
+    ],
+    "new_item_ids": [
+     "9844888101"
+    ],
+    "order_id": "#W5166363",
+    "payment_method_id": "credit_card_4466831"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1120917161",
+     "4548300368"
+    ],
+    "new_item_ids": [
+     "7848293342",
+     "4245201809"
+    ],
+    "order_id": "#W6289770",
+    "payment_method_id": "credit_card_4466831"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 474,
+ "instruction": "Your name is Lei Li and your email is lei.li8350@example.com. You are independent, messy. For #W5166363, change address to {'order_id': '#W5166363', 'address1': '604 Pine Lane', 'address2': 'Suite 907', 'city': 'Phoenix', 'country': 'USA', 'state': 'AZ', 'zip': '85033'} (same as #W3414433). For #W5166363, modify Laptop {'screen size': '17-inch', 'processor': 'i5', 'ram': '8GB', 'storage': '1TB SSD', 'color': 'space grey'} to {'screen size': '15-inch', 'processor': 'i7', 'color': 'black'}; via credit_card_4466831. For #W6289770, exchange Grill {'type': 'electric', 'size': 'portable', 'features': 'none'} to {'type': 'charcoal', 'size': 'medium', 'features': 'side burner'}; Sunglasses {'frame color': 'black', 'lens color': 'green', 'lens type': 'polarized', 'frame material': 'plastic'} to {'lens type': 'non-polarized', 'frame material': 'metal'}; via credit_card_4466831. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_474",
+ "user_id": "lei_li_6575"
+}

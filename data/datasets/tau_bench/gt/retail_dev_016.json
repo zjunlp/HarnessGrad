@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4843487907"
+    ],
+    "new_item_ids": [
+     "6342039236"
+    ],
+    "order_id": "#W8969494",
+    "payment_method_id": "paypal_1009053"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 16,
+ "instruction": "Your name is Daiki Patel and your zip code is 94111. You are confident, independent, polite. For #W8969494, exchange Mechanical Keyboard {'switch type': 'clicky', 'backlight': 'white', 'size': '80%'} to {'size': 'full size'}; For #W3135192, try to exchange Electric Kettle {'capacity': '2L', 'material': 'stainless steel', 'color': 'white'} to to a green one, but change your mind and decide to not exchange the electric kettle. after all.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_016",
+ "user_id": "daiki_patel_5953"
+}

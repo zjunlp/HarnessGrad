@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6501071631"
+    ],
+    "order_id": "#W9495141",
+    "payment_method_id": "gift_card_8862145"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 489,
+ "instruction": "Your name is Harper Li and your email is harper.li3262@example.com. You are patient, direct, confident. Return #W9495141 via gift_card_8862145: Tablet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_489",
+ "user_id": "harper_li_7655"
+}

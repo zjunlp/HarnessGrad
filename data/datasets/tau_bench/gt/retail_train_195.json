@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7661609223"
+    ],
+    "order_id": "#W2922379",
+    "payment_method_id": "paypal_3839332"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 195,
+ "instruction": "Your name is Mia Smith and your zip code is 80246. You are logical, independent, direct, impatient, sad. Return #W2922379 via paypal_3839332: Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_195",
+ "user_id": "mia_smith_1623"
+}

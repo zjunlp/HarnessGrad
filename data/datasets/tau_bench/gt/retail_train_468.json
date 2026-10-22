@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2407258246",
+     "7159180318",
+     "2681513500"
+    ],
+    "order_id": "#W9250394",
+    "payment_method_id": "gift_card_4817478"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 468,
+ "instruction": "Your name is Ethan Sanchez and your email is ethan.sanchez6360@example.com. You are cautious, insecure. Return #W9250394 via gift_card_4817478: Wristwatch; Dumbbell Set; Smart Watch; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_468",
+ "user_id": "ethan_sanchez_2952"
+}

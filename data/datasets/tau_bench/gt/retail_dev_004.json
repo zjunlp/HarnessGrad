@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3694871183"
+    ],
+    "order_id": "#W3508684",
+    "payment_method_id": "paypal_1575973"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 4,
+ "instruction": "Your name is Fatima Smith and your email is fatima.smith9435@example.com. You are shy, independent, pessimistic. The earbuds that you've received doesn't pair with your iPhone. You've been trying to reset your phone multiple times, but it still doesn't work reliably. Try to see if they can troubleshoot the issue, but every time they ask you to do to do something, tell that the you've already tried it and it didn't work. You're sure that the earbuds are faulty and want a full refund.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_004",
+ "user_id": "fatima_smith_4908"
+}

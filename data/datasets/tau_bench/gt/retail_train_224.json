@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7758198585"
+    ],
+    "new_item_ids": [
+     "2143041831"
+    ],
+    "order_id": "#W7909132",
+    "payment_method_id": "paypal_2557789"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 224,
+ "instruction": "Your name is Anya Thomas and your email is anya.thomas9688@example.com. You are organized, relaxing. For #W7909132, exchange Bicycle {'frame size': 'medium', 'color': 'green', 'type': 'road'} to {'color': 'black', 'type': 'mountain'}; via paypal_2557789. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_224",
+ "user_id": "anya_thomas_1213"
+}

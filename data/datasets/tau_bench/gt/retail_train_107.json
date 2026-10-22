@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3334537816",
+     "5067898160",
+     "9665000388"
+    ],
+    "order_id": "#W7764382",
+    "payment_method_id": "paypal_6982172"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 107,
+ "instruction": "Your name is Ethan Thomas and your zip code is 43188. You are direct, insecure. Return #W7764382 via paypal_6982172: Laptop; Pet Bed; Mechanical Keyboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_107",
+ "user_id": "ethan_thomas_1791"
+}

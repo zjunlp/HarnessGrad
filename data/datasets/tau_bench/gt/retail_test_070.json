@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3358616356"
+    ],
+    "new_item_ids": [
+     "9013366374"
+    ],
+    "order_id": "#W3947049",
+    "payment_method_id": "credit_card_7901829"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 70,
+ "instruction": "You name is Sofia Hernandez and your zip code is 98193. You are impatient, confident, direct, messy. You recently received a helmet but you are not happy with it and want to exchange. The size is too small and you want medium, plus you want high ventilation. If multiple colors are available, you prefer blue. You do not want the  You prefer original payment to pay for the price difference, and you want to know how much you need to pay today.",
+ "outputs": [
+  "22.55"
+ ],
+ "split": "test",
+ "task_id": "retail_test_070",
+ "user_id": "sofia_hernandez_5364"
+}

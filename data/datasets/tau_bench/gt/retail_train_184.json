@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1436802",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3230708338"
+    ],
+    "new_item_ids": [
+     "9829827210"
+    ],
+    "order_id": "#W5282037",
+    "payment_method_id": "paypal_2433177"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 184,
+ "instruction": "Your name is Daiki Johnson and your email is daiki.johnson2279@example.com. You are optimistic, direct, rigid, sad. Cancel order #W1436802 because no longer needed. For #W5282037, modify Garden Hose {'length': '25ft', 'material': 'latex', 'color': 'green'} to {'material': 'vinyl', 'color': 'blue'}; via paypal_2433177. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_184",
+ "user_id": "daiki_johnson_9523"
+}

@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7381052709",
+     "6065192424"
+    ],
+    "order_id": "#W9571698",
+    "payment_method_id": "gift_card_7250692"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5012998807",
+     "4545791457"
+    ],
+    "order_id": "#W3069600",
+    "payment_method_id": "credit_card_1565124"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 84,
+ "instruction": "Your name is Chen Silva and your email is chen.silva2698@example.com. You are optimistic, rigid, happy, busy, impatient. Return #W9571698 via gift_card_7250692: Pet Bed; Tablet; Return #W3069600 via credit_card_1565124: Makeup Kit; Skateboard; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_084",
+ "user_id": "chen_silva_7485"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2757705742"
+    ],
+    "new_item_ids": [
+     "8555936349"
+    ],
+    "order_id": "#W1075114",
+    "payment_method_id": "gift_card_5115976"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 66,
+ "instruction": "Your name is Olivia Garcia and your email is olivia.garcia2695@example.com. You are pessimistic, messy, outgoing. For #W1075114, exchange Wireless Earbuds {'color': 'blue', 'battery life': '4 hours', 'water resistance': 'IPX7'} to {'battery life': '8 hours', 'water resistance': 'IPX4'}; via gift_card_5115976. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_066",
+ "user_id": "olivia_garcia_1208"
+}

@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7292993796",
+     "7292993796"
+    ],
+    "new_item_ids": [
+     "3761330360",
+     "9647374798"
+    ],
+    "order_id": "#W4316152",
+    "payment_method_id": "gift_card_7245904"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 106,
+ "instruction": "You name is Aarav Anderson and your zip code is 19031. You are cautious, messy, rigid. For #W4316152, exchange Tea Kettle {'material': 'glass', 'capacity': '2 liters', 'stovetop compatibility': 'induction'} to {'material': 'ceramic', 'stovetop compatibility': 'gas'}; Tea Kettle {'material': 'glass', 'capacity': '2 liters', 'stovetop compatibility': 'induction'} to {'capacity': '1.5 liters', 'stovetop compatibility': 'gas'}; ",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_106",
+ "user_id": "aarav_anderson_8794"
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5311660992"
+    ],
+    "new_item_ids": [
+     "5339029584"
+    ],
+    "order_id": "#W4183735",
+    "payment_method_id": "gift_card_2415038"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 358,
+ "instruction": "Your name is Sophia Nguyen and your zip code is 60647. You are shy, optimistic, organized, logical, flexible. For #W4183735, modify Smartphone {'color': 'rose gold', 'storage': '64GB', 'RAM': '8GB', 'screen size': '5.8-inch'} to {'color': 'black', 'storage': '128GB', 'RAM': '4GB', 'screen size': '6.5-inch'}; via gift_card_2415038. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_358",
+ "user_id": "sophia_nguyen_7885"
+}

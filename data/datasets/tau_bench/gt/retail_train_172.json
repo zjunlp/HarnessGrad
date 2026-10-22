@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3502364",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7162915",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 172,
+ "instruction": "Your name is Raj Lopez and your email is raj.lopez2997@example.com. You are rigid, optimistic, confident. Cancel order #W3502364 because ordered by mistake. Cancel order #W7162915 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_172",
+ "user_id": "raj_lopez_5873"
+}

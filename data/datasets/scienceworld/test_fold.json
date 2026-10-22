@@ -1,0 +1,8750 @@
+{
+ "about": [
+  "The official ScienceWorld evaluation split, transcribed from the repository's",
+  "goldpaths/goldpaths-all.zip. **Generated, not hand-written** -- see the generator",
+  "in tests/quality/test_scienceworld_dataset.py, which rebuilds this from the",
+  "archive and fails if the two disagree.",
+  "",
+  "Why the split is in git and the archive is not: raw.githubusercontent.com is",
+  "blocked on this host and a branch URL is not a pin, so the archive could not be",
+  "provisioned reproducibly. Only the *identity* of the evaluation tasks is needed",
+  "at run time -- the gold action sequences are regenerated from the environment's",
+  "own API, which is what makes the oracle control check the environment rather than",
+  "a stored answer."
+ ],
+ "archive": {
+  "folds": {
+   "dev": 1721,
+   "test": 1744,
+   "train": 3442
+  },
+  "inner_member": "goldsequences-0-1-2-3-4-6-7-8-9-10-11-12-13-14-15-16-17-18-19-20-21-22-23-24-25-26-27-28-29.json",
+  "member": "ScienceWorld-main/goldpaths/goldpaths-all.zip",
+  "package_version": "1.2.3",
+  "sha256": "bec9711010a57240ebc0cf263b7ec1c88bce44b953984c934e709baf0f7ea02d",
+  "url": "https://github.com/allenai/ScienceWorld/blob/main/goldpaths/goldpaths-all.zip"
+ },
+ "eval_fold": "test",
+ "tasks": [
+  {
+   "gold_moves": 85,
+   "task_name": "task-1-boil",
+   "variation": 21
+  },
+  {
+   "gold_moves": 175,
+   "task_name": "task-1-boil",
+   "variation": 22
+  },
+  {
+   "gold_moves": 115,
+   "task_name": "task-1-boil",
+   "variation": 23
+  },
+  {
+   "gold_moves": 121,
+   "task_name": "task-1-boil",
+   "variation": 24
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-1-boil",
+   "variation": 25
+  },
+  {
+   "gold_moves": 165,
+   "task_name": "task-1-boil",
+   "variation": 26
+  },
+  {
+   "gold_moves": 105,
+   "task_name": "task-1-boil",
+   "variation": 27
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-1-boil",
+   "variation": 28
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-1-boil",
+   "variation": 29
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 21
+  },
+  {
+   "gold_moves": 121,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 22
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 23
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 24
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 25
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 26
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 27
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 28
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-1-change-the-state-of-matter-of",
+   "variation": 29
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-1-freeze",
+   "variation": 21
+  },
+  {
+   "gold_moves": 138,
+   "task_name": "task-1-freeze",
+   "variation": 22
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-1-freeze",
+   "variation": 23
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-1-freeze",
+   "variation": 24
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-1-freeze",
+   "variation": 25
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-1-freeze",
+   "variation": 26
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-1-freeze",
+   "variation": 27
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-1-freeze",
+   "variation": 28
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-1-freeze",
+   "variation": 29
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-1-melt",
+   "variation": 21
+  },
+  {
+   "gold_moves": 121,
+   "task_name": "task-1-melt",
+   "variation": 22
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-1-melt",
+   "variation": 23
+  },
+  {
+   "gold_moves": 137,
+   "task_name": "task-1-melt",
+   "variation": 24
+  },
+  {
+   "gold_moves": 145,
+   "task_name": "task-1-melt",
+   "variation": 25
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-1-melt",
+   "variation": 26
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-1-melt",
+   "variation": 27
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-1-melt",
+   "variation": 28
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-1-melt",
+   "variation": 29
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 327
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 328
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 329
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 330
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 331
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 332
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 333
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 334
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 335
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 336
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 337
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 338
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 339
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 340
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 341
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 342
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 343
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 344
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 345
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 346
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 347
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 348
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 349
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 350
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 351
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 352
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 353
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 354
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 355
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 356
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 357
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 358
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 359
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 360
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 361
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 362
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 363
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 364
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 365
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 366
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 367
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 368
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 369
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 370
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 371
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 372
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 373
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 374
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 375
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 376
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 377
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 378
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 379
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 380
+  },
+  {
+   "gold_moves": 36,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 381
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 382
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 383
+  },
+  {
+   "gold_moves": 36,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 384
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 385
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 386
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 387
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 388
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 389
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 390
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 391
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 392
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 393
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 394
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 395
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 396
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 397
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 398
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 399
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 400
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 401
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 402
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 403
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 404
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 405
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 406
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 407
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 408
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 409
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 410
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 411
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 412
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 413
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 414
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 415
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 416
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 417
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 418
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 419
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 420
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 421
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 422
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 423
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 424
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 425
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 426
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 427
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 428
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 429
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 430
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 431
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 432
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 433
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 434
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-10-measure-melting-point-(known-substance)",
+   "variation": 435
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 405
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-10-use-thermometer",
+   "variation": 406
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 407
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 408
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 409
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 410
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 411
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 412
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 413
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 414
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 415
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 416
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 417
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 418
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 419
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 420
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 421
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 422
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 423
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 424
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 425
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 426
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 427
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 428
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 429
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 430
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 431
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 432
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 433
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 434
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 435
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-10-use-thermometer",
+   "variation": 436
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 437
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 438
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 439
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 440
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 441
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 442
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 443
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 444
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 445
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 446
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 447
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 448
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 449
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 450
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 451
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-10-use-thermometer",
+   "variation": 452
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 453
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 454
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 455
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 456
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 457
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 458
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 459
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 460
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 461
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 462
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 463
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-10-use-thermometer",
+   "variation": 464
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 465
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 466
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 467
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 468
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 469
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 470
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 471
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 472
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 473
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 474
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 475
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 476
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 477
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 478
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 479
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 480
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 481
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 482
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 483
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-10-use-thermometer",
+   "variation": 484
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 485
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 486
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 487
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 488
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 489
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 490
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-10-use-thermometer",
+   "variation": 491
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 492
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-10-use-thermometer",
+   "variation": 493
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 494
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 495
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 496
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 497
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 498
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 499
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 500
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 501
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 502
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 503
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 504
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 505
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 506
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 507
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 508
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 509
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 510
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 511
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 512
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 513
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 514
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 515
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 516
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 517
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 518
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 519
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 520
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 521
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 522
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 523
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 524
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 525
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 526
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 527
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 528
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-10-use-thermometer",
+   "variation": 529
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 530
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 531
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-10-use-thermometer",
+   "variation": 532
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 533
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-10-use-thermometer",
+   "variation": 534
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 535
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 536
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 537
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-10-use-thermometer",
+   "variation": 538
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-10-use-thermometer",
+   "variation": 539
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-2-power-component",
+   "variation": 15
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2-power-component",
+   "variation": 16
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2-power-component",
+   "variation": 17
+  },
+  {
+   "gold_moves": 12,
+   "task_name": "task-2-power-component",
+   "variation": 18
+  },
+  {
+   "gold_moves": 14,
+   "task_name": "task-2-power-component",
+   "variation": 19
+  },
+  {
+   "gold_moves": 12,
+   "task_name": "task-2-power-component-(renewable-vs-nonrenewable-energy)",
+   "variation": 15
+  },
+  {
+   "gold_moves": 31,
+   "task_name": "task-2-power-component-(renewable-vs-nonrenewable-energy)",
+   "variation": 16
+  },
+  {
+   "gold_moves": 18,
+   "task_name": "task-2-power-component-(renewable-vs-nonrenewable-energy)",
+   "variation": 17
+  },
+  {
+   "gold_moves": 27,
+   "task_name": "task-2-power-component-(renewable-vs-nonrenewable-energy)",
+   "variation": 18
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2-power-component-(renewable-vs-nonrenewable-energy)",
+   "variation": 19
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 675
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 676
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 677
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 678
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 679
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 680
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 681
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 682
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 683
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 684
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 685
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 686
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 687
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 688
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 689
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 690
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 691
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 692
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 693
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 694
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 695
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 696
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 697
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 698
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 699
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 700
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 701
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 702
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 703
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 704
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 705
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 706
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 707
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 708
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 709
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 710
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 711
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 712
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 713
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 714
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 715
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 716
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 717
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 718
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 719
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 720
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 721
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 722
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 723
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 724
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 725
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 726
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 727
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 728
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 729
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 730
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 731
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 732
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 733
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 734
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 735
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 736
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 737
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 738
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 739
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 740
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 741
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 742
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 743
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 744
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 745
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 746
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 747
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 748
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 749
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 750
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 751
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 752
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 753
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 754
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 755
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 756
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 757
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 758
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 759
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 760
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 761
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 762
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 763
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 764
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 765
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 766
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 767
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 768
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 769
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 770
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 771
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 772
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 773
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 774
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 775
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 776
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 777
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 778
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 779
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 780
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 781
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 782
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 783
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 784
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 785
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 786
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 787
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 788
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 789
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 790
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 791
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 792
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 793
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 794
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 795
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 796
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 797
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 798
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 799
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 800
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 801
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 802
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 803
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 804
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 805
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 806
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 807
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 808
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 809
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 810
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 811
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 812
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 813
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 814
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 815
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 816
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 817
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 818
+  },
+  {
+   "gold_moves": 25,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 819
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 820
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 821
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 822
+  },
+  {
+   "gold_moves": 47,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 823
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 824
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 825
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 826
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 827
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 828
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 829
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 830
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 831
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 832
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 833
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 834
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 835
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 836
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 837
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 838
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 839
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 840
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 841
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 842
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 843
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 844
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 845
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 846
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 847
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 848
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 849
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 850
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 851
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 852
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 853
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 854
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 855
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 856
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 857
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 858
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 859
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 860
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 861
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 862
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 863
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 864
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 865
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 866
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 867
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 868
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 869
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 870
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 871
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 872
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 873
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 874
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 875
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 876
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 877
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 878
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 879
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 880
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 881
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 882
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 883
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 884
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 885
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 886
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 887
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 888
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 889
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 890
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 891
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 892
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 893
+  },
+  {
+   "gold_moves": 28,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 894
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 895
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 896
+  },
+  {
+   "gold_moves": 38,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 897
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 898
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity",
+   "variation": 899
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 450
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 451
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 452
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 453
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 454
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 455
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 456
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 457
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 458
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 459
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 460
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 461
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 462
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 463
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 464
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 465
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 466
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 467
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 468
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 469
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 470
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 471
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 472
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 473
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 474
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 475
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 476
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 477
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 478
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 479
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 480
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 481
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 482
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 483
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 484
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 485
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 486
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 487
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 488
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 489
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 490
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 491
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 492
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 493
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 494
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 495
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 496
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 497
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 498
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 499
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 500
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 501
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 502
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 503
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 504
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 505
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 506
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 507
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 508
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 509
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 510
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 511
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 512
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 513
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 514
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 515
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 516
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 517
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 518
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 519
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 520
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 521
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 522
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 523
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 524
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 525
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 526
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 527
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 528
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 529
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 530
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 531
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 532
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 533
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 534
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 535
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 536
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 537
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 538
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 539
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 540
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 541
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 542
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 543
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 544
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 545
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 546
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 547
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 548
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 549
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 550
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 551
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 552
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 553
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 554
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 555
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 556
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 557
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 558
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 559
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 560
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 561
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 562
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 563
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 564
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 565
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 566
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 567
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 568
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 569
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 570
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 571
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 572
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 573
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 574
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 575
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 576
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 577
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 578
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 579
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 580
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 581
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 582
+  },
+  {
+   "gold_moves": 24,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 583
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 584
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 585
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 586
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 587
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 588
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 589
+  },
+  {
+   "gold_moves": 16,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 590
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 591
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 592
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 593
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 594
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 595
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 596
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 597
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 598
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-2a-test-conductivity-of-unknown-substances",
+   "variation": 599
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 225
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 226
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 227
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 228
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 229
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 230
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 231
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 232
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 233
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 234
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 235
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 236
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 237
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 238
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 239
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 240
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 241
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 242
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 243
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 244
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 245
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 246
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 247
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 248
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 249
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 250
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 251
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 252
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 253
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 254
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 255
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 256
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 257
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 258
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 259
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 260
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 261
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 262
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 263
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 264
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 265
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 266
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 267
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 268
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 269
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 270
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 271
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 272
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 273
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 274
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 275
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 276
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-animal",
+   "variation": 277
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 278
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 279
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 280
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 281
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 282
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 283
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 284
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-animal",
+   "variation": 285
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 286
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 287
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 288
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 289
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 290
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 291
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 292
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-animal",
+   "variation": 293
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 294
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-animal",
+   "variation": 295
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 296
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 297
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 298
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-animal",
+   "variation": 299
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 225
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 226
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 227
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 228
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 229
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 230
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 231
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 232
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 233
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 234
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 235
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 236
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 237
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 238
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 239
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 240
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 241
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 242
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 243
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 244
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 245
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 246
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 247
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 248
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 249
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 250
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 251
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 252
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 253
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 254
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 255
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 256
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 257
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 258
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 259
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 260
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 261
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 262
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 263
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 264
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 265
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 266
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 267
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 268
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 269
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 270
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 271
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 272
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 273
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 274
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 275
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 276
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-living-thing",
+   "variation": 277
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 278
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 279
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 280
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 281
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 282
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 283
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 284
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-living-thing",
+   "variation": 285
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 286
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 287
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 288
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 289
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 290
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 291
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 292
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-living-thing",
+   "variation": 293
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 294
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-living-thing",
+   "variation": 295
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 296
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 297
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 298
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-3-find-living-thing",
+   "variation": 299
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 225
+  },
+  {
+   "gold_moves": 12,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 226
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 227
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 228
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 229
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 230
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 231
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 232
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 233
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 234
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 235
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 236
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 237
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 238
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 239
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 240
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 241
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 242
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 243
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 244
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 245
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 246
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 247
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 248
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 249
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 250
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 251
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 252
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 253
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 254
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 255
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 256
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 257
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 258
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 259
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 260
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 261
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 262
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 263
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 264
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 265
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 266
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 267
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 268
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 269
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 270
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 271
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 272
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 273
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 274
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 275
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 276
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 277
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 278
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 279
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 280
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 281
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 282
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 283
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 284
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 285
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 286
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 287
+  },
+  {
+   "gold_moves": 12,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 288
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 289
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 290
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 291
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 292
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 293
+  },
+  {
+   "gold_moves": 12,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 294
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 295
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 296
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 297
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 298
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-3-find-non-living-thing",
+   "variation": 299
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 225
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 226
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 227
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 228
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-plant",
+   "variation": 229
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 230
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 231
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 232
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 233
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 234
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 235
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 236
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 237
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 238
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 239
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 240
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 241
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 242
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 243
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 244
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 245
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 246
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 247
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 248
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 249
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 250
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 251
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 252
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 253
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 254
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 255
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 256
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 257
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-plant",
+   "variation": 258
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 259
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 260
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 261
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-plant",
+   "variation": 262
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 263
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 264
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-plant",
+   "variation": 265
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 266
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 267
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 268
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 269
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 270
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 271
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 272
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 273
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-plant",
+   "variation": 274
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-3-find-plant",
+   "variation": 275
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 276
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 277
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 278
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 279
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 280
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-3-find-plant",
+   "variation": 281
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 282
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 283
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 284
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 285
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 286
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 287
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 288
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 289
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 290
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 291
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 292
+  },
+  {
+   "gold_moves": 11,
+   "task_name": "task-3-find-plant",
+   "variation": 293
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 294
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 295
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 296
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 297
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 298
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-3-find-plant",
+   "variation": 299
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-4-grow-fruit",
+   "variation": 93
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-4-grow-fruit",
+   "variation": 94
+  },
+  {
+   "gold_moves": 90,
+   "task_name": "task-4-grow-fruit",
+   "variation": 95
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-fruit",
+   "variation": 96
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-4-grow-fruit",
+   "variation": 97
+  },
+  {
+   "gold_moves": 88,
+   "task_name": "task-4-grow-fruit",
+   "variation": 98
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-fruit",
+   "variation": 99
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-4-grow-fruit",
+   "variation": 100
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-4-grow-fruit",
+   "variation": 101
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-fruit",
+   "variation": 102
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-4-grow-fruit",
+   "variation": 103
+  },
+  {
+   "gold_moves": 88,
+   "task_name": "task-4-grow-fruit",
+   "variation": 104
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-4-grow-fruit",
+   "variation": 105
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-4-grow-fruit",
+   "variation": 106
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-4-grow-fruit",
+   "variation": 107
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-fruit",
+   "variation": 108
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-4-grow-fruit",
+   "variation": 109
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-4-grow-fruit",
+   "variation": 110
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-4-grow-fruit",
+   "variation": 111
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-4-grow-fruit",
+   "variation": 112
+  },
+  {
+   "gold_moves": 90,
+   "task_name": "task-4-grow-fruit",
+   "variation": 113
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-4-grow-fruit",
+   "variation": 114
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-4-grow-fruit",
+   "variation": 115
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-4-grow-fruit",
+   "variation": 116
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-fruit",
+   "variation": 117
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-4-grow-fruit",
+   "variation": 118
+  },
+  {
+   "gold_moves": 88,
+   "task_name": "task-4-grow-fruit",
+   "variation": 119
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-fruit",
+   "variation": 120
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-4-grow-fruit",
+   "variation": 121
+  },
+  {
+   "gold_moves": 88,
+   "task_name": "task-4-grow-fruit",
+   "variation": 122
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-4-grow-fruit",
+   "variation": 123
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-4-grow-fruit",
+   "variation": 124
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-4-grow-fruit",
+   "variation": 125
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-4-grow-plant",
+   "variation": 93
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-4-grow-plant",
+   "variation": 94
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-4-grow-plant",
+   "variation": 95
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-plant",
+   "variation": 96
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-4-grow-plant",
+   "variation": 97
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-4-grow-plant",
+   "variation": 98
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-plant",
+   "variation": 99
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-4-grow-plant",
+   "variation": 100
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-4-grow-plant",
+   "variation": 101
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-plant",
+   "variation": 102
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-4-grow-plant",
+   "variation": 103
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-4-grow-plant",
+   "variation": 104
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-4-grow-plant",
+   "variation": 105
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-4-grow-plant",
+   "variation": 106
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-4-grow-plant",
+   "variation": 107
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-plant",
+   "variation": 108
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-4-grow-plant",
+   "variation": 109
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-4-grow-plant",
+   "variation": 110
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-4-grow-plant",
+   "variation": 111
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-4-grow-plant",
+   "variation": 112
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-4-grow-plant",
+   "variation": 113
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-4-grow-plant",
+   "variation": 114
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-4-grow-plant",
+   "variation": 115
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-4-grow-plant",
+   "variation": 116
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-plant",
+   "variation": 117
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-4-grow-plant",
+   "variation": 118
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-4-grow-plant",
+   "variation": 119
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-4-grow-plant",
+   "variation": 120
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-4-grow-plant",
+   "variation": 121
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-4-grow-plant",
+   "variation": 122
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-4-grow-plant",
+   "variation": 123
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-4-grow-plant",
+   "variation": 124
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-4-grow-plant",
+   "variation": 125
+  },
+  {
+   "gold_moves": 20,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 24
+  },
+  {
+   "gold_moves": 21,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 25
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 26
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 27
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 28
+  },
+  {
+   "gold_moves": 23,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 29
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 30
+  },
+  {
+   "gold_moves": 34,
+   "task_name": "task-5-chemistry-mix",
+   "variation": 31
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 27
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 28
+  },
+  {
+   "gold_moves": 26,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 29
+  },
+  {
+   "gold_moves": 32,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 30
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 31
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 32
+  },
+  {
+   "gold_moves": 12,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 33
+  },
+  {
+   "gold_moves": 22,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 34
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-5-chemistry-mix-paint-(secondary-color)",
+   "variation": 35
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 27
+  },
+  {
+   "gold_moves": 37,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 28
+  },
+  {
+   "gold_moves": 42,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 29
+  },
+  {
+   "gold_moves": 40,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 30
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 31
+  },
+  {
+   "gold_moves": 14,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 32
+  },
+  {
+   "gold_moves": 19,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 33
+  },
+  {
+   "gold_moves": 29,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 34
+  },
+  {
+   "gold_moves": 15,
+   "task_name": "task-5-chemistry-mix-paint-(tertiary-color)",
+   "variation": 35
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 93
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 94
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 95
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 96
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 97
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 98
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 99
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 100
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 101
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 102
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 103
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 104
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 105
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 106
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 107
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 108
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 109
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 110
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 111
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 112
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 113
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 114
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 115
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 116
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 117
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 118
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 119
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 120
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 121
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 122
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 123
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(longest-lived)",
+   "variation": 124
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 93
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 94
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 95
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 96
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 97
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 98
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 99
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 100
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 101
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 102
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 103
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 104
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 105
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 106
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 107
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 108
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 109
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 110
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 111
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 112
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 113
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 114
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 115
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 116
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 117
+  },
+  {
+   "gold_moves": 4,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 118
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 119
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 120
+  },
+  {
+   "gold_moves": 8,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 121
+  },
+  {
+   "gold_moves": 10,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 122
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 123
+  },
+  {
+   "gold_moves": 6,
+   "task_name": "task-6-lifespan-(longest-lived-then-shortest-lived)",
+   "variation": 124
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 93
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 94
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 95
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 96
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 97
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 98
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 99
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 100
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 101
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 102
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 103
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 104
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 105
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 106
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 107
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 108
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 109
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 110
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 111
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 112
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 113
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 114
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 115
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 116
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 117
+  },
+  {
+   "gold_moves": 3,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 118
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 119
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 120
+  },
+  {
+   "gold_moves": 7,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 121
+  },
+  {
+   "gold_moves": 9,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 122
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 123
+  },
+  {
+   "gold_moves": 5,
+   "task_name": "task-6-lifespan-(shortest-lived)",
+   "variation": 124
+  },
+  {
+   "gold_moves": 43,
+   "task_name": "task-7-identify-life-stages-1",
+   "variation": 9
+  },
+  {
+   "gold_moves": 43,
+   "task_name": "task-7-identify-life-stages-1",
+   "variation": 10
+  },
+  {
+   "gold_moves": 41,
+   "task_name": "task-7-identify-life-stages-1",
+   "variation": 11
+  },
+  {
+   "gold_moves": 43,
+   "task_name": "task-7-identify-life-stages-1",
+   "variation": 12
+  },
+  {
+   "gold_moves": 30,
+   "task_name": "task-7-identify-life-stages-1",
+   "variation": 13
+  },
+  {
+   "gold_moves": 13,
+   "task_name": "task-7-identify-life-stages-2",
+   "variation": 6
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-7-identify-life-stages-2",
+   "variation": 7
+  },
+  {
+   "gold_moves": 17,
+   "task_name": "task-7-identify-life-stages-2",
+   "variation": 8
+  },
+  {
+   "gold_moves": 18,
+   "task_name": "task-7-identify-life-stages-2",
+   "variation": 9
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 126
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 127
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 128
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 129
+  },
+  {
+   "gold_moves": 78,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 130
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 131
+  },
+  {
+   "gold_moves": 112,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 132
+  },
+  {
+   "gold_moves": 114,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 133
+  },
+  {
+   "gold_moves": 116,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 134
+  },
+  {
+   "gold_moves": 167,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 135
+  },
+  {
+   "gold_moves": 171,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 136
+  },
+  {
+   "gold_moves": 171,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 137
+  },
+  {
+   "gold_moves": 79,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 138
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 139
+  },
+  {
+   "gold_moves": 79,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 140
+  },
+  {
+   "gold_moves": 87,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 141
+  },
+  {
+   "gold_moves": 85,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 142
+  },
+  {
+   "gold_moves": 91,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 143
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 144
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 145
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 146
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 147
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 148
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 149
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 150
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 151
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 152
+  },
+  {
+   "gold_moves": 103,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 153
+  },
+  {
+   "gold_moves": 105,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 154
+  },
+  {
+   "gold_moves": 101,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 155
+  },
+  {
+   "gold_moves": 158,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 156
+  },
+  {
+   "gold_moves": 158,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 157
+  },
+  {
+   "gold_moves": 158,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 158
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 159
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 160
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 161
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 162
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 163
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 164
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 165
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 166
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-determine-angle",
+   "variation": 167
+  },
+  {
+   "gold_moves": 112,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1038
+  },
+  {
+   "gold_moves": 108,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1039
+  },
+  {
+   "gold_moves": 116,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1040
+  },
+  {
+   "gold_moves": 79,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1041
+  },
+  {
+   "gold_moves": 81,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1042
+  },
+  {
+   "gold_moves": 79,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1043
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1044
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1045
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1046
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1047
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1048
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1049
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1050
+  },
+  {
+   "gold_moves": 75,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1051
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1052
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1053
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1054
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1055
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1056
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1057
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1058
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1059
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1060
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1061
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1062
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1063
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1064
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1065
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1066
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1067
+  },
+  {
+   "gold_moves": 751,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1068
+  },
+  {
+   "gold_moves": 749,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1069
+  },
+  {
+   "gold_moves": 749,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1070
+  },
+  {
+   "gold_moves": 81,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1071
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1072
+  },
+  {
+   "gold_moves": 75,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1073
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1074
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1075
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1076
+  },
+  {
+   "gold_moves": 746,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1077
+  },
+  {
+   "gold_moves": 746,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1078
+  },
+  {
+   "gold_moves": 740,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1079
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1080
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1081
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1082
+  },
+  {
+   "gold_moves": 739,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1083
+  },
+  {
+   "gold_moves": 743,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1084
+  },
+  {
+   "gold_moves": 739,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1085
+  },
+  {
+   "gold_moves": 771,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1086
+  },
+  {
+   "gold_moves": 775,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1087
+  },
+  {
+   "gold_moves": 771,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1088
+  },
+  {
+   "gold_moves": 796,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1089
+  },
+  {
+   "gold_moves": 792,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1090
+  },
+  {
+   "gold_moves": 794,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1091
+  },
+  {
+   "gold_moves": 763,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1092
+  },
+  {
+   "gold_moves": 761,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1093
+  },
+  {
+   "gold_moves": 763,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1094
+  },
+  {
+   "gold_moves": 752,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1095
+  },
+  {
+   "gold_moves": 752,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1096
+  },
+  {
+   "gold_moves": 750,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1097
+  },
+  {
+   "gold_moves": 742,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1098
+  },
+  {
+   "gold_moves": 746,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1099
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1100
+  },
+  {
+   "gold_moves": 764,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1101
+  },
+  {
+   "gold_moves": 764,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1102
+  },
+  {
+   "gold_moves": 766,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1103
+  },
+  {
+   "gold_moves": 761,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1104
+  },
+  {
+   "gold_moves": 759,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1105
+  },
+  {
+   "gold_moves": 757,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1106
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1107
+  },
+  {
+   "gold_moves": 748,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1108
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1109
+  },
+  {
+   "gold_moves": 751,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1110
+  },
+  {
+   "gold_moves": 747,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1111
+  },
+  {
+   "gold_moves": 747,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1112
+  },
+  {
+   "gold_moves": 735,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1113
+  },
+  {
+   "gold_moves": 739,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1114
+  },
+  {
+   "gold_moves": 735,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1115
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1116
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1117
+  },
+  {
+   "gold_moves": 737,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1118
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1119
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1120
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1121
+  },
+  {
+   "gold_moves": 743,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1122
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1123
+  },
+  {
+   "gold_moves": 741,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1124
+  },
+  {
+   "gold_moves": 745,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1125
+  },
+  {
+   "gold_moves": 747,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1126
+  },
+  {
+   "gold_moves": 751,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1127
+  },
+  {
+   "gold_moves": 752,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1128
+  },
+  {
+   "gold_moves": 756,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1129
+  },
+  {
+   "gold_moves": 754,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1130
+  },
+  {
+   "gold_moves": 752,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1131
+  },
+  {
+   "gold_moves": 748,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1132
+  },
+  {
+   "gold_moves": 748,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1133
+  },
+  {
+   "gold_moves": 761,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1134
+  },
+  {
+   "gold_moves": 757,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1135
+  },
+  {
+   "gold_moves": 759,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1136
+  },
+  {
+   "gold_moves": 738,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1137
+  },
+  {
+   "gold_moves": 738,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1138
+  },
+  {
+   "gold_moves": 738,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1139
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1140
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1141
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1142
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1143
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1144
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1145
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1146
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1147
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1148
+  },
+  {
+   "gold_moves": 90,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1149
+  },
+  {
+   "gold_moves": 92,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1150
+  },
+  {
+   "gold_moves": 92,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1151
+  },
+  {
+   "gold_moves": 327,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1152
+  },
+  {
+   "gold_moves": 329,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1153
+  },
+  {
+   "gold_moves": 329,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1154
+  },
+  {
+   "gold_moves": 115,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1155
+  },
+  {
+   "gold_moves": 119,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1156
+  },
+  {
+   "gold_moves": 115,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1157
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1158
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1159
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1160
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1161
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1162
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1163
+  },
+  {
+   "gold_moves": 89,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1164
+  },
+  {
+   "gold_moves": 87,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1165
+  },
+  {
+   "gold_moves": 85,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1166
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1167
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1168
+  },
+  {
+   "gold_moves": 78,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1169
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1170
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1171
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1172
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1173
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1174
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1175
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1176
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1177
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1178
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1179
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1180
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1181
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1182
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1183
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1184
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1185
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1186
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1187
+  },
+  {
+   "gold_moves": 752,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1188
+  },
+  {
+   "gold_moves": 750,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1189
+  },
+  {
+   "gold_moves": 754,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1190
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1191
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1192
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1193
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1194
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1195
+  },
+  {
+   "gold_moves": 78,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1196
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1197
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1198
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1199
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1200
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1201
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1202
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1203
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1204
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1205
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1206
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1207
+  },
+  {
+   "gold_moves": 54,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1208
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1209
+  },
+  {
+   "gold_moves": 86,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1210
+  },
+  {
+   "gold_moves": 88,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1211
+  },
+  {
+   "gold_moves": 323,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1212
+  },
+  {
+   "gold_moves": 325,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1213
+  },
+  {
+   "gold_moves": 319,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1214
+  },
+  {
+   "gold_moves": 111,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1215
+  },
+  {
+   "gold_moves": 111,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1216
+  },
+  {
+   "gold_moves": 111,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1217
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1218
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1219
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1220
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1221
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1222
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1223
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1224
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1225
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1226
+  },
+  {
+   "gold_moves": 81,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1227
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1228
+  },
+  {
+   "gold_moves": 83,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1229
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1230
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1231
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1232
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1233
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1234
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1235
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1236
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1237
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1238
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1239
+  },
+  {
+   "gold_moves": 56,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1240
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1241
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1242
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1243
+  },
+  {
+   "gold_moves": 61,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1244
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1245
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1246
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1247
+  },
+  {
+   "gold_moves": 748,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1248
+  },
+  {
+   "gold_moves": 748,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1249
+  },
+  {
+   "gold_moves": 744,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1250
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1251
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1252
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1253
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1254
+  },
+  {
+   "gold_moves": 78,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1255
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1256
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1257
+  },
+  {
+   "gold_moves": 53,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1258
+  },
+  {
+   "gold_moves": 53,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1259
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1260
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1261
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1262
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1263
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1264
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1265
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1266
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1267
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1268
+  },
+  {
+   "gold_moves": 99,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1269
+  },
+  {
+   "gold_moves": 99,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1270
+  },
+  {
+   "gold_moves": 99,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1271
+  },
+  {
+   "gold_moves": 336,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1272
+  },
+  {
+   "gold_moves": 336,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1273
+  },
+  {
+   "gold_moves": 332,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1274
+  },
+  {
+   "gold_moves": 126,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1275
+  },
+  {
+   "gold_moves": 124,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1276
+  },
+  {
+   "gold_moves": 124,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1277
+  },
+  {
+   "gold_moves": 78,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1278
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1279
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1280
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1281
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1282
+  },
+  {
+   "gold_moves": 76,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1283
+  },
+  {
+   "gold_moves": 92,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1284
+  },
+  {
+   "gold_moves": 92,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1285
+  },
+  {
+   "gold_moves": 94,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1286
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1287
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1288
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1289
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1290
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1291
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1292
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1293
+  },
+  {
+   "gold_moves": 63,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1294
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1295
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1296
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1297
+  },
+  {
+   "gold_moves": 67,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1298
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1299
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1300
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1301
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1302
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1303
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1304
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1305
+  },
+  {
+   "gold_moves": 75,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1306
+  },
+  {
+   "gold_moves": 77,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1307
+  },
+  {
+   "gold_moves": 763,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1308
+  },
+  {
+   "gold_moves": 755,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1309
+  },
+  {
+   "gold_moves": 757,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1310
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1311
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1312
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1313
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1314
+  },
+  {
+   "gold_moves": 74,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1315
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1316
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1317
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1318
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1319
+  },
+  {
+   "gold_moves": 51,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1320
+  },
+  {
+   "gold_moves": 51,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1321
+  },
+  {
+   "gold_moves": 51,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1322
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1323
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1324
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1325
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1326
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1327
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1328
+  },
+  {
+   "gold_moves": 82,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1329
+  },
+  {
+   "gold_moves": 78,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1330
+  },
+  {
+   "gold_moves": 80,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1331
+  },
+  {
+   "gold_moves": 315,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1332
+  },
+  {
+   "gold_moves": 315,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1333
+  },
+  {
+   "gold_moves": 317,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1334
+  },
+  {
+   "gold_moves": 101,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1335
+  },
+  {
+   "gold_moves": 97,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1336
+  },
+  {
+   "gold_moves": 105,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1337
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1338
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1339
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1340
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1341
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1342
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1343
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1344
+  },
+  {
+   "gold_moves": 53,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1345
+  },
+  {
+   "gold_moves": 49,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1346
+  },
+  {
+   "gold_moves": 71,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1347
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1348
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1349
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1350
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1351
+  },
+  {
+   "gold_moves": 64,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1352
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1353
+  },
+  {
+   "gold_moves": 51,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1354
+  },
+  {
+   "gold_moves": 51,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1355
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1356
+  },
+  {
+   "gold_moves": 52,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1357
+  },
+  {
+   "gold_moves": 54,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1358
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1359
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1360
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1361
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1362
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1363
+  },
+  {
+   "gold_moves": 46,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1364
+  },
+  {
+   "gold_moves": 53,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1365
+  },
+  {
+   "gold_moves": 51,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1366
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1367
+  },
+  {
+   "gold_moves": 44,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1368
+  },
+  {
+   "gold_moves": 50,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1369
+  },
+  {
+   "gold_moves": 48,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1370
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1371
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1372
+  },
+  {
+   "gold_moves": 58,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1373
+  },
+  {
+   "gold_moves": 740,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1374
+  },
+  {
+   "gold_moves": 738,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1375
+  },
+  {
+   "gold_moves": 740,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1376
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1377
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1378
+  },
+  {
+   "gold_moves": 59,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1379
+  },
+  {
+   "gold_moves": 55,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1380
+  },
+  {
+   "gold_moves": 53,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1381
+  },
+  {
+   "gold_moves": 57,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1382
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1383
+  },
+  {
+   "gold_moves": 68,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1384
+  },
+  {
+   "gold_moves": 66,
+   "task_name": "task-8-inclined-plane-friction-(named-surfaces)",
+   "variation": 1385
+  },
+  {
+   "gold_moves": 193,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 120
+  },
+  {
+   "gold_moves": 195,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 121
+  },
+  {
+   "gold_moves": 193,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 122
+  },
+  {
+   "gold_moves": 79,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 123
+  },
+  {
+   "gold_moves": 75,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 124
+  },
+  {
+   "gold_moves": 73,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 125
+  },
+  {
+   "gold_moves": 99,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 126
+  },
+  {
+   "gold_moves": 99,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 127
+  },
+  {
+   "gold_moves": 99,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 128
+  },
+  {
+   "gold_moves": 126,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 129
+  },
+  {
+   "gold_moves": 124,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 130
+  },
+  {
+   "gold_moves": 118,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 131
+  },
+  {
+   "gold_moves": 191,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 132
+  },
+  {
+   "gold_moves": 193,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 133
+  },
+  {
+   "gold_moves": 195,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 134
+  },
+  {
+   "gold_moves": 65,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 135
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 136
+  },
+  {
+   "gold_moves": 69,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 137
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 138
+  },
+  {
+   "gold_moves": 70,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 139
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 140
+  },
+  {
+   "gold_moves": 178,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 141
+  },
+  {
+   "gold_moves": 176,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 142
+  },
+  {
+   "gold_moves": 182,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 143
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 144
+  },
+  {
+   "gold_moves": 62,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 145
+  },
+  {
+   "gold_moves": 60,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 146
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 147
+  },
+  {
+   "gold_moves": 84,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 148
+  },
+  {
+   "gold_moves": 88,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 149
+  },
+  {
+   "gold_moves": 107,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 150
+  },
+  {
+   "gold_moves": 107,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 151
+  },
+  {
+   "gold_moves": 107,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 152
+  },
+  {
+   "gold_moves": 180,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 153
+  },
+  {
+   "gold_moves": 182,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 154
+  },
+  {
+   "gold_moves": 178,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 155
+  },
+  {
+   "gold_moves": 54,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 156
+  },
+  {
+   "gold_moves": 54,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 157
+  },
+  {
+   "gold_moves": 54,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 158
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 159
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 160
+  },
+  {
+   "gold_moves": 72,
+   "task_name": "task-8-inclined-plane-friction-(unnamed-surfaces)",
+   "variation": 161
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 90
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 91
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 92
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 93
+  },
+  {
+   "gold_moves": 113,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 94
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 95
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 96
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 97
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 98
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 99
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 100
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 101
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 102
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 103
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 104
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 105
+  },
+  {
+   "gold_moves": 126,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 106
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 107
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 108
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 109
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 110
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 111
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 112
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 113
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 114
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 115
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 116
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 117
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 118
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(known-plant)",
+   "variation": 119
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 360
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 361
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 362
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 363
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 364
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 365
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 366
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 367
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 368
+  },
+  {
+   "gold_moves": 126,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 369
+  },
+  {
+   "gold_moves": 137,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 370
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 371
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 372
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 373
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 374
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 375
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 376
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 377
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 378
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 379
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 380
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 381
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 382
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 383
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 384
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 385
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 386
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 387
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 388
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 389
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 390
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 391
+  },
+  {
+   "gold_moves": 146,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 392
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 393
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 394
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 395
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 396
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 397
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 398
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 399
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 400
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 401
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 402
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 403
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 404
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 405
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 406
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 407
+  },
+  {
+   "gold_moves": 143,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 408
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 409
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 410
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 411
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 412
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 413
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 414
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 415
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 416
+  },
+  {
+   "gold_moves": 123,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 417
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 418
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 419
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 420
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 421
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 422
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 423
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 424
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 425
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 426
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 427
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 428
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 429
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 430
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 431
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 432
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 433
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 434
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 435
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 436
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 437
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 438
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 439
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 440
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 441
+  },
+  {
+   "gold_moves": 125,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 442
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 443
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 444
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 445
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 446
+  },
+  {
+   "gold_moves": 127,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 447
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 448
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 449
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 450
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 451
+  },
+  {
+   "gold_moves": 117,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 452
+  },
+  {
+   "gold_moves": 124,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 453
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 454
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 455
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 456
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 457
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 458
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 459
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 460
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 461
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 462
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 463
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 464
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 465
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 466
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 467
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 468
+  },
+  {
+   "gold_moves": 132,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 469
+  },
+  {
+   "gold_moves": 134,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 470
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 471
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 472
+  },
+  {
+   "gold_moves": 129,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 473
+  },
+  {
+   "gold_moves": 143,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 474
+  },
+  {
+   "gold_moves": 128,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 475
+  },
+  {
+   "gold_moves": 130,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 476
+  },
+  {
+   "gold_moves": 131,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 477
+  },
+  {
+   "gold_moves": 133,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 478
+  },
+  {
+   "gold_moves": 135,
+   "task_name": "task-9-mendellian-genetics-(unknown-plant)",
+   "variation": 479
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9385662952"
+    ],
+    "new_item_ids": [
+     "8733974883"
+    ],
+    "order_id": "#W2466703",
+    "payment_method_id": "paypal_7529813"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 85,
+ "instruction": "You name is Yusuf Hernandez and your email is yusuf.hernandez8836@example.com. You are shy, rigid. You want to exchange your Fleece Jacket for a large red Fleece Jacket with a half zipper",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_085",
+ "user_id": "yusuf_hernandez_6785"
+}

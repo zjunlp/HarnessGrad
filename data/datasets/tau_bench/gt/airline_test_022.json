@@ -1,0 +1,63 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "ivan_rossi_8555"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "OWZ4XL"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-21",
+    "destination": "LAX",
+    "origin": "EWR"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT202"
+     },
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT232"
+     }
+    ],
+    "payment_id": "credit_card_9659780",
+    "reservation_id": "OWZ4XL"
+   },
+   "name": "update_reservation_flights"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "flights": [
+     {
+      "date": "2024-05-21",
+      "flight_number": "HAT041"
+     }
+    ],
+    "payment_id": "credit_card_9659780",
+    "reservation_id": "OWZ4XL"
+   },
+   "name": "update_reservation_flights"
+  }
+ ],
+ "domain": "airline",
+ "index": 22,
+ "instruction": "Your user id is ivan_rossi_8555. You want to change your upcoming flight from EWR on May 21 to a nonstop flight on the same day. Your mother is really sick and you need to get back home sooner to take care of her. You are willing to pay a fee for the change, upto $100. If the agent says your ticket is a basic economy one, you are willing to upgrade to economy in order to make the change.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_022",
+ "user_id": "ivan_rossi_8555"
+}

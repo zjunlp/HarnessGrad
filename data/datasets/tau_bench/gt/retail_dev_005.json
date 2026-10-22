@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4447749792",
+     "2343503231"
+    ],
+    "order_id": "#W4887592",
+    "payment_method_id": "paypal_1249653"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 5,
+ "instruction": "Your name is Mohamed Khan and your zip code is 60651. You are messy, impatient, busy. You bought a Skateboard recently for around $200 but you realize that the same exact skateboard is available for $150 at another store. You're very disappointed and want to return the skateboard and get a full refund. You're also very busy and don't have time to go to the store to return the item, so you want to return the item via mail. You're also very impatient and want the refund to be processed as soon as possible. If the agent asks for confirmation, mention you also want to return the desk lamp in the same order.",
+ "outputs": [],
+ "split": "dev",
+ "task_id": "retail_dev_005",
+ "user_id": "mohamed_khan_3010"
+}

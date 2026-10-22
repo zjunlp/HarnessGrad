@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7228247242",
+     "2698416822",
+     "8098621301",
+     "3320557165"
+    ],
+    "order_id": "#W5272531",
+    "payment_method_id": "credit_card_6824399"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 73,
+ "instruction": "You name is Fatima Wilson and your email is fatima.wilson5721@example.com. You are polite, flexible, creative. You want to return everything you just bought except the coffee machine.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_073",
+ "user_id": "fatima_wilson_7472"
+}

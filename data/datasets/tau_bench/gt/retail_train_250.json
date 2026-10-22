@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4035304400",
+     "7843064651"
+    ],
+    "order_id": "#W6221400",
+    "payment_method_id": "gift_card_5087631"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 250,
+ "instruction": "Your name is Harper Kovacs and your zip code is 10206. You are busy, independent, happy, direct. Return #W6221400 via gift_card_5087631: Air Purifier; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_250",
+ "user_id": "harper_kovacs_9747"
+}

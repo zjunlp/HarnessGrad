@@ -1,0 +1,40 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W7111824",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8557584",
+    "payment_method_id": "credit_card_3577130"
+   },
+   "name": "modify_pending_order_payment"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9747045638",
+     "1096508426"
+    ],
+    "new_item_ids": [
+     "7292993796",
+     "1096508426"
+    ],
+    "order_id": "#W8557584",
+    "payment_method_id": "credit_card_3577130"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 70,
+ "instruction": "Your name is Omar Kim and your zip code is 32214. You are sad, relaxing, curious, creative, polite. Cancel order #W7111824 because no longer needed. For #W8557584, change payment to credit_card_3577130. For #W8557584, modify Tea Kettle {'material': 'glass', 'capacity': '1 liter', 'stovetop compatibility': 'electric'} to {'capacity': '2 liters', 'stovetop compatibility': 'induction'}; Jigsaw Puzzle {'pieces': '500', 'theme': 'art', 'difficulty level': 'beginner'} to {}; via credit_card_3577130. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_070",
+ "user_id": "omar_kim_3528"
+}

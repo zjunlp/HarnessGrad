@@ -1,0 +1,18 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W1416704",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 175,
+ "instruction": "Your name is Evelyn Ahmed and your zip code is 80256. You are dependent, flexible, optimistic. Cancel order #W1416704 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_175",
+ "user_id": "evelyn_ahmed_3960"
+}

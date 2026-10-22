@@ -1,0 +1,26 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2757705742",
+     "1768466237"
+    ],
+    "new_item_ids": [
+     "2052249669",
+     "8895454203"
+    ],
+    "order_id": "#W2936099",
+    "payment_method_id": "paypal_4060450"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 79,
+ "instruction": "Your name is Mei Li and your zip code is 92149. You are sad, flexible, relaxing. For #W2936099, exchange Wireless Earbuds {'color': 'blue', 'battery life': '4 hours', 'water resistance': 'IPX7'} to {'color': 'white', 'water resistance': 'not resistant'}; Bookshelf {'material': 'glass', 'color': 'black', 'height': '3 ft'} to {'color': 'white', 'height': '5 ft'}; via paypal_4060450. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_079",
+ "user_id": "mei_li_2872"
+}

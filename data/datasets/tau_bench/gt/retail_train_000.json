@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9624127908",
+     "8917609800"
+    ],
+    "order_id": "#W6067464",
+    "payment_method_id": "credit_card_4190576"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 0,
+ "instruction": "Your name is Omar Anderson and your zip code is 19031. You are logical, independent, relaxing, polite. Return #W6067464 via credit_card_4190576: Electric Kettle; Wall Clock; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_000",
+ "user_id": "omar_anderson_3203"
+}

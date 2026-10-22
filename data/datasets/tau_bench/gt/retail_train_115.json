@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7533802601"
+    ],
+    "new_item_ids": [
+     "6777246137"
+    ],
+    "order_id": "#W3691773",
+    "payment_method_id": "gift_card_4303603"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 115,
+ "instruction": "Your name is Yusuf Garcia and your zip code is 46202. You are sad, dependent. For #W3691773, modify Water Bottle {'capacity': '500ml', 'material': 'stainless steel', 'color': 'green'} to {'capacity': '750ml', 'color': 'red'}; via gift_card_4303603. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_115",
+ "user_id": "yusuf_garcia_1670"
+}

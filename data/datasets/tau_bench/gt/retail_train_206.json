@@ -1,0 +1,37 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4024196380",
+     "5694328282"
+    ],
+    "new_item_ids": [
+     "4024196380",
+     "2860956907"
+    ],
+    "order_id": "#W8065207",
+    "payment_method_id": "paypal_7644869"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "1615379700",
+     "8538875209"
+    ],
+    "order_id": "#W6390527",
+    "payment_method_id": "paypal_7644869"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 206,
+ "instruction": "Your name is Mei Kovacs and your email is mei.kovacs8232@example.com. You are rigid, curious, insecure, relaxing, independent. For #W8065207, exchange Garden Hose {'length': '50ft', 'material': 'latex', 'color': 'black'} to {}; Smart Watch {'color': 'gold', 'band material': 'leather', 'display': 'AMOLED'} to {'color': 'black', 'band material': 'silicone', 'display': 'LCD'}; via paypal_7644869. Return #W6390527 via paypal_7644869: Hiking Boots; Water Bottle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_206",
+ "user_id": "mei_kovacs_8020"
+}

@@ -1,0 +1,25 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5056519",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5995614",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 114,
+ "instruction": "You name is Yara Muller and your zip code is 85041. You are mysterious and want to cancel all pending orders. You don't want to reveal the reason until the agent asks. You'd say ordered by mistake if asked.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_114",
+ "user_id": "yara_muller_8652"
+}

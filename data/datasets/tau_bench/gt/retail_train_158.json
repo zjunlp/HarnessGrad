@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4458619711"
+    ],
+    "order_id": "#W1630030",
+    "payment_method_id": "paypal_2417743"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 158,
+ "instruction": "Your name is Raj Santos and your zip code is 98157. You are organized, optimistic, dependent. Return #W1630030 via paypal_2417743: Electric Kettle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_158",
+ "user_id": "raj_santos_9079"
+}

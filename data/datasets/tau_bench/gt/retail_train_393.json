@@ -1,0 +1,51 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5676696062"
+    ],
+    "order_id": "#W8488728",
+    "payment_method_id": "paypal_3650980"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6268080249",
+     "5669664287"
+    ],
+    "new_item_ids": [
+     "5418781403",
+     "9375701158"
+    ],
+    "order_id": "#W1654931",
+    "payment_method_id": "paypal_3650980"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2872451762",
+     "7896397433"
+    ],
+    "new_item_ids": [
+     "4725166838",
+     "3275928196"
+    ],
+    "order_id": "#W6397299",
+    "payment_method_id": "credit_card_3261838"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 393,
+ "instruction": "Your name is Liam Thomas and your zip code is 85049. You are outgoing, impatient, logical. Return #W8488728 via paypal_3650980: Hiking Boots; For #W1654931, modify E-Reader {'screen size': '7-inch', 'connectivity': 'Wi-Fi', 'storage': '8GB'} to {'connectivity': 'Wi-Fi + Cellular'}; Air Purifier {'room size': 'small', 'filter type': 'ionic', 'features': 'quiet operation'} to {'room size': 'medium', 'filter type': 'carbon'}; via paypal_3650980. For #W6397299, exchange Vacuum Cleaner {'type': 'canister', 'bagged/bagless': 'bagged', 'features': 'pet hair removal'} to {'type': 'robotic', 'bagged/bagless': 'bagless', 'features': 'HEPA filter'}; Dumbbell Set {'weight range': '5-25 lbs', 'material': 'rubber', 'set type': 'adjustable'} to {'material': 'urethane'}; via credit_card_3261838. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_393",
+ "user_id": "liam_thomas_7882"
+}

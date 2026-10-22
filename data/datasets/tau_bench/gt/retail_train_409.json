@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "592 Elm Avenue",
+    "address2": "Suite 978",
+    "city": "Houston",
+    "country": "USA",
+    "order_id": "#W1603792",
+    "state": "TX",
+    "zip": "77242"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5606522780"
+    ],
+    "new_item_ids": [
+     "2143041831"
+    ],
+    "order_id": "#W1603792",
+    "payment_method_id": "credit_card_5694100"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 409,
+ "instruction": "Your name is Sophia Martin and your zip code is 77034. You are relaxing, happy, insecure, impatient. For #W1603792, change address to {'order_id': '#W1603792', 'address1': '592 Elm Avenue', 'address2': 'Suite 978', 'city': 'Houston', 'country': 'USA', 'state': 'TX', 'zip': '77242'} (same as #W1092119). For #W1603792, modify Bicycle {'frame size': 'large', 'color': 'red', 'type': 'mountain'} to {'frame size': 'medium', 'color': 'black'}; via credit_card_5694100. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_409",
+ "user_id": "sophia_martin_8570"
+}

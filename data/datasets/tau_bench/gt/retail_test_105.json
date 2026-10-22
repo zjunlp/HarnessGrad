@@ -1,0 +1,58 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8479046075"
+    ],
+    "order_id": "#W8660475",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7824298782"
+    ],
+    "order_id": "#W9218746",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "921 Park Avenue",
+    "address2": "Suite 892",
+    "city": "Chicago",
+    "country": "USA",
+    "order_id": "#W4860251",
+    "state": "IL",
+    "zip": "60612"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5209958006"
+    ],
+    "new_item_ids": [
+     "8964750292"
+    ],
+    "order_id": "#W4860251",
+    "payment_method_id": "credit_card_2112420"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 105,
+ "instruction": "You name is Lucas Brown and your email is lucas.brown9344@example.com. You are busy, happy, outgoing, messy, optimistic. You want to return the bookshelf and jigsaw you received in different orders. Make sure you mention at the beginning that you want to cancel these two things, and they are from different orders. You also want to return the backpack you received with the vacuum cleaner. You also want to change your pending order item to red, and address to your default Chicago home (you won't reveal it for private reasons but it's in your profile). You want to get the tracking number of your cancelled order. You like to say one thing at a time.",
+ "outputs": [
+  "286422338955"
+ ],
+ "split": "test",
+ "task_id": "retail_test_105",
+ "user_id": "lucas_brown_6720"
+}

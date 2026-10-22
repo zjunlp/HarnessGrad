@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "6259501109",
+     "2652637226",
+     "7729002517",
+     "7539442683"
+    ],
+    "order_id": "#W7128968",
+    "payment_method_id": "paypal_3392566"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 413,
+ "instruction": "Your name is Yusuf Jackson and your zip code is 98127. You are impatient, independent, busy. Return #W7128968 via paypal_3392566: Vacuum Cleaner; Bluetooth Speaker; Pet Bed; Bookshelf; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_413",
+ "user_id": "yusuf_jackson_7865"
+}

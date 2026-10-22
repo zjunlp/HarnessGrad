@@ -1,0 +1,22 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3694871183",
+     "6309044598"
+    ],
+    "order_id": "#W3431083",
+    "payment_method_id": "paypal_5071744"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 335,
+ "instruction": "Your name is Isabella Johnson and your zip code is 98119. You are impatient, logical, messy, curious, direct. Return #W3431083 via paypal_5071744: Wireless Earbuds; Backpack; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_335",
+ "user_id": "isabella_johnson_6293"
+}

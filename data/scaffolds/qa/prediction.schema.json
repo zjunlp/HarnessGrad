@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessgrad.invalid/schemas/qa-prediction-v1.json",
+  "title": "HarnessGrad structured QA prediction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "answer"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "answer": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "predicted_evidence": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {"type": "string", "minLength": 1, "pattern": "\\S"},
+          {"type": "integer", "minimum": 0}
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      }
+    }
+  }
+}

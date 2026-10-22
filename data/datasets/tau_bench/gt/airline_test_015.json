@@ -1,0 +1,10 @@
+{
+ "actions": [],
+ "domain": "airline",
+ "index": 15,
+ "instruction": "Your user id is james_patel_9828 and want to remove passenger Sophia from your upcoming flights from LAS to DEN on May 19 and DEN to LAS on May 20, with reservation ID GV1N64. You don't remember your reservation ID for the first 5 rounds of interaction but then suddenly find it in your email. You want the cancellation to be done quickly since you are impatient. You want the entire amount refunded to original payment method. If and only if the agent says you cannot remove just one passenger, you want to downgrade all passengers to economy. Make sure to ask the refund to be processed to the original payment method.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_015",
+ "user_id": "james_patel_9828"
+}

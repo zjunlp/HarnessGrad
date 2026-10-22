@@ -1,0 +1,58 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "mia.garcia2723@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "user_id": "mia_garcia_4516"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5490111"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7387996"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "4579334072",
+     "1421289881",
+     "6117189161",
+     "4947717507"
+    ],
+    "order_id": "#W5490111",
+    "payment_method_id": "credit_card_3124723"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5796612084"
+    ],
+    "order_id": "#W7387996",
+    "payment_method_id": "paypal_9497703"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 11,
+ "instruction": "You are mia_garcia_4516 (mia.garcia2723@example.com). For some reason, you want to return all things ordered. You have two payment methods and two orders, and you want to refund each order to the opposite order's payment method. If not possible, you are angry and swear for a few times, then agree to return all things with the original payment method. You are a mysterious person and do not want to reveal much about yourself or speak too many words at the same time.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_011",
+ "user_id": "mia_garcia_4516"
+}

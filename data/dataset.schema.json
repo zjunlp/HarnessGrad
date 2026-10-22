@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "about": [
+    "The machine-checkable half of the dataset contract (INTERFACE.md §2.5.9, §8.1).",
+    "It is read by tools/dataset_lint.py, which the quality suite runs, and by",
+    "tools/datasets.py, which renders DOWNLOADS.md from the same loaders.",
+    "",
+    "It deliberately holds only what can be decided without judgement: names, shapes,",
+    "coverage, path spelling, and the pinning of a download. Everything that needs a",
+    "human -- 'is this trap real?', 'does this goal leak the answer?' -- lives in",
+    "docs/dataset-onboarding-skill.md instead, because a rule that cannot be evaluated",
+    "by a program is a rule that trains people to ignore the check."
+  ],
+  "module": {
+    "kind_attribute": "KIND",
+    "namespace": "data.datasets",
+    "source_directory": "data/datasets",
+    "oracle_attribute": "ORACLE_SOURCE",
+    "oracle_sources": ["released", "authored"],
+    "oracle_authored_requires": ["ORACLE_VALIDATED_BY", "ORACLE_COVERAGE"],
+    "oracle_about": [
+      "Gate 1 is the oracle control: the dataset's own reference artifact, submitted, expected to score 1. Until 2026-10-08 that artifact was always the benchmark's released answer, so nothing had to say so; the owner then authorised platform-authored references validated by the released tests, and the two are different claims about a curve. Silence is refused rather than defaulted, the rule OFFICIAL_EVAL already follows.",
+      "`released`: the reference comes from the benchmark's own release (a gold answer, a walkthrough, a gold SQL). `authored`: the platform wrote it, `ORACLE_VALIDATED_BY` names what validates it, and `ORACLE_COVERAGE` says how much of the pool has one -- an authored oracle covering three tasks proves the check is reachable on three tasks, and a reader has to be able to see that."
+    ],
+    "kinds": ["dataset", "fixture"],
+    "required_callables": ["load", "downloads"],
+    "published_kind": "dataset"
+  },
+  "task": {
+    "required": ["task_id", "goal"],
+    "optional": ["inputs", "interaction", "submission"],
+    "submission": "Optional public delivery hint: {kind: text} or {kind: files, paths: [workdir-relative file paths]}. Contains no expected contents or verifier metadata. Omission preserves a harness's existing behavior; goal remains sufficient for older harnesses.",
+    "interaction": "Explicit per-task opt-in; chessbench_puzzles.stepwise.v1 selects trusted live board/UCI exchange on the native files sandbox. Omission preserves the existing protocol.",
+    "task_id": "non-empty unique string",
+    "goal": "non-empty string"
+  },
+  "split": {
+    "sides": ["train", "eval"],
+    "every_task_on_exactly_one_side": true,
+    "no_empty_side": true
+  },
+  "download": {
+    "kinds": ["http", "hf-file", "hf-dataset", "pip"],
+    "common_required": ["kind", "name", "version", "size", "note"],
+    "by_kind": {
+      "http": {"required": ["url", "dst"]},
+      "hf-file": {"required": ["repo", "file", "dst"]},
+      "hf-dataset": {"required": ["repo", "dst"]},
+      "pip": {"required": ["package"]}
+    },
+    "version_forbidden": ["", "main", "master", "head", "latest", "trunk", "dev", "nightly"],
+    "note_min_chars": 20
+  },
+  "verify": {
+    "kinds": ["answer", "command"],
+    "command_required": ["argv", "reward_file"],
+    "command_optional": ["cwd", "inputs", "pass_when", "stdout", "timeout_s", "evidence_file", "image", "scorer_input", "native_runtime", "judge", "result_contract", "trial_protocol", "trial_evidence", "model_failure_policy", "container_runtime", "runtime_paths"],
+    "model_failure_policy": "Optional extension {version: 1, invalidate_on_http_status: [status, ...]}; absent preserves existing classification. Sandboxed files without workers; live models require network=none and the native HTTP route. When enabled, the nonempty list is required and contains unique integer error statuses (400..599): a platform-observed final inference response status in that list invalidates the trial regardless of Harness exit, exception formatting, recovery or raw score. A confirmed status remains evidence even if its body or another connection is incomplete. Unlisted statuses and stderr text do not trigger this extension. A version-only declaration is rejected. Independent of trial_evidence; original verdict and HTTP metadata are retained without recording response payloads or credentials.",
+    "runtime_paths": "Optional absolute host runtime directories, bound read-only for sandboxed files command verification with an absolute executable and result_contract.require_exit_zero=true. Unsupported routes, missing/hidden/symlink directories and task-storage overlaps are unmeasured; absence preserves the existing launch.",
+    "container_runtime": "Optional observed-v1 Docker command verifier. Requires sandboxed files parent, result_contract, local pinned image and bounded filesystems. Same declaration as Docker worker env; no judge/native_runtime combination.",
+    "judge": "Optional verifier-only model broker: model, max_calls, max_output_tokens, timeout_s, parameters. Requires sandboxed files command verification and result_contract v1.",
+    "result_contract": "Optional version=1 and score_range=[min,max], with optional boolean require_exit_zero (default false). Invalid/nonfinite/out-of-range or measured:false results carry no score. require_exit_zero rejects a nonzero command exit before reading score files; unsupported for pristine-offline. Omission preserves legacy interpretation.",
+    "trial_protocol": "Optional version=1, metric=pass^k, trials, ks, seeds. Requires a complete explicit task/trial manifest; reports separately from legacy run_reward.",
+    "trial_evidence": "Optional {version: 1}; absent disables archive writes for that task. Requires trial_protocol and a progress_dir outside the visible harness work root. If any task opts in or the progress_dir already has trial-evidence (including resume), every actor must use sandboxed files without workers and pass final ordered mount checks, including runtime sources and aliases. Unsupported mixed routes fail before any trial starts. Safe output collection covers every actor sharing archives. Readable, single-link regular UTF-8 answer and trace files preserve existing scoring and feedback text. Links, unreadable and nonregular files produce empty text; malformed UTF-8 uses replacement decoding with original bytes retained as base64. Only opted-in tasks archive each returned trial result, full verdict, available Harness output and service receipts. Archives are excluded from method feedback. Runs without opt-in or existing archives keep the legacy path. Resume validates archive identity and hash; partial groups still cannot resume.",
+    "native_runtime": "Explicit bird_minidev/jericho/alfworld trusted dataset/manifest/sha256 binding. Requires sandbox=True, a files command check, exact sealed runtime bytes, closed Python/loader resolution and a native_runtime receipt; any admission mismatch is unmeasured with no ambient fallback.",
+    "scorer_input": "Optional trusted task_id/path/sha256 binding, with a files path-to-SHA256 inventory for native multi-file inputs. Native dispatch compares task_id to the selected task and requires matching verified scorer-input evidence (including files when declared) before accepting a reward.",
+    "absolute_paths": ["reward_file", "evidence_file"],
+    "image": "optional pinned verifier image for an exec command; defaults to the task image",
+    "input_target_keys": ["path", "dst"],
+    "dst_must_be_top_level": true
+  },
+  "setup_extensions": {
+    "tool_relay.record": "Optional {path, max_bytes?}. Service writes HG_RELAY_RECORD_PATH JSON; HG_RELAY_CONTEXT_PATH supplies task/run/trial/input binding. Native sandboxed command verification only.",
+    "tool_relay.model": "Optional environment-role model broker with the same bounded completion declaration as judge. Optional seed_source=trial binds parameters.seed to the platform run_seed and cannot combine with a static parameters.seed. Service receives HG_ENV_MODEL_SOCKET, not model credentials.",
+    "workers": "Optional fixed-peer list: id, goal, files, env, artifacts, timeout_s. Each executes the same candidate harness with isolated files/state and a mailbox. Native files or explicit exec backend=observed-v1, with kernel resource observation, per-peer model/mailbox sockets and bounded artifact export."
+  },
+  "env": {
+    "kinds": ["files", "exec"],
+    "files_may_carry": ["kind", "network", "agent_timeout_s", "verify_timeout_s", "agent_runtime"],
+    "web": {
+      "type": "object",
+      "required": ["search", "fetch"],
+      "properties": {"search": {"type": "boolean"}, "fetch": {"type": "boolean"}},
+      "additionalProperties": false,
+      "description": "Host-published web access for an exec task; the harness receives HG_SVC_WEB_URL only when declared."
+    }
+  },
+  "paths": {
+    "data_root_attributes": ["DATASET_ROOT", "ROOT"],
+    "must_be_outside_platform": true,
+    "why": "Code (how to load and score) is in git; data is not. A dataset whose root is inside the platform tree has put bytes into git that the next reader will silently get a different copy of."
+  },
+  "platform_tree": "the directory containing this file's parent, i.e. the HarnessGrad checkout"
+}

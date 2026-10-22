@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8277474082"
+    ],
+    "new_item_ids": [
+     "1437889264"
+    ],
+    "order_id": "#W8073920",
+    "payment_method_id": "gift_card_7219486"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W6779827",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 261,
+ "instruction": "Your name is Ethan Lopez and your email is ethan.lopez8943@example.com. You are cautious, relaxing. For #W8073920, modify Hiking Boots {'size': '12', 'material': 'leather', 'waterproof': 'yes'} to {'size': '7', 'material': 'synthetic', 'waterproof': 'no'}; via gift_card_7219486. Cancel order #W6779827 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_261",
+ "user_id": "ethan_lopez_6291"
+}

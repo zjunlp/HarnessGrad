@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3877338112"
+    ],
+    "new_item_ids": [
+     "2444431651"
+    ],
+    "order_id": "#W9077205",
+    "payment_method_id": "gift_card_7108145"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 164,
+ "instruction": "Your name is Amelia Wilson and your zip code is 75215. You are optimistic, rigid, shy. For #W9077205, exchange Dumbbell Set {'weight range': '5-25 lbs', 'material': 'iron', 'set type': 'adjustable'} to {'weight range': '55-75 lbs', 'set type': 'fixed'}; via gift_card_7108145. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_164",
+ "user_id": "amelia_wilson_4614"
+}

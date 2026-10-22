@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "8142779083"
+    ],
+    "order_id": "#W6904184",
+    "payment_method_id": "credit_card_6699629"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 350,
+ "instruction": "Your name is Yara Johansson and your email is yara.johansson5198@example.com. You are shy, creative. Return #W6904184 via credit_card_6699629: Electric Kettle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_350",
+ "user_id": "yara_johansson_9032"
+}

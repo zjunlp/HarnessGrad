@@ -1,0 +1,48 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "592 Elm Avenue",
+    "address2": "Suite 978",
+    "city": "Houston",
+    "country": "USA",
+    "order_id": "#W1603792",
+    "state": "TX",
+    "zip": "77242"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "address1": "592 Elm Avenue",
+    "address2": "Suite 978",
+    "city": "Houston",
+    "country": "USA",
+    "state": "TX",
+    "user_id": "sophia_martin_8570",
+    "zip": "77242"
+   },
+   "name": "modify_user_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6501071631"
+    ],
+    "new_item_ids": [
+     "2106335193"
+    ],
+    "order_id": "#W1603792",
+    "payment_method_id": "credit_card_5694100"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 110,
+ "instruction": "You name is Sophia Martin and your email is sophia.martin4832@example.com. You are organized and outgoing. You live on Elm Avenue in Houston, and recently you moved to a new house on the same street and bought a luggage set sent to there. But you realize you have another order sent to the old address, and you want to change your wrong order address to the new home, and also your user default address to the new home. You do not want to reveal your address but the agent should be able to look it up in orders You do not want to reveal your address and insist the agent should be able to look it up in orders. You also want to exchange your tablet to the cheapest one due to moving costs. Make sure to mention the two address changes then the exchange.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_110",
+ "user_id": "sophia_martin_8570"
+}

@@ -1,0 +1,21 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2284404181"
+    ],
+    "order_id": "#W1874267",
+    "payment_method_id": "credit_card_8008637"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 390,
+ "instruction": "Your name is Omar Moore and your zip code is 10096. You are organized, busy, shy, logical. Return #W1874267 via credit_card_8008637: Digital Camera; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_390",
+ "user_id": "omar_moore_9540"
+}

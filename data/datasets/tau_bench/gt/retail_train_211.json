@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "7736359414"
+    ],
+    "new_item_ids": [
+     "1573035764"
+    ],
+    "order_id": "#W2601346",
+    "payment_method_id": "paypal_3180577"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 211,
+ "instruction": "Your name is Ava Nguyen and your email is ava.nguyen1851@example.com. You are relaxing, curious. For #W2601346, modify Makeup Kit {'skin tone': 'medium', 'kit size': 'professional', 'brand': 'Brand C'} to {'skin tone': 'dark', 'brand': 'Brand A'}; via paypal_3180577. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_211",
+ "user_id": "ava_nguyen_4072"
+}

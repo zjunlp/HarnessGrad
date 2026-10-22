@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "1340995114"
+    ],
+    "new_item_ids": [
+     "1151293680"
+    ],
+    "order_id": "#W2260828",
+    "payment_method_id": "credit_card_9698900"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 310,
+ "instruction": "Your name is Olivia Ahmed and your zip code is 94152. You are polite, outgoing. For #W2260828, exchange Mechanical Keyboard {'switch type': 'tactile', 'backlight': 'none', 'size': 'full size'} to {'switch type': 'linear', 'backlight': 'RGB'}; via credit_card_9698900. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_310",
+ "user_id": "olivia_ahmed_6778"
+}

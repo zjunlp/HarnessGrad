@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "3330317167"
+    ],
+    "new_item_ids": [
+     "3330317167"
+    ],
+    "order_id": "#W2640384",
+    "payment_method_id": "paypal_6619428"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 34,
+ "instruction": "Your name is Mei Silva and your zip code is 91147. You are curious, outgoing. For #W2640384, exchange Gaming Mouse {'color': 'black', 'sensor type': 'optical', 'connectivity': 'wired'} to {}; via paypal_6619428. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_034",
+ "user_id": "mei_silva_6882"
+}

@@ -1,0 +1,68 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "user_id": "sophia_silva_7557"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "reservation_id": "WUNA5K"
+   },
+   "name": "get_reservation_details"
+  },
+  {
+   "arguments": {
+    "date": "2024-05-26",
+    "destination": "PHL",
+    "origin": "ORD"
+   },
+   "name": "search_direct_flight"
+  },
+  {
+   "arguments": {
+    "cabin": "economy",
+    "destination": "PHL",
+    "flight_type": "one_way",
+    "flights": [
+     {
+      "date": "2024-05-26",
+      "flight_number": "HAT271"
+     }
+    ],
+    "insurance": "no",
+    "nonfree_baggages": 0,
+    "origin": "ORD",
+    "passengers": [
+     {
+      "dob": "1957-10-05",
+      "first_name": "Sophia",
+      "last_name": "Silva"
+     },
+     {
+      "dob": "2001-04-12",
+      "first_name": "Kevin",
+      "last_name": "Smith"
+     }
+    ],
+    "payment_methods": [
+     {
+      "amount": 348,
+      "payment_id": "certificate_8045380"
+     }
+    ],
+    "total_baggages": 0,
+    "user_id": "sophia_silva_7557"
+   },
+   "name": "book_reservation"
+  }
+ ],
+ "domain": "airline",
+ "index": 32,
+ "instruction": "Your user id is sophia_silva_7557. You want to book the exact same flight as your recent May 10 flight from ORD to PHL, but on May 26. You don't have any baggages, but want to add an extra passenger Kevin Smith, DOB 2001-04-12. You are ok with economy and want aisle and a middle seat together. You are willing to pay up to $500 for the purchase. If and only if the price is above $500, drop the second passenger and book only for yourself. If the agent asks, you only want a one-way ticket, not roundtrip. You don't need any travel insurance.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "airline_test_032",
+ "user_id": "sophia_silva_7557"
+}

@@ -1,0 +1,23 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4953074738",
+     "1804581713",
+     "1719127154"
+    ],
+    "order_id": "#W9045919",
+    "payment_method_id": "gift_card_8633125"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 226,
+ "instruction": "Your name is Fatima Brown and your email is fatima.brown7817@example.com. You are pessimistic, rigid. Return #W9045919 via gift_card_8633125: Smart Thermostat; Digital Camera; Cycling Helmet; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_226",
+ "user_id": "fatima_brown_5229"
+}

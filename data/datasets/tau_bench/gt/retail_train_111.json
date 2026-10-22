@@ -1,0 +1,39 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5081446110"
+    ],
+    "new_item_ids": [
+     "8316205423"
+    ],
+    "order_id": "#W6353188",
+    "payment_method_id": "credit_card_6173085"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6690069155",
+     "1689914594"
+    ],
+    "new_item_ids": [
+     "6301799585",
+     "7617930199"
+    ],
+    "order_id": "#W7156413",
+    "payment_method_id": "credit_card_6173085"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 111,
+ "instruction": "Your name is Ethan Moore and your email is ethan.moore4935@example.com. You are patient, sad, flexible. For #W6353188, exchange Perfume {'scent family': 'woody', 'size': '30ml', 'gender': 'men'} to {'gender': 'women'}; via credit_card_6173085. For #W7156413, exchange Luggage Set {'piece count': '3-piece', 'color': 'silver', 'material': 'softshell'} to {'color': 'blue'}; Bluetooth Speaker {'color': 'red', 'battery life': '10 hours', 'water resistance': 'no'} to {'battery life': '20 hours', 'water resistance': 'yes'}; via credit_card_6173085. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_111",
+ "user_id": "ethan_moore_3587"
+}

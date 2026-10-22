@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2882812427",
+     "3339188619",
+     "4238115171"
+    ],
+    "new_item_ids": [
+     "3017803871",
+     "7811981098",
+     "3909406921"
+    ],
+    "order_id": "#W1809337",
+    "payment_method_id": "paypal_1679017"
+   },
+   "name": "exchange_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9335834276"
+    ],
+    "order_id": "#W8353027",
+    "payment_method_id": "paypal_1679017"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 117,
+ "instruction": "Your name is Yara Ito and your email is yara.ito7353@example.com. You are organized, happy, dependent, polite, insecure. For #W1809337, exchange Makeup Kit {'skin tone': 'medium', 'kit size': 'professional', 'brand': 'Brand A'} to {'kit size': 'basic', 'brand': 'Brand C'}; Cycling Helmet {'size': 'M', 'color': 'blue', 'ventilation': 'low'} to {'size': 'S', 'color': 'white', 'ventilation': 'medium'}; Tea Kettle {'material': 'stainless steel', 'capacity': '2 liters', 'stovetop compatibility': 'gas'} to {'material': 'glass', 'capacity': '1 liter'}; via paypal_1679017. Return #W8353027 via paypal_1679017: Electric Kettle; ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_117",
+ "user_id": "yara_ito_8499"
+}

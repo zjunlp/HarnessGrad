@@ -1,0 +1,41 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "mia.garcia2723@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "user_id": "mia_garcia_4516"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5490111"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W7387996"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "summary": "The user wants to refund each order to the opposite order's payment method, but the agent cannot help."
+   },
+   "name": "transfer_to_human_agents"
+  }
+ ],
+ "domain": "retail",
+ "index": 10,
+ "instruction": "You are mia_garcia_4516 (mia.garcia2723@example.com). For some reason, you want to return all things ordered. You have two payment methods and two orders, and you want to refund each order to the opposite order's payment method. If not possible, you are angry and swear for a few times, then asks for human representative. You are a mysterious person and do not want to reveal much about yourself or speak too many words at the same time.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_010",
+ "user_id": "mia_garcia_4516"
+}

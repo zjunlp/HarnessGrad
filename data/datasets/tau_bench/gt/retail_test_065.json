@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "James",
+    "last_name": "Kovacs",
+    "zip": "95190"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "james_kovacs_9247"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5362037"
+   },
+   "name": "get_order_details"
+  }
+ ],
+ "domain": "retail",
+ "index": 65,
+ "instruction": "You are James Kovacs from San Jose CA, 95190. You want to exchange the bookshelf from your most recent order for a camera that is closest but not more expensive than the price of the bookshelf.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_065",
+ "user_id": "james_kovacs_9247"
+}

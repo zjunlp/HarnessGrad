@@ -1,0 +1,38 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "5565631513",
+     "9580569596",
+     "9228757377"
+    ],
+    "order_id": "#W4864669",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "6956751343",
+     "9025753381"
+    ],
+    "new_item_ids": [
+     "4293355847",
+     "9665000388"
+    ],
+    "order_id": "#W7293142",
+    "payment_method_id": "gift_card_9909795"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 102,
+ "instruction": "Your name is Noah Sanchez and your email is noah.sanchez7461@example.com. You are logical, polite, impatient, busy. Return #W4864669 via gift_card_9909795: Wireless Earbuds {'color': 'black', 'battery life': '6 hours', 'water resistance': 'IPX7'}; Wireless Earbuds {'color': 'black', 'battery life': '4 hours', 'water resistance': 'IPX7'}; Digital Camera; For #W7293142, exchange Skateboard {'deck material': 'bamboo', 'length': '34 inch', 'design': 'custom'} to {'length': '31 inch', 'design': 'plain'}; Mechanical Keyboard {'switch type': 'clicky', 'backlight': 'RGB', 'size': 'full size'} to {'backlight': 'none', 'size': '80%'}; via gift_card_9909795. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_102",
+ "user_id": "noah_sanchez_2690"
+}

@@ -1,0 +1,36 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "9385662952"
+    ],
+    "new_item_ids": [
+     "8733974883"
+    ],
+    "order_id": "#W2466703",
+    "payment_method_id": "paypal_7529813"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "address1": "565 Maple Drive",
+    "address2": "Suite 501",
+    "city": "Washington",
+    "country": "USA",
+    "state": "DC",
+    "user_id": "yusuf_hernandez_6785",
+    "zip": "20307"
+   },
+   "name": "modify_user_address"
+  }
+ ],
+ "domain": "retail",
+ "index": 86,
+ "instruction": "You name is Yusuf Hernandez and your email is yusuf.hernandez8836@example.com. You are shy, rigid. You want to exchange your Fleece Jacket to red color and half zipper. You also want to want to change your default address to your Washington DC address (which you do not want to reveal but is in one of the orders).",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_086",
+ "user_id": "yusuf_hernandez_6785"
+}

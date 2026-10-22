@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+r"""`jer` -- the command line the agent uses to play a Jericho interactive-fiction game.
+
+    python3 jer look                show the current observation
+    python3 jer do "<command>"      apply one game command
+    python3 jer score               the game's score, the maximum, and the moves spent
+    python3 jer inventory           what the agent is carrying
+    python3 jer done                declare the episode over and stop acting
+    python3 jer help                this text
+
+Why a CLI, and why the log is replayed
+--------------------------------------
+The platform grades what a harness left behind, and an interactive-fiction episode is a
+transcript rather than an artifact. So every command goes through here and is appended to
+`jer_actions.jsonl`; the check then rebuilds the game at its official seed and replays the log,
+reading the game's own score. Nothing this program prints is a verdict.
+
+A fresh process per command means the game is rebuilt and the log replayed every time -- the
+same O(n^2) design as `alf` and `scw`, and for the same reason: one code path builds the world
+the agent saw and the world being scored. Jericho's interpreter is fast (Zork 1's 396-move
+walkthrough replays in well under a second), so the cost is a process launch per command.
+
+Where things live (override with the matching flag):
+    <workdir>/jer_game.json       the game and its seed, written by the platform's SETUP
+    <workdir>/<rom>               the game file, written by SETUP and by VERIFY
+    <workdir>/jer_actions.jsonl   this program's append-only output
+
+There is no `valid` command, and the absence is deliberate. The agent runtime is a code-only
+projection of the jericho package whose `defines.py` has `BINDINGS_DICT = {}` -- that table is
+what hides the walkthrough, and it is also what `FrotzEnv` builds its template action generator
+from, so `get_valid_actions()` returns `[]` there. Restoring the table would not be enough
+either: the generator needs spaCy's `en_core_web_sm`, which is neither installed nor reachable
+(its fallback is a download, and this dataset's runtime has `network: none`). Listing it as a
+command only cost the agent turns, so it is gone rather than advertised and broken.
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import jer_env  # noqa: E402
+
+
+def _fail(message: str, code: int = 2) -> int:
+    print(f"error: {message}", file=sys.stderr)
+    return code
+
+
+def _current(args):
+    """Build the game and replay the log. Returns `(env, last_step_or_None, actions)`."""
+    records = jer_env.action_log_records(args.log)
+    actions = jer_env.actions_in(records)
+    env = jer_env.load_game(args.workdir, rom_dir=args.rom_dir)
+    result = jer_env.replay(env, actions)
+    return env, (result["steps"][-1] if result["steps"] else None), actions
+
+
+def cmd_look(args) -> int:
+    """Print the observation *now*: the room the agent is in, not its last action's feedback.
+
+    `FrotzEnv` has no call that re-describes the current room without stepping: `get_state()`'s
+    `narrative` is the *last* turn's text (exactly the "Taken." this command used to print) and
+    the object tree carries object names, not room descriptions. `look` is the game's own
+    command for re-observing, so the only honest answer is to ask the game and print what it
+    says.
+
+    That step is free with respect to the grade. `_current()` rebuilt this game by replaying the
+    log, nothing here appends to `jer_actions.jsonl`, and the check replays the log in its own
+    fresh game -- so an ephemeral advance cannot leak into a score. The move counter is
+    therefore read from the replayed log as well, never from this step: the game counts `look`
+    itself as a move, and reporting that number would claim a move the check never replays.
+    """
+    env, last, _actions = _current(args)
+    observation = _observation_now(env, last)
+    last = last or {}
+    print(str(observation).strip())
+    print()
+    print(f"[jer] move {last.get('moves', 0)}; "
+          f"score {last.get('score', 0)}/{env.get_max_score()}")
+    return 0
+
+
+def _observation_now(env, last) -> str:
+    """The game's answer to "what do I see here", asked of the game.
+
+    Before the first action this is the opening text. If the step itself fails -- a halted
+    interpreter, or any game that will not take `look` -- the last recorded output is returned
+    instead of a traceback; that record keeps only 400 characters, so the fallback is a floor,
+    not the preferred reading, and there is nothing to fall back to before the first action.
+    """
+    try:
+        observation, _reward, _done, _info = env.step("look")
+        return str(observation)
+    except Exception:  # the whole game, not this command, is what failed
+        if last is None:
+            raise
+        return str(last["observation"])
+
+
+def cmd_do(args) -> int:
+    action = " ".join(args.action).strip()
+    if not action:
+        return _fail('usage: jer do "<command>"')
+    env, last, actions = _current(args)
+    observation, _reward, done, info = env.step(action)
+    jer_env.append_action(args.log, action, len(actions))
+    print(str(observation).strip())
+    print()
+    print(f"[jer] move {info.get('moves', 0)}; score {info.get('score', 0)}/"
+          f"{env.get_max_score()}" + ("; the game is over" if done else ""))
+    return 0
+
+
+def cmd_score(args) -> int:
+    env, last, actions = _current(args)
+    score = (last or {}).get("score", 0)
+    moves = (last or {}).get("moves", 0)
+    maximum = env.get_max_score()
+    print(f"score {score}/{maximum}; moves {moves}; actions logged {len(actions)}")
+    return 0
+
+
+def cmd_inventory(args) -> int:
+    env, _last, _actions = _current(args)
+    print(str(env.get_inventory()).strip())
+    return 0
+
+
+def cmd_done(args) -> int:
+    records = jer_env.action_log_records(args.log)
+    if not any(r.get("kind") == "done" for r in records):
+        jer_env.append_marker(args.log, "done", len(jer_env.actions_in(records)))
+    print("Noted. The episode is marked done.")
+    return 0
+
+
+def _parse_global(argv: list) -> tuple[argparse.Namespace, list]:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--workdir", default=".")
+    parser.add_argument("--log", default=None)
+    parser.add_argument("--rom-dir", default=None,
+                        help="where the ROM is; defaults to --workdir")
+    known, rest = parser.parse_known_args(argv)
+    known.workdir = Path(known.workdir)
+    known.rom_dir = Path(known.rom_dir) if known.rom_dir else known.workdir
+    known.log = Path(known.log) if known.log else known.workdir / jer_env.LOG_FILENAME
+    return known, rest
+
+
+USAGE = """jer -- play a Jericho interactive-fiction game
+
+  python3 jer look            show the current observation
+  python3 jer do "<command>"  apply one game command
+  python3 jer score           the game's score, the maximum, and the moves spent
+  python3 jer inventory       what you are carrying
+  python3 jer done            declare the episode over
+
+Options (anywhere on the line): --workdir DIR --log FILE --rom-dir DIR
+The game is {game}; the action log is {log}.
+""".format(game=jer_env.GAME_FILENAME, log=jer_env.LOG_FILENAME)
+
+
+def main(argv: list) -> int:
+    args, rest = _parse_global(list(argv))
+    if not rest or rest[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return 0
+    command, rest = rest[0], rest[1:]
+    if command == "look":
+        return cmd_look(args)
+    if command == "do":
+        args.action = rest
+        return cmd_do(args)
+    if command == "score":
+        return cmd_score(args)
+    if command == "inventory":
+        return cmd_inventory(args)
+    if command == "done":
+        return cmd_done(args)
+    print(f"error: unknown command {command!r}", file=sys.stderr)
+    print(USAGE, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

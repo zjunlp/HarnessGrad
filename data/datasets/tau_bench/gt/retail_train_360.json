@@ -1,0 +1,42 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "2499294441"
+    ],
+    "new_item_ids": [
+     "4063058357"
+    ],
+    "order_id": "#W7342738",
+    "payment_method_id": "gift_card_3491931"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "9862136885",
+     "4900990404"
+    ],
+    "order_id": "#W4597054",
+    "payment_method_id": "gift_card_3491931"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4836353",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 360,
+ "instruction": "Your name is Amelia Silva and your zip code is 19117. You are shy, impatient, insecure, optimistic. For #W7342738, modify Wireless Earbuds {'color': 'black', 'battery life': '8 hours', 'water resistance': 'IPX7'} to {'battery life': '4 hours', 'water resistance': 'not resistant'}; via gift_card_3491931. Return #W4597054 via gift_card_3491931: Coffee Maker; Smart Watch; Cancel order #W4836353 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_360",
+ "user_id": "amelia_silva_7726"
+}

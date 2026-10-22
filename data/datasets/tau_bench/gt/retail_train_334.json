@@ -1,0 +1,63 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "address1": "553 Main Street",
+    "address2": "Suite 389",
+    "city": "San Francisco",
+    "country": "USA",
+    "order_id": "#W2609687",
+    "state": "CA",
+    "zip": "94152"
+   },
+   "name": "modify_pending_order_address"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3909704820",
+     "5428723833"
+    ],
+    "new_item_ids": [
+     "6901578702",
+     "5428723833"
+    ],
+    "order_id": "#W2609687",
+    "payment_method_id": "gift_card_1044904"
+   },
+   "name": "modify_pending_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "2658930189"
+    ],
+    "order_id": "#W3972714",
+    "payment_method_id": "credit_card_9698900"
+   },
+   "name": "return_delivered_order_items"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7866854614",
+     "7184044281"
+    ],
+    "new_item_ids": [
+     "1178356107",
+     "3104857380"
+    ],
+    "order_id": "#W1579621",
+    "payment_method_id": "credit_card_9698900"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 334,
+ "instruction": "Your name is Olivia Ahmed and your zip code is 94152. You are shy, patient. For #W2609687, change address to {'order_id': '#W2609687', 'address1': '553 Main Street', 'address2': 'Suite 389', 'city': 'San Francisco', 'country': 'USA', 'state': 'CA', 'zip': '94152'} (same as #W1579621). For #W2609687, modify Indoor Security Camera {'resolution': '4K', 'field of view': '110 degrees', 'connectivity': 'Ethernet'} to {'field of view': '130 degrees'}; Electric Kettle {'capacity': '1.5L', 'material': 'plastic', 'color': 'black'} to {}; via gift_card_1044904. Return #W3972714 via credit_card_9698900: Hiking Boots; For #W1579621, exchange Portable Charger {'capacity': '5000mAh', 'output': 'USB-C', 'color': 'white'} to {'capacity': '20000mAh'}; Headphones {'type': 'in-ear', 'connectivity': 'wireless', 'color': 'black'} to {'type': 'on-ear', 'color': 'red'}; via credit_card_9698900. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_334",
+ "user_id": "olivia_ahmed_6778"
+}

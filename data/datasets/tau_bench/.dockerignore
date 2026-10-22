@@ -1,0 +1,6 @@
+# The ground truth and the check are copied in only at verification time; keeping them
+# out of the build context means they cannot reach the image even by accident.
+gt/
+verify/
+PROVENANCE.json
+**/__pycache__

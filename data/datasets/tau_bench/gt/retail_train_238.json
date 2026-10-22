@@ -1,0 +1,33 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W5056519",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3877338112",
+     "9692325258"
+    ],
+    "new_item_ids": [
+     "3735133539",
+     "8926329222"
+    ],
+    "order_id": "#W5995614",
+    "payment_method_id": "credit_card_3095586"
+   },
+   "name": "modify_pending_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 238,
+ "instruction": "Your name is Yara Muller and your email is yara.muller9246@example.com. You are rigid, shy, confident. Cancel order #W5056519 because no longer needed. For #W5995614, modify Dumbbell Set {'weight range': '5-25 lbs', 'material': 'iron', 'set type': 'adjustable'} to {'weight range': '30-50 lbs', 'material': 'rubber'}; Luggage Set {'piece count': '3-piece', 'color': 'black', 'material': 'softshell'} to {'piece count': '2-piece'}; via credit_card_3095586. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_238",
+ "user_id": "yara_muller_8652"
+}

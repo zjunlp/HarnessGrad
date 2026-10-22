@@ -1,0 +1,32 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W3913498",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8770097",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "order_id": "#W5183325",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 317,
+ "instruction": "Your name is Ivan Santos and your email is ivan.santos3158@example.com. You are confident, sad. Cancel order #W3913498 because ordered by mistake. Cancel order #W8770097 because no longer needed. Cancel order #W5183325 because no longer needed. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_317",
+ "user_id": "ivan_santos_6635"
+}

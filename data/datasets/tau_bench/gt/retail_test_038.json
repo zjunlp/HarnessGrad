@@ -1,0 +1,83 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "email": "daikisanchez1479@example.com"
+   },
+   "name": "find_user_id_by_email"
+  },
+  {
+   "arguments": {
+    "first_name": "Daiki",
+    "last_name": "Sanchez",
+    "zip": "46236"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "daiki_sanchez_3253"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9348897"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "product_id": "3377618313"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "9743693396"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "6817146515"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "2524789262"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "product_id": "9523456873"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "expression": "466.75 + 288.82 + 135.24 + 193.38 + 46.66"
+   },
+   "name": "calculate"
+  },
+  {
+   "arguments": {
+    "order_id": "#W9348897",
+    "reason": "no longer needed"
+   },
+   "name": "cancel_pending_order"
+  }
+ ],
+ "domain": "retail",
+ "index": 38,
+ "instruction": "Your name is Daiki Sanchez, and you live in 46236, your email is daikisanchez1479@example.com. You just placed an order but you realize that your card has only $950 credit left, but the order total is more than $1100. You wonder if the agent can help split the payment with another card. If not, you wonder what the most expensive item and its price, and if you can just cancel that item. If not, you wonder if you can switch all items to their cheapest options and bring the cost down to $950. If not, you wonder if the agent can just cancel the order so that you can order again. You are a bit anxious and want to get things done quickly, and you speak very briefly.",
+ "outputs": [
+  "camera",
+  "481.5"
+ ],
+ "split": "test",
+ "task_id": "retail_test_038",
+ "user_id": "daiki_sanchez_3253"
+}

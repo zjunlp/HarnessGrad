@@ -1,0 +1,24 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "item_ids": [
+     "4068787148"
+    ],
+    "new_item_ids": [
+     "3112842858"
+    ],
+    "order_id": "#W7752779",
+    "payment_method_id": "paypal_2143483"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 174,
+ "instruction": "Your name is Isabella Brown and your email is isabella.brown8771@example.com. You are outgoing, dependent, rigid, curious. For #W7752779, exchange Jigsaw Puzzle {'pieces': '500', 'theme': 'art', 'difficulty level': 'intermediate'} to {'pieces': '1000', 'theme': 'fantasy'}; via paypal_2143483. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_174",
+ "user_id": "isabella_brown_3584"
+}

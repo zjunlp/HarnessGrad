@@ -1,0 +1,53 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Sofia",
+    "last_name": "Li",
+    "zip": "78260"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "user_id": "sofia_li_9219"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4689314"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8855135"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W3916020"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "7758198585"
+    ],
+    "order_id": "#W3916020",
+    "payment_method_id": "credit_card_8105988"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 53,
+ "instruction": "You are Sofia Li, residing in San Antonio, 78260. The bicycle you received was damaged during delivery, and you want to get a refund. You're quite frustrated because the bike was very expensive and you'd like to receive the refund as soon as possible. You want the refund to be credited to your original credit card.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_053",
+ "user_id": "sofia_li_9219"
+}

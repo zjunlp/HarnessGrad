@@ -1,0 +1,31 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "order_id": "#W6302827",
+    "reason": "ordered by mistake"
+   },
+   "name": "cancel_pending_order"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "3735133539"
+    ],
+    "new_item_ids": [
+     "6585768447"
+    ],
+    "order_id": "#W6114312",
+    "payment_method_id": "credit_card_8169552"
+   },
+   "name": "exchange_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 87,
+ "instruction": "Your name is Mohamed Lee and your email is mohamed.lee1888@example.com. You are sad, optimistic. Cancel order #W6302827 because ordered by mistake. For #W6114312, exchange Dumbbell Set {'weight range': '30-50 lbs', 'material': 'rubber', 'set type': 'adjustable'} to {'weight range': '5-25 lbs', 'material': 'urethane', 'set type': 'fixed'}; via credit_card_8169552. ",
+ "outputs": [],
+ "split": "train",
+ "task_id": "retail_train_087",
+ "user_id": "mohamed_lee_5442"
+}

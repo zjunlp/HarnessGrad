@@ -1,0 +1,57 @@
+{
+ "actions": [
+  {
+   "arguments": {
+    "first_name": "Sofia",
+    "last_name": "Li",
+    "zip": "78260"
+   },
+   "name": "find_user_id_by_name_zip"
+  },
+  {
+   "arguments": {
+    "order_id": "#W8855135"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {},
+   "name": "list_all_product_types"
+  },
+  {
+   "arguments": {
+    "product_id": "8940227892"
+   },
+   "name": "get_product_details"
+  },
+  {
+   "arguments": {
+    "user_id": "sofia_li_9219"
+   },
+   "name": "get_user_details"
+  },
+  {
+   "arguments": {
+    "order_id": "#W4689314"
+   },
+   "name": "get_order_details"
+  },
+  {
+   "arguments": {
+    "item_ids": [
+     "5996159312"
+    ],
+    "order_id": "#W4689314",
+    "payment_method_id": "credit_card_8105988"
+   },
+   "name": "return_delivered_order_items"
+  }
+ ],
+ "domain": "retail",
+ "index": 51,
+ "instruction": "You are Sofia Li, residing in San Antonio, 78260. You want to return the digital camera that you received. You guess that the order number is #W8855135, but you're not 100% sure. Insist that you want to return the camera and get a refund to the original payment method.",
+ "outputs": [],
+ "split": "test",
+ "task_id": "retail_test_051",
+ "user_id": "sofia_li_9219"
+}
