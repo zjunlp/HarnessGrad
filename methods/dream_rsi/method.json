@@ -1,0 +1,63 @@
+{
+ "kind": "published",
+ "title": "Dream-RSI：基于各轮代理值的 argmax 选择",
+ "note": "依据 Dream-RSI/papers/Dream-RSI.pdf（v1，2026-09-14）第 5–6 页 §3、公式 (1) 核对，未取得上游实现（README.md:64–65,126–135）。上游已升版：arXiv:2609.14858 v2（2026-10-06）重写了第 3 节，把正文 Eq. (1) 换成附录 B.2 那条 Pareto 目标（归一化 hypervolume 减 λ 并行惩罚），把预算系数换成 ρ∈{0,.25,.5,.75,1} 的扫描，并把 M 明确为 4（当前策略 + 3 个新版本）。本端口实现的是 v1 的线性 Eq. (1)，也就是被替换掉的那一版；该差异见 deviations[appendix_objective]。v2 还新增了第 4 个域 harness optimization（§4.4）。此处实际用各轮 studied score、harness token/1000 和 n_trials 作代理，默认 b1=0.001、b2=0.0 均为移植版选择。保留 argmax 结构，但 guarantee_holds 只核对记录中代理值的大小关系；它不保证论文回放目标、质量、部署或下一候选不退化。选中的 staged state 仅作为后续编辑起点。上游指纹见 docs/upstream-pins.md。",
+ "deviations": [
+  {
+   "id": "replay_simulator",
+   "what": "The replay simulator is absent.",
+   "why": "The paper deterministically reveals recorded children in a fixed discovery tree with prefix-only observations; v2 keeps exactly that mechanism. run.py reads round summaries and builds no tree or replay transitions; it cannot perform zero-new-execution off-policy replay. This is missing machinery, not an exact reduction of replay to best-of rounds.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3 Offline evaluation; Dream-RSI/papers/Dream-RSI.pdf p.5–6, §3 Offline evaluation; README.md:91–104"
+  },
+  {
+   "id": "fixed_history",
+   "what": "Each round's studied score replaces the paper's normalized Pareto hypervolume; no subtree max and no average over replay worlds is formed.",
+   "why": "v2 §3 defines the attained quality as a = clip(s/S_i, 0, 1), the revealed subtree's max normalized by that world's best, then takes the normalized hypervolume of the quality–cost frontier over the budget sweep and averages V_i over the worlds in the history. version_row() calls studied_score(point) with no subtree max, normalization or frontier, and select() compares stored rows without re-evaluating each version on one common history. The paper's t counts accumulated world trees, not tasks already averaged into one score. The max survives only inside the attained score, so the substitution is a single-point linear stand-in for an area; the effect on rankings is unestablished.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3 Replay objective Eq. (1), Policy improvement and selection; Dream-RSI/papers/Dream-RSI.pdf p.6, §3 Replay objective Eq. (1)"
+  },
+  {
+   "id": "execution_cost",
+   "what": "The priced quantity N is the request count (Eq. 1), not kilo-tokens; beta1/beta2 stay unspecified (neither paper version publishes a value) and kilo-tokens are still recorded",
+   "why": "v1 Eq. (1) prices a request count. An earlier version of this port priced harness_tokens/1000 with beta1=0.001, which made the cost term ~8.5 against a quality term bounded by 1, so the argmax followed cost rather than quality (measured 2026-10-17: quality 0.53, cost_kilo 8530, v = -8.000045). N is now the round's position in the evaluation sequence. beta1/beta2 are still values neither paper version publishes; k remains n_trials. N is now the round's position in the evaluation sequence; the remaining open question is the same one both paper versions leave: the coefficient values are unspecified.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3 Replay objective Eq. (1); Dream-RSI/papers/Dream-RSI.pdf p.6, §3 Replay objective Eq. (1); p.7, §4 discovery cost in agent calls"
+  },
+  {
+   "id": "parallelism",
+   "what": "The denominator k is n_trials rather than completed replay decision rounds, and with b2=0.0 the port carries no parallelism term while v2 penalizes serial policies.",
+   "why": "v1 rewards N/max(1,k), the average requests per decision round, not requests divided by worker count or trial repetitions. version_row() sets k=int(n_trials or 1) and uses kilo-tokens in the numerator. v2 changes the sign of the mechanism outright: it subtracts lambda times the mean of k*/n over the budget sweep, with one decision round costing ceil(k/W) effective sequential rounds. b2 defaults to 0.0, so no parallelism signal is used at all by default, and a nonzero override still does not recover either version's term. The effect on rankings is unknown; fixed trials does not mean the paper's k is fixed.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3 Replay objective Eq. (1), parallelism penalty; Dream-RSI/papers/Dream-RSI.pdf p.5–6, §3 replay termination and Replay objective Eq. (1)"
+  },
+  {
+   "id": "offline_revisions",
+   "what": "The offline M-revision phase is absent: every revision is paid for.",
+   "why": "The paper holds history fixed for M evaluated versions including the current policy, with replay feedback between revisions and no new discovery execution for replay. v2 settles the boundary the earlier version left ambiguous: M = 4, meaning the current policy plus three newly generated versions, so M-1 revisions, and Appendix Table 3 lists M per task. main() calls the shared proposer once per invocation (with possible repair retries) and submits one candidate for platform measurement. Historical round count is not M on a common fixed simulator pool.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3 Policy improvement and selection, §B.2 Table 3; Dream-RSI/papers/Dream-RSI.pdf p.5–6, §3 Offline evaluation"
+  },
+  {
+   "id": "policy_surface",
+   "what": "The proposer edits a harness rather than a dedicated executable exploration policy with the shared online/replay batch interface.",
+   "why": "The paper fixes the discovery agent, evaluator and interfaces and changes exploration-policy code governing branching, batching and stopping. main() instead sends harness sources through the common editor with no policy-only restriction or discovery-tree action API. v2's fourth domain (§4.4) does apply the framework to harness optimization, so editing a harness is not foreign to the paper; what stays absent is the declarative policy layer that allocates discovery calls, and the method cannot enforce that only exploration changes.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3, §4.4 Harness Optimization; Dream-RSI/papers/Dream-RSI.pdf p.4–5, §3"
+  },
+  {
+   "id": "selection_scope",
+   "what": "Argmax is over recorded round proxies; the arithmetic check does not establish the paper's replay or deployment guarantee.",
+   "why": "The paper includes the current policy in a common-history comparison then deploys the selected policy. Here an unscored last round is omitted and the last scored row becomes the comparison incumbent. Scores with positive tokens are rounded to six decimals; ties prefer the earliest round, while the paper leaves argmax ties unspecified. base_round() edits a selected staged state or falls back to the actual incumbent when unstaged. No incumbent_round selection is emitted, and the newly edited candidate can regress. guarantee_holds is only a check of recorded proxy values, explicitly labelled guarantee_scope=recorded_proxy_values_only. Its effect relative to the paper is unknown.",
+   "direction": "unknown",
+   "source": "arXiv:2609.14858v2 §3 Policy improvement and selection; Dream-RSI/papers/Dream-RSI.pdf p.6, §3 Policy improvement and selection"
+  },
+  {
+   "id": "appendix_objective",
+   "what": "The port implements v1's linear Eq. (1), which v2 superseded with the appendix's Pareto objective.",
+   "why": "v1's main text gave V = max s_v - beta1*N + beta2*N/max(1,k) while its Appendix B.2 ranked pareto.reward = pareto.auc - lambda * parallel_penalty across a beta sweep, with parallel_penalty built from effective_sequential_rounds / total_probes. Those are different objects, and v1 left their relation unstated. arXiv:2609.14858v2 resolves the conflict by adopting the appendix's form as the main Eq. (1): normalized hypervolume minus lambda times the parallelism penalty, with the beta knob replaced by budget preferences rho in {0, 0.25, 0.5, 0.75, 1}. run.py still computes the superseded linear v1 formula and performs no sweep or AUC. Implementing v2 needs a replay world and the five-point rho sweep, which the unreleased code would provide. The open question is therefore no longer the relation between the two formulas but whether the linear v1 form can stand in for the v2 area.",
+   "direction": "weaker",
+   "source": "arXiv:2609.14858v2 §3 Replay objective Eq. (1), §B.2 Table 3; Dream-RSI/papers/Dream-RSI.pdf p.19 Appendix B.2 Listing 2 lines 12–21; p.6 Eq. (1) (v1, superseded)"
+  }
+ ]
+}

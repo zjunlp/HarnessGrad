@@ -1,0 +1,16 @@
+{
+  "name": "dsh-agent",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null,
+  "runtime_paths": [
+    "/home/xubuqiang/.nvm/versions/node/v22.19.0/bin",
+    "/mnt/20t/xubuqiang/deepseek-harness"
+  ],
+  "env_kinds": [
+    "files",
+    "exec"
+  ]
+}

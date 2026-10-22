@@ -1,0 +1,27 @@
+{
+ "kind": "published",
+ "title": "SICA:置信下界选择(移植)",
+ "note": "SICA 选择规则的移植版:沿用本地 CLB 数学,有可用 CI 时将选中的历史 round 写入 step.incumbent_round。平台负责测量与停止预算;具体数学及历史源码恢复方面的偏差见 deviations。",
+ "deviations": [
+  {
+   "what": "The platform owns candidate measurement and the stopping budget; normal returns record the selected historical round as step.incumbent_round when its comparison bound has an available CI.",
+   "why": "main() reports one step through editor.report_many, the editor API that supports incumbent_round. _worth_continuing is diagnostic only; no-change and unusable proposals explicitly keep stop=False. This records the selection separately from candidate scores while the platform decides what to measure and when to stop.",
+   "direction": "neutral"
+  },
+  {
+   "what": "An unavailable comparison CI leaves incumbent_round unspecified rather than asserting a fallback kept round.",
+   "why": "_incumbent_fields requires a finite, ordered two-endpoint score_ci95 on the bound holder and a valid selected round. Missing history, unavailable CI, or an invalid round is explained in method_reported.sica_rule.incumbent_reason. Upstream sica/runner.py:107-114 instead defaults to iteration 0 when score tables or statistics are empty. The existing selector and its prompt fallback remain unchanged.",
+   "direction": "unknown"
+  },
+  {
+   "what": "The selected historical round is recorded and named in the prompt, but its source snapshot is not restored for editing.",
+   "why": "main() continues to pass request.base_harness to editor.ask and editor.apply_edits. The edit uses the shared platform editor rather than SICA's full per-iteration improvement machinery; incumbent_round records the choice but does not itself switch the tree being edited.",
+   "direction": "unknown"
+  },
+  {
+   "what": "When no iteration clears the bound, this port keeps the bound holder; upstream `select_base_agent` falls off the end of its loop and returns None.",
+   "why": "sica/runner.py:126-135 returns `i` on the first clearing iteration and has no `else` branch, so its caller must handle None. Handing back a round is a platform adaptation: a method here has to name the tree it edits. The rule is unchanged otherwise -- the bound is the highest-mean iteration's `ci_lower` and the comparison is `>=`.",
+   "direction": "unknown"
+  }
+ ]
+}

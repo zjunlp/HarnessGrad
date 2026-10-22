@@ -1,0 +1,34 @@
+{
+ "kind": "published",
+ "title": "DGM:归档里的父代采样",
+ "fidelity_profile": "archive-aligned-staged-eval-dual-role",
+ "source_commit": "bd7c0773c8f7d17549a3b67e7d783c47f7fba407",
+ "note": "移植的是 DGM 的归档规则：父代权重 = sigmoid(10*(分数-0.5)) / (1+子代数)，让搜索从\"一个走运的祖先\"上散开。**2026-10-20 起目标选择默认走具体失败类别**（`trace`）：从未提交（≈ 上游 solve_empty_patches）与上下文被裁剪（solve_contextlength），这两类不需要标准答案、平台轨迹里就有；此前是\"失败占比≥50% 就说 broad failure mode\"，在 AppWorld 上每轮都是同一句话，编辑因此每轮重写一遍广谱机制并丢掉上一轮已解出的 17–20 题。`HG_DGM_TARGET_MODE=broad` 仍可复现旧行为（15 轮 AppWorld 曲线就是在它下面测的）。一次调用可提交多个 child：HG_DGM_CHILDREN 默认 3（上游 --selfimprove_size 默认 2）。SWE-bench 的 gold patch、private test patch 和官方测试日志仍不提供。",
+ "deviations": [
+  {
+   "what": "The round's target is chosen from two trace-derived failure categories (never submitted, context trimmed) instead of upstream's four entries.",
+   "why": "solve_empty_patches and solve_contextlength are episode properties this platform records; the other two need repeated trials or a continuous per-task score, which it does not have. Before this the target was 'N/90 tasks fail' every round, which made each edit a broad rewrite. Direction in the lint's terms: closer to upstream than the broad rule, still narrower than upstream.",
+   "direction": "weaker"
+  },
+  {
+   "what": "The diagnostic prompt carries no gold patch, no private test patch and no test log.",
+   "why": "The platform excludes them on purpose (INTERFACE.md 2.3, 2.4): a method that can read the verifier can fit the verifier.",
+   "direction": "weaker"
+  },
+  {
+   "what": "One invocation can submit multiple children via `editor.report_many`: each child samples a parent from the same archive history and chooses that parent's target, then children are generated sequentially and submitted as a batch. No rejection means no post-measurement score-based rejection or rollback to an earlier incumbent via `incumbent_round`.",
+   "why": "Upstream DGM_outer.py:90-100 samples parents with replacement and :111-148 selects an entry per parent. The port uses child-specific sampling seeds; repeated parents and identical edits remain possible. Only changed, usable edits are submitted, subject to the remaining budget. `keep_all` (default) / `keep_better` governs future parent eligibility, not whether a measured child is rolled back; malformed history and unsafe, unmeasured or uncompiled parents are still filtered.",
+   "direction": "neutral"
+  },
+  {
+   "what": "`HG_DGM_CHILDREN` has default 3, whereas upstream `--selfimprove_size` has default 2 (DGM_outer.py:224). This is an existing port configuration choice and a default batch-size deviation, not the upstream default.",
+   "why": "methods/dgm/run.py reads the environment setting and caps the requested batch by the remaining budget; missing parents or unusable edits can further reduce submissions. This documentation repair leaves that setting and its default unchanged; its effect on outcomes is not established.",
+   "direction": "unknown"
+  },
+  {
+   "what": "`noise_leeway` remains configurable via `HG_DGM_NOISE_LEEWAY`, with default 0.1 matching upstream `--eval_noise` (DGM_outer.py:238).",
+   "why": "As in DGM_outer.py:174-188, it affects only `keep_better`: the archive score floor is the initial score minus the leeway. The default `HG_DGM_RETAIN=keep_all` bypasses this floor. Environment-based configuration is a platform adaptation; no task-set-specific recalibration or statistical guarantee is implemented.",
+   "direction": "unknown"
+  }
+ ]
+}

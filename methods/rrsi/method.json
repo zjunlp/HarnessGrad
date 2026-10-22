@@ -1,0 +1,59 @@
+{
+ "kind": "published",
+ "title": "RRSI: 噪声带内的逐轮决策（port）",
+ "note": "HarnessGrad mode-A port 移植逐轮规则，并通过单 step report_many 的 incumbent_round 记录最新历史候选重裁决后的保留轮次；没有可用判定则不声明保留并记录原因。平台已有批量提交与历史树能力，但此入口仍一次只草拟一个候选，不恢复选中树，也未接通上游同 incumbent 的 m-candidate 评估后选优。独立的 methods/rrsi/fidelity.py 提供离线候选池选择等纯函数；这仍不是 native reproduction。",
+ "source": {
+   "repository": "/mnt/20t/xubuqiang/Study/RRSI",
+   "commit": "e4d1a7a0388e02b388bc40eb0a125fcfc7123f8d",
+   "scope": "native algorithm source audit; local checkout may contain unrelated uncommitted probes"
+ },
+ "fidelity_profile": {
+   "preserved": [
+     "noise floor, two-branch cost rule, structural novelty, and study-side score discipline",
+     "m-candidate argmax over admissible candidates and incumbent retention when none qualify (offline pure module)"
+   ],
+   "adapted": [
+     "annealed budget, stall/exploration reserve, pruning state, and bounded critic repair are wired in the one-candidate-per-call mode-A port only",
+     "pre-evaluation deterministic plus model critic is retained in the port, while native multi-candidate retry/deploy wiring is missing",
+     "HarnessGrad artifact/channel and configurable model, scaffold, domain evaluator and split",
+     "platform trial-spread calibration is an explicit provenance-labeled adapter",
+     "role prompts are compact adaptations of the upstream action contracts, not verbatim templates",
+     "missing token accounting is explicitly marked unavailable instead of using the upstream dC=0 substitution",
+     "incumbent_round records delayed singleton re-adjudication against the actual predecessor; it does not restore a historical tree or select the newly submitted unmeasured candidate"
+   ],
+   "missing_until_runtime_support": [
+     "runtime wiring to draft/group m screened artifacts from one incumbent, evaluate on the study side, and select after measurements become visible (batch submission already exists)",
+     "restoration/deployment of the retained incumbent via available states/ trees; kept_round records a choice but does not deploy it",
+     "native analyst/digester trace dispatch, git worktrees/frontier, and k trials inside the RRSI loop",
+     "full upstream role prompt bodies and domain-specific role briefs"
+   ],
+   "source_role_prompt_hashes": {
+     "digester": {"path": "rrsi/digester.py:SYSTEM_TMPL", "sha256": "24c9ceb093eee4ed22eae971d65001f075781543de77b45cdeebd476907dd0b3"},
+     "analyst": {"path": "rrsi/analyst.py:SYSTEM_TMPL", "sha256": "11287c002c2d09d9b48cd6f22c290ae9073c33a0dabe01db12a5da76f12c5703"},
+     "proposer": {"path": "rrsi/propose.py:SYSTEM_TMPL", "sha256": "cb31c5acc8f70eb0454e9e35ed146aa96f458f8d309934846769b20890f1fe10"},
+     "critic": {"path": "rrsi/critic.py:SYSTEM_TMPL", "sha256": "8818c7e1d7b082190cc9abd72b368160d1818a3ee9587badda7709af515b94ed"}
+   }
+ },
+ "deviations": [
+  {
+   "what": "The run.py port still drafts one candidate per call and records delayed singleton retention instead of executing the native measured m-candidate selection and deployment loop.",
+   "why": "The platform supports report_many batches (methods/editor.py:1485-1530), records incumbent_round as kept_round without deploying it (harnessgrad/loops/mode_a.py:524-544), and exposes historical trees through states/ (harnessgrad/channel.py:427-450). A batch exposes no intervening measurement to the method. Upstream rrsi/loop.py:290-307 drafts/screens m variants from one incumbent, evaluates them, then calls rrsi/selection.py:124-137 for an admissible argmax; rrsi/loop.py:327-340 deploys the winner or retains H_t. This port neither groups such a pool for later selection nor restores a selected states/ tree. It only re-adjudicates the latest measured historical candidate against its predecessor and emits that retention as incumbent_round. The offline fidelity.py selector is not wired into main().",
+   "direction": "weaker"
+  },
+  {
+   "what": "Missing token accounting leaves admissibility and retention undeclared after the score floor passes.",
+   "why": "Upstream rrsi/evaluate.py:131-135 substitutes dC=0 when either token count is unavailable. run.py:_relative_cost_change and _judge instead mark cost_rule_active=false and admissible=null; _retention then omits incumbent_round with the cost_skipped reason. This avoids claiming a cost verdict without its inputs but cannot reproduce upstream selection in that case.",
+   "direction": "weaker"
+  },
+  {
+   "what": "The noise band uses an explicit override or a platform trial-spread adapter, with a declared fallback, rather than staging upstream base calibration.",
+   "why": "run.py:_delta uses HG_RRSI_DELTA when set; otherwise z*sqrt(2)*score_std of the latest point when score_std>0 and n_trials>1, or HG_RRSI_DELTA_FALLBACK (default 0). Upstream rrsi/calibrate.py:85-108 estimates from repeated base scores or per-task trial bootstrap. The adapter and fallback do not establish equivalence to that base-calibration procedure.",
+   "direction": "neutral"
+  },
+  {
+   "what": "Native scaffold and evaluator are not silently replaced.",
+   "why": "The port keeps model, scaffold, domain evaluator and split configurable; a result is a decision-rule alignment measurement until those axes match the source instance.",
+   "direction": "weaker"
+  }
+ ]
+}

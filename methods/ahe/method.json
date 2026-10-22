@@ -1,0 +1,42 @@
+{
+ "kind": "published",
+ "title": "AHE:预注册预测与组件级回退",
+ "note": "移植的是 AHE 的每轮决策规则:动手之前先写 change_manifest,声明 predicted_fixes 和 risk_tasks;下一轮用 per-task 的 fail→pass / pass→fail 把每条改动判成 HARMFUL / MIXED / EFFECTIVE / PARTIALLY_EFFECTIVE / INEFFECTIVE,判决再渲染成「保留 / 改进 / 回滚并换一层重来」。HARMFUL 时把候选建在被归因改动的基底上。每次调用恢复 Best-of-2:以不同策略指令并发生成两个独立候选,两者有效且不同则一批提交测量;声明相同、实际内容相同或只有一个有效候选时确定性退回单候选并记录原因。winner 仍由平台按 train 分数选择,AHE 自己的 winner 规则无法在 mode A 表达。这里的两候选不等于每任务 k 次 rollout 全过聚合;全工具编辑器也未恢复。constraint_level 在 AHE 里没有任何 Python 读它,这里也只当声明记录。",
+ "deviations": [
+  {
+   "what": "Rollback uses a different edit base plus an instruction, at whole-candidate granularity rather than restoring individual declared changes.",
+   "why": "choose_edit_dir restores the staged base of a HARMFUL candidate; the one-shot editor receives the per-change rollback instructions (upstream evolve.py:2860-2861), but there is no mechanical per-change restoration.",
+   "direction": "weaker"
+  },
+  {
+   "what": "Two proposal variants are generated per call in the upstream `n_variants` sense (`evolve.py:3123-3151`), but winner selection remains with the platform by train score; AHE's own winner rule cannot be expressed in mode A.",
+   "why": "Upstream `adopt_variant_winner` merges the best of `n_variants` git worktrees and tags the losers; here both variants are measured and the platform keeps whichever train score is best. The word `k` is deliberately not used here: upstream `k` is per-task rollout count (`evolve.py:599-602`), a different quantity from the number of proposal variants.",
+   "direction": "weaker"
+  },
+  {
+   "what": "The batch deterministically falls back to its first usable candidate when change declarations or applied contents are identical; a declined, invalid or failed sibling also reduces the usable batch.",
+   "why": "Temperature=0.0 needs explicit strategy differences, supplied by variant_prompt as upstream strategy hints (evolve.py:3715-3758). Declarations are compared before filling omitted files and without list-order differences; applied contents are also compared. ahe_rollouts records the fallback reason and both variant outcomes rather than claiming two distinct proposals.",
+   "direction": "weaker"
+  },
+  {
+   "what": "Exact shared-base attribution requires the recorded parent point to remain in the staged history.",
+   "why": "ahe_rule.edited_from_round identifies the parent of both variants. attribution_history compares against that point when present, but retains the legacy adjacent-point fallback if the recorded parent is absent; truncated history cannot support exact shared-base attribution.",
+   "direction": "weaker"
+  },
+  {
+   "what": "Per-task rollouts stay at 1 because the platform runs `--trials 1`; upstream's `k` (`evolve.py:599-602`) passes a task only if ALL k rollouts pass, so this is a run configuration, not a difference in the ported rule.",
+   "why": "`--trials` is the platform's knob and it is recorded on every point, so a run with `--trials 2` would exercise upstream's aggregation; nothing in this port prevents it. Kept separate from the two proposal variants above so the two quantities are not conflated.",
+   "direction": "weaker"
+  },
+  {
+   "what": "Each variant uses one shared-editor request instead of AHE's full tool-using evolution and debugger workflow.",
+   "why": "run.py dispatches editor.ask once per variant and applies its returned edits; it does not run the upstream evolve-agent tool loop or cross-variant debugger (evolve.py:3690-3712).",
+   "direction": "weaker"
+  },
+  {
+   "what": "AHE's component taxonomy travels only as a declared string.",
+   "why": "This harness contract does not know AHE's mount points, so the level can be recorded but not enforced.",
+   "direction": "neutral"
+  }
+ ]
+}

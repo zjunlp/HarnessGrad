@@ -1,0 +1,53 @@
+{
+ "surface": "deepseek-harness-profile",
+ "about": [
+  "What an improver may edit on this harness, declared by the harness itself.",
+  "Declarative, not code: the launcher reads this file and refuses an edit outside it,",
+  "so a method cannot reach the credentials, the settings that override the patch, or the",
+  "230 MB dependency tree. Verified 2026-10-21 (findings.md §185-186)."
+ ],
+ "allow": [
+  "cordis.patch.yml",
+  "knobs.json",
+  "plugins/*.mjs",
+  "plugins/*.js",
+  "skills/**"
+ ],
+ "deny": [
+  "**/settings.yaml",
+  "**/credentials*",
+  "**/.env*",
+  "**/node_modules/**",
+  "**/profiles/**/package.json"
+ ],
+ "caps": {
+  "files": 40,
+  "bytes": 200000,
+  "per_file_bytes": 64000
+ },
+ "apply": {
+  "where": "profile",
+  "profile": "headless",
+  "path_root": "$DSH_HOME/profiles/headless",
+  "note": "DSH resolves the profile root from DSH_HOME, not HOME (measured §186.2): a launcher that sets only HOME makes the patch silently inert while the task still succeeds."
+ },
+ "smoke": {
+  "compose": {
+   "argv": [
+    "--profile",
+    "headless",
+    "--dump-config"
+   ],
+   "must_contain": "cordis.patch.yml"
+  },
+  "boot": {
+   "argv": [
+    "--profile",
+    "headless",
+    "<trivial task>"
+   ],
+   "expect": "non-empty answer"
+  },
+  "note": "-h prints usage without loading the plugin tree, and --dump-config does not resolve modules, so neither alone is a smoke (§186.1)."
+ }
+}

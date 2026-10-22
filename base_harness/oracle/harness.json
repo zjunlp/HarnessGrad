@@ -1,0 +1,13 @@
+{
+  "name": "oracle",
+  "version": "1",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": [
+    "files",
+    "exec"
+  ],
+  "install": null,
+  "notes": "A CONTROL, NOT A HARNESS. It runs the dataset's own reference solution instead of attempting the task, and exists to prove that a dataset's verify path can produce a pass at all. A score of 0 from a real harness against a dataset whose oracle also scores 0 says nothing about the harness -- it says the check is not reachable, which is exactly the ambiguity this control removes. Never report a curve row for it.",
+  "role": "control"
+}

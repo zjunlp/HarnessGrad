@@ -1,0 +1,67 @@
+{
+    "_why": "One place that says which improver to use and how it is governed. `default` names an entry below; an entry's `version` is what is resolved: an exact version, `latest` (highest verified on this machine), or an absolute path. Whatever is resolved is reported as an immutable fact (version + sha256) and belongs on every curve point -- `latest` means 'do not pin', never 'do not record'. The `default` is an **endpoint**, not the CLI: an unattended run has to be able to use the default, and a CLI needs a logged-in account, a HOME of its own and a long timeout — measured, making codex the default meant a run resolved a CLI, recorded it in `identity.improver`, and then a method carrying its own editor called whatever `.env` held instead. That is the defect `INTERFACE.md` §4.49.1 records; the decision there is option A, and this line is it.",
+    "default": "deepseek",
+    "improvers": {
+        "codex": {
+            "name": "codex",
+            "kind": "cli",
+            "version": "latest",
+            "path": "",
+            "modified": false,
+            "env": {
+                "CODEX_HOME": ".codex-home"
+            },
+            "note": "The upstream Codex CLI, unmodified. `latest` because the first question a user asks is 'can I use the current one' -- and because the version actually used is recorded, so this stays reproducible in the only sense that matters: a number always says what produced it."
+        },
+        "dsh": {
+            "name": "dsh",
+            "kind": "cli",
+            "argv_style": "dsh",
+            "version": "latest",
+            "path": "",
+            "launcher": "methods/dsh-improver",
+            "interpreter": "node",
+            "home": "/mnt/20t/xubuqiang/hg-work/dsh-improver-home",
+            "api_key_env": "DEEPSEEK_API_KEY",
+            "runtime": [
+                "/mnt/20t/xubuqiang/deepseek-harness",
+                "/mnt/20t/xubuqiang/hg-work/dsh-improver-home"
+            ],
+            "build_command": [
+                "git",
+                "-C",
+                "/mnt/20t/xubuqiang/deepseek-harness",
+                "rev-parse",
+                "--short",
+                "HEAD"
+            ],
+            "model": "deepseek-flash",
+            "provider": "deepseek-official",
+            "profile": "headless",
+            "modified": false,
+            "note": "The harness's own agent CLI as the improver: `dsh --profile headless` runs one agentic task in the candidate tree with read/edit/bash tools, on `deepseek-flash` -- the same model the `deepseek` endpoint improver calls, so the two differ in *agency*, not in model. This is what the endpoint layer cannot do: `methods/editor.py` is one chat completion, so evidence must be inlined and is capped (6 traces, worst-first), while this reads `_harnessgrad/` itself and decides what matters. `argv_style` and `launcher` are how an entry says its CLI is not codex; `runtime` is what the method sandbox must bind; `build_command` identifies the *checkout* rather than the 2 KB launcher, because that repository is live and its build output can change underneath a run. Recorded as `version` on every point, e.g. `0.1.5+cdb43ac4`.\n\n`home` is a dsh home built for this role and nothing else: one provider, one model, no sessions, no third-party providers. It exists because borrowing the operator's `~/.dsh` made \"which model edits the harness\" depend on an ambient `DSH_HOME` that this tool environment happens to export -- inherited by the driver and by every method -- and because that home carries `llm-pi-ai` providers nobody chose for the improver. `methods/cli_improver.py` copies it into the round's workspace (dsh writes sessions under its home and the sandbox binds these trees read-only) and hands the improver a *restricted* environment: `api_key_env` is the one credential it gets, and every other secret-shaped variable is dropped, so \"no forbidden models, no other endpoints\" is a property of what the process holds rather than of it not trying."
+        },
+        "local": {
+            "name": "local",
+            "kind": "openai-compatible",
+            "version": "",
+            "path": "",
+            "modified": false,
+            "note": "A local model as the improver, through the platform's own chat-completions client (methods/editor.py). Kept as an option, not a default: measured, this vLLM's /v1/responses returns tool calls as <tool_call> TEXT rather than structured function_call items, so a codex-style loop cannot use it. Re-evaluate when a local model is chosen; the plan is to select one specifically for this role."
+        },
+        "deepseek": {
+            "name": "deepseek",
+            "kind": "openai-compatible",
+            "version": "",
+            "path": "",
+            "modified": false,
+            "model": "deepseek-flash",
+            "base_url": "https://api.deepseek.com/v1",
+            "api_key_env": "DEEPSEEK_API_KEY",
+            "note": "A hosted chat-completions provider used as the improver, through the platform's own client (`methods/editor.py`) -- the same code path as `local`, so a method does not need a second implementation. The model is DeepSeek-V4.1-Flash, and the project does not use any other DeepSeek model (`_forbidden_models`, enforced by `resolve()` and by `driver.py`); `--improver-model` can still choose a *different endpoint's* model, because that is a different experiment, but not a forbidden one. Declared here rather than left to `.env` because 'which improver ran' has to be a recorded fact: the entry names the endpoint and the model, and the platform injects both into the method's environment, so the number on the curve point and the endpoint the method called cannot disagree."
+        }
+    },
+    "_forbidden_models": {
+        "deepseek-v4-pro": "we use `deepseek-flash` (DeepSeek-V4.1-Flash) instead: it scores better on our tasks and costs less. Recorded here as a refusal rather than a convention, because a run that quietly used a different model would put a number on a curve nobody can compare against anything."
+    }
+}

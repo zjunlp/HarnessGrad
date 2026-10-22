@@ -1,0 +1,6 @@
+{
+ "kind": "control",
+ "title": "阳性对照:把步数上限提到环境预算",
+ "note": "已知答案的 H1,与 `noop`(阴性对照)配对。它只做一处改动:把 `agent.py` 的 `MAX_STEPS` 默认值从 32 提到 50。依据不是猜的 —— `base_harness/loop/agent.py:54-57` 自己写着这个杠杆是陷阱,并给出它合法的条件:\"helps only if the model is already using the steps it has\"。实测 alfworld 的 134 条轨迹里,失败的 71 条有 37 条正好停在上限(通过的中位只要 14 步),也就是模型确实在用这些步数,条件成立。50 不是随便取的:那是 alfworld 环境自己的 `STEP_BUDGET`(`data/datasets/alfworld/lib/gym_env.py:44`),而 harness 的上限低于它时,harness 才是那个提前掐断episode的东西。先跑它再跑任何方法:方法的编辑可能是任意的,所以方法跑出零结果时,\"仪器看不见真改进\"和\"方法没提出有用的东西\"无法区分。",
+ "deviations": []
+}

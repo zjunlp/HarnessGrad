@@ -1,0 +1,6 @@
+{
+ "kind": "reference",
+ "title": "The B shape: a batch of candidates per call",
+ "note": "One of the two trajectory shapes this platform supports. Not a port of any published method and it claims none; the shape is the whole content. See `docs/methods_we_port.md` for how the published ports map onto it.",
+ "deviations": []
+}

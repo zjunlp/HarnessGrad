@@ -1,0 +1,12 @@
+{
+  "name": "loop",
+  "version": "0.2.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": "requirements.txt",
+  "env_kinds": [
+    "files",
+    "exec"
+  ]
+}

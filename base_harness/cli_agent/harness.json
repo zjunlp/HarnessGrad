@@ -1,0 +1,15 @@
+{
+  "name": "cli-agent",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null,
+  "env_kinds": [
+    "files"
+  ],
+  "notes": "A wrapper: runs any prompt-taking agent CLI (Claude Code, Codex, OpenCode, ...) as the harness. Configure with HG_CLI / HG_CLI_ENV / HG_CLI_MODEL. See agent.py's docstring. `runtime_paths` names the trees a CLI lives in when it is not under /usr; this example points at a directory outside the platform holding tools/fake_cli.py's copy.",
+  "runtime_paths": [
+    "/mnt/20t/xubuqiang/Study/harnessgrad_cli"
+  ]
+}

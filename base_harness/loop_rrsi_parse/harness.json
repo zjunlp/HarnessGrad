@@ -1,0 +1,8 @@
+{
+  "name": "loop-rrsi-parse",
+  "version": "0.2.0+r0A",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null
+}

@@ -1,0 +1,4 @@
+{
+ "_why": "Which improvers the console may launch as the **meta-harness**, and the name the operator sees. `improvers.json` is the platform's full registry and also holds improvers this console is not meant to launch: `deepseek` and `local` are bare OpenAI-compatible endpoints (the endpoint fallback, not a harness), `codex` is another vendor's CLI. The one these experiments run is the DeepSeek-Harness CLI, registered as `dsh`; the record keeps that id because `--improver` and every curve point use it, and the console shows the harness's real name.",
+ "improvers": [{"name": "dsh", "label": "deepseek-harness"}]
+}

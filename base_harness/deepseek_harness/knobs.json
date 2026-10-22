@@ -1,0 +1,16 @@
+{
+ "about": [
+  "The behavioural knobs of this harness, as data: a method edits a value here instead of",
+  "rewriting the launcher, so the diff says which knob moved and the record can name it.",
+  "Defaults live in agent.py; a missing file or a dropped key falls back to them, so this",
+  "file is an overlay on the code rather than a second source of truth."
+ ],
+ "prompt": {
+  "preamble": "Complete the following task. Everything you need is in the current working directory, and the work is the files you leave there rather than a description of them.\n\n",
+  "append_inputs": true,
+  "inputs_header": "\n\nTask inputs:\n"
+ },
+ "limits": {
+  "dump_config_timeout_s": 20
+ }
+}

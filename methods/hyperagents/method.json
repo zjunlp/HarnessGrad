@@ -1,0 +1,24 @@
+{
+ "kind": "published",
+ "title": "HyperAgents:按分数与子代数采样父代",
+ "fidelity_profile": "archive-aligned-selector-branches-dual-role",
+ "source_commit": "local methods_src/hyperagents checkout; git commit unavailable",
+ "note": "移植的是它的父代选择:以前三名均值为中心的 sigmoid,再乘 exp(-(子代数/8)^3)。顺带记下一条查证过的差异:它另一个选择器 select_next_parent 算完子代数和分数后把它们整个丢掉,直接 random.choice —— 均匀的是那个分支,不是公式本身(归一化的 sigmoid 并不均匀)。区别在于「设计上就随机」还是「两个选择器里有一个忽略了自己算出来的统计量」。",
+ "deviations": [
+  {
+   "what": "Multiple children per call: HG_HYPERAGENTS_CHILDREN defaults to 3, capped by remaining epochs. Parents are sampled from valid measured history using sigmoid(10*(score-mid)) * exp(-(children/8)^3), with mid = mean(top-3 scores). The snapshot window is configurable: HG_METHOD_HISTORY_ROUNDS=0 keeps all states by default; positive N stages only the newest N states (STATES_KEPT = HISTORY_ROUNDS or None).",
+   "why": "Upstream generates, evaluates and archives each generation before selecting the next parent (generate_loop.py:900-925,1006-1017); siblings here use the same pre-call history without intervening scores or child-count updates. All round summaries remain visible, but if a sampled parent's snapshot is absent from the staged index or directory, that child is skipped rather than resampled (run.py:309-318,352-371; harnessgrad/channel.py:395-397,427-449,565-569).",
+   "direction": "weaker"
+  },
+  {
+   "what": "The live parent selector reads a single protocol.studied_score value; upstream staged-eval rescaling, per-domain agent/ensemble max and multi-domain averaging are not applied. staged_eval.py records scheduling metadata with score_rescaling=none (run.py passes staged_fraction=1.0). archive.py:ArchiveNode.score implements agent/ensemble max, but run.py does not use that helper for parent scoring.",
+   "why": "Upstream utils/gl_utils.py:38-57 rescales agent and ensemble scores when full evaluation has not run and takes their max; :523-530 averages those results across domains. The port instead uses the platform's scalar measurement for the run's selected task set (run.py:148-158,245-248,363-368; staged_eval.py:30-40; archive.py:57-61), without those per-domain staged/full agent and ensemble results.",
+   "direction": "weaker"
+  },
+  {
+   "what": "HG_HYPERAGENTS_SELECT is read once at module import, defaulting to score_child_prop. It selects fixed local weight branches: score_child_prop, score_prop, uniform/random or best; it does not execute or evolve upstream select_next_parent.py. Unrecognized values (including latest) fall back to score_child_prop weights while the report retains the requested setting.",
+   "why": "Upstream generate_loop.py:1071 defaults to score_child_prop, utils/gl_utils.py:511 defaults to best, and select_next_parent.py:49-57 discards child counts and samples uniformly. The port's configuration, branch table and fallback are in run.py:117,220-230,250-253; successful selections report the requested setting and actual weights with a deterministic round-based seed (run.py:263-297).",
+   "direction": "neutral"
+  }
+ ]
+}

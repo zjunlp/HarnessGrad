@@ -1,0 +1,4 @@
+{
+ "_why": "Which base_harness/ directories the console may launch as a *task* harness. The directory also holds the platform's probes (loop_plain, loop_rrsi_parse) and the improver agents (cli_agent, codex_agent, dsh_agent) plus `oracle`; all of them are harnesses, but none of them is a task agent a study should start from. Declaring the set here keeps the console from hard-coding it while still refusing to offer the rest.",
+ "harnesses": ["loop", "deepseek_harness"]
+}

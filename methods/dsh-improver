@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# The dsh CLI as an improver: one agentic task, run in the current working directory.
+#
+# `cli_improver.propose` runs this with `cwd=<candidate>`, so "the current working
+# directory" *is* the harness the method is proposing a change to. dsh reads and edits it
+# with its own tools -- read, edit, bash -- which is the whole difference between this
+# improver and the endpoint layer: the endpoint gets evidence inlined into a prompt and
+# capped, this one gets the workspace and reads whatever it decides it needs.
+#
+# **Why it lives in `methods/` and not in `improvers/`.** The method sandbox binds
+# `PLATFORM_ROOT/methods` -- the directory the method's own program lives in -- and
+# deliberately drops every tree that lies inside the platform (`harnessgrad/methods.py`,
+# the guard whose docstring is about not undoing the hide). A launcher under
+# `improvers/` is therefore *invisible* to the method that has to execute it. Measured:
+# `round 1: method entrypoint failed ... the platform named an improver at
+# '.../improvers/dsh-improver', which does not exist inside this sandbox`. The choice was
+# to widen that guard or to move the file; widening it means an operator-writable registry
+# could name any directory under the platform -- `data/` holds the expected answers -- so
+# the launcher sits beside `cli_improver.py`, which is the module that runs it and is
+# already bound for exactly this reason.
+#
+# Why a launcher instead of pointing the registry straight at the built CLI: the model has
+# to be a fact of the *command line*, not of ambient state. dsh reads `agent-default-model`
+# out of `$DSH_HOME/settings.yaml`, which belongs to whoever is logged in on this machine --
+# so a run could be recorded as one model while another answered it, which is the same
+# class of lie the `deepseek` registry entry exists to prevent. `--patch` pins both fields
+# at composition time, so the pin is visible in the argv and cannot drift behind the record.
+set -euo pipefail
+
+root="${HG_DSH_ROOT:-/mnt/20t/xubuqiang/deepseek-harness}"
+bin="$root/apps/cli/lib/bin.js"
+
+# `tools/improver.py:_run_version` verifies the resolved improver by asking it its version,
+# so `--version` has to answer before anything else happens.
+if [ "${1:-}" = "--version" ]; then
+  [ -f "$bin" ] || { echo "dsh improver: no built CLI at $bin" >&2; exit 2; }
+  exec node "$bin" --version
+fi
+
+[ -f "$bin" ] || {
+  echo "dsh improver: no built CLI at $bin -- build it with 'pnpm build' in $root" >&2
+  exit 2
+}
+
+# The pin goes in the candidate's *parent* -- the method's workspace -- rather than in
+# /tmp: the method sandbox binds the work root, and a namespace need not have a writable
+# /tmp. The workspace is also where `improver.log` lands, so it is known writable, and a
+# dotfile there is outside the candidate, so `_changed_files` can never mistake it for
+# something the improver did to the harness.
+#
+# It is left behind on purpose once the task starts: sitting next to `improver.log`, it is
+# the receipt of which model this round was pinned to. The trap covers only the paths that
+# never reach the `exec` below -- `exec` replaces this shell and takes the trap with it,
+# which is also why no later line can clean up.
+work="$(dirname "$(pwd -P)")"
+pin="$work/.dsh-model-pin.yml"
+if ! : 2>/dev/null >"$pin"; then
+  pin="$(mktemp)"
+fi
+trap 'rm -f "$pin"' EXIT
+cat >"$pin" <<EOF
+- id: agent-default-model
+  config:
+    provider: ${HG_IMPROVER_PROVIDER:-deepseek-official}
+    model: ${HG_IMPROVER_MODEL:-deepseek-flash}
+EOF
+
+exec node "$bin" \
+  --profile "${HG_IMPROVER_PROFILE:-headless}" \
+  --patch "$pin" \
+  "$@"

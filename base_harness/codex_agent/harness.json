@@ -1,0 +1,10 @@
+{
+  "name": "codex-agent",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null,
+  "runtime_paths": ["/home/xubuqiang/.nvm/versions/node/v22.16.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin"],
+  "env_kinds": ["files", "exec"]
+}

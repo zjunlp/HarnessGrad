@@ -1,0 +1,32 @@
+{
+ "kind": "published",
+ "title": "Meta-Harness:每题 frontier,和更宽的历史",
+ "note": "移植的是它的 frontier 规则(`update_frontier`):**每题**记录最佳候选与通过率,外加总体最佳;下一轮建在总体最佳那个**已 staged** 的状态上。历史分数与假说覆盖所有曲线点,源码与 trace 受 staged 窗口限制。批量候选先一次设计 name/hypothesis/changes,再逐个从同一基底实现;多样性来自设计阶段的文本差异,不是采样。原实现的 validate+smoke 门带不过来(mode A 交出去的候选就是被测对象,方法不能先单题试跑),Claude Code 的工具面也换成了共用 editor;它的搜索集与报告集是同一批 89 题,我们分开。见 docs/methods_we_port.md §6。",
+ "deviations": [
+  {
+   "what": "A different experiment on a different model, not a reproduction.",
+   "why": "Their default is 89 tasks x 2 trials at concurrency 50 on Opus 4.6 with an optional `--full-eval` 5-trial winner pass; ours is the shared editor with the run's own trials.",
+   "direction": "unknown"
+  },
+  {
+   "what": "History depth is the newest 12 states, not every prior candidate.",
+   "why": "`STATES_KEPT`; every curve point is still on disk, but the proposer does not see all prior source and traces.",
+   "direction": "weaker"
+  },
+  {
+   "what": "The gate cannot smoke-test.",
+   "why": "mode A cannot smoke-test: a candidate that is handed over *is* evaluated, so the gate can only move to 'do not spend this round'.",
+   "direction": "weaker"
+  },
+  {
+   "what": "A bounded two-stage batch replaces the upstream agent-written candidate manifest.",
+   "why": "Upstream meta_harness.py:431-456 runs one proposer session; SKILL.md:65,70-98 requires one mechanism per candidate and passes its name and changes from analysis to implementation. Here one editor.ask designs up to HG_META_HARNESS_CANDIDATES (default 3, capped by remaining epochs), then separate calls implement each design from the same base. Diversity comes from the design stage's distinct text, not sampling. Nonempty name/hypothesis/changes are required; changes are deduplicated ignoring whitespace and case. Fewer than two valid distinct changes falls back to one implementation (using the first valid design, or direct proposal if none), recorded in method_reported.meta_harness_design. Semantic equivalence and distinct output trees are not automatically verified. A one-candidate budget skips design entirely.",
+   "direction": "unknown"
+  },
+  {
+   "what": "Design is an endpoint JSON call, rather than the upstream trajectory-reading subagent.",
+   "why": "editor.ask(endpoint_only=True) is required for the design schema because the CLI editor returns file edits. Batch design therefore needs the shared method endpoint credentials even when implementation uses a CLI improver. The designer sees the shared editor's inlined source/evidence, frontier and historical rows, without the upstream subagent's autonomous filesystem exploration. Unparseable design replies cause a recorded single-candidate fallback; other call failures remain errors. Shared editor retries and implementation repair calls may add model calls.",
+   "direction": "weaker"
+  }
+ ]
+}
