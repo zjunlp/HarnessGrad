@@ -1,10 +1,13 @@
 /* 侧栏折叠 —— 像公开站那样,点一下就收成一条窄条,再点展开。
  *
- * 状态存在 localStorage 里(跨页面、刷新都记得),所以 console 的四个页面共用同一份。
+ * 用户点过以后,状态存在 localStorage 里(跨页面、刷新都记得),所以 console 的四个页面
+ * 共用同一份。第一次在窄屏打开时默认收起,避免 248px 侧栏挤坏主内容；这次自动选择
+ * 不写 localStorage,所以不会意外改变桌面端偏好。
  * 这个文件只做两件事:注入那个按钮、把 body[data-sidebar] 切好;样式在 app.css 里。
  */
 (() => {
   const KEY = "hg.sidebar";
+  const NARROW = "(max-width: 640px)";
   const root = document.body;
 
   function apply(mode) {
@@ -41,7 +44,9 @@
       item.title = label.replace(/\s+/g, " ");
     });
     document.body.appendChild(btn);
-    apply(localStorage.getItem(KEY) === "collapsed" ? "collapsed" : "expanded");
+    const saved = localStorage.getItem(KEY);
+    const narrow = window.matchMedia && window.matchMedia(NARROW).matches;
+    apply(saved === "collapsed" || (!saved && narrow) ? "collapsed" : "expanded");
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);

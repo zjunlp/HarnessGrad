@@ -394,7 +394,6 @@ body[data-sidebar="collapsed"] { --side-w: 56px; }
   font-size: 13px; cursor: pointer; transition: left .16s ease;
 }
 .sidebar-toggle:hover { background: var(--hg-alias-bg-layer-2); color: var(--hg-alias-label-primary); }
-.sidebar-toggle:hover { background: var(--hg-alias-bg-layer-2); color: var(--hg-alias-label-primary); }
 
 body[data-sidebar="collapsed"] .app { grid-template-columns: 56px minmax(0, 1fr); }
 body[data-sidebar="collapsed"] .side { padding: 10px 6px; gap: 8px; }

@@ -18,6 +18,8 @@
   let FORM = null;          // /api/launch/form
   let card = null;          // 卡片当前值（弹窗打开时才有）
   let busy = false;
+  let previewSeq = 0;
+  let canLaunch = false;
 
   const ses = () => {
     if (!state.sessions.length) state.sessions.push({ id: Date.now(), title: "新对话", msgs: [] });
@@ -144,6 +146,7 @@
     }
     renderCard();
     $("#mask3").dataset.open = "true";
+    setState("", "正在预检查…", false);
     refreshCard();
   }
   function closeCard() { $("#mask3").dataset.open = "false"; card = null; }
@@ -159,12 +162,13 @@
       <label for="c-r">轮数</label><input id="c-r" type="number" min="1" max="20" value="${esc(card.rounds)}">
       <label for="c-j">并发</label><input id="c-j" type="number" min="1" max="64" value="${esc(card.jobs)}">
       <label for="c-t">trials</label><input id="c-t" type="number" min="1" max="3" value="${esc(card.trials)}">`;
-    const on = (sel, key, cast) => {
+    const on = (sel, key, cast, event = "change") => {
       const el = $(sel); if (!el) return;
-      el.onchange = () => { card[key] = cast ? cast(el.value) : el.value; refreshCard(); };
+      el[`on${event}`] = () => { card[key] = cast ? cast(el.value) : el.value; refreshCard(); };
     };
     on("#c-ds", "dataset"); on("#c-h", "harness");
-    on("#c-r", "rounds", Number); on("#c-j", "jobs", Number); on("#c-t", "trials", Number);
+    on("#c-r", "rounds", Number, "input"); on("#c-j", "jobs", Number, "input");
+    on("#c-t", "trials", Number, "input");
     $("#c-imp").onchange = () => {
       const [name, model] = $("#c-imp").value.split("|");
       card.improver = name; card.improver_model = model; refreshCard();
@@ -172,24 +176,43 @@
   }
 
   async function refreshCard() {
+    const seq = ++previewSeq;
+    const invalid = [["轮数", card.rounds, 1, 20], ["并发", card.jobs, 1, 64],
+      ["trials", card.trials, 1, 3]].find(([, value, lo, hi]) =>
+        !Number.isInteger(value) || value < lo || value > hi);
+    if (invalid) {
+      const [label, , lo, hi] = invalid;
+      $("#cmd3").textContent = "（参数有效后生成命令）";
+      setState("bad", `${label}必须是 ${lo}..${hi} 的整数`, false);
+      return;
+    }
     const q = new URLSearchParams({ dataset: card.dataset, harness: card.harness, rounds: card.rounds,
       jobs: card.jobs, trials: card.trials, improver: card.improver, improver_model: card.improver_model,
       sampling: card.sampling });
     try {
-      const d = await (await fetch(`/api/launch/preview?${q}`)).json();
+      const r = await fetch(`/api/launch/preview?${q}`);
+      const d = await r.json();
+      if (seq !== previewSeq) return;
       $("#cmd3").textContent = (d.argv || []).map((a) => (/[\s"]/.test(a) ? JSON.stringify(a) : a)).join(" ");
-    } catch { $("#cmd3").textContent = "（命令生成失败）"; }
-    try {
-      const h = await (await fetch("/api/health")).json();
-      const live = (h.running || []).length;
-      setState(live ? "bad" : "ok", live
-        ? `已有 driver 在跑：${h.running.map((x) => x.run_id).join("、")}（确认也会被服务端拒绝）`
-        : "没有 driver 在跑，可以起跑");
-    } catch { setState("bad", "读不到平台状态"); }
+      const preflight = d.preflight || {};
+      setState(preflight.ok ? "ok" : "bad", preflight.ok
+        ? "预检查通过，可以起跑"
+        : `预检查未通过：${preflight.detail || preflight.error || "未知原因"}`,
+      Boolean(preflight.ok));
+    } catch {
+      if (seq !== previewSeq) return;
+      $("#cmd3").textContent = "（命令生成失败）";
+      setState("bad", "读不到启动预检查", false);
+    }
   }
-  function setState(kind, text) { const el = $("#state3"); el.dataset.kind = kind; el.textContent = text; }
+  function setState(kind, text, ready) {
+    const el = $("#state3"); el.dataset.kind = kind; el.textContent = text;
+    canLaunch = ready;
+    $("#confirm3").disabled = !ready;
+  }
 
   async function confirmCard() {
+    if (!canLaunch) return;
     const btn = $("#confirm3"); btn.disabled = true;
     try {
       const r = await fetch("/api/runs", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -205,7 +228,8 @@
         setState("bad", `被拒绝：${d.detail || d.error || r.status}`);
       }
     } catch (e) { setState("bad", `提交失败：${e.message}`); }
-    btn.disabled = false; save(); render();
+    if (card) await refreshCard();
+    save(); render();
   }
 
   /* ── 绑定 ─────────────────────────────────────────── */
