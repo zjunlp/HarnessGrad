@@ -214,6 +214,18 @@ loads and scores it stays in git.
 
 > Parses FEN and UCI moves. Pin this dependency because strict replay checks legal_moves before push; upstream push itself does not enforce legality.
 
+## `cooperbench`
+
+### CooperBench pinned source and released feature pairs (http, 63b9d44d9f39a02fccf5bf0052db48a917a011fd)
+
+- **Version (pinned):** `63b9d44d9f39a02fccf5bf0052db48a917a011fd`
+- **Size:** 1693222 bytes; 199 features, 652 pairs
+- **URL:** https://codeload.github.com/cooperbench/CooperBench/tar.gz/63b9d44d9f39a02fccf5bf0052db48a917a011fd
+- **Destination:** `source.tar.gz`
+- **sha256:** `f2af4c7d721987e008e01a03a1f69500a448f7c273cc2bd91e6e093f09c6a8e6`
+
+> Prepare with the pinned Harbor checkout, then import explicit per-group Docker images. Runtime digests, package versions and transformed runner hashes are recorded outside the source tree; measurements never download dependencies or pull; editable builds remain offline.
+
 ## `ds1000`
 
 ### DS-1000 simplified test.jsonl (hf-dataset, 4416080ac5cb80bdf7576aefb8f9a0b4d5426a44)

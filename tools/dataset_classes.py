@@ -147,6 +147,7 @@ UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
 from harnessgrad.components import COMPONENTS as FUNCTIONS  # noqa: E402
 
 EXERCISES: dict[str, tuple[str, ...]] = {
+    "cooperbench": ("context", "tools", "control", "verification"),
     "kumo": ("context", "tools", "control", "verification"),
     "alfworld": ("context", "tools", "control", "recovery"),
     "agentdojo": ("context", "tools", "control", "safety"),
@@ -211,7 +212,8 @@ MIN_MEMBERS_PER_FUNCTION = 2
 #: red entry for an infrastructure decision rather than a dataset gap.
 UNCOVERED_FUNCTIONS: dict[str, str] = {
     "delegation": "no adapter requires the harness to split work across sub-agents or route "
-                  "between models; tau2_bench needs an independent user simulator, which the "
+                  "between models; CooperBench assigns fixed peer roles through the platform, "
+                  "not dynamic harness delegation. tau2_bench needs an independent user simulator, which the "
                   "platform supplies rather than the harness",
     "reliability": "no adapter is built so that consistency across trials is what is scored; "
                    "the platform takes repeated trials, but no task is constructed for pass^k",
@@ -229,6 +231,7 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
 #: forget its surface, which a second dict keyed by the same names would allow.
 CAPABILITY: dict[str, tuple[str, str]] = {
     "kumo": ("reasoning", "planning_and_search"),
+    "cooperbench": ("artifact", "code_generation"),
     "alfworld": ("environment", "embodied_text"),
     "agentdojo": ("tool_use", "tool_dialogue"),
     "bfcl_v3": ("tool_use", "tool_calling"),
@@ -291,13 +294,14 @@ ADVERSARIAL = frozenset({"agentdojo", "strongreject"})
 #: which advances the private input stream. A dataset that ships a *new*
 #: action verb therefore fails the check below rather than being silently misclassified --
 #: which is what happened to `agentdojo` when this list held only `do`.
-ACT_VERBS = ("do", "call", "ack")
+ACT_VERBS = ("do", "call", "send_message", "ack")
 
 #: The judged value, declared, and asserted equal to the derived one by `classify_all()`.
 #: Two independent sources that must agree: if a shipped CLI changes its surface, or someone
 #: edits this map, the tool stops and someone looks. A single source would have hidden the
 #: `agentdojo` mistake above; the derived side is what caught it.
 EXPECTED_INTERACTION = {
+    "cooperbench": "closed_loop",
     "agentdojo": "closed_loop",
     "kumo": "closed_loop",
     "alfworld": "closed_loop",
@@ -379,7 +383,11 @@ def _cli_scripts(module, task_id: str) -> list[Path]:
     lives under a `cli/` directory or is materialized under a `bin/` directory.
     """
     out = []
-    for entry in (module.SETUP.get(task_id) or {}).get("files", []):
+    setup = module.SETUP.get(task_id) or {}
+    files = list(setup.get("files", []))
+    for worker in setup.get("workers", []):
+        files.extend(worker.get("files", []))
+    for entry in files:
         rel = entry.get("path", "")
         source = entry.get("from")
         if not source:

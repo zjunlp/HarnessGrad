@@ -408,8 +408,7 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo",
-        "memoryagentbench", "personamem_v2", "scienceworld",
+        "agentdojo", "alfworld", "appworld", "cooperbench", "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld",
         "tau_bench", "terminal_bench"}
 
 
@@ -418,8 +417,7 @@ def test_the_filters_select_what_they_say(classified):
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "gaia", "jericho", "kumo",
-        "memoryagentbench", "personamem_v2", "scienceworld",
+        "agentdojo", "alfworld", "appworld", "cooperbench", "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld",
         "tau_bench", "terminal_bench"}
 
 

@@ -20,7 +20,7 @@ SCAFFOLDS = DATA / "scaffolds"
 # Independent, reviewed inventory: do not derive this expectation from discovery.
 EXPECTED_DATASETS = (
     "agentdojo", "aime", "alfworld", "api_bank", "appworld", "bfcl_v3",
-    "bird_minidev", "chessbench_puzzles", "ds1000", "fever", "gaia",
+    "bird_minidev", "chessbench_puzzles", "cooperbench", "ds1000", "fever", "gaia",
     "gsm8k", "hotpotqa", "jericho", "kumo", "livecodebench", "locomo",
     "memoryagentbench", "musique", "nestful", "personamem_v2",
     "physicsquestions", "reasoning_gym", "scienceworld", "sotuqa",
@@ -34,7 +34,7 @@ FIXTURES = (
 # Reviewed adapter assets stay beside their declarations.
 # pinchbench is not a published adapter and is deliberately not classified here.
 EXPECTED_ASSET_DIRS = (
-    "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "ds1000",
+    "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "cooperbench", "ds1000",
     "gaia", "jericho", "kumo", "livecodebench", "locomo", "memoryagentbench", "nestful",
     "personamem_v2", "reasoning_gym",
     "scienceworld", "spreadsheetbench", "strongreject", "tau_bench",
