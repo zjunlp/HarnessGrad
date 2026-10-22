@@ -152,7 +152,7 @@ def _goal(question: str, gold: dict) -> str:
         "Write one word -- `plausible` or `implausible` -- to "
         f"`{base.ANSWER_FILE}` in your working directory, or submit it with\n"
         "\n"
-        f"    python3 {base.CLI_FILE} submit plausible\n"
+        f"    python3 {base.CLI_PATH} submit plausible\n"
         "\n"
         f"## How it is scored\n"
         "\n"

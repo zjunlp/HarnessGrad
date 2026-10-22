@@ -36,7 +36,9 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                              verifier, timeout_s: int, verify_timeout_s: int,
                              run_id: str, run_seed: str,
                              recordings_root: Path | None,
-                             runtime_paths: tuple[Path, ...] = ()) -> dict:
+                             runtime_paths: tuple[Path, ...] = (),
+                             runtime_env: dict[str, str] | None = None,
+                             runtime_receipt: dict | None = None) -> dict:
     """Run a task whose state is the container's own filesystem. INTERFACE.md §2.5.9.
 
     The order is the design, so it is spelled out here in the same steps the contract
@@ -65,6 +67,19 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
     # bind mount: that is the whole point of this state kind.
     with tempfile.TemporaryDirectory(prefix="hg-cstate-") as tmp:
         staging = Path(tmp)
+        capture_mounts = []
+        if (runtime_env or {}).get("HG_RESPONSES_OVERLAY_SHA256"):
+            (staging / ".responses").mkdir()
+            # Bounded writer logs directly into this task-owned bind. Do not use
+            # unbounded docker cp to extract provider output from the container.
+            capture_mounts = ["--mount", f"type=bind,src={staging / '.responses'},dst={task_mount}/.responses"]
+            # Supplemental adapter diagnostics are outside the graded snapshot and
+            # collected with independent byte limits, also on timeout/failure.
+            from eval.containers.responses_overlay import ARTIFACTS
+            for filename in ARTIFACTS[2:]:
+                (staging / filename).touch()
+                capture_mounts.extend(["--mount", f"type=bind,src={staging / filename},dst={task_mount}/{filename}"])
+            runtime_env = {**runtime_env, "HG_RESPONSES_ARTIFACT_DIR": f"{task_mount}/.responses"}
         try:
             # Step 1. The harness tree read-only at its own host path, and its scratch
             # space as a **tmpfs** -- so nothing the containerised harness writes as root
@@ -94,7 +109,7 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                     limits=container_mod.limits_from(env_spec), network=network_name,
                     run_id=run_id, task_id=task["task_id"],
                     extra_mounts=tuple(
-                        ["--mount", f"type=bind,src={repo},dst={repo},readonly"]
+                        ["--mount", f"type=bind,src={repo},dst={repo},readonly"] + capture_mounts
                         + [a for pth in (tuple(runtime_paths)
                                          + harness_runtime.extra_paths(overlay)
                                          + (() if image_python_here
@@ -134,6 +149,7 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                         f"{task_mount}/task.json", "--workdir", task_mount]
 
                 child_env = container_mod.container_env(task_mount, deadline_s=timeout_s)
+                child_env.update(runtime_env or {})
                 child_env["HARNESSGRAD_STATE"] = str(state_dir)
                 # Prepended, not replacing: a harness that sets its own `PYTHONPATH` is not
                 # the platform's to overwrite.
@@ -237,14 +253,19 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
             # invisible while it took minutes: removing one image per task plus the
             # network, with nothing printed. It runs inside the task's context, so it
             # reports even when the path above raised.
-            with phases("teardown"):
-                if gateway is not None:
-                    gateway.stop()
-                if web_gateway is not None:
-                    web_gateway.stop()
-                if snapshot is not None:
-                    container_mod.remove_image(snapshot)
-                if created:
-                    container_mod.remove_container(name)
-                if network_name is not None:
-                    services_mod.remove_network(network_name)
+            try:
+                with phases("teardown"):
+                    if gateway is not None:
+                        gateway.stop()
+                    if web_gateway is not None:
+                        web_gateway.stop()
+                    if snapshot is not None:
+                        container_mod.remove_image(snapshot)
+                    if created:
+                        container_mod.remove_container(name)
+                    if network_name is not None:
+                        services_mod.remove_network(network_name)
+            finally:
+                if capture_mounts and runtime_receipt is not None:
+                    from eval.containers.responses_overlay import collect_capture
+                    runtime_receipt["responses_capture"] = collect_capture(staging)

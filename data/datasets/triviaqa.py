@@ -283,7 +283,7 @@ def _goal(question: str, gold: dict) -> str:
         "Write the answer -- the name, title or phrase alone -- to "
         f"`{base.ANSWER_FILE}` in your working directory, or submit it with\n"
         "\n"
-        f"    python3 {base.CLI_FILE} submit \"<the answer>\"\n"
+        f"    python3 {base.CLI_PATH} submit \"<the answer>\"\n"
         "\n"
         "## How it is scored\n"
         "\n"

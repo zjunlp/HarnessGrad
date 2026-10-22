@@ -148,7 +148,7 @@ def _goal(question: str, gold: dict) -> str:
         "Write the answer -- a number and its unit, for example `12.5 m` -- to\n"
         f"`{base.ANSWER_FILE}` in your working directory, or submit it with\n"
         "\n"
-        f"    python3 {base.CLI_FILE} submit \"12.5 m\"\n"
+        f"    python3 {base.CLI_PATH} submit \"12.5 m\"\n"
         "\n"
         "Do not explain. Include the unit.\n"
         "\n"

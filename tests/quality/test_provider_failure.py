@@ -1,21 +1,21 @@
-"""连不上模型端点 ≠ harness 很弱。两者不能是同一个 0。
+"""Model endpoint failures must remain distinct from measured zero scores (§2.5.7).
 
-这是平台存在的理由本身(§2.5.7),而它真的发生过:一次运行里 `bn-fit-modify` 和
-`chess-best-move` 的 harness 都死在
+In one run, the harnesses for `bn-fit-modify` and `chess-best-move` both died with
 
     RuntimeError: 3 attempts failed, last: Connection error.
 
-而平台给它们记的是 **0.0** —— 一次网关故障被读成了"harness 做不出来"。
+but the platform recorded 0.0, attributing a gateway failure to harness capability.
 
-机制在容器里复现过(`eval/service/modelgate.py` 有完整说明):vLLM 的 uvicorn 默认 5 秒关掉
-空闲 keep-alive,而平台的字节转发网关把上游的 EOF 半关到客户端,于是 harness 隔十几秒
-的下一次调用复用了一条死连接。**keep-alive 是客户端的正常行为,所以这是网关的缺陷。**
+The container reproduction is documented in `eval/service/modelgate.py`: uvicorn
+closed idle keep-alive connections after five seconds, the gateway forwarded EOF,
+and a later harness call reused a dead connection. Normal client keep-alive exposed
+a gateway defect.
 
-这个文件测三件事:
+These tests verify that:
 
-  * 判据**窄**:只有"非零退出码 + stderr 尾部有连接痕迹"才算提供方故障;
-  * 判成之后进 `invalid`(带 stage/service),**不进 `per_task`** —— 不进分数;
-  * 判据的两侧都要能失败:退出码 0 的不算,连上了又自己重试成功的不算。
+  * Only nonzero exits with connection markers at the end of stderr qualify.
+  * Provider failures enter `invalid` with attribution and stay out of `per_task`.
+  * Successful exits and errors recovered by the harness do not qualify.
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT))
 
 import eval.run.runner as runner  # noqa: E402
 
-#: 真实那一次的 stderr 尾部(截取)。
+#: Excerpt from the original failure's stderr tail.
 CONNECTION_TAIL = '''  File "/app/agent.py", line 162, in _call_openai
     raise RuntimeError(f"{attempts} attempts failed, last: {last}") from last
 RuntimeError: 3 attempts failed, last: Connection error.
@@ -53,35 +53,47 @@ def test_the_openai_client_s_own_wording_is_recognised_too():
 
 
 def test_a_harness_that_exited_zero_is_never_a_provider_failure():
-    """跑完了就是跑完了:它的分数是它该得的。
+    """A completed harness keeps its score.
 
-    这一条防的是"把失败都推给基础设施"。一个连上又掉了、但自己重试成功的 harness
-    会在 stderr 里留下同样的字眼 —— 而它做对了,不该被算成没测到。
+    Recovered connection errors can leave the same markers in stderr; do not
+    misattribute those successful recoveries to infrastructure failure.
     """
     assert runner._provider_failure({"exit_code": 0, "stderr": CONNECTION_TAIL}) is None
 
 
 def test_a_transient_error_the_harness_recovered_from_is_not_a_provider_failure():
-    """只在**尾部**找痕迹:中间的、被它自己吸收掉的错误不算。"""
+    """Only inspect the tail; earlier errors recovered by the harness do not count."""
     recovered = ("Connection error while calling the model; retrying\n" * 20
                  + "answer written\n")
     assert runner._provider_failure({"exit_code": 0, "stderr": recovered}) is None
 
 
 def test_an_unrelated_failure_is_not_misattributed():
-    """harness 因为自己的 bug 死了,就不能赖到网关头上。"""
+    """Do not attribute harness bugs to the gateway."""
     assert runner._provider_failure(
         {"exit_code": 1, "stderr": "KeyError: 'entrypoint'\n"}) is None
     assert runner._provider_failure({"exit_code": None, "stderr": ""}) is None
 
 
+def test_opencode_terminal_provider_failure_is_invalid_not_a_zero(tmp_path, monkeypatch):
+    stderr = 'OpenCode provider failure: {"type":"provider.auth","status":401}'
+    monkeypatch.setattr(runner, "run_one", lambda *_a, **_k: _death(
+        stderr=stderr, model_gateway=None))
+    result = runner._evaluate(tmp_path, [{"task_id": "t1"}], {}, trials=1)
+    assert result["per_task"] == {}
+    assert result["invalid"]["t1"]["stage"] == "harness model call"
+    assert runner._provider_failure({"exit_code": 0, "stderr": stderr}) is None
+    assert runner._provider_failure({
+        "exit_code": 1, "stderr": "OpenCode execution failed; inspect trace.jsonl"}) is None
+
+
 def test_the_invalid_record_names_the_stage_and_the_service():
-    """`invalid` 的全部内容是归因:读者下一个问题就是"谁的错",而答案不是 harness。"""
+    """The invalid record attributes the failure to the responsible service."""
     result = {"exit_code": 1, "stderr": CONNECTION_TAIL,
               "model_gateway": {"published": True, "target": "127.0.0.1:8001"}}
     provider = runner._provider_failure(result)
     assert provider is not None
-    # 这两句是 `_evaluate` 里写进 invalid 的内容,单独断言,免得措辞漂了没人发现。
+    # Assert the stage and detail wording used by `_evaluate` to detect drift.
     stage = "harness model call"
     detail = (f"the harness could not reach the model endpoint and exited "
               f"{provider['exit_code']}: {provider['line']}")
@@ -89,10 +101,10 @@ def test_the_invalid_record_names_the_stage_and_the_service():
     assert stage == "harness model call"
 
 
-# ------------------------------- 判据接进真实评估路径(它以前从没被调用过) ---
+# ----------------------- Wire the criterion into the production evaluation path ---
 
 def _death(**over) -> dict:
-    """一次"harness 死在上游连不上"的结果,字段与 `run_one` 返回的同名。"""
+    """Model an unreachable-upstream death using the fields returned by `run_one`."""
     result = {"task_id": "t1", "answer": "", "trace": "", "exit_code": 1,
               "stderr": CONNECTION_TAIL,
               "verdict": {"kind": "command", "passed": False, "score": 0.0,
@@ -116,24 +128,24 @@ def _death(**over) -> dict:
 
 
 def test_a_provider_death_reaches_the_curve_as_invalid(tmp_path, monkeypatch):
-    """**这条之前不存在,而它是这个文件存在的理由。**
+    """Verify the production wiring, not just the isolated criterion.
 
-    `_provider_failure` 写好了、测过了,然后**没有任何生产路径调用它** —— 判据只活在
-    它自己的测试里。于是一次 91 个 task-run 里死了 20 个的运行,在曲线上还是普通非零
-    退出。这里钉住的是接线本身:死因进 `invalid`、带 stage、不进 `per_task`。
+    `_provider_failure` once passed its own tests but had no production caller.
+    In a run with 20 deaths among 91 task-runs, failures still appeared as ordinary
+    nonzero exits. Require stage attribution in `invalid` and no `per_task` score.
     """
     monkeypatch.setattr(runner, "run_one", lambda *_a, **_k: _death())
     res = runner._evaluate(tmp_path, [{"task_id": "t1"}], {}, trials=1)
-    assert res["per_task"] == {}, "一次网关故障不能变成 0 分"
+    assert res["per_task"] == {}, "A gateway failure must not become a zero score"
     bad = res["invalid"]["t1"]
     assert bad["stage"] == "harness model call"
     assert "could not reach the model endpoint" in bad["detail"]
-    assert "Connection error" in bad["detail"], "要留下哪一句"
-    assert "the model hung up first" in bad["detail"], "网关自己的账也要在记录里"
+    assert "Connection error" in bad["detail"], "Preserve the matching error line"
+    assert "the model hung up first" in bad["detail"], "Include the gateway's accounting"
 
 
 def test_a_passing_artifact_survives_the_death_of_its_harness(tmp_path, monkeypatch):
-    """写完 artifact 之后才死的 harness 完成了这道题(§2.2):分数保留。"""
+    """A harness that dies after producing a passing artifact keeps its score (§2.2)."""
     monkeypatch.setattr(runner, "run_one", lambda *_a, **_k: _death(
         # A passed artifact here means the modeled command verifier actually ran.
         verdict={"kind": "command", "passed": True, "score": 1.0, "detail": "ok",
@@ -144,7 +156,7 @@ def test_a_passing_artifact_survives_the_death_of_its_harness(tmp_path, monkeypa
 
 
 def test_a_trial_that_measured_survives_a_later_connection_death(tmp_path, monkeypatch):
-    """`--trials` 的意义就是把这种噪声平均掉,而不是让第二个 trial 抹掉第一个。"""
+    """`--trials` averages noise; a later failure must not erase a measured trial."""
     calls = {"n": 0}
 
     def fake(*_a, **_k):
@@ -155,12 +167,12 @@ def test_a_trial_that_measured_survives_a_later_connection_death(tmp_path, monke
 
     monkeypatch.setattr(runner, "run_one", fake)
     res = runner._evaluate(tmp_path, [{"task_id": "t1"}], {}, trials=2)
-    assert res["invalid"] == {}, "已经测到的一次不能被后来的连接故障抹掉"
+    assert res["invalid"] == {}, "A later connection failure must not erase a measured trial"
     assert res["per_task"] == {"t1": 0.0}
     assert res["per_task_trials"]["t1"] == [0.0]
 
 
-# ------------------------------------------------- 网关自己的账(真 socket) ---
+# ---------------------------------------- Gateway accounting with real sockets ---
 
 def _poll(gw, key, want, timeout=5.0):
     deadline = time.time() + timeout
@@ -173,11 +185,12 @@ def _poll(gw, key, want, timeout=5.0):
 
 
 def test_the_gateway_counts_who_hung_up_first():
-    """上游空闲关闭 → 网关把 EOF 传给客户端,这一次连接记在 upstream 头上。
+    """Attribute upstream closure to upstream when the gateway forwards EOF.
 
-    这就是 `bn-fit-modify` / `chess-best-move` 那次的机制(`eval/service/modelgate.py` 顶部
-    有完整复现):harness 的下一次调用复用了一条死连接,而客户端看到的只有
-    `Connection error`。转发器不懂 HTTP,所以现在还修不了根 —— 但至少要记账。
+    This reproduces the `bn-fit-modify` / `chess-best-move` failure documented in
+    `eval/service/modelgate.py`: the harness reused a dead connection and saw only
+    `Connection error`. The byte forwarder cannot fix HTTP semantics, but it must
+    record which side closed first.
     """
     import socket
     import threading
@@ -190,14 +203,14 @@ def test_the_gateway_counts_who_hung_up_first():
 
     def serve():
         conn, _ = listener.accept()
-        conn.close()                      # 上游挂断,一个字节都不回
+        conn.close()                      # Upstream closes without returning any bytes.
 
     threading.Thread(target=serve, daemon=True).start()
     gw = modelgate.ModelGateway(bind_host="127.0.0.1",
                                 target=("127.0.0.1", listener.getsockname()[1])).start()
     try:
         client = socket.create_connection(("127.0.0.1", gw.port), timeout=5)
-        assert client.recv(10) == b"", "客户端必须看到连接结束(它看到的就是那个 error)"
+        assert client.recv(10) == b"", "The client must observe the closed connection"
         client.close()
         account = _poll(gw, "upstream_closed_first", 1)
     finally:
@@ -210,8 +223,10 @@ def test_the_gateway_counts_who_hung_up_first():
 
 
 def test_the_gateway_says_why_it_could_not_reach_the_model():
-    """模型根本没在听的时候,原因(`Connection refused`)以前在网关里被 `except: pass`
-    吞掉:harness 报同一句 `Connection error`,记录里一个字的原因都没有。"""
+    """Preserve connection-refused details previously swallowed by `except: pass`.
+
+    Without them, the harness reports only `Connection error` with no cause.
+    """
     import socket
 
     import eval.service.modelgate as modelgate
@@ -219,7 +234,7 @@ def test_the_gateway_says_why_it_could_not_reach_the_model():
     probe = socket.socket()
     probe.bind(("127.0.0.1", 0))
     dead_port = probe.getsockname()[1]
-    probe.close()                          # 没人监听这个端口了
+    probe.close()                          # Nothing is listening on this port now.
 
     gw = modelgate.ModelGateway(bind_host="127.0.0.1",
                                 target=("127.0.0.1", dead_port)).start()
@@ -231,14 +246,15 @@ def test_the_gateway_says_why_it_could_not_reach_the_model():
     finally:
         gw.stop()
     assert account["upstream_connect_failed"] == 1
-    assert account["upstream_connect_error"], "原因必须留下来,哪怕是 Errno"
+    assert account["upstream_connect_error"], "Preserve the cause, even if only an Errno"
     assert "refus" in account["upstream_connect_error"].lower(), account
     note = modelgate.describe({"published": True, **account})
-    assert "could not reach the model" in note and "Errno" in note
+    assert "could not reach the model" in note
+    assert "Errno" in note or "WinError" in note
 
 
 def test_a_record_with_no_gateway_attributes_nothing():
-    """端点本来就直连的时候没有网关,不能被赖上 —— 空的归因比错的归因好。"""
+    """Direct endpoint connections have no gateway to attribute a failure to."""
     import eval.service.modelgate as modelgate
 
     assert modelgate.describe(None) == ""
@@ -246,16 +262,18 @@ def test_a_record_with_no_gateway_attributes_nothing():
     assert modelgate.describe({"published": False}) == ""
 
 
-# --------------------------- 网关的读超时不能留在 socket 上(本地模型那次) ---
+# ----------------------- Do not retain the gateway's connect timeout on the socket ---
 
 def test_a_silent_upstream_is_not_mistaken_for_a_hung_up_one(monkeypatch):
-    """**实测那次:5 道题里死 2 道,而网关把责任写成了"the model hung up first"。**
+    """Do not misreport a silent upstream as having hung up first.
 
-    机制:`create_connection(target, timeout=15)` 的超时是给**握手**的,但它会留在 socket
-    上,之后每一次 `recv` 都继承它。本地模型排队或长生成时,上游静默超过 15 秒是常事,于是
-    泵抛 `TimeoutError` 退出、把 EOF 半关给客户端,harness 收到 `APIConnectionError`。
+    This once killed two of five tasks. The timeout passed to `create_connection`
+    stayed on the socket and affected later `recv` calls. Local-model queues or
+    long generations could then cause `TimeoutError`, forwarded EOF, and a client
+    `APIConnectionError` after 15 seconds of silence.
 
-    这条测试把"连接超时"缩到 0.3 秒、让上游静默 1 秒再回复:修好之后,静默多久都不算断线。
+    Use a 0.3-second connect timeout and a one-second delayed reply to verify
+    that silence after connecting is not treated as a disconnected upstream.
     """
     import socket
     import threading
@@ -270,8 +288,8 @@ def test_a_silent_upstream_is_not_mistaken_for_a_hung_up_one(monkeypatch):
     def serve():
         conn, _ = listener.accept()
         with conn:
-            conn.recv(64)                    # 收到请求
-            time.sleep(1.0)                  # 比连接超时长得多,但它是"在上游想事情"
+            conn.recv(64)                    # Receive the request.
+            time.sleep(1.0)                  # Model processing outlasts the connect timeout.
             conn.sendall(b"HTTP/1.1 200 OK\r\n\r\nlate but fine")
 
     threading.Thread(target=serve, daemon=True).start()
@@ -292,7 +310,7 @@ def test_a_silent_upstream_is_not_mistaken_for_a_hung_up_one(monkeypatch):
     finally:
         gw.stop()
         listener.close()
-    assert b"late but fine" in got, ("上游只是安静,不是挂断", got, account)
-    # 关键断言:修好之前这里会记下 `upstream: TimeoutError: timed out`,客户端拿到的是 EOF。
-    # 上游最后真的关掉连接是对的(它回完就关),所以不断言 `upstream_closed_first`。
+    assert b"late but fine" in got, ("Upstream is silent, not disconnected", got, account)
+    # Previously this recorded `upstream: TimeoutError: timed out` and sent EOF.
+    # Upstream legitimately closes after replying, so do not assert its closure count.
     assert account["read_errors"] == [], account

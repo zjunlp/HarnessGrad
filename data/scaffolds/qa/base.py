@@ -105,6 +105,8 @@ VERIFY_DIR = QA_DIR / "verify"
 CHECK_DIR = "qa/lib/verify"
 CHECK_NAME = "check.py"
 CLI_REL = "qa/bin"
+#: Public command path; keep CLI_FILE as a basename for existing control callers.
+CLI_PATH = f"{CLI_REL}/{CLI_FILE}"
 
 #: The package the adapter is materialized into, and the name prefix the check imports.
 #: **The adapter keeps its real module name** (`data/datasets/<name>.py` -> `data.datasets.<name>`): a
@@ -313,7 +315,7 @@ class QASpec:
 
     def setup(self, record: dict) -> dict:
         return {"files": [
-            {"path": f"{CLI_REL}/{CLI_FILE}", "from": str(CLI_DIR / "qa")},
+            {"path": CLI_PATH, "from": str(CLI_DIR / CLI_FILE)},
             {"path": "qa/prediction.py", "from": str(QA_DIR / "prediction.py")},
             {"path": "qa/prediction.schema.json", "from": str(QA_DIR / "prediction.schema.json")},
             *self.extra_setup,
@@ -521,6 +523,6 @@ def split_env_override(name: str) -> str | None:
     return os.environ.get(f"HG_{name.upper()}_SPLIT")
 
 
-__all__ = ["QASpec", "module_getattr", "ANSWER_FILE", "PREDICTION_FILE", "CLI_FILE", "GOLD_FILE",
+__all__ = ["QASpec", "module_getattr", "ANSWER_FILE", "PREDICTION_FILE", "CLI_FILE", "CLI_PATH", "GOLD_FILE",
            "REWARD_FILE", "EVIDENCE_FILE", "REWARD_REL", "EVIDENCE_REL",
            "is_eval", "split_env_override", "ROOT", "Path"]

@@ -483,7 +483,7 @@ def failing_first(base: Path) -> list[str]:
             point = json.loads(rp.read_text())
         except (OSError, json.JSONDecodeError):
             point = {}
-    # 哪一侧是「诊断侧」由记录自己说(§2.6),这条规则只在 protocol 里写一次。
+    # The record identifies the diagnostic side (§2.6); define that rule once in the protocol.
     scores = protocol.studied_per_task(point)
     return [tid for tid, _ in sorted(scores.items(), key=lambda kv: kv[1])]
 
@@ -1340,7 +1340,12 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
     # a bare task and had to open `evidence/round.json` itself to learn the backend, the
     # model, the score, and what the harness did on each task. The numbers are one line per
     # task and they are what a hypothesis is made of (`loop_facts_block`).
-    facts = "\n\n".join(b for b in (run_facts(base), loop_facts_block(base)) if b)
+    context_base = base
+    if not channel(base).is_dir():
+        enclosing = _enclosing_channel(base)
+        if enclosing is not None:
+            context_base = enclosing.parent
+    facts = "\n\n".join(b for b in (run_facts(context_base), loop_facts_block(context_base)) if b)
     # **The evidence is named, not compiled in.** `propose` has staged the whole channel as
     # `evidence/` beside the tree the improver edits, so the paths are enough and the prompt
     # stops growing with the dataset (`evidence_pointer` states the ceiling this removes).
@@ -1357,10 +1362,15 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
         "Absolute artifact keys, parent traversal and symlinks are forbidden.\n")
     req = {"platform_api_version": "0.1.0", "workspace": str(workspace),
            "base_harness": str(parent), "candidate": str(workspace / "candidate"),
-           "improver": improver, "channel": str(channel(base)),
+           "improver": improver, "channel": str(channel(context_base)),
            "trajectory_out": "", "task_ids": [], "train_task_ids": []}
+    runtime_receipt = context_base / ".state/bun-runtime.json"
+    if runtime_receipt.is_file():
+        # Trusted preparation is staged on the incumbent. Archive parents may
+        # have no generated state; propose still validates their dependency inputs.
+        req["harness_runtime"] = json.loads(runtime_receipt.read_text())
     result = cli_improver.propose(req, parent, prompt=prompt, facts=facts,
-                                   evidence=evidence_pointer(base))
+                                   evidence=evidence_pointer(context_base))
     _keep_improver_transcript(result, workspace)
     artifacts = _read_cli_artifacts(workspace)
     # **What the improver itself cost, as far as anyone can see.** `propose` returns a
@@ -1518,8 +1528,6 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     reported. Silently returning `no_change` on a parse failure is the one thing
     that must not happen: it turns a broken call into a method decision.
     """
-    from openai import OpenAI
-
     # **One dispatch point for the improver layer.** When this run resolved a *CLI* improver
     # (codex), drive it rather than a chat endpoint -- on the tree the rule chose to build on
     # (`parent`, defaulting to the incumbent) -- and hand the result back as an ordinary edit
@@ -1536,6 +1544,8 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     if cli is not None:
         tree = Path(parent) if parent is not None else Path(base)
         return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli)
+
+    from openai import OpenAI
 
     base_url, api_key, model = model_settings()
     client = OpenAI(base_url=base_url, api_key=api_key,

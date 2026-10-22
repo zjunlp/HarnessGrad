@@ -191,7 +191,7 @@ def _goal(question: str, gold: dict) -> str:
         "Write the final answer -- the number alone, or your working followed by the\n"
         f"number -- to `{base.ANSWER_FILE}` in your working directory, or submit it with\n"
         "\n"
-        f"    python3 {base.CLI_FILE} submit \"<the number>\"\n"
+        f"    python3 {base.CLI_PATH} submit \"<the number>\"\n"
         "\n"
         "For example, a correct submission is `18` or `1250` after the commas are\n"
         "dropped. Without a `####` marker, units, currency signs and explanatory prose\n"

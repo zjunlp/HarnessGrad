@@ -28,10 +28,10 @@ from harnessgrad import PLATFORM_ROOT
 from harnessgrad.config import current as current_config
 
 def _loop_summary(traces: dict) -> dict:
-    """整轮的 harness 侧事实:每题一次调用就交卷的有几道、预算用满的有几道。
+    """Aggregate harness loop facts across the round, including calls and budgets.
 
-    和每题页里的 `loop` 是同一份数据,只是聚合到轮级 —— 方法最先读的是 `round.json`,
-    而"这一轮 5 道题里有 3 道只调用了一次模型"这句话,值一整页解释。
+    This is the same data as each task's `loop`, aggregated for `round.json`,
+    which the method reads first. Single-call counts make early exits visible.
     """
     if not traces:
         return {}
@@ -45,11 +45,11 @@ def _loop_summary(traces: dict) -> dict:
         "ended_breakdown": ended,
         "model_calls_total": sum(f["model_calls"] for f in facts.values()),
         "model_calls_median": calls[len(calls) // 2] if calls else 0,
-        # 只调用一次就结束的题:最可疑的一类 —— 要么它真聪明,要么它根本没动手。
+        # Single-call tasks may be efficient or may have stopped before doing any work.
         "single_call_tasks": sorted(t for t, f in facts.items() if f["model_calls"] <= 1),
-        # **被接口吃掉的动作。** `commands: 13` 和"其中 10 条执行的是空字符串"是两件
-        # 事,而方法先读的就是这份摘要:实测 `local-floor-9` 的 `cancel-async-tasks` 正是
-        # 后者(重复的 JSON 键把真命令替换成了 `""`),只给命令条数等于告诉它一切正常。
+        # Expose actions lost at the interface. In `local-floor-9`, duplicate JSON
+        # keys replaced real commands with empty strings in `cancel-async-tasks`.
+        # Command counts alone would hide that failure from the method.
         "empty_commands_total": sum(f["empty_commands"] for f in facts.values()),
         "tasks_with_empty_commands": sorted(t for t, f in facts.items()
                                            if f["empty_commands"]),
@@ -60,10 +60,10 @@ def _loop_summary(traces: dict) -> dict:
                                            if f["context_trims"]),
         "tasks_with_clipped_output": sorted(t for t, f in facts.items()
                                             if f["output_clipped_events"]),
-        # **重复命令。** `repeated_commands_total` 是"重发一条本run已经执行过的命令"的条数;
-        # `repeat_nudges_total` 是 harness 自己的重复提醒触发了几次。两个数的**差距**就是
-        # 那个盲区:提醒只看紧挨着的一次,隔一步的重复它不管 —— 实测 9B 在
-        # `large-scale-text-editing` 上 31 步里有 24 步是重发,轮级记录只有一个 0.000。
+        # Repeated commands count resubmissions from anywhere in this run; nudges
+        # only detect consecutive repeats. The gap exposes that blind spot: the
+        # 9B model repeated 24 of 31 steps on `large-scale-text-editing`, which a
+        # round score of 0.000 alone did not explain.
         "repeated_commands_total": sum(f["repeated_commands"] for f in facts.values()),
         "repeat_nudges_total": sum(f["repeat_nudges"] for f in facts.values()),
         "tasks_with_repeated_commands": sorted(t for t, f in facts.items()
@@ -209,9 +209,9 @@ def _stage_task_context(work: Path, tasks, setups, verifiers, result,
                 "checks": _resolve_checks(spec, budget),
             },
             "verdict": dict(verdicts.get(tid) or {}),
-            # **harness 内部的事实。** 判分说的是"产物对不对",这里说的是"harness 怎么
-            # 结束的" —— 两者缺一不可:一道题 0 分可能是产物不合格,也可能是 harness
-            # 在第 1 次调用后就交卷了。后者在只给判分的记录里完全看不出来。
+            # Loop facts explain how the harness ended alongside artifact scores.
+            # A zero score alone cannot show whether the artifact was wrong or
+            # the harness submitted immediately after its first model call.
             "loop": _loop_facts((result or {}).get("traces", {}).get(tid, "")),
             # **Why it ended, in the harness's own words.** `loop` above says *how* a run
             # ended (`crashed`, `budget_exhausted`, `answered`); it cannot say why, and a
@@ -229,8 +229,8 @@ def _stage_task_context(work: Path, tasks, setups, verifiers, result,
                                     or _stderr_of(harness_failed.get(tid) or {})),
                                 1200),
             }} if (harness_output.get(tid) or harness_failed.get(tid)) else {}),
-            # 平台侧判定"这道题根本没测到"的原因(§2.5.7)。方法必须看到它:
-            # 一次网关抖动被它读成"harness 很弱",它会去改完全不相干的地方。
+            # Expose why the platform could not measure this task (§2.5.7), so
+            # gateway failures do not prompt unrelated harness changes.
             **({"invalid": (result or {}).get("invalid", {})[tid]}
                if tid in ((result or {}).get("invalid") or {}) else {}),
         }
@@ -318,6 +318,14 @@ def _write_trace_with_index(dest: Path, name: str, body: str) -> None:
         json.dumps(_trace_index(body), indent=1))
 
 
+def _stage_default_skill(channel: Path) -> None:
+    """Deliver the public contract before the method's sandbox hides the platform."""
+    skill = PLATFORM_ROOT / "improvers" / "skill.md"
+    if skill.is_file():
+        channel.mkdir(parents=True, exist_ok=True)
+        (channel / "SKILL.md").write_text(skill.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def _stage_for_method(work: Path, point: dict, traces: dict,
                       history: list[dict] | None = None,
                       task_ids: list[str] | None = None,
@@ -374,8 +382,8 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
     (hg / "history").mkdir(parents=True)
     (hg / "history" / "traces").mkdir(parents=True)
     (hg / "states").mkdir(parents=True)
-    # 轮次摘要 = 曲线点 + **harness 侧事实的聚合**。方法最先读这一份;没有后半段,
-    # "5 道题里 3 道只调用了一次模型"这句话在记录里根本不存在。
+    # The method reads this round summary first: curve points plus aggregated
+    # loop facts, including how many tasks ended after a single model call.
     summary = _for_method(point)
     summary["loop_summary"] = _loop_summary(traces or {})
     # How much history this round handed over. `None` = every round; a number = a bound the
@@ -389,9 +397,7 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
     # passed in the request because it is something the improver is *asked to read*, and
     # §4.7 already says where the things a method may read live. A method with its own
     # skill simply ignores it.
-    skill = PLATFORM_ROOT / "improvers" / "skill.md"
-    if skill.is_file():
-        (hg / "SKILL.md").write_text(skill.read_text(encoding="utf-8"), encoding="utf-8")
+    _stage_default_skill(hg)
     for past in (history or []):
         (hg / "history" / f"round-{past.get('round', 0)}.json").write_text(
             json.dumps(_for_method(past), indent=1))
