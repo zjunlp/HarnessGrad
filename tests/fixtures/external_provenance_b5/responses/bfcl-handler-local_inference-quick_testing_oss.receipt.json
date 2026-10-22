@@ -1,0 +1,104 @@
+{
+  "url": "https://api.github.com/repos/ShishirPatil/gorilla/git/blobs/a1e7c45fc425121ca799d0b1a290c0d8990e8397",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:20:40.542643+00:00",
+  "production_authorized": false,
+  "status": 403,
+  "reason": "rate limit exceeded",
+  "response_headers": [
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:20:40 GMT"
+    ],
+    [
+      "Server",
+      "Varnish"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubdomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-Frame-Options",
+      "deny"
+    ],
+    [
+      "X-XSS-Protection",
+      "1; mode=block"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'"
+    ],
+    [
+      "Access-Control-Allow-Origin",
+      "*"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-RateLimit-Used, X-RateLimit-Resource, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, Deprecation, Sunset"
+    ],
+    [
+      "Content-Type",
+      "application/json; charset=utf-8"
+    ],
+    [
+      "Referrer-Policy",
+      "origin-when-cross-origin, strict-origin-when-cross-origin"
+    ],
+    [
+      "X-GitHub-Media-Type",
+      "github.v3; format=json"
+    ],
+    [
+      "X-RateLimit-Limit",
+      "60"
+    ],
+    [
+      "X-RateLimit-Remaining",
+      "0"
+    ],
+    [
+      "X-RateLimit-Used",
+      "60"
+    ],
+    [
+      "X-RateLimit-Resource",
+      "core"
+    ],
+    [
+      "X-RateLimit-Reset",
+      "1792001526"
+    ],
+    [
+      "Content-Length",
+      "279"
+    ],
+    [
+      "X-GitHub-Request-Id",
+      "C7A2:58D1E:752313:B586F8:6ACFB9E8"
+    ],
+    [
+      "x-github-edge-region",
+      "southeastasia"
+    ],
+    [
+      "connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/bfcl-handler-local_inference-quick_testing_oss.body",
+    "bytes": 279,
+    "sha256": "fdfea826e425097e5c9a8837c28e99ba8458ba5b55987f027beb9c87b208284b"
+  },
+  "completed_at_utc": "2026-10-14T17:20:41.040876+00:00"
+}

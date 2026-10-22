@@ -1,0 +1,108 @@
+{
+  "url": "https://github.com/ShishirPatil/gorilla/blob/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:22:12.281821+00:00",
+  "production_authorized": false,
+  "status": 200,
+  "reason": "OK",
+  "response_headers": [
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:22:12 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json; charset=utf-8"
+    ],
+    [
+      "x-repository-download",
+      "git clone https://github.com/ShishirPatil/gorilla.git"
+    ],
+    [
+      "x-raw-download",
+      "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py"
+    ],
+    [
+      "Vary",
+      "X-PJAX, X-PJAX-Container, Turbo-Visit, Turbo-Frame, X-Requested-With, X-GitHub-Client-Version, Sec-Fetch-Site,Accept-Encoding, Accept, X-Requested-With"
+    ],
+    [
+      "ETag",
+      "W/\"75066749a8400d7e05f056fbd9e41bfc\""
+    ],
+    [
+      "Cache-Control",
+      "max-age=0, private, must-revalidate"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubdomains; preload"
+    ],
+    [
+      "X-Frame-Options",
+      "deny"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "0"
+    ],
+    [
+      "Referrer-Policy",
+      "no-referrer-when-downgrade"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; base-uri 'self'; child-src github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/ gist.github.com/assets-cdn/worker/; connect-src 'self' uploads.github.com www.githubstatus.com collector.github.com raw.githubusercontent.com api.github.com github-cloud.s3.amazonaws.com github-production-repository-file-5c1aeb.s3.amazonaws.com github-production-upload-manifest-file-7fdce7.s3.amazonaws.com github-production-user-asset-6210df.s3.amazonaws.com *.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com github.githubassets.com objects-origin.githubusercontent.com copilot-proxy.githubusercontent.com proxy.individual.githubcopilot.com proxy.business.githubcopilot.com proxy.enterprise.githubcopilot.com *.actions.githubusercontent.com wss://*.actions.githubusercontent.com productionresultssa0.blob.core.windows.net productionresultssa1.blob.core.windows.net productionresultssa2.blob.core.windows.net productionresultssa3.blob.core.windows.net productionresultssa4.blob.core.windows.net productionresultssa5.blob.core.windows.net productionresultssa6.blob.core.windows.net productionresultssa7.blob.core.windows.net productionresultssa8.blob.core.windows.net productionresultssa9.blob.core.windows.net productionresultssa10.blob.core.windows.net productionresultssa11.blob.core.windows.net productionresultssa12.blob.core.windows.net productionresultssa13.blob.core.windows.net productionresultssa14.blob.core.windows.net productionresultssa15.blob.core.windows.net productionresultssa16.blob.core.windows.net productionresultssa17.blob.core.windows.net productionresultssa18.blob.core.windows.net productionresultssa19.blob.core.windows.net github-production-repository-image-32fea6.s3.amazonaws.com github-production-release-asset-2e65be.s3.amazonaws.com insights.github.com wss://alive.github.com wss://alive-staging.github.com api.githubcopilot.com api.individual.githubcopilot.com api.business.githubcopilot.com api.enterprise.githubcopilot.com wss://production-copilot-host.webpubsub.azure.com api.github.com/cmc_internal/api/; font-src github.githubassets.com; form-action 'self' github.com gist.github.com copilot-workspace.githubnext.com objects-origin.githubusercontent.com; frame-ancestors 'none'; frame-src viewscreen.githubusercontent.com notebooks.githubusercontent.com; img-src 'self' data: blob: github.githubassets.com media.githubusercontent.com camo.githubusercontent.com identicons.github.com avatars.githubusercontent.com private-avatars.githubusercontent.com github-cloud.s3.amazonaws.com objects.githubusercontent.com release-assets.githubusercontent.com secured-user-images.githubusercontent.com user-images.githubusercontent.com private-user-images.githubusercontent.com opengraph.githubassets.com repository-images.githubusercontent.com marketplace-screenshots.githubusercontent.com copilotprodattachments.blob.core.windows.net/github-production-copilot-attachments/ github-production-user-asset-6210df.s3.amazonaws.com customer-stories-feed.github.com spotlights-feed.github.com explore-feed.github.com *.googleusercontent.com objects-origin.githubusercontent.com *.githubusercontent.com; manifest-src 'self'; media-src github.com user-images.githubusercontent.com secured-user-images.githubusercontent.com private-user-images.githubusercontent.com github-production-user-asset-6210df.s3.amazonaws.com gist.github.com github.githubassets.com; script-src github.githubassets.com; style-src 'unsafe-inline' github.githubassets.com; upgrade-insecure-requests; worker-src github.githubassets.com github.com/assets-cdn/worker/ github.com/assets/ gist.github.com/assets-cdn/worker/"
+    ],
+    [
+      "Server",
+      "github.com"
+    ],
+    [
+      "Accept-Ranges",
+      "bytes"
+    ],
+    [
+      "Set-Cookie",
+      "_gh_sess=lDNrR7y9KZl2Leq9IxQVwFmxqMHY3nRoxQNcmsXrI9Ab19eVhi0OofWUI%2Bx0I8Q%2FQIpjOS3sstT8rW23A%2BUKI7OswYgy2jZNuhBKR5d4Hivy4sPrSITAvCdV6mILDL1dfQ4RKYlODx52ycvl1F8y0h8I2Kz%2BjHs8TMJcZYfDHjXVq8eS9FrYPp7yNli%2FPyCAPapkyQiHd4JLom8DCTuQOtJ1nLRXaBMMqeJjSuZuGwJkX1qZR9isnPejdHN%2FB67aUeXu5lbauRZ1wFiR5vHYUg%3D%3D--keMJKmJxk0eq8tg7--tWZbEqHadot2vbF8AcX6tw%3D%3D; path=/; HttpOnly; secure; SameSite=Lax"
+    ],
+    [
+      "Set-Cookie",
+      "_octo=GH1.1.818290052.1791998532; expires=Thu, 14 Oct 2027 17:22:12 GMT; domain=.github.com; path=/; secure; SameSite=Lax"
+    ],
+    [
+      "Set-Cookie",
+      "logged_in=no; expires=Thu, 14 Oct 2027 17:22:12 GMT; domain=.github.com; path=/; HttpOnly; secure; SameSite=Lax"
+    ],
+    [
+      "Content-Length",
+      "2642"
+    ],
+    [
+      "X-GitHub-Request-Id",
+      "D1D8:2487C9:5E788B:8AD0EF:6ACFBA44"
+    ],
+    [
+      "x-github-edge-region",
+      "southeastasia"
+    ],
+    [
+      "connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/bfcl-web-bitagent.body",
+    "bytes": 2642,
+    "sha256": "75066749a8400d7e05f056fbd9e41bfc083c53a3f01a99fbe5e24c0844dba533"
+  },
+  "completed_at_utc": "2026-10-14T17:22:12.984935+00:00"
+}

@@ -1,0 +1,124 @@
+{
+  "url": "https://api.github.com/repos/ShishirPatil/gorilla/git/blobs/e5cd82326cc08accb7985cce4a12e0044ce4cf93",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:20:37.725188+00:00",
+  "production_authorized": false,
+  "status": 200,
+  "reason": "OK",
+  "response_headers": [
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:20:38 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json; charset=utf-8"
+    ],
+    [
+      "Cache-Control",
+      "public, max-age=86400, s-maxage=86400"
+    ],
+    [
+      "Vary",
+      "Accept,Accept-Encoding, Accept, X-Requested-With"
+    ],
+    [
+      "ETag",
+      "W/\"9bd74873917531425ebbfa3e19651aa010769aded23e1da2700c73bca44f422f\""
+    ],
+    [
+      "X-GitHub-Media-Type",
+      "github.v3"
+    ],
+    [
+      "x-github-api-version-selected",
+      "2022-11-28"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning"
+    ],
+    [
+      "Access-Control-Allow-Origin",
+      "*"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubdomains; preload"
+    ],
+    [
+      "X-Frame-Options",
+      "deny"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "0"
+    ],
+    [
+      "Referrer-Policy",
+      "origin-when-cross-origin, strict-origin-when-cross-origin"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'"
+    ],
+    [
+      "Server",
+      "github.com"
+    ],
+    [
+      "Accept-Ranges",
+      "bytes"
+    ],
+    [
+      "X-RateLimit-Limit",
+      "60"
+    ],
+    [
+      "X-RateLimit-Remaining",
+      "14"
+    ],
+    [
+      "X-RateLimit-Used",
+      "46"
+    ],
+    [
+      "X-RateLimit-Resource",
+      "core"
+    ],
+    [
+      "X-RateLimit-Reset",
+      "1792001526"
+    ],
+    [
+      "Content-Length",
+      "6966"
+    ],
+    [
+      "X-GitHub-Request-Id",
+      "C686:28B46A:BBAA5:129ABA:6ACFB9E5"
+    ],
+    [
+      "x-github-edge-region",
+      "southeastasia"
+    ],
+    [
+      "connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/bfcl-handler-api_inference-mining.body",
+    "bytes": 6966,
+    "sha256": "efa19e14211e15352597b0bb7cb0a2a7fc6f1d40619c1f4893d63cd014a799ce"
+  },
+  "completed_at_utc": "2026-10-14T17:20:38.305649+00:00"
+}

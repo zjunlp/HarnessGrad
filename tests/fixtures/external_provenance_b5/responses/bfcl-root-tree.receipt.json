@@ -1,0 +1,128 @@
+{
+  "url": "https://api.github.com/repos/ShishirPatil/gorilla/git/trees/b34aa53a73491f42dc69b8b18c92448d7c311f50",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:16:50.213145+00:00",
+  "production_authorized": false,
+  "status": 200,
+  "reason": "OK",
+  "response_headers": [
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:16:50 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json; charset=utf-8"
+    ],
+    [
+      "Cache-Control",
+      "public, max-age=86400, s-maxage=86400"
+    ],
+    [
+      "Vary",
+      "Accept,Accept-Encoding, Accept, X-Requested-With"
+    ],
+    [
+      "ETag",
+      "W/\"666d8074e110602ff8353a2e9d36f09b0ec2b6450f78f0caaebba896f92692ff\""
+    ],
+    [
+      "Last-Modified",
+      "Tue, 13 Oct 2026 09:58:17 GMT"
+    ],
+    [
+      "X-GitHub-Media-Type",
+      "github.v3"
+    ],
+    [
+      "x-github-api-version-selected",
+      "2022-11-28"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset, Warning"
+    ],
+    [
+      "Access-Control-Allow-Origin",
+      "*"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubdomains; preload"
+    ],
+    [
+      "X-Frame-Options",
+      "deny"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "X-XSS-Protection",
+      "0"
+    ],
+    [
+      "Referrer-Policy",
+      "origin-when-cross-origin, strict-origin-when-cross-origin"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'"
+    ],
+    [
+      "Server",
+      "github.com"
+    ],
+    [
+      "Accept-Ranges",
+      "bytes"
+    ],
+    [
+      "X-RateLimit-Limit",
+      "60"
+    ],
+    [
+      "X-RateLimit-Remaining",
+      "37"
+    ],
+    [
+      "X-RateLimit-Used",
+      "23"
+    ],
+    [
+      "X-RateLimit-Resource",
+      "core"
+    ],
+    [
+      "X-RateLimit-Reset",
+      "1792001526"
+    ],
+    [
+      "Content-Length",
+      "2747"
+    ],
+    [
+      "X-GitHub-Request-Id",
+      "B7D8:803E6:723BA1:B1DFF3:6ACFB902"
+    ],
+    [
+      "x-github-edge-region",
+      "southeastasia"
+    ],
+    [
+      "connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/bfcl-root-tree.body",
+    "bytes": 2747,
+    "sha256": "abc34da884e5821fe189f05aefcd29096e3c04846c391688564fd023d6f2f0bf"
+  },
+  "completed_at_utc": "2026-10-14T17:16:50.819851+00:00"
+}

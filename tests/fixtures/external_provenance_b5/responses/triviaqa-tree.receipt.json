@@ -1,0 +1,15 @@
+{
+  "url": "https://huggingface.co/api/datasets/mandarjoshi/trivia_qa/tree/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f?recursive=false&expand=false",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:15:06.594697+00:00",
+  "production_authorized": false,
+  "status": null,
+  "error_type": "URLError",
+  "error": "<urlopen error [Errno 101] Network is unreachable>",
+  "response_body": null,
+  "completed_at_utc": "2026-10-14T17:15:41.963505+00:00"
+}

@@ -1,0 +1,422 @@
+[
+ {
+  "reference": "/site/adapter-integration-journal.md",
+  "source_path": "docs/adapter-integration-journal.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 498256,
+  "sha256": "8b87462779cfc705b422721dc9643e5813818a80f5bd1448a76bac26d6660463",
+  "carrier": "tests/fixtures/hg_migration_site/adapter-integration-journal.md"
+ },
+ {
+  "reference": "/site/agentdojo-metadata-privacy-codex180-report.md",
+  "source_path": "reports/agentdojo-metadata-privacy-codex180-report.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 3939,
+  "sha256": "9fab2aaa25846577c1dc57c31a8ede70f1401c8668a057cd22fa44f7b3a45223",
+  "carrier": "tests/fixtures/hg_migration_site/agentdojo-metadata-privacy-codex180-report.md"
+ },
+ {
+  "reference": "/site/b6-dataset-blocker-review.md",
+  "source_path": "reports/b6-dataset-blocker-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 19897,
+  "sha256": "26115b75541063f26fb0e88d1aa2ff87be96b0a44f25d4f8390a4402f97995ba",
+  "carrier": "tests/fixtures/hg_migration_site/b6-dataset-blocker-review.md"
+ },
+ {
+  "reference": "/site/b9-appworld-protocol-and-pilot-guidance-review.md",
+  "source_path": "reports/b9-appworld-protocol-and-pilot-guidance-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 12385,
+  "sha256": "a2d86676823e4820853ce493c1b0b1dd8579b3361273f4a13211777b4853a9f2",
+  "carrier": "tests/fixtures/hg_migration_site/b9-appworld-protocol-and-pilot-guidance-review.md"
+ },
+ {
+  "reference": "/site/bfcl-blob-retry-codex227-report.md",
+  "source_path": "reports/bfcl-blob-retry-codex227-report.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 6206,
+  "sha256": "23d993f1573da2fc2958703f73a710d9d42ef993953e2e7d4fd046a69d0acd0d",
+  "carrier": "tests/fixtures/hg_migration_site/bfcl-blob-retry-codex227-report.md"
+ },
+ {
+  "reference": "/site/chess-recovery-id-conflict-codex182-report.md",
+  "source_path": "reports/chess-recovery-id-conflict-codex182-report.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 2331,
+  "sha256": "3afbe22e62414eaa55f4cb2ac9d92177e0916d4e8fa01903cd1e618ba003c226",
+  "carrier": "tests/fixtures/hg_migration_site/chess-recovery-id-conflict-codex182-report.md"
+ },
+ {
+  "reference": "/site/dataset-blockers.md",
+  "source_path": "docs/dataset-blockers.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 13214,
+  "sha256": "7ae1f8b93397a45340afe7d2b1a240650806de3a7e6f39c6f5395dd2ad686558",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-blockers.md"
+ },
+ {
+  "reference": "/site/dataset-reviews/fever.md",
+  "source_path": "docs/dataset-reviews/fever.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 8198,
+  "sha256": "bcd89024063bee0c2edf60c9d5ce3b391e937af2f0294cba72bd06cf116d9123",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/fever.md"
+ },
+ {
+  "reference": "/site/dataset-reviews/physicsquestions.md",
+  "source_path": "docs/dataset-reviews/physicsquestions.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 8530,
+  "sha256": "34de545bf6377f6cbd1a711376fbe3abfd603d709571dd57ea40a1943e574fc3",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/physicsquestions.md"
+ },
+ {
+  "reference": "/site/dataset-reviews/reasoning_gym.md",
+  "source_path": "docs/dataset-reviews/reasoning_gym.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 9740,
+  "sha256": "9857a1b74f3b13a6f58b2ef4a9cd95a6c985e02c1f48b1344523eb18db0f857d",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/reasoning_gym.md"
+ },
+ {
+  "reference": "/site/dataset-source-reviews-b2.md",
+  "source_path": "docs/dataset-source-reviews-b2.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 16954,
+  "sha256": "16973041138d99209191666e93c31da7dd37caa065da7fd5d80d570dc5831cd9",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-source-reviews-b2.md"
+ },
+ {
+  "reference": "/site/e1-fever-physics-bird-review.md",
+  "source_path": "reports/e1-fever-physics-bird-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 16763,
+  "sha256": "586c41231de15700c70d988c177ab4eb49a671d2d0708bca1014fc3ad6bf1e7a",
+  "carrier": "tests/fixtures/hg_migration_site/e1-fever-physics-bird-review.md"
+ },
+ {
+  "reference": "/site/e3-bfcl-simple-source-review.md",
+  "source_path": "docs/e3-bfcl-simple-source-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 13603,
+  "sha256": "c9461cacf158927c7c3dbbed37ea2a08f6b59fae09857cb363d7e5561413ebe4",
+  "carrier": "tests/fixtures/hg_migration_site/e3-bfcl-simple-source-review.md"
+ },
+ {
+  "reference": "/site/enforcement-proof-decision.md",
+  "source_path": "docs/enforcement-proof-decision.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 5013,
+  "sha256": "0b207629a0cb03e3467ff556f527f0a56839f4614bd61267775bb4c0ed47db4d",
+  "carrier": "tests/fixtures/hg_migration_site/enforcement-proof-decision.md"
+ },
+ {
+  "reference": "/site/gaia-operator-packet-codex210.md",
+  "source_path": "docs/gaia-operator-packet-codex210.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 13159,
+  "sha256": "7ffc47af92a4a9063438b906c125bbb28f15ece316f1dc2c665a9c7e90f25900",
+  "carrier": "tests/fixtures/hg_migration_site/gaia-operator-packet-codex210.md"
+ },
+ {
+  "reference": "/site/independent-review-deferred.md",
+  "source_path": "docs/independent-review-deferred.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 3430,
+  "sha256": "6d762de3a713858c7bfd226cf14c7a802f019beab23655a0cb7d476f816dd230",
+  "carrier": "tests/fixtures/hg_migration_site/independent-review-deferred.md"
+ },
+ {
+  "reference": "/site/jericho-runtime-b7.json",
+  "source_path": "reports/jericho-runtime-b7.json",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 516709,
+  "sha256": "c6f67ffca7f9320570829509912bbac6469b907b03b093ae4dca4f74f18e8599",
+  "carrier": "tests/fixtures/hg_migration_site/jericho-runtime-b7.json"
+ },
+ {
+  "reference": "/site/measurement-coverage-hg-b3-review.md",
+  "source_path": "reports/measurement-coverage-hg-b3-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 14482,
+  "sha256": "d05539b51f5d3092c70c390d786d332914243cdba7c2d64676ad120495b77795",
+  "carrier": "tests/fixtures/hg_migration_site/measurement-coverage-hg-b3-review.md"
+ },
+ {
+  "reference": "/site/preserved-lifecycle-review-b8.md",
+  "source_path": "reports/preserved-lifecycle-review-b8.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 15571,
+  "sha256": "a7b97ffe86f6b24dad742689e44020523c8ef90007700ba8e364f1fbbb4f99a5",
+  "carrier": "tests/fixtures/hg_migration_site/preserved-lifecycle-review-b8.md"
+ },
+ {
+  "reference": "/site/runtime-blockers-b7.md",
+  "source_path": "reports/runtime-blockers-b7.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 13078,
+  "sha256": "8d84ad31ae3f2e7efd39234488db305f13613faeb85154e976a8f627ee15a78d",
+  "carrier": "tests/fixtures/hg_migration_site/runtime-blockers-b7.md"
+ },
+ {
+  "reference": "/site/scienceworld-runtime-b7.json",
+  "source_path": "reports/scienceworld-runtime-b7.json",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 268427,
+  "sha256": "77194eb46b343a7eae5f56ec97c6b39e21c3003935ccfbe016835ee660643180",
+  "carrier": "tests/fixtures/hg_migration_site/scienceworld-runtime-b7.json"
+ },
+ {
+  "reference": "/site/task-206-twowiki-provenance-review.md",
+  "source_path": "docs/task-206-twowiki-provenance-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 5947,
+  "sha256": "04c834ccdb83241cb0875da3a98b232d1b6705a6c1ca8d4cd2abc862b1cadb67",
+  "carrier": "tests/fixtures/hg_migration_site/task-206-twowiki-provenance-review.md"
+ },
+ {
+  "reference": "/site/tau-bench-vendoring.md",
+  "source_path": "docs/tau-bench-vendoring.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 39771,
+  "sha256": "b9ce9b85123c819a37ca5f574762d86e86e79bc0141604c52fa4835614b53aed",
+  "carrier": "tests/fixtures/hg_migration_site/tau-bench-vendoring.md"
+ },
+ {
+  "reference": "/site/triviaqa-hub-linkage-codex225-report.md",
+  "source_path": "reports/triviaqa-hub-linkage-codex225-report.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 8014,
+  "sha256": "97ab863db9220006def15d36784568870d02e66c0ae15404dde545578466710a",
+  "carrier": "tests/fixtures/hg_migration_site/triviaqa-hub-linkage-codex225-report.md"
+ },
+ {
+  "reference": "/site/triviaqa-review-codex215-report.md",
+  "source_path": "reports/triviaqa-review-codex215-report.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 6453,
+  "sha256": "177b86f67775726978d3cc2ad6f286f17b9edbcdfa9fe22ee7ecb92cdf72e20c",
+  "carrier": "tests/fixtures/hg_migration_site/triviaqa-review-codex215-report.md"
+ },
+ {
+  "reference": "/site/w-appworld-receipts.md",
+  "source_path": "reports/w-appworld-receipts.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 20986,
+  "sha256": "af4d54c80abd5f6d9b93b179438e2bf99ff72200f0aaff200bc028818efa276f",
+  "carrier": "tests/fixtures/hg_migration_site/w-appworld-receipts.md"
+ },
+ {
+  "reference": "/site/w-appworld2-receipts.md",
+  "source_path": "reports/w-appworld2-receipts.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 17607,
+  "sha256": "610c36bac0be46e5418e89b9e52f76e419ef0d53cbd880dc921e161b824ac7d6",
+  "carrier": "tests/fixtures/hg_migration_site/w-appworld2-receipts.md"
+ },
+ {
+  "reference": "/site/w-bfcl-review.md",
+  "source_path": "reports/w-bfcl-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 52503,
+  "sha256": "4951a3e28efaa47ca8f9c8398ed4d78660507bf304f8e7c9cd00fca6fc1a9402",
+  "carrier": "tests/fixtures/hg_migration_site/w-bfcl-review.md"
+ },
+ {
+  "reference": "/site/w-hotpot-timeout-closure.md",
+  "source_path": "docs/w-hotpot-timeout-closure.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 2978,
+  "sha256": "cda75efcafd9b66650402b1def2d9aa9e0dfa2faca3e76723397771131ebaf12",
+  "carrier": "tests/fixtures/hg_migration_site/w-hotpot-timeout-closure.md"
+ },
+ {
+  "reference": "/site/w-hotpot-validation.txt",
+  "source_path": "reports/w-hotpot-validation.txt",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 53410,
+  "sha256": "d398d5e7879f4d624b9cc1a2396221d7ec73c77b2acba19e6aac1a9c514ac480",
+  "carrier": "tests/fixtures/hg_migration_site/w-hotpot-validation.txt"
+ },
+ {
+  "reference": "/site/w-obs-runtime-review.md",
+  "source_path": "docs/w-obs-runtime-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 6544,
+  "sha256": "0f85047c17a0b9efd8d47e3edde66cdbb4f0722df454a8b594b4aa79b56be094",
+  "carrier": "tests/fixtures/hg_migration_site/w-obs-runtime-review.md"
+ },
+ {
+  "reference": "/site/w-scope-pristine-applicability.md",
+  "source_path": "reports/w-scope-pristine-applicability.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 23338,
+  "sha256": "b30c728d0a27ce9845eadeb66a848cfd6c922012fd4338936faadc27adab7015",
+  "carrier": "tests/fixtures/hg_migration_site/w-scope-pristine-applicability.md"
+ },
+ {
+  "reference": "/site/w-shared-verifier-review.md",
+  "source_path": "docs/w-shared-verifier-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 13844,
+  "sha256": "a67f21d882ee362a75435a2341f260312ee5e1c4bb1ee685cf1cb23cbdc0080b",
+  "carrier": "tests/fixtures/hg_migration_site/w-shared-verifier-review.md"
+ },
+ {
+  "reference": "/site/w-spread2-evidence/audit-output.txt",
+  "source_path": "reports/w-spread2-evidence/audit-output.txt",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 1989,
+  "sha256": "792d1ff14b10cffa8e0cfd4bbb1737aa6e099494dc3e0639d37b5e9d6a18c193",
+  "carrier": "tests/fixtures/hg_migration_site/w-spread2-evidence/audit-output.txt"
+ },
+ {
+  "reference": "/site/w-spread2-reconciliation.md",
+  "source_path": "reports/w-spread2-reconciliation.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 11061,
+  "sha256": "e141574d3f6bf31eee828c4de761a9f63f0dc60e83837265e28b1c49bb2de60d",
+  "carrier": "tests/fixtures/hg_migration_site/w-spread2-reconciliation.md"
+ },
+ {
+  "reference": "/site/w-trivia-review.md",
+  "source_path": "reports/w-trivia-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 12945,
+  "sha256": "cdebdb8d92f7a1f34ba402c6ad5629868fc2c8e1176db844e89581ddb7bc5b32",
+  "carrier": "tests/fixtures/hg_migration_site/w-trivia-review.md"
+ },
+ {
+  "reference": "reports/w-jc2-review.md",
+  "carrier": "reports/w-jc2-review.md",
+  "source_path": "reports/w-jc2-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 19604,
+  "sha256": "39cab1080ee6a37f92e0f022ab008f3a2304bf3ba1fd4d935e190245ba62c8f6"
+ },
+ {
+  "reference": "reports/w-journalcov-review.md",
+  "carrier": "reports/w-journalcov-review.md",
+  "source_path": "reports/w-journalcov-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 21738,
+  "sha256": "13aecaaf16541311fb703bce01246d6ea7e822d079c1be8ea5d0ff17deedac38"
+ },
+ {
+  "reference": "docs/enforcement-proof-decision.md",
+  "carrier": "docs/enforcement-proof-decision.md",
+  "source_path": "docs/enforcement-proof-decision.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 5013,
+  "sha256": "0b207629a0cb03e3467ff556f527f0a56839f4614bd61267775bb4c0ed47db4d"
+ },
+ {
+  "reference": "docs/independent-review-deferred.md",
+  "carrier": "docs/independent-review-deferred.md",
+  "source_path": "docs/independent-review-deferred.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 3430,
+  "sha256": "6d762de3a713858c7bfd226cf14c7a802f019beab23655a0cb7d476f816dd230"
+ },
+ {
+  "reference": "docs/w-fix-unknown-isolation-records.md",
+  "carrier": "docs/w-fix-unknown-isolation-records.md",
+  "source_path": "docs/w-fix-unknown-isolation-records.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 4061,
+  "sha256": "372d85bf3d1c5ef163d04be046ef587914412eeb9323203af4964e712536dcd5"
+ },
+ {
+  "reference": "docs/w-obs-runtime-review.md",
+  "carrier": "docs/w-obs-runtime-review.md",
+  "source_path": "docs/w-obs-runtime-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 6544,
+  "sha256": "0f85047c17a0b9efd8d47e3edde66cdbb4f0722df454a8b594b4aa79b56be094"
+ },
+ {
+  "reference": "docs/w-shared-verifier-review.md",
+  "carrier": "docs/w-shared-verifier-review.md",
+  "source_path": "docs/w-shared-verifier-review.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 13844,
+  "sha256": "a67f21d882ee362a75435a2341f260312ee5e1c4bb1ee685cf1cb23cbdc0080b"
+ },
+ {
+  "reference": "reports/w-chess2-evidence/actor-command-line-19.sh",
+  "carrier": "reports/w-chess2-evidence/actor-command-line-19.sh",
+  "source_path": "reports/w-chess2-evidence/actor-command-line-19.sh",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 1432,
+  "sha256": "b291ae5e2df779abf51f608493ac25aa779da9316e4b9d0259f07b371a8ad83f"
+ },
+ {
+  "reference": "reports/w-chess3-evidence/corrected-blocker-before-run.json",
+  "carrier": "reports/w-chess3-evidence/corrected-blocker-before-run.json",
+  "source_path": "reports/w-chess3-evidence/corrected-blocker-before-run.json",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 3800,
+  "sha256": "ae0ba272929f1a3ee9a54c98ed4bbfada490cfc87fe566b231a93e0b25a5d317"
+ },
+ {
+  "reference": "reports/w-chess3-receipts.md",
+  "carrier": "reports/w-chess3-receipts.md",
+  "source_path": "reports/w-chess3-receipts.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 21600,
+  "sha256": "6f7a94d7845f0a73685e73c9a408c4720044c454a031916b8d1bb85886639244"
+ },
+ {
+  "reference": "reports/w-fix-validation.txt",
+  "carrier": "reports/w-fix-validation.txt",
+  "source_path": "reports/w-fix-validation.txt",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 55892,
+  "sha256": "f3a3f77bbc2e57f7570dc5e4a875a442bf094182b4e094bb08b28fea80048a14"
+ },
+ {
+  "reference": "reports/w-obs-validation.txt",
+  "carrier": "reports/w-obs-validation.txt",
+  "source_path": "reports/w-obs-validation.txt",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 67005,
+  "sha256": "1088a272ec97a1015fce0ecf83c8bb15f2f587fa7f62276740087f6affe744a0"
+ },
+ {
+  "reference": "/site/dataset-reviews/sportsunderstanding.md",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/sportsunderstanding.md",
+  "source_path": "docs/dataset-source-reviews-b2.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 5338,
+  "sha256": "d6d1ca958c7227512dc3fb58e4933e824d60024d70f5798a21bc4c76b300ff7b",
+  "transform": "section extracted verbatim; title line added; provenance comment added"
+ },
+ {
+  "reference": "/site/dataset-reviews/spreadsheetbench.md",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/spreadsheetbench.md",
+  "source_path": "docs/dataset-source-reviews-b2.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 7789,
+  "sha256": "4780f09301666f2531d52e4ba586b530d9e260dab185f6dd5f1a18a3f9bb37fa",
+  "transform": "section extracted verbatim; title line added; provenance comment added"
+ },
+ {
+  "reference": "/site/dataset-reviews/strategyqa.md",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/strategyqa.md",
+  "source_path": "docs/dataset-source-reviews-b2.md",
+  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
+  "bytes": 4755,
+  "sha256": "d913fcdd8f8d5c4e15543dc688b13efc1d944545cabed7b034278f490a1c33e0",
+  "transform": "section extracted verbatim; title line added; provenance comment added"
+ },
+ {
+  "reference": "/site/dataset-reviews/aime.md",
+  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/aime.md",
+  "source_path": "docs/dataset-reviews/aime.md",
+  "source_commit": "67c9a6817a8684245e9ee7620ec82c9fdb721f95",
+  "bytes": 11224,
+  "sha256": "282ab4122a5f5d2048eb63cafc7e1328f1029a484bd267e90bb4679f94da6c7d",
+  "transform": "verbatim copy of the tracked file. Unlike the six migrations above, this one is a FORWARD archive rather than a recovery: docs/dataset-reviews/aime.md is present in this repository, and its carrier exists because the /site/ citation convention requires an archived copy of every cited review. source_commit is the commit that introduced the review."
+ }
+]

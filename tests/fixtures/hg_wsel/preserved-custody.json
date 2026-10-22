@@ -1,0 +1,43 @@
+{
+  "read_only_prior_path": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wjournalcov/observations.json",
+  "prior_bytes": 9708,
+  "prior_sha256": "9a3ddb924fd43737a57b6e0f5682e9d24a3aa7839623b6fbfebb45d90dcd711e",
+  "checks": [
+    {
+      "dataset": "fever",
+      "current_source_sha256": "5da0ccc0ccf77f974611de13f8aac6f78c6bba6293912835099eb6029baa85d9",
+      "preserved_source_sha256": "5da0ccc0ccf77f974611de13f8aac6f78c6bba6293912835099eb6029baa85d9",
+      "source_size_and_pool_count_match": true
+    },
+    {
+      "dataset": "physicsquestions",
+      "current_source_sha256": "7747cf185111aaa58493b5d804ba7b496cb152a6ae89a69a66a0c443adfd34aa",
+      "preserved_source_sha256": "7747cf185111aaa58493b5d804ba7b496cb152a6ae89a69a66a0c443adfd34aa",
+      "source_size_and_pool_count_match": true
+    },
+    {
+      "dataset": "reasoning_gym",
+      "current_source_sha256": "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177",
+      "preserved_source_sha256": "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177",
+      "source_size_and_pool_count_match": true
+    },
+    {
+      "dataset": "sportsunderstanding",
+      "current_source_sha256": "5cfc24702b7a809409f42634f0b958f0d61c4d5aec8d732fd89889281c63d45e",
+      "preserved_source_sha256": "5cfc24702b7a809409f42634f0b958f0d61c4d5aec8d732fd89889281c63d45e",
+      "source_size_and_pool_count_match": true
+    },
+    {
+      "dataset": "spreadsheetbench",
+      "current_source_sha256": "bcecaa89a005bd4e3bbe98da150a86e8062c27f262e575d5e47bd9861b3525e7",
+      "preserved_source_sha256": "bcecaa89a005bd4e3bbe98da150a86e8062c27f262e575d5e47bd9861b3525e7",
+      "source_size_and_pool_count_match": true
+    },
+    {
+      "dataset": "strategyqa",
+      "current_source_sha256": "c1fd0c271bf98741b68ac1ea3d167c5ccf2ed46da66645d5fc0ed6222e45f055",
+      "preserved_source_sha256": "c1fd0c271bf98741b68ac1ea3d167c5ccf2ed46da66645d5fc0ed6222e45f055",
+      "source_size_and_pool_count_match": true
+    }
+  ]
+}

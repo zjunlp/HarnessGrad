@@ -1,0 +1,23 @@
+Content-Type: application/json
+Accept-Ranges: bytes
+Cache-Control: max-age=60
+Content-Disposition: attachment; filename="data_ids.zip";
+ filename*=UTF-8''data_ids.zip
+Content-Security-Policy: sandbox
+Etag: 1607522485443626d
+Pragma: public
+Referrer-Policy: no-referrer
+Vary: Origin, Accept-Encoding
+X-Content-Security-Policy: sandbox
+X-Content-Type-Options: nosniff
+X-Robots-Tag: noindex, nofollow, noimageindex
+X-Server-Response-Time: 652
+X-Webkit-Csp: sandbox
+Date: Wed, 14 Oct 2026 17:55:48 GMT
+Server: envoy
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Content-Length: 259216602
+X-Dropbox-Response-Origin: far_remote
+X-Dropbox-Request-Id: 05954e52070f4613aaf11a496acfc224
+Connection: close
+

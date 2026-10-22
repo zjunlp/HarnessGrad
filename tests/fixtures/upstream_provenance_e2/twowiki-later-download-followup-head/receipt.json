@@ -1,0 +1,16 @@
+[
+  {
+    "method": "HEAD",
+    "url": "https://uca47197cb573ff9881874c910b1.dl.dropboxusercontent.com/cd/0/get/DJ-vT3i2vbrOlt-lfrMN9wUpbF8K7rhwv4gbofApBWgeQPKJxqca-3cR_toxOFKxjnOelfycnC8olSsK7AAGg59rRm6_mr1zuPnLCqUc9YQ7bjlZ3HHEdJuSO4xYtmErAhVH7hgBOiqyB18mNXA2S1UV/file?dl=1",
+    "started_at_utc": "2026-10-14T17:55:48.246337+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "headers_sha256": "3116b74bf94aebc8c457cf03bb6b2574c007f61d1c7e016aebdbf681e0673ccd",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

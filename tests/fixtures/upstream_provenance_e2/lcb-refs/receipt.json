@@ -1,0 +1,16 @@
+[
+  {
+    "method": "GET",
+    "url": "https://huggingface.co/api/datasets/livecodebench/code_generation_lite/refs",
+    "started_at_utc": "2026-10-14T17:53:49.060822+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 136,
+    "sha256": "9c9f407731dbc02775a9bc04f1f5a09827e302a5d54a919c59e6016ac0f10cb6",
+    "headers_sha256": "8ed2e424588f874eb97c17f1b9f4d6d7848fcfcd63a54c27b6f4a78ee738a181",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "dataset": "strategyqa",
+  "selection_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-strategyqa",
+  "selection_kind": "operator-authorized-first-5-of-full-adapter-order",
+  "runtime_run_id": null,
+  "execution_authorized": false,
+  "claim_limit": "Bounded first-N selection in declared adapter order; NOT a random sample and NOT representative of the dataset. Establishes only identifiable, hash-bound selection -> export -> scoring-input custody for these five tasks, not scoring execution, eligibility, admission or claims about the rest of the pool.",
+  "source_revision": "ReWOO@9cd0283043ff4be0c9d614fda2789d143ca6ffd1",
+  "adapter_source": [
+    {
+      "path": "data/datasets/strategyqa.py",
+      "bytes": 9164,
+      "sha256": "eaad45dfb944241fad84eb575882560ffcf7243de40c9d34fd0766a40c16a50a"
+    },
+    {
+      "path": "data/scaffolds/qa/base.py",
+      "bytes": 27878,
+      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    },
+    {
+      "path": "data/scaffolds/qa/read.py",
+      "bytes": 8624,
+      "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+    },
+    {
+      "path": "data/scaffolds/scorer_input.py",
+      "bytes": 6166,
+      "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"
+    }
+  ],
+  "installed_source": {
+    "path": "/mnt/20t/xubuqiang/datasets/strategyqa/ReWOO-9cd0283043ff4be0c9d614fda2789d143ca6ffd1/data/bigbench/strategy_qa.csv",
+    "bytes": 200453,
+    "sha256": "c1fd0c271bf98741b68ac1ea3d167c5ccf2ed46da66645d5fc0ed6222e45f055"
+  },
+  "adapter_presented_count": 2290,
+  "selected_count": 5,
+  "eligible_count": null,
+  "trials_executed": 0,
+  "measured_count": 0,
+  "invalid_count": 0,
+  "unmeasured_execution_count": 0,
+  "unexecuted_selected_count": 5,
+  "split_mode": "declared",
+  "split_source": "hash",
+  "side": "mixed",
+  "selected_sides": {
+    "train": [
+      "strategyqa/test/0",
+      "strategyqa/test/1",
+      "strategyqa/test/2",
+      "strategyqa/test/4"
+    ],
+    "eval": [
+      "strategyqa/test/3"
+    ]
+  },
+  "order_rule": "adapter full record order, slice [:5] BEFORE any side filter; no sorting/sampling/shuffling",
+  "export_path": "/tmp/hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f/strategyqa",
+  "row_export": "rows.csv",
+  "export_files": {
+    "rows.csv": "18bb5a754bbe04124b73396b1b7b80b522d3a59b525a6173d0d06914086bd1ba",
+    "inputs/0/gold.json": "cff9d5e72adf611516ac710d89c9a03e0425882e14d024b4ceb68002224cbe83",
+    "inputs/0/question.txt": "7ca37bc7d6dc6e9a722083beb58b2d86599e344fa3bcce0f5bc46aedda3218e1",
+    "inputs/0/goal.txt": "0105b3101dbac19434c64ba1cbcd9885942fbfad567ea0de5651fea88201d9f6",
+    "inputs/1/gold.json": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db",
+    "inputs/1/question.txt": "792821c00e4dc1f67abf26d12efb1aafb282ae93849e2c9bf72aaac0ca693ff6",
+    "inputs/1/goal.txt": "1358dca7aa41463bbc162fcc4760b9ad665e5b12cc50025b061eb671fab3d631",
+    "inputs/2/gold.json": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db",
+    "inputs/2/question.txt": "9212bf26b78334e975a1912d30458e832f1f404e9f66da96b9454c3d7ffd67dc",
+    "inputs/2/goal.txt": "142ebe030a18e9588888259d6bda25463a35c78319d01bd080911f1eb506ce20",
+    "inputs/3/gold.json": "cff9d5e72adf611516ac710d89c9a03e0425882e14d024b4ceb68002224cbe83",
+    "inputs/3/question.txt": "715cfc122da3c951b7331ee069cac92b706b815f18c0c10f625333ab547d0b0f",
+    "inputs/3/goal.txt": "ef9728f4599fd2d9e139cb5e4558d2bfdf94ad1fa864c9a5f986693de5c0be07",
+    "inputs/4/gold.json": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db",
+    "inputs/4/question.txt": "659811a294b0cfb1eb0fe49195cde1340d10801de77fca052fc33426cc26d0ea",
+    "inputs/4/goal.txt": "f426cd7c3ccc2d2d2cfede898b524b5e66bde98bf73a37992f3b1b8adf569f95"
+  },
+  "export_inventory_sha256": "394d0323d407000ee4a73301f8a30c688d7ea3f1d8997935130818fbc88350ee",
+  "prior_inventory": {
+    "path": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wjournalcov/strategyqa-inventory.json",
+    "bytes": 611300,
+    "sha256": "9e3ca16f8756725a8433ecea33d8a88768f5c19466bff075ae69ce9887ee4710",
+    "selected_order_and_row_digests_match": true,
+    "whole_inventory_revalidated": false,
+    "selected_rows": [
+      {
+        "task_id": "strategyqa/test/0",
+        "loaded_position": 0,
+        "parsed_row_sha256": "8c6302d32f0c9464ab72ca5a97b4f88886d15d359ffa5d874056b767d9204141",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "strategyqa/test/1",
+        "loaded_position": 1,
+        "parsed_row_sha256": "44e3996dba6587ce1c01bca18f6e2cdedd517181010eb1aaafee4da93a8b62a6",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "strategyqa/test/2",
+        "loaded_position": 2,
+        "parsed_row_sha256": "ac6f9ae52f740787faa1948ebc22e94b271fe5864df4facc6f5a1c1a38c56f76",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "strategyqa/test/3",
+        "loaded_position": 3,
+        "parsed_row_sha256": "041517daad5de5e05265c95f50d59199a31a551249ca9abc18902d8f123fd42c",
+        "declared_side": "eval"
+      },
+      {
+        "task_id": "strategyqa/test/4",
+        "loaded_position": 4,
+        "parsed_row_sha256": "fe0ab42fa33f249fde932ae5abc28fc5562d92e9abca5a342f3d07fa97df14af",
+        "declared_side": "train"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "task_id": "strategyqa/test/0",
+      "adapter_position": 0,
+      "source_row_index": 0,
+      "source_split": "test",
+      "declared_side": "train",
+      "parsed_row_sha256": "8c6302d32f0c9464ab72ca5a97b4f88886d15d359ffa5d874056b767d9204141",
+      "scorer_input": {
+        "task_id": "strategyqa/test/0",
+        "path": "gold.json",
+        "sha256": "cff9d5e72adf611516ac710d89c9a03e0425882e14d024b4ceb68002224cbe83"
+      },
+      "input_sha256": "cff9d5e72adf611516ac710d89c9a03e0425882e14d024b4ceb68002224cbe83",
+      "question_sha256": "7ca37bc7d6dc6e9a722083beb58b2d86599e344fa3bcce0f5bc46aedda3218e1",
+      "goal_sha256": "0105b3101dbac19434c64ba1cbcd9885942fbfad567ea0de5651fea88201d9f6"
+    },
+    {
+      "task_id": "strategyqa/test/1",
+      "adapter_position": 1,
+      "source_row_index": 1,
+      "source_split": "test",
+      "declared_side": "train",
+      "parsed_row_sha256": "44e3996dba6587ce1c01bca18f6e2cdedd517181010eb1aaafee4da93a8b62a6",
+      "scorer_input": {
+        "task_id": "strategyqa/test/1",
+        "path": "gold.json",
+        "sha256": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db"
+      },
+      "input_sha256": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db",
+      "question_sha256": "792821c00e4dc1f67abf26d12efb1aafb282ae93849e2c9bf72aaac0ca693ff6",
+      "goal_sha256": "1358dca7aa41463bbc162fcc4760b9ad665e5b12cc50025b061eb671fab3d631"
+    },
+    {
+      "task_id": "strategyqa/test/2",
+      "adapter_position": 2,
+      "source_row_index": 2,
+      "source_split": "test",
+      "declared_side": "train",
+      "parsed_row_sha256": "ac6f9ae52f740787faa1948ebc22e94b271fe5864df4facc6f5a1c1a38c56f76",
+      "scorer_input": {
+        "task_id": "strategyqa/test/2",
+        "path": "gold.json",
+        "sha256": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db"
+      },
+      "input_sha256": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db",
+      "question_sha256": "9212bf26b78334e975a1912d30458e832f1f404e9f66da96b9454c3d7ffd67dc",
+      "goal_sha256": "142ebe030a18e9588888259d6bda25463a35c78319d01bd080911f1eb506ce20"
+    },
+    {
+      "task_id": "strategyqa/test/3",
+      "adapter_position": 3,
+      "source_row_index": 3,
+      "source_split": "test",
+      "declared_side": "eval",
+      "parsed_row_sha256": "041517daad5de5e05265c95f50d59199a31a551249ca9abc18902d8f123fd42c",
+      "scorer_input": {
+        "task_id": "strategyqa/test/3",
+        "path": "gold.json",
+        "sha256": "cff9d5e72adf611516ac710d89c9a03e0425882e14d024b4ceb68002224cbe83"
+      },
+      "input_sha256": "cff9d5e72adf611516ac710d89c9a03e0425882e14d024b4ceb68002224cbe83",
+      "question_sha256": "715cfc122da3c951b7331ee069cac92b706b815f18c0c10f625333ab547d0b0f",
+      "goal_sha256": "ef9728f4599fd2d9e139cb5e4558d2bfdf94ad1fa864c9a5f986693de5c0be07"
+    },
+    {
+      "task_id": "strategyqa/test/4",
+      "adapter_position": 4,
+      "source_row_index": 4,
+      "source_split": "test",
+      "declared_side": "train",
+      "parsed_row_sha256": "fe0ab42fa33f249fde932ae5abc28fc5562d92e9abca5a342f3d07fa97df14af",
+      "scorer_input": {
+        "task_id": "strategyqa/test/4",
+        "path": "gold.json",
+        "sha256": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db"
+      },
+      "input_sha256": "f7aaf09b54e1832b32bc6cfed983ebb0755a35b0ac15382e247d23a77cd5f2db",
+      "question_sha256": "659811a294b0cfb1eb0fe49195cde1340d10801de77fca052fc33426cc26d0ea",
+      "goal_sha256": "f426cd7c3ccc2d2d2cfede898b524b5e66bde98bf73a37992f3b1b8adf569f95"
+    }
+  ],
+  "run_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-strategyqa",
+  "run_state": "reserved-selection-only; no execution"
+}

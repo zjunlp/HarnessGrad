@@ -1,0 +1,214 @@
+{
+  "approval_boundary": "This retry is deliberately not an approved harnessgrad.bfcl-ast-source.v1 receipt. Earlier candidate/receipts and production files are unchanged. Local hashes provide integrity evidence only.",
+  "checker_direct_in_repository_imports": [
+    {
+      "acquired": false,
+      "git_blob_sha1": null,
+      "line": 1,
+      "module": "bfcl_eval.constants.model_config",
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "reason": "No retained path-to-blob identity; Git blob API requires a SHA. No contents/tree/raw/web/archive request or guessed SHA was used.",
+      "request_status": "not_attempted_missing_pinned_blob_sha",
+      "symbols": [
+        "MODEL_CONFIG_MAPPING"
+      ]
+    },
+    {
+      "acquired": true,
+      "git_blob_sha1": "fdbdde48402f8f2812b146f9b7341b6aae9e55b8",
+      "line": 2,
+      "module": "bfcl_eval.constants.type_mappings",
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "reason": null,
+      "request_status": "acquired_and_verified",
+      "symbols": [
+        "JAVA_TYPE_CONVERSION",
+        "JS_TYPE_CONVERSION"
+      ]
+    },
+    {
+      "acquired": false,
+      "git_blob_sha1": null,
+      "line": 6,
+      "module": "bfcl_eval.eval_checker.ast_eval.type_convertor.java_type_converter",
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "reason": "No retained path-to-blob identity; Git blob API requires a SHA. No contents/tree/raw/web/archive request or guessed SHA was used.",
+      "request_status": "not_attempted_missing_pinned_blob_sha",
+      "symbols": [
+        "java_type_converter"
+      ]
+    },
+    {
+      "acquired": false,
+      "git_blob_sha1": null,
+      "line": 7,
+      "module": "bfcl_eval.eval_checker.ast_eval.type_convertor.js_type_converter",
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+      "reason": "No retained path-to-blob identity; Git blob API requires a SHA. No contents/tree/raw/web/archive request or guessed SHA was used.",
+      "request_status": "not_attempted_missing_pinned_blob_sha",
+      "symbols": [
+        "js_type_converter"
+      ]
+    }
+  ],
+  "checker_entrypoint": {
+    "line": 30,
+    "parameters": [
+      "func_description",
+      "model_output",
+      "possible_answer",
+      "language",
+      "test_category",
+      "model_name"
+    ],
+    "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+    "symbol": "ast_checker"
+  },
+  "checker_standard_library_imports": [
+    "re"
+  ],
+  "closure": {
+    "checker_body_acquired": true,
+    "checker_body_statically_reviewed": true,
+    "direct_import_closure_complete": false,
+    "evaluator_imported_or_executed": false,
+    "license_notice_closure_complete": false,
+    "package_initialization_inventory_complete": false,
+    "third_party_runtime_locked": false,
+    "transitive_import_closure_complete": false
+  },
+  "commit": "ea13468e4423454d0c213704fb87cf7cb3990433",
+  "custodian_approved": false,
+  "failed_request_count": 0,
+  "failed_requests": [],
+  "failure_accounting": "All four Task 227 requests returned HTTP 200. Missing helper requests were not attempted because pinned SHAs are unavailable; they are not HTTP failures. Earlier aggregate failures remain unchanged in candidate-codex195 and are not new Task 227 failures.",
+  "files": [
+    {
+      "archive_member_verified": false,
+      "bytes": 24916,
+      "git_blob_sha1": "214f3ba55c012691761913b6aca68ab7bc4aa38b",
+      "imports": [
+        {
+          "line": 1,
+          "module": "bfcl_eval.constants.model_config",
+          "symbols": [
+            "MODEL_CONFIG_MAPPING"
+          ]
+        },
+        {
+          "line": 2,
+          "module": "bfcl_eval.constants.type_mappings",
+          "symbols": [
+            "JAVA_TYPE_CONVERSION",
+            "JS_TYPE_CONVERSION"
+          ]
+        },
+        {
+          "line": 6,
+          "module": "bfcl_eval.eval_checker.ast_eval.type_convertor.java_type_converter",
+          "symbols": [
+            "java_type_converter"
+          ]
+        },
+        {
+          "line": 7,
+          "module": "bfcl_eval.eval_checker.ast_eval.type_convertor.js_type_converter",
+          "symbols": [
+            "js_type_converter"
+          ]
+        },
+        {
+          "line": 8,
+          "module": "re",
+          "symbols": []
+        }
+      ],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "recorded_pin_location": "entrypoints.checker.git_blob_sha1_from_pinned_directory",
+      "request_receipt": "requests/01-ast-checker.json",
+      "role": "source",
+      "sha256": "58a8a1d8a42ec4f7e0f340a8bf11ab4035c54d38d933ae2621f22bbc7c8d1c9b",
+      "syntax_validated_without_execution": true
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 1813,
+      "git_blob_sha1": "fdbdde48402f8f2812b146f9b7341b6aae9e55b8",
+      "imports": [],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "recorded_pin_location": "files[path=berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py].git_blob_sha1",
+      "request_receipt": "requests/02-type-mappings.json",
+      "role": "source",
+      "sha256": "1702fb67afbe2c492608e58e2b7d02e46381f50166b47f3c952f76e34c7cd3bd",
+      "syntax_validated_without_execution": true
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 11357,
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "path": "LICENSE",
+      "recorded_pin_location": "files[path=LICENSE].git_blob_sha1",
+      "request_receipt": "requests/03-license.json",
+      "role": "license",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 1831,
+      "git_blob_sha1": "a514e581f18902f4f87562ee3c4964931b61e81f",
+      "path": "berkeley-function-call-leaderboard/pyproject.toml",
+      "recorded_pin_location": "files[path=berkeley-function-call-leaderboard/pyproject.toml].git_blob_sha1",
+      "request_receipt": "requests/04-package-metadata.json",
+      "role": "dependency-spec",
+      "sha256": "20d86859dc988e442c13a6c4f3567094bd8f2d4a269d59015337bdf6aeba7dd3"
+    }
+  ],
+  "license": {
+    "license_and_declaration_git_blob_verified": true,
+    "limits": "Root/package Apache-2.0 evidence agrees with Task 195. Nested LICENSE/NOTICE inventories, missing helpers and third-party license coverage remain unverified; no complete license closure is claimed.",
+    "original_license": "files/LICENSE",
+    "package_declaration": "files/berkeley-function-call-leaderboard/pyproject.toml:16",
+    "source_review": "The two acquired Python bodies contain checker logic/type constants, no embedded benchmark rows or separate license/attribution header. Original bytes including whitespace are retained.",
+    "spdx": "Apache-2.0"
+  },
+  "measured": false,
+  "pin_evidence": {
+    "checker_pin_origin": "Task 195 recorded pinned ast_eval directory metadata",
+    "independent_commit_tree_path_binding_verified": false,
+    "limitation": "The prior raw directory/tree response is absent. Blob content hashes match retained declarations, but this task cannot reconstruct an independently verifiable commit-tree/path proof. No tree endpoint was requested under the Git-blob-only restriction.",
+    "other_pins_origin": "Task 195 recorded commit-qualified contents API metadata",
+    "path": "../candidate-codex195/provenance.json",
+    "raw_tree_response_retained": false,
+    "recorded_pin_comparison_passed": true,
+    "sha256": "55d14464b75fee0e0c15749f37d33f6d64e15f2bf3457a7e98f27a7f2ffbea8b"
+  },
+  "privacy_scope": {
+    "H0_or_model_run": false,
+    "dependencies_installed": false,
+    "external_dataset_root_accessed": false,
+    "main_worktree_changed": false,
+    "network_endpoints": "Exactly four unauthenticated HTTPS GETs to api.github.com/repos/ShishirPatil/gorilla/git/blobs/<retained SHA>; redirects disabled.",
+    "task_data_answers_references_or_archive_retrieved": false
+  },
+  "production_authorized": false,
+  "recorded_commit_tree_sha1": "b34aa53a73491f42dc69b8b18c92448d7c311f50",
+  "repo_tag": "v1.3",
+  "repository": "https://github.com/ShishirPatil/gorilla",
+  "request_count": 4,
+  "requests": [
+    "requests/01-ast-checker.json",
+    "requests/02-type-mappings.json",
+    "requests/03-license.json",
+    "requests/04-package-metadata.json"
+  ],
+  "schema": "harnessgrad.bfcl-ast-source-retry.v1",
+  "scope": "Public original checker/code constants and source-license/package metadata only; no upstream import or execution.",
+  "status": "blocked",
+  "task": "codex227",
+  "total_source_license_spec_bytes": 39917,
+  "unresolved": [
+    "Pinned blob identities and original bytes for model_config.py, java_type_converter.py and js_type_converter.py; their imports, package initializers and license/NOTICE coverage.",
+    "Retained raw pinned-tree/path metadata or independent custody evidence binding all blobs to the exact commit.",
+    "Independent archive/member/source receipt approval and separate runtime/index/privacy/export/quota/cleanup gates remain outside this task."
+  ]
+}

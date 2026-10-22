@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "dataset": "fever",
+  "selection_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-fever",
+  "selection_kind": "operator-authorized-first-5-of-full-adapter-order",
+  "runtime_run_id": null,
+  "execution_authorized": false,
+  "claim_limit": "Bounded first-N selection in declared adapter order; NOT a random sample and NOT representative of the dataset. Establishes only identifiable, hash-bound selection -> export -> scoring-input custody for these five tasks, not scoring execution, eligibility, admission or claims about the rest of the pool.",
+  "source_revision": "a6b8d891d393e97a4efac791afffb2d7de5e57c6",
+  "adapter_source": [
+    {
+      "path": "data/datasets/fever.py",
+      "bytes": 4950,
+      "sha256": "7c0cd67c7d82d9c71f2bde4c52e564f279930f6fc7f62aae4cdda5b7c27afcd0"
+    },
+    {
+      "path": "data/scaffolds/qa/base.py",
+      "bytes": 27878,
+      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    },
+    {
+      "path": "data/scaffolds/qa/read.py",
+      "bytes": 8624,
+      "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+    },
+    {
+      "path": "data/scaffolds/scorer_input.py",
+      "bytes": 6166,
+      "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"
+    }
+  ],
+  "installed_source": {
+    "path": "/mnt/20t/xubuqiang/datasets/fever/valid.jsonl",
+    "bytes": 6471611,
+    "sha256": "5da0ccc0ccf77f974611de13f8aac6f78c6bba6293912835099eb6029baa85d9"
+  },
+  "adapter_presented_count": 15935,
+  "selected_count": 5,
+  "eligible_count": null,
+  "trials_executed": 0,
+  "measured_count": 0,
+  "invalid_count": 0,
+  "unmeasured_execution_count": 0,
+  "unexecuted_selected_count": 5,
+  "split_mode": "declared",
+  "split_source": "hash",
+  "side": "mixed",
+  "selected_sides": {
+    "train": [
+      "fever/validation/0",
+      "fever/validation/2"
+    ],
+    "eval": [
+      "fever/validation/1",
+      "fever/validation/3",
+      "fever/validation/4"
+    ]
+  },
+  "order_rule": "adapter full record order, slice [:5] BEFORE any side filter; no sorting/sampling/shuffling",
+  "export_path": "/tmp/hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f/fever",
+  "row_export": "rows.jsonl",
+  "export_files": {
+    "rows.jsonl": "41189af8735e749797dd26415a69b7075adb7ba54692b6039a0879d20450f72b",
+    "inputs/0/gold.json": "4f25c1ca5756408dd82f17ff1757afe5ec1982d405326869d5ff895c040cba21",
+    "inputs/0/question.txt": "b82677396dd817bce97181774bdc3587a89cba276bfe61fbee166f32925d85f8",
+    "inputs/0/goal.txt": "ab27f1df3dab0d21ee8ea2f891ca9bd2a5c490e963f7294513cbab174d9552c5",
+    "inputs/1/gold.json": "e1d804cccd806c5d50a4eabbb0b1c4512439dffe3d172545810009c210509e1f",
+    "inputs/1/question.txt": "9ad92c4a66d3f6f4cf8f23c6cfcb1ffc9e8a89c8872a1b1222562a82601d8ec3",
+    "inputs/1/goal.txt": "196e861f36755600cc0eb1138d4298faf1ae75886fc51d0fad35761e4c5f4f9d",
+    "inputs/2/gold.json": "a346faf754cc26c891d88468f5a2a742b039b38a74db5397193a57a943bca24e",
+    "inputs/2/question.txt": "96a1c7f58d7e1bdfbadb0be12cdc445f7ee387ce91e47ef85a00146e1a133c95",
+    "inputs/2/goal.txt": "0e67b25139b1be28c2bd24abdb792548b7515b8483a7126b652c5ff6af54340f",
+    "inputs/3/gold.json": "73d42e0505825789348baeb368eae9154a35fdc8718cd44a2364b2d8480a9f2e",
+    "inputs/3/question.txt": "a6757f97611acbd9e0a8fd0572732942c811a42c1344dfccf93aca830ab37a4f",
+    "inputs/3/goal.txt": "ef8e1910452e8b946e83c281b506e18ad8b9dadacb3e9023e0be6157d9889706",
+    "inputs/4/gold.json": "c2d1f23d10359627dbc1b917d5bb59cba095a5e78a39542c59190df6ef74f1d2",
+    "inputs/4/question.txt": "67659908365c88f235d2a0aef14d3b04ed17ae56244c2119ef2544ceb73668bf",
+    "inputs/4/goal.txt": "762e8ed83bfa9fa473966b3e3ecabdd279f3c19fc6c312af058f55467347018a"
+  },
+  "export_inventory_sha256": "f36b7123c34900ebdf782122a67dd1d7bf281e572cd5935cf178fa1dffed730b",
+  "prior_inventory": null,
+  "tasks": [
+    {
+      "task_id": "fever/validation/0",
+      "adapter_position": 0,
+      "source_row_index": 0,
+      "source_split": "validation",
+      "declared_side": "train",
+      "parsed_row_sha256": "3089f3936d16aa292cd3df2e9777d7db2532c68d6e68c8c6420c06597edb2e12",
+      "scorer_input": {
+        "task_id": "fever/validation/0",
+        "path": "gold.json",
+        "sha256": "4f25c1ca5756408dd82f17ff1757afe5ec1982d405326869d5ff895c040cba21"
+      },
+      "input_sha256": "4f25c1ca5756408dd82f17ff1757afe5ec1982d405326869d5ff895c040cba21",
+      "question_sha256": "b82677396dd817bce97181774bdc3587a89cba276bfe61fbee166f32925d85f8",
+      "goal_sha256": "ab27f1df3dab0d21ee8ea2f891ca9bd2a5c490e963f7294513cbab174d9552c5",
+      "native_row_id": "e9a7305690bde211b7434ccd53b3a763"
+    },
+    {
+      "task_id": "fever/validation/1",
+      "adapter_position": 1,
+      "source_row_index": 1,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "acdb1be775ba1853995ceabae7014f72eec5d0199df15fb21b1e08c4cb658101",
+      "scorer_input": {
+        "task_id": "fever/validation/1",
+        "path": "gold.json",
+        "sha256": "e1d804cccd806c5d50a4eabbb0b1c4512439dffe3d172545810009c210509e1f"
+      },
+      "input_sha256": "e1d804cccd806c5d50a4eabbb0b1c4512439dffe3d172545810009c210509e1f",
+      "question_sha256": "9ad92c4a66d3f6f4cf8f23c6cfcb1ffc9e8a89c8872a1b1222562a82601d8ec3",
+      "goal_sha256": "196e861f36755600cc0eb1138d4298faf1ae75886fc51d0fad35761e4c5f4f9d",
+      "native_row_id": "82caf51ce8a246f1b5244cc1fd8ca9d4"
+    },
+    {
+      "task_id": "fever/validation/2",
+      "adapter_position": 2,
+      "source_row_index": 2,
+      "source_split": "validation",
+      "declared_side": "train",
+      "parsed_row_sha256": "9f0bb9ff57ff857ecae1ddd22e67d1ac670aa1708596e824a686eb01bafd001e",
+      "scorer_input": {
+        "task_id": "fever/validation/2",
+        "path": "gold.json",
+        "sha256": "a346faf754cc26c891d88468f5a2a742b039b38a74db5397193a57a943bca24e"
+      },
+      "input_sha256": "a346faf754cc26c891d88468f5a2a742b039b38a74db5397193a57a943bca24e",
+      "question_sha256": "96a1c7f58d7e1bdfbadb0be12cdc445f7ee387ce91e47ef85a00146e1a133c95",
+      "goal_sha256": "0e67b25139b1be28c2bd24abdb792548b7515b8483a7126b652c5ff6af54340f",
+      "native_row_id": "b8182754eb4410163c45b97ddb3b6de1"
+    },
+    {
+      "task_id": "fever/validation/3",
+      "adapter_position": 3,
+      "source_row_index": 3,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "2380b8b61b4108828cef9b055aad4497612447da5cdc530e9db0f499bfe10413",
+      "scorer_input": {
+        "task_id": "fever/validation/3",
+        "path": "gold.json",
+        "sha256": "73d42e0505825789348baeb368eae9154a35fdc8718cd44a2364b2d8480a9f2e"
+      },
+      "input_sha256": "73d42e0505825789348baeb368eae9154a35fdc8718cd44a2364b2d8480a9f2e",
+      "question_sha256": "a6757f97611acbd9e0a8fd0572732942c811a42c1344dfccf93aca830ab37a4f",
+      "goal_sha256": "ef8e1910452e8b946e83c281b506e18ad8b9dadacb3e9023e0be6157d9889706",
+      "native_row_id": "2ab70646fffa23b2c2546796d6d85fd3"
+    },
+    {
+      "task_id": "fever/validation/4",
+      "adapter_position": 4,
+      "source_row_index": 4,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "d85db8e5ff549bd77df5a844c8f25777fdc71ae39e3b47246216418128621a11",
+      "scorer_input": {
+        "task_id": "fever/validation/4",
+        "path": "gold.json",
+        "sha256": "c2d1f23d10359627dbc1b917d5bb59cba095a5e78a39542c59190df6ef74f1d2"
+      },
+      "input_sha256": "c2d1f23d10359627dbc1b917d5bb59cba095a5e78a39542c59190df6ef74f1d2",
+      "question_sha256": "67659908365c88f235d2a0aef14d3b04ed17ae56244c2119ef2544ceb73668bf",
+      "goal_sha256": "762e8ed83bfa9fa473966b3e3ecabdd279f3c19fc6c312af058f55467347018a",
+      "native_row_id": "95bcef60842dc24a2d9b18ae25020303"
+    }
+  ],
+  "run_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-fever",
+  "run_state": "reserved-selection-only; no execution"
+}

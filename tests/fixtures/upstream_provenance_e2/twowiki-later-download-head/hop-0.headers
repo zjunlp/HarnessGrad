@@ -1,0 +1,30 @@
+Content-Type: text/html; charset=utf-8
+Location: 
+ https://www.dropbox.com/scl/fi/aasqsj45yokx71pnm8ctr/data_ids.zip?rlkey=72n2p6jywhfmm6kdeuzz8c55u&dl=1
+Pragma: no-cache
+Referrer-Policy: strict-origin-when-cross-origin
+Set-Cookie: gvc=MzIzNDUzNzcxNDUxMjk5MDI3NzA2NjE4NTAyMzg0NTEyNzkzMzU3; Path=/;
+ Expires=Mon, 13 Oct 2031 17:54:55 GMT; HttpOnly; Secure; SameSite=None
+Set-Cookie: t=5aeyR5kgAe6_aPM_UIdBOe9J; Path=/; Domain=dropbox.com;
+ Expires=Thu, 14 Oct 2027 17:54:55 GMT; HttpOnly; Secure; SameSite=None
+Set-Cookie: __Host-js_csrf=5aeyR5kgAe6_aPM_UIdBOe9J; Path=/;
+ Expires=Thu, 14 Oct 2027 17:54:55 GMT; Secure; SameSite=None
+Set-Cookie: __Host-ss=9jrQblvixk; Path=/;
+ Expires=Thu, 14 Oct 2027 17:54:55 GMT; HttpOnly; Secure; SameSite=Strict
+Set-Cookie: locale=en; Path=/; Domain=dropbox.com;
+ Expires=Mon, 13 Oct 2031 17:54:55 GMT
+X-Content-Type-Options: nosniff
+X-Permitted-Cross-Domain-Policies: none
+X-Robots-Tag: noindex, nofollow, noimageindex
+X-Xss-Protection: 1; mode=block
+Date: Wed, 14 Oct 2026 17:54:55 GMT
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Server: envoy
+Cache-Control: no-cache, no-store
+Alt-Svc: h3=":443"; ma=86400, h3-29=":443"; ma=86400
+Vary: Accept-Encoding
+X-Dropbox-Response-Origin: far_remote
+X-Dropbox-Request-Id: 3de36809c8384537955a24476acfc1ef
+Connection: close
+Transfer-Encoding: chunked
+

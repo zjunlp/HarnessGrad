@@ -1,0 +1,14 @@
+..................................................                       [100%]
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 212 warnings
+tests/quality/test_spreadsheetbench_control_submit.py: 2 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 94 warnings
+tests/quality/test_spreadsheetbench_control_submit.py: 4 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+50 passed, 312 warnings in 13.46s

@@ -1,0 +1,58 @@
+{
+  "command": "Python os.walk over each enumerated scope; followlinks=False; match listed filename prefixes and archive suffixes",
+  "errors": [
+    {
+      "error": "[Errno 13] Permission denied: '/opt/containerd'",
+      "scope": "/opt"
+    },
+    {
+      "error": "root does not exist",
+      "scope": "/tmp/hg-wwheelhouse-payloads-e5uywviu"
+    },
+    {
+      "error": "[Errno 13] Permission denied: '/tmp/pip-ephem-wheel-cache-hh0ewg2_'",
+      "scope": "/tmp/pip-ephem-wheel-cache-hh0ewg2_"
+    },
+    {
+      "error": "[Errno 13] Permission denied: '/tmp/pip-ephem-wheel-cache-u3quqp9h'",
+      "scope": "/tmp/pip-ephem-wheel-cache-u3quqp9h"
+    },
+    {
+      "error": "[Errno 13] Permission denied: '/tmp/pip-ephem-wheel-cache-xpe4fqg5'",
+      "scope": "/tmp/pip-ephem-wheel-cache-xpe4fqg5"
+    }
+  ],
+  "matches": [],
+  "prefixes": [
+    "libreoffice",
+    "libuno",
+    "uno-libs-private",
+    "ure-",
+    "ure_",
+    "python3-uno",
+    "LibreOffice"
+  ],
+  "scopes": [
+    "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures",
+    "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages",
+    "/home/xubuqiang/.local/lib/python3.12/site-packages",
+    "/mnt/8t/xubuqiang/anaconda3/pkgs",
+    "/home/xubuqiang/.cache/pip",
+    "/usr/bin",
+    "/usr/lib/libreoffice",
+    "/opt",
+    "/tmp/hg-wwheelhouse-payloads-e5uywviu",
+    "/tmp/pip-ephem-wheel-cache-hh0ewg2_",
+    "/tmp/pip-ephem-wheel-cache-u3quqp9h",
+    "/tmp/pip-ephem-wheel-cache-xpe4fqg5"
+  ],
+  "suffixes": [
+    ".deb",
+    ".rpm",
+    ".tar.gz",
+    ".tar.xz",
+    ".tar.bz2",
+    ".conda",
+    ".whl"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "url": "https://huggingface.co/api/datasets/mandarjoshi/trivia_qa/revision/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:20:01.229123+00:00",
+  "production_authorized": false,
+  "connect_ip": "18.65.14.125",
+  "status": null,
+  "error_type": "URLError",
+  "error": "<urlopen error [Errno 104] Connection reset by peer>",
+  "response_body": null,
+  "completed_at_utc": "2026-10-14T17:20:01.380857+00:00"
+}

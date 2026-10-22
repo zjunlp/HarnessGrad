@@ -1,0 +1,4 @@
+dependency_summary=tests/fixtures/hg_spreadrt/dependency-summary.txt
+installed_source_excerpts=tests/fixtures/hg_spreadrt/installed-source-excerpts.txt
+engine_installed_files_hashed=3085
+all_conda_closure_archives_found=True

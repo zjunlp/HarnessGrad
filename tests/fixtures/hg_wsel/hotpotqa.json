@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "dataset": "hotpotqa",
+  "selection_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-hotpotqa",
+  "selection_kind": "operator-authorized-first-5-of-full-adapter-order",
+  "runtime_run_id": null,
+  "execution_authorized": false,
+  "claim_limit": "Bounded first-N selection in declared adapter order; NOT a random sample and NOT representative of the dataset. Establishes only identifiable, hash-bound selection -> export -> scoring-input custody for these five tasks, not scoring execution, eligibility, admission or claims about the rest of the pool.",
+  "source_revision": "1908d6afbbead072334abe2965f91bd2709910ab",
+  "adapter_source": [
+    {
+      "path": "data/datasets/hotpotqa.py",
+      "bytes": 4946,
+      "sha256": "1946c6cf56db9124cf1b8d4fed61eed43c61d2a4ff85f181ac8b2739946db6e1"
+    },
+    {
+      "path": "data/scaffolds/qa/base.py",
+      "bytes": 27878,
+      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    },
+    {
+      "path": "data/scaffolds/qa/read.py",
+      "bytes": 8624,
+      "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+    },
+    {
+      "path": "data/scaffolds/scorer_input.py",
+      "bytes": 6166,
+      "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"
+    }
+  ],
+  "installed_source": {
+    "path": "/mnt/20t/xubuqiang/datasets/hotpotqa/fullwiki/validation-00000-of-00001.parquet",
+    "bytes": 28041820,
+    "sha256": "78933c0a31a5f7b420d4effdf4cd4eed573b28c6a3da6179dcf7a02b39e51d03"
+  },
+  "adapter_presented_count": 7405,
+  "selected_count": 5,
+  "eligible_count": null,
+  "trials_executed": 0,
+  "measured_count": 0,
+  "invalid_count": 0,
+  "unmeasured_execution_count": 0,
+  "unexecuted_selected_count": 5,
+  "split_mode": "declared",
+  "split_source": "hash",
+  "side": "mixed",
+  "selected_sides": {
+    "train": [
+      "hotpotqa/validation/0",
+      "hotpotqa/validation/1",
+      "hotpotqa/validation/3"
+    ],
+    "eval": [
+      "hotpotqa/validation/2",
+      "hotpotqa/validation/4"
+    ]
+  },
+  "order_rule": "adapter full record order, slice [:5] BEFORE any side filter; no sorting/sampling/shuffling",
+  "export_path": "/tmp/hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f/hotpotqa",
+  "row_export": "rows.jsonl",
+  "export_files": {
+    "rows.jsonl": "0cfe16ffdf0984132e537236d1e701900217984d3219889eeeca43fc3356ec01",
+    "inputs/0/gold.json": "496f379ebdbe94d738dbccbd7f5be5228d8a133f1248243bfd8d14c4da770bc2",
+    "inputs/0/question.txt": "5dda555f7bbde715cefa2f2ba0d287c9215cca56b33fe5b0c4c1bb7fc8362c48",
+    "inputs/0/goal.txt": "3694716e1d9de0e45c690eafdfb3099149fc27731faefc55d514c40b2655a903",
+    "inputs/1/gold.json": "08fcfad039524654f2ac28777dd8c1222b8d0150a670d041d55e1ea3a57aba74",
+    "inputs/1/question.txt": "61137c25525c022ce9c3e8c8ca23ae73ea730deeb225cbde124e13b96a1d073f",
+    "inputs/1/goal.txt": "f0d9e5eecd82432633768aaa1122ef5135ef05246c8e2163ccb00132d1a041fe",
+    "inputs/2/gold.json": "8dddf51756e383d070b12e18149cb7f5159361df97d48b4130f7b053115d0a82",
+    "inputs/2/question.txt": "c727af252f4ae661ec46e8c7ca9ad35cffe7e07c067e086ecc88ac0d100ca2cf",
+    "inputs/2/goal.txt": "2adc307aeba60bfe760637500ddd210048aad55b461523d5286e92c78d7c6302",
+    "inputs/3/gold.json": "7f433eac614d88b3b7c3e18fb1c3ff702a912ba1b3910ae9b7a44847042b0ca4",
+    "inputs/3/question.txt": "0db9cfa6230f80bbd2ce64e7d8cdbf116b3564b1c8db88f3d9bd82804477c1f6",
+    "inputs/3/goal.txt": "10a29d9e69813cc722f22c554be980095dc85f3ee2eef587edcf174de64a18bf",
+    "inputs/4/gold.json": "981d56be264f12e6c7a574f1cf89489e9cfdfd831de655e8bcc6b6ff81bbb832",
+    "inputs/4/question.txt": "94e21d6ecc92a6b4de24e0e30ceff8bb9af097d1b7eb21ed0039ae87dce69436",
+    "inputs/4/goal.txt": "ffa6a40a0864ad9eec0517f91c3efd08f5acfd7b8258991911de6ae9d92a37d8"
+  },
+  "export_inventory_sha256": "753a8d2f30f72650ce33e942113bbd53fdd223c63ebdbe1adf944e798d76b900",
+  "prior_inventory": null,
+  "tasks": [
+    {
+      "task_id": "hotpotqa/validation/0",
+      "adapter_position": 0,
+      "source_row_index": 0,
+      "source_split": "validation",
+      "declared_side": "train",
+      "parsed_row_sha256": "66a844cc7b09e70907b2077ae232146c209b33c8e143286615f8d91e605aea50",
+      "scorer_input": {
+        "task_id": "hotpotqa/validation/0",
+        "path": "gold.json",
+        "sha256": "496f379ebdbe94d738dbccbd7f5be5228d8a133f1248243bfd8d14c4da770bc2"
+      },
+      "input_sha256": "496f379ebdbe94d738dbccbd7f5be5228d8a133f1248243bfd8d14c4da770bc2",
+      "question_sha256": "5dda555f7bbde715cefa2f2ba0d287c9215cca56b33fe5b0c4c1bb7fc8362c48",
+      "goal_sha256": "3694716e1d9de0e45c690eafdfb3099149fc27731faefc55d514c40b2655a903",
+      "native_row_id": "5a8b57f25542995d1e6f1371"
+    },
+    {
+      "task_id": "hotpotqa/validation/1",
+      "adapter_position": 1,
+      "source_row_index": 1,
+      "source_split": "validation",
+      "declared_side": "train",
+      "parsed_row_sha256": "e6707a73232f3321e948751a6fa6a8a1796f6832e69cefa31b6cc9547cedf672",
+      "scorer_input": {
+        "task_id": "hotpotqa/validation/1",
+        "path": "gold.json",
+        "sha256": "08fcfad039524654f2ac28777dd8c1222b8d0150a670d041d55e1ea3a57aba74"
+      },
+      "input_sha256": "08fcfad039524654f2ac28777dd8c1222b8d0150a670d041d55e1ea3a57aba74",
+      "question_sha256": "61137c25525c022ce9c3e8c8ca23ae73ea730deeb225cbde124e13b96a1d073f",
+      "goal_sha256": "f0d9e5eecd82432633768aaa1122ef5135ef05246c8e2163ccb00132d1a041fe",
+      "native_row_id": "5a8c7595554299585d9e36b6"
+    },
+    {
+      "task_id": "hotpotqa/validation/2",
+      "adapter_position": 2,
+      "source_row_index": 2,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "1dd0ab88f6e3a894a6c2d98d0a078e30c1b7bc9ae37f151c5a55b62271449a2d",
+      "scorer_input": {
+        "task_id": "hotpotqa/validation/2",
+        "path": "gold.json",
+        "sha256": "8dddf51756e383d070b12e18149cb7f5159361df97d48b4130f7b053115d0a82"
+      },
+      "input_sha256": "8dddf51756e383d070b12e18149cb7f5159361df97d48b4130f7b053115d0a82",
+      "question_sha256": "c727af252f4ae661ec46e8c7ca9ad35cffe7e07c067e086ecc88ac0d100ca2cf",
+      "goal_sha256": "2adc307aeba60bfe760637500ddd210048aad55b461523d5286e92c78d7c6302",
+      "native_row_id": "5a85ea095542994775f606a8"
+    },
+    {
+      "task_id": "hotpotqa/validation/3",
+      "adapter_position": 3,
+      "source_row_index": 3,
+      "source_split": "validation",
+      "declared_side": "train",
+      "parsed_row_sha256": "fef0d15cc8266622aa992bca0fea0d2bfc503767970a57973ec0c79b144b2bcd",
+      "scorer_input": {
+        "task_id": "hotpotqa/validation/3",
+        "path": "gold.json",
+        "sha256": "7f433eac614d88b3b7c3e18fb1c3ff702a912ba1b3910ae9b7a44847042b0ca4"
+      },
+      "input_sha256": "7f433eac614d88b3b7c3e18fb1c3ff702a912ba1b3910ae9b7a44847042b0ca4",
+      "question_sha256": "0db9cfa6230f80bbd2ce64e7d8cdbf116b3564b1c8db88f3d9bd82804477c1f6",
+      "goal_sha256": "10a29d9e69813cc722f22c554be980095dc85f3ee2eef587edcf174de64a18bf",
+      "native_row_id": "5adbf0a255429947ff17385a"
+    },
+    {
+      "task_id": "hotpotqa/validation/4",
+      "adapter_position": 4,
+      "source_row_index": 4,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "ce5c1584a7ac9667429c8001b54ab29966bac7ad8240fbe8ccd776c08cc4293b",
+      "scorer_input": {
+        "task_id": "hotpotqa/validation/4",
+        "path": "gold.json",
+        "sha256": "981d56be264f12e6c7a574f1cf89489e9cfdfd831de655e8bcc6b6ff81bbb832"
+      },
+      "input_sha256": "981d56be264f12e6c7a574f1cf89489e9cfdfd831de655e8bcc6b6ff81bbb832",
+      "question_sha256": "94e21d6ecc92a6b4de24e0e30ceff8bb9af097d1b7eb21ed0039ae87dce69436",
+      "goal_sha256": "ffa6a40a0864ad9eec0517f91c3efd08f5acfd7b8258991911de6ae9d92a37d8",
+      "native_row_id": "5a8e3ea95542995a26add48d"
+    }
+  ],
+  "run_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-hotpotqa",
+  "run_state": "reserved-selection-only; no execution"
+}

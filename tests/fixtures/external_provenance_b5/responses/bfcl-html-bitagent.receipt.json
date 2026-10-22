@@ -1,0 +1,15 @@
+{
+  "url": "https://github.com/ShishirPatil/gorilla/blob/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "text/html"
+  },
+  "requested_at_utc": "2026-10-14T17:23:24.635073+00:00",
+  "production_authorized": false,
+  "status": null,
+  "error_type": "URLError",
+  "error": "<urlopen error timed out>",
+  "response_body": null,
+  "completed_at_utc": "2026-10-14T17:23:59.754665+00:00"
+}

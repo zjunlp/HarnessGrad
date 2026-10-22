@@ -1,0 +1,10 @@
+{
+  "task": "codex226",
+  "observed_at_utc": "2026-10-14T04:34:38.827185+00:00",
+  "removed_and_verified_absent": [
+    ".scratch/ujson-codex226",
+    ".scratch/ujson-codex226-tests"
+  ],
+  "retained": "Public wheel, raw JSON, notices, static native metadata, installation/test receipts, docs/tests and HTML summary.",
+  "scope": "Local task-owned file cleanup only; no runtime/container/snapshot cleanup receipt."
+}

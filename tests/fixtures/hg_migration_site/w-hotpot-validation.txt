@@ -1,0 +1,812 @@
+HotpotQA timeout outcome/persistence/aggregation synthetic validation - w-hotpot
+Worktree: /tmp/hg-hotpot; branch: wg-hotpot; baseline: bd25f5a
+No benchmark run, dataset loading, model, GPU, paid API or historical receipt access.
+The first command characterizes the old bug; the second is the new regression before the fix.
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-before-characterization tests/quality/test_measurement_coverage_hg_b3.py::test_timeout_detail_alone_does_not_close_aggregation_gate
+.                                                                        [100%]
+1 passed in 0.58s
+[exit 0]
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-before tests/quality/test_hotpot_timeout_admission_w_hotpot.py
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1] ___
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a92628f9ee0>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr0')
+trials = 1, timeout_trial = 1
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1327: in _evaluate
+    scorer_isolation_class = common_class(per_task_scorer_isolation.values())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = dict_values(['unknown', 'unknown', 'actor-workdir'])
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: actor-workdir, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2] ___
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a9262939d30>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr1')
+trials = 3, timeout_trial = 2
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1200: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x7a926316db60>
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: actor-workdir, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-timeout: scorer isolation class mismatch: actor-workdir, unknown
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1] __
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a92628fa720>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr2')
+trials = 1, timeout_trial = 1
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1327: in _evaluate
+    scorer_isolation_class = common_class(per_task_scorer_isolation.values())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = dict_values(['unknown', 'unknown', 'actor-workdir'])
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: actor-workdir, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2] __
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a9262916b40>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr3')
+trials = 3, timeout_trial = 2
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1200: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x7a92628bfca0>
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: actor-workdir, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-timeout: scorer isolation class mismatch: actor-workdir, unknown
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1] ___
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a92628fbfb0>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr4')
+trials = 1, timeout_trial = 1
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1327: in _evaluate
+    scorer_isolation_class = common_class(per_task_scorer_isolation.values())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = dict_values(['unknown', 'unknown', 'actor-workdir'])
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: actor-workdir, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2] ___
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a92628fa8d0>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr5')
+trials = 3, timeout_trial = 2
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1200: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x7a92628bf5a0>
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: actor-workdir, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-timeout: scorer isolation class mismatch: actor-workdir, unknown
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1] _
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'snapshot-service', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a9262930710>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr6')
+trials = 1, timeout_trial = 1
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1327: in _evaluate
+    scorer_isolation_class = common_class(per_task_scorer_isolation.values())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = dict_values(['unknown', 'unknown', 'snapshot-service'])
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: snapshot-service, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2] _
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'snapshot-service', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a9262931b50>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_is_unmeasured_thr7')
+trials = 3, timeout_trial = 2
+
+    @pytest.mark.parametrize("trials, timeout_trial", [(1, 1), (3, 2)])
+    def test_timeout_is_unmeasured_through_persistence_and_aggregation(
+            expired_verdict, monkeypatch, tmp_path, trials, timeout_trial):
+        """Timeouts cannot enter task/trial scores or cache, even after a good trial."""
+        calls = {}
+    
+        def synthetic_run(_repo, task, **kwargs):
+            tid = task["task_id"]
+            calls[tid] = calls.get(tid, 0) + 1
+            score = 0.0 if tid == "synthetic-zero" else 1.0
+            verdict = (expired_verdict
+                       if tid == "synthetic-timeout" and calls[tid] == timeout_trial
+                       else {"kind": "command", "passed": bool(score), "score": score,
+                             "detail": "synthetic completed check"})
+            return {"verdict": verdict, "trace": "synthetic trace\n",
+                    "exit_code": 0, "stderr": ""}
+    
+        monkeypatch.setattr(runner, "run_one", synthetic_run)
+        cache = {}
+>       result = runner._evaluate(
+            tmp_path, [{"task_id": tid} for tid in (
+                "synthetic-pass", "synthetic-zero", "synthetic-timeout")], cache,
+            trials=trials, jobs=1, progress_dir=tmp_path, round_no=0)
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+eval/run/runner.py:1200: in _evaluate
+    per_task_scorer_isolation[tid] = common_class(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+classes = <generator object _evaluate.<locals>.<genexpr> at 0x7a92628bf5a0>
+
+    def common_class(classes) -> str:
+        values = {c if isinstance(c, str) and c in CLASSES else "unknown" for c in classes}
+        if len(values) > 1:
+>           raise IsolationMismatch("scorer isolation class mismatch: " + ", ".join(sorted(values)))
+E           eval.verification.isolation.IsolationMismatch: scorer isolation class mismatch: snapshot-service, unknown
+
+eval/verification/isolation.py:23: IsolationMismatch
+----------------------------- Captured stderr call -----------------------------
+warning: could not write the progress record for synthetic-timeout: scorer isolation class mismatch: snapshot-service, unknown
+__________ test_timeout_only_round_has_no_measurement_or_cache[host] ___________
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a9262915490>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_only_round_has_no0')
+
+    def test_timeout_only_round_has_no_measurement_or_cache(
+            expired_verdict, monkeypatch, tmp_path):
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": expired_verdict, "trace": "", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-timeout"}], cache,
+            progress_dir=tmp_path, trials=1, jobs=1)
+>       assert result["per_task"] == {}
+E       AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E         Left contains 1 more item:
+E         {'synthetic-timeout': 0.0}
+E         Use -v to get more diff
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:117: AssertionError
+_________ test_timeout_only_round_has_no_measurement_or_cache[sandbox] _________
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a9262910d40>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_only_round_has_no1')
+
+    def test_timeout_only_round_has_no_measurement_or_cache(
+            expired_verdict, monkeypatch, tmp_path):
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": expired_verdict, "trace": "", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-timeout"}], cache,
+            progress_dir=tmp_path, trials=1, jobs=1)
+>       assert result["per_task"] == {}
+E       AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E         Left contains 1 more item:
+E         {'synthetic-timeout': 0.0}
+E         Use -v to get more diff
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:117: AssertionError
+__________ test_timeout_only_round_has_no_measurement_or_cache[exec] ___________
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'actor-workdir', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a92629117c0>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_only_round_has_no2')
+
+    def test_timeout_only_round_has_no_measurement_or_cache(
+            expired_verdict, monkeypatch, tmp_path):
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": expired_verdict, "trace": "", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-timeout"}], cache,
+            progress_dir=tmp_path, trials=1, jobs=1)
+>       assert result["per_task"] == {}
+E       AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E         Left contains 1 more item:
+E         {'synthetic-timeout': 0.0}
+E         Use -v to get more diff
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:117: AssertionError
+________ test_timeout_only_round_has_no_measurement_or_cache[snapshot] _________
+
+expired_verdict = {'detail': 'the verifier timed out after 1s', 'kind': 'command', 'passed': False, 'scorer_isolation_class': 'snapshot-service', ...}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7a92629323c0>
+tmp_path = PosixPath('/tmp/harnessgrad-pytest-w-hotpot-before/test_timeout_only_round_has_no3')
+
+    def test_timeout_only_round_has_no_measurement_or_cache(
+            expired_verdict, monkeypatch, tmp_path):
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": expired_verdict, "trace": "", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-timeout"}], cache,
+            progress_dir=tmp_path, trials=1, jobs=1)
+>       assert result["per_task"] == {}
+E       AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E         Left contains 1 more item:
+E         {'synthetic-timeout': 0.0}
+E         Use -v to get more diff
+
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[host]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[sandbox]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[exec]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[snapshot]
+12 failed in 3.20s
+[exit 1]
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q --tb=short -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-before-corrected tests/quality/test_hotpot_timeout_admission_w_hotpot.py
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1] __
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2] __
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1] _
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2] _
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+__________ test_timeout_only_round_has_no_measurement_or_cache[host] ___________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+_________ test_timeout_only_round_has_no_measurement_or_cache[sandbox] _________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+__________ test_timeout_only_round_has_no_measurement_or_cache[exec] ___________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+________ test_timeout_only_round_has_no_measurement_or_cache[snapshot] _________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[host]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[sandbox]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[exec]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[snapshot]
+12 failed in 4.66s
+[exit 1]
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q --tb=short -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-after tests/quality/test_hotpot_timeout_admission_w_hotpot.py
+FFFFFFFF....                                                             [100%]
+=================================== FAILURES ===================================
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1] __
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2] __
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1] _
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2] _
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:98: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert len(cache) == 2
+E   assert 0 == 2
+E    +  where 0 = len({})
+=========================== short test summary info ============================
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2]
+8 failed, 4 passed in 4.04s
+[exit 1]
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q --tb=short -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-final-focused tests/quality/test_hotpot_timeout_admission_w_hotpot.py
+............                                                             [100%]
+12 passed in 3.69s
+[exit 0]
+
+Final regression replay against baseline production sources (git show bd25f5a:<path> for eval/run/runner.py and eval/verification/verifier.py); finally restore fixed bytes.
+The earlier fixture corrections match isolation classes and pass cache by keyword; neither changes production code.
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q --tb=short -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-final-baseline tests/quality/test_hotpot_timeout_admission_w_hotpot.py
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1] __
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2] __
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+___ test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2] ___
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1] _
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+_ test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2] _
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:85: in test_timeout_is_unmeasured_through_persistence_and_aggregation
+    assert result["per_task"] == {"synthetic-pass": 1.0, "synthetic-zero": 0.0}
+E   AssertionError: assert {'synthetic-p...ic-zero': 0.0} == {'synthetic-p...ic-zero': 0.0}
+E     Omitting 2 identical items, use -vv to show
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.6666666666666666}
+E     Use -v to get more diff
+__________ test_timeout_only_round_has_no_measurement_or_cache[host] ___________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+_________ test_timeout_only_round_has_no_measurement_or_cache[sandbox] _________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+__________ test_timeout_only_round_has_no_measurement_or_cache[exec] ___________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+________ test_timeout_only_round_has_no_measurement_or_cache[snapshot] _________
+tests/quality/test_hotpot_timeout_admission_w_hotpot.py:118: in test_timeout_only_round_has_no_measurement_or_cache
+    assert result["per_task"] == {}
+E   AssertionError: assert {'synthetic-timeout': 0.0} == {}
+E     Left contains 1 more item:
+E     {'synthetic-timeout': 0.0}
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[host-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[sandbox-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[exec-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-1-1]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_is_unmeasured_through_persistence_and_aggregation[snapshot-3-2]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[host]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[sandbox]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[exec]
+FAILED tests/quality/test_hotpot_timeout_admission_w_hotpot.py::test_timeout_only_round_has_no_measurement_or_cache[snapshot]
+12 failed in 4.64s
+[exit 1]
+
+$ python3 tools/check_dataset_blockers.py
+{"valid": true, "datasets": 28, "shared_blockers": 3, "historical_records": 11, "production_authorized": false}
+[exit 0]
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q --tb=short -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-final tests/quality/test_hotpot_timeout_admission_w_hotpot.py tests/quality/test_measurement_coverage_hg_b3.py::test_hotpot_malformed_predictions_are_unmeasured tests/quality/test_measurement_coverage_hg_b3.py::test_hotpot_valid_support_uses_joint_em tests/quality/test_measurement_coverage_hg_b3.py::test_timeout_detail_alone_does_not_close_aggregation_gate 'tests/quality/test_measurement_coverage_hg_b3.py::test_review_preserves_unresolved_gates_and_original_history[hotpotqa-historical-comparison-receipts-measurement-timeout-aggregation-admission]' tests/quality/test_dataset_blockers.py
+........................................................................ [ 94%]
+....                                                                     [100%]
+76 passed in 8.07s
+[exit 0]
+
+$ env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q --tb=short -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-w-hotpot-verifier-regressions tests/quality/test_verifier.py::test_exec_verdict_ignores_precreated_reward_and_evidence tests/quality/test_verifier.py::test_exec_verdict_does_not_follow_subject_symlink tests/quality/test_verifier.py::test_exec_verdict_missing_new_reward_is_zero tests/quality/test_verifier.py::test_exec_verdict_timeout_is_not_a_forged_score tests/quality/test_verifier.py::test_host_verdict_clears_precreated_files_and_rejects_symlink_parent tests/quality/test_jericho_runtime_boundaries.py::test_verifier_declaration_reaches_every_launch_path tests/quality/test_jericho_runtime_boundaries.py::test_real_host_sleep_obeys_declared_timeout tests/quality/test_trials_and_unmeasured.py::test_trials_average_and_record_their_spread tests/quality/test_trials_and_unmeasured.py::test_one_trial_records_no_spread_at_all tests/quality/test_trials_and_unmeasured.py::test_the_runner_keeps_every_trial_s_trace_and_verdict tests/quality/test_trials_and_unmeasured.py::test_a_check_that_never_ran_is_invalid_not_zero tests/quality/test_trials_and_unmeasured.py::test_a_measured_zero_is_still_a_zero tests/quality/test_trials_and_unmeasured.py::test_a_task_is_written_down_the_moment_it_is_measured tests/quality/test_trials_and_unmeasured.py::test_an_unmeasured_task_is_written_down_too tests/quality/test_trials_and_unmeasured.py::test_what_survives_a_kill_is_what_was_already_measured tests/quality/test_scorer_isolation_option_b.py::test_snapshot_verifier_keeps_dependency_network_and_records_actual_class
+...................                                                      [100%]
+19 passed in 3.28s
+[exit 0]
+
+$ python3 -c 'import json, pathlib, subprocess; old=json.loads(subprocess.check_output(["git","show","bd25f5a:docs/dataset-blockers.json"])); new=json.loads(pathlib.Path("docs/dataset-blockers.json").read_text()); assert {k:v for k,v in old.items() if k!="datasets"}=={k:v for k,v in new.items() if k!="datasets"}; assert len(old["datasets"])==len(new["datasets"]); changed=[a["dataset"] for a,b in zip(old["datasets"],new["datasets"]) if a!=b]; assert changed==["hotpotqa"], changed; a=next(r for r in old["datasets"] if r["dataset"]=="hotpotqa"); b=next(r for r in new["datasets"] if r["dataset"]=="hotpotqa"); assert {k:v for k,v in a.items() if k!="blockers"}=={k:v for k,v in b.items() if k!="blockers"}; paths=subprocess.check_output(["git","diff","--name-only","bd25f5a"]).decode().splitlines(); assert not any(p=="runs" or p.startswith("runs/") for p in paths); print("Scope verified: only HotpotQA blockers changed; shared entries/references, all other datasets, historical records, and runs/ unchanged.")'
+Scope verified: only HotpotQA blockers changed; shared entries/references, all other datasets, historical records, and runs/ unchanged.
+[exit 0]
+
+$ python3 -m pytest -q tests/quality/test_hotpot_timeout_admission_w_hotpot.py
+............                                                             [100%]
+12 passed in 4.61s
+[exit 0]
+
+$ python3 tools/check_dataset_blockers.py
+{"valid": true, "datasets": 28, "shared_blockers": 3, "historical_records": 11, "production_authorized": false}
+[exit 0]
+
+$ git diff --check
+[exit 0]
+
+$ git diff --cached --check -- . ':(exclude)reports/w-hotpot-validation.txt'
+[exit 0]
+
+$ python3 tools/check_dataset_blockers.py
+{"valid": true, "datasets": 28, "shared_blockers": 3, "historical_records": 11, "production_authorized": false}
+[exit 0]
+
+Transcript note: raw pytest failure output above retains its original trailing spaces. The final staged whitespace check excludes only this exact-output transcript; all implementation, test, registry and documentation files pass.

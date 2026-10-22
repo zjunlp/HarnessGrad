@@ -1,0 +1,671 @@
+{
+  "inputs": {
+    "musique_gold": {
+      "aliases": [],
+      "answer": "red blue",
+      "id": "one",
+      "supporting_facts": [
+        [
+          "Page",
+          7
+        ],
+        [
+          "Page",
+          11
+        ]
+      ]
+    },
+    "musique_predictions": [
+      {
+        "answer": "red blue",
+        "predicted_evidence": [
+          [
+            "Page",
+            7
+          ],
+          [
+            "Page",
+            11
+          ]
+        ],
+        "schema_version": 1
+      },
+      {
+        "answer": "red",
+        "predicted_evidence": [
+          [
+            "Page",
+            7
+          ]
+        ],
+        "schema_version": 1
+      },
+      {
+        "answer": "wrong",
+        "predicted_evidence": [],
+        "schema_version": 1
+      }
+    ],
+    "run_scores": [
+      [],
+      [
+        1.0
+      ],
+      [
+        1.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.3333333333333333
+      ],
+      [
+        0.1,
+        0.2,
+        0.3
+      ]
+    ],
+    "twowiki_golds": [
+      {
+        "aliases": [],
+        "answer": "red blue",
+        "evidence_aliases": {},
+        "evidences": [
+          [
+            "Subject",
+            "relation",
+            "Object"
+          ]
+        ],
+        "evidences_id": [],
+        "id": "one",
+        "supporting_facts": [
+          [
+            "Page",
+            0
+          ]
+        ]
+      },
+      {
+        "aliases": [],
+        "answer": "red blue",
+        "evidence_aliases": {},
+        "evidences": [
+          [
+            "Subject",
+            "relation",
+            "Object"
+          ]
+        ],
+        "evidences_id": [],
+        "id": "two",
+        "supporting_facts": [
+          [
+            "Page",
+            0
+          ]
+        ]
+      }
+    ],
+    "twowiki_predictions": {
+      "complete": {
+        "one": {
+          "answer": "red blue",
+          "evidence": [
+            [
+              "Subject",
+              "relation",
+              "Object"
+            ]
+          ],
+          "schema_version": 1,
+          "supporting_facts": [
+            [
+              "Page",
+              0
+            ]
+          ]
+        },
+        "two": {
+          "answer": "red blue",
+          "evidence": [
+            [
+              "Subject",
+              "relation",
+              "Object"
+            ]
+          ],
+          "schema_version": 1,
+          "supporting_facts": [
+            [
+              "Page",
+              0
+            ]
+          ]
+        }
+      },
+      "missing_channel": {
+        "one": {
+          "answer": "red blue",
+          "evidence": [
+            [
+              "Subject",
+              "relation",
+              "Object"
+            ]
+          ],
+          "schema_version": 1,
+          "supporting_facts": [
+            [
+              "Page",
+              0
+            ]
+          ]
+        },
+        "two": {
+          "answer": "red blue",
+          "schema_version": 1
+        }
+      },
+      "missing_row": {
+        "one": {
+          "answer": "red blue",
+          "evidence": [
+            [
+              "Subject",
+              "relation",
+              "Object"
+            ]
+          ],
+          "schema_version": 1,
+          "supporting_facts": [
+            [
+              "Page",
+              0
+            ]
+          ]
+        }
+      },
+      "no_predictions": {},
+      "partial_answer": {
+        "one": {
+          "answer": "red",
+          "evidence": [
+            [
+              "Subject",
+              "relation",
+              "Object"
+            ]
+          ],
+          "schema_version": 1,
+          "supporting_facts": [
+            [
+              "Page",
+              0
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "outputs": {
+    "musique_complete": {
+      "aggregate_policy": "ordered macro mean; official columns rounded to 3 decimals",
+      "answer_em": 0.333,
+      "answer_f1": 0.556,
+      "count": 3,
+      "joint_em": 0.3333333333333333,
+      "joint_f1": 0.48148148148148145,
+      "mode": "answer_support",
+      "reward": 0.48148148148148145,
+      "reward_policy": "platform answer_f1 * support_f1 (not an official metric)",
+      "support_f1": 0.556
+    },
+    "musique_items": [
+      {
+        "correct": true,
+        "official": {
+          "aggregate_policy": "ordered macro mean; official columns rounded to 3 decimals",
+          "answer_em": 1,
+          "answer_f1": 1.0,
+          "id": "one",
+          "joint_em": 1,
+          "joint_em_policy": "platform answer_em * support_em (not an official metric)",
+          "joint_f1": 1.0,
+          "metric": "MuSiQue-Ans",
+          "mode": "answer_support",
+          "reward_policy": "platform answer_f1 * support_f1 (not an official metric)",
+          "support_em": 1,
+          "support_f1": 1.0
+        },
+        "reward": 1.0,
+        "why": "answer_f1=1, support_f1=1, answer_em=1; platform joint_f1=1"
+      },
+      {
+        "correct": false,
+        "official": {
+          "aggregate_policy": "ordered macro mean; official columns rounded to 3 decimals",
+          "answer_em": 0,
+          "answer_f1": 0.6666666666666666,
+          "id": "one",
+          "joint_em": 0,
+          "joint_em_policy": "platform answer_em * support_em (not an official metric)",
+          "joint_f1": 0.4444444444444444,
+          "metric": "MuSiQue-Ans",
+          "mode": "answer_support",
+          "reward_policy": "platform answer_f1 * support_f1 (not an official metric)",
+          "support_em": 0,
+          "support_f1": 0.6666666666666666
+        },
+        "reward": 0.4444444444444444,
+        "why": "answer_f1=0.666667, support_f1=0.666667, answer_em=0; platform joint_f1=0.444444"
+      },
+      {
+        "correct": false,
+        "official": {
+          "aggregate_policy": "ordered macro mean; official columns rounded to 3 decimals",
+          "answer_em": 0,
+          "answer_f1": 0,
+          "id": "one",
+          "joint_em": 0,
+          "joint_em_policy": "platform answer_em * support_em (not an official metric)",
+          "joint_f1": 0.0,
+          "metric": "MuSiQue-Ans",
+          "mode": "answer_support",
+          "reward_policy": "platform answer_f1 * support_f1 (not an official metric)",
+          "support_em": 0,
+          "support_f1": 0.0
+        },
+        "reward": 0.0,
+        "why": "answer_f1=0, support_f1=0, answer_em=0; platform joint_f1=0"
+      }
+    ],
+    "musique_legacy": {
+      "aggregate_policy": "ordered macro mean; official columns rounded to 3 decimals",
+      "answer_em": 0.333,
+      "answer_f1": 0.556,
+      "count": 3,
+      "mode": "legacy_answer_only",
+      "reward": 0.5555555555555555,
+      "reward_policy": "legacy answer_f1 only",
+      "support_f1": null
+    },
+    "musique_omitted_item": {
+      "aggregate_policy": "ordered macro mean; official columns rounded to 3 decimals",
+      "answer_em": 1.0,
+      "answer_f1": 1.0,
+      "count": 1,
+      "joint_em": 1.0,
+      "joint_f1": 1.0,
+      "mode": "answer_support",
+      "reward": 1.0,
+      "reward_policy": "platform answer_f1 * support_f1 (not an official metric)",
+      "support_f1": 1.0
+    },
+    "run_means": {
+      "agentdojo": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "alfworld": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "api_bank": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "appworld": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "bfcl_v3": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "bird_minidev": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "chessbench_puzzles": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "ds1000": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "fever": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "gaia": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "gsm8k": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "hotpotqa": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "jericho": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "livecodebench": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "musique": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "nestful": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "physicsquestions": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "reasoning_gym": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "scienceworld": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "sotuqa": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "sportsunderstanding": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "spreadsheetbench": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "strategyqa": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "tau2_bench": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "tau_bench": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "terminal_bench": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "triviaqa": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ],
+      "twowikimultihopqa": [
+        0.0,
+        1.0,
+        0.5,
+        0.4444444444444444,
+        0.19999999999999998
+      ]
+    },
+    "twowiki_corpus": {
+      "complete": {
+        "em": 100.0,
+        "evi_em": 100.0,
+        "evi_f1": 100.0,
+        "evi_prec": 100.0,
+        "evi_recall": 100.0,
+        "f1": 100.0,
+        "joint_em": 100.0,
+        "joint_f1": 100.0,
+        "joint_prec": 100.0,
+        "joint_recall": 100.0,
+        "prec": 100.0,
+        "recall": 100.0,
+        "sp_em": 100.0,
+        "sp_f1": 100.0,
+        "sp_prec": 100.0,
+        "sp_recall": 100.0
+      },
+      "missing_channel": {
+        "em": 100.0,
+        "evi_em": 50.0,
+        "evi_f1": 50.0,
+        "evi_prec": 50.0,
+        "evi_recall": 50.0,
+        "f1": 100.0,
+        "joint_em": 50.0,
+        "joint_f1": 50.0,
+        "joint_prec": 50.0,
+        "joint_recall": 50.0,
+        "prec": 100.0,
+        "recall": 100.0,
+        "sp_em": 50.0,
+        "sp_f1": 50.0,
+        "sp_prec": 50.0,
+        "sp_recall": 50.0
+      },
+      "missing_row": {
+        "em": 50.0,
+        "evi_em": 50.0,
+        "evi_f1": 50.0,
+        "evi_prec": 50.0,
+        "evi_recall": 50.0,
+        "f1": 50.0,
+        "joint_em": 50.0,
+        "joint_f1": 50.0,
+        "joint_prec": 50.0,
+        "joint_recall": 50.0,
+        "prec": 50.0,
+        "recall": 50.0,
+        "sp_em": 50.0,
+        "sp_f1": 50.0,
+        "sp_prec": 50.0,
+        "sp_recall": 50.0
+      },
+      "no_predictions": {
+        "em": 0.0,
+        "evi_em": 0.0,
+        "evi_f1": 0.0,
+        "evi_prec": 0.0,
+        "evi_recall": 0.0,
+        "f1": 0.0,
+        "joint_em": 0.0,
+        "joint_f1": 0.0,
+        "joint_prec": 0.0,
+        "joint_recall": 0.0,
+        "prec": 0.0,
+        "recall": 0.0,
+        "sp_em": 0.0,
+        "sp_f1": 0.0,
+        "sp_prec": 0.0,
+        "sp_recall": 0.0
+      },
+      "partial_answer": {
+        "em": 0.0,
+        "evi_em": 50.0,
+        "evi_f1": 50.0,
+        "evi_prec": 50.0,
+        "evi_recall": 50.0,
+        "f1": 33.33,
+        "joint_em": 0.0,
+        "joint_f1": 33.33,
+        "joint_prec": 50.0,
+        "joint_recall": 25.0,
+        "prec": 50.0,
+        "recall": 25.0,
+        "sp_em": 50.0,
+        "sp_f1": 50.0,
+        "sp_prec": 50.0,
+        "sp_recall": 50.0
+      }
+    },
+    "twowiki_items": [
+      {
+        "correct": true,
+        "official": {
+          "em": 1.0,
+          "evi_em": 1.0,
+          "evi_f1": 1.0,
+          "evi_prec": 1.0,
+          "evi_recall": 1.0,
+          "f1": 1.0,
+          "id": "one",
+          "joint_em": 1.0,
+          "joint_f1": 1.0,
+          "joint_prec": 1.0,
+          "joint_recall": 1.0,
+          "metric": "2WikiMultihopQA Joint F1 (official v1.1 evaluator)",
+          "mode": "structured",
+          "prec": 1.0,
+          "recall": 1.0,
+          "scale": "fraction",
+          "sp_em": 1.0,
+          "sp_f1": 1.0,
+          "sp_prec": 1.0,
+          "sp_recall": 1.0,
+          "type": null
+        },
+        "reward": 1.0,
+        "why": "Joint F1=1, Joint EM=1"
+      },
+      {
+        "correct": false,
+        "official": {
+          "em": 0.0,
+          "evi_em": 0.0,
+          "evi_f1": 0.0,
+          "evi_prec": 0.0,
+          "evi_recall": 0.0,
+          "f1": 0.6666666666666666,
+          "id": "one",
+          "joint_em": 0.0,
+          "joint_f1": 0.0,
+          "joint_prec": 0.0,
+          "joint_recall": 0.0,
+          "metric": "2WikiMultihopQA Joint F1 (official v1.1 evaluator)",
+          "mode": "structured",
+          "prec": 1.0,
+          "recall": 0.5,
+          "scale": "fraction",
+          "sp_em": 0.0,
+          "sp_f1": 0.0,
+          "sp_prec": 0.0,
+          "sp_recall": 0.0,
+          "type": null
+        },
+        "reward": 0.0,
+        "why": "Joint F1=0, Joint EM=0"
+      }
+    ],
+    "twowiki_legacy": {
+      "correct": false,
+      "official": {
+        "em": 0.0,
+        "f1": 0.6666666666666666,
+        "id": "one",
+        "metric": "2WikiMultihopQA Ans F1 (legacy answer-only, v1.1)",
+        "mode": "legacy_answer_only",
+        "prec": 1.0,
+        "recall": 0.5,
+        "scale": "fraction",
+        "type": null
+      },
+      "reward": 0.6666666666666666,
+      "why": "legacy answer-only: Ans F1=0.666667, Ans EM=0; Sup/Evi/Joint are not reported in this mode"
+    }
+  }
+}

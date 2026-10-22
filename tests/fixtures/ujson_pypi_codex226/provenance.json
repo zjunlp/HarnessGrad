@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "task": "codex226",
+  "base_commit": "61e7f82245c76e7c833740216940d1fcaf3b76be",
+  "target": {
+    "implementation": "CPython",
+    "python": "3.12.4",
+    "python_tag": "cp312",
+    "abi_tag": "cp312",
+    "os": "Linux",
+    "machine": "x86_64",
+    "libc_family": "glibc",
+    "minimum_glibc_tag": "2.17",
+    "basis": "Recorded code-only environment in tests/fixtures/twowikimultihopqa_upstream_codex197/provenance.json. No immutable supported image was supplied.",
+    "metadata_compatible": true,
+    "supported_image_digest": null
+  },
+  "artifact": {
+    "filename": "ujson-5.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "sha256": "f8ccb77b3e40b151e20519c6ae6d89bfe3f4c14e8e210d910287f778368bb3d1",
+    "bytes": 53686,
+    "url": "https://files.pythonhosted.org/packages/04/81/668707e5f2177791869b624be4c06fb2473bf97ee33296b18d1cf3092af7/ujson-5.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+  },
+  "members": {
+    "ujson.cpython-312-x86_64-linux-gnu.so": {
+      "bytes": 105936,
+      "sha256": "deb036e60d4b61104bad389783094ebb09a35dbdecd21aeea572968762c3be5c"
+    },
+    "ujson-5.10.0.dist-info/LICENSE.txt": {
+      "bytes": 5975,
+      "sha256": "36866344f0a486541bd9800f1a407a056c0c214a82c658f059694daf3dc394d2"
+    },
+    "ujson-5.10.0.dist-info/METADATA": {
+      "bytes": 9349,
+      "sha256": "b7a07b8cfb552e87ddf1ff235080d3c23ab1dd3fdba0e53775ba456e7ba09488"
+    },
+    "ujson-5.10.0.dist-info/RECORD": {
+      "bytes": 487,
+      "sha256": "69c7569ec888906c74b54b5a71087218f533cfce4bdb28c72c2dc6d815e4f90d"
+    },
+    "ujson-5.10.0.dist-info/top_level.txt": {
+      "bytes": 6,
+      "sha256": "201318b952021d68bdc6798c376d9434c10561fd784dc702ee8f6e60f872720d"
+    },
+    "ujson-5.10.0.dist-info/WHEEL": {
+      "bytes": 152,
+      "sha256": "3afb6f9dba5c6b11dae5381781f0b8f04e8903bccbafbb2f32ca4f3fb564e68f"
+    }
+  },
+  "python_dependency_metadata": {
+    "requires_python": ">=3.8",
+    "requires_dist": []
+  },
+  "license": {
+    "project_family": "BSD-3-Clause",
+    "wheel_license_file": "ujson-5.10.0.dist-info/LICENSE.txt",
+    "preserved_copy": "LICENSE.txt",
+    "contains_notices": [
+      "Electronic Arts / ESN",
+      "MODP_ASCII / Nick Galbreath",
+      "Tcl-derived numeric decoder / Regents of University of California / Sun Microsystems and others"
+    ],
+    "separate_notice_members": [],
+    "completeness_attested": false,
+    "remaining_review": "ELF exports defined double_conversion symbols but LICENSE.txt has no double-conversion/V8 notice. Bind exact bundled source revision/license and carry its required notices before redistribution; no source license was inferred or invented."
+  },
+  "native": {
+    "module": "ujson.cpython-312-x86_64-linux-gnu.so",
+    "elf_class": "ELF64",
+    "machine": "Advanced Micro Devices X86-64",
+    "type": "DYN",
+    "needed": [
+      "libstdc++.so.6",
+      "libm.so.6",
+      "libgcc_s.so.1",
+      "libpthread.so.0",
+      "libc.so.6"
+    ],
+    "required_symbol_versions": {
+      "libgcc_s.so.1": [
+        "GCC_3.0"
+      ],
+      "libstdc++.so.6": [
+        "CXXABI_1.3",
+        "GLIBCXX_3.4"
+      ],
+      "libc.so.6": [
+        "GLIBC_2.2.5",
+        "GLIBC_2.14"
+      ]
+    },
+    "rpath": null,
+    "runpath": null,
+    "bundled_shared_libraries": [],
+    "defined_double_conversion_symbols": true,
+    "python_symbols_resolved_by": "Target CPython process; no libpython DT_NEEDED entry. Must verify in approved runtime.",
+    "method": "Static GNU readelf 2.38; LC_ALL=C; extension never loaded. No ldd or loader execution.",
+    "reports": {
+      "elf-header.txt": "534dcb6af4bafb90670e785bb67c77435b58de23a56f83fa25448e2b59ed4ed4",
+      "elf-dynamic.txt": "d0f5bb095c4b1a19a694f915bcfb9e069e284a8276c63be1f6b64309f57fbdd6",
+      "elf-versions.txt": "240098337060d5b42575eb375ce96e35cf842de0398afe1acc0caa736d6b0f08",
+      "elf-symbols.txt": "935e774da61671b55bc9bd47fde8b7b6e470e411bad685a94847ad284357df9b"
+    },
+    "comparison_to_codex197_installed_extension": "Published wheel extension SHA-256 deb036e60d4b61104bad389783094ebb09a35dbdecd21aeea572968762c3be5c differs from prior installed extension 41ef15691cb490d5c38cde5f7e588d9d348cb92008888a0dcb2770ae84ea87db. Prior three-library observations do not attest this five-library artifact."
+  },
+  "closure": {
+    "artifact_provenance_verified": true,
+    "wheel_record_verified": true,
+    "offline_install_verified": true,
+    "fresh_native_import_verified": false,
+    "loader_resolution_attested": false,
+    "transitive_native_closure_attested": false,
+    "supported_image_attested": false,
+    "runtime_closed": false,
+    "production_authorized": false
+  },
+  "scope": {
+    "benchmark_payload_accessed": false,
+    "model_or_h0_executed": false,
+    "sdist_acquired": false,
+    "native_extension_loaded": false,
+    "production_code_changed": false
+  }
+}

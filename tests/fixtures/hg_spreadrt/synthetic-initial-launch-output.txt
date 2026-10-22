@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/run_synthetic.py", line 29, in <module>
+    assert any('/soffice.bin' in line and '--convert-to' in line for line in successful)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

@@ -1,0 +1,7 @@
+label=synthetic reward-transport fault injection; no dataset execution
+verdict={"kind": "command", "passed": false, "score": null, "scorer_isolation_class": "actor-workdir", "scorer_isolation_declared": "unknown", "unmeasured": "scorer input does not belong to selected task"}
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/reward_loss_control.py", line 56, in <module>
+    assert verdict['score'] == 0.0 and 'unmeasured' not in verdict
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

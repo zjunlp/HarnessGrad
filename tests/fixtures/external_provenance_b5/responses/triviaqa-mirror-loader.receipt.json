@@ -1,0 +1,144 @@
+{
+  "url": "https://hf-mirror.com/datasets/mandarjoshi/trivia_qa/raw/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f/trivia_qa.py",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:18:44.970281+00:00",
+  "production_authorized": false,
+  "status": 404,
+  "reason": "Not Found",
+  "response_headers": [
+    [
+      "Access-Control-Allow-Origin",
+      "https://hf-mirror.com"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range,X-Linked-Size,X-Linked-ETag,X-Xet-Hash"
+    ],
+    [
+      "Access-Control-Max-Age",
+      "86400"
+    ],
+    [
+      "Alt-Svc",
+      "h3=\":443\"; ma=2592000"
+    ],
+    [
+      "Cf-Cache-Status",
+      "MISS"
+    ],
+    [
+      "Cf-Ray",
+      "a4a83ebcac3aa88f-NRT"
+    ],
+    [
+      "Content-Length",
+      "15"
+    ],
+    [
+      "Content-Type",
+      "text/plain; charset=utf-8"
+    ],
+    [
+      "Cross-Origin-Opener-Policy",
+      "same-origin"
+    ],
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:18:45 GMT"
+    ],
+    [
+      "Etag",
+      "W/\"f-mY2VvLxuxB7KhsoOdQTlMTccuAQ\""
+    ],
+    [
+      "Nel",
+      "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}"
+    ],
+    [
+      "Ratelimit",
+      "\"resolvers\";r=2999;t=295"
+    ],
+    [
+      "Ratelimit-Policy",
+      "\"fixed window\";\"resolvers\";q=3000;w=300"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Report-To",
+      "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=7L646F8LwErXMUMnu02D0r7%2FfpnkN%2F42tXDUtgilX00SUjHdg0oiVsHhweQc8j%2FJ6Ta2sojdZc0poB4G1bcy6Vsw1%2B3zCD41ARXXQbHJRozFO9njiaP9ZTRVckNf5eW8LYMx%2FzZLV%2F4%3D\"}]}"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000"
+    ],
+    [
+      "Vary",
+      "Origin"
+    ],
+    [
+      "Via",
+      "2.0 Caddy"
+    ],
+    [
+      "Via",
+      "2.0 Caddy"
+    ],
+    [
+      "Via",
+      "2.0 Caddy"
+    ],
+    [
+      "Via",
+      "1.1 8b9ec68d0eb4c160094e388b8b5faae0.cloudfront.net (CloudFront)"
+    ],
+    [
+      "X-Amz-Cf-Id",
+      "JgeOGJkCgtw18zPx0uFG-apQN5DYs-RY4y8qFFCZqiF6hd4mfUf4CA=="
+    ],
+    [
+      "X-Amz-Cf-Pop",
+      "NRT12-P2"
+    ],
+    [
+      "X-Cache",
+      "Error from cloudfront"
+    ],
+    [
+      "X-Error-Code",
+      "EntryNotFound"
+    ],
+    [
+      "X-Error-Message",
+      "Entry not found"
+    ],
+    [
+      "X-Powered-By",
+      "huggingface-moon"
+    ],
+    [
+      "X-Request-Id",
+      "Root=1-6acfb975-76041f3056ba67e42a4d4748"
+    ],
+    [
+      "Connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/triviaqa-mirror-loader.body",
+    "bytes": 15,
+    "sha256": "f36668ddf22403a332f978057d527cf285b01468bc3431b04094a7bafa6aba59"
+  },
+  "completed_at_utc": "2026-10-14T17:18:45.481545+00:00"
+}

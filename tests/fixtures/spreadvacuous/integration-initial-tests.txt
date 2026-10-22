@@ -1,0 +1,70 @@
+{"mode": "before", "cache_commit": "e5aa274acc5c947d1d31a5d2737a4f831530c411", "patch_base": "e0c1cd3254e0168c9e9e1a7dabee750772ddc868", "checker_sha256": "5c247413ec7fe636cd6d417bc7d9bd76c1c7e8944cceae58635c7add10ba737d"}
+................................................F..                      [100%]
+=================================== FAILURES ===================================
+_______________ test_real_engine_replaces_authored_stale_caches ________________
+
+tmp_path = PosixPath('/tmp/spreadvacuous-tmp/spreadvacuous-cache-before-cx_cko05/pytest/test_real_engine_replaces_auth0')
+
+    @pytest.mark.skipif(os.environ.get("HG_SPREADCACHE_ENGINE_CONTROL") != "1",
+                        reason="opt-in authored real LibreOffice control (no dataset/model)")
+    def test_real_engine_replaces_authored_stale_caches(tmp_path):
+        """The original failing mathematical assertion, under explicit network isolation."""
+        assert shutil.which("bwrap") and shutil.which("soffice")
+        wb = openpyxl.Workbook()
+        wb.active.title = "Synthetic"
+        wb.active["A1"], wb.active["A2"] = 2, 3
+        wb.active["B1"], wb.active["B2"] = "=SUM(A1:A2)", "=B1*2"
+        candidate = tmp_path / "result.xlsx"
+        wb.save(candidate)
+        with zipfile.ZipFile(candidate) as src:
+            entries = {n: src.read(n) for n in src.namelist()}
+        ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+        sheet = ET.fromstring(entries["xl/worksheets/sheet1.xml"])
+        for name, stale in (("B1", 999), ("B2", 888)):
+            sheet.find(f".//{ns}c[@r='{name}']/{ns}v").text = str(stale)
+        entries["xl/worksheets/sheet1.xml"] = ET.tostring(sheet)
+        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as dst:
+            for name, content in entries.items():
+                dst.writestr(name, content)
+        wb.active["B1"], wb.active["B2"] = 5, 10
+        wb.save(tmp_path / "golden.xlsx")
+        wb.close()
+        cached = openpyxl.load_workbook(candidate, data_only=True)
+        assert [cached.active["B1"].value, cached.active["B2"].value] == [999, 888]
+        cached.close()
+        (tmp_path / "task.json").write_text(json.dumps({
+            "task_id": "spreadcache-authored", "answer_position": "Synthetic!B1:B2"}))
+        (tmp_path / "answer.txt").write_text("result.xlsx\n")
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        cmd = [shutil.which("bwrap"), "--unshare-net", "--ro-bind", "/", "/",
+               "--bind", str(tmp_path), "/tmp",
+               "--proc", "/proc", "--", sys.executable,
+               str(ROOT / "data/datasets/spreadsheetbench/verify/check.py"),
+               "--workdir", "/tmp", "--reward-file", "/tmp/reward.txt",
+               "--evidence-file", "/tmp/evidence.json"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=240,
+                              env=dict(os.environ, TMPDIR="/tmp/scratch", PYTHONDONTWRITEBYTECODE="1"))
+>       assert proc.returncode == 0, (proc.stdout, proc.stderr)
+E       AssertionError: ('', "/mnt/8t/xubuqiang/anaconda3/bin/python3: can't open file '/tmp/spreadvacuous-tmp/spreadvacuous-cache-before-cx_cko05/data/datasets/spreadsheetbench/verify/check.py': [Errno 2] No such file or directory
+E         ")
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/usr/bin/bwrap', '--unshare-net', '--ro-bind', '/', '/', '--bind', '/tmp/spreadvacuous-tmp/spr...dvacuous-cache-before-cx_cko05/data/datasets/spreadsheetbench/verify/check.py': [Errno 2] No such file or directory\n").returncode
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:325: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 193 warnings
+tests/quality/test_spreadsheetbench_control_submit.py: 2 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 98 warnings
+tests/quality/test_spreadsheetbench_control_submit.py: 4 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_real_engine_replaces_authored_stale_caches
+1 failed, 50 passed, 297 warnings in 15.38s
+before_exit=1

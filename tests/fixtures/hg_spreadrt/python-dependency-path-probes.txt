@@ -1,0 +1,6 @@
+COMMAND: importlib.import_module('pycparser')
+FOUND module=/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/pycparser/__init__.py version=2.21 sha256=594129e43d1fb87047f50f1cd5f62f47678a59f8fe08d8212dfd8c32540b2352
+COMMAND: importlib.import_module('six')
+FOUND module=/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/six.py version=1.16.0 sha256=4ce39f422ee71467ccac8bed76beb05f8c321c7f0ceda9279ae2dfa3670106b3
+COMMAND: importlib.import_module('setuptools')
+FOUND module=/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/setuptools/__init__.py version=82.0.0 sha256=f94b531bda5d7846646222054faf51724302ab151d5482e38f6e20dea789feb7

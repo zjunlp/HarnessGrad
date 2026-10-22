@@ -1,0 +1,35 @@
+upstream_revision: e2758ac01c6c52efc746bf0d53b2fd01dbc42dd2
+source_url: https://github.com/RUCKBReasoning/SpreadsheetBench/blob/e2758ac01c6c52efc746bf0d53b2fd01dbc42dd2/evaluation/evaluation.py
+source_sha256: 4ae77cee8df01d1f34684fceab972810d696886533d33be2e89373de6b4d3de3
+source_git_blob_sha1: d8109e9509f06fc67e9458fbbd4d494e086e48fc
+archive_sha256: 10ef893dd29cb13ab97143ea787e68cdc9574a13873ab9a54e50b31dc03fc949
+matches_adapter_declared_archive_sha256: True
+metadata_path: /mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/dataset.json
+metadata_sha256: bcecaa89a005bd4e3bbe98da150a86e8062c27f262e575d5e47bd9861b3525e7
+metadata_identical_to_local_archive_member: True
+raw_metadata_fields: {"id": "283-32", "spreadsheet_path": "spreadsheet/283-32", "instruction_type": "Sheet-Level Manipulation", "answer_position": "Sheet3'!A:G,'Sheet4'!A:G"}
+raw_metadata_line_156:         "id": "283-32",
+raw_metadata_line_160:         "answer_position": "Sheet3'!A:G,'Sheet4'!A:G",
+audit_method: every comma-separated component; official parse_cell_range for colon ranges; single cells bypass it upstream
+metadata_rows: 400
+colon_range_components: 371
+single_cell_components: 45
+parse_failing_components: [{"id": "283-32", "range": "A:G", "exception": "ValueError: invalid literal for int() with base 10: ''"}, {"id": "283-32", "range": "A:G", "exception": "ValueError: invalid literal for int() with base 10: ''"}]
+parse_failing_tasks: 1
+scope: installed verified_400 metadata only; not a gradability or full upstream 912-task audit
+283-32_hash_first_byte: 191
+283-32_default_hash_eval: False
+official_compare_on_synthetic_workbooks: ValueError: invalid literal for int() with base 10: ''
+official_evaluation_on_synthetic_workbooks: [
+    {
+        "id": "synthetic-released-range",
+        "instruction_type": "",
+        "test_case_results": [
+            0,
+            0,
+            0
+        ],
+        "soft_restriction": 0.0,
+        "hard_restriction": 0
+    }
+]

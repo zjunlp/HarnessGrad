@@ -1,0 +1,40 @@
+{
+  "url": "https://doh.pub/resolve?name=huggingface.co&type=A",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:19:14.474943+00:00",
+  "production_authorized": false,
+  "status": 200,
+  "reason": "OK",
+  "response_headers": [
+    [
+      "Server",
+      "nginx"
+    ],
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:19:14 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Content-Length",
+      "391"
+    ],
+    [
+      "Connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/triviaqa-dns-dohpub.body",
+    "bytes": 391,
+    "sha256": "4096d066d405a32f3422cadafd7ceaefbb33e62a0fcf77316d236e581ae908c4"
+  },
+  "completed_at_utc": "2026-10-14T17:19:14.664510+00:00"
+}

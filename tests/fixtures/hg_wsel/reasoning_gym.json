@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "dataset": "reasoning_gym",
+  "selection_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-reasoning_gym",
+  "selection_kind": "operator-authorized-first-5-of-full-adapter-order",
+  "runtime_run_id": null,
+  "execution_authorized": false,
+  "claim_limit": "Bounded first-N selection in declared adapter order; NOT a random sample and NOT representative of the dataset. Establishes only identifiable, hash-bound selection -> export -> scoring-input custody for these five tasks, not scoring execution, eligibility, admission or claims about the rest of the pool.",
+  "source_revision": "reasoning-gym==0.1.25; seed=20261008; per_family=20; preserved pool, not regenerated",
+  "adapter_source": [
+    {
+      "path": "data/datasets/reasoning_gym.py",
+      "bytes": 10031,
+      "sha256": "fcf4be2daa187dc4d74395530bbbdaa308e317bc0173b346f7de0bb889ac7f33"
+    },
+    {
+      "path": "data/scaffolds/qa/base.py",
+      "bytes": 27878,
+      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    },
+    {
+      "path": "data/scaffolds/qa/read.py",
+      "bytes": 8624,
+      "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+    },
+    {
+      "path": "data/scaffolds/scorer_input.py",
+      "bytes": 6166,
+      "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"
+    }
+  ],
+  "installed_source": {
+    "path": "/mnt/20t/xubuqiang/datasets/reasoning_gym/pool.jsonl",
+    "bytes": 3315981,
+    "sha256": "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177"
+  },
+  "adapter_presented_count": 1780,
+  "selected_count": 5,
+  "eligible_count": null,
+  "trials_executed": 0,
+  "measured_count": 0,
+  "invalid_count": 0,
+  "unmeasured_execution_count": 0,
+  "unexecuted_selected_count": 5,
+  "split_mode": "declared",
+  "split_source": "hash",
+  "side": "mixed",
+  "selected_sides": {
+    "train": [
+      "reasoning_gym/eval/0",
+      "reasoning_gym/eval/1",
+      "reasoning_gym/eval/3",
+      "reasoning_gym/eval/4"
+    ],
+    "eval": [
+      "reasoning_gym/eval/2"
+    ]
+  },
+  "order_rule": "adapter full record order, slice [:5] BEFORE any side filter; no sorting/sampling/shuffling",
+  "export_path": "/tmp/hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f/reasoning_gym",
+  "row_export": "rows.jsonl",
+  "export_files": {
+    "rows.jsonl": "0d00e9c9517e549af76bfda59d0183f5682c3eacab0fb35597753664d87d863f",
+    "inputs/0/gold.json": "3a1ad75316cfbfd5c8ef3d68eaebdf472e1ecbc87e09cf8c0177eefff4fdc54b",
+    "inputs/0/question.txt": "a99681321df820ef456006d8981881e7840f6141c7ba530c82fa45cac885e2ce",
+    "inputs/0/goal.txt": "1f259bcd0c0615f70be21072191ee8b9fc3547ecb3752f46ef3014e1468ad0e5",
+    "inputs/1/gold.json": "558794148fb33f99f643369924266c5882319282c9f500e528bfa5519e394b06",
+    "inputs/1/question.txt": "4e5513d6376bfcb1b4adc7c07e511b78f3945d461ca2c11093aa8d48a51c5f9d",
+    "inputs/1/goal.txt": "a4d885c130f65b384380ccb36fdd63292bf8af56de63f4237ba64315129c4108",
+    "inputs/2/gold.json": "02bacf660571f552f0ccd99fb69912dc71d5762504d35646f8f436b9b52a6d9d",
+    "inputs/2/question.txt": "3cbd94882fc529be161207991cd21e67a7c60eea8b388ffc2e6f85ccd4fefb5e",
+    "inputs/2/goal.txt": "11dce146656d0bece1a31a1fcd6b20144dad16e9169cabdca94c9ffa5a2a563a",
+    "inputs/3/gold.json": "c0be328d2aafcf2bf683a10cf780623cf8b7819434d319b52724f54fbda68ed9",
+    "inputs/3/question.txt": "326a177dd54fa9c9b97b2a283f48acc64c9f0f4988647f3a0f958a8cfb793b96",
+    "inputs/3/goal.txt": "2a15600ca135648d2239657f5ee692a9a950d2c9a2ae9da7b81df0bc1b33dfc2",
+    "inputs/4/gold.json": "8f7b7c61d23a04e9a70c8d1033fc9d2e72e893009d1a9e95e902a33919150ac6",
+    "inputs/4/question.txt": "ae999d766a015cf84c8033cc382a939983fcf5fc9adc22344da764c884f061a8",
+    "inputs/4/goal.txt": "49835bb577132cb34b96a51be3a5b30bfbe79ead2cf41aa34992e7fd1266a67b"
+  },
+  "export_inventory_sha256": "9529aac306a9450f10c894282bba41f912b8b28e2bd6322643ab94a662c127b2",
+  "prior_inventory": {
+    "path": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wjournalcov/reasoning_gym-inventory.json",
+    "bytes": 490339,
+    "sha256": "9d34cf4747385099f5c5fcecd76676b5d3b8a15225318f41e198c37a73044286",
+    "selected_order_and_row_digests_match": true,
+    "whole_inventory_revalidated": false,
+    "selected_rows": [
+      {
+        "task_id": "reasoning_gym/eval/0",
+        "loaded_position": 0,
+        "parsed_row_sha256": "6a088ed3f0faba4ef70706e9611d5c88c0d819cc308feb920d636d4a40fa3ee7",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "reasoning_gym/eval/1",
+        "loaded_position": 1,
+        "parsed_row_sha256": "3b20109cad0508c1610099be00629ca8c86c9cfaa89cdb5af1df65b12699e477",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "reasoning_gym/eval/2",
+        "loaded_position": 2,
+        "parsed_row_sha256": "3f78c76d5b743f198ffb14ba18712ce5f6d5285e2bb11b77e3bcb2d0bc5266e7",
+        "declared_side": "eval"
+      },
+      {
+        "task_id": "reasoning_gym/eval/3",
+        "loaded_position": 3,
+        "parsed_row_sha256": "199e1d04705a8fb005f4a4895fa00d87bb0dda0de7c0262edd00c5a2e22e782d",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "reasoning_gym/eval/4",
+        "loaded_position": 4,
+        "parsed_row_sha256": "9888a02feb92f879180ff8313d5fdd3ae7ad061f6ca4f802c9126e9763d34541",
+        "declared_side": "train"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "task_id": "reasoning_gym/eval/0",
+      "adapter_position": 0,
+      "source_row_index": 0,
+      "source_split": "eval",
+      "declared_side": "train",
+      "parsed_row_sha256": "6a088ed3f0faba4ef70706e9611d5c88c0d819cc308feb920d636d4a40fa3ee7",
+      "scorer_input": {
+        "task_id": "reasoning_gym/eval/0",
+        "path": "gold.json",
+        "sha256": "3a1ad75316cfbfd5c8ef3d68eaebdf472e1ecbc87e09cf8c0177eefff4fdc54b"
+      },
+      "input_sha256": "3a1ad75316cfbfd5c8ef3d68eaebdf472e1ecbc87e09cf8c0177eefff4fdc54b",
+      "question_sha256": "a99681321df820ef456006d8981881e7840f6141c7ba530c82fa45cac885e2ce",
+      "goal_sha256": "1f259bcd0c0615f70be21072191ee8b9fc3547ecb3752f46ef3014e1468ad0e5",
+      "family": "ab",
+      "family_index": 0
+    },
+    {
+      "task_id": "reasoning_gym/eval/1",
+      "adapter_position": 1,
+      "source_row_index": 1,
+      "source_split": "eval",
+      "declared_side": "train",
+      "parsed_row_sha256": "3b20109cad0508c1610099be00629ca8c86c9cfaa89cdb5af1df65b12699e477",
+      "scorer_input": {
+        "task_id": "reasoning_gym/eval/1",
+        "path": "gold.json",
+        "sha256": "558794148fb33f99f643369924266c5882319282c9f500e528bfa5519e394b06"
+      },
+      "input_sha256": "558794148fb33f99f643369924266c5882319282c9f500e528bfa5519e394b06",
+      "question_sha256": "4e5513d6376bfcb1b4adc7c07e511b78f3945d461ca2c11093aa8d48a51c5f9d",
+      "goal_sha256": "a4d885c130f65b384380ccb36fdd63292bf8af56de63f4237ba64315129c4108",
+      "family": "ab",
+      "family_index": 1
+    },
+    {
+      "task_id": "reasoning_gym/eval/2",
+      "adapter_position": 2,
+      "source_row_index": 2,
+      "source_split": "eval",
+      "declared_side": "eval",
+      "parsed_row_sha256": "3f78c76d5b743f198ffb14ba18712ce5f6d5285e2bb11b77e3bcb2d0bc5266e7",
+      "scorer_input": {
+        "task_id": "reasoning_gym/eval/2",
+        "path": "gold.json",
+        "sha256": "02bacf660571f552f0ccd99fb69912dc71d5762504d35646f8f436b9b52a6d9d"
+      },
+      "input_sha256": "02bacf660571f552f0ccd99fb69912dc71d5762504d35646f8f436b9b52a6d9d",
+      "question_sha256": "3cbd94882fc529be161207991cd21e67a7c60eea8b388ffc2e6f85ccd4fefb5e",
+      "goal_sha256": "11dce146656d0bece1a31a1fcd6b20144dad16e9169cabdca94c9ffa5a2a563a",
+      "family": "ab",
+      "family_index": 2
+    },
+    {
+      "task_id": "reasoning_gym/eval/3",
+      "adapter_position": 3,
+      "source_row_index": 3,
+      "source_split": "eval",
+      "declared_side": "train",
+      "parsed_row_sha256": "199e1d04705a8fb005f4a4895fa00d87bb0dda0de7c0262edd00c5a2e22e782d",
+      "scorer_input": {
+        "task_id": "reasoning_gym/eval/3",
+        "path": "gold.json",
+        "sha256": "c0be328d2aafcf2bf683a10cf780623cf8b7819434d319b52724f54fbda68ed9"
+      },
+      "input_sha256": "c0be328d2aafcf2bf683a10cf780623cf8b7819434d319b52724f54fbda68ed9",
+      "question_sha256": "326a177dd54fa9c9b97b2a283f48acc64c9f0f4988647f3a0f958a8cfb793b96",
+      "goal_sha256": "2a15600ca135648d2239657f5ee692a9a950d2c9a2ae9da7b81df0bc1b33dfc2",
+      "family": "ab",
+      "family_index": 3
+    },
+    {
+      "task_id": "reasoning_gym/eval/4",
+      "adapter_position": 4,
+      "source_row_index": 4,
+      "source_split": "eval",
+      "declared_side": "train",
+      "parsed_row_sha256": "9888a02feb92f879180ff8313d5fdd3ae7ad061f6ca4f802c9126e9763d34541",
+      "scorer_input": {
+        "task_id": "reasoning_gym/eval/4",
+        "path": "gold.json",
+        "sha256": "8f7b7c61d23a04e9a70c8d1033fc9d2e72e893009d1a9e95e902a33919150ac6"
+      },
+      "input_sha256": "8f7b7c61d23a04e9a70c8d1033fc9d2e72e893009d1a9e95e902a33919150ac6",
+      "question_sha256": "ae999d766a015cf84c8033cc382a939983fcf5fc9adc22344da764c884f061a8",
+      "goal_sha256": "49835bb577132cb34b96a51be3a5b30bfbe79ead2cf41aa34992e7fd1266a67b",
+      "family": "ab",
+      "family_index": 4
+    }
+  ],
+  "run_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-reasoning_gym",
+  "run_state": "reserved-selection-only; no execution"
+}

@@ -1,0 +1,566 @@
+.....................FFFFFFFFFFFFFFFFFFFFF                               [100%]
+=================================== FAILURES ===================================
+_ test_classification_survives_verifier_persistence_and_aggregation[unparseable-range] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...r_input.py'}], 'kind': 'command', ...}, 0.0, 'not a cell range', <function scenario.<locals>.invoke at 0x715cef5cc180>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef628a70>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v0')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+            assert reason in verdict["unmeasured"]
+            assert result["per_task"] == result["per_task_trials"] == {}
+            assert result["trial_verdicts"] == result["verdicts"] == {}
+            assert result["invalid"]["synthetic-spread"]["stage"] == "check"
+            assert reason in persisted["invalid"]["detail"]
+            assert not {"score", "trial_scores", "complete"}.intersection(persisted)
+            assert cache == {}
+        else:
+>           assert "unmeasured" not in verdict
+E           AssertionError: assert 'unmeasured' not in {'kind': 'command', 'passed': False, 'score': None, 'scorer_isolation_class': 'actor-workdir', ...}
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:220: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[released-unparseable-range] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...ind': 'command', ...}, 0.0, 'official-equivalent measured zero', <function scenario.<locals>.invoke at 0x715cef590f40>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef5a98b0>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v1')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+            assert reason in verdict["unmeasured"]
+            assert result["per_task"] == result["per_task_trials"] == {}
+            assert result["trial_verdicts"] == result["verdicts"] == {}
+            assert result["invalid"]["synthetic-spread"]["stage"] == "check"
+            assert reason in persisted["invalid"]["detail"]
+            assert not {"score", "trial_scores", "complete"}.intersection(persisted)
+            assert cache == {}
+        else:
+>           assert "unmeasured" not in verdict
+E           AssertionError: assert 'unmeasured' not in {'kind': 'command', 'passed': False, 'score': None, 'scorer_isolation_class': 'actor-workdir', ...}
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:220: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[parser-exception] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...y'}], 'kind': 'command', ...}, None, 'synthetic parser failure', <function scenario.<locals>.invoke at 0x715cef592f20>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef6b4e00>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v2')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'synthetic parser failure' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[result-vanished] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...}], 'kind': 'command', ...}, None, 'unavailable for comparison', <function scenario.<locals>.invoke at 0x715cef60ac00>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef4becc0>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v3')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'unavailable for comparison' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[golden-load] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...ut.py'}], 'kind': 'command', ...}, None, 'workbook load failed', <function scenario.<locals>.invoke at 0x715cef60a980>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef629670>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v4')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'workbook load failed' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[result-load] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...ut.py'}], 'kind': 'command', ...}, None, 'workbook load failed', <function scenario.<locals>.invoke at 0x715cef495080>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef716420>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v5')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'workbook load failed' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[formula-probe-load] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...input.py'}], 'kind': 'command', ...}, None, 'formula detection', <function scenario.<locals>.invoke at 0x715cef5cf420>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef6b7920>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v6')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'formula detection' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[comparator-exception] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify..., 'kind': 'command', ...}, None, 'synthetic comparator failure', <function scenario.<locals>.invoke at 0x715cef496980>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef5bbf80>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v7')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'synthetic comparator failure' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[formula-no-runtime] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...er_input.py'}], 'kind': 'command', ...}, None, 'no LibreOffice', <function scenario.<locals>.invoke at 0x715cef609300>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef5b8a10>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v8')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'no LibreOffice' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-timeout] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...t.py'}], 'kind': 'command', ...}, None, 'LibreOffice timed out', <function scenario.<locals>.invoke at 0x715cef495e40>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef49ef00>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v9')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice timed out' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-exit] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...ut.py'}], 'kind': 'command', ...}, None, 'LibreOffice exited 7', <function scenario.<locals>.invoke at 0x715cef5cd300>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef5a64b0>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v10')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice exited 7' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-no-output] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify..., 'kind': 'command', ...}, None, 'LibreOffice produced no file', <function scenario.<locals>.invoke at 0x715cef5928e0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef6b54c0>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v11')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice produced no file' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-launch] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...'}], 'kind': 'command', ...}, None, 'LibreOffice recalculation', <function scenario.<locals>.invoke at 0x715cef4959e0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef5a86b0>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v12')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice recalculation' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-copy] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...'}], 'kind': 'command', ...}, None, 'LibreOffice recalculation', <function scenario.<locals>.invoke at 0x715cef5cf6a0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef629130>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v13')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice recalculation' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-scratch] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...'}], 'kind': 'command', ...}, None, 'LibreOffice recalculation', <function scenario.<locals>.invoke at 0x715cef591580>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef6eb740>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v14')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice recalculation' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[recalc-cleanup] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...'}], 'kind': 'command', ...}, None, 'LibreOffice recalculation', <function scenario.<locals>.invoke at 0x715cef60ae80>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef4bd910>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v15')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'LibreOffice recalculation' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[golden-sheet-absent] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...scorer_input.py'}], 'kind': 'command', ...}, None, 'comparison', <function scenario.<locals>.invoke at 0x715cef609580>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef4b2b10>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v16')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+>           assert reason in verdict["unmeasured"]
+E           AssertionError: assert 'comparison' in 'scorer input does not belong to selected task'
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:212: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[mismatch] __
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...r_input.py'}], 'kind': 'command', ...}, 0.0, 'value difference', <function scenario.<locals>.invoke at 0x715cef60bd80>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef4f9940>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v17')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+            assert reason in verdict["unmeasured"]
+            assert result["per_task"] == result["per_task_trials"] == {}
+            assert result["trial_verdicts"] == result["verdicts"] == {}
+            assert result["invalid"]["synthetic-spread"]["stage"] == "check"
+            assert reason in persisted["invalid"]["detail"]
+            assert not {"score", "trial_scores", "complete"}.intersection(persisted)
+            assert cache == {}
+        else:
+>           assert "unmeasured" not in verdict
+E           AssertionError: assert 'unmeasured' not in {'kind': 'command', 'passed': False, 'score': None, 'scorer_isolation_class': 'actor-workdir', ...}
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:220: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[result-sheet-absent] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify....py'}], 'kind': 'command', ...}, 0.0, 'not found in the result', <function scenario.<locals>.invoke at 0x715cef591260>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef5bab40>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v18')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+            assert reason in verdict["unmeasured"]
+            assert result["per_task"] == result["per_task_trials"] == {}
+            assert result["trial_verdicts"] == result["verdicts"] == {}
+            assert result["invalid"]["synthetic-spread"]["stage"] == "check"
+            assert reason in persisted["invalid"]["detail"]
+            assert not {"score", "trial_scores", "complete"}.intersection(persisted)
+            assert cache == {}
+        else:
+>           assert "unmeasured" not in verdict
+E           AssertionError: assert 'unmeasured' not in {'kind': 'command', 'passed': False, 'score': None, 'scorer_isolation_class': 'actor-workdir', ...}
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:220: AssertionError
+_ test_classification_survives_verifier_persistence_and_aggregation[result-absent] _
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...nput.py'}], 'kind': 'command', ...}, 0.0, 'no such file exists', <function scenario.<locals>.invoke at 0x715cef495ee0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef6db890>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v19')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+            assert reason in verdict["unmeasured"]
+            assert result["per_task"] == result["per_task_trials"] == {}
+            assert result["trial_verdicts"] == result["verdicts"] == {}
+            assert result["invalid"]["synthetic-spread"]["stage"] == "check"
+            assert reason in persisted["invalid"]["detail"]
+            assert not {"score", "trial_scores", "complete"}.intersection(persisted)
+            assert cache == {}
+        else:
+>           assert "unmeasured" not in verdict
+E           AssertionError: assert 'unmeasured' not in {'kind': 'command', 'passed': False, 'score': None, 'scorer_isolation_class': 'actor-workdir', ...}
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:220: AssertionError
+___ test_classification_survives_verifier_persistence_and_aggregation[match] ___
+
+scenario = (<module 'spreadsheet_check_w_spread2' from '/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify...r_input.py'}], 'kind': 'command', ...}, 1.0, 'reference values', <function scenario.<locals>.invoke at 0x715cef60bec0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x715cef408b00>
+tmp_path = PosixPath('/mnt/20t/xubuqiang/hg-work/spreadrt/pytest-classification/test_classification_survives_v20')
+
+    def test_classification_survives_verifier_persistence_and_aggregation(
+            scenario, monkeypatch, tmp_path):
+        check, work, spec, score, reason, invoke = scenario
+        verdict = verifier._verify(work, spec, "", sandbox=False, timeout_s=300,
+                                   env={"kind": "files"})
+        monkeypatch.setattr(runner, "run_one", lambda *a, **k: {
+            "verdict": verdict, "trace": "synthetic trace\n", "exit_code": 0, "stderr": ""})
+        cache = {}
+        result = runner._evaluate(
+            tmp_path, [{"task_id": "synthetic-spread"}], {}, cache=cache,
+            trials=1, jobs=1, progress_dir=tmp_path, round_no=0)
+        persisted = json.loads((tmp_path / "progress/round-0/synthetic-spread.json").read_text())
+        if score is None:
+            assert reason in verdict["unmeasured"]
+            assert result["per_task"] == result["per_task_trials"] == {}
+            assert result["trial_verdicts"] == result["verdicts"] == {}
+            assert result["invalid"]["synthetic-spread"]["stage"] == "check"
+            assert reason in persisted["invalid"]["detail"]
+            assert not {"score", "trial_scores", "complete"}.intersection(persisted)
+            assert cache == {}
+        else:
+>           assert "unmeasured" not in verdict
+E           AssertionError: assert 'unmeasured' not in {'kind': 'command', 'passed': False, 'score': None, 'scorer_isolation_class': 'actor-workdir', ...}
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py:220: AssertionError
+=============================== warnings summary ===============================
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 106 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/packaging/core.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/quality/test_spreadsheetbench_classification_w_spread2.py: 82 warnings
+  /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/writer/excel.py:292: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    workbook.properties.modified = datetime.datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[unparseable-range]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[released-unparseable-range]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[parser-exception]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[result-vanished]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[golden-load]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[result-load]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[formula-probe-load]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[comparator-exception]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[formula-no-runtime]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-timeout]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-exit]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-no-output]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-launch]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-copy]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-scratch]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[recalc-cleanup]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[golden-sheet-absent]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[mismatch]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[result-sheet-absent]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[result-absent]
+FAILED tests/quality/test_spreadsheetbench_classification_w_spread2.py::test_classification_survives_verifier_persistence_and_aggregation[match]
+21 failed, 21 passed, 188 warnings in 29.38s

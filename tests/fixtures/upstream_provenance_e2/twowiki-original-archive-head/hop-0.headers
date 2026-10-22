@@ -1,0 +1,78 @@
+Content-Security-Policy: base-uri 'self';
+ child-src https://www.dropbox.com/static/serviceworker/ blob:;
+ connect-src https://* ws://127.0.0.1:*/ws blob: wss://dsimports.dropbox.com/;
+ default-src https://www.dropbox.com/playlist/
+ https://www.dropbox.com/v/s/playlist/
+ https://*.dropboxusercontent.com/p/hls_master_playlist/
+ https://*.dropboxusercontent.com/p/hls_playlist/;
+ font-src 'self' data: https://*;
+ form-action 'self' https://www.dropbox.com/ https://dl-web.dropbox.com/
+ https://photos.dropbox.com/ https://paper.dropbox.com/
+ https://showcase.dropbox.com/ https://www.hellofax.com/
+ https://app.hellofax.com/ https://www.hellosign.com/
+ https://app.hellosign.com/ https://docsend.com/ https://www.docsend.com/
+ https://help.dropbox.com/ https://navi.dropbox.jp/ https://a.sprig.com/
+ https://selfguidedlearning.dropboxbusiness.com/
+ https://instructorledlearning.dropboxbusiness.com/
+ https://sales.dropboxbusiness.com/ https://accounts.google.com/
+ https://api.login.yahoo.com/ https://login.yahoo.com/
+ https://experience.dropbox.com/ https://pal-test.adyen.com
+ https://2e83413d8036243b-Dropbox-pal-live.adyenpayments.com/
+ https://onedrive.live.com/picker https://*.sharepoint.com/;
+ frame-ancestors 'self';
+ frame-src https://* dbapi-6: dbapi-7: dbapi-8: dropbox-client: itms-apps:
+ itms-appss: blob:; img-src https://* data: blob:; media-src https://* blob:;
+ object-src 'self' https://cfl.dropboxstatic.com/static/
+ https://www.dropboxstatic.com/static/
+ https://edge-live.dropboxstatic.com/static/;
+ report-to csp-metaserver-whitelist;
+ report-uri https://www.dropbox.com/csp_log?policy_name=metaserver-whitelist;
+ script-src 'unsafe-eval' 'inline-speculation-rules'
+ https://www.dropbox.com/static/api/ https://www.dropbox.com/pithos/
+ https://cfl.dropboxstatic.com/static/ https://www.dropboxstatic.com/static/
+ https://edge-live.dropboxstatic.com/static/
+ https://accounts.google.com/gsi/client
+ https://reveal.clearbit.com/v1/companies/reveal https://www.paypal.com/sdk/js
+ https://applepay.cdn-apple.com https://snippet.meticulous.ai/record/
+ https://edge.cofra.me/cf-static-97646a4fe3e6.js
+ https://edge.cofra.me/cf-static-4d85f2a0ba2d.js
+ https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/
+ 'unsafe-inline'; style-src https://* 'unsafe-inline' 'unsafe-eval';
+ worker-src https://www.dropbox.com/static/serviceworker/
+ https://www.dropbox.com/encrypted_folder_download/service_worker.js
+ https://www.dropbox.com/service_worker.js blob:
+Content-Type: text/html; charset=utf-8
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+Pragma: no-cache
+Referrer-Policy: strict-origin-when-cross-origin
+Reporting-Endpoints: 
+ coop-dws2="https://www.dropbox.com/csp_log?policy_name=coop-dws2",
+ max_age=10886400,
+ csp-metaserver-whitelist="https://www.dropbox.com/csp_log?policy_name=metaserver-whitelist",
+ max_age=10886400
+Set-Cookie: gvc=Mjc5ODE2NzY3MzU0MDQ4NDkxNTU5NTUyNTQ4NDYzNzU2MDA4ODIz; Path=/;
+ Expires=Mon, 13 Oct 2031 17:53:49 GMT; HttpOnly; Secure; SameSite=None
+Set-Cookie: t=bmc9fjebWq8jvBNZUl-e3A9S; Path=/; Domain=dropbox.com;
+ Expires=Thu, 14 Oct 2027 17:53:49 GMT; HttpOnly; Secure; SameSite=None
+Set-Cookie: __Host-js_csrf=bmc9fjebWq8jvBNZUl-e3A9S; Path=/;
+ Expires=Thu, 14 Oct 2027 17:53:49 GMT; Secure; SameSite=None
+Set-Cookie: __Host-ss=AsfawRxV3M; Path=/;
+ Expires=Thu, 14 Oct 2027 17:53:49 GMT; HttpOnly; Secure; SameSite=Strict
+Set-Cookie: locale=en; Path=/; Domain=dropbox.com;
+ Expires=Mon, 13 Oct 2031 17:53:49 GMT
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-Robots-Tag: noindex, nofollow, noimageindex
+X-Xss-Protection: 1; mode=block
+Date: Wed, 14 Oct 2026 17:53:49 GMT
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Server: envoy
+Cache-Control: no-cache, no-store
+Alt-Svc: h3=":443"; ma=86400, h3-29=":443"; ma=86400
+Vary: Accept-Encoding
+X-Dropbox-Response-Origin: far_remote
+X-Dropbox-Request-Id: d9cc425c7ed6443bab7dee4c6acfc1ad
+Connection: close
+Transfer-Encoding: chunked
+

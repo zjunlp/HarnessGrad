@@ -1,0 +1,414 @@
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/compat/numbers.py | sed -n '1,45p'
+     1	# Copyright (c) 2010-2023 openpyxl
+     2	
+     3	from decimal import Decimal
+     4	
+     5	NUMERIC_TYPES = (int, float, Decimal)
+     6	
+     7	
+     8	try:
+     9	    import numpy
+    10	    NUMPY = True
+    11	except ImportError:
+    12	    NUMPY = False
+    13	
+    14	
+    15	if NUMPY:
+    16	    NUMERIC_TYPES = NUMERIC_TYPES + (numpy.short,
+    17	                                     numpy.ushort,
+    18	                                     numpy.intc,
+    19	                                     numpy.uintc,
+    20	                                     numpy.int_,
+    21	                                     numpy.uint,
+    22	                                     numpy.longlong,
+    23	                                     numpy.ulonglong,
+    24	                                     numpy.half,
+    25	                                     numpy.float16,
+    26	                                     numpy.single,
+    27	                                     numpy.double,
+    28	                                     numpy.longdouble,
+    29	                                     numpy.int8,
+    30	                                     numpy.int16,
+    31	                                     numpy.int32,
+    32	                                     numpy.int64,
+    33	                                     numpy.uint8,
+    34	                                     numpy.uint16,
+    35	                                     numpy.uint32,
+    36	                                     numpy.uint64,
+    37	                                     numpy.intp,
+    38	                                     numpy.uintp,
+    39	                                     numpy.float32,
+    40	                                     numpy.float64,
+    41	                                     numpy.bool_,
+    42	                                     numpy.floating,
+    43	                                     numpy.integer)
+
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/xml/__init__.py | sed -n '1,44p'
+     1	# Copyright (c) 2010-2023 openpyxl
+     2	
+     3	
+     4	"""Collection of XML resources compatible across different Python versions"""
+     5	import os
+     6	
+     7	
+     8	def lxml_available():
+     9	    try:
+    10	        from lxml.etree import LXML_VERSION
+    11	        LXML = LXML_VERSION >= (3, 3, 1, 0)
+    12	        if not LXML:
+    13	            import warnings
+    14	            warnings.warn("The installed version of lxml is too old to be used with openpyxl")
+    15	            return False  # we have it, but too old
+    16	        else:
+    17	            return True  # we have it, and recent enough
+    18	    except ImportError:
+    19	        return False  # we don't even have it
+    20	
+    21	
+    22	def lxml_env_set():
+    23	    return os.environ.get("OPENPYXL_LXML", "True") == "True"
+    24	
+    25	
+    26	LXML = lxml_available() and lxml_env_set()
+    27	
+    28	
+    29	def defusedxml_available():
+    30	    try:
+    31	        import defusedxml # noqa
+    32	    except ImportError:
+    33	        return False
+    34	    else:
+    35	        return True
+    36	
+    37	
+    38	def defusedxml_env_set():
+    39	    return os.environ.get("OPENPYXL_DEFUSEDXML", "True") == "True"
+    40	
+    41	
+    42	DEFUSEDXML = defusedxml_available() and defusedxml_env_set()
+
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/xml/functions.py | sed -n '1,43p'
+     1	# Copyright (c) 2010-2023 openpyxl
+     2	
+     3	"""
+     4	XML compatibility functions
+     5	"""
+     6	
+     7	# Python stdlib imports
+     8	import re
+     9	from functools import partial
+    10	
+    11	from openpyxl import DEFUSEDXML, LXML
+    12	
+    13	if LXML is True:
+    14	    from lxml.etree import (
+    15	    Element,
+    16	    SubElement,
+    17	    register_namespace,
+    18	    QName,
+    19	    xmlfile,
+    20	    XMLParser,
+    21	    )
+    22	    from lxml.etree import fromstring, tostring
+    23	    # do not resolve entities
+    24	    safe_parser = XMLParser(resolve_entities=False)
+    25	    fromstring = partial(fromstring, parser=safe_parser)
+    26	
+    27	else:
+    28	    from xml.etree.ElementTree import (
+    29	    Element,
+    30	    SubElement,
+    31	    fromstring,
+    32	    tostring,
+    33	    QName,
+    34	    register_namespace
+    35	    )
+    36	    from et_xmlfile import xmlfile
+    37	    if DEFUSEDXML is True:
+    38	        from defusedxml.ElementTree import fromstring
+    39	
+    40	from xml.etree.ElementTree import iterparse
+    41	if DEFUSEDXML is True:
+    42	    from defusedxml.ElementTree import iterparse
+    43	
+
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/openpyxl/drawing/image.py | sed -n '1,45p'
+     1	# Copyright (c) 2010-2023 openpyxl
+     2	
+     3	from io import BytesIO
+     4	
+     5	try:
+     6	    from PIL import Image as PILImage
+     7	except ImportError:
+     8	    PILImage = False
+     9	
+    10	
+    11	def _import_image(img):
+    12	    if not PILImage:
+    13	        raise ImportError('You must install Pillow to fetch image objects')
+    14	
+    15	    if not isinstance(img, PILImage.Image):
+    16	        img = PILImage.open(img)
+    17	
+    18	    return img
+    19	
+    20	
+    21	class Image(object):
+    22	    """Image in a spreadsheet"""
+    23	
+    24	    _id = 1
+    25	    _path = "/xl/media/image{0}.{1}"
+    26	    anchor = "A1"
+    27	
+    28	    def __init__(self, img):
+    29	
+    30	        self.ref = img
+    31	        mark_to_close = isinstance(img, str)
+    32	        image = _import_image(img)
+    33	        self.width, self.height = image.size
+    34	
+    35	        try:
+    36	            self.format = image.format.lower()
+    37	        except AttributeError:
+    38	            self.format = "png"
+    39	        if mark_to_close:
+    40	            # PIL instances created for metadata should be closed.
+    41	            image.close()
+    42	
+    43	
+    44	    def _data(self):
+    45	        """
+
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/numpy/_distributor_init.py | sed -n '1,60p'
+     1	""" Distributor init file
+     2	
+     3	Distributors: you can add custom code here to support particular distributions
+     4	of numpy.
+     5	
+     6	For example, this is a good place to put any BLAS/LAPACK initialization code.
+     7	
+     8	The numpy standard source distribution will not put code in this file, so you
+     9	can safely replace this file with your own version.
+    10	"""
+    11	
+    12	try:
+    13	    import mkl
+    14	    __mkl_version__ = "{MajorVersion}.{MinorVersion}.{UpdateVersion}".format(**mkl.get_version())
+    15	except ImportError:
+    16	    import warnings
+    17	    warnings.warn(
+    18	        "mkl-service package failed to import, therefore Intel(R) MKL "
+    19	        "initialization ensuring its correct out-of-the box operation under "
+    20	        "condition when Gnu OpenMP had already been loaded by Python process "
+    21	        "is not assured. Please install mkl-service package, see "
+    22	        "http://github.com/IntelPython/mkl-service", stacklevel=2)
+
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/mkl/__init__.py | sed -n '24,65p'
+    24	# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    25	
+    26	import sys
+    27	
+    28	class RTLD_for_MKL():
+    29	    def __init__(self):
+    30	        self.saved_rtld = None
+    31	
+    32	    def __enter__(self):
+    33	        import ctypes
+    34	        try:
+    35	            self.saved_rtld = sys.getdlopenflags()
+    36	            # python loads libraries with RTLD_LOCAL, but MKL requires RTLD_GLOBAL
+    37	            # pre-load MKL with RTLD_GLOBAL before loading the native extension
+    38	            sys.setdlopenflags(self.saved_rtld | ctypes.RTLD_GLOBAL)
+    39	        except AttributeError:
+    40	            pass
+    41	        del ctypes
+    42	
+    43	    def __exit__(self, *args):
+    44	        if self.saved_rtld:
+    45	            sys.setdlopenflags(self.saved_rtld)
+    46	            self.saved_rtld = None
+    47	
+    48	with RTLD_for_MKL():
+    49	    from . import _mklinit
+    50	
+    51	del RTLD_for_MKL
+    52	del sys
+    53	
+    54	from ._py_mkl_service import *
+    55	
+    56	
+    57	__version__ = '2.4.0'
+
+COMMAND: nl -ba /mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/cffi/api.py | sed -n '1,70p'
+     1	import sys, types
+     2	from .lock import allocate_lock
+     3	from .error import CDefError
+     4	from . import model
+     5	
+     6	try:
+     7	    callable
+     8	except NameError:
+     9	    # Python 3.1
+    10	    from collections import Callable
+    11	    callable = lambda x: isinstance(x, Callable)
+    12	
+    13	try:
+    14	    basestring
+    15	except NameError:
+    16	    # Python 3.x
+    17	    basestring = str
+    18	
+    19	_unspecified = object()
+    20	
+    21	
+    22	
+    23	class FFI(object):
+    24	    r'''
+    25	    The main top-level class that you instantiate once, or once per module.
+    26	
+    27	    Example usage:
+    28	
+    29	        ffi = FFI()
+    30	        ffi.cdef("""
+    31	            int printf(const char *, ...);
+    32	        """)
+    33	
+    34	        C = ffi.dlopen(None)   # standard library
+    35	        -or-
+    36	        C = ffi.verify()  # use a C compiler: verify the decl above is right
+    37	
+    38	        C.printf("hello, %s!\n", ffi.new("char[]", "world"))
+    39	    '''
+    40	
+    41	    def __init__(self, backend=None):
+    42	        """Create an FFI instance.  The 'backend' argument is used to
+    43	        select a non-default backend, mostly for tests.
+    44	        """
+    45	        if backend is None:
+    46	            # You need PyPy (>= 2.0 beta), or a CPython (>= 2.6) with
+    47	            # _cffi_backend.so compiled.
+    48	            import _cffi_backend as backend
+    49	            from . import __version__
+    50	            if backend.__version__ != __version__:
+    51	                # bad version!  Try to be as explicit as possible.
+    52	                if hasattr(backend, '__file__'):
+    53	                    # CPython
+    54	                    raise Exception("Version mismatch: this is the 'cffi' package version %s, located in %r.  When we import the top-level '_cffi_backend' extension module, we get version %s, located in %r.  The two versions should be equal; check your installation." % (
+    55	                        __version__, __file__,
+    56	                        backend.__version__, backend.__file__))
+    57	                else:
+    58	                    # PyPy
+    59	                    raise Exception("Version mismatch: this is the 'cffi' package version %s, located in %r.  This interpreter comes with a built-in '_cffi_backend' module, which is version %s.  The two versions should be equal; check your installation." % (
+    60	                        __version__, __file__, backend.__version__))
+    61	            # (If you insist you can also try to pass the option
+    62	            # 'backend=backend_ctypes.CTypesBackend()', but don't
+    63	            # rely on it!  It's probably not going to work well.)
+    64	
+    65	        from . import cparser
+    66	        self._backend = backend
+    67	        self._lock = allocate_lock()
+    68	        self._parser = cparser.Parser()
+    69	        self._cached_btypes = {}
+    70	        self._parsed_types = types.ModuleType('parsed_types').__dict__
+
+COMMAND: nl -ba /usr/lib/libreoffice/program/soffice | sed -n '1,65p'
+     1	#!/bin/sh
+     2	#
+     3	# This file is part of the LibreOffice project.
+     4	#
+     5	# This Source Code Form is subject to the terms of the Mozilla Public
+     6	# License, v. 2.0. If a copy of the MPL was not distributed with this
+     7	# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+     8	#
+     9	# This file incorporates work covered by the following license notice:
+    10	#
+    11	#   Licensed to the Apache Software Foundation (ASF) under one or more
+    12	#   contributor license agreements. See the NOTICE file distributed
+    13	#   with this work for additional information regarding copyright
+    14	#   ownership. The ASF licenses this file to you under the Apache
+    15	#   License, Version 2.0 (the "License"); you may not use this file
+    16	#   except in compliance with the License. You may obtain a copy of
+    17	#   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+    18	#
+    19	
+    20	# use POSIX locale for well-defined tool output
+    21	LO_SAVE_LC_ALL="$LC_ALL"
+    22	LC_ALL=C
+    23	export LC_ALL
+    24	
+    25	#
+    26	# STAR_PROFILE_LOCKING_DISABLED=1
+    27	# export STAR_PROFILE_LOCKING_DISABLED
+    28	#
+    29	
+    30	# file locking now enabled by default
+    31	SAL_ENABLE_FILE_LOCKING=1
+    32	export SAL_ENABLE_FILE_LOCKING
+    33	
+    34	# uncomment line below to disable anti aliasing of fonts
+    35	# SAL_ANTIALIAS_DISABLE=true; export SAL_ANTIALIAS_DISABLE
+    36	
+    37	# uncomment line below if you encounter problems starting soffice on your system
+    38	# SAL_NO_XINITTHREADS=true; export SAL_NO_XINITTHREADS
+    39	
+    40	#@JITC_PROCESSOR_TYPE_EXPORT@
+    41	
+    42	# resolve installation directory
+    43	sd_cwd=$(pwd)
+    44	sd_res="$0"
+    45	while [ -h "$sd_res" ] ; do
+    46	    sd_dirname=$(dirname "$sd_res")
+    47	    cd "$sd_dirname" || exit $?
+    48	    sd_basename=$(basename "$sd_res")
+    49	    sd_res=$(ls -l "$sd_basename" | sed "s/.*$sd_basename -> //g")
+    50	done
+    51	sd_dirname=$(dirname "$sd_res")
+    52	cd "$sd_dirname" || exit $?
+    53	sd_prog=$(pwd)
+    54	cd "$sd_cwd" || exit $?
+    55	
+    56	# linked build needs additional settings
+    57	if [ -e "${sd_prog}/ooenv" ] ; then
+    58	    # shellcheck source=../../instsetoo_native/ooenv
+    59	    . "${sd_prog}/ooenv"
+    60	fi
+    61	
+    62	# try to get some debug output?
+    63	GDBTRACECHECK=
+    64	STRACECHECK=
+    65	VALGRINDCHECK=
+
+COMMAND: nl -ba /usr/lib/libreoffice/program/soffice | sed -n '160,200p'
+   160	    ;;
+   161	NetBSD|DragonFly)
+   162	# this is a temporary hack until we can live with the default search paths
+   163	    LD_LIBRARY_PATH="$sd_prog${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+   164	    export LD_LIBRARY_PATH
+   165	    ;;
+   166	AIX)
+   167	    LIBPATH="$sd_prog${LIBPATH:+:$LIBPATH}"
+   168	    export LIBPATH
+   169	    ;;
+   170	esac
+   171	
+   172	# restore locale setting, avoiding to export empty LC_ALL, s. tdf#130080
+   173	if [ -n "$LO_SAVE_LC_ALL" ]; then
+   174	    LC_ALL="$LO_SAVE_LC_ALL"
+   175	else
+   176	    unset LC_ALL
+   177	fi
+   178	
+   179	# run soffice.bin directly when you want to get the backtrace
+   180	if [ -n "$GDBTRACECHECK" ] ; then
+   181	    exec $GDBTRACECHECK "$sd_prog/soffice.bin" "$@"
+   182	fi
+   183	
+   184	# valgrind --log-file=valgrind.log does not work well with --trace-children=yes
+   185	if [ -n "$VALGRINDCHECK" ] && [ -z "$VALGRIND" ] ; then
+   186	    echo "redirecting the standard and the error output to valgrind.log"
+   187	    exec > valgrind.log 2>&1
+   188	fi
+   189	
+   190	# oosplash does the rest: forcing pages in, javaldx etc. are
+   191	exec $RRCHECK $VALGRINDCHECK $STRACECHECK "$sd_prog/oosplash" "$@"
+

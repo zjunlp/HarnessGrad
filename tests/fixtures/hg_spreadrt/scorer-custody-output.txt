@@ -1,0 +1,10 @@
+data/datasets/spreadsheetbench/verify/check.py sha256=e7131a2649a89d818a73b6b83e1b66892e41b93c53a7fee8330749146ad3ee46
+registry/w-metriccmp-sources/spreadsheetbench-evaluation.py.txt sha256=7cbddc1a31ade2a1bb87047a1dcaa293911fdeefc046c1fe796f5436af11a0a6
+transform_value AST_equal_ignoring_docstrings=True
+datetime_to_float AST_equal_ignoring_docstrings=True
+compare_cell_value AST_equal_ignoring_docstrings=True
+col_num2name AST_equal_ignoring_docstrings=True
+col_name2num AST_equal_ignoring_docstrings=True
+parse_cell_range AST_equal_ignoring_docstrings=True
+generate_cell_names AST_equal_ignoring_docstrings=False
+scope=source-only; adapted workbook/comparison/error policy is separate; no official execution

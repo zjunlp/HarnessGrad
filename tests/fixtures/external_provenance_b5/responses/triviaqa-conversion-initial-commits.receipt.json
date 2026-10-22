@@ -1,0 +1,140 @@
+{
+  "url": "https://hf-mirror.com/api/datasets/mandarjoshi/trivia_qa/commits/6baa09772e6ddf7e7b5d629ea64f1a8c1df21c3c",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:20:38.734768+00:00",
+  "production_authorized": false,
+  "status": 200,
+  "reason": "OK",
+  "response_headers": [
+    [
+      "Access-Control-Allow-Origin",
+      "https://hf-mirror.com"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range,X-Linked-Size,X-Linked-ETag,X-Xet-Hash"
+    ],
+    [
+      "Access-Control-Max-Age",
+      "86400"
+    ],
+    [
+      "Alt-Svc",
+      "h3=\":443\"; ma=2592000"
+    ],
+    [
+      "Cf-Cache-Status",
+      "MISS"
+    ],
+    [
+      "Cf-Ray",
+      "a4a84184a97dea74-NRT"
+    ],
+    [
+      "Content-Type",
+      "application/json; charset=utf-8"
+    ],
+    [
+      "Cross-Origin-Opener-Policy",
+      "same-origin"
+    ],
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:20:39 GMT"
+    ],
+    [
+      "Etag",
+      "W/\"1b8c-+iJqyVceQ8FdV7m9wETMPdACQq0\""
+    ],
+    [
+      "Nel",
+      "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}"
+    ],
+    [
+      "Ratelimit",
+      "\"api\";r=497;t=49"
+    ],
+    [
+      "Ratelimit-Policy",
+      "\"fixed window\";\"api\";q=500;w=300"
+    ],
+    [
+      "Referrer-Policy",
+      "strict-origin-when-cross-origin"
+    ],
+    [
+      "Report-To",
+      "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=xiRH%2Bz2lpbPfU8hC4y2nNLyOs9UTZNB6%2BadJQEPyR%2FwFL4A0Rb3syzSwn08gHnzihF5SV5HAHOuHDjtJj7A29YQm%2F%2B2ckWAA51fy3u%2B%2Bgkk5ka0IGOU%2FtQbwp8dFW1BRXtZiURVmhcc%3D\"}]}"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000"
+    ],
+    [
+      "Vary",
+      "Origin, Accept-Encoding"
+    ],
+    [
+      "Via",
+      "2.0 Caddy"
+    ],
+    [
+      "Via",
+      "2.0 Caddy"
+    ],
+    [
+      "Via",
+      "2.0 Caddy"
+    ],
+    [
+      "Via",
+      "1.1 5a8e1661c31057dd4c6b67234ad6ade6.cloudfront.net (CloudFront)"
+    ],
+    [
+      "X-Amz-Cf-Id",
+      "ROIFBXTyID-tFjS4N4RC4WGsYcnRCoJCraFZIB6_d0pYXgzNgDeLmA=="
+    ],
+    [
+      "X-Amz-Cf-Pop",
+      "NRT12-P2"
+    ],
+    [
+      "X-Cache",
+      "Miss from cloudfront"
+    ],
+    [
+      "X-Powered-By",
+      "huggingface-moon"
+    ],
+    [
+      "X-Request-Id",
+      "Root=1-6acfb9e7-54171c6e1cfdf3e422bf29f9"
+    ],
+    [
+      "X-Total-Count",
+      "17"
+    ],
+    [
+      "Connection",
+      "close"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/triviaqa-conversion-initial-commits.body",
+    "bytes": 7052,
+    "sha256": "7a386287343a75fdb7f09a924ab3d9b2b05856077947257adbb95e653d63c48d"
+  },
+  "completed_at_utc": "2026-10-14T17:20:39.453269+00:00"
+}

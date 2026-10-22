@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "dataset": "triviaqa",
+  "selection_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-triviaqa",
+  "selection_kind": "operator-authorized-first-5-of-full-adapter-order",
+  "runtime_run_id": null,
+  "execution_authorized": false,
+  "claim_limit": "Bounded first-N selection in declared adapter order; NOT a random sample and NOT representative of the dataset. Establishes only identifiable, hash-bound selection -> export -> scoring-input custody for these five tasks, not scoring execution, eligibility, admission or claims about the rest of the pool.",
+  "source_revision": "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f",
+  "adapter_source": [
+    {
+      "path": "data/datasets/triviaqa.py",
+      "bytes": 18723,
+      "sha256": "c4c9e7121672f482abd5ec5527daa07d893f27bfbdcb7255841782332597413c"
+    },
+    {
+      "path": "data/scaffolds/qa/base.py",
+      "bytes": 27878,
+      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    },
+    {
+      "path": "data/scaffolds/qa/read.py",
+      "bytes": 8624,
+      "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+    },
+    {
+      "path": "data/scaffolds/scorer_input.py",
+      "bytes": 6166,
+      "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"
+    }
+  ],
+  "installed_source": {
+    "path": "/mnt/20t/xubuqiang/datasets/triviaqa/rc.nocontext/validation-00000-of-00001.parquet",
+    "bytes": 7335321,
+    "sha256": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201"
+  },
+  "adapter_presented_count": 19944,
+  "selected_count": 5,
+  "eligible_count": null,
+  "trials_executed": 0,
+  "measured_count": 0,
+  "invalid_count": 0,
+  "unmeasured_execution_count": 0,
+  "unexecuted_selected_count": 5,
+  "split_mode": "declared",
+  "split_source": "declared",
+  "side": "eval",
+  "selected_sides": {
+    "train": [],
+    "eval": [
+      "triviaqa/validation/0",
+      "triviaqa/validation/1",
+      "triviaqa/validation/2",
+      "triviaqa/validation/3",
+      "triviaqa/validation/4"
+    ]
+  },
+  "order_rule": "adapter full record order, slice [:5] BEFORE any side filter; no sorting/sampling/shuffling",
+  "export_path": "/tmp/hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f/triviaqa",
+  "row_export": "rows.jsonl",
+  "export_files": {
+    "rows.jsonl": "0b1b6ad5db09414a3b1316b4cd04f9b1f9c27ced671f730e85c01203b36dbf5c",
+    "inputs/0/gold.json": "9259788e9162f97b630000d5e8bb2a8c8c4cfbf9875d098c96d6f87e1d6db715",
+    "inputs/0/question.txt": "d9a79b1136d48af7ae43021e80b25e2e48911d30ec6e9dd10ff59b4f34783032",
+    "inputs/0/goal.txt": "eb4c00e3c6fcb931d963bb5c64949ba0072d269b91c9ea08586357e642ab22e3",
+    "inputs/1/gold.json": "4401266f67049c7fc15b36d591cd00eb94d43bdb8ddaf7f81afa36521452ce0a",
+    "inputs/1/question.txt": "5bf1bca52f7fccea632e0feb5f51524dcdc0f3a55d8f87d3619a949009a62372",
+    "inputs/1/goal.txt": "fefeff834c7f0a26bcc5d620b8ac95d1027a72bff6774c973a3ac6323f0858a3",
+    "inputs/2/gold.json": "da0735bc8d9cb9dc3375346c1bcc546447efe47662ec4dce9b7281ae010f57c4",
+    "inputs/2/question.txt": "a867243d90242ade21d6c9c8b69ce5121c5fe6bfed47fe97286c856ed8ca9bdc",
+    "inputs/2/goal.txt": "aea3addf2393ceb5442122c415a209b5a96ff2cf5e7e0fbdd7b3dff74585b81a",
+    "inputs/3/gold.json": "f0d50314982d21592223c4fd48d51881677af320c3f1eca59f6c477a8e92a483",
+    "inputs/3/question.txt": "385bb55323c18ffe3552b046ef6b8f6eb515a1ffe49756d3731ea2c1906369d6",
+    "inputs/3/goal.txt": "b2c2272cfdb4497e0ff3a26356514c7ce584ab8e19550787eb2a3fdddaa0d22a",
+    "inputs/4/gold.json": "cb217fac1d1f8c731a2f0ae25d50b052721cacaf7d3947572cd63e734ee667be",
+    "inputs/4/question.txt": "fa89c23952d62760c7b9d755ced3f087d8b49a4bb54b4a4ac2d7df8b182c0cad",
+    "inputs/4/goal.txt": "6b3feaf0e9bc1a8285c3a652a6b60942df485a058bba09625a3e8416d64f31fb"
+  },
+  "export_inventory_sha256": "3de29925f6bf457160102e756ae0427bcd351bca48977c2148360cb1f5e07e0f",
+  "prior_inventory": null,
+  "tasks": [
+    {
+      "task_id": "triviaqa/validation/0",
+      "adapter_position": 0,
+      "source_row_index": 0,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "ba45110eed574abfc61b04ef76f4857fa75a645894637bc952021c8b6c7239a6",
+      "scorer_input": {
+        "task_id": "triviaqa/validation/0",
+        "path": "gold.json",
+        "sha256": "9259788e9162f97b630000d5e8bb2a8c8c4cfbf9875d098c96d6f87e1d6db715"
+      },
+      "input_sha256": "9259788e9162f97b630000d5e8bb2a8c8c4cfbf9875d098c96d6f87e1d6db715",
+      "question_sha256": "d9a79b1136d48af7ae43021e80b25e2e48911d30ec6e9dd10ff59b4f34783032",
+      "goal_sha256": "eb4c00e3c6fcb931d963bb5c64949ba0072d269b91c9ea08586357e642ab22e3"
+    },
+    {
+      "task_id": "triviaqa/validation/1",
+      "adapter_position": 1,
+      "source_row_index": 1,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "cd5e615dad714343161338ed1b20cfff937bbf44e3d3cd1d57247271b6384878",
+      "scorer_input": {
+        "task_id": "triviaqa/validation/1",
+        "path": "gold.json",
+        "sha256": "4401266f67049c7fc15b36d591cd00eb94d43bdb8ddaf7f81afa36521452ce0a"
+      },
+      "input_sha256": "4401266f67049c7fc15b36d591cd00eb94d43bdb8ddaf7f81afa36521452ce0a",
+      "question_sha256": "5bf1bca52f7fccea632e0feb5f51524dcdc0f3a55d8f87d3619a949009a62372",
+      "goal_sha256": "fefeff834c7f0a26bcc5d620b8ac95d1027a72bff6774c973a3ac6323f0858a3"
+    },
+    {
+      "task_id": "triviaqa/validation/2",
+      "adapter_position": 2,
+      "source_row_index": 2,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "d6491bd758619f6ffcfcfa2fcdc8d2ccd8b40c00b02068a5760e1572fc68111a",
+      "scorer_input": {
+        "task_id": "triviaqa/validation/2",
+        "path": "gold.json",
+        "sha256": "da0735bc8d9cb9dc3375346c1bcc546447efe47662ec4dce9b7281ae010f57c4"
+      },
+      "input_sha256": "da0735bc8d9cb9dc3375346c1bcc546447efe47662ec4dce9b7281ae010f57c4",
+      "question_sha256": "a867243d90242ade21d6c9c8b69ce5121c5fe6bfed47fe97286c856ed8ca9bdc",
+      "goal_sha256": "aea3addf2393ceb5442122c415a209b5a96ff2cf5e7e0fbdd7b3dff74585b81a"
+    },
+    {
+      "task_id": "triviaqa/validation/3",
+      "adapter_position": 3,
+      "source_row_index": 3,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "8f47db55d07b2cb1870ea5a1061d9b9190a9da646e657723769d66d181c79041",
+      "scorer_input": {
+        "task_id": "triviaqa/validation/3",
+        "path": "gold.json",
+        "sha256": "f0d50314982d21592223c4fd48d51881677af320c3f1eca59f6c477a8e92a483"
+      },
+      "input_sha256": "f0d50314982d21592223c4fd48d51881677af320c3f1eca59f6c477a8e92a483",
+      "question_sha256": "385bb55323c18ffe3552b046ef6b8f6eb515a1ffe49756d3731ea2c1906369d6",
+      "goal_sha256": "b2c2272cfdb4497e0ff3a26356514c7ce584ab8e19550787eb2a3fdddaa0d22a"
+    },
+    {
+      "task_id": "triviaqa/validation/4",
+      "adapter_position": 4,
+      "source_row_index": 4,
+      "source_split": "validation",
+      "declared_side": "eval",
+      "parsed_row_sha256": "9566114d0d7ecd6abd37cc6e8740a2e5131a289634e2833e102a8d0ae9fed057",
+      "scorer_input": {
+        "task_id": "triviaqa/validation/4",
+        "path": "gold.json",
+        "sha256": "cb217fac1d1f8c731a2f0ae25d50b052721cacaf7d3947572cd63e734ee667be"
+      },
+      "input_sha256": "cb217fac1d1f8c731a2f0ae25d50b052721cacaf7d3947572cd63e734ee667be",
+      "question_sha256": "fa89c23952d62760c7b9d755ced3f087d8b49a4bb54b4a4ac2d7df8b182c0cad",
+      "goal_sha256": "6b3feaf0e9bc1a8285c3a652a6b60942df485a058bba09625a3e8416d64f31fb"
+    }
+  ],
+  "run_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-triviaqa",
+  "run_state": "reserved-selection-only; no execution"
+}

@@ -1,0 +1,4 @@
+spreadsheetbench/dataset-journal-gap
+  next_action  2315 -> 2547 chars
+  observed     8758 -> 9524 chars
+  dry run: nothing written (pass --apply)

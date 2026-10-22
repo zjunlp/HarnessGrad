@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/run_synthetic.py", line 37, in <module>
+    assert proc.returncode == 0
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError

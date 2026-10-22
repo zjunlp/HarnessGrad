@@ -1,0 +1,453 @@
+{
+  "schema_version": 1,
+  "inherited_evidence": [
+    {
+      "path": "docs/evidence/lcb740/prior-selection.inert.json",
+      "sha256": "683d0a0e689b4579ffd8f61a3e672299c8e944014efcc9cffa75e99af3512d38",
+      "bytes": 7223
+    },
+    {
+      "path": "docs/evidence/lcb740/prior-launch.json",
+      "sha256": "b2402fc26b4ea0c675c7880ffd72e5272793df084ee9471aebcb06022ed8e168",
+      "bytes": 2840
+    },
+    {
+      "path": "docs/task-207-livecodebench-operator-packet.md",
+      "sha256": "5b490cb33868811e623606c6c35c6c7f695dd5bf39ea2f382b5baa0e1049927f",
+      "bytes": 9154
+    },
+    {
+      "path": "reports/b6-blocker-evidence/twowiki-hub-proxy-revision/hop-0.body",
+      "sha256": "6340521cf170fac8e82785cd21a5e9941306ea6ee54963438b6555561b09d21a",
+      "bytes": 2073
+    },
+    {
+      "path": "reports/b6-blocker-evidence/twowiki-hub-proxy-tree/hop-0.body",
+      "sha256": "0726213cab74f08258be4080918684821a5b3c313f51043a089d79ddcc6947eb",
+      "bytes": 1496
+    },
+    {
+      "path": "reports/b6-blocker-evidence/lcb-hub-proxy-revision/hop-0.body",
+      "sha256": "501d60839cc3f592b476d5d79b1093f29ade0144fb3318f1b261d3ece274e4d4",
+      "bytes": 2913
+    },
+    {
+      "path": "reports/b6-blocker-evidence/lcb-hub-proxy-tree/hop-0.body",
+      "sha256": "91b24116907e1c5e5ed962fa90afe8583a36e97148e0ef6ed8369df21b27dee8",
+      "bytes": 2475
+    },
+    {
+      "path": "reports/b6-blocker-evidence/twowiki-upstream-readme/README.upstream.md",
+      "sha256": "d1831fa4b1a8fdcc1729565e30e38b3d8b955534486eb690fd5ea54c1232955f",
+      "bytes": 4828
+    },
+    {
+      "path": "reports/b6-blocker-evidence/twowiki-upstream-current-readme/hop-0.body",
+      "sha256": "bb0cf42315c4e65ccf8fda8e5a1a76fd76bf81552763b9bbd6230bc3077ddba0",
+      "bytes": 7114
+    },
+    {
+      "path": "reports/b6-blocker-evidence/twowiki-hub-proxy-loader/hop-1.body",
+      "sha256": "fab06a1a2d4731e1aefb415252f1613d93754bd94ca0b2ba1f6c268af93711c4",
+      "bytes": 4613
+    },
+    {
+      "path": "reports/b6-blocker-evidence/lcb-hub-proxy-builder/hop-1.body",
+      "sha256": "973e37989fed0f069c8246776e918d0d96600d64a3730cd6242dd76bccf2f7bb",
+      "bytes": 5013
+    },
+    {
+      "path": "reports/b6-blocker-evidence/preserved-receipts/twowiki-imposed-split.json",
+      "sha256": "3236a75876d8afea722255cb8d12c32aba64b327c19f15234af1c2325923c18f",
+      "bytes": 429086
+    },
+    {
+      "path": "reports/b6-blocker-evidence/preserved-receipts/twowiki-original-run-meta.json",
+      "sha256": "c381baf1514ba903bd515bbe44092ae4cc0a96be34c5bb672e096557491bbda0",
+      "bytes": 419578
+    },
+    {
+      "path": "reports/b6-blocker-evidence/preserved-receipts/twowiki-recovery-run-meta.json",
+      "sha256": "f0c91f731006e4b760916c481262873a0808e36a1ec3b8e714b73026ed9a27a4",
+      "bytes": 419655
+    },
+    {
+      "path": "reports/b6-blocker-evidence/preserved-receipts/twowiki-original-curve.jsonl",
+      "sha256": "14790c0c322981ad2e8497d368bee29de971526e4499a22a2e77be05b60eff0f",
+      "bytes": 390201
+    },
+    {
+      "path": "reports/b6-blocker-evidence/preserved-receipts/twowiki-recovery-curve.jsonl",
+      "sha256": "0f27ad9146371b2e9e318d0cce8b4f3769eeb33e209948e780c5a3a3ec034f20",
+      "bytes": 382899
+    },
+    {
+      "path": "tests/fixtures/twowikimultihopqa_upstream_codex197/LICENSE",
+      "sha256": "b8c1d7752e71597a45121774b6be93df38a81e1b748be15c063c0759f11e00ea",
+      "bytes": 11337
+    }
+  ],
+  "responses": [
+    {
+      "acquisition": "lcb-pinned-card",
+      "body_path": "tests/fixtures/upstream_provenance_e2/lcb-pinned-card/hop-0.body",
+      "method": "GET",
+      "url": "https://huggingface.co/datasets/livecodebench/code_generation_lite/resolve/0fe84c3912ea0c4d4a78037083943e8f0c4dd505/README.md",
+      "started_at_utc": "2026-10-14T17:53:49.060131+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 307,
+      "bytes": 317,
+      "sha256": "a88533329cd2b7ea07e49c53982cccb2c8d0d83d1cfca1a92e40284385050474",
+      "headers_sha256": "358a1e2e21939cc970ebfc58e85b7a3e08b37741c3d682213d14c65a6ad6a14b",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "lcb-pinned-card",
+      "body_path": "tests/fixtures/upstream_provenance_e2/lcb-pinned-card/hop-1.body",
+      "method": "GET",
+      "url": "https://huggingface.co/api/resolve-cache/datasets/livecodebench/code_generation_lite/0fe84c3912ea0c4d4a78037083943e8f0c4dd505/README.md?%2Fdatasets%2Flivecodebench%2Fcode_generation_lite%2Fresolve%2F0fe84c3912ea0c4d4a78037083943e8f0c4dd505%2FREADME.md=&etag=%2237908db28f9e16ad36a1c6dfb5c30201cc325f99%22",
+      "started_at_utc": "2026-10-14T17:53:49.448832+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 3390,
+      "sha256": "fbf0df23c9fb430778f037691bd191ece41d49373c0695151d87549b6f45d809",
+      "headers_sha256": "d0ca492eb3ecdf9e7d983edb6010dbd90aef4e21c23ba9474b0e2e52642a56ed",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "lcb-pinned-history",
+      "body_path": "tests/fixtures/upstream_provenance_e2/lcb-pinned-history/hop-0.body",
+      "method": "GET",
+      "url": "https://huggingface.co/api/datasets/livecodebench/code_generation_lite/commits/0fe84c3912ea0c4d4a78037083943e8f0c4dd505",
+      "started_at_utc": "2026-10-14T17:53:49.068903+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 4605,
+      "sha256": "cc74ef23ada8a009f211d1a6531330bd4491ac61e428bd0abd25984ee9f5cffa",
+      "headers_sha256": "e5b479ee09209e2b3daef359ac518d4f30f34761bea2ca6e98f3dff9d8a28cba",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "lcb-refs",
+      "body_path": "tests/fixtures/upstream_provenance_e2/lcb-refs/hop-0.body",
+      "method": "GET",
+      "url": "https://huggingface.co/api/datasets/livecodebench/code_generation_lite/refs",
+      "started_at_utc": "2026-10-14T17:53:49.060822+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 136,
+      "sha256": "9c9f407731dbc02775a9bc04f1f5a09827e302a5d54a919c59e6016ac0f10cb6",
+      "headers_sha256": "8ed2e424588f874eb97c17f1b9f4d6d7848fcfcd63a54c27b6f4a78ee738a181",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-later-archive-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-later-archive-head/hop-0.body",
+      "method": "HEAD",
+      "url": "https://www.dropbox.com/s/7ep3h8unu2njfxv/data_ids.zip?dl=0",
+      "started_at_utc": "2026-10-14T17:53:50.156897+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 302,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "90c5d70fa09c6505f5413f68436219bb9f62246c253030651e7da1dfbfc1b38e",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-later-archive-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-later-archive-head/hop-1.body",
+      "method": "HEAD",
+      "url": "https://www.dropbox.com/scl/fi/aasqsj45yokx71pnm8ctr/data_ids.zip?rlkey=72n2p6jywhfmm6kdeuzz8c55u&dl=0",
+      "started_at_utc": "2026-10-14T17:53:50.576038+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "b5913b7b8f9e35b913f50048c2b2d9b76561387e92e528d68bec89141b5da123",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-later-download-followup-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-later-download-followup-head/hop-0.body",
+      "method": "HEAD",
+      "url": "https://uca47197cb573ff9881874c910b1.dl.dropboxusercontent.com/cd/0/get/DJ-vT3i2vbrOlt-lfrMN9wUpbF8K7rhwv4gbofApBWgeQPKJxqca-3cR_toxOFKxjnOelfycnC8olSsK7AAGg59rRm6_mr1zuPnLCqUc9YQ7bjlZ3HHEdJuSO4xYtmErAhVH7hgBOiqyB18mNXA2S1UV/file?dl=1",
+      "started_at_utc": "2026-10-14T17:55:48.246337+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "3116b74bf94aebc8c457cf03bb6b2574c007f61d1c7e016aebdbf681e0673ccd",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-later-download-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-later-download-head/hop-0.body",
+      "method": "HEAD",
+      "url": "https://www.dropbox.com/s/7ep3h8unu2njfxv/data_ids.zip?dl=1",
+      "started_at_utc": "2026-10-14T17:54:55.258807+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 302,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "79e3cd380f677b2cbcafc8e903508e4bc02ecd4975f5f664b574b1e4217924b0",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-later-download-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-later-download-head/hop-1.body",
+      "method": "HEAD",
+      "url": "https://www.dropbox.com/scl/fi/aasqsj45yokx71pnm8ctr/data_ids.zip?rlkey=72n2p6jywhfmm6kdeuzz8c55u&dl=1",
+      "started_at_utc": "2026-10-14T17:54:55.753800+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 302,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "b1589e30341331b8c3f00633c58097ebd1dc4fd4f8124bbf34432a8fb4426dda",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-license-issues",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-license-issues/hop-0.body",
+      "method": "GET",
+      "url": "https://api.github.com/search/issues?q=repo%3AAlab-NII%2F2wikimultihop%20license&per_page=100",
+      "started_at_utc": "2026-10-14T17:54:55.259477+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 79,
+      "sha256": "c9938edecb99d754b2d039ac9eec320a94c769b6a6417921e2dcbef9e2fe01a0",
+      "headers_sha256": "8da893ebf816a87940af93360ac6c03a9bf08b338e8d81cb6f3d8034af4aab3a",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-original-archive-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-original-archive-head/hop-0.body",
+      "method": "HEAD",
+      "url": "https://www.dropbox.com/s/9fwhnzektzv4wh5/data_ids.zip?dl=0",
+      "started_at_utc": "2026-10-14T17:53:49.640625+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "6615b5fe26b4dc8046f51c5b1b4c06a857d41da8a1cd352c1f70c0504c5f2afd",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-original-download-head",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-original-download-head/hop-0.body",
+      "method": "HEAD",
+      "url": "https://www.dropbox.com/s/9fwhnzektzv4wh5/data_ids.zip?dl=1",
+      "started_at_utc": "2026-10-14T17:54:55.247480+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers_sha256": "400f18b45b51028221162e9042965a405dc96c02212f5ea0ca1d13610990e459",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-pinned-history",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-pinned-history/hop-0.body",
+      "method": "GET",
+      "url": "https://huggingface.co/api/datasets/kamelliao/2wikimultihopqa/commits/f4f0d7e4ae275d9281e90c46c93e66d6cdda3674",
+      "started_at_utc": "2026-10-14T17:53:49.068243+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 570,
+      "sha256": "8eebb51231a4a4cfc4cb314c76ac4954a3237cd277777566a56dc0be8371dbf9",
+      "headers_sha256": "4cc96431586d651192acf982d14496d77123d9eb075ab66eab4e72a72f41d948",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-releases",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-releases/hop-0.body",
+      "method": "GET",
+      "url": "https://api.github.com/repos/Alab-NII/2wikimultihop/releases?per_page=100",
+      "started_at_utc": "2026-10-14T17:53:49.457784+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "headers_sha256": "1a7182bcb648611a630d65748b21abf6ccc25b63d62bbd1774bfb2ee75e32b89",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    },
+    {
+      "acquisition": "twowiki-tags",
+      "body_path": "tests/fixtures/upstream_provenance_e2/twowiki-tags/hop-0.body",
+      "method": "GET",
+      "url": "https://api.github.com/repos/Alab-NII/2wikimultihop/tags?per_page=100",
+      "started_at_utc": "2026-10-14T17:53:49.497227+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "status": 200,
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "headers_sha256": "684a931c5128630c20544e88f0525290785b66d16a4bf29d2e39af478e12643d",
+      "complete": true,
+      "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+    }
+  ],
+  "failures": [
+    {
+      "acquisition": "twowiki-later-download-head",
+      "method": "HEAD",
+      "url": "https://uca47197cb573ff9881874c910b1.dl.dropboxusercontent.com/cd/0/get/DJ-vT3i2vbrOlt-lfrMN9wUpbF8K7rhwv4gbofApBWgeQPKJxqca-3cR_toxOFKxjnOelfycnC8olSsK7AAGg59rRm6_mr1zuPnLCqUc9YQ7bjlZ3HHEdJuSO4xYtmErAhVH7hgBOiqyB18mNXA2S1UV/file?dl=1",
+      "started_at_utc": "2026-10-14T17:54:56.649259+00:00",
+      "transport_proxy": "http://127.0.0.1:17891",
+      "tls_certificate_validation": true,
+      "publisher_signature_verified": false,
+      "error": "Refused URL outside metadata/HEAD allowlist"
+    }
+  ],
+  "livecodebench": {
+    "compared_declarations": {
+      "task_id": "livecodebench/740",
+      "question_id": "abc360_a",
+      "row_index": 740,
+      "side": "train",
+      "revision": "0fe84c3912ea0c4d4a78037083943e8f0c4dd505",
+      "pool_sha256": "bbf2bf826856156656568f568e4026f7702f90b5da22a880b733b755a69f4256",
+      "split_sha256": "af97cfb379d5af4ae2437e6fda50d4a15199f0d001b0dda64625304a85c9f187",
+      "public_statement_sha256": "072b9614bc27ae5fb47d3a7fc90de200c15208722a145d6291985967cb50c14f"
+    },
+    "task207_target_matches_inert_declarations": true,
+    "inert_sha256": "683d0a0e689b4579ffd8f61a3e672299c8e944014efcc9cffa75e99af3512d38",
+    "rank_selection_matches": true,
+    "local_hash_train_rule_matches": true,
+    "complete_catalog_acquired": false,
+    "authenticated_row_record_acquired": false,
+    "independent_approval_received": false,
+    "row_attested": false,
+    "pool_freshly_verified_here": false
+  },
+  "twowikimultihopqa": {
+    "hub_revision": "f4f0d7e4ae275d9281e90c46c93e66d6cdda3674",
+    "hub_advertised_artifacts": {
+      "data/dev.json": "79f77ae104088ea8e25b1a65dbece768d45771194663bc5660ec9a98070dadf5",
+      "data/id_aliases.json": "f08ffcb6c2cefca9bdbe86b4248d6ad7a7743762d3f7264c14ff0bae85726fb6",
+      "data/test.json": "48b196d4ba8557343abb9bd1ad03566bc02762ecd734617ff910027c33821b04",
+      "data/train.json": "b318dbafbfed51a8029718fa59be8b616600cbff675a3b587694b28c5eedfc13"
+    },
+    "historical_selections": {
+      "original": {
+        "run_id": "twowiki-pilot-h0-20261013",
+        "selected_count": 50,
+        "selected_task_ids": [
+          "twowikimultihopqa/dev/10159",
+          "twowikimultihopqa/dev/10176",
+          "twowikimultihopqa/dev/10311",
+          "twowikimultihopqa/dev/10410",
+          "twowikimultihopqa/dev/10438",
+          "twowikimultihopqa/dev/10455",
+          "twowikimultihopqa/dev/10584",
+          "twowikimultihopqa/dev/10594",
+          "twowikimultihopqa/dev/11421",
+          "twowikimultihopqa/dev/11543",
+          "twowikimultihopqa/dev/11551",
+          "twowikimultihopqa/dev/11578",
+          "twowikimultihopqa/dev/12457",
+          "twowikimultihopqa/dev/12550",
+          "twowikimultihopqa/dev/1492",
+          "twowikimultihopqa/dev/1565",
+          "twowikimultihopqa/dev/1589",
+          "twowikimultihopqa/dev/2170",
+          "twowikimultihopqa/dev/2401",
+          "twowikimultihopqa/dev/2501",
+          "twowikimultihopqa/dev/2668",
+          "twowikimultihopqa/dev/2738",
+          "twowikimultihopqa/dev/3588",
+          "twowikimultihopqa/dev/3608",
+          "twowikimultihopqa/dev/3615",
+          "twowikimultihopqa/dev/3727",
+          "twowikimultihopqa/dev/3780",
+          "twowikimultihopqa/dev/385",
+          "twowikimultihopqa/dev/3948",
+          "twowikimultihopqa/dev/4060",
+          "twowikimultihopqa/dev/4858",
+          "twowikimultihopqa/dev/5020",
+          "twowikimultihopqa/dev/5076",
+          "twowikimultihopqa/dev/5420",
+          "twowikimultihopqa/dev/5689",
+          "twowikimultihopqa/dev/580",
+          "twowikimultihopqa/dev/5967",
+          "twowikimultihopqa/dev/6185",
+          "twowikimultihopqa/dev/6545",
+          "twowikimultihopqa/dev/6598",
+          "twowikimultihopqa/dev/6912",
+          "twowikimultihopqa/dev/6987",
+          "twowikimultihopqa/dev/7076",
+          "twowikimultihopqa/dev/7142",
+          "twowikimultihopqa/dev/7504",
+          "twowikimultihopqa/dev/8019",
+          "twowikimultihopqa/dev/811",
+          "twowikimultihopqa/dev/854",
+          "twowikimultihopqa/dev/9034",
+          "twowikimultihopqa/dev/9410"
+        ],
+        "selected_ids_sha256_json_compact": "c9abd185c059bbc2ef3f8e1ca3ade5e275258c234fb7ad4a5b1512b8b60f1a19",
+        "split_sha256": "161b79332301a152d9ff53ffff073b2f9b307054bc510764068fb48a89bc17b4",
+        "raw_artifact_binding_authenticated": false
+      },
+      "recovery": {
+        "run_id": "twowiki-invalid-recovery-h0-20261013",
+        "selected_count": 2,
+        "selected_task_ids": [
+          "twowikimultihopqa/dev/1589",
+          "twowikimultihopqa/dev/2501"
+        ],
+        "selected_ids_sha256_json_compact": "d083aef36aa69942821871272277fdd162a6112a1e204c8007cae342952dedfb",
+        "split_sha256": "161b79332301a152d9ff53ffff073b2f9b307054bc510764068fb48a89bc17b4",
+        "raw_artifact_binding_authenticated": false
+      }
+    },
+    "original_release_digest_custody_acquired": false,
+    "dataset_alias_rights_attested": false,
+    "alias_id_coverage_attested": false,
+    "selected_manifest_linkage_authenticated": false
+  },
+  "production_authorized": false,
+  "benchmark_execution": false,
+  "payload_access": false
+}

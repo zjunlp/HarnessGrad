@@ -1,0 +1,30 @@
+[
+  {
+    "method": "HEAD",
+    "url": "https://www.dropbox.com/s/7ep3h8unu2njfxv/data_ids.zip?dl=0",
+    "started_at_utc": "2026-10-14T17:53:50.156897+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 302,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "headers_sha256": "90c5d70fa09c6505f5413f68436219bb9f62246c253030651e7da1dfbfc1b38e",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  },
+  {
+    "method": "HEAD",
+    "url": "https://www.dropbox.com/scl/fi/aasqsj45yokx71pnm8ctr/data_ids.zip?rlkey=72n2p6jywhfmm6kdeuzz8c55u&dl=0",
+    "started_at_utc": "2026-10-14T17:53:50.576038+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "headers_sha256": "b5913b7b8f9e35b913f50048c2b2d9b76561387e92e528d68bec89141b5da123",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

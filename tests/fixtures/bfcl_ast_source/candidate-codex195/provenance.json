@@ -1,0 +1,437 @@
+{
+  "approval_boundary": "This deliberately different candidate schema is not an approved v1 source-contract receipt. Do not supply its digest as custody approval or move it into the approved fixture.",
+  "archive": {
+    "declared_sha256": "57854157e82aed5723a1458d2a4ac426e3256959ded4a20ddc4d627c22edb7fe",
+    "digest_verified": false,
+    "downloaded": false,
+    "member_binding_verified": false,
+    "reason": "Archive contains benchmark material; not requested, downloaded, opened or hashed in this task.",
+    "url": "https://codeload.github.com/ShishirPatil/gorilla/tar.gz/refs/tags/v1.3"
+  },
+  "closure": {
+    "checker_body_reviewed": false,
+    "complete_in_repository_import_closure": false,
+    "complete_official_metric_semantics_verified": false,
+    "evaluator_imported_or_executed": false,
+    "helper_transitive_discovery_complete": false,
+    "original_bytes_git_blob_verified": true,
+    "third_party_runtime_locked": false
+  },
+  "custodian_approved": false,
+  "custodian_request": "CUSTODIAN_REQUEST.md",
+  "entrypoints": {
+    "category_runner": {
+      "line": 246,
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "source_acquired": true,
+      "symbol": "ast_file_runner"
+    },
+    "checker": {
+      "evidence": "eval_runner.py:16 imports this symbol; ast_eval pinned directory lists this blob; checker body not acquired",
+      "git_blob_sha1_from_pinned_directory": "214f3ba55c012691761913b6aca68ab7bc4aa38b",
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "signature": null,
+      "source_acquired": false,
+      "symbol": "ast_checker"
+    },
+    "dispatch": {
+      "line": 410,
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "source_acquired": true,
+      "symbol": "evaluate_task"
+    },
+    "handler_decode": {
+      "concrete_decoder_acquired": false,
+      "line": 654,
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "reason": "Base implementation raises NotImplementedError; concrete model handler is a separate dependency.",
+      "source_acquired": true,
+      "symbol": "BaseHandler.decode_ast"
+    },
+    "parser": {
+      "line": 695,
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "signature": "(result: str, language: str = \"Python\") -> list[dict]",
+      "source_acquired": true,
+      "symbol": "default_decode_ast_prompting"
+    },
+    "parser_core": {
+      "line": 241,
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "signature": "(input_str: str, language: str = \"Python\") -> list[dict]",
+      "source_acquired": true,
+      "symbol": "ast_parse"
+    }
+  },
+  "failed_attempts": [
+    {
+      "endpoint_family": "raw.githubusercontent.com commit-pinned LICENSE and pyproject",
+      "result": "URLError: Network is unreachable; subsequently acquired equivalent original blobs via official GitHub contents API"
+    },
+    {
+      "result": "URLError: timed out; no source acquired",
+      "url": "https://github.com/ShishirPatil/gorilla/blob/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py"
+    },
+    {
+      "endpoint_family": "api.github.com contents for category_mapping.py, eval_config.py, bfcl_eval/utils.py, ast_checker.py and git/blob for checker",
+      "result": "HTTP 403 rate limit exceeded; X-RateLimit-Remaining 0 observed; no source acquired"
+    }
+  ],
+  "files": [
+    {
+      "archive_member_verified": false,
+      "bytes": 11357,
+      "expected_archive_member": "gorilla-1.3/LICENSE",
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "path": "LICENSE",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/LICENSE",
+      "role": "license",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/LICENSE?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 1813,
+      "expected_archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "git_blob_sha1": "fdbdde48402f8f2812b146f9b7341b6aae9e55b8",
+      "imports": [],
+      "in_repository_dependencies": [],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "role": "source",
+      "sha256": "1702fb67afbe2c492608e58e2b7d02e46381f50166b47f3c952f76e34c7cd3bd",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 20789,
+      "expected_archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "git_blob_sha1": "0ac9bd7a11dd73e3116971d925ca8383fcac0267",
+      "imports": [
+        "argparse",
+        "bfcl_eval.constants.category_mapping",
+        "bfcl_eval.constants.eval_config",
+        "bfcl_eval.constants.model_config",
+        "bfcl_eval.eval_checker.ast_eval.ast_checker",
+        "bfcl_eval.eval_checker.eval_runner_helper",
+        "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_checker",
+        "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils",
+        "bfcl_eval.utils",
+        "dotenv",
+        "tqdm"
+      ],
+      "in_repository_dependencies": [
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.category_mapping",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.eval_config",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.model_config",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.eval_checker.ast_eval.ast_checker",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py"
+        },
+        {
+          "acquired": true,
+          "module": "bfcl_eval.eval_checker.eval_runner_helper",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_checker",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_checker.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.utils",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/utils.py"
+        }
+      ],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "role": "source",
+      "sha256": "31f1420ae78709920d2fc49ceb93ea3dc451379cf5f320ac0b02b9845d0cbb36",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 19856,
+      "expected_archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "git_blob_sha1": "1de6462be8be9cc91d5a0e95c69e2c6fd6fc1a0d",
+      "imports": [
+        "bfcl_eval.constants.category_mapping",
+        "bfcl_eval.constants.column_headers",
+        "bfcl_eval.constants.eval_config",
+        "bfcl_eval.constants.model_config",
+        "bfcl_eval.utils",
+        "datetime",
+        "numpy",
+        "os",
+        "pandas",
+        "pathlib",
+        "statistics",
+        "wandb"
+      ],
+      "in_repository_dependencies": [
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.category_mapping",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.column_headers",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/column_headers.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.eval_config",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.model_config",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.utils",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/utils.py"
+        }
+      ],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "role": "source",
+      "sha256": "3bcfbb32ea37e05666f8ef2743bb7f73b2982b1775a1bd132a2204c159516389",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 39291,
+      "expected_archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "git_blob_sha1": "6899b8dce1444fa71e4ab86e4c6c995e988053e7",
+      "imports": [
+        "bfcl_eval.constants.category_mapping",
+        "bfcl_eval.constants.default_prompts",
+        "bfcl_eval.constants.eval_config",
+        "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils",
+        "bfcl_eval.model_handler.model_style",
+        "bfcl_eval.utils",
+        "copy",
+        "json",
+        "overrides",
+        "time"
+      ],
+      "in_repository_dependencies": [
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.category_mapping",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.default_prompts",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/default_prompts.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.eval_config",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.model_handler.model_style",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.utils",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/utils.py"
+        }
+      ],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "role": "source",
+      "sha256": "4a2f4e677d1f6930f396dbc92c50138f56268f970de7e4f815fb801607cafad1",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 31374,
+      "expected_archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "git_blob_sha1": "f78acc240bee3c43b18de3d4195fbf6ee1a207f1",
+      "imports": [
+        "ast",
+        "bfcl_eval.constants.default_prompts",
+        "bfcl_eval.constants.type_mappings",
+        "bfcl_eval.model_handler.model_style",
+        "bfcl_eval.model_handler.parser.java_parser",
+        "bfcl_eval.model_handler.parser.js_parser",
+        "builtins",
+        "copy",
+        "functools",
+        "json",
+        "operator",
+        "re",
+        "tenacity",
+        "typing"
+      ],
+      "in_repository_dependencies": [
+        {
+          "acquired": false,
+          "module": "bfcl_eval.constants.default_prompts",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/default_prompts.py"
+        },
+        {
+          "acquired": true,
+          "module": "bfcl_eval.constants.type_mappings",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.model_handler.model_style",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.model_handler.parser.java_parser",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py"
+        },
+        {
+          "acquired": false,
+          "module": "bfcl_eval.model_handler.parser.js_parser",
+          "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py"
+        }
+      ],
+      "path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "role": "source",
+      "sha256": "153bb33a9515ea2d6ee6a1387faaa464c7be4fe9c6a9f88cc17ad23a1cc306d2",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "archive_member_verified": false,
+      "bytes": 1831,
+      "expected_archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/pyproject.toml",
+      "git_blob_sha1": "a514e581f18902f4f87562ee3c4964931b61e81f",
+      "path": "berkeley-function-call-leaderboard/pyproject.toml",
+      "raw_url": "https://raw.githubusercontent.com/ShishirPatil/gorilla/ea13468e4423454d0c213704fb87cf7cb3990433/berkeley-function-call-leaderboard/pyproject.toml",
+      "role": "dependency-spec",
+      "sha256": "20d86859dc988e442c13a6c4f3567094bd8f2d4a269d59015337bdf6aeba7dd3",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/contents/berkeley-function-call-leaderboard/pyproject.toml?ref=ea13468e4423454d0c213704fb87cf7cb3990433"
+    }
+  ],
+  "license": {
+    "coverage": "Repository root license plus exact pinned package license declaration; no alternate LICENSE/NOTICE observed in the repository or BFCL package root inventories. Transitive third-party license closure not verified.",
+    "file": "LICENSE",
+    "package_confirmation": "berkeley-function-call-leaderboard/pyproject.toml:16",
+    "spdx": "Apache-2.0"
+  },
+  "measured": false,
+  "metadata_evidence": [
+    {
+      "response_sha256": "8c0af1047736edde0312513fd217bb4168fc6fd052a221a1212cfba2d537a64f",
+      "scope": "public metadata; no patch or benchmark blobs fetched",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/git/ref/tags/v1.3"
+    },
+    {
+      "response_sha256": "e9f5ca4365d35fe97b3bf8c5497c3859e54625871dde06b05466609892d515f8",
+      "scope": "public metadata; no patch or benchmark blobs fetched",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/git/commits/ea13468e4423454d0c213704fb87cf7cb3990433"
+    },
+    {
+      "response_sha256": "83290385b6160c577bb385d3c83bc990eead8fb57dfeeafb28071762c27592a7",
+      "scope": "public metadata; no patch or benchmark blobs fetched",
+      "url": "https://api.github.com/repos/ShishirPatil/gorilla/releases/tags/v1.3"
+    }
+  ],
+  "observed_date_utc": "2026-10-14",
+  "official_scope": "Berkeley-linked repository; v1.3/V3 release metadata; pinned original files and partial parser/runner/aggregation semantics only; complete Simple checker semantics unresolved",
+  "owner_login": "ShishirPatil",
+  "ownership_evidence": {
+    "final_url": "https://gorilla.cs.berkeley.edu/leaderboard.html",
+    "http_status": 200,
+    "repository_link": "https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard",
+    "response_sha256": "ef72a8621b6ea1b8aa1d1b7691f73cc3079fd38e86f599c9a38cb626c911fc29",
+    "url": "https://gorilla.cs.berkeley.edu/leaderboard.html",
+    "v3_documentation_link": "blogs/13_bfcl_v3_multi_turn.html"
+  },
+  "privacy_scope": {
+    "archive_requested": false,
+    "benchmark_task_or_answer_files_requested": false,
+    "external_dataset_root_accessed": false,
+    "heldout_requested": false,
+    "model_or_H0_run": false,
+    "source_scope": "Only original .py, pyproject.toml, LICENSE blobs; code-directory/root name inventories and metadata; Berkeley leaderboard repository link and release prose. No data directory traversed; no generated model results or benchmark payload examples acquired."
+  },
+  "production_authorized": false,
+  "ref": {
+    "commit": "ea13468e4423454d0c213704fb87cf7cb3990433",
+    "commit_tree_sha1": "b34aa53a73491f42dc69b8b18c92448d7c311f50",
+    "object_type": "commit",
+    "ref": "refs/tags/v1.3",
+    "tag": "v1.3",
+    "tag_binding": "public GitHub observation only; lightweight tag may move"
+  },
+  "release": {
+    "assets": [],
+    "name": "Berkeley Function Calling Leaderboard Updates (v1.3)",
+    "published_at": "2025-07-17T21:10:14Z",
+    "tarball_url": "https://api.github.com/repos/ShishirPatil/gorilla/tarball/v1.3",
+    "target_commitish": "main",
+    "target_commitish_is_commit_pin": false,
+    "url": "https://github.com/ShishirPatil/gorilla/releases/tag/v1.3",
+    "v3_relationship_statement": "## Highlights\r\n\r\n\ud83c\udfc6 Stable release of Berkeley Function Calling Leaderboard V3 with Multi-step and Multi-turn function call evaluation",
+    "zipball_url": "https://api.github.com/repos/ShishirPatil/gorilla/zipball/v1.3"
+  },
+  "repository": "https://github.com/ShishirPatil/gorilla",
+  "schema": "harnessgrad.bfcl-ast-source-candidate.v1",
+  "status": "blocked",
+  "task": "codex195",
+  "unresolved": [
+    "Original AST checker arguments/signature and semantic body",
+    "Function/call count matching, acceptable alternatives, required/optional/extra parameters and type/value/order normalization",
+    "Concrete model-specific raw-output decoding and format predicate implementation",
+    "Parser Java/JavaScript and AST type-converter helper closure",
+    "Pinned category constants and complete third-party offline/runtime/license closure",
+    "Independent archive digest/tag/member binding and independently approved source receipt"
+  ],
+  "verified_partial_metric": {
+    "category_denominator": "len(model_result); equal lengths of prediction/prompt/reference arrays asserted",
+    "category_numerator": "correct_count incremented only for checker_result[\"valid\"]",
+    "category_scale": "0..1 fraction; CSV formatting multiplies by 100",
+    "decode_failures": "caught decode exceptions and wrong output format remain in category denominator with no correct increment",
+    "non_live_simple_aggregation": "arithmetic mean of simple (Python), java and javascript category accuracies; not pooled task accuracy",
+    "source_citations": [
+      "eval_runner.py:246",
+      "eval_runner.py:270",
+      "eval_runner.py:287",
+      "eval_runner.py:307",
+      "eval_runner.py:332",
+      "eval_runner_helper.py:38",
+      "eval_runner_helper.py:180",
+      "eval_runner_helper.py:212",
+      "eval_runner_helper.py:222"
+    ]
+  }
+}

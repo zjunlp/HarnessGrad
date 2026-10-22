@@ -1,0 +1,50 @@
+{
+  "cleanup": {
+    "removed": true,
+    "retained_receipts": true,
+    "scratch_path": ".scratch/bfcl-codex227"
+  },
+  "diff_review": {
+    "authored_files_whitespace_check_exit": 0,
+    "earlier_tracked_files_modified": false,
+    "original_upstream_trailing_whitespace_preserved_at_lines": [
+      37,
+      42,
+      244,
+      257,
+      276,
+      284,
+      529
+    ]
+  },
+  "evaluator_imported_or_executed": false,
+  "measured": false,
+  "production_authorized": false,
+  "retry_candidate_negative_admission": {
+    "locally_computed_digest_used_for_refusal_test_only": true,
+    "only_metadata_read": true,
+    "projected_source_read": false,
+    "refused": true,
+    "source_inventory_attempted": false
+  },
+  "source_blob_and_sha256_audit": {
+    "bytes": 39917,
+    "failed_requests": 0,
+    "files_verified": 4,
+    "python_bodies_ast_parsed_without_execution": 2,
+    "request_response_pairs_verified": 4
+  },
+  "source_contract_suite": {
+    "exit_code": 0,
+    "module": "tests/quality/test_bfcl_ast_source_contract.py",
+    "passed": 38
+  },
+  "task": "codex227",
+  "unpinned_source_gate": {
+    "exit_code": 2,
+    "measured": false,
+    "production_authorized": false,
+    "reason": "bfcl_ast_source_contract_refused",
+    "status": "blocked"
+  }
+}

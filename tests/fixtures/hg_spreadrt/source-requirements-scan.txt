@@ -1,0 +1,42 @@
+data/scaffolds/scorer_input.py:12:from __future__ import annotations
+data/scaffolds/scorer_input.py:14:import hashlib
+data/scaffolds/scorer_input.py:15:import json
+data/scaffolds/scorer_input.py:16:import sys
+data/scaffolds/scorer_input.py:17:import tempfile
+data/scaffolds/scorer_input.py:18:from functools import lru_cache
+data/scaffolds/scorer_input.py:19:from pathlib import Path
+data/datasets/spreadsheetbench.py:10:from the HuggingFace mirror `KAKA22/SpreadsheetBench`
+data/datasets/spreadsheetbench.py:36:`evaluation/open_spreadsheet.py` exists to do. Measured on this host: `soffice` is installed
+data/datasets/spreadsheetbench.py:37:(`/usr/bin/soffice`) and `--headless --calc --convert-to xlsx` does cache the computed values.
+data/datasets/spreadsheetbench.py:51:from __future__ import annotations
+data/datasets/spreadsheetbench.py:53:from data.scaffolds.scorer_input import bind as bind_scorer_input
+data/datasets/spreadsheetbench.py:55:import json
+data/datasets/spreadsheetbench.py:56:import os
+data/datasets/spreadsheetbench.py:57:from pathlib import Path
+data/datasets/spreadsheetbench.py:82:TARBALL_URL = (f"https://hf-mirror.com/datasets/KAKA22/SpreadsheetBench/resolve/"
+data/datasets/spreadsheetbench.py:276:                    "exists to do, and `soffice` must be installed for any formula-using task. "
+data/datasets/spreadsheetbench.py:329:        "libreoffice": _soffice(),
+data/datasets/spreadsheetbench.py:334:def _soffice() -> str | None:
+data/datasets/spreadsheetbench.py:338:    for candidate in ("soffice", "libreoffice"):
+data/datasets/spreadsheetbench/verify/check.py:24:`evaluation/open_spreadsheet.py` does, and the reason `soffice` has to be installed.
+data/datasets/spreadsheetbench/verify/check.py:36:from __future__ import annotations
+data/datasets/spreadsheetbench/verify/check.py:38:import argparse
+data/datasets/spreadsheetbench/verify/check.py:39:import datetime
+data/datasets/spreadsheetbench/verify/check.py:40:import json
+data/datasets/spreadsheetbench/verify/check.py:41:import os
+data/datasets/spreadsheetbench/verify/check.py:42:import shutil
+data/datasets/spreadsheetbench/verify/check.py:43:import subprocess
+data/datasets/spreadsheetbench/verify/check.py:44:import sys
+data/datasets/spreadsheetbench/verify/check.py:45:import tempfile
+data/datasets/spreadsheetbench/verify/check.py:46:import traceback
+data/datasets/spreadsheetbench/verify/check.py:47:from pathlib import Path
+data/datasets/spreadsheetbench/verify/check.py:51:from data.scaffolds.scorer_input import add_arguments, run_bound
+data/datasets/spreadsheetbench/verify/check.py:218:def soffice_path() -> str | None:
+data/datasets/spreadsheetbench/verify/check.py:220:    for candidate in ("soffice", "libreoffice"):
+data/datasets/spreadsheetbench/verify/check.py:227:def recalculate(workbook: Path, *, scratch: Path, soffice: str) -> tuple[bool, str]:
+data/datasets/spreadsheetbench/verify/check.py:241:    cmd = [soffice, "--headless", "--calc", "--norestore", "--nolockcheck",
+data/datasets/spreadsheetbench/verify/check.py:246:        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
+data/datasets/spreadsheetbench/verify/check.py:247:    except subprocess.TimeoutExpired:
+data/datasets/spreadsheetbench/verify/check.py:369:            soffice = soffice_path()
+data/datasets/spreadsheetbench/verify/check.py:370:            if soffice is None:
+data/datasets/spreadsheetbench/verify/check.py:375:                ok, why = recalculate(candidate, scratch=Path(scratch), soffice=soffice)

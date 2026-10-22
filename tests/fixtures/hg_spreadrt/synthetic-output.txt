@@ -1,0 +1,267 @@
+COMMAND=["/usr/bin/bwrap", "--unshare-net", "--ro-bind", "/", "/", "--bind", "/mnt/20t/xubuqiang/hg-work/spreadrt", "/mnt/20t/xubuqiang/hg-work/spreadrt", "--bind", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp", "/tmp", "--proc", "/proc", "--", "/usr/bin/strace", "-f", "-s", "2000", "-e", "trace=execve", "-o", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a-exec.trace", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a"]
+ENV_OVERRIDES={"PYTHONDONTWRITEBYTECODE": "1", "SPREADRT_PARENT_NETNS": "net:[4026531840]", "TMPDIR": "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp"}
+EXIT=1
+STDOUT:
+label=synthetic offline control; not dataset measurement or official scorer execution
+work=/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a
+netns=net:[4026535624]
+parent_netns=net:[4026531840]
+route_table='Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \n'
+network_probe family=AF_INET errno=101 message=Network is unreachable
+network_probe family=AF_INET6 errno=101 message=Network is unreachable
+engine_version_stdout='LibreOffice 7.3.7.2 30(Build:2)\n\n'
+engine_version_stderr="\n(process:401234): dconf-CRITICAL **: 17:37:06.836: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n"
+authored_formulas=["=SUM(A1:A2)", "=B1*2"]
+stale_cached_values=[999, 888]
+before_compare=(False, 'value difference at B1: golden has 5, result has 999')
+scorer_argv=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "a061507b33591e794eaf72eb770499a857a7415458f0aae0879dfc0a9a00ada5", "--scorer-input-files", "{\"golden.xlsx\": \"98c5449f365a2fece2aed965b222f6917afa8204e6682508b6ea2b87aaeeb4a8\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"]
+scorer_exit=1
+scorer_stdout='reward 0: workbook differs: value difference at B1: golden has 5, result has 999\n'
+scorer_stderr=''
+scorer_evidence={"answer_file": "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/answer.txt", "answer_position": "Synthetic!B1:B2", "correct": false, "golden": "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/hg-scorer-input-204ftf92/golden.xlsx", "instruction_type": "synthetic", "measured": true, "named_result": "result.xlsx", "recalculated": true, "result_exists": true, "reward": 0.0, "score": 0.0, "scorer_input": {"expected_sha256": "a061507b33591e794eaf72eb770499a857a7415458f0aae0879dfc0a9a00ada5", "files": {"golden.xlsx": "98c5449f365a2fece2aed965b222f6917afa8204e6682508b6ea2b87aaeeb4a8", "task.json": "db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf"}, "path": "native-inputs", "sha256": "a061507b33591e794eaf72eb770499a857a7415458f0aae0879dfc0a9a00ada5", "task_id": "spreadrt-authored-formulas", "verified": true}, "task_id": "spreadrt-authored-formulas", "why": "workbook differs: value difference at B1: golden has 5, result has 999"}
+reward_file='0\n'
+recalculated_cached_values=[999, 888]
+
+STDERR:
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", line 112, in <module>
+    main()
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", line 104, in main
+    assert proc.returncode == 0 and after == [5, 10]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+EXEC_TRACE:
+401203 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a"], 0x7ffe4fb4cd28 /* 78 vars */) = 0
+401220 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--version"], 0x3b49bda0 /* 79 vars */) = 0
+401221 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401221, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401222 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x59fa798f9b88 /* 80 vars */) = 0
+401222 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401222, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401223 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x59fa798f9c58 /* 80 vars */) = 0
+401223 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401223, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401225 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x59fa798f9ca8 /* 80 vars */) = 0
+401226 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x59fa798f9cd8 /* 80 vars */) = 0
+401225 +++ exited with 0 +++
+401224 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401225, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401226 +++ exited with 0 +++
+401224 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401226, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401224 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401224, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401227 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x59fa798f9c98 /* 80 vars */) = 0
+401227 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401227, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401228 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401228, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401229 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401229, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401230 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x59fa798f94d8 /* 80 vars */) = 0
+401230 +++ exited with 1 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401230, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+401231 execve("/usr/bin/uname", ["uname", "-s"], 0x59fa798f9f38 /* 80 vars */) = 0
+401231 +++ exited with 0 +++
+401220 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401231, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401220 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--version"], 0x59fa798f94d8 /* 80 vars */) = 0
+401234 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "--version"], 0x7ffc68cd6530 /* 80 vars */) = 0
+401247 +++ exited with 1 +++
+401234 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401247, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+401234 +++ exited with 0 +++
+401233 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401234, si_uid=1026, si_status=0, si_utime=7, si_stime=5} ---
+401233 +++ exited with 0 +++
+401220 +++ exited with 0 +++
+401203 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401220, si_uid=1026, si_status=0, si_utime=0, si_stime=1} ---
+401250 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "a061507b33591e794eaf72eb770499a857a7415458f0aae0879dfc0a9a00ada5", "--scorer-input-files", "{\"golden.xlsx\": \"98c5449f365a2fece2aed965b222f6917afa8204e6682508b6ea2b87aaeeb4a8\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"], 0x3b49bda0 /* 79 vars */) = 0
+401263 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/conv", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/result.xlsx"], 0x1b235510 /* 79 vars */) = 0
+401264 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401264, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401265 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x566724bd4b88 /* 80 vars */) = 0
+401265 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401265, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401266 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x566724bd4c58 /* 80 vars */) = 0
+401266 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401266, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401268 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x566724bd4ca8 /* 80 vars */ <unfinished ...>
+401269 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x566724bd4cd8 /* 80 vars */ <unfinished ...>
+401268 <... execve resumed>)            = 0
+401269 <... execve resumed>)            = 0
+401268 +++ exited with 0 +++
+401267 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401268, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401269 +++ exited with 0 +++
+401267 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401269, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401267 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401267, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401270 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x566724bd4c98 /* 80 vars */) = 0
+401270 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401270, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401271 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401271, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401272 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401272, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401273 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x566724bd44d8 /* 80 vars */) = 0
+401273 +++ exited with 1 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401273, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+401274 execve("/usr/bin/uname", ["uname", "-s"], 0x566724bd4f38 /* 80 vars */) = 0
+401274 +++ exited with 0 +++
+401263 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401274, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401263 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/conv", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/result.xlsx"], 0x566724bd44d8 /* 80 vars */) = 0
+401276 execve("/usr/lib/libreoffice/program/javaldx", ["/usr/lib/libreoffice/program/javaldx", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/lo-profile", "-env:INIFILENAME=vnd.sun.star.pathname:/usr/lib/libreoffice/program/redirectrc"], 0x7ffd301f2cb8 /* 80 vars */) = -1 ENOENT (没有那个文件或目录)
+401276 +++ exited with 255 +++
+401275 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401276, si_uid=1026, si_status=255, si_utime=0, si_stime=0} ---
+401275 +++ exited with 0 +++
+401278 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/lo-profile", "--headless", "--calc", "--norestore", "--nolockcheck", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/conv", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/result.xlsx"], 0x7ffd301f2cb8 /* 80 vars */) = 0
+401284 +++ exited with 1 +++
+401278 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401284, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+401295 +++ exited with 0 +++
+401296 +++ exited with 0 +++
+401278 +++ exited with 81 +++
+401277 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401278, si_uid=1026, si_status=81, si_utime=19, si_stime=14} ---
+401277 +++ exited with 0 +++
+401325 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/lo-profile", "--headless", "--calc", "--norestore", "--nolockcheck", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-g702ulbs/conv", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-3b187a95e0f449fd9f34fea75940e48a/result.xlsx"], 0x7ffd301f2cb8 /* 80 vars */) = 0
+401329 +++ exited with 1 +++
+401325 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401329, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+401330 +++ exited with 0 +++
+401394 execve("/bin/sh", ["sh", "-c", "paperconf 2>/dev/null"], 0x636282ff8140 /* 82 vars */) = 0
+401394 +++ exited with 2 +++
+401325 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401394, si_uid=1026, si_status=2, si_utime=0, si_stime=0} ---
+401401 +++ exited with 0 +++
+401402 +++ exited with 0 +++
+401403 +++ exited with 0 +++
+401408 +++ exited with 0 +++
+401325 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401408, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401409 +++ exited with 8 +++
+401410 +++ exited with 0 +++
+401325 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401410, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401411 +++ exited with 8 +++
+401412 +++ exited with 0 +++
+401325 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401412, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+401413 +++ exited with 8 +++
+401435 +++ exited with 0 +++
+401551 +++ exited with 0 +++
+401547 +++ exited with 0 +++
+401546 +++ exited with 0 +++
+401545 +++ exited with 0 +++
+401544 +++ exited with 0 +++
+401543 +++ exited with 0 +++
+401542 +++ exited with 0 +++
+401539 +++ exited with 0 +++
+401536 +++ exited with 0 +++
+401535 +++ exited with 0 +++
+401533 +++ exited with 0 +++
+401524 +++ exited with 0 +++
+401523 +++ exited with 0 +++
+401521 +++ exited with 0 +++
+401519 +++ exited with 0 +++
+401512 +++ exited with 0 +++
+401509 +++ exited with 0 +++
+401501 +++ exited with 0 +++
+401496 +++ exited with 0 +++
+401495 +++ exited with 0 +++
+401494 +++ exited with 0 +++
+401490 +++ exited with 0 +++
+401485 +++ exited with 0 +++
+401484 +++ exited with 0 +++
+401478 +++ exited with 0 +++
+401472 +++ exited with 0 +++
+401465 +++ exited with 0 +++
+401459 +++ exited with 0 +++
+401458 +++ exited with 0 +++
+401447 +++ exited with 0 +++
+401538 +++ exited with 0 +++
+401531 +++ exited with 0 +++
+401527 +++ exited with 0 +++
+401518 +++ exited with 0 +++
+401516 +++ exited with 0 +++
+401514 +++ exited with 0 +++
+401508 +++ exited with 0 +++
+401499 +++ exited with 0 +++
+401492 +++ exited with 0 +++
+401489 +++ exited with 0 +++
+401487 +++ exited with 0 +++
+401474 +++ exited with 0 +++
+401470 +++ exited with 0 +++
+401467 +++ exited with 0 +++
+401463 +++ exited with 0 +++
+401462 +++ exited with 0 +++
+401454 +++ exited with 0 +++
+401452 +++ exited with 0 +++
+401446 +++ exited with 0 +++
+401444 +++ exited with 0 +++
+401439 +++ exited with 0 +++
+401437 +++ exited with 0 +++
+401550 +++ exited with 0 +++
+401549 +++ exited with 0 +++
+401541 +++ exited with 0 +++
+401537 +++ exited with 0 +++
+401534 +++ exited with 0 +++
+401530 +++ exited with 0 +++
+401529 +++ exited with 0 +++
+401526 +++ exited with 0 +++
+401525 +++ exited with 0 +++
+401522 +++ exited with 0 +++
+401517 +++ exited with 0 +++
+401515 +++ exited with 0 +++
+401513 +++ exited with 0 +++
+401510 +++ exited with 0 +++
+401507 +++ exited with 0 +++
+401506 +++ exited with 0 +++
+401503 +++ exited with 0 +++
+401500 +++ exited with 0 +++
+401498 +++ exited with 0 +++
+401497 +++ exited with 0 +++
+401493 +++ exited with 0 +++
+401491 +++ exited with 0 +++
+401488 +++ exited with 0 +++
+401486 +++ exited with 0 +++
+401483 +++ exited with 0 +++
+401479 +++ exited with 0 +++
+401475 +++ exited with 0 +++
+401477 +++ exited with 0 +++
+401473 +++ exited with 0 +++
+401471 +++ exited with 0 +++
+401469 +++ exited with 0 +++
+401468 +++ exited with 0 +++
+401466 +++ exited with 0 +++
+401464 +++ exited with 0 +++
+401461 +++ exited with 0 +++
+401460 +++ exited with 0 +++
+401456 +++ exited with 0 +++
+401455 +++ exited with 0 +++
+401453 +++ exited with 0 +++
+401451 +++ exited with 0 +++
+401450 +++ exited with 0 +++
+401448 +++ exited with 0 +++
+401445 +++ exited with 0 +++
+401443 +++ exited with 0 +++
+401442 +++ exited with 0 +++
+401440 +++ exited with 0 +++
+401438 +++ exited with 0 +++
+401436 +++ exited with 0 +++
+401548 +++ exited with 0 +++
+401540 +++ exited with 0 +++
+401532 +++ exited with 0 +++
+401528 +++ exited with 0 +++
+401520 +++ exited with 0 +++
+401511 +++ exited with 0 +++
+401504 +++ exited with 0 +++
+401502 +++ exited with 0 +++
+401481 +++ exited with 0 +++
+401480 +++ exited with 0 +++
+401476 +++ exited with 0 +++
+401457 +++ exited with 0 +++
+401449 +++ exited with 0 +++
+401441 +++ exited with 0 +++
+401505 +++ exited with 0 +++
+401482 +++ exited with 0 +++
+401594 +++ exited with 0 +++
+401331 +++ exited with 0 +++
+401325 +++ exited with 0 +++
+401324 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401325, si_uid=1026, si_status=0, si_utime=61, si_stime=72} ---
+401324 +++ exited with 0 +++
+401263 +++ exited with 0 +++
+401250 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401263, si_uid=1026, si_status=0, si_utime=0, si_stime=1} ---
+401250 +++ exited with 1 +++
+401203 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=401250, si_uid=1026, si_status=1, si_utime=35, si_stime=10} ---
+401203 +++ exited with 1 +++
+

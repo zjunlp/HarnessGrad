@@ -1,0 +1,50 @@
+{
+  "base_commit": "13fa17c451eb0cb44adcf5126fa25ccd345c47c8",
+  "blockers": [
+    {
+      "dataset": "livecodebench",
+      "id": "row-attestation",
+      "family": "source-provenance",
+      "status": "external",
+      "observed": "B6 acquired canonical HTTPS metadata/tree and builder at 0fe84c3912ea0c4d4a78037083943e8f0c4dd505, matching all six declared shard LFS hashes. The builder maps release_v6 to six files in upstream test order; the source loader passes version_tag and optional date filters. Local prepare.py instead sorts unique question_id values and imposes a platform hash split. No complete ID-only rank catalog, externally custodied local row/pool/split/statement record or independent approval was obtained. Task 207 remains an unsent procedure, not an issued attestation; self-hashes and upstream ordinals do not bind local row 740 to abc360_a.",
+      "evidence": [
+        {
+          "kind": "repository",
+          "path": "docs/adapter-integration-journal.md",
+          "locator": "### LiveCodeBench `/740` trusted metadata validation"
+        },
+        {
+          "kind": "repository",
+          "path": "reports/b6-dataset-blocker-review.md",
+          "locator": "## LiveCodeBench: row-attestation"
+        }
+      ],
+      "next_action": "Use the existing task-207 custody/reviewer procedure to obtain a genuine metadata-only complete catalog/rank and authenticated row/pool/split/statement linkage, plus separate independent approval. Compare against the preserved inert selection without payload reads. Exact upstream release/builder/shard metadata is now acquired; it cannot establish the local sorted-row mapping or manufacture reviewer approval."
+    },
+    {
+      "dataset": "twowikimultihopqa",
+      "id": "hub-data-provenance",
+      "family": "source-provenance",
+      "status": "external",
+      "observed": "B6 acquired canonical HTTPS Hub metadata/tree and builder for f4f0d7e4ae275d9281e90c46c93e66d6cdda3674. Advertised dev/alias LFS SHA-256 and witness validation hash match the adapter pins. The pinned upstream README links the December 2020 ID-enriched release, id_aliases.json and evaluator v1.1. The Hub builder drops answer_id/evidences_id and does not load aliases; its generated dataset is not the adapter raw-JSON route. Original-release-to-Hub byte linkage, data/alias rights and completeness, and independently custodied selected-manifest binding remain unestablished.",
+      "evidence": [
+        {
+          "kind": "repository",
+          "path": "docs/task-206-twowiki-provenance-review.md",
+          "locator": "Hub/data provenance remains blocked"
+        },
+        {
+          "kind": "repository",
+          "path": "tests/fixtures/twowikimultihopqa_upstream_codex197/README.md",
+          "locator": "this acquisition makes no assertion about dataset redistribution rights"
+        },
+        {
+          "kind": "repository",
+          "path": "reports/b6-dataset-blocker-review.md",
+          "locator": "## 2Wiki: hub-data-provenance"
+        }
+      ],
+      "next_action": "Obtain metadata-only original-release archive/file digest custody, explicit dataset/alias rights and completeness/ID-coverage attestation, and independently authenticated selected-manifest linkage to the pinned raw artifacts. Canonical Hub artifact identity and intended evaluator-version documentation are acquired; do not substitute builder-converted rows or infer original release equivalence. Keep payload and production execution outside this review."
+    }
+  ]
+}

@@ -1,0 +1,808 @@
+[
+  {
+    "id": "fabricated_exact",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      true
+    ]
+  },
+  {
+    "id": "fabricated_wrong_value",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 8
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_wrong_type",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": "7"
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_missing_required",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {}
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_extra_parameter",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7,
+          "extra": 0
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_wrong_function",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_other": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      false,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_namespace_erasure",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_ns.fabricated_echo": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_duplicate_calls",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7
+        }
+      },
+      {
+        "fabricated_echo": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      false,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_empty_calls",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [],
+    "expected_verdicts": [
+      false,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_multi_key_format",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7
+        },
+        "fabricated_other": {}
+      }
+    ],
+    "expected_verdicts": [
+      false,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_optional_omission",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            },
+            "unit": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ],
+          "unit": [
+            "",
+            "fabricated-units"
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      true
+    ]
+  },
+  {
+    "id": "fabricated_optional_without_empty",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            },
+            "unit": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ],
+          "unit": [
+            "fabricated-units"
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_int_to_float",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "float"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      true
+    ]
+  },
+  {
+    "id": "fabricated_bool_not_int",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": true
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_list_order",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            [
+              1,
+              2
+            ]
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": [
+            2,
+            1
+          ]
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_string_normalization",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            "fabricated value"
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": "FABRICATED VALUE"
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      true
+    ]
+  },
+  {
+    "id": "fabricated_quoted_code_is_data",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            "__bfclcontain_probe__()"
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": "__bfclcontain_probe__()"
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      true
+    ]
+  },
+  {
+    "id": "fabricated_expression_name",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            7
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "(__bfclcontain_probe__())": {
+          "value": 7
+        }
+      }
+    ],
+    "expected_verdicts": [
+      false,
+      false
+    ]
+  },
+  {
+    "id": "fabricated_dict_alternatives",
+    "language": "Python",
+    "category": "simple",
+    "schema": [
+      {
+        "name": "fabricated_echo",
+        "parameters": {
+          "type": "dict",
+          "properties": {
+            "value": {
+              "type": "dict"
+            }
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    ],
+    "reference": [
+      {
+        "fabricated_echo": {
+          "value": [
+            {
+              "label": [
+                "fabricated"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "calls": [
+      {
+        "fabricated_echo": {
+          "value": {
+            "label": "FABRICATED"
+          }
+        }
+      }
+    ],
+    "expected_verdicts": [
+      true,
+      true
+    ]
+  }
+]

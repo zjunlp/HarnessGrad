@@ -1,0 +1,16 @@
+[
+  {
+    "method": "GET",
+    "url": "https://api.github.com/repos/Alab-NII/2wikimultihop/tags?per_page=100",
+    "started_at_utc": "2026-10-14T17:53:49.497227+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 2,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "headers_sha256": "684a931c5128630c20544e88f0525290785b66d16a4bf29d2e39af478e12643d",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

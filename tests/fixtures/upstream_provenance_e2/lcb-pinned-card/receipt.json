@@ -1,0 +1,30 @@
+[
+  {
+    "method": "GET",
+    "url": "https://huggingface.co/datasets/livecodebench/code_generation_lite/resolve/0fe84c3912ea0c4d4a78037083943e8f0c4dd505/README.md",
+    "started_at_utc": "2026-10-14T17:53:49.060131+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 307,
+    "bytes": 317,
+    "sha256": "a88533329cd2b7ea07e49c53982cccb2c8d0d83d1cfca1a92e40284385050474",
+    "headers_sha256": "358a1e2e21939cc970ebfc58e85b7a3e08b37741c3d682213d14c65a6ad6a14b",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  },
+  {
+    "method": "GET",
+    "url": "https://huggingface.co/api/resolve-cache/datasets/livecodebench/code_generation_lite/0fe84c3912ea0c4d4a78037083943e8f0c4dd505/README.md?%2Fdatasets%2Flivecodebench%2Fcode_generation_lite%2Fresolve%2F0fe84c3912ea0c4d4a78037083943e8f0c4dd505%2FREADME.md=&etag=%2237908db28f9e16ad36a1c6dfb5c30201cc325f99%22",
+    "started_at_utc": "2026-10-14T17:53:49.448832+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 3390,
+    "sha256": "fbf0df23c9fb430778f037691bd191ece41d49373c0695151d87549b6f45d809",
+    "headers_sha256": "d0ca492eb3ecdf9e7d983edb6010dbd90aef4e21c23ba9474b0e2e52642a56ed",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

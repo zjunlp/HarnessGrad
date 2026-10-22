@@ -1,0 +1,68 @@
+[
+  {
+    "restored_path": "tests/fixtures/hg_wresolver/raw/inventory-final.stdout.txt",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wresolver/raw/inventory-final.stdout.txt",
+    "bytes": 507,
+    "sha256": "b8698a2529d07f38466a2635835fa220b6b56b40a33dfb9194ca4fd154cf25ce"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_wresolver2/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wresolver2/README.md",
+    "bytes": 3714,
+    "sha256": "7e5c68ce3b340b8a05e58b74df6c2d3749fd144d9c4e506a30b094dd93e9255c"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_whostdeps/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_whostdeps/README.md",
+    "bytes": 2238,
+    "sha256": "81b9ec9c34afa701afe492ef92678806730e3a0d39c4da30dc0eb1b651e0b548"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_wresolver3/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wresolver3/README.md",
+    "bytes": 2665,
+    "sha256": "faf5ec5644d2680839614e17f823ff0497ce2f70c3406fcbf61c7939098fe9ca"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_wresolver4/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wresolver4/README.md",
+    "bytes": 2962,
+    "sha256": "c98d053ab54b74ad889dd046aa4ff22f069a05a41f28fe3616468906a2e47a4d"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_bfcl/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_bfcl/README.md",
+    "bytes": 2963,
+    "sha256": "def3ec48bbb820bcb2e46354cf65f1ac7185781de6b55ac39e3b8c8c5184007a"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_bfcl/inventory.json",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_bfcl/inventory.json",
+    "bytes": 153710,
+    "sha256": "425d168c19b864b3367feae22c161f377b4d080386b4ed3b491f6aeb79b17562"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_wprov/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wprov/README.md",
+    "bytes": 10224,
+    "sha256": "65968fa1327f18658fd9625af26a5c4691b04b875ca371476d7b3e6364e359e1"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_trivia/README.md",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_trivia/README.md",
+    "bytes": 5178,
+    "sha256": "f1b33cdd6c8f2b24d56255faf9dfb7b2c423f3169e0abfb77f668b9c28810d16"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_wujson/provenance.json",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wujson/provenance.json",
+    "bytes": 1664,
+    "sha256": "b965f25cb0673bdfd6d71d6554c2e51c77145c3ee6fcc45720fb79b69a54d91b"
+  },
+  {
+    "restored_path": "tests/fixtures/hg_wujson2/assessment.json",
+    "existing_read_only_source": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wujson2/assessment.json",
+    "bytes": 1478,
+    "sha256": "ad2287efdc7b16210b2438aba13b62697c3b45eb34891e3b6fce1325eb9f585b"
+  }
+]

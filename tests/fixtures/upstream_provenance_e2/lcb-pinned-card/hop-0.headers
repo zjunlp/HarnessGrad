@@ -1,0 +1,27 @@
+Content-Type: text/plain; charset=utf-8
+Content-Length: 317
+Connection: close
+Date: Wed, 14 Oct 2026 17:53:49 GMT
+Location: 
+ /api/resolve-cache/datasets/livecodebench/code_generation_lite/0fe84c3912ea0c4d4a78037083943e8f0c4dd505/README.md?%2Fdatasets%2Flivecodebench%2Fcode_generation_lite%2Fresolve%2F0fe84c3912ea0c4d4a78037083943e8f0c4dd505%2FREADME.md=&etag=%2237908db28f9e16ad36a1c6dfb5c30201cc325f99%22
+X-Powered-By: huggingface-moon
+X-Request-Id: Root=1-6acfc1ad-70544b4546e3364b7c5b486f
+RateLimit: "resolvers";r=2939;t=231
+RateLimit-Policy: "fixed window";"resolvers";q=3000;w=300
+cross-origin-opener-policy: same-origin
+Referrer-Policy: strict-origin-when-cross-origin
+Access-Control-Max-Age: 86400
+Access-Control-Allow-Origin: https://huggingface.co
+Vary: Origin, Accept
+Access-Control-Expose-Headers: 
+ X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range,X-Linked-Size,X-Linked-ETag,X-Xet-Hash
+X-Repo-Commit: 0fe84c3912ea0c4d4a78037083943e8f0c4dd505
+Accept-Ranges: bytes
+X-Linked-ETag: "37908db28f9e16ad36a1c6dfb5c30201cc325f99"
+X-Cache: Miss from cloudfront
+Via: 1.1 f1c37912097d9d9ad33dce64d3a2f0ea.cloudfront.net (CloudFront)
+X-Amz-Cf-Pop: HKG61-P1
+Alt-Svc: h3=":443"; ma=86400
+X-Amz-Cf-Id: VOzlhH8glsZlC1zv1zSs4Ne2HHw_Hw9BVyjZLlMzc12k8y7RNXQYxA==
+Strict-Transport-Security: max-age=31536000
+

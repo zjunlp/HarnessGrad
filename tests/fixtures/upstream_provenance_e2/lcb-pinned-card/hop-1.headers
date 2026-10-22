@@ -1,0 +1,28 @@
+Content-Type: text/plain; charset=utf-8
+Content-Length: 3390
+Connection: close
+Date: Mon, 31 Aug 2026 20:16:04 GMT
+ETag: "37908db28f9e16ad36a1c6dfb5c30201cc325f99"
+X-Powered-By: huggingface-moon
+X-Request-Id: Root=1-6a95e104-384915a67f6e88a4190238a6
+RateLimit: "resolvers";r=2990;t=232
+RateLimit-Policy: "fixed window";"resolvers";q=3000;w=300
+cross-origin-opener-policy: same-origin
+Referrer-Policy: strict-origin-when-cross-origin
+Access-Control-Max-Age: 86400
+Access-Control-Allow-Origin: https://huggingface.co
+Access-Control-Expose-Headers: 
+ X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range,X-Linked-Size,X-Linked-ETag,X-Xet-Hash
+X-Repo-Commit: 0fe84c3912ea0c4d4a78037083943e8f0c4dd505
+Accept-Ranges: bytes
+Content-Disposition: inline; filename*=UTF-8''README.md; filename="README.md";
+Content-Security-Policy: default-src 'none'; sandbox
+Vary: Origin
+X-Cache: Hit from cloudfront
+Via: 1.1 ad1746ebcdbd023f612ddbf4b0bf2e48.cloudfront.net (CloudFront)
+X-Amz-Cf-Pop: HKG61-P1
+Alt-Svc: h3=":443"; ma=86400
+X-Amz-Cf-Id: mS0mlXJtCqDnCJFO4C2xvNky99LuWd1EZBMubj6OxxptqP_weamVWA==
+Age: 3793065
+Strict-Transport-Security: max-age=31536000
+

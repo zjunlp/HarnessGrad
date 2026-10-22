@@ -1,0 +1,14 @@
+{
+  "identity": "original-integer-only-extract",
+  "source_commit": "f7ab62143108e120914b5ead34ed339d0c785ee9",
+  "source_path": "tests/quality/test_gsm8k_official_scorer.py",
+  "source_symbol": "REF_FLEXIBLE",
+  "source_sha256": "feb85c6646873e13e6a84feab4322b186e45e07c400151518d00f9e0e3765dcc",
+  "regex_pattern": "(-?[$]?\\d[\\d,]*)",
+  "match_selection": "last",
+  "strip_characters": [
+    ",",
+    "$"
+  ],
+  "upstream_equivalence": "unverified historical attribution"
+}

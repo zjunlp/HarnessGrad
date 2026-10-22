@@ -1,0 +1,16 @@
+[
+  {
+    "method": "GET",
+    "url": "https://api.github.com/search/issues?q=repo%3AAlab-NII%2F2wikimultihop%20license&per_page=100",
+    "started_at_utc": "2026-10-14T17:54:55.259477+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 79,
+    "sha256": "c9938edecb99d754b2d039ac9eec320a94c769b6a6417921e2dcbef9e2fe01a0",
+    "headers_sha256": "8da893ebf816a87940af93360ac6c03a9bf08b338e8d81cb6f3d8034af4aab3a",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

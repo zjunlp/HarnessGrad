@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/mandarjoshi90/triviaqa",
+  "commit": "ca43b5820b107f3970cf4b7d67f7db7a98117b79",
+  "source_path": "evaluation/triviaqa_evaluation.py",
+  "license_path": "LICENSE",
+  "license_spdx": "Apache-2.0",
+  "source_url": "https://github.com/mandarjoshi90/triviaqa/blob/ca43b5820b107f3970cf4b7d67f7db7a98117b79/evaluation/triviaqa_evaluation.py",
+  "acquisition": {
+    "method": "github_git_objects",
+    "origin": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/commits/ca43b5820b107f3970cf4b7d67f7db7a98117b79",
+    "acquired_at_utc": "2026-10-14T02:10:33.693601+00:00",
+    "reviewed_by": "Codex task 196 (automated source/tree review; parent review pending)",
+    "commit_link_evidence": "evidence/commit.git reconstructs the signed GitHub commit byte-for-byte; its Git commit SHA-1 equals the pin. Root/evaluation/utils tree bytes reconstruct their Git SHA-1 identities and link every source/license/requirements blob. Offline test_triviaqa_source_provenance_codex196.py verifies this chain. No independent PGP verification is claimed."
+  },
+  "files": {
+    "evaluation/triviaqa_evaluation.py": {
+      "sha256": "51785a3bc2e02a8f1ebf9db3aa18834c6a5daa5089ee5d435c99e0babf4be682",
+      "git_blob_sha1": "b67ffcda2fc1af0616a427dc3280aa4189aef7db",
+      "source_url": "https://github.com/mandarjoshi90/triviaqa/blob/ca43b5820b107f3970cf4b7d67f7db7a98117b79/evaluation/triviaqa_evaluation.py",
+      "acquired_from": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/blobs/b67ffcda2fc1af0616a427dc3280aa4189aef7db"
+    },
+    "utils/dataset_utils.py": {
+      "sha256": "0965b863e29cf28ff3707ba6f6a7f5681b00562deed3eccff8d2bc1764180a10",
+      "git_blob_sha1": "b5de201faba5b8149a4cba5e9a6698bc72b89958",
+      "source_url": "https://github.com/mandarjoshi90/triviaqa/blob/ca43b5820b107f3970cf4b7d67f7db7a98117b79/utils/dataset_utils.py",
+      "acquired_from": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/blobs/b5de201faba5b8149a4cba5e9a6698bc72b89958"
+    },
+    "utils/utils.py": {
+      "sha256": "744f5ea49381c58d9c4f266d0dba53779b26212b0c55e969e8e14704d0c7f31b",
+      "git_blob_sha1": "4a8e5158672cd2a5d88f5b7e88e750e734850530",
+      "source_url": "https://github.com/mandarjoshi90/triviaqa/blob/ca43b5820b107f3970cf4b7d67f7db7a98117b79/utils/utils.py",
+      "acquired_from": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/blobs/4a8e5158672cd2a5d88f5b7e88e750e734850530"
+    },
+    "LICENSE": {
+      "sha256": "5cc548335f22310a53877044624711ac3e20e5ed1117617c1fd3fc462c54330e",
+      "git_blob_sha1": "290cc8618d5da6d0027365c00e9374ae0c6120ff",
+      "source_url": "https://github.com/mandarjoshi90/triviaqa/blob/ca43b5820b107f3970cf4b7d67f7db7a98117b79/LICENSE",
+      "acquired_from": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/blobs/290cc8618d5da6d0027365c00e9374ae0c6120ff"
+    },
+    "requirements.txt": {
+      "sha256": "15ac0eee6610e2c2e9f455dce5d5e509f79881e37b41d1e7e1fa0c1528d66e10",
+      "git_blob_sha1": "af5add666cc06e0001a0f39148f2572794891abe",
+      "source_url": "https://github.com/mandarjoshi90/triviaqa/blob/ca43b5820b107f3970cf4b7d67f7db7a98117b79/requirements.txt",
+      "acquired_from": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/blobs/af5add666cc06e0001a0f39148f2572794891abe"
+    }
+  },
+  "evidence": {
+    "evidence/commit.git": {
+      "sha256": "9cc075d0ced2510a9095359860ee8fcfcab87bc93c4e7d0672081d9adaffaa10",
+      "git_object_type": "commit",
+      "git_object_sha1": "ca43b5820b107f3970cf4b7d67f7db7a98117b79"
+    },
+    "evidence/root_tree.git": {
+      "sha256": "e7230e1e149c7b6bd94c39eaa68a4dc67a53b6241b079f463c09e36e6aada13e",
+      "git_object_type": "tree",
+      "git_object_sha1": "1d2617b8e820dffab8b157bd710a18f75b8667a6"
+    },
+    "evidence/evaluation_tree.git": {
+      "sha256": "96600160103d110ec378742fae6fee71bfa0045e9a0bddfd5a359528798fef2b",
+      "git_object_type": "tree",
+      "git_object_sha1": "d286d09f4323792378c59291d216e72a9dade73c"
+    },
+    "evidence/utils_tree.git": {
+      "sha256": "397cff3f5863e84aac149413694bd14c331698eca89d1adddf2f9fcfaa8195d0",
+      "git_object_type": "tree",
+      "git_object_sha1": "889c6d6a55555cf3552f98a1807776942a36c67a"
+    },
+    "evidence/commit_response.json": {
+      "sha256": "e4217f2e578e729defb86ce2523036e24ec465b5153259855cd85eb71d028a30"
+    },
+    "evidence/git_commit_response.json": {
+      "sha256": "b4b7fff36dc658c8162ebe2daca75143f70d71e29a59f4fd1e72b9d74a694745"
+    },
+    "evidence/repository_response.json": {
+      "sha256": "3b94cb8aa46588a71f0d5e05273ca423252524e3e785cb2ba599a997deb5cd7d"
+    },
+    "evidence/scorer_history_response.json": {
+      "sha256": "ddae79897b7cbb295d028336a360398a3d2844147690ae43f08b4da715c606ec"
+    }
+  },
+  "dependencies": {
+    "python": "Unmodified evaluator and its two helpers verified with Python 3; no conversion applied.",
+    "stdlib": [
+      "__future__",
+      "collections.Counter",
+      "string",
+      "re",
+      "sys",
+      "argparse",
+      "json"
+    ],
+    "local_helpers": [
+      "utils/dataset_utils.py",
+      "utils/utils.py"
+    ],
+    "package_initializers": "Upstream tree identifies both __init__.py blobs as the empty blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391. Not downloaded or fabricated; Python 3 namespace packages are used by the source-only test.",
+    "third_party_for_evaluator": [],
+    "repository_requirements": [
+      "tensorflow>=0.11",
+      "nltk",
+      "tqdm",
+      "jinja2"
+    ],
+    "requirements_note": "These repository-wide requirements are not imported by the evaluator/helper closure and were not installed."
+  },
+  "scope": {
+    "dataset_payload_accessed": false,
+    "model_or_h0_run": false,
+    "production_scorer_changed": false,
+    "hub_config_split_mapping_verified": false
+  },
+  "license_statement": {
+    "text": "The Apache 2.0 License applies to both the code and the data.",
+    "evidence": "evidence/commit_response.json: files[0].patch (README.md license-only change at the pinned commit)"
+  },
+  "failed_acquisition_attempts": [
+    {
+      "url": "https://api.github.com/repos/mandarjoshi/TriviaQA",
+      "result": "HTTP 404; inherited repository URL is incorrect"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/mandarjoshi90/triviaqa/ca43b5820b107f3970cf4b7d67f7db7a98117b79/evaluation/triviaqa_evaluation.py",
+      "result": "Connection reset by peer; acquired original blob via GitHub Git API instead"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/mandarjoshi90/triviaqa/ca43b5820b107f3970cf4b7d67f7db7a98117b79/LICENSE",
+      "result": "Network unreachable; acquired original blob via GitHub Git API instead"
+    },
+    {
+      "url": "https://huggingface.co/datasets/mandarjoshi/trivia_qa/raw/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f/trivia_qa.py",
+      "result": "Network unreachable; file existence and export relevance not verified"
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/contents/datasets/trivia_qa/trivia_qa.py?ref=2.14.7",
+      "result": "HTTP 403 anonymous API rate limit; no loader code acquired"
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/commits/2.14.7",
+      "result": "HTTP 403 anonymous API rate limit; candidate loader commit not resolved"
+    },
+    {
+      "url": "https://api.github.com/repos/mandarjoshi90/triviaqa/git/blobs/e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "result": "HTTP 403 anonymous API rate limit; empty initializers not acquired or fabricated"
+    }
+  ]
+}

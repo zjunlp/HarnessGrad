@@ -1,0 +1,68 @@
+[
+  {
+    "path": "/bin/sh",
+    "resolved": "/usr/bin/dash",
+    "bytes": 125688,
+    "sha256": "4f291296e89b784cd35479fca606f228126e3641f5bcaee68dee36583d7c9483"
+  },
+  {
+    "path": "/mnt/8t/xubuqiang/anaconda3/bin/python3",
+    "resolved": "/mnt/8t/xubuqiang/anaconda3/bin/python3.12",
+    "bytes": 30652904,
+    "sha256": "0eb25a387ef43f21492b659f4865eae5bdaf8da30d6357097b2d9bb24873ebfb"
+  },
+  {
+    "path": "/usr/bin/basename",
+    "resolved": "/usr/bin/basename",
+    "bytes": 35336,
+    "sha256": "a423d13293294e6bd0399b435a4bd88b02525494723519d4a4f82a8cd1dbf1ff"
+  },
+  {
+    "path": "/usr/bin/dirname",
+    "resolved": "/usr/bin/dirname",
+    "bytes": 31112,
+    "sha256": "34ccc3f134486d06dd132ba8da19e6a540b422f082c5fa775572242fdba9ff89"
+  },
+  {
+    "path": "/usr/bin/grep",
+    "resolved": "/usr/bin/grep",
+    "bytes": 182728,
+    "sha256": "73abb4280520053564fd4917286909ba3b054598b32c9cdfaf1d733e0202cc96"
+  },
+  {
+    "path": "/usr/bin/ls",
+    "resolved": "/usr/bin/ls",
+    "bytes": 138216,
+    "sha256": "f32928d242847a04a474f71e23e65e6e35414cd7fc2cf29aaba12e6b39a26442"
+  },
+  {
+    "path": "/usr/bin/sed",
+    "resolved": "/usr/bin/sed",
+    "bytes": 113224,
+    "sha256": "42e2ce00721556ff9d371778fc36adcbb7c1697f65c3f996c6c9b28206dba565"
+  },
+  {
+    "path": "/usr/bin/soffice",
+    "resolved": "/usr/lib/libreoffice/program/soffice",
+    "bytes": 6731,
+    "sha256": "eb926ee03b6ba1b18e89b4a94cbb7a060ceac31f171b4bf9db5677e848451f86"
+  },
+  {
+    "path": "/usr/bin/uname",
+    "resolved": "/usr/bin/uname",
+    "bytes": 35336,
+    "sha256": "89e9eef988b5ce6c35715a5e1bd2fa562413186acd4479bf52910f479513eb4f"
+  },
+  {
+    "path": "/usr/lib/libreoffice/program/oosplash",
+    "resolved": "/usr/lib/libreoffice/program/oosplash",
+    "bytes": 43248,
+    "sha256": "2568e315a86f738cdd8ff0a1ad7bed28cbc51a52db7ee6962ca659f9a8d43fa9"
+  },
+  {
+    "path": "/usr/lib/libreoffice/program/soffice.bin",
+    "resolved": "/usr/lib/libreoffice/program/soffice.bin",
+    "bytes": 14488,
+    "sha256": "a6d7b5183e47afc5e104cf7101f735d7c97b1569778df9269667983abb275622"
+  }
+]

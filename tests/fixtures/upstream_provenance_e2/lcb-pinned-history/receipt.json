@@ -1,0 +1,16 @@
+[
+  {
+    "method": "GET",
+    "url": "https://huggingface.co/api/datasets/livecodebench/code_generation_lite/commits/0fe84c3912ea0c4d4a78037083943e8f0c4dd505",
+    "started_at_utc": "2026-10-14T17:53:49.068903+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 4605,
+    "sha256": "cc74ef23ada8a009f211d1a6531330bd4491ac61e428bd0abd25984ee9f5cffa",
+    "headers_sha256": "e5b479ee09209e2b3daef359ac518d4f30f34761bea2ca6e98f3dff9d8a28cba",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/inventory.py", line 75, in <module>
+    'metadata': file_record(Path(d._path) / 'METADATA')}
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/inventory.py", line 29, in file_record
+    return {'path': str(p), 'resolved': str(p.resolve()), 'bytes': p.stat().st_size,
+                                                                   ^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/pathlib.py", line 840, in stat
+    return os.stat(self, follow_symlinks=follow_symlinks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/8t/xubuqiang/anaconda3/lib/python3.12/site-packages/mkl_service-2.4.0-py3.12.egg-info/METADATA'

@@ -1,0 +1,116 @@
+COMMAND=["/usr/bin/bwrap", "--unshare-net", "--ro-bind", "/", "/", "--bind", "/mnt/20t/xubuqiang/hg-work/spreadrt", "/mnt/20t/xubuqiang/hg-work/spreadrt", "--proc", "/proc", "--", "/usr/bin/strace", "-f", "-s", "2000", "-e", "trace=execve", "-o", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e-exec.trace", "/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e"]
+ENV_OVERRIDES={"PYTHONDONTWRITEBYTECODE": "1", "SPREADRT_PARENT_NETNS": "net:[4026531840]", "TMPDIR": "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp"}
+EXIT=1
+STDOUT:
+label=synthetic offline control; not dataset measurement or official scorer execution
+work=/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e
+netns=net:[4026535624]
+parent_netns=net:[4026531840]
+route_table='Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \n'
+network_probe family=AF_INET errno=101 message=Network is unreachable
+network_probe family=AF_INET6 errno=101 message=Network is unreachable
+engine_version_stdout='LibreOffice 7.3.7.2 30(Build:2)\n\n'
+engine_version_stderr="\n(process:398126): dconf-CRITICAL **: 17:35:32.532: unable to create file '/run/user/1026/dconf/user': Read-only file system.  dconf will not work properly.\n"
+authored_formulas=["=SUM(A1:A2)", "=B1*2"]
+stale_cached_values=[999, 888]
+before_compare=(False, 'value difference at B1: golden has 5, result has 999')
+scorer_argv=["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "a08fd547703c9cb3f8a7545aefe521bf01d553652a2ae556839913cc8ba5ef88", "--scorer-input-files", "{\"golden.xlsx\": \"6338854b9f3355fe7013c011067436d0f0554878d3e3d6a9f834a00a1ca63325\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"]
+scorer_exit=3
+scorer_stdout=''
+scorer_stderr='check cannot measure: LibreOffice recalculation failed: RuntimeError: could not recalculate the workbook: LibreOffice exited 1: ERROR: no valid pipe path found.\n'
+scorer_evidence={"answer_file": "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/answer.txt", "answer_position": "Synthetic!B1:B2", "error": "LibreOffice recalculation failed: RuntimeError: could not recalculate the workbook: LibreOffice exited 1: ERROR: no valid pipe path found.", "golden": "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/hg-scorer-input-ekm8rdw2/golden.xlsx", "instruction_type": "synthetic", "measured": false, "named_result": "result.xlsx", "recalculated": false, "result_exists": true, "scorer_input": {"expected_sha256": "a08fd547703c9cb3f8a7545aefe521bf01d553652a2ae556839913cc8ba5ef88", "files": {"golden.xlsx": "6338854b9f3355fe7013c011067436d0f0554878d3e3d6a9f834a00a1ca63325", "task.json": "db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf"}, "path": "native-inputs", "sha256": "a08fd547703c9cb3f8a7545aefe521bf01d553652a2ae556839913cc8ba5ef88", "task_id": "spreadrt-authored-formulas", "verified": true}, "task_id": "spreadrt-authored-formulas", "traceback": "Traceback (most recent call last):\n  File \"/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify/check.py\", line 378, in _score\n    raise RuntimeError(f\"could not recalculate the workbook: {why}\")\nRuntimeError: could not recalculate the workbook: LibreOffice exited 1: ERROR: no valid pipe path found.\n"}
+
+STDERR:
+Traceback (most recent call last):
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", line 111, in <module>
+    main()
+  File "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", line 98, in main
+    print('reward_file=' + repr((work / 'reward.txt').read_text()), flush=True)
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/8t/xubuqiang/anaconda3/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/reward.txt'
+
+EXEC_TRACE:
+398096 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/tests/fixtures/hg_spreadrt/synthetic_control.py", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e"], 0x7ffc9ddac348 /* 78 vars */) = 0
+398110 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--version"], 0x21e2c3b0 /* 79 vars */) = 0
+398111 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398111, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398112 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x5d904f0d6b88 /* 80 vars */) = 0
+398112 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398112, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398113 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x5d904f0d6c58 /* 80 vars */) = 0
+398113 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398113, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398118 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x5d904f0d6ca8 /* 80 vars */) = 0
+398119 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x5d904f0d6cd8 /* 80 vars */) = 0
+398118 +++ exited with 0 +++
+398115 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398118, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398119 +++ exited with 0 +++
+398115 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398119, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398115 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398115, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398120 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x5d904f0d6c98 /* 80 vars */) = 0
+398120 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398120, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398121 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398121, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398122 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398122, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398123 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x5d904f0d64d8 /* 80 vars */) = 0
+398123 +++ exited with 1 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398123, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+398124 execve("/usr/bin/uname", ["uname", "-s"], 0x5d904f0d6f38 /* 80 vars */) = 0
+398124 +++ exited with 0 +++
+398110 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398124, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398110 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--version"], 0x5d904f0d64d8 /* 80 vars */) = 0
+398126 execve("/usr/lib/libreoffice/program/soffice.bin", ["/usr/lib/libreoffice/program/soffice.bin", "--version"], 0x7ffe62557e80 /* 80 vars */) = 0
+398132 +++ exited with 1 +++
+398126 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398132, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+398126 +++ exited with 0 +++
+398125 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398126, si_uid=1026, si_status=0, si_utime=9, si_stime=4} ---
+398125 +++ exited with 0 +++
+398110 +++ exited with 0 +++
+398096 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398110, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398143 execve("/mnt/8t/xubuqiang/anaconda3/bin/python3", ["/mnt/8t/xubuqiang/anaconda3/bin/python3", "/mnt/20t/xubuqiang/hg-wt/w-spreadrt/data/datasets/spreadsheetbench/verify/check.py", "--workdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e", "--reward-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/reward.txt", "--evidence-file", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/evidence.json", "--task-id", "spreadrt-authored-formulas", "--scorer-input-sha256", "a08fd547703c9cb3f8a7545aefe521bf01d553652a2ae556839913cc8ba5ef88", "--scorer-input-files", "{\"golden.xlsx\": \"6338854b9f3355fe7013c011067436d0f0554878d3e3d6a9f834a00a1ca63325\", \"task.json\": \"db686bbe230a77cc476f21e57734f8f198ecb82e1f1cd2c686f4a089116c7dcf\"}"], 0x21e2c3b0 /* 79 vars */) = 0
+398177 execve("/usr/bin/soffice", ["/usr/bin/soffice", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-u_eiqyto/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-u_eiqyto/conv", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/result.xlsx"], 0x26e9c510 /* 79 vars */) = 0
+398178 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398178, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398179 execve("/usr/bin/dirname", ["dirname", "/usr/bin/soffice"], 0x55b3fcfd5b88 /* 80 vars */) = 0
+398179 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398179, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398180 execve("/usr/bin/basename", ["basename", "/usr/bin/soffice"], 0x55b3fcfd5c58 /* 80 vars */) = 0
+398180 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398180, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398182 execve("/usr/bin/ls", ["ls", "-l", "soffice"], 0x55b3fcfd5ca8 /* 80 vars */) = 0
+398183 execve("/usr/bin/sed", ["sed", "s/.*soffice -> //g"], 0x55b3fcfd5cd8 /* 80 vars */) = 0
+398182 +++ exited with 0 +++
+398181 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398182, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398183 +++ exited with 0 +++
+398181 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398183, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398181 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398181, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398184 execve("/usr/bin/dirname", ["dirname", "../lib/libreoffice/program/soffice"], 0x55b3fcfd5c98 /* 80 vars */) = 0
+398184 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398184, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398185 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398185, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398186 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398186, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398187 execve("/usr/bin/grep", ["grep", "-q", "cc"], 0x55b3fcfd54d8 /* 80 vars */) = 0
+398187 +++ exited with 1 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398187, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+398188 execve("/usr/bin/uname", ["uname", "-s"], 0x55b3fcfd5f38 /* 80 vars */) = 0
+398188 +++ exited with 0 +++
+398177 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398188, si_uid=1026, si_status=0, si_utime=0, si_stime=0} ---
+398177 execve("/usr/lib/libreoffice/program/oosplash", ["/usr/lib/libreoffice/program/oosplash", "--headless", "--calc", "--norestore", "--nolockcheck", "-env:UserInstallation=file:///mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-u_eiqyto/lo-profile", "--convert-to", "xlsx:Calc MS Excel 2007 XML", "--outdir", "/mnt/20t/xubuqiang/hg-work/spreadrt/tmp/sb-recalc-u_eiqyto/conv", "/mnt/20t/xubuqiang/hg-work/spreadrt/synthetic-8682d43d0f4042f2a5dd125669fb027e/result.xlsx"], 0x55b3fcfd54d8 /* 80 vars */) = 0
+398177 +++ exited with 1 +++
+398143 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398177, si_uid=1026, si_status=1, si_utime=0, si_stime=0} ---
+398143 +++ exited with 3 +++
+398096 --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=398143, si_uid=1026, si_status=3, si_utime=31, si_stime=10} ---
+398096 +++ exited with 1 +++
+

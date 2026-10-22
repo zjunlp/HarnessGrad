@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "dataset": "spreadsheetbench",
+  "selection_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-spreadsheetbench",
+  "selection_kind": "operator-authorized-first-5-of-full-adapter-order",
+  "runtime_run_id": null,
+  "execution_authorized": false,
+  "claim_limit": "Bounded first-N selection in declared adapter order; NOT a random sample and NOT representative of the dataset. Establishes only identifiable, hash-bound selection -> export -> scoring-input custody for these five tasks, not scoring execution, eligibility, admission or claims about the rest of the pool.",
+  "source_revision": "ab0b742b0fc95b946f212d80ac7771b5531272e4",
+  "adapter_source": [
+    {
+      "path": "data/datasets/spreadsheetbench.py",
+      "bytes": 16465,
+      "sha256": "1ed36abf71ff84f489d9be1cd9b231180d18e45c60ea514c9b4baf34add2ab9e"
+    },
+    {
+      "path": "data/scaffolds/qa/base.py",
+      "bytes": 27878,
+      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    },
+    {
+      "path": "data/scaffolds/qa/read.py",
+      "bytes": 8624,
+      "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+    },
+    {
+      "path": "data/scaffolds/scorer_input.py",
+      "bytes": 6166,
+      "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"
+    }
+  ],
+  "installed_source": {
+    "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/dataset.json",
+    "bytes": 306533,
+    "sha256": "bcecaa89a005bd4e3bbe98da150a86e8062c27f262e575d5e47bd9861b3525e7"
+  },
+  "adapter_presented_count": 400,
+  "selected_count": 5,
+  "eligible_count": null,
+  "trials_executed": 0,
+  "measured_count": 0,
+  "invalid_count": 0,
+  "unmeasured_execution_count": 0,
+  "unexecuted_selected_count": 5,
+  "split_mode": "declared",
+  "split_source": "hash",
+  "side": "mixed",
+  "selected_sides": {
+    "train": [
+      "13-1",
+      "17-35",
+      "22-47",
+      "24-23"
+    ],
+    "eval": [
+      "23-24"
+    ]
+  },
+  "order_rule": "adapter full record order, slice [:5] BEFORE any side filter; no sorting/sampling/shuffling",
+  "export_path": "/tmp/hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f/spreadsheetbench",
+  "row_export": "rows.json",
+  "export_files": {
+    "rows.json": "395b1fff129d8de3ba59b79ed09b7c20bebd74560d9377ec3e147cd7170f6c50",
+    "inputs/0/golden.xlsx": "a8eaf5ec1991c35ae785fb82efce2ecd24f6268410a8a89f78ca07843fcaf140",
+    "inputs/0/task.json": "a8a0039e0c42fca97d1574a21706a34c14ef9246543bb7fee1a4eaff061d3e1a",
+    "inputs/0/workbook.xlsx": "36e7e5238ac29a506d06a27b73aab4ac6249530c9cfd4b1c40835c7823a39da5",
+    "inputs/0/goal.txt": "1d86f70540300379f93e82adf40007ba86120698137e1a1c384819b5beff0a55",
+    "inputs/1/golden.xlsx": "2e35c3957c9025cc60a3b4bd10984b709037eb674c1ab26e18805c99f9543ce4",
+    "inputs/1/task.json": "fec79b694b4bc3329a325963edd23883fd3d85d68003ad3b2f5b391876a5c744",
+    "inputs/1/workbook.xlsx": "50ba7b30308e0579e4141120349c0c97103fb6b58b315051e9bafd3764c75feb",
+    "inputs/1/goal.txt": "44e87d63ee5715692382e270dd68fe30bc655c86e098cb5deea747dbfebc8c87",
+    "inputs/2/golden.xlsx": "2dd6719f5d3b37eca3b51e3d3cbc57f1f4791bc194e30f3932f2ce0acd4695c8",
+    "inputs/2/task.json": "0338b0a05f80f427325fbfc9d84ee3fe7f95c2d904ed2149d0ce77b790bca5b3",
+    "inputs/2/workbook.xlsx": "d06080c377499133d6ccb6a0efc9a88f78cfa98b3ea76b53c2443acbf21afa6e",
+    "inputs/2/goal.txt": "b50fb291d1a6a1b120b276fd258cded1dbda288054849184c9a35d0b97f3367b",
+    "inputs/3/golden.xlsx": "f0aed39194734eb7c471aa80fb5a0ec9677ba60a35b7b7fb1c10de38dc21b2b6",
+    "inputs/3/task.json": "e21c3e0026cfc9264b23c8509aba6aa8493ca35d2a237184e50e6f7740256830",
+    "inputs/3/workbook.xlsx": "9edd14173d1e42f481a909f07e9ad9e56c2c38c0782f20a25cf6280020ce9cd5",
+    "inputs/3/goal.txt": "830b55892b671a3975add704c10a67215b8d7efd147ed6f2999451e51fb2745f",
+    "inputs/4/golden.xlsx": "150050ea865c40456eeae47ccbb8a5cc5d9f064313220b664303c851c7ef7351",
+    "inputs/4/task.json": "4e70c968a19643a8da3596cf8c4b30023e704965c9706bda377aab1ba4ca5037",
+    "inputs/4/workbook.xlsx": "ad398fa79f63391cbfeb808d96e9af8b0c8d6e98de29c096c9d6f4a53f204a1a",
+    "inputs/4/goal.txt": "cdd85305ec4b5e10ab58a6fbe47b9ab891eb0c5ca4209f8b3b4d5391861a92f3"
+  },
+  "export_inventory_sha256": "ee60ef16c7fcb0a248a1450885130af48a16c77ed06f9471a098df8374c6944f",
+  "prior_inventory": {
+    "path": "/mnt/20t/xubuqiang/Study/HarnessGrad/tests/fixtures/hg_wjournalcov/spreadsheetbench-inventory.json",
+    "bytes": 404188,
+    "sha256": "5df006d7a6e682b50e15425386d7cfd5b47ec9cdcfe3b1fb6963ecc71cc1db11",
+    "selected_order_and_row_digests_match": true,
+    "whole_inventory_revalidated": false,
+    "selected_rows": [
+      {
+        "task_id": "13-1",
+        "loaded_position": 0,
+        "parsed_row_sha256": "7f20332a4a7cbc778e1779496a62d31ac5eb929d56d94b522aa00e5317b2e602",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "17-35",
+        "loaded_position": 1,
+        "parsed_row_sha256": "deab9a53a887f73a881be4d8d88932604052e95407a5ed8feb46f62266d60224",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "22-47",
+        "loaded_position": 2,
+        "parsed_row_sha256": "ccfe9e6e59ecd90e275ec6df01f58146ae0bdced15c0772935e91f7beea4f753",
+        "declared_side": "train"
+      },
+      {
+        "task_id": "23-24",
+        "loaded_position": 3,
+        "parsed_row_sha256": "95b2468f44602d72d761f5413d00bfc94883e1d67ac9c8ed6ec110bb1130b318",
+        "declared_side": "eval"
+      },
+      {
+        "task_id": "24-23",
+        "loaded_position": 4,
+        "parsed_row_sha256": "0012c64d26820a0efb51a753986d02099b536418befff73939ab28c4a1341a13",
+        "declared_side": "train"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "task_id": "13-1",
+      "adapter_position": 0,
+      "source_row_index": 0,
+      "source_split": "verified_400",
+      "declared_side": "train",
+      "parsed_row_sha256": "7f20332a4a7cbc778e1779496a62d31ac5eb929d56d94b522aa00e5317b2e602",
+      "scorer_input": {
+        "task_id": "13-1",
+        "path": "native-inputs",
+        "sha256": "9cbb070ac434b7c1a73554dc5c57e1164e6e92dc68e3491907f056104e79ee4c",
+        "files": {
+          "golden.xlsx": "a8eaf5ec1991c35ae785fb82efce2ecd24f6268410a8a89f78ca07843fcaf140",
+          "task.json": "a8a0039e0c42fca97d1574a21706a34c14ef9246543bb7fee1a4eaff061d3e1a"
+        }
+      },
+      "input_sha256": "9cbb070ac434b7c1a73554dc5c57e1164e6e92dc68e3491907f056104e79ee4c",
+      "initial_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/13-1/1_13-1_init.xlsx",
+        "bytes": 12876,
+        "sha256": "36e7e5238ac29a506d06a27b73aab4ac6249530c9cfd4b1c40835c7823a39da5"
+      },
+      "golden_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/13-1/1_13-1_golden.xlsx",
+        "bytes": 14698,
+        "sha256": "a8eaf5ec1991c35ae785fb82efce2ecd24f6268410a8a89f78ca07843fcaf140"
+      },
+      "goal_sha256": "1d86f70540300379f93e82adf40007ba86120698137e1a1c384819b5beff0a55"
+    },
+    {
+      "task_id": "17-35",
+      "adapter_position": 1,
+      "source_row_index": 1,
+      "source_split": "verified_400",
+      "declared_side": "train",
+      "parsed_row_sha256": "deab9a53a887f73a881be4d8d88932604052e95407a5ed8feb46f62266d60224",
+      "scorer_input": {
+        "task_id": "17-35",
+        "path": "native-inputs",
+        "sha256": "6f3ca83c4356e3f214170b9cae54286bb8e366ce75a1e4d1bb86b622d1978a37",
+        "files": {
+          "golden.xlsx": "2e35c3957c9025cc60a3b4bd10984b709037eb674c1ab26e18805c99f9543ce4",
+          "task.json": "fec79b694b4bc3329a325963edd23883fd3d85d68003ad3b2f5b391876a5c744"
+        }
+      },
+      "input_sha256": "6f3ca83c4356e3f214170b9cae54286bb8e366ce75a1e4d1bb86b622d1978a37",
+      "initial_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/17-35/1_17-35_init.xlsx",
+        "bytes": 28975,
+        "sha256": "50ba7b30308e0579e4141120349c0c97103fb6b58b315051e9bafd3764c75feb"
+      },
+      "golden_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/17-35/1_17-35_golden.xlsx",
+        "bytes": 36840,
+        "sha256": "2e35c3957c9025cc60a3b4bd10984b709037eb674c1ab26e18805c99f9543ce4"
+      },
+      "goal_sha256": "44e87d63ee5715692382e270dd68fe30bc655c86e098cb5deea747dbfebc8c87"
+    },
+    {
+      "task_id": "22-47",
+      "adapter_position": 2,
+      "source_row_index": 2,
+      "source_split": "verified_400",
+      "declared_side": "train",
+      "parsed_row_sha256": "ccfe9e6e59ecd90e275ec6df01f58146ae0bdced15c0772935e91f7beea4f753",
+      "scorer_input": {
+        "task_id": "22-47",
+        "path": "native-inputs",
+        "sha256": "0fda9279dff83cff65c70a290d1cb5dfcb3ad15484e62f923d6325ed24848d91",
+        "files": {
+          "golden.xlsx": "2dd6719f5d3b37eca3b51e3d3cbc57f1f4791bc194e30f3932f2ce0acd4695c8",
+          "task.json": "0338b0a05f80f427325fbfc9d84ee3fe7f95c2d904ed2149d0ce77b790bca5b3"
+        }
+      },
+      "input_sha256": "0fda9279dff83cff65c70a290d1cb5dfcb3ad15484e62f923d6325ed24848d91",
+      "initial_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/22-47/1_22-47_init.xlsx",
+        "bytes": 6459,
+        "sha256": "d06080c377499133d6ccb6a0efc9a88f78cfa98b3ea76b53c2443acbf21afa6e"
+      },
+      "golden_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/22-47/1_22-47_golden.xlsx",
+        "bytes": 10494,
+        "sha256": "2dd6719f5d3b37eca3b51e3d3cbc57f1f4791bc194e30f3932f2ce0acd4695c8"
+      },
+      "goal_sha256": "b50fb291d1a6a1b120b276fd258cded1dbda288054849184c9a35d0b97f3367b"
+    },
+    {
+      "task_id": "23-24",
+      "adapter_position": 3,
+      "source_row_index": 3,
+      "source_split": "verified_400",
+      "declared_side": "eval",
+      "parsed_row_sha256": "95b2468f44602d72d761f5413d00bfc94883e1d67ac9c8ed6ec110bb1130b318",
+      "scorer_input": {
+        "task_id": "23-24",
+        "path": "native-inputs",
+        "sha256": "40ee20d4d3c1b74c189ddc52c0ea6ff6f83eeefcf438ded2a666c7a50cef3cb9",
+        "files": {
+          "golden.xlsx": "f0aed39194734eb7c471aa80fb5a0ec9677ba60a35b7b7fb1c10de38dc21b2b6",
+          "task.json": "e21c3e0026cfc9264b23c8509aba6aa8493ca35d2a237184e50e6f7740256830"
+        }
+      },
+      "input_sha256": "40ee20d4d3c1b74c189ddc52c0ea6ff6f83eeefcf438ded2a666c7a50cef3cb9",
+      "initial_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/23-24/1_23-24_init.xlsx",
+        "bytes": 96937,
+        "sha256": "9edd14173d1e42f481a909f07e9ad9e56c2c38c0782f20a25cf6280020ce9cd5"
+      },
+      "golden_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/23-24/1_23-24_golden.xlsx",
+        "bytes": 84789,
+        "sha256": "f0aed39194734eb7c471aa80fb5a0ec9677ba60a35b7b7fb1c10de38dc21b2b6"
+      },
+      "goal_sha256": "830b55892b671a3975add704c10a67215b8d7efd147ed6f2999451e51fb2745f"
+    },
+    {
+      "task_id": "24-23",
+      "adapter_position": 4,
+      "source_row_index": 4,
+      "source_split": "verified_400",
+      "declared_side": "train",
+      "parsed_row_sha256": "0012c64d26820a0efb51a753986d02099b536418befff73939ab28c4a1341a13",
+      "scorer_input": {
+        "task_id": "24-23",
+        "path": "native-inputs",
+        "sha256": "692dbfc0fec8717f22a7bf79f5ca737e6578439bb68ef424eaeb10290efe76fa",
+        "files": {
+          "golden.xlsx": "150050ea865c40456eeae47ccbb8a5cc5d9f064313220b664303c851c7ef7351",
+          "task.json": "4e70c968a19643a8da3596cf8c4b30023e704965c9706bda377aab1ba4ca5037"
+        }
+      },
+      "input_sha256": "692dbfc0fec8717f22a7bf79f5ca737e6578439bb68ef424eaeb10290efe76fa",
+      "initial_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/24-23/1_24-23_init.xlsx",
+        "bytes": 813794,
+        "sha256": "ad398fa79f63391cbfeb808d96e9af8b0c8d6e98de29c096c9d6f4a53f204a1a"
+      },
+      "golden_workbook": {
+        "path": "/mnt/20t/xubuqiang/datasets/spreadsheetbench/spreadsheetbench_verified_400/spreadsheet/24-23/1_24-23_golden.xlsx",
+        "bytes": 141695,
+        "sha256": "150050ea865c40456eeae47ccbb8a5cc5d9f064313220b664303c851c7ef7351"
+      },
+      "goal_sha256": "cdd85305ec4b5e10ab58a6fbe47b9ab891eb0c5ca4209f8b3b4d5391861a92f3"
+    }
+  ],
+  "run_id": "hg-wsel-exports-20261015T081758Z-e8bf2cb83f6f-spreadsheetbench",
+  "run_state": "reserved-selection-only; no execution"
+}

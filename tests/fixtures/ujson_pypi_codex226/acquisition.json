@@ -1,0 +1,38 @@
+{
+  "task": "codex226",
+  "acquired_at_utc": "2026-10-14T04:20:31.929810+00:00",
+  "metadata_url": "https://pypi.org/pypi/ujson/5.10.0/json",
+  "metadata_sha256": "a3c95fe11a39ff2db660e12cee42ff27ad0411d205320d1350fbc2924a7ab6a2",
+  "response_headers": {
+    "Date": "Wed, 14 Oct 2026 04:20:30 GMT",
+    "ETag": "\"V4RwK1zJe6+b8kuikWSv4g\"",
+    "Content-Type": "application/json"
+  },
+  "artifact": {
+    "comment_text": "",
+    "core-metadata": {
+      "sha256": "b7a07b8cfb552e87ddf1ff235080d3c23ab1dd3fdba0e53775ba456e7ba09488"
+    },
+    "digests": {
+      "blake2b_256": "0481668707e5f2177791869b624be4c06fb2473bf97ee33296b18d1cf3092af7",
+      "md5": "9e598a56712942ace4c6b23d32ad020a",
+      "sha256": "f8ccb77b3e40b151e20519c6ae6d89bfe3f4c14e8e210d910287f778368bb3d1"
+    },
+    "downloads": -1,
+    "filename": "ujson-5.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "has_sig": false,
+    "md5_digest": "9e598a56712942ace4c6b23d32ad020a",
+    "packagetype": "bdist_wheel",
+    "python_version": "cp312",
+    "requires_python": ">=3.8",
+    "size": 53686,
+    "upload_time": "2024-05-14T02:01:07",
+    "upload_time_iso_8601": "2024-05-14T02:01:07.618187Z",
+    "url": "https://files.pythonhosted.org/packages/04/81/668707e5f2177791869b624be4c06fb2473bf97ee33296b18d1cf3092af7/ujson-5.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    "yanked": false,
+    "yanked_reason": null
+  },
+  "artifact_sha256_verified": true,
+  "artifact_size_verified": true,
+  "trust_boundary": "Official PyPI HTTPS JSON and files.pythonhosted.org HTTPS; hashes bind bytes, not an independent signature or supported-image attestation."
+}

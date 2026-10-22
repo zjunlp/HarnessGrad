@@ -1,0 +1,10 @@
+label=synthetic reward-transport fault injection; no dataset execution
+real_scorer_argv=["python3", "check.py", "--workdir", ".", "--reward-file", "verifier/reward.txt", "--evidence-file", "verifier/evidence.json", "--task-id", "authored-reward-loss", "--scorer-input-sha256", "dae1f1ca4486df0a46184c69fe769043e140ea94395df0d836b0239dae3fd299", "--scorer-input-files", "{\"golden.xlsx\": \"d424bfff4e76b5e8599e2c2c848445489aa3d71dab995e11d3a1911fa9067b24\", \"task.json\": \"614fb6e8f287fc75b50705e11ccacaa09e9a213f2a20b7d8a8b4367d882d2665\"}"]
+real_scorer_exit=0
+real_scorer_stdout='reward 1: the named cells hold the reference values\n'
+real_scorer_stderr=''
+reward_before_injected_loss='1\n'
+fault_injected=unlink authored reward after successful real scorer process
+verdict={"detail": "the check wrote no /verifier/reward.txt (looked for /mnt/20t/xubuqiang/hg-work/spreadrt/reward-loss-d2e518f0d06c4ebd915cc499112184de/verifier/reward.txt), exit 0 | stdout reward 1: the named cells hold the reference values", "evidence": {"answer_file": "answer.txt", "answer_position": "Synthetic!A1", "correct": true, "golden": "/tmp/hg-scorer-input-ia5r2jn6/golden.xlsx", "instruction_type": "synthetic", "measured": true, "named_result": "result.xlsx", "recalculated": false, "result_exists": true, "reward": 1.0, "score": 1.0, "scorer_input": {"expected_sha256": "dae1f1ca4486df0a46184c69fe769043e140ea94395df0d836b0239dae3fd299", "files": {"golden.xlsx": "d424bfff4e76b5e8599e2c2c848445489aa3d71dab995e11d3a1911fa9067b24", "task.json": "614fb6e8f287fc75b50705e11ccacaa09e9a213f2a20b7d8a8b4367d882d2665"}, "path": "native-inputs", "sha256": "dae1f1ca4486df0a46184c69fe769043e140ea94395df0d836b0239dae3fd299", "task_id": "authored-reward-loss", "verified": true}, "task_id": "authored-reward-loss", "why": "the named cells hold the reference values"}, "kind": "command", "passed": false, "score": 0.0, "scorer_isolation_class": "actor-workdir", "scorer_isolation_declared": "unknown"}
+infrastructure_failure_as_zero=YES; matching bound evidence survives while reward disappears
+synthetic_work_removed=True

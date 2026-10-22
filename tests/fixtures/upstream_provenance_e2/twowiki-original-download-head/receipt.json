@@ -1,0 +1,16 @@
+[
+  {
+    "method": "HEAD",
+    "url": "https://www.dropbox.com/s/9fwhnzektzv4wh5/data_ids.zip?dl=1",
+    "started_at_utc": "2026-10-14T17:54:55.247480+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 200,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "headers_sha256": "400f18b45b51028221162e9042965a405dc96c02212f5ea0ca1d13610990e459",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  }
+]

@@ -1,0 +1,312 @@
+[
+ {
+  "path": "data/__init__.py",
+  "bytes": 386,
+  "sha256": "35b30199d6e60d287e2596e0fb593e539767ac0380fd12b87816e6b4d3e2c5d6"
+ },
+ {
+  "path": "data/datasets/__init__.py",
+  "bytes": 59,
+  "sha256": "a8f74fad6e250310d19608e1d3350722035361684e98d82b8a47d924e1ca5e72"
+ },
+ {
+  "path": "data/datasets/bfcl_v3.py",
+  "bytes": 29051,
+  "sha256": "7650b103721a35bd5db391d6d6e1a27d0ff5ad7fed8dfff4a60d7986a0afc10f"
+ },
+ {
+  "path": "data/scaffolds/__init__.py",
+  "bytes": 61,
+  "sha256": "13bf55fe2761637a6e78f54a88ca4c6d5a8911f83c7b789a9cec8a36f30a5219"
+ },
+ {
+  "path": "data/scaffolds/qa/__init__.py",
+  "bytes": 0,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ },
+ {
+  "path": "data/scaffolds/qa/base.py",
+  "bytes": 27878,
+  "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+ },
+ {
+  "path": "data/scaffolds/qa/cli/qa",
+  "bytes": 6403,
+  "sha256": "fa92c945dd58fdc771ee4ea8f967203c6e6d6b2abd48f9d606c95e3596b7a788"
+ },
+ {
+  "path": "data/scaffolds/qa/control.py",
+  "bytes": 14503,
+  "sha256": "4cd0da7ddc2ca99f49540f5decb09a87aecd3da1d106af944833a0eae6791e17"
+ },
+ {
+  "path": "data/scaffolds/qa/evidence_scorers.py",
+  "bytes": 7468,
+  "sha256": "ce97451202f521d33e75e1505d43bf13daf0797864a20412ed4d538c2d190865"
+ },
+ {
+  "path": "data/scaffolds/qa/oracle_harness/agent.py",
+  "bytes": 3404,
+  "sha256": "9244494e84eaf19117b1d7dbcf8722b98e94ce047553f60d9e17fc06d41666e1"
+ },
+ {
+  "path": "data/scaffolds/qa/prediction.py",
+  "bytes": 1620,
+  "sha256": "598ebb5fe688f561d6cb6388ef202be4233de14058c51e65391613c7a6bedd7e"
+ },
+ {
+  "path": "data/scaffolds/qa/read.py",
+  "bytes": 8624,
+  "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+ },
+ {
+  "path": "data/scaffolds/qa/verify/check.py",
+  "bytes": 14936,
+  "sha256": "ec603e0d7fc655473dde92260d70cefefc0dd107eaa0d9273df1e7eeb0d0763c"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+  "bytes": 1813,
+  "sha256": "1702fb67afbe2c492608e58e2b7d02e46381f50166b47f3c952f76e34c7cd3bd"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+  "bytes": 20789,
+  "sha256": "31f1420ae78709920d2fc49ceb93ea3dc451379cf5f320ac0b02b9845d0cbb36"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+  "bytes": 19856,
+  "sha256": "3bcfbb32ea37e05666f8ef2743bb7f73b2982b1775a1bd132a2204c159516389"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+  "bytes": 39291,
+  "sha256": "4a2f4e677d1f6930f396dbc92c50138f56268f970de7e4f815fb801607cafad1"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+  "bytes": 31374,
+  "sha256": "153bb33a9515ea2d6ee6a1387faaa464c7be4fe9c6a9f88cc17ad23a1cc306d2"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+  "bytes": 1813,
+  "sha256": "1702fb67afbe2c492608e58e2b7d02e46381f50166b47f3c952f76e34c7cd3bd"
+ },
+ {
+  "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+  "bytes": 24916,
+  "sha256": "58a8a1d8a42ec4f7e0f340a8bf11ab4035c54d38d933ae2621f22bbc7c8d1c9b"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py",
+  "bytes": 4164,
+  "sha256": "c08dfe14283990bc4f67333183d8c14a2506da6d99ac00c6ef5f018dd44757fc"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/column_headers.py",
+  "bytes": 1395,
+  "sha256": "8c84e7432950d5755e55c3ff5399f725e66a55bc42caf5cfebd2fac5e49e3ff5"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/default_prompts.py",
+  "bytes": 1463,
+  "sha256": "eeaf03cb3594666b527993160d6b6b18ee219fee6b3ab1672ef71202cc9f9721"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py",
+  "bytes": 1159,
+  "sha256": "cc87be460aa472c676e9813f35c07e6631b70477ce1423169d520922acc346d2"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+  "bytes": 71573,
+  "sha256": "26bff7e39e1ea018c5fd5a55882a0020a98f63f76068ece29e68f4ff6e8c4cb1"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+  "bytes": 15716,
+  "sha256": "2fd4f4b0443b3dd974a1723bb4e45c086d7b352631062da7807ad1ad40706604"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+  "bytes": 11706,
+  "sha256": "a114e9ff75c025cb52787ac33d6c2fbaa390905c6125a2b3c6afebab232bb5e4"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_checker.py",
+  "bytes": 13592,
+  "sha256": "b3b787515eda3bf0e365e39634a8fc7f831763f010f716d35d86f96fd5aab1b5"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+  "bytes": 5997,
+  "sha256": "bfa5dacec5f2236117d4bb069d173018675e9eb38f35565eda3bd7c3881f3435"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+  "bytes": 14037,
+  "sha256": "5247034b7817a147e4500f86eb6429033dfc820007f8e32e2198d4d905fc3ab8"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+  "bytes": 11984,
+  "sha256": "7dad580d2d51c8906224a97446e8132333beb7739acc2abc0b1e76fc32575bf2"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+  "bytes": 3501,
+  "sha256": "c7015bd77b31c0f8c120cf30631b66156c0be0b1aaa61a4eef6d1854e17284f6"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+  "bytes": 6208,
+  "sha256": "ccb39a92644d908df9d58357d2fb94967fd0a0b0b797ebfea4fd410b470f774a"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+  "bytes": 507,
+  "sha256": "d1ec30eceb1793891ab17a173e79358c13c9e14ffae9844c3bfa4a702021264b"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+  "bytes": 3989,
+  "sha256": "993b3558b4c2acf7785c0e24464a031d0bab7c1968cc3636030b731720651155"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+  "bytes": 586,
+  "sha256": "1a2dda6e412eaebdf293a4d12f3fc31f8a737a717812266b80e39787112c9d48"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+  "bytes": 13303,
+  "sha256": "be6316af964ed343d78c9189d908347d78ecd2a6fe8e95cb61fac9a1735987c7"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+  "bytes": 451,
+  "sha256": "3d3a07e10e7a8801bf55254265b4039eadd673079864f69f5de0f458c1ea863d"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+  "bytes": 3805,
+  "sha256": "9c833a1f8cadf161471c12c4b5a23bd2cf431a0a9236691f4f29d2267cda0fd0"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+  "bytes": 1074,
+  "sha256": "8e62414565d3bd2b4bee974902139d4fdf3b1bde987efce1a1d07c6396dd454b"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+  "bytes": 2806,
+  "sha256": "55485a65955acb63d028690899dca98e918c046f47fcf53565afe33db3c2c12a"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+  "bytes": 4846,
+  "sha256": "b5ee92d035a7fe90c70da43f5f52324c3ff75e5a06fd4a0cca18ac46880aa223"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+  "bytes": 8200,
+  "sha256": "d717054a46a651cb184a4a32234c5f8423d1c77c7bbbc0fd2f00b61b2b6cf537"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+  "bytes": 4383,
+  "sha256": "b480518998ad1d1d8562a25f08e12e751dc4a0569f03edd0c2db1afd16141bac"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+  "bytes": 7683,
+  "sha256": "d135f8fdb4f8622f3f6622e3ed305ad43ef0c1df3957a8edb419e11c15055e6d"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+  "bytes": 7574,
+  "sha256": "c5c9aeaeb5a3186f41c071bc2e26ee7c6a3cfff1336f68ef8e5425cdd55bc590"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+  "bytes": 1733,
+  "sha256": "70a1f55106b4bcc5171d37f99bde5e1c2ca876210466869713a3fb6d9d9f2088"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+  "bytes": 2885,
+  "sha256": "ee220a8d78732714f8783abc5c24dc97f80d59d57891e8636d43704217cfe008"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+  "bytes": 10871,
+  "sha256": "b84c67a86190e1b8dbc38e72cb5f175ad106b1017cf14f19655318f3379ba00a"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+  "bytes": 9874,
+  "sha256": "305cb4f5d3e431aca5cbe3449d43ff771d021392b2a9db4aaff58d3dfa330d7a"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+  "bytes": 12526,
+  "sha256": "036f2f4d6aaecedba1692593a291518bc64e888308c39a8e18c25cf18a7c4df2"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+  "bytes": 1352,
+  "sha256": "dbaf6dc6fc629ead1275598976751bd0882f7373d2af0de60a0fab9a3fa76501"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+  "bytes": 5295,
+  "sha256": "e9add376405956cfee5fd343c30fc745f1f127b34b88caf2993014bde13582ec"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+  "bytes": 9291,
+  "sha256": "d5939cf1cd4424dcf93657ea04ca759dde02e6697b1aefb734a216fe70d2fff8"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+  "bytes": 16629,
+  "sha256": "3304c7e94fcc3a9ff873759590a7f1dccf1a6a437dd31c554eb4d507e9e8435c"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bielik.py",
+  "bytes": 982,
+  "sha256": "f5482a9cb7f0e203be65f86759824bee73eeeed66b3024d012483b37bd521645"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek.py",
+  "bytes": 3417,
+  "sha256": "e6357a9006ad1aeeeab27423ef18f4e17e5dba8615a5c4f90a9c91f9f656905f"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen.py",
+  "bytes": 8747,
+  "sha256": "8354bf77dca40b425a42d665bc3944bfc4fbe1ce291fc2765e9e5cce7d84c835"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py",
+  "bytes": 464,
+  "sha256": "0244f6108e85b40379d7ddd80d4f7b699a270972c4d8cf37966a4aa677f8ba57"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py",
+  "bytes": 5510,
+  "sha256": "78aa38dcfae655b5e3a982d0aaadf72aad0bb64a62cc4db4d7b7aa2185e666f5"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py",
+  "bytes": 2735,
+  "sha256": "65eea903e538cc2afa5f37e15cccfc303462f750ca45556ee654f6722f4b1e52"
+ },
+ {
+  "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+  "bytes": 7494,
+  "sha256": "255e6dad9a6533c8e52b4c8b2bfc78c0744b915605e09c04808df6c023f4a43f"
+ }
+]

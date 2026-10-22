@@ -1,0 +1,7 @@
+inventory=tests/fixtures/hg_spreadrt/dependency-inventory.json
+python=3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 15:12:24) [GCC 11.2.0]
+abi=cpython-312-x86_64-linux-gnu
+openpyxl_flags={"DEFUSEDXML": true, "LXML": true, "NUMPY": true}
+conda_closure_packages=54
+matching_cached_archives=281
+search_errors=[{"error": "[Errno 13] Permission denied: '/opt/containerd'", "scope": "/opt"}, {"error": "root does not exist", "scope": "/tmp/hg-wwheelhouse-payloads-e5uywviu"}, {"error": "[Errno 13] Permission denied: '/tmp/pip-ephem-wheel-cache-hh0ewg2_'", "scope": "/tmp/pip-ephem-wheel-cache-hh0ewg2_"}, {"error": "[Errno 13] Permission denied: '/tmp/pip-ephem-wheel-cache-u3quqp9h'", "scope": "/tmp/pip-ephem-wheel-cache-u3quqp9h"}, {"error": "[Errno 13] Permission denied: '/tmp/pip-ephem-wheel-cache-xpe4fqg5'", "scope": "/tmp/pip-ephem-wheel-cache-xpe4fqg5"}]

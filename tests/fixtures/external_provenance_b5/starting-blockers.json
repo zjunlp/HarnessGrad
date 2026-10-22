@@ -1,0 +1,124 @@
+{
+  "base_commit": "9066072",
+  "datasets": [
+    {
+      "dataset": "bfcl_v3",
+      "demand": "tool_use",
+      "surface": "tool_calling",
+      "exercises": [
+        "tools"
+      ],
+      "shared_blockers": [
+        "runtime-observations",
+        "paired-filesystem-quotas",
+        "scorer-offline-closure",
+        "pristine-verifier",
+        "artifact-only-state-export",
+        "official-scorer-identity",
+        "snapshot-owned-cleanup",
+        "pilot-guidance-conflict"
+      ],
+      "blockers": [
+        {
+          "id": "release-index-custody",
+          "family": "source-provenance",
+          "status": "external",
+          "observed": "Synthetic selected-span checks passed, but index hashes are unauthenticated and official release identity is unproven.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/adapter-integration-journal.md",
+              "locator": "## BFCL official call scorer review \u2014 Codex 166"
+            }
+          ],
+          "next_action": "Obtain independently reviewed code-only evaluator provenance and custodian approval of metadata-only release/index bindings."
+        },
+        {
+          "id": "simple-ast-contract",
+          "family": "official-scorer-execution",
+          "status": "external",
+          "observed": "The pinned v1.3/V3 source and Apache-2.0 license are partially acquired with Git blob checks. ast_checker.py and type_mappings.py are present, but direct model_config, Java converter and JS converter helpers lack pinned blob identities/source; no archive binding or independent custodian receipt exists. Production remains function-name diagnostic-only.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/adapter-integration-journal.md",
+              "locator": "Current scorer remains function-name multiset diagnostic"
+            },
+            {
+              "kind": "repository",
+              "path": "tests/fixtures/bfcl_ast_source/README.md",
+              "locator": "external source/provenance blocker remains open"
+            },
+            {
+              "kind": "repository",
+              "path": "reports/bfcl-blob-retry-codex227-report.md",
+              "locator": "checker acquired; complete checker closure remains blocked"
+            },
+            {
+              "kind": "repository",
+              "path": "tests/fixtures/bfcl_ast_source/retry-codex227/provenance.json",
+              "locator": "not_attempted_missing_pinned_blob_sha"
+            }
+          ],
+          "next_action": "Obtain independently approved v1.3 archive/tag/commit and original-file custody evidence, a code-only parser/checker/dispatch/helper/license projection and a separate exact receipt pin. Pass the explicit source gate, then derive the full-call contract from original symbols using fabricated differential calls; preserve the name diagnostic and selected/privacy boundaries. No production H0."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "triviaqa",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context"
+      ],
+      "shared_blockers": [
+        "runtime-observations",
+        "paired-filesystem-quotas",
+        "scorer-offline-closure",
+        "pristine-verifier",
+        "artifact-only-state-export",
+        "official-scorer-identity",
+        "snapshot-owned-cleanup",
+        "pilot-guidance-conflict"
+      ],
+      "blockers": [
+        {
+          "id": "hub-export-scorer-linkage",
+          "family": "source-provenance",
+          "status": "external",
+          "observed": "Original evaluator acquisition is closed at source/test level; prior reviews retain the corrected triviaqa-alias-max-em-upstream-normalization-all-aliases-v2 identity and upstream reference. Task 225 pins historical HuggingFace loader/config/license at 413205c1a7247a2ff81cf709117ce93624fa6fd3 with reconstructed Git commit/tree/blob linkage. That loader copies and trims normalized aliases, omits HumanAnswers, combines Web/Wikipedia for rc.nocontext, removes documents and omits domain/verified flags. Four exact-revision Hub code/metadata requests failed with network unreachable, so association of that historical loader with Hub revision 0f7faf33a3908546c6fd5b73a660e0f8ff173c2f remains unverified. No dataset rows were read, no metric was changed and full answer-set/selection/grouping/denominator compatibility is not certified.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/adapter-integration-journal.md",
+              "locator": "## TriviaQA \u2014 current scorer identity and registry review \u2014 Codex 215 \u2014 2026-10-14"
+            },
+            {
+              "kind": "repository",
+              "path": "tests/fixtures/triviaqa_upstream/provenance.json",
+              "locator": "ca43b5820b107f3970cf4b7d67f7db7a98117b79"
+            },
+            {
+              "kind": "repository",
+              "path": "reports/triviaqa-review-codex215-report.md",
+              "locator": "Only confirmed repository-solvable mismatch: the active registry still named upstream evaluator acquisition as open."
+            },
+            {
+              "kind": "repository",
+              "path": "tests/fixtures/triviaqa_hub_codex225/README.md",
+              "locator": "Exact Hub revision linkage remains unverified."
+            },
+            {
+              "kind": "repository",
+              "path": "reports/triviaqa-hub-linkage-codex225-report.md",
+              "locator": "Compatibility for the exact Hub revision is not established."
+            }
+          ],
+          "next_action": "Obtain public exact-revision Hub commit/tree/config/split metadata and immutable conversion provenance identifying the loader actually used (including predecessor loader plus export receipt if absent at the export revision), original license and file hashes. Establish whether HumanAnswers are preserved, absent or redundant, and document Domain/VerifiedEval/source membership, duplicate handling, scorer-key mapping and denominator/aggregation; no rows or payloads are requested. Historical loader name/schema/count matches alone do not close this gate. Preserve v2 and historical identities; actual deployed hashes and all shared admission gates remain prerequisites to a separately authorized diagnostic."
+        }
+      ],
+      "historical_runs": []
+    }
+  ]
+}

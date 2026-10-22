@@ -1,0 +1,52 @@
+{
+  "url": "https://dns.alidns.com/resolve?name=huggingface.co&type=A",
+  "method": "GET",
+  "request_headers": {
+    "User-Agent": "HarnessGrad-public-provenance/1",
+    "Accept": "application/json"
+  },
+  "requested_at_utc": "2026-10-14T17:19:14.474132+00:00",
+  "production_authorized": false,
+  "status": 200,
+  "reason": "OK",
+  "response_headers": [
+    [
+      "Access-Control-Allow-Origin",
+      "*"
+    ],
+    [
+      "Alt-Svc",
+      "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000,h3-T051=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\""
+    ],
+    [
+      "Cache-Control",
+      "max-age=107.000000"
+    ],
+    [
+      "Content-Length",
+      "191"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "S",
+      "39.185.147.24"
+    ],
+    [
+      "Date",
+      "Wed, 14 Oct 2026 17:19:14 GMT"
+    ],
+    [
+      "Connection",
+      "close"
+    ]
+  ],
+  "response_body": {
+    "path": "responses/triviaqa-dns-alidns.body",
+    "bytes": 191,
+    "sha256": "6e2ad4e2be0c13a8a25663fb7d316276207a7f59ea59e6a0ead7b6ac8d364628"
+  },
+  "completed_at_utc": "2026-10-14T17:19:14.923938+00:00"
+}

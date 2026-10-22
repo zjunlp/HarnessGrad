@@ -1,0 +1,39 @@
+[
+  {
+    "method": "HEAD",
+    "url": "https://www.dropbox.com/s/7ep3h8unu2njfxv/data_ids.zip?dl=1",
+    "started_at_utc": "2026-10-14T17:54:55.258807+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 302,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "headers_sha256": "79e3cd380f677b2cbcafc8e903508e4bc02ecd4975f5f664b574b1e4217924b0",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  },
+  {
+    "method": "HEAD",
+    "url": "https://www.dropbox.com/scl/fi/aasqsj45yokx71pnm8ctr/data_ids.zip?rlkey=72n2p6jywhfmm6kdeuzz8c55u&dl=1",
+    "started_at_utc": "2026-10-14T17:54:55.753800+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "status": 302,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "headers_sha256": "b1589e30341331b8c3f00633c58097ebd1dc4fd4f8124bbf34432a8fb4426dda",
+    "complete": true,
+    "headers_representation": "HTTPMessage.as_bytes; parsed response headers"
+  },
+  {
+    "method": "HEAD",
+    "url": "https://uca47197cb573ff9881874c910b1.dl.dropboxusercontent.com/cd/0/get/DJ-vT3i2vbrOlt-lfrMN9wUpbF8K7rhwv4gbofApBWgeQPKJxqca-3cR_toxOFKxjnOelfycnC8olSsK7AAGg59rRm6_mr1zuPnLCqUc9YQ7bjlZ3HHEdJuSO4xYtmErAhVH7hgBOiqyB18mNXA2S1UV/file?dl=1",
+    "started_at_utc": "2026-10-14T17:54:56.649259+00:00",
+    "transport_proxy": "http://127.0.0.1:17891",
+    "tls_certificate_validation": true,
+    "publisher_signature_verified": false,
+    "error": "Refused URL outside metadata/HEAD allowlist"
+  }
+]

@@ -1,0 +1,3045 @@
+{
+  "schema": "harnessgrad.w-bfcl-public-custody.v1",
+  "scope": "Static code review and public-source custody; no upstream execution or task member access",
+  "commit": "ea13468e4423454d0c213704fb87cf7cb3990433",
+  "root_tree": "b34aa53a73491f42dc69b8b18c92448d7c311f50",
+  "tag": "refs/tags/v1.3",
+  "archive": {
+    "path": "tests/fixtures/hg_bfcl/responses/archive.body",
+    "bytes": 44552456,
+    "sha256": "57854157e82aed5723a1458d2a4ac426e3256959ded4a20ddc4d627c22edb7fe"
+  },
+  "archive_pax_headers": {
+    "comment": "ea13468e4423454d0c213704fb87cf7cb3990433"
+  },
+  "archive_matches_adapter_pin": true,
+  "reconstructed_tree_objects": 93,
+  "reused_evidence": [
+    {
+      "path": "tests/fixtures/external_provenance_b5/responses/bfcl-tree.body",
+      "bytes": 161306,
+      "sha256": "f903cf4935a1528bdab0726d8894072f9c69c42e2cc6c5a2e77eb56d64053b49"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/responses/bfcl-root-tree.body",
+      "bytes": 2747,
+      "sha256": "abc34da884e5821fe189f05aefcd29096e3c04846c391688564fd023d6f2f0bf"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/inventory.json",
+      "bytes": 53860,
+      "sha256": "23ded7d2a3db0540eef64faf945e3b3392ef6d5f95b8dbbd2793e656626cfefa"
+    },
+    {
+      "path": "data/datasets/bfcl_v3.py",
+      "bytes": 28188,
+      "sha256": "de8f7efb844c39fa79632d42171d537e488f055dae7b5e1bceb583368e3bce17"
+    }
+  ],
+  "files": [
+    {
+      "original_path": "LICENSE",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "archive_member": "gorilla-1.3/LICENSE",
+      "archive_member_bytes": 11357,
+      "archive_member_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/constants/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py",
+      "bytes": 4164,
+      "sha256": "c08dfe14283990bc4f67333183d8c14a2506da6d99ac00c6ef5f018dd44757fc",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/category_mapping.py",
+      "archive_member_bytes": 4164,
+      "archive_member_sha256": "c08dfe14283990bc4f67333183d8c14a2506da6d99ac00c6ef5f018dd44757fc",
+      "git_blob_sha1": "66e7308baa11512903656ae26e0efa2c998e87a1"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/column_headers.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/column_headers.py",
+      "bytes": 1395,
+      "sha256": "8c84e7432950d5755e55c3ff5399f725e66a55bc42caf5cfebd2fac5e49e3ff5",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/column_headers.py",
+      "archive_member_bytes": 1395,
+      "archive_member_sha256": "8c84e7432950d5755e55c3ff5399f725e66a55bc42caf5cfebd2fac5e49e3ff5",
+      "git_blob_sha1": "79d1fd0a4bd73aa34c2311227af0762bc3d640c9"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/default_prompts.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/default_prompts.py",
+      "bytes": 1463,
+      "sha256": "eeaf03cb3594666b527993160d6b6b18ee219fee6b3ab1672ef71202cc9f9721",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/default_prompts.py",
+      "archive_member_bytes": 1463,
+      "archive_member_sha256": "eeaf03cb3594666b527993160d6b6b18ee219fee6b3ab1672ef71202cc9f9721",
+      "git_blob_sha1": "37eb080480daff689748601c2c77179578c187e3"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py",
+      "bytes": 1159,
+      "sha256": "cc87be460aa472c676e9813f35c07e6631b70477ce1423169d520922acc346d2",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py",
+      "archive_member_bytes": 1159,
+      "archive_member_sha256": "cc87be460aa472c676e9813f35c07e6631b70477ce1423169d520922acc346d2",
+      "git_blob_sha1": "04b769c682eabf9f770e436db357ad55992c4dbc"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "bytes": 71573,
+      "sha256": "26bff7e39e1ea018c5fd5a55882a0020a98f63f76068ece29e68f4ff6e8c4cb1",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "archive_member_bytes": 71573,
+      "archive_member_sha256": "26bff7e39e1ea018c5fd5a55882a0020a98f63f76068ece29e68f4ff6e8c4cb1",
+      "git_blob_sha1": "e332d00c79592ef9d35e6511f7d199e048bd9a16"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "bytes": 1813,
+      "sha256": "1702fb67afbe2c492608e58e2b7d02e46381f50166b47f3c952f76e34c7cd3bd",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",
+      "archive_member_bytes": 1813,
+      "archive_member_sha256": "1702fb67afbe2c492608e58e2b7d02e46381f50166b47f3c952f76e34c7cd3bd",
+      "git_blob_sha1": "fdbdde48402f8f2812b146f9b7341b6aae9e55b8"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "bytes": 24916,
+      "sha256": "58a8a1d8a42ec4f7e0f340a8bf11ab4035c54d38d933ae2621f22bbc7c8d1c9b",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "archive_member_bytes": 24916,
+      "archive_member_sha256": "58a8a1d8a42ec4f7e0f340a8bf11ab4035c54d38d933ae2621f22bbc7c8d1c9b",
+      "git_blob_sha1": "214f3ba55c012691761913b6aca68ab7bc4aa38b"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "bytes": 15716,
+      "sha256": "2fd4f4b0443b3dd974a1723bb4e45c086d7b352631062da7807ad1ad40706604",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "archive_member_bytes": 15716,
+      "archive_member_sha256": "2fd4f4b0443b3dd974a1723bb4e45c086d7b352631062da7807ad1ad40706604",
+      "git_blob_sha1": "7d2b141dfcb8e527df6424893e60a833eb69f3e1"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+      "bytes": 11706,
+      "sha256": "a114e9ff75c025cb52787ac33d6c2fbaa390905c6125a2b3c6afebab232bb5e4",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+      "archive_member_bytes": 11706,
+      "archive_member_sha256": "a114e9ff75c025cb52787ac33d6c2fbaa390905c6125a2b3c6afebab232bb5e4",
+      "git_blob_sha1": "4205b92e05af83d2e61a7bf4bd2530718b57acee"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "bytes": 20789,
+      "sha256": "31f1420ae78709920d2fc49ceb93ea3dc451379cf5f320ac0b02b9845d0cbb36",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "archive_member_bytes": 20789,
+      "archive_member_sha256": "31f1420ae78709920d2fc49ceb93ea3dc451379cf5f320ac0b02b9845d0cbb36",
+      "git_blob_sha1": "0ac9bd7a11dd73e3116971d925ca8383fcac0267"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "bytes": 19856,
+      "sha256": "3bcfbb32ea37e05666f8ef2743bb7f73b2982b1775a1bd132a2204c159516389",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "archive_member_bytes": 19856,
+      "archive_member_sha256": "3bcfbb32ea37e05666f8ef2743bb7f73b2982b1775a1bd132a2204c159516389",
+      "git_blob_sha1": "1de6462be8be9cc91d5a0e95c69e2c6fd6fc1a0d"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_checker.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_checker.py",
+      "bytes": 13592,
+      "sha256": "b3b787515eda3bf0e365e39634a8fc7f831763f010f716d35d86f96fd5aab1b5",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_checker.py",
+      "archive_member_bytes": 13592,
+      "archive_member_sha256": "b3b787515eda3bf0e365e39634a8fc7f831763f010f716d35d86f96fd5aab1b5",
+      "git_blob_sha1": "34b36715cdfaa4464ba1be137af4d30e85da8efb"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "bytes": 5997,
+      "sha256": "bfa5dacec5f2236117d4bb069d173018675e9eb38f35565eda3bd7c3881f3435",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "archive_member_bytes": 5997,
+      "archive_member_sha256": "bfa5dacec5f2236117d4bb069d173018675e9eb38f35565eda3bd7c3881f3435",
+      "git_blob_sha1": "57eb6efdd6312a5e8dd015cdf2486f31a575aac6"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "bytes": 14037,
+      "sha256": "5247034b7817a147e4500f86eb6429033dfc820007f8e32e2198d4d905fc3ab8",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "archive_member_bytes": 14037,
+      "archive_member_sha256": "5247034b7817a147e4500f86eb6429033dfc820007f8e32e2198d4d905fc3ab8",
+      "git_blob_sha1": "e95529179d084d5974fc3947acc1c54d23b30706"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "bytes": 11984,
+      "sha256": "7dad580d2d51c8906224a97446e8132333beb7739acc2abc0b1e76fc32575bf2",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "archive_member_bytes": 11984,
+      "archive_member_sha256": "7dad580d2d51c8906224a97446e8132333beb7739acc2abc0b1e76fc32575bf2",
+      "git_blob_sha1": "4a4f023cb49f19ee480a67948a6a15f1072a7d76"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "bytes": 3501,
+      "sha256": "c7015bd77b31c0f8c120cf30631b66156c0be0b1aaa61a4eef6d1854e17284f6",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "archive_member_bytes": 3501,
+      "archive_member_sha256": "c7015bd77b31c0f8c120cf30631b66156c0be0b1aaa61a4eef6d1854e17284f6",
+      "git_blob_sha1": "e75234a2afeab65c2060e5c42f9bc45b06db6a39"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "bytes": 6208,
+      "sha256": "ccb39a92644d908df9d58357d2fb94967fd0a0b0b797ebfea4fd410b470f774a",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "archive_member_bytes": 6208,
+      "archive_member_sha256": "ccb39a92644d908df9d58357d2fb94967fd0a0b0b797ebfea4fd410b470f774a",
+      "git_blob_sha1": "da3904505f3e8b15a5932974a96ed518d1146e48"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "bytes": 507,
+      "sha256": "d1ec30eceb1793891ab17a173e79358c13c9e14ffae9844c3bfa4a702021264b",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "archive_member_bytes": 507,
+      "archive_member_sha256": "d1ec30eceb1793891ab17a173e79358c13c9e14ffae9844c3bfa4a702021264b",
+      "git_blob_sha1": "0874f52266381fd9f5c72b9d155b660ba549f5ed"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "bytes": 3989,
+      "sha256": "993b3558b4c2acf7785c0e24464a031d0bab7c1968cc3636030b731720651155",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "archive_member_bytes": 3989,
+      "archive_member_sha256": "993b3558b4c2acf7785c0e24464a031d0bab7c1968cc3636030b731720651155",
+      "git_blob_sha1": "26dfcc85c2e96d1f362463f5e5f76dd1fc8e8215"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+      "bytes": 586,
+      "sha256": "1a2dda6e412eaebdf293a4d12f3fc31f8a737a717812266b80e39787112c9d48",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+      "archive_member_bytes": 586,
+      "archive_member_sha256": "1a2dda6e412eaebdf293a4d12f3fc31f8a737a717812266b80e39787112c9d48",
+      "git_blob_sha1": "402e5e2088c6a4b070e78f88f9e067cfa21e7260"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "bytes": 13303,
+      "sha256": "be6316af964ed343d78c9189d908347d78ecd2a6fe8e95cb61fac9a1735987c7",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "archive_member_bytes": 13303,
+      "archive_member_sha256": "be6316af964ed343d78c9189d908347d78ecd2a6fe8e95cb61fac9a1735987c7",
+      "git_blob_sha1": "6fe9215a8fabb3e692e524bf65e07da65fa52457"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+      "bytes": 451,
+      "sha256": "3d3a07e10e7a8801bf55254265b4039eadd673079864f69f5de0f458c1ea863d",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+      "archive_member_bytes": 451,
+      "archive_member_sha256": "3d3a07e10e7a8801bf55254265b4039eadd673079864f69f5de0f458c1ea863d",
+      "git_blob_sha1": "ca6e80c01876785b860133f7dab10b89fc948788"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "bytes": 3805,
+      "sha256": "9c833a1f8cadf161471c12c4b5a23bd2cf431a0a9236691f4f29d2267cda0fd0",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "archive_member_bytes": 3805,
+      "archive_member_sha256": "9c833a1f8cadf161471c12c4b5a23bd2cf431a0a9236691f4f29d2267cda0fd0",
+      "git_blob_sha1": "9099185fad74115ad6264f74b1296e6e35158eb3"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "bytes": 1074,
+      "sha256": "8e62414565d3bd2b4bee974902139d4fdf3b1bde987efce1a1d07c6396dd454b",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "archive_member_bytes": 1074,
+      "archive_member_sha256": "8e62414565d3bd2b4bee974902139d4fdf3b1bde987efce1a1d07c6396dd454b",
+      "git_blob_sha1": "e75cbfc77237a897e45721dc03cd3de8d90559c8"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "bytes": 2806,
+      "sha256": "55485a65955acb63d028690899dca98e918c046f47fcf53565afe33db3c2c12a",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "archive_member_bytes": 2806,
+      "archive_member_sha256": "55485a65955acb63d028690899dca98e918c046f47fcf53565afe33db3c2c12a",
+      "git_blob_sha1": "bd45f960781b74db58d791451dbb16d6b2069a49"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "bytes": 4846,
+      "sha256": "b5ee92d035a7fe90c70da43f5f52324c3ff75e5a06fd4a0cca18ac46880aa223",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "archive_member_bytes": 4846,
+      "archive_member_sha256": "b5ee92d035a7fe90c70da43f5f52324c3ff75e5a06fd4a0cca18ac46880aa223",
+      "git_blob_sha1": "e5cd82326cc08accb7985cce4a12e0044ce4cf93"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "bytes": 8200,
+      "sha256": "d717054a46a651cb184a4a32234c5f8423d1c77c7bbbc0fd2f00b61b2b6cf537",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "archive_member_bytes": 8200,
+      "archive_member_sha256": "d717054a46a651cb184a4a32234c5f8423d1c77c7bbbc0fd2f00b61b2b6cf537",
+      "git_blob_sha1": "5b0e523476e30cb4567da327423141573c234bd1"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "bytes": 4383,
+      "sha256": "b480518998ad1d1d8562a25f08e12e751dc4a0569f03edd0c2db1afd16141bac",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "archive_member_bytes": 4383,
+      "archive_member_sha256": "b480518998ad1d1d8562a25f08e12e751dc4a0569f03edd0c2db1afd16141bac",
+      "git_blob_sha1": "39ac32cb2762d6cb351bf721b8403ccff17cf186"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "bytes": 7683,
+      "sha256": "d135f8fdb4f8622f3f6622e3ed305ad43ef0c1df3957a8edb419e11c15055e6d",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "archive_member_bytes": 7683,
+      "archive_member_sha256": "d135f8fdb4f8622f3f6622e3ed305ad43ef0c1df3957a8edb419e11c15055e6d",
+      "git_blob_sha1": "f64a3b260c3dc09afec868707e6cc50eb835d172"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "bytes": 7574,
+      "sha256": "c5c9aeaeb5a3186f41c071bc2e26ee7c6a3cfff1336f68ef8e5425cdd55bc590",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "archive_member_bytes": 7574,
+      "archive_member_sha256": "c5c9aeaeb5a3186f41c071bc2e26ee7c6a3cfff1336f68ef8e5425cdd55bc590",
+      "git_blob_sha1": "11ad37ed9cc456ee85d7b7a3ebf849312823c89b"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "bytes": 1733,
+      "sha256": "70a1f55106b4bcc5171d37f99bde5e1c2ca876210466869713a3fb6d9d9f2088",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "archive_member_bytes": 1733,
+      "archive_member_sha256": "70a1f55106b4bcc5171d37f99bde5e1c2ca876210466869713a3fb6d9d9f2088",
+      "git_blob_sha1": "38f01b28f78029d09f212efa639e1fc37a8b0c14"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "bytes": 2885,
+      "sha256": "ee220a8d78732714f8783abc5c24dc97f80d59d57891e8636d43704217cfe008",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "archive_member_bytes": 2885,
+      "archive_member_sha256": "ee220a8d78732714f8783abc5c24dc97f80d59d57891e8636d43704217cfe008",
+      "git_blob_sha1": "0cf3029fddf31783059d7d2681e4c7cd379771d2"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "bytes": 10871,
+      "sha256": "b84c67a86190e1b8dbc38e72cb5f175ad106b1017cf14f19655318f3379ba00a",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "archive_member_bytes": 10871,
+      "archive_member_sha256": "b84c67a86190e1b8dbc38e72cb5f175ad106b1017cf14f19655318f3379ba00a",
+      "git_blob_sha1": "8665234b651860eb8ee80bf7922936de46ee9ce2"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "bytes": 9874,
+      "sha256": "305cb4f5d3e431aca5cbe3449d43ff771d021392b2a9db4aaff58d3dfa330d7a",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "archive_member_bytes": 9874,
+      "archive_member_sha256": "305cb4f5d3e431aca5cbe3449d43ff771d021392b2a9db4aaff58d3dfa330d7a",
+      "git_blob_sha1": "e2777bf49d419a8c99e289739232dd93666dc66b"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "bytes": 12526,
+      "sha256": "036f2f4d6aaecedba1692593a291518bc64e888308c39a8e18c25cf18a7c4df2",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "archive_member_bytes": 12526,
+      "archive_member_sha256": "036f2f4d6aaecedba1692593a291518bc64e888308c39a8e18c25cf18a7c4df2",
+      "git_blob_sha1": "9ce4e7dcb4543e3dec889839f01fc8e772201451"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "bytes": 1352,
+      "sha256": "dbaf6dc6fc629ead1275598976751bd0882f7373d2af0de60a0fab9a3fa76501",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "archive_member_bytes": 1352,
+      "archive_member_sha256": "dbaf6dc6fc629ead1275598976751bd0882f7373d2af0de60a0fab9a3fa76501",
+      "git_blob_sha1": "9e0e1042b1050cc4c929e19eb6cd240b635ad5b2"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "bytes": 5295,
+      "sha256": "e9add376405956cfee5fd343c30fc745f1f127b34b88caf2993014bde13582ec",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "archive_member_bytes": 5295,
+      "archive_member_sha256": "e9add376405956cfee5fd343c30fc745f1f127b34b88caf2993014bde13582ec",
+      "git_blob_sha1": "5efbf6c0a73184ff11592cb44db83c45f8fb820e"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "bytes": 39291,
+      "sha256": "4a2f4e677d1f6930f396dbc92c50138f56268f970de7e4f815fb801607cafad1",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "archive_member_bytes": 39291,
+      "archive_member_sha256": "4a2f4e677d1f6930f396dbc92c50138f56268f970de7e4f815fb801607cafad1",
+      "git_blob_sha1": "6899b8dce1444fa71e4ab86e4c6c995e988053e7"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "bytes": 9291,
+      "sha256": "d5939cf1cd4424dcf93657ea04ca759dde02e6697b1aefb734a216fe70d2fff8",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "archive_member_bytes": 9291,
+      "archive_member_sha256": "d5939cf1cd4424dcf93657ea04ca759dde02e6697b1aefb734a216fe70d2fff8",
+      "git_blob_sha1": "4e4beee7c532bcc6eee99998189db750252c0b64"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "bytes": 16629,
+      "sha256": "3304c7e94fcc3a9ff873759590a7f1dccf1a6a437dd31c554eb4d507e9e8435c",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "archive_member_bytes": 16629,
+      "archive_member_sha256": "3304c7e94fcc3a9ff873759590a7f1dccf1a6a437dd31c554eb4d507e9e8435c",
+      "git_blob_sha1": "e26dd8a8c62062be672cb6bd8fb6359666d8fb7c"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bielik.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bielik.py",
+      "bytes": 982,
+      "sha256": "f5482a9cb7f0e203be65f86759824bee73eeeed66b3024d012483b37bd521645",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bielik.py",
+      "archive_member_bytes": 982,
+      "archive_member_sha256": "f5482a9cb7f0e203be65f86759824bee73eeeed66b3024d012483b37bd521645",
+      "git_blob_sha1": "ceda370bcff7f529d6f3f15c1ca10cd9b73bc4d7"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "bytes": 4602,
+      "sha256": "8f755768c1806dddd511f8ff106a4387582af2b061b27db7fff64b5d55ea987f",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "archive_member_bytes": 4602,
+      "archive_member_sha256": "8f755768c1806dddd511f8ff106a4387582af2b061b27db7fff64b5d55ea987f",
+      "git_blob_sha1": "67b896665bbc80c5f304f971134203ea6f7c3d16"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek.py",
+      "bytes": 3417,
+      "sha256": "e6357a9006ad1aeeeab27423ef18f4e17e5dba8615a5c4f90a9c91f9f656905f",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek.py",
+      "archive_member_bytes": 3417,
+      "archive_member_sha256": "e6357a9006ad1aeeeab27423ef18f4e17e5dba8615a5c4f90a9c91f9f656905f",
+      "git_blob_sha1": "0c4af8f09c21dad7e74e7db617d8709748bb24ed"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "bytes": 11421,
+      "sha256": "4c07edd6f5472c35a000a128832e5e0515dbeb70577e6f8efdc86a14952fb993",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "archive_member_bytes": 11421,
+      "archive_member_sha256": "4c07edd6f5472c35a000a128832e5e0515dbeb70577e6f8efdc86a14952fb993",
+      "git_blob_sha1": "b425bfe87a99c48dcb8aefc3d6262b26013b78df"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_reasoning.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_reasoning.py",
+      "bytes": 10186,
+      "sha256": "59b04da511730e7bfeb1b8c3e38f70ca24d48f3bef73afcd7a0f30bfc7fc182b",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_reasoning.py",
+      "archive_member_bytes": 10186,
+      "archive_member_sha256": "59b04da511730e7bfeb1b8c3e38f70ca24d48f3bef73afcd7a0f30bfc7fc182b",
+      "git_blob_sha1": "62994859a90cccd00ac07fa2888d8d138bbdbc17"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "bytes": 3466,
+      "sha256": "440293955ad874fab0729d562f925941627aea8f2487dab3e5a393011959dd29",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "archive_member_bytes": 3466,
+      "archive_member_sha256": "440293955ad874fab0729d562f925941627aea8f2487dab3e5a393011959dd29",
+      "git_blob_sha1": "d9b15517a89f223bfdd721f7c069dede1d14bf7b"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/gemma.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/gemma.py",
+      "bytes": 3805,
+      "sha256": "b2f8ec980a49c6719de3e9e18f5cb25ec54484f4e686b2c89f2d1a5fd95108d3",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/gemma.py",
+      "archive_member_bytes": 3805,
+      "archive_member_sha256": "b2f8ec980a49c6719de3e9e18f5cb25ec54484f4e686b2c89f2d1a5fd95108d3",
+      "git_blob_sha1": "3b5c3985525c4e433be52abbff5e1a16c61dd73a"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "bytes": 1402,
+      "sha256": "7252a759b7d7187c7a9b551fbacfb125e8cd7742dc3a3f6ab8984ff358d9d5ea",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "archive_member_bytes": 1402,
+      "archive_member_sha256": "7252a759b7d7187c7a9b551fbacfb125e8cd7742dc3a3f6ab8984ff358d9d5ea",
+      "git_blob_sha1": "a27ad97a4d2c43dd9d55650e551a465570e24873"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "bytes": 5399,
+      "sha256": "3e49ee7611c28ebe5d52af0f8043abac88800ed414c4c932f02e4658828d2e15",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "archive_member_bytes": 5399,
+      "archive_member_sha256": "3e49ee7611c28ebe5d52af0f8043abac88800ed414c4c932f02e4658828d2e15",
+      "git_blob_sha1": "dd81ed0ea398d36195afe9350c12290db70c05b6"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "bytes": 4484,
+      "sha256": "b56874969035189cb0b4e915837c571d4d44221f00acb1eb3a78353f34c74fbe",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "archive_member_bytes": 4484,
+      "archive_member_sha256": "b56874969035189cb0b4e915837c571d4d44221f00acb1eb3a78353f34c74fbe",
+      "git_blob_sha1": "9bbbc1e122bac761a7ec62864aa50840b44782da"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "bytes": 13609,
+      "sha256": "0cfef9fc3940310bf592ddb18758e6200a172b2d484e9668aa7cb715ccac2c97",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "archive_member_bytes": 13609,
+      "archive_member_sha256": "0cfef9fc3940310bf592ddb18758e6200a172b2d484e9668aa7cb715ccac2c97",
+      "git_blob_sha1": "2b303b50877122bcc508fe6eef30d7dcc40eac39"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "bytes": 8954,
+      "sha256": "eebf156bd5febbbaa7251368f508b553cabb0762dca31073c8effbfab0bbc193",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "archive_member_bytes": 8954,
+      "archive_member_sha256": "eebf156bd5febbbaa7251368f508b553cabb0762dca31073c8effbfab0bbc193",
+      "git_blob_sha1": "fee6ab74def4523a97a9615c3350df53acdf9d8b"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "bytes": 5117,
+      "sha256": "be6f72048f93ddd5e646012eb4cf7ae07ad637d8101e900d522ce24fc4e05a28",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "archive_member_bytes": 5117,
+      "archive_member_sha256": "be6f72048f93ddd5e646012eb4cf7ae07ad637d8101e900d522ce24fc4e05a28",
+      "git_blob_sha1": "2eb06b52459b21a59482ea7ced7195a2e6664a4b"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama.py",
+      "bytes": 2480,
+      "sha256": "43d6a5931abc1050510b88b1055c4ffb66aeaecfe15ea0275806ef3edc10c1ee",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama.py",
+      "archive_member_bytes": 2480,
+      "archive_member_sha256": "43d6a5931abc1050510b88b1055c4ffb66aeaecfe15ea0275806ef3edc10c1ee",
+      "git_blob_sha1": "59c28c8a1567d4b08e607a359457500930d617a3"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "bytes": 11429,
+      "sha256": "6ad5c7ae2921ad2dae37a8b0b45da64e76fc7c80bae6bf982863876e0c792549",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "archive_member_bytes": 11429,
+      "archive_member_sha256": "6ad5c7ae2921ad2dae37a8b0b45da64e76fc7c80bae6bf982863876e0c792549",
+      "git_blob_sha1": "9df2e225fb7bf3722a4cb14a94a72c9ce0a5016c"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm.py",
+      "bytes": 854,
+      "sha256": "35c3aa1b1fec5467a8f21622e9dd6034ab2aa49d1321bf200da84a00bc0bf934",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm.py",
+      "archive_member_bytes": 854,
+      "archive_member_sha256": "35c3aa1b1fec5467a8f21622e9dd6034ab2aa49d1321bf200da84a00bc0bf934",
+      "git_blob_sha1": "861c852b11f7b8072c711d802bea2effef623db2"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "bytes": 20512,
+      "sha256": "7948881d88c81078cf8d580c3d19b7e3eadb80cdcc7542d08607dc293c437bd3",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "archive_member_bytes": 20512,
+      "archive_member_sha256": "7948881d88c81078cf8d580c3d19b7e3eadb80cdcc7542d08607dc293c437bd3",
+      "git_blob_sha1": "d52b9207277b5d71d789612a316b8ff225164f32"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "bytes": 12676,
+      "sha256": "11686f33c34b2bf67aaab5911e5862acac47fc543dc0a95fc01f249e03d6362f",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "archive_member_bytes": 12676,
+      "archive_member_sha256": "11686f33c34b2bf67aaab5911e5862acac47fc543dc0a95fc01f249e03d6362f",
+      "git_blob_sha1": "cc925980980bdc886756738337793b9ea7aab7ba"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi.py",
+      "bytes": 2490,
+      "sha256": "457d6f9bf4a5cfdad6438d2d908eb378800a3ba52807a4081d442c6bb1b774e4",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi.py",
+      "archive_member_bytes": 2490,
+      "archive_member_sha256": "457d6f9bf4a5cfdad6438d2d908eb378800a3ba52807a4081d442c6bb1b774e4",
+      "git_blob_sha1": "71492c91d8a2c7bb2443e29cf48763bbbcc98b2a"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "bytes": 9823,
+      "sha256": "07e28e8d7129ac0de92c494599413364cae3f0738d221794a747668bd349365f",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "archive_member_bytes": 9823,
+      "archive_member_sha256": "07e28e8d7129ac0de92c494599413364cae3f0738d221794a747668bd349365f",
+      "git_blob_sha1": "b52e05461cf54232e6b2a42e41b45ecd146507f6"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/quick_testing_oss.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/quick_testing_oss.py",
+      "bytes": 917,
+      "sha256": "2f2d30416518ffa744138feb1608e305bb5b5249843538a8e67411ecc878e2ba",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/quick_testing_oss.py",
+      "archive_member_bytes": 917,
+      "archive_member_sha256": "2f2d30416518ffa744138feb1608e305bb5b5249843538a8e67411ecc878e2ba",
+      "git_blob_sha1": "a1e7c45fc425121ca799d0b1a290c0d8990e8397"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen.py",
+      "bytes": 8747,
+      "sha256": "8354bf77dca40b425a42d665bc3944bfc4fbe1ce291fc2765e9e5cce7d84c835",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen.py",
+      "archive_member_bytes": 8747,
+      "archive_member_sha256": "8354bf77dca40b425a42d665bc3944bfc4fbe1ce291fc2765e9e5cce7d84c835",
+      "git_blob_sha1": "f24a4c8f847158ac19785191da614c3650a808cb"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "bytes": 12654,
+      "sha256": "57f161b88938069fca9659c93d10b668b6628b6a4db40c50dc4e3e954d84f583",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "archive_member_bytes": 12654,
+      "archive_member_sha256": "57f161b88938069fca9659c93d10b668b6628b6a4db40c50dc4e3e954d84f583",
+      "git_blob_sha1": "66191d78a27a8917f3fde1095781375668866f34"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "bytes": 4991,
+      "sha256": "a44ddda09b58efa44fcb2766d0a0b3c65be6621e88d1e86934d6ea20754fa4a3",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "archive_member_bytes": 4991,
+      "archive_member_sha256": "a44ddda09b58efa44fcb2766d0a0b3c65be6621e88d1e86934d6ea20754fa4a3",
+      "git_blob_sha1": "ddd3396f9e9272df84189d63b95c074e625cf195"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "bytes": 4936,
+      "sha256": "ce36883003d4935e9ff614b96a817fc4608fc1e42cc4c9321c2098d42e685be0",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "archive_member_bytes": 4936,
+      "archive_member_sha256": "ce36883003d4935e9ff614b96a817fc4608fc1e42cc4c9321c2098d42e685be0",
+      "git_blob_sha1": "8850b4b6e2d5d481cf58e0c7baf4fedccf928c3d"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/think_agent.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/think_agent.py",
+      "bytes": 7761,
+      "sha256": "e728c0da30b9f72add108c5f3176bfab43358275ca30e08d22c32520eb600bf8",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/think_agent.py",
+      "archive_member_bytes": 7761,
+      "archive_member_sha256": "e728c0da30b9f72add108c5f3176bfab43358275ca30e08d22c32520eb600bf8",
+      "git_blob_sha1": "5904e3fdcfc70998c7d2cd35162e5b021528557f"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py",
+      "bytes": 464,
+      "sha256": "0244f6108e85b40379d7ddd80d4f7b699a270972c4d8cf37966a4aa677f8ba57",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py",
+      "archive_member_bytes": 464,
+      "archive_member_sha256": "0244f6108e85b40379d7ddd80d4f7b699a270972c4d8cf37966a4aa677f8ba57",
+      "git_blob_sha1": "d57680ab3eab31cce1188d765da39c5cb9784fa4"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/__init__.py",
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/__init__.py",
+      "archive_member_bytes": 0,
+      "archive_member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob_sha1": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py",
+      "bytes": 5510,
+      "sha256": "78aa38dcfae655b5e3a982d0aaadf72aad0bb64a62cc4db4d7b7aa2185e666f5",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py",
+      "archive_member_bytes": 5510,
+      "archive_member_sha256": "78aa38dcfae655b5e3a982d0aaadf72aad0bb64a62cc4db4d7b7aa2185e666f5",
+      "git_blob_sha1": "f9081a958f1d173427064c3505d25ecbebf8aa70"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py",
+      "bytes": 2735,
+      "sha256": "65eea903e538cc2afa5f37e15cccfc303462f750ca45556ee654f6722f4b1e52",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py",
+      "archive_member_bytes": 2735,
+      "archive_member_sha256": "65eea903e538cc2afa5f37e15cccfc303462f750ca45556ee654f6722f4b1e52",
+      "git_blob_sha1": "162510cf681283c95458904177776a41271d014a"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "bytes": 31374,
+      "sha256": "153bb33a9515ea2d6ee6a1387faaa464c7be4fe9c6a9f88cc17ad23a1cc306d2",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "archive_member_bytes": 31374,
+      "archive_member_sha256": "153bb33a9515ea2d6ee6a1387faaa464c7be4fe9c6a9f88cc17ad23a1cc306d2",
+      "git_blob_sha1": "f78acc240bee3c43b18de3d4195fbf6ee1a207f1"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "bytes": 7494,
+      "sha256": "255e6dad9a6533c8e52b4c8b2bfc78c0744b915605e09c04808df6c023f4a43f",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "archive_member_bytes": 7494,
+      "archive_member_sha256": "255e6dad9a6533c8e52b4c8b2bfc78c0744b915605e09c04808df6c023f4a43f",
+      "git_blob_sha1": "c28472cd8b24e250d3412c5edf3b7b49c748f915"
+    },
+    {
+      "original_path": "berkeley-function-call-leaderboard/pyproject.toml",
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/pyproject.toml",
+      "bytes": 1831,
+      "sha256": "20d86859dc988e442c13a6c4f3567094bd8f2d4a269d59015337bdf6aeba7dd3",
+      "archive_member": "gorilla-1.3/berkeley-function-call-leaderboard/pyproject.toml",
+      "archive_member_bytes": 1831,
+      "archive_member_sha256": "20d86859dc988e442c13a6c4f3567094bd8f2d4a269d59015337bdf6aeba7dd3",
+      "git_blob_sha1": "a514e581f18902f4f87562ee3c4964931b61e81f"
+    }
+  ],
+  "imports": [
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 1,
+      "module": "argparse"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 3,
+      "module": "bfcl_eval.constants.category_mapping"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 8,
+      "module": "bfcl_eval.constants.eval_config"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 16,
+      "module": "bfcl_eval.eval_checker.ast_eval.ast_checker"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 17,
+      "module": "bfcl_eval.eval_checker.eval_runner_helper"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 18,
+      "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_checker"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 22,
+      "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 23,
+      "module": "bfcl_eval.constants.model_config"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 24,
+      "module": "bfcl_eval.utils"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 25,
+      "module": "dotenv"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner.py",
+      "line": 26,
+      "module": "tqdm"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 2,
+      "module": "statistics"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 3,
+      "module": "datetime"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 4,
+      "module": "pathlib"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 6,
+      "module": "numpy"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 7,
+      "module": "pandas"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 8,
+      "module": "bfcl_eval.constants.category_mapping"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 9,
+      "module": "bfcl_eval.constants.column_headers"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 10,
+      "module": "bfcl_eval.constants.eval_config"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 11,
+      "module": "bfcl_eval.constants.model_config"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 12,
+      "module": "bfcl_eval.utils"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/eval_runner_helper.py",
+      "line": 434,
+      "module": "wandb"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 2,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 3,
+      "module": "copy"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 5,
+      "module": "bfcl_eval.constants.category_mapping"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 6,
+      "module": "bfcl_eval.constants.default_prompts"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 11,
+      "module": "bfcl_eval.constants.eval_config"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 12,
+      "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 17,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 18,
+      "module": "bfcl_eval.utils"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/base_handler.py",
+      "line": 19,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 1,
+      "module": "ast"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 2,
+      "module": "builtins"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 3,
+      "module": "copy"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 4,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 5,
+      "module": "operator"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 6,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 7,
+      "module": "functools"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 8,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 10,
+      "module": "bfcl_eval.constants.default_prompts"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 11,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 12,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 13,
+      "module": "bfcl_eval.model_handler.parser.java_parser"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 14,
+      "module": "bfcl_eval.model_handler.parser.js_parser"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 15,
+      "module": "tenacity"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "line": 1,
+      "module": "bfcl_eval.constants.model_config"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "line": 2,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "line": 6,
+      "module": "bfcl_eval.eval_checker.ast_eval.type_convertor.java_type_converter"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "line": 7,
+      "module": "bfcl_eval.eval_checker.ast_eval.type_convertor.js_type_converter"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/retry-codex227/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/ast_checker.py",
+      "line": 8,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bitagent.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "line": 2,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_coder.py",
+      "line": 11,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_reasoning.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_reasoning.py",
+      "line": 2,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek_reasoning.py",
+      "line": 8,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/falcon_fc.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/gemma.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/gemma.py",
+      "line": 2,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/gemma.py",
+      "line": 7,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glaive.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "line": 3,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/glm.py",
+      "line": 11,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "line": 3,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite.py",
+      "line": 10,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 2,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 3,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 10,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hammer.py",
+      "line": 8,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 1,
+      "module": "inspect"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 2,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 4,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/hermes.py",
+      "line": 11,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 1,
+      "module": "ast"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 2,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 3,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 5,
+      "module": "datamodel_code_generator"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 6,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 13,
+      "module": "datamodel_code_generator"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 14,
+      "module": "datamodel_code_generator.model"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 15,
+      "module": "datamodel_code_generator.parser.jsonschema"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 16,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 151,
+      "module": "datamodel_code_generator.format"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 158,
+      "module": "datamodel_code_generator.format"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "line": 2,
+      "module": "random"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "line": 3,
+      "module": "string"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/mistral_fc.py",
+      "line": 10,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "line": 2,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "line": 9,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/quick_testing_oss.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/quick_testing_oss.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "line": 2,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "line": 9,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_llama.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/salesforce_qwen.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/think_agent.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/think_agent.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/think_agent.py",
+      "line": 4,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/eval_config.py",
+      "line": 2,
+      "module": "pathlib"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 1,
+      "module": "dataclasses"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 2,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.api_inference.claude"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.api_inference.cohere"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.api_inference.databricks"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.api_inference.deepseek"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.api_inference.dm_cito"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 9,
+      "module": "bfcl_eval.model_handler.api_inference.fireworks"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 10,
+      "module": "bfcl_eval.model_handler.api_inference.functionary"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 11,
+      "module": "bfcl_eval.model_handler.api_inference.gemini"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 12,
+      "module": "bfcl_eval.model_handler.api_inference.gogoagent"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 13,
+      "module": "bfcl_eval.model_handler.api_inference.gorilla"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 14,
+      "module": "bfcl_eval.model_handler.api_inference.grok"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 15,
+      "module": "bfcl_eval.model_handler.api_inference.ling"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 16,
+      "module": "bfcl_eval.model_handler.api_inference.mining"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 17,
+      "module": "bfcl_eval.model_handler.api_inference.mistral"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 18,
+      "module": "bfcl_eval.model_handler.api_inference.nemotron"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 19,
+      "module": "bfcl_eval.model_handler.api_inference.nexus"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 20,
+      "module": "bfcl_eval.model_handler.api_inference.nova"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 21,
+      "module": "bfcl_eval.model_handler.api_inference.novita"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 22,
+      "module": "bfcl_eval.model_handler.api_inference.nvidia"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 23,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 26,
+      "module": "bfcl_eval.model_handler.api_inference.openai_response"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 27,
+      "module": "bfcl_eval.model_handler.api_inference.qwen"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 32,
+      "module": "bfcl_eval.model_handler.api_inference.writer"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 33,
+      "module": "bfcl_eval.model_handler.api_inference.yi"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 34,
+      "module": "bfcl_eval.model_handler.local_inference.arch"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 35,
+      "module": "bfcl_eval.model_handler.local_inference.bielik"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 36,
+      "module": "bfcl_eval.model_handler.local_inference.bitagent"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 37,
+      "module": "bfcl_eval.model_handler.local_inference.deepseek"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 38,
+      "module": "bfcl_eval.model_handler.local_inference.deepseek_coder"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 39,
+      "module": "bfcl_eval.model_handler.local_inference.deepseek_reasoning"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 42,
+      "module": "bfcl_eval.model_handler.local_inference.falcon_fc"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 43,
+      "module": "bfcl_eval.model_handler.local_inference.gemma"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 44,
+      "module": "bfcl_eval.model_handler.local_inference.glaive"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 45,
+      "module": "bfcl_eval.model_handler.local_inference.glm"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 46,
+      "module": "bfcl_eval.model_handler.local_inference.granite"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 49,
+      "module": "bfcl_eval.model_handler.local_inference.granite_3"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 50,
+      "module": "bfcl_eval.model_handler.local_inference.hammer"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 51,
+      "module": "bfcl_eval.model_handler.local_inference.hermes"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 52,
+      "module": "bfcl_eval.model_handler.local_inference.llama"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 53,
+      "module": "bfcl_eval.model_handler.local_inference.llama_3_1"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 54,
+      "module": "bfcl_eval.model_handler.local_inference.minicpm"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 55,
+      "module": "bfcl_eval.model_handler.local_inference.minicpm_fc"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 56,
+      "module": "bfcl_eval.model_handler.local_inference.mistral_fc"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 57,
+      "module": "bfcl_eval.model_handler.local_inference.phi"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 58,
+      "module": "bfcl_eval.model_handler.local_inference.phi_fc"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 59,
+      "module": "bfcl_eval.model_handler.local_inference.quick_testing_oss"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 62,
+      "module": "bfcl_eval.model_handler.local_inference.qwen"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 63,
+      "module": "bfcl_eval.model_handler.local_inference.qwen_fc"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 64,
+      "module": "bfcl_eval.model_handler.local_inference.salesforce_llama"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 67,
+      "module": "bfcl_eval.model_handler.local_inference.salesforce_qwen"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/constants/model_config.py",
+      "line": 70,
+      "module": "bfcl_eval.model_handler.local_inference.think_agent"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "line": 1,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "line": 2,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/java_type_converter.py",
+      "line": 3,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+      "line": 1,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/ast_eval/type_convertor/js_type_converter.py",
+      "line": 2,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_checker.py",
+      "line": 1,
+      "module": "bfcl_eval.eval_checker.multi_turn_eval.multi_turn_utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 1,
+      "module": "importlib"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 2,
+      "module": "inspect"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 3,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 4,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 5,
+      "module": "copy"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 5,
+      "module": "anthropic"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 6,
+      "module": "anthropic.types"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 8,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 9,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 10,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/claude.py",
+      "line": 22,
+      "module": "bfcl_eval.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 1,
+      "module": "ast"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 2,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 3,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 4,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 5,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 7,
+      "module": "cohere"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 9,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 10,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 11,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 16,
+      "module": "tenacity.stop"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 2,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/databricks.py",
+      "line": 13,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 4,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 14,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/deepseek.py",
+      "line": 15,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "line": 2,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "line": 3,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/dm_cito.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.api_inference.mining"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "line": 2,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/fireworks.py",
+      "line": 6,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+      "line": 2,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/functionary.py",
+      "line": 3,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 2,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 4,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 17,
+      "module": "google"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 18,
+      "module": "google.genai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gemini.py",
+      "line": 19,
+      "module": "google.genai.types"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gogoagent.py",
+      "line": 4,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "line": 2,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "line": 4,
+      "module": "requests"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/gorilla.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "line": 4,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "line": 5,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/grok.py",
+      "line": 6,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 13,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/ling.py",
+      "line": 14,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 4,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 9,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mining.py",
+      "line": 10,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 6,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/mistral.py",
+      "line": 16,
+      "module": "mistralai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "line": 1,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.api_inference.nvidia"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nemotron.py",
+      "line": 11,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "line": 1,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "line": 3,
+      "module": "requests"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nexus.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 2,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 4,
+      "module": "boto3"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 6,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nova.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/novita.py",
+      "line": 5,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "line": 3,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/nvidia.py",
+      "line": 11,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 4,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 6,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 9,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_completion.py",
+      "line": 19,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 5,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 6,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 18,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/openai_response.py",
+      "line": 19,
+      "module": "openai.types.responses"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 2,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 6,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 7,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 8,
+      "module": "qwen_agent.llm"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/qwen.py",
+      "line": 9,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "line": 2,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.api_inference.openai_completion"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/writer.py",
+      "line": 6,
+      "module": "writerai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 3,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 6,
+      "module": "bfcl_eval.constants.type_mappings"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 7,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 8,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/yi.py",
+      "line": 13,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "line": 2,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "line": 4,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "line": 5,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "line": 9,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 1,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 2,
+      "module": "subprocess"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 3,
+      "module": "threading"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 4,
+      "module": "time"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 5,
+      "module": "concurrent.futures"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 6,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 7,
+      "module": "traceback"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 9,
+      "module": "requests"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 10,
+      "module": "bfcl_eval.constants.eval_config"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 11,
+      "module": "bfcl_eval.model_handler.base_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 12,
+      "module": "bfcl_eval.model_handler.model_style"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 13,
+      "module": "bfcl_eval.model_handler.utils"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 19,
+      "module": "openai"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 20,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 21,
+      "module": "tqdm"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/base_oss_handler.py",
+      "line": 79,
+      "module": "transformers"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bielik.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/bielik.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/deepseek.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen.py",
+      "line": 1,
+      "module": "bfcl_eval.model_handler.local_inference.base_oss_handler"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen.py",
+      "line": 2,
+      "module": "overrides"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/model_style.py",
+      "line": 1,
+      "module": "enum"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py",
+      "line": 1,
+      "module": "tree_sitter"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/java_parser.py",
+      "line": 2,
+      "module": "tree_sitter_java"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py",
+      "line": 1,
+      "module": "tree_sitter"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/parser/js_parser.py",
+      "line": 2,
+      "module": "tree_sitter_javascript"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "line": 1,
+      "module": "json"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "line": 2,
+      "module": "os"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "line": 3,
+      "module": "re"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "line": 4,
+      "module": "pathlib"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "line": 5,
+      "module": "typing"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/utils.py",
+      "line": 7,
+      "module": "bfcl_eval.constants.category_mapping"
+    }
+  ],
+  "evaluation_calls": [
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 230,
+      "call": "ast.literal_eval"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 302,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 313,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py",
+      "line": 646,
+      "call": "ast.literal_eval"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/granite_3.py",
+      "line": 125,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "line": 198,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/llama_3_1.py",
+      "line": 218,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/minicpm_fc.py",
+      "line": 281,
+      "call": "ast.literal_eval"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/phi_fc.py",
+      "line": 195,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/e3_bfcl_source/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/qwen_fc.py",
+      "line": 38,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 48,
+      "call": "importlib.import_module"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/eval_checker/multi_turn_eval/multi_turn_utils.py",
+      "line": 93,
+      "call": "eval"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/api_inference/cohere.py",
+      "line": 237,
+      "call": "ast.literal_eval"
+    },
+    {
+      "path": "tests/fixtures/external_provenance_b5/bfcl/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/local_inference/arch.py",
+      "line": 167,
+      "call": "eval"
+    }
+  ],
+  "signature_cryptographically_verified": false,
+  "runtime_closure": false,
+  "official_scorer_executed": false,
+  "measured": false,
+  "production_authorized": false
+}

@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "task": 225,
+  "scope": "code/metadata only; historical candidate is not Hub-export provenance",
+  "requests": [
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/commits?path=datasets/trivia_qa/trivia_qa.py&per_page=3",
+      "requested_at_utc": "2026-10-14T04:20:16.615585+00:00",
+      "purpose": "public code or repository metadata only",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "path": "evidence/history.json",
+      "size_bytes": 14209,
+      "sha256": "0419849c519580c26fc9b4d886cbe54c3b7be19811458468adf6249ff9264cd2"
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/contents/datasets/trivia_qa/trivia_qa.py?ref=413205c1a7247a2ff81cf709117ce93624fa6fd3",
+      "requested_at_utc": "2026-10-14T04:20:16.617757+00:00",
+      "purpose": "public code or repository metadata only",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "path": "evidence/loader_response.json",
+      "size_bytes": 19504,
+      "sha256": "61adbc3dd6515cc5136d267385e9c1750c58f1cb59b487a23955e85f2e7d5031",
+      "decoded_file": {
+        "path": "historical_loader/trivia_qa.py",
+        "size_bytes": 13358,
+        "sha256": "653d4b0179d708c23d20aebf40253bc64c2b30d70627247d2a4e6d63c63213d2",
+        "git_blob_sha1": "5e1c9aab6b9e71f7d1251089ae34590794c7ae58",
+        "api_blob_sha1": "5e1c9aab6b9e71f7d1251089ae34590794c7ae58"
+      }
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/contents/LICENSE?ref=413205c1a7247a2ff81cf709117ce93624fa6fd3",
+      "requested_at_utc": "2026-10-14T04:20:16.619121+00:00",
+      "purpose": "public code or repository metadata only",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "path": "evidence/license_response.json",
+      "size_bytes": 16599,
+      "sha256": "23fb3d7bb77228da93dd5a15e7aca0b45d7f14120726916642f1c23c61e66f3a",
+      "decoded_file": {
+        "path": "historical_loader/LICENSE",
+        "size_bytes": 11358,
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "git_blob_sha1": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+        "api_blob_sha1": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+      }
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/git/commits/413205c1a7247a2ff81cf709117ce93624fa6fd3",
+      "requested_at_utc": "2026-10-14T04:20:16.620160+00:00",
+      "purpose": "public code or repository metadata only",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "path": "evidence/git_commit_response.json",
+      "size_bytes": 1905,
+      "sha256": "fce193eafc340029b32bcea6d1c902f273fa0dda9970b08b6e0015a062b1971b"
+    },
+    {
+      "url": "https://huggingface.co/api/datasets/mandarjoshi/trivia_qa/revision/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f",
+      "requested_at_utc": "2026-10-14T04:20:16.621455+00:00",
+      "purpose": "public code or repository metadata only",
+      "error_type": "URLError",
+      "error": "<urlopen error [Errno 101] Network is unreachable>",
+      "status": null,
+      "response_retained": false
+    },
+    {
+      "url": "https://huggingface.co/api/datasets/mandarjoshi/trivia_qa/tree/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f?recursive=false&expand=false",
+      "requested_at_utc": "2026-10-14T04:20:16.622493+00:00",
+      "purpose": "public code or repository metadata only",
+      "error_type": "URLError",
+      "error": "<urlopen error [Errno 101] Network is unreachable>",
+      "status": null,
+      "response_retained": false
+    },
+    {
+      "url": "https://huggingface.co/datasets/mandarjoshi/trivia_qa/raw/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f/trivia_qa.py",
+      "requested_at_utc": "2026-10-14T04:20:16.623950+00:00",
+      "purpose": "public code or repository metadata only",
+      "error_type": "URLError",
+      "error": "<urlopen error [Errno 101] Network is unreachable>",
+      "status": null,
+      "response_retained": false
+    },
+    {
+      "url": "https://huggingface.co/api/datasets/mandarjoshi/trivia_qa/commits/0f7faf33a3908546c6fd5b73a660e0f8ff173c2f",
+      "requested_at_utc": "2026-10-14T04:20:16.624841+00:00",
+      "purpose": "public code or repository metadata only",
+      "error_type": "URLError",
+      "error": "<urlopen error [Errno 101] Network is unreachable>",
+      "status": null,
+      "response_retained": false
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/git/trees/5d78c0a2019283e63dac3180a380b863640fc09b",
+      "requested_at_utc": "2026-10-14T04:22:11.110003+00:00",
+      "purpose": "nonrecursive Git tree metadata only",
+      "status": 200,
+      "path": "evidence/root_tree_response.json",
+      "size_bytes": 6033,
+      "sha256": "3d84f0e8ea307b6851e3fc835bb0a80e186ef72a07cf835379340b3e65b52a2b"
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/git/trees/d7cddc6d8052851bd29fa6135c435414d33d8693",
+      "requested_at_utc": "2026-10-14T04:22:12.466565+00:00",
+      "purpose": "nonrecursive Git tree metadata only",
+      "status": 200,
+      "path": "evidence/datasets_tree_response.json",
+      "size_bytes": 149914,
+      "sha256": "3ce211def68444614d351544c01ab69775a9afd18877e57b3d336fc01e9bd282"
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/git/trees/a2f0a9794fb3ada24ab9e298e2230996c59e500e",
+      "requested_at_utc": "2026-10-14T04:22:15.544783+00:00",
+      "purpose": "nonrecursive Git tree metadata only",
+      "status": 200,
+      "path": "evidence/trivia_qa_tree_response.json",
+      "size_bytes": 1069,
+      "sha256": "5ad3736148ff7ce01d0b90973b416a67c8fba33587475f602002214e44eff3a6"
+    },
+    {
+      "url": "https://api.github.com/repos/huggingface/datasets/contents/datasets/trivia_qa/dataset_infos.json?ref=413205c1a7247a2ff81cf709117ce93624fa6fd3",
+      "requested_at_utc": "2026-10-14T04:23:23.443458+00:00",
+      "purpose": "historical feature/config/split/checksum manifest only; no rows",
+      "status": 200,
+      "path": "evidence/manifest_response.json",
+      "size_bytes": 58020,
+      "sha256": "fa8c6ca0e4962ab7099e196f3a2320f603d99066c8cedf079655df68064b6bc5",
+      "decoded_file": {
+        "path": "historical_loader/dataset_infos.json",
+        "size_bytes": 41283,
+        "sha256": "220e5edddaa870a2840d363bd0d69a08997a4c6e107795ac727e5fa935533194",
+        "git_blob_sha1": "02fa50221855cf0619e5f6a6dfcdcf977f484be0",
+        "api_blob_sha1": "02fa50221855cf0619e5f6a6dfcdcf977f484be0"
+      }
+    }
+  ]
+}

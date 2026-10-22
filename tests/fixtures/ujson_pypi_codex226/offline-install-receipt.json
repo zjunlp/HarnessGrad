@@ -1,0 +1,41 @@
+{
+  "task": "codex226",
+  "method": "PIP_CONFIG_FILE=/dev/null Fresh worktree-local stdlib venv, ensurepip pip 24.0, pip --isolated --disable-pip-version-check --no-cache-dir install --no-index --find-links=<fixture>/artifacts --require-hashes --only-binary=:all: --no-deps --no-compile --report=<fixture>/offline-install-report.json -r <fixture>/requirements-codex226.txt",
+  "python": "3.12.4",
+  "libc": [
+    "glibc",
+    "2.35"
+  ],
+  "prefix": "/tmp/hg-codex-226/.scratch/ujson-codex226/replay-venv",
+  "system_site_packages": false,
+  "installed_files_match_wheel": {
+    "ujson.cpython-312-x86_64-linux-gnu.so": {
+      "bytes": 105936,
+      "sha256": "deb036e60d4b61104bad389783094ebb09a35dbdecd21aeea572968762c3be5c"
+    },
+    "ujson-5.10.0.dist-info/LICENSE.txt": {
+      "bytes": 5975,
+      "sha256": "36866344f0a486541bd9800f1a407a056c0c214a82c658f059694daf3dc394d2"
+    },
+    "ujson-5.10.0.dist-info/METADATA": {
+      "bytes": 9349,
+      "sha256": "b7a07b8cfb552e87ddf1ff235080d3c23ab1dd3fdba0e53775ba456e7ba09488"
+    },
+    "ujson-5.10.0.dist-info/top_level.txt": {
+      "bytes": 6,
+      "sha256": "201318b952021d68bdc6798c376d9434c10561fd784dc702ee8f6e60f872720d"
+    },
+    "ujson-5.10.0.dist-info/WHEEL": {
+      "bytes": 152,
+      "sha256": "3afb6f9dba5c6b11dae5381781f0b8f04e8903bccbafbb2f32ca4f3fb564e68f"
+    }
+  },
+  "wheel_record_verified": true,
+  "native_extension_imported": false,
+  "network_namespace_disabled": false,
+  "offline_scope": "Local-wheel installation with index/dependency/version/cache access disabled. No OS-level network denial or supported-image closure is claimed.",
+  "pip_report_sha256": "2ac49d5d6f3463439e6e3bb11fdad626ca2050998e70a4aac31e567f7a6ab9e1",
+  "runtime_closed": false,
+  "cleanup": "Task scratch venv/extracted ELF will be removed after focused tests; fixture and receipts remain.",
+  "pip_configuration_files_disabled": true
+}
