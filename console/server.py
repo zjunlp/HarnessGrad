@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""实验台 · 只读 API 与静态文件服务。
+"""实验台 · 观察 API、对话与受守卫保护的实验启动器。
 
 三个刻意的限制，都是为了**不干扰正在跑的实验**：
 
-1. **只读**。没有一个写接口，没有"启动 run"。不要为了 UI 方便偷偷加一个 POST。
+1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/chat.html`
+   只有在服务端预检查通过且用户二次确认后才允许启动一次 run。
 2. **只绑 127.0.0.1**。它是这台机器上的工具，不是服务。
 3. **不缓存到磁盘**。列表只在内存里缓存 2 秒，避免边跑边看时反复读 299 个目录。
    唯一的例外是 `/api/explain` 的模型回复：它按
    `(run, round, harness_sha, model, prompt_sha)` 落在 `.cache/explain/*.json`，
    因为一次模型调用很贵，而同样的输入应该得到同样的答案（GET 仍然幂等、可缓存）。
 
-界面只有三屏（实验 / 轨迹 / 版本）。下面标了 **not surfaced** 的接口是**保留但没有任何
-界面在用**：删掉的那几张卡/面板（对话技能卡、方法页、解释面板）曾经读它们。端点留着是因为
-它们只读、幂等、边界清楚，重接时不必重写。
+主界面有三屏（实验 / 轨迹 / 版本），另有一个独立对话/启动页。下面标了
+**not surfaced** 的接口是保留但没有任何界面在用的只读端点。
 
-接口（全部 GET）：
+读取接口（GET）：
     /api/health                     平台 sha、在跑的 driver、磁盘余量、run 计数
     /api/runs?kind=study|eval|unknown|""  列表（派生字段：轮数、最好、状态、进度）
     /api/runs/<id>                  曲线 + identity + 每轮摘要
@@ -32,6 +32,10 @@
     /api/compare?method=<name>&dataset=  同一轮：train 分 vs 三个 eval 池的分（按 method+round 拼）
     /api/coverage                   round × pool 覆盖矩阵（8 个方法 × 每个已测轮次 × 3 个池）
     /api/explain?run=<id>&round=<n>[&force=1]  [not surfaced] LLM 解释这一轮改动（只读；缓存）
+
+显式写接口（POST）：
+    /api/chat                       调用配置好的模型；不启动实验
+    /api/runs                       经启动守卫检查后启动一次实验
 
 数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
 会显示成 "—"；`traces: 0` 只在目录存在且确实为空时出现。
@@ -454,6 +458,10 @@ BUDGET_DIR = pathlib.Path("/tmp/hg-rsi10-lb")
 DRIVER = PLATFORM / "driver.py"
 
 
+def python_supported() -> bool:
+    return sys.version_info >= (3, 10)
+
+
 def adapters() -> list[dict]:
     """可选数据集 = 平台自己发布的清单，不自己扫目录。
 
@@ -499,7 +507,11 @@ def improvers() -> list[dict]:
 def live_drivers_by_run() -> dict[str, dict]:
     """在跑的 driver：读 /proc，不 grep ps（`ps` 会截断 cmdline）。"""
     found: dict[str, dict] = {}
-    for entry in pathlib.Path("/proc").iterdir():
+    try:
+        entries = list(pathlib.Path("/proc").iterdir())
+    except OSError:
+        return found
+    for entry in entries:
         if not entry.name.isdigit():
             continue
         try:
@@ -652,6 +664,15 @@ def guard_launch(form: dict) -> tuple[int, dict]:
     if live:
         return 409, {"error": "driver-running", "detail": "已经有一个 driver 在跑，先等它结束",
                      "live": [{"run_id": k, **v} for k, v in live.items()]}
+    if not python_supported():
+        return 400, {"error": "unsupported-python",
+                     "detail": (f"当前 Python 是 {sys.version_info.major}.{sys.version_info.minor}，"
+                                "HarnessGrad 需要 Python 3.10+")}
+    if not DRIVER.is_file():
+        return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{DRIVER}"}
+    if not RUNS.is_dir() or not os.access(RUNS, os.W_OK):
+        return 400, {"error": "runs-root-not-writable",
+                     "detail": f"runs 根目录不存在或不可写：{RUNS}"}
     if not BUDGET_DIR.is_dir():
         return 400, {"error": "no-budget-dir",
                      "detail": f"GPU 预算目录不存在：{BUDGET_DIR}（要先排窗口）"}
@@ -689,6 +710,23 @@ def api_launch(form: dict) -> tuple[int, dict]:
                                  "run_id": run_id, "argv": argv, "by": "console chat"},
                                 ensure_ascii=False) + "\n")
     return 202, {"run_id": run_id, "argv": argv, "log": str(log_path.relative_to(ROOT))}
+
+
+def launch_preview(form: dict) -> dict:
+    """返回命令预览和与真正起跑相同的守卫结果，不产生任何副作用。"""
+    code, err = guard_launch(form)
+    try:
+        argv = launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train")
+    except (KeyError, TypeError, ValueError):
+        argv = []
+        if code == 200:
+            code = 400
+            err = {"error": "bad-value", "detail": "运行参数不完整或格式不正确"}
+    return {
+        "argv": argv,
+        "form": form,
+        "preflight": {"ok": code == 200, "status": code, **err},
+    }
 
 
 def api_health() -> dict:
@@ -2551,14 +2589,13 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1:] == ["launch", "form"]:
                 return self._send(launch_form())
             if parts[1:] == ["launch", "preview"]:
-                # 预览走**和起跑同一个** launch_argv()，只是 run_id 用占位符。
+                # 预览和起跑共用 launch_argv() 与 guard_launch()，只是 run_id 用占位符。
                 base = launch_form()["defaults"]
                 form = {k: (query.get(k) or [base[k]])[0] for k in
                         ("dataset", "harness", "rounds", "jobs", "trials", "sampling")}
                 form["improver"] = (query.get("improver") or ["dsh"])[0]
                 form["improver_model"] = (query.get("improver_model") or ["deepseek-flash"])[0]
-                return self._send({"argv": launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train"),
-                                   "form": form})
+                return self._send(launch_preview(form))
             if parts[1:] == ["methods"]:
                 return self._send({"rows": api_methods()})
             if len(parts) == 3 and parts[1] == "methods":
