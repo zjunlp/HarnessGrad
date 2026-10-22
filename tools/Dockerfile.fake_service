@@ -1,0 +1,28 @@
+# A mock order service, for data/verify_service.py and tests/quality/test_services.py.
+#
+# Built once, by a human, at import time -- never during a run (INTERFACE.md §2.5.5):
+#
+#     python tools/import_env.py --dockerfile tools/Dockerfile.fake_service \
+#         --tag harnessgrad-fake-service:demo
+#
+# Nothing is installed. The service is standard library only, which keeps the demo
+# image a stock python image plus one file, and keeps an end-to-end service test
+# affordable.
+FROM docker.m.daocloud.io/library/python:3.11-slim
+
+# `--chmod` is not decoration. `COPY` gives the file the *source's* mode, and a file
+# created by a tool that defaults to 0600 arrives owned by root and mode 0600 -- so the
+# container's process, which runs as the invoking user rather than as root (see
+# `eval/container.py`), cannot read the program it was started to run. Measured: the
+# service exited immediately with `can't open file '/opt/fake_service.py': [Errno 13]
+# Permission denied`, and `--rm` had already removed the container by the time anything
+# looked. This is the first thing to check when a service image starts and immediately
+# dies.
+COPY --chmod=0644 fake_service.py /opt/fake_service.py
+
+# The recording is mounted by the platform at /recordings/<service-name>; this
+# directory is only here so the image is runnable by hand for debugging.
+RUN mkdir -p -m 0755 /recordings/orders
+
+EXPOSE 8080
+CMD ["python3", "/opt/fake_service.py"]

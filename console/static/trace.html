@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>轨迹 · HarnessGrad 实验台</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/app.css">
+<style>
+  .load { padding: 14px; color: var(--hg-alias-label-secondary); font-size: 12px; }
+  .err { margin: 14px; padding: 10px 12px; border-radius: 10px;
+         border: 1px solid color-mix(in oklab, #d04b3a 40%, var(--hg-alias-border-l2));
+         background: color-mix(in oklab, #d04b3a 8%, var(--hg-alias-bg-layer-1)); font-size: 12px; }
+</style>
+</head>
+<body>
+<!-- 独立页：URL 是 /trace.html?run=&round=（验收按它写的，不能死）。
+     标记与行为都在 static/trace-view.js 里，与主界面的 #/trace 是同一个模块。 -->
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">HG</div>
+      <div><div class="brand-name">HarnessGrad</div><div class="brand-sub">轨迹</div></div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/#/runs">实验</a>
+      <a class="nav-item" href="/trace.html" aria-current="page">轨迹</a>
+      <a class="nav-item" href="/#/version">版本</a>
+    </nav>
+    <div class="side-foot">
+      <div class="status-line" id="st">读取中…</div>
+      <a class="side-link" href="https://huggingface.co/datasets/Xubqpanda/HarnessGrad" target="_blank" rel="noreferrer">数据集 ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div id="trace-root"></div>
+  </main>
+</div>
+<script src="/trace-view.js"></script>
+<script>
+  (() => {
+    const qs = new URLSearchParams(location.search);
+    HGTraceView.mount(document.getElementById("trace-root"), {
+      initialRun: qs.get("run"),
+      initialRound: qs.get("round"),
+      statusEl: document.getElementById("st"),
+      onChange: (run, round) => {
+        if (!run) return;
+        const want = `/trace.html?run=${encodeURIComponent(run)}` + (round == null ? "" : `&round=${round}`);
+        if (location.pathname + location.search !== want) history.replaceState(null, "", want);
+      },
+    });
+  })();
+</script>
+</body>
+</html>
