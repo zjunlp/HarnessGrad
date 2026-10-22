@@ -4,7 +4,7 @@ Parent assessment, 2026-10-15, opened at registry commit `21d6ebbf` and updated 
 registry. Its purpose is to answer one question for every open blocker: **which of its own
 `next_action` obligations are already discharged, which are not, and what class the rest belong to** —
 so that "14 open" becomes a set of concrete dispositions instead of a number. It currently describes
-**7** open blockers; the count and every supersession are recorded in the closure sections below.
+**11** open blockers; the count and every supersession are recorded in the closure sections below.
 
 The controlling rule is the objective's: a blocker closes only on the kind of evidence its own
 `next_action` names. Nothing here is a claim that an obligation is met unless the record already holds
@@ -22,7 +22,7 @@ the artefact.
 | `PENDING-RUN` | Requires a live measured execution under the staged pilot policy (authorization plus a run). |
 | `PENDING-INPUT` | Requires an artefact only the operator or a third party can supply. |
 | `LIMIT-CANDIDATE` | The original artefact no longer exists anywhere the record can reach; a candidate for the operator's proven-unobtainable standing-limit treatment. |
-| `REFUSED` | Permanent refusal the operator instructed not to revisit. |
+| `REFUSED` | Refusal the operator instructed not to revisit. **No longer permanent for `tau2_bench`:** lifted conditionally on 2026-10-22 (`docs/refusal-lift-decision.md`), while its adapter still refuses in code. |
 
 ## Summary
 
@@ -32,7 +32,13 @@ the artefact.
 | `api_bank / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
 | `nestful / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
 | `sotuqa / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
-| `tau2_bench / retain-contract-refusal` | external | permanent refusal | `REFUSED` |
+| `tau2_bench / retain-contract-refusal` | code-solvable | exclusion lifted conditionally 2026-10-22 (`docs/refusal-lift-decision.md`); the adapter still refuses in code | `REFUSED` |
+| `aime / dataset-journal-gap` | measurement | the operator's bounded first-five custody packet, plus a comparability statement for the Harbor port | `PENDING-INPUT`, `PRE-DIAGNOSTIC` |
+| `cooperbench / runtime-group-coverage` | measurement | all 652 pair identities stay explicit; reference controls are not full-benchmark performance | `PRE-DIAGNOSTIC` |
+| `locomo / adapter-acceptance-pending` | measurement | accept the Conda receipt and pin scope/model/budget before any model evaluation | `PRE-DIAGNOSTIC` |
+| `memoryagentbench / judge-dependent-subset` | measurement | judge provider and resolved model on every point; without one the judge-dependent questions are unmeasured | `PRE-DIAGNOSTIC` |
+| `personamem_v2 / excluded-source-question` | measurement | original/excluded/eligible/measured counts under the valid-question metric | `PRE-DIAGNOSTIC` |
+| `strongreject / judge-model-metric-identity` | measurement | the resolved judge model *is* the metric identity, and two judge profiles never pool | `PRE-DIAGNOSTIC` |
 
 **Withdrawn 2026-10-16 — `bfcl_v3 / simple-ast-contract`, `triviaqa / hub-export-scorer-linkage`
 and `appworld / successful-task-evidence`.** All three rows left this table; **no non-refusal
