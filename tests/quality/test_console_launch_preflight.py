@@ -97,7 +97,30 @@ def test_driver_probe_is_empty_when_proc_is_unavailable(monkeypatch):
         raise FileNotFoundError("no procfs")
 
     monkeypatch.setattr(module.pathlib.Path, "iterdir", unavailable)
+    # The reading side degrades: health and the run list show no live driver rather than 500.
     assert module.live_drivers_by_run() == {}
+    assert module.procfs_readable() is False
+
+
+def test_launch_is_refused_when_procfs_cannot_be_read(tmp_path, monkeypatch):
+    """**看不见 ≠ 没有。** /proc 读不到时必须拒绝起跑,而不是当作"没有 driver"放行。
+
+    这条是合入时补的:`live_drivers_by_run()` 在 /proc 不可读时返回 `{}`,而守卫原先只看那个
+    字典,于是同一个 `{}` 既表示"机器上没实验"也表示"我没法知道" —— 后者放行就等于在别人的
+    实验旁边再起一个,正好是这份守卫存在的理由。
+    """
+    module = _console()
+    budget = tmp_path / "budget"
+    budget.mkdir()
+    _prepare(module, monkeypatch, budget)
+
+    def unavailable(self):
+        raise FileNotFoundError("no procfs")
+
+    monkeypatch.setattr(module.pathlib.Path, "iterdir", unavailable)
+    code, body = module.guard_launch(_form())
+    assert code == 503, body
+    assert body["error"] == "liveness-unknown"
 
 
 def test_preview_reports_an_unsupported_python_before_launch(tmp_path, monkeypatch):

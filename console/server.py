@@ -504,6 +504,20 @@ def improvers() -> list[dict]:
     return out
 
 
+def procfs_readable() -> bool:
+    """能不能读 /proc —— 与"读到几个 driver"是两个问题。
+
+    `live_drivers_by_run()` 在 /proc 不可读时返回空字典(读接口应该降级而不是 500),但**启动守卫
+    不能把"看不见"当成"没有"**:那正好是这份守卫存在的理由。所以这里单独问一次,守卫拿它 fail
+    closed。
+    """
+    try:
+        next(iter(pathlib.Path("/proc").iterdir()))
+    except (OSError, StopIteration):
+        return False
+    return True
+
+
 def live_drivers_by_run() -> dict[str, dict]:
     """在跑的 driver：读 /proc，不 grep ps（`ps` 会截断 cmdline）。"""
     found: dict[str, dict] = {}
@@ -660,6 +674,12 @@ def new_run_id(form: dict) -> str:
 
 def guard_launch(form: dict) -> tuple[int, dict]:
     """返回 (状态码, 错误体)；200 表示可以起跑。判断顺序是有意的：先安全，再合法性。"""
+    if not procfs_readable():
+        # **Fail closed.** An unreadable /proc cannot answer "is a run in progress", and the one
+        # thing this guard must never do is start a second experiment beside a live one because
+        # it could not look. 503, not 400: the request is fine, the machine's answer is not.
+        return 503, {"error": "liveness-unknown",
+                     "detail": "读不到 /proc：无法确认是否有 driver 在跑，因此拒绝起跑"}
     live = live_drivers_by_run()
     if live:
         return 409, {"error": "driver-running", "detail": "已经有一个 driver 在跑，先等它结束",
