@@ -1,6 +1,6 @@
 {
  "slug": "alfworld",
- "generated_at": "2026-10-22T13:32:35Z",
+ "generated_at": "2026-10-22T16:09:02Z",
  "stamp": "20261017T123952Z",
  "study": {
   "pool": "train100",
@@ -515,9 +515,6 @@
          "tasks_acted": 200
         }
        },
-       "eval_source": {
-        "valid_unseen": "exam"
-       },
        "eval_n": 200
       }
      ],
@@ -881,10 +878,6 @@
          "tasks_reporting": 200,
          "tasks": 200
         }
-       },
-       "eval_source": {
-        "valid_unseen": "exam",
-        "valid_seen": "exam"
        },
        "eval_n": 200
       }
@@ -1369,14 +1362,14 @@
        "train_invalid": 0,
        "train_harness_failed": 0,
        "eval_tokens": {
-        "valid_unseen": 3824487,
+        "valid_unseen": 3868798,
         "valid_seen": 3266244,
         "valid_train": 6141211
        },
        "eval_split": {
         "valid_unseen": {
-         "input": 3792353,
-         "output": 32134,
+         "input": 3836508,
+         "output": 32290,
          "tasks_reporting": 134,
          "tasks": 134
         },
@@ -1392,9 +1385,6 @@
          "tasks_reporting": 200,
          "tasks": 200
         }
-       },
-       "eval_source": {
-        "valid_unseen": "exam"
        },
        "eval_n": 200
       }

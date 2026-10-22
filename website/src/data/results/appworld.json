@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-22T15:23:54Z",
+ "generated_at": "2026-10-22T16:08:02Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -306,14 +306,14 @@
       },
       {
        "round": 11,
-       "train": 0.5333333333333333,
+       "train": 0.5444444444444444,
        "train_n": 90,
        "eval": {
         "dev": 0.5087719298245614
        },
-       "valid": false,
+       "valid": true,
        "n_invalid": 0,
-       "train_raw": 0.5333333333333333,
+       "train_raw": 0.5444444444444444,
        "step": 1,
        "state": "7e2e3301a720",
        "eval_tokens": {
@@ -426,14 +426,14 @@
       },
       {
        "round": 16,
-       "train": 0.7111111111111111,
+       "train": 0.7222222222222222,
        "train_n": 90,
        "eval": {
         "dev": 0.5087719298245614
        },
-       "valid": false,
+       "valid": true,
        "n_invalid": 0,
-       "train_raw": 0.7111111111111111,
+       "train_raw": 0.7222222222222222,
        "step": 1,
        "state": "1f76e8ba0e48",
        "eval_tokens": {
@@ -474,14 +474,14 @@
       },
       {
        "round": 18,
-       "train": 0.7752808988764045,
-       "train_n": 89,
+       "train": 0.7777777777777778,
+       "train_n": 90,
        "eval": {
         "dev": 0.5087719298245614
        },
-       "valid": false,
-       "n_invalid": 1,
-       "train_raw": 0.7752808988764045,
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.7777777777777778,
        "step": 1,
        "state": "a2bea9fd7342",
        "eval_tokens": {
@@ -498,14 +498,14 @@
       },
       {
        "round": 19,
-       "train": 0.6888888888888889,
+       "train": 0.7222222222222222,
        "train_n": 90,
        "eval": {
         "dev": 0.45614035087719296
        },
        "valid": false,
        "n_invalid": 0,
-       "train_raw": 0.6888888888888889,
+       "train_raw": 0.7222222222222222,
        "step": 1,
        "state": "412c6c0afde7",
        "eval_tokens": {
@@ -2142,14 +2142,14 @@
       },
       {
        "round": 11,
-       "train": 0.370787,
-       "train_n": 89,
+       "train": 0.36666666666666664,
+       "train_n": 90,
        "eval": {
         "dev": 0.38596491228070173
        },
-       "valid": false,
+       "valid": true,
        "n_invalid": 0,
-       "train_raw": 0.370787,
+       "train_raw": 0.36666666666666664,
        "step": 1,
        "state": "d838aa8698d8",
        "batch": 3,
