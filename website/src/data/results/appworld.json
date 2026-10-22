@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-22T16:08:02Z",
+ "generated_at": "2026-10-22T17:34:32Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -213,7 +213,7 @@
        "train": 0.5444444444444444,
        "train_n": 90,
        "eval": {
-        "dev": 0.41818181818181815
+        "dev": 0.5892857142857143
        },
        "valid": true,
        "n_invalid": 0,
@@ -221,14 +221,14 @@
        "step": 1,
        "state": "c33ab6aad7e8",
        "eval_tokens": {
-        "dev": 7082338
+        "dev": 6905576
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 55,
-         "input": 6954435,
-         "output": 127903
+         "tasks_reporting": 56,
+         "input": 6765401,
+         "output": 140175
         }
        }
       },
@@ -2320,7 +2320,7 @@
        "train": 0.4111111111111111,
        "train_n": 90,
        "eval": {
-        "dev": 0.30357142857142855
+        "dev": 0.3684210526315789
        },
        "valid": true,
        "n_invalid": 0,
@@ -2329,14 +2329,14 @@
        "state": "877e24f8a5f3",
        "batch": 3,
        "eval_tokens": {
-        "dev": 4871423
+        "dev": 5392968
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 56,
-         "input": 4758047,
-         "output": 113376
+         "tasks_reporting": 57,
+         "input": 5283648,
+         "output": 109320
         }
        }
       },
@@ -2345,7 +2345,7 @@
        "train": 0.35555555555555557,
        "train_n": 90,
        "eval": {
-        "dev": 0.30357142857142855
+        "dev": 0.3684210526315789
        },
        "valid": true,
        "n_invalid": 0,
@@ -2354,14 +2354,14 @@
        "state": "463e99e84b60",
        "batch": 2,
        "eval_tokens": {
-        "dev": 9080804
+        "dev": 8403721
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 55,
-         "input": 8915545,
-         "output": 165259
+         "tasks_reporting": 57,
+         "input": 8260355,
+         "output": 143366
         }
        }
       },
@@ -3119,7 +3119,7 @@
        "train": 0.4444444444444444,
        "train_n": 90,
        "eval": {
-        "dev": 0.2909090909090909
+        "dev": 0.25
        },
        "valid": true,
        "n_invalid": 0,
@@ -3127,14 +3127,14 @@
        "step": 1,
        "state": "d85bc54b8c41",
        "eval_tokens": {
-        "dev": 6186856
+        "dev": 6666977
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 55,
-         "input": 6065194,
-         "output": 121662
+         "tasks_reporting": 56,
+         "input": 6538644,
+         "output": 128333
         }
        }
       },
@@ -3265,7 +3265,7 @@
        "train": 0.6333333333333333,
        "train_n": 90,
        "eval": {
-        "dev": 0.45454545454545453
+        "dev": 0.5614035087719298
        },
        "valid": true,
        "n_invalid": 0,
@@ -3273,14 +3273,14 @@
        "step": 1,
        "state": "a5501ee0613a",
        "eval_tokens": {
-        "dev": 7636492
+        "dev": 7137139
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 55,
-         "input": 7503189,
-         "output": 133303
+         "tasks_reporting": 57,
+         "input": 6998067,
+         "output": 139072
         }
        }
       },
