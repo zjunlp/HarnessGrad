@@ -413,3 +413,35 @@ def test_a_verdict_file_carries_the_tally_not_only_the_sentence(tmp_path):
     # 老的六个字段照旧,现有读者不受影响
     for field in ("task_id", "round", "score", "kind", "passed", "detail"):
         assert field in entry, field
+
+
+def test_self_referential_says_whether_the_method_is_the_harness_it_edits():
+    """The paper's independent variable, recorded instead of re-derived by every reader.
+
+    A HarnessX-style method edits the tree it is itself running in; `dsh` edits somebody
+    else's. Both are `improver.name` + `harness_name` in the identity, and comparing them is
+    the whole difference -- so the point says it.
+    """
+    from harnessgrad.identity import _identity
+
+    man = {"name": "loop", "version": "0.2.0"}
+    assert _identity(man, "s", "unified", improver={"name": "dsh"})["self_referential"] is False
+    assert _identity(man, "s", "unified", improver={"name": "loop"})["self_referential"] is True
+    # No improver at all (a reference method that edits as it runs) is not self-referential:
+    # the field is a statement about an improver, and there is none to compare.
+    assert _identity(man, "s", "unified")["self_referential"] is False
+
+
+def test_harness_base_records_only_a_declared_lineage():
+    from harnessgrad.identity import _identity
+
+    man = {"name": "loop", "version": "0.2.0"}
+    # A harness we wrote declares no base, and the field is then absent rather than null: "the
+    # platform looked and found nothing" is a different statement from "written here".
+    assert "harness_base" not in _identity(man, "s", "unified")
+
+    declared = {**man, "base": {"repo": "https://example.invalid/upstream", "commit": "abc123",
+                                "name": "upstream", "smuggled": ["a", "b"]}}
+    base = _identity(declared, "s", "unified")["harness_base"]
+    assert base == {"repo": "https://example.invalid/upstream", "commit": "abc123",
+                    "name": "upstream"}

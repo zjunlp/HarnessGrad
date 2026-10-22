@@ -190,6 +190,56 @@ FOLD_FILE = ASSETS / "test_fold.json"
 #: The fold this dataset is: the benchmark's own held-out evaluation set.
 EVAL_FOLD = "test"
 
+#: The study setting: 100 tasks from each official fold, built by
+#: `tools/scienceworld_study_sample.py`. `HG_SCIENCEWORLD_POOL` selects which fold's 100 the
+#: **eval** side scores -- `dev` while a study is running, `test` for the exam -- and both are
+#: scored against the train fold's 100, exactly as `HG_APPWORLD_POOL` does. Unset keeps this
+#: adapter what it was before the setting existed: the whole official test fold, hash-split.
+STUDY_FILE = ASSETS / "study_300.json"
+STUDY_POOLS = ("dev", "test")
+_STUDY_POOL = (os.environ.get("HG_SCIENCEWORLD_POOL") or "").strip().lower()
+if _STUDY_POOL and _STUDY_POOL not in STUDY_POOLS:
+    raise ValueError(f"scienceworld: HG_SCIENCEWORLD_POOL={_STUDY_POOL!r} is not one of "
+                     f"{STUDY_POOLS} (unset keeps the whole-test-fold dataset)")
+
+
+_STUDY_CACHE: dict | None = None
+
+
+def _study() -> dict | None:
+    """`{"train": [...], "eval": [...]}` for the study setting, or `None` when it is off.
+
+    The eval side is `_STUDY_POOL`'s fold, so the same 100 train tasks back both the dev pass
+    and the exam; the two eval folds are disjoint from each other and from train (the
+    transcription asserts all three), which is what makes the exam comparable.
+    """
+    global _STUDY_CACHE
+    if not _STUDY_POOL:
+        return None
+    if _STUDY_CACHE is None:
+        if not STUDY_FILE.is_file():
+            raise FileNotFoundError(f"no study setting at {STUDY_FILE}; run "
+                                    f"tools/scienceworld_study_sample.py --write")
+        payload = json.loads(STUDY_FILE.read_text())
+
+        def rows(fold: str) -> list[dict]:
+            return [{"task_id": f"{entry['task_name']}/{entry['variation']}",
+                     "task_name": str(entry["task_name"]),
+                     "variation": int(entry["variation"]),
+                     "gold_moves": int(entry["gold_moves"])}
+                    for entry in payload["pools"][fold]]
+
+        _STUDY_CACHE = {"train": rows("train"), "eval": rows(_STUDY_POOL),
+                        "counts": {f: len(payload["pools"][f]) for f in payload["pools"]},
+                        "eval_fold": _STUDY_POOL}
+    return _STUDY_CACHE
+
+#: In study mode the pool holds study material (the train fold), so `None` would be a false
+#: declaration -- `data/scaffolds/registry.py::official_eval` reserves `None` for pools that
+#: carry none. The eval fold's 100 ids are the comparable set, which is what the exam scores.
+if _STUDY_POOL:
+    OFFICIAL_EVAL = tuple(r["task_id"] for r in _study()["eval"])
+
 
 def test_fold() -> list[dict]:
     """The complete official `test` fold, read once per process.
@@ -503,7 +553,8 @@ def _ensure() -> list[dict]:
     if _LOAD_ERROR is not None:
         raise ValueError(f"scienceworld: cannot read the task set ({_LOAD_ERROR})")
     try:
-        _RECORDS = test_fold()
+        study = _study()
+        _RECORDS = (study["train"] + study["eval"]) if study else test_fold()
     except Exception as exc:  # noqa: BLE001 - carried into load()
         _LOAD_ERROR = f"{type(exc).__name__}: {exc}"
         raise
@@ -552,6 +603,10 @@ def _split() -> dict:
     read `SPLIT` before anything else. The identity is the same generator the records use,
     so the two cannot disagree.
     """
+    study = _study()
+    if study is not None:
+        return {"train": [r["task_id"] for r in study["train"]],
+                "eval": [r["task_id"] for r in study["eval"]]}
     train, eval_ = [], []
     for record in _ensure():
         (eval_ if _is_eval(record["task_id"]) else train).append(record["task_id"])

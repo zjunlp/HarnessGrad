@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -49,7 +50,22 @@ class Judge:
         # Judge model precedence is resolved by the trusted dataset adapter.
         # The frozen declaration controls both calls and evidence; the global
         # model is a default, not a second equality constraint on overrides.
-        if role == 'environment' and cfg.model != spec['model']:
+        #
+        # **But a mismatch is recorded, not ignored.** For `environment` it is still fatal --
+        # an environment model that differs from the declaration is a different world. For
+        # `judge` the override is a supported choice (strongreject's metric identity is
+        # `strongreject.rubric.defense.<model>.v1`, memoryagentbench's profile carries the
+        # judge model plus its reasoning policy), so refusing it would remove a capability.
+        # What was missing is that nothing *said* which model actually answered: a judge run
+        # with an override looked exactly like one without, and two profiles that must be
+        # reported separately could be pooled in silence. `report()` now carries the pair, so
+        # a receipt states the declared model and the model that answered, or nothing when
+        # they agree.
+        self.model_mismatch = None
+        declared_model = spec.get('model')
+        if declared_model and cfg.model and cfg.model != declared_model:
+            self.model_mismatch = {'declared': declared_model, 'actual': cfg.model}
+        if role == 'environment' and self.model_mismatch:
             raise JudgeUnavailable('HG_ENV_MODEL must match the declared model')
         parsed = urlsplit(cfg.base_url)
         if (parsed.scheme not in ('http', 'https') or not parsed.hostname
@@ -64,6 +80,15 @@ class Judge:
         self.calls = []
         self.attempts = []
         self.faults = []
+        # **What the provider says it served, when it differs from the declaration.** The
+        # request always names `spec['model']`, so a provider that quietly answers with another
+        # model would otherwise be invisible: the receipt would carry the declared id and the
+        # metric identity (`strongreject.rubric.defense.<model>.v1`) would claim a model that did
+        # not answer. Recorded unconditionally; refused only under
+        # `HG_JUDGE_REQUIRE_SERVED_MODEL=1`, because a provider legitimately answers with a
+        # dated snapshot of a declared alias, and turning that into an unmeasured result by
+        # default would fail runs that are fine.
+        self.served_model_mismatches = []
         self.directory = None
         self.relay = None
         self.proc = None
@@ -140,6 +165,15 @@ class Judge:
             record.update(status='ok', response_sha256=hashlib.sha256(raw).hexdigest(),
                           usage={k: usage[k] for k in ('prompt_tokens', 'completion_tokens')},
                           response_model=result.get('model'))
+            served = result.get('model')
+            if isinstance(served, str) and served and served != self.spec['model']:
+                mismatch = {'declared': self.spec['model'], 'served': served,
+                            'request_sha256': record['request_sha256']}
+                record['served_model_mismatch'] = mismatch
+                self.served_model_mismatches.append(mismatch)
+                if os.environ.get('HG_JUDGE_REQUIRE_SERVED_MODEL') == '1':
+                    raise JudgeUnavailable(
+                        'the provider answered as a different model than the declaration froze')
             return {'content': content, 'message': message, 'usage': record['usage']}
         except Exception as exc:
             # Do not expose provider response bodies, URLs or credentials in errors.
@@ -206,6 +240,9 @@ class Judge:
         if transport.get('refused') or transport.get('errors'):
             failures.append('judge transport rejected or failed a request')
         return {**({'api_options': self.api_options} if self.api_options is not None else {}),
+                **({'model_mismatch': self.model_mismatch} if self.model_mismatch else {}),
+                **({'served_model_mismatches': self.served_model_mismatches}
+                   if self.served_model_mismatches else {}),
                 'schema': 'harnessgrad.judge.v1', 'role': self.role,
                 'configuration': self.spec, 'endpoint_sha256': hashlib.sha256(self.url.encode()).hexdigest(), 'calls': self.calls, 'attempts': self.attempts, 'faults': failures,
                 'transport': transport,

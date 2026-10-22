@@ -15,36 +15,36 @@
       "surface": "tool_dialogue"
     },
     {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## Gate disposition",
+              "path": "docs/dataset-reviews/aime.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "# AIME source-only journal review",
+              "path": "/site/dataset-reviews/aime.md"
+            }
+          ],
+          "family": "journal-coverage",
+          "id": "dataset-journal-gap",
+          "next_action": "Before any diagnostic that scores this dataset: obtain the operator-side bounded first-five selected-only custody packet (an operator artefact about selection and privacy; it cannot be produced by a worker and must not be invented), and record an independent metric-comparability statement for the port, because Harbor's parity_experiment.json does not exist for aime. Measured coverage is a precondition of any such diagnostic rather than a condition on this review: a future diagnostic needs its own authorization, a fresh run ID, an applicable split side against the imposed 37/23 hash division, and the staged policy. Do not fabricate a parity number, do not promote any coverage count, and do not treat this review as production or H0 authorization.",
+          "observed": "First adapter ported from a Harbor adapter rather than from an upstream release read directly, and the port's source-only review is docs/dataset-reviews/aime.md. Measured at this revision: the scorer is Harbor's `adapters/aime/src/aime/task-template/tests/test_outputs.py` (.strip() then exact string equality) vendored byte-for-byte with four files re-checked by git blob digest; the oracle and do-nothing controls reach 1 and 0 both by hand and through `--platform`; dataset_lint reports `ok aime`; the shared QA contract passes 12 tests and the transcription differential 34; the data is pinned to GAIR-NLP/AIME-Preview@7011a9ea... with tarball sha256 1cb67669... and 30/15/15 = 60 rows. Harbor ships NO parity_experiment.json for aime, so the transcription is the whole of the equivalence evidence and no recorded comparison establishes that Harbor's number and this platform's are the same number. AIME has never been run here: zero tasks, zero trials, no run ID, so every coverage count is absent rather than zero. The payload census over all 60 rows found answer is a digit STRING in every row (never an int), test2025-II.jsonl carries no `solution` or `url` field, ids are int in test2024 and str elsewhere, and the 60 answers hold only 55 distinct values.",
+          "status": "measurement"
+        }
+      ],
       "dataset": "aime",
       "demand": "reasoning",
-      "surface": "reasoning",
       "exercises": [
         "context",
         "verification"
       ],
+      "historical_runs": [],
       "shared_blockers": [],
-      "blockers": [
-        {
-          "id": "dataset-journal-gap",
-          "family": "journal-coverage",
-          "status": "measurement",
-          "observed": "First adapter ported from a Harbor adapter rather than from an upstream release read directly, and the port's source-only review is docs/dataset-reviews/aime.md. Measured at this revision: the scorer is Harbor's `adapters/aime/src/aime/task-template/tests/test_outputs.py` (.strip() then exact string equality) vendored byte-for-byte with four files re-checked by git blob digest; the oracle and do-nothing controls reach 1 and 0 both by hand and through `--platform`; dataset_lint reports `ok aime`; the shared QA contract passes 12 tests and the transcription differential 34; the data is pinned to GAIR-NLP/AIME-Preview@7011a9ea... with tarball sha256 1cb67669... and 30/15/15 = 60 rows. Harbor ships NO parity_experiment.json for aime, so the transcription is the whole of the equivalence evidence and no recorded comparison establishes that Harbor's number and this platform's are the same number. AIME has never been run here: zero tasks, zero trials, no run ID, so every coverage count is absent rather than zero. The payload census over all 60 rows found answer is a digit STRING in every row (never an int), test2025-II.jsonl carries no `solution` or `url` field, ids are int in test2024 and str elsewhere, and the 60 answers hold only 55 distinct values.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "docs/dataset-reviews/aime.md",
-              "locator": "## Gate disposition"
-            },
-            {
-              "kind": "external-reference",
-              "path": "/site/dataset-reviews/aime.md",
-              "locator": "# AIME source-only journal review"
-            }
-          ],
-          "next_action": "Before any diagnostic that scores this dataset: obtain the operator-side bounded first-five selected-only custody packet (an operator artefact about selection and privacy; it cannot be produced by a worker and must not be invented), and record an independent metric-comparability statement for the port, because Harbor's parity_experiment.json does not exist for aime. Measured coverage is a precondition of any such diagnostic rather than a condition on this review: a future diagnostic needs its own authorization, a fresh run ID, an applicable split side against the imposed 37/23 hash division, and the staged policy. Do not fabricate a parity number, do not promote any coverage count, and do not treat this review as production or H0 authorization."
-        }
-      ],
-      "historical_runs": []
+      "surface": "reasoning"
     },
     {
       "blockers": [],
@@ -63,18 +63,18 @@
     {
       "blockers": [
         {
-          "id": "retain-contract-refusal",
-          "family": "contract-refusal",
-          "status": "external",
-          "observed": "Recorded API results rely on missing dialogue state; the oracle cannot reproduce the released metric.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "data/datasets/api_bank.py",
-              "locator": "REFUSED ="
+              "locator": "REFUSED =",
+              "path": "data/datasets/api_bank.py"
             }
           ],
-          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric."
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric.",
+          "observed": "Recorded API results rely on missing dialogue state; the oracle cannot reproduce the released metric.",
+          "status": "external"
         }
       ],
       "dataset": "api_bank",
@@ -98,23 +98,23 @@
       ],
       "historical_runs": [
         {
-          "record_id": "appworld-initial-infrastructure-smoke",
-          "run_id": null,
-          "status": "incomplete",
           "effect": null,
-          "observation": "Original actor launch failed with Docker exit 125. Later repaired smokes measured zero; they do not replace this incomplete attempt. Original failed run ID is not specified.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "### AppWorld real-model smoke blocker"
+              "locator": "### AppWorld real-model smoke blocker",
+              "path": "docs/adapter-integration-journal.md"
             },
             {
               "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/101/deliverables/receipt.md",
-              "locator": "Journal citation only; external receipt not opened during this review."
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/101/deliverables/receipt.md"
             }
-          ]
+          ],
+          "observation": "Original actor launch failed with Docker exit 125. Later repaired smokes measured zero; they do not replace this incomplete attempt. Original failed run ID is not specified.",
+          "record_id": "appworld-initial-infrastructure-smoke",
+          "run_id": null,
+          "status": "incomplete"
         }
       ],
       "shared_blockers": [],
@@ -142,42 +142,42 @@
       ],
       "historical_runs": [
         {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "v4 stalled and remains incomplete",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json"
+            }
+          ],
+          "observation": "V4 stalled and remains incomplete; no later V5 record supersedes it. The journal names the v4 generation but does not provide its exact run ID.",
           "record_id": "bird-v4-incomplete",
           "run_id": null,
-          "status": "incomplete",
-          "effect": null,
-          "observation": "V4 stalled and remains incomplete; no later V5 record supersedes it. The journal names the v4 generation but does not provide its exact run ID.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "v4 stalled and remains incomplete"
-            },
-            {
-              "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json",
-              "locator": "Journal citation only; external receipt not opened during this review."
-            }
-          ]
+          "status": "incomplete"
         },
         {
-          "record_id": "bird-v5-partial-coverage",
-          "run_id": "bird-minidev-h0-10pct-v5",
-          "status": "partial-measurement",
           "effect": null,
-          "observation": "Historical label complete, reported score 0.3214285714; only 28/34 tasks measured, 90 verify phases. Planned 34 tasks x3 is not certified full coverage.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "only 28/34 tasks were measured (90 verify phases)"
+              "locator": "only 28/34 tasks were measured (90 verify phases)",
+              "path": "docs/adapter-integration-journal.md"
             },
             {
               "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json",
-              "locator": "Journal citation only; external receipt not opened during this review."
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json"
             }
-          ]
+          ],
+          "observation": "Historical label complete, reported score 0.3214285714; only 28/34 tasks measured, 90 verify phases. Planned 34 tasks x3 is not certified full coverage.",
+          "record_id": "bird-v5-partial-coverage",
+          "run_id": "bird-minidev-h0-10pct-v5",
+          "status": "partial-measurement"
         }
       ],
       "shared_blockers": [],
@@ -193,75 +193,75 @@
       ],
       "historical_runs": [
         {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "- Pilot interruption: run `chess-pilot-h0-20261013`",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md"
+            }
+          ],
+          "observation": "19 task-trials completed, 0 failed envelopes; events stopped during test/1270 trial 2 with no final verdict or aggregate curve.",
           "record_id": "chess-original-incomplete",
           "run_id": "chess-pilot-h0-20261013",
-          "status": "incomplete",
-          "effect": null,
-          "observation": "19 task-trials completed, 0 failed envelopes; events stopped during test/1270 trial 2 with no final verdict or aggregate curve.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "- Pilot interruption: run `chess-pilot-h0-20261013`"
-            },
-            {
-              "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md",
-              "locator": "Journal citation only; external receipt not opened during this review."
-            }
-          ]
+          "status": "incomplete"
         },
         {
-          "record_id": "chess-recovery-incomplete",
-          "run_id": "chess-pilot-h0-20261013-recovery-01",
-          "status": "incomplete",
           "effect": null,
-          "observation": "149/150 task-trials completed, 0 failed envelopes; final test/9967 trial stopped after more than 620s with no terminal verdict/curve. Termination/cleanup closure unproven.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "- Recovery result: `chess-pilot-h0-20261013-recovery-01`"
+              "locator": "- Recovery result: `chess-pilot-h0-20261013-recovery-01`",
+              "path": "docs/adapter-integration-journal.md"
             },
             {
               "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md",
-              "locator": "Journal citation only; external receipt not opened during this review."
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md"
             }
-          ]
+          ],
+          "observation": "149/150 task-trials completed, 0 failed envelopes; final test/9967 trial stopped after more than 620s with no terminal verdict/curve. Termination/cleanup closure unproven.",
+          "record_id": "chess-recovery-incomplete",
+          "run_id": "chess-pilot-h0-20261013-recovery-01",
+          "status": "incomplete"
         }
       ],
       "shared_blockers": [],
       "surface": "planning_and_search"
     },
     {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## Controls and tests",
+              "path": "data/datasets/cooperbench/README.md"
+            }
+          ],
+          "family": "measurement-coverage",
+          "id": "runtime-group-coverage",
+          "next_action": "Retain all 652 pair identities and explicit task/trial coverage when running candidate-harness diagnostics or broader evaluation. Do not report representative reference controls as full-benchmark model performance.",
+          "observed": "The adapter retains all 652 pair identities across 30 runtime groups. Preparation pins source, scorer, dependencies and image identities; runtime availability is checked per selected group. Two isolated workers submit patches to a fresh verifier using Harbor's merged-pair scorer. Oracle/noop controls exercise the selected runtime without measuring candidate coding quality.",
+          "status": "measurement"
+        }
+      ],
       "dataset": "cooperbench",
       "demand": "artifact",
-      "surface": "code_generation",
       "exercises": [
         "context",
         "tools",
         "control",
         "verification"
       ],
+      "historical_runs": [],
       "shared_blockers": [],
-      "blockers": [
-        {
-          "id": "runtime-group-coverage",
-          "family": "measurement-coverage",
-          "status": "measurement",
-          "observed": "The adapter retains all 652 pair identities across 30 runtime groups. Preparation pins source, scorer, dependencies and image identities; runtime availability is checked per selected group. Two isolated workers submit patches to a fresh verifier using Harbor's merged-pair scorer. Oracle/noop controls exercise the selected runtime without measuring candidate coding quality.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "data/datasets/cooperbench/README.md",
-              "locator": "## Controls and tests"
-            }
-          ],
-          "next_action": "Retain all 652 pair identities and explicit task/trial coverage when running candidate-harness diagnostics or broader evaluation. Do not report representative reference controls as full-benchmark model performance."
-        }
-      ],
-      "historical_runs": []
+      "surface": "code_generation"
     },
     {
       "blockers": [],
@@ -273,23 +273,23 @@
       ],
       "historical_runs": [
         {
-          "record_id": "ds1000-v4-pending-review",
-          "run_id": "ds1000-h0-10pct-v4",
-          "status": "pending-review",
           "effect": null,
-          "observation": "Reported score 0.2076502732 over a 61-task/3-trial pilot on the 926/1000 host slice; sample/trial/timeout audit and archive append remain pending.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "## DS1000 — host slice and timeout evidence"
+              "locator": "## DS1000 \u2014 host slice and timeout evidence",
+              "path": "docs/adapter-integration-journal.md"
             },
             {
               "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/61/report.md",
-              "locator": "Journal citation only; external receipt not opened during this review."
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/61/report.md"
             }
-          ]
+          ],
+          "observation": "Reported score 0.2076502732 over a 61-task/3-trial pilot on the 926/1000 host slice; sample/trial/timeout audit and archive append remain pending.",
+          "record_id": "ds1000-v4-pending-review",
+          "run_id": "ds1000-h0-10pct-v4",
+          "status": "pending-review"
         }
       ],
       "shared_blockers": [],
@@ -317,42 +317,42 @@
       ],
       "historical_runs": [
         {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "### GAIA V2 real-model pilot attempt",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json"
+            }
+          ],
+          "observation": "17 tasks x3 planned; sealed receipt reports 9 persisted trials, events contain 10 done events. API-timeout usage unknown; coverage discrepancy unresolved.",
           "record_id": "gaia-v2-incomplete",
           "run_id": "gaia-validation-pilot-h0-20261117-v2",
-          "status": "incomplete",
-          "effect": null,
-          "observation": "17 tasks x3 planned; sealed receipt reports 9 persisted trials, events contain 10 done events. API-timeout usage unknown; coverage discrepancy unresolved.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "### GAIA V2 real-model pilot attempt"
-            },
-            {
-              "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json",
-              "locator": "Journal citation only; external receipt not opened during this review."
-            }
-          ]
+          "status": "incomplete"
         },
         {
-          "record_id": "gaia-v3-incomplete",
-          "run_id": "gaia-validation-pilot-h0-20261117-v3",
-          "status": "incomplete",
           "effect": null,
-          "observation": "11 trials completed normally; gaia/49 third trial reached agent completion but snapshot exited 137 before verification. No aggregate score is valid.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "### GAIA V3 real-model pilot attempt"
+              "locator": "### GAIA V3 real-model pilot attempt",
+              "path": "docs/adapter-integration-journal.md"
             },
             {
               "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl",
-              "locator": "Journal citation only; external receipt not opened during this review."
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl"
             }
-          ]
+          ],
+          "observation": "11 trials completed normally; gaia/49 third trial reached agent completion but snapshot exited 137 before verification. No aggregate score is valid.",
+          "record_id": "gaia-v3-incomplete",
+          "run_id": "gaia-validation-pilot-h0-20261117-v3",
+          "status": "incomplete"
         }
       ],
       "shared_blockers": [],
@@ -379,23 +379,23 @@
       ],
       "historical_runs": [
         {
-          "record_id": "hotpot-v4-incomplete",
-          "run_id": null,
-          "status": "incomplete",
           "effect": null,
-          "observation": "User stopped the oversized 492-task/3-trial run at 94/1476 task-trials; the journal provides no exact run ID, so none is invented.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "## HotpotQA — structured evidence and time budget"
+              "locator": "## HotpotQA \u2014 structured evidence and time budget",
+              "path": "docs/adapter-integration-journal.md"
             },
             {
               "kind": "external-reference",
-              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-incomplete-index.json",
-              "locator": "Journal citation only; external receipt not opened during this review."
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-incomplete-index.json"
             }
-          ]
+          ],
+          "observation": "User stopped the oversized 492-task/3-trial run at 94/1476 task-trials; the journal provides no exact run ID, so none is invented.",
+          "record_id": "hotpot-v4-incomplete",
+          "run_id": null,
+          "status": "incomplete"
         }
       ],
       "shared_blockers": [],
@@ -416,33 +416,33 @@
       "surface": "interactive_fiction"
     },
     {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "Validation",
+              "path": "data/datasets/kumo/README.md"
+            }
+          ],
+          "family": "measurement-coverage",
+          "id": "kumo-measurement-coverage",
+          "next_action": "Retain explicit subset, split and protocol identity in evaluation records; report selected and unmeasured coverage without treating a subset as a full-benchmark result.",
+          "observed": "The adapter retains 5290/5300 released standard cases under the official consistency predicate: 10 unsatisfiable cases are excluded and 35 multi-answer cases retained. It uses the query50 protocol, native oracle/noop controls and a private relay. Actor networking is inherited and the adapter does not enforce filesystem quotas.",
+          "status": "measurement"
+        }
+      ],
       "dataset": "kumo",
       "demand": "reasoning",
-      "surface": "planning_and_search",
       "exercises": [
         "context",
         "tools",
         "control",
         "verification"
       ],
-      "shared_blockers": [],
       "historical_runs": [],
-      "blockers": [
-        {
-          "id": "kumo-measurement-coverage",
-          "family": "measurement-coverage",
-          "status": "measurement",
-          "observed": "The adapter retains 5290/5300 released standard cases under the official consistency predicate: 10 unsatisfiable cases are excluded and 35 multi-answer cases retained. It uses the query50 protocol, native oracle/noop controls and a private relay. Actor networking is inherited and the adapter does not enforce filesystem quotas.",
-          "evidence": [
-            {
-              "kind": "repository",
-              "path": "data/datasets/kumo/README.md",
-              "locator": "Validation"
-            }
-          ],
-          "next_action": "Retain explicit subset, split and protocol identity in evaluation records; report selected and unmeasured coverage without treating a subset as a full-benchmark result."
-        }
-      ]
+      "shared_blockers": [],
+      "surface": "planning_and_search"
     },
     {
       "blockers": [],
@@ -457,43 +457,63 @@
       "surface": "code_generation"
     },
     {
-      "dataset": "locomo",
-      "demand": "evidence",
-      "surface": "long_context",
-      "exercises": [
-        "context"
-      ],
-      "shared_blockers": [],
       "blockers": [
         {
-          "id": "adapter-acceptance-pending",
-          "family": "measurement-coverage",
-          "status": "measurement",
-          "observed": "Native files adapter following pinned Harbor input rendering and scoring, using official LoCoMo data: 10 conversations, 1986 questions, all five categories. Complete conversation.md and questions are available at task start; the harness writes answers.json. Per-question scores are retained in standard verdict evidence. The platform uses its existing task mean; report.py provides a separately invoked question-weighted summary with explicit selected coverage. Uses Conda and the existing local HTTP model route with network none. No platform execution changes, model judge or declared study/eval split. Current implementation and validation scope are documented in data/datasets/locomo/README.md and specs/validation-20261017.json. Real local-model inference, target-host readiness and full model benchmark results are not established.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "tests/quality/test_dataset_controls.py",
-              "locator": "\"locomo\": {"
+              "locator": "\"locomo\": {",
+              "path": "tests/quality/test_dataset_controls.py"
             },
             {
               "kind": "repository",
-              "path": "tools/dataset_classes.py",
-              "locator": "\"locomo\": (\"evidence\", \"long_context\")"
+              "locator": "\"locomo\": (\"evidence\", \"long_context\")",
+              "path": "tools/dataset_classes.py"
             },
             {
               "kind": "repository",
-              "path": "data/datasets/locomo/README.md",
-              "locator": "LoCoMo native adapter (Harbor protocol)"
+              "locator": "LoCoMo native adapter (Harbor protocol)",
+              "path": "data/datasets/locomo/README.md"
             }
           ],
-          "next_action": "Review the current Conda validation receipt and adapter documentation. Validate the intended local-model configuration and native sandbox on the target host before model evaluation. Specify task scope, model and budget for the experiment; use the manual question-weighted report with complete selected coverage and matching trial evidence. Preserve invalid and unmeasured outcomes and verification records. Formal staged evaluation remains subject to existing platform runtime and publication checks."
+          "family": "measurement-coverage",
+          "id": "adapter-acceptance-pending",
+          "next_action": "Review the current Conda validation receipt and adapter documentation. Validate the intended local-model configuration and native sandbox on the target host before model evaluation. Specify task scope, model and budget for the experiment; use the manual question-weighted report with complete selected coverage and matching trial evidence. Preserve invalid and unmeasured outcomes and verification records. Formal staged evaluation remains subject to existing platform runtime and publication checks.",
+          "observed": "Native files adapter following pinned Harbor input rendering and scoring, using official LoCoMo data: 10 conversations, 1986 questions, all five categories. Complete conversation.md and questions are available at task start; the harness writes answers.json. Per-question scores are retained in standard verdict evidence. The platform uses its existing task mean; report.py provides a separately invoked question-weighted summary with explicit selected coverage. Uses Conda and the existing local HTTP model route with network none. No platform execution changes, model judge or declared study/eval split. Current implementation and validation scope are documented in data/datasets/locomo/README.md and specs/validation-20261017.json. Real local-model inference, target-host readiness and full model benchmark results are not established.",
+          "status": "measurement"
         }
       ],
-      "historical_runs": []
+      "dataset": "locomo",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "long_context"
     },
     {
-      "blockers": [],
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "### Model judges",
+              "path": "data/datasets/memoryagentbench/README.md"
+            },
+            {
+              "kind": "repository",
+              "locator": "class Judge",
+              "path": "eval/service/judge.py"
+            }
+          ],
+          "family": "metric-comparability",
+          "id": "judge-dependent-subset",
+          "next_action": "Before any diagnostic that scores the judge-dependent subset: configure `HG_JUDGE_BASE_URL`/`HG_JUDGE_API_KEY`, record the resolved judge model and reasoning profile on every point, and report the judge-dependent questions as unmeasured when the provider or the declared model is unavailable. Do not substitute a different judge model, do not pool points whose profiles differ, and never count an unavailable judge as a failure.",
+          "observed": "Two model-judge paths cover 105 episodes / 400 questions and the remaining questions are scored locally (data/datasets/memoryagentbench/README.md, `### Model judges`). Both paths call the verifier-only `VERIFY.judge` channel with `reasoning=\"disabled\"`, so the judge model and its reasoning policy are part of the measured metric, not a detail of the run: a record without the profile stays readable but cannot be aggregated with records that declare one. An unconfigured provider, an unsupported model, or an unavailable endpoint makes those questions unmeasured rather than wrong, and the adapter rejects unsupported models before the actor runs.",
+          "status": "measurement"
+        }
+      ],
       "dataset": "memoryagentbench",
       "demand": "memory",
       "exercises": [
@@ -518,18 +538,18 @@
     {
       "blockers": [
         {
-          "id": "retain-contract-refusal",
-          "family": "contract-refusal",
-          "status": "external",
-          "observed": "Official execution Win Rate is nondeterministic/unreproducible as released; slot/sequence metrics cannot replace it.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "data/datasets/nestful.py",
-              "locator": "REFUSED ="
+              "locator": "REFUSED =",
+              "path": "data/datasets/nestful.py"
             }
           ],
-          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric."
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric.",
+          "observed": "Official execution Win Rate is nondeterministic/unreproducible as released; slot/sequence metrics cannot replace it.",
+          "status": "external"
         }
       ],
       "dataset": "nestful",
@@ -544,18 +564,18 @@
     {
       "blockers": [
         {
-          "id": "excluded-source-question",
-          "family": "measurement-coverage",
-          "status": "measurement",
-          "observed": "Native train row 949 for persona 592 lacks distractors. The valid-question metric excludes only this pinned row and scores the episode's other 28 questions. All 1735 episodes remain; native train has 18548 eligible questions out of 18549 released, while val and benchmark are unchanged. Prepared artifacts and scoring evidence retain the exact exclusion and reason.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "data/datasets/personamem_v2/README.md",
-              "locator": "Native train row 949"
+              "locator": "Native train row 949",
+              "path": "data/datasets/personamem_v2/README.md"
             }
           ],
-          "next_action": "Report original, excluded, eligible and measured question counts under the valid-question metric. Do not label the filtered training score as an exact full-release result or mix it with earlier metric versions; uncompleted eligible questions and runtime failures remain unmeasured."
+          "family": "measurement-coverage",
+          "id": "excluded-source-question",
+          "next_action": "Report original, excluded, eligible and measured question counts under the valid-question metric. Do not label the filtered training score as an exact full-release result or mix it with earlier metric versions; uncompleted eligible questions and runtime failures remain unmeasured.",
+          "observed": "Native train row 949 for persona 592 lacks distractors. The valid-question metric excludes only this pinned row and scores the episode's other 28 questions. All 1735 episodes remain; native train has 18548 eligible questions out of 18549 released, while val and benchmark are unchanged. Prepared artifacts and scoring evidence retain the exact exclusion and reason.",
+          "status": "measurement"
         }
       ],
       "dataset": "personamem_v2",
@@ -605,18 +625,18 @@
       ],
       "historical_runs": [
         {
-          "record_id": "scienceworld-v4-incomplete",
-          "run_id": "scienceworld-h0-10pct-v4",
-          "status": "incomplete",
           "effect": null,
-          "observation": "354/354 task-trials completed, but platform-integrity mismatch invalidates run-level completeness; diagnostic mean 0.1380508475 is not an archive effect.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "## ScienceWorld — platform integrity"
+              "locator": "## ScienceWorld \u2014 platform integrity",
+              "path": "docs/adapter-integration-journal.md"
             }
-          ]
+          ],
+          "observation": "354/354 task-trials completed, but platform-integrity mismatch invalidates run-level completeness; diagnostic mean 0.1380508475 is not an archive effect.",
+          "record_id": "scienceworld-v4-incomplete",
+          "run_id": "scienceworld-h0-10pct-v4",
+          "status": "incomplete"
         }
       ],
       "shared_blockers": [],
@@ -625,18 +645,18 @@
     {
       "blockers": [
         {
-          "id": "retain-contract-refusal",
-          "family": "contract-refusal",
-          "status": "external",
-          "observed": "The headline unpinned LLM-judge metric is unavailable under the platform contract; EM/F1 are not a substitute.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "data/datasets/sotuqa.py",
-              "locator": "REFUSAL ="
+              "locator": "REFUSAL =",
+              "path": "data/datasets/sotuqa.py"
             }
           ],
-          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric."
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric.",
+          "observed": "The headline unpinned LLM-judge metric is unavailable under the platform contract; EM/F1 are not a substitute.",
+          "status": "external"
         }
       ],
       "dataset": "sotuqa",
@@ -687,7 +707,27 @@
       "surface": "reasoning"
     },
     {
-      "blockers": [],
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "`HG_STRONGREJECT_JUDGE_MODEL`",
+              "path": "data/datasets/strongreject/README.md"
+            },
+            {
+              "kind": "repository",
+              "locator": "class Judge",
+              "path": "eval/service/judge.py"
+            }
+          ],
+          "family": "metric-comparability",
+          "id": "judge-model-metric-identity",
+          "next_action": "Before any diagnostic that scores this dataset: configure the judge provider, record the resolved judge model on every point (it is the metric identity), and report points measured under different judge models separately. Do not let the global `HG_JUDGE_MODEL` silently change the metric identity of a run, do not pool two judge profiles, and treat an unavailable judge model as unmeasured rather than as a low score.",
+          "observed": "Metric identity is `strongreject.rubric.defense.<model>.v1`, and the resolved judge model is selected by `HG_STRONGREJECT_JUDGE_MODEL` > `HG_JUDGE_MODEL` > `gpt-4o-mini-2024-07-18` (data/datasets/strongreject/README.md, paragraph beginning `HG_STRONGREJECT_JUDGE_MODEL`). The resolved model is frozen into the verifier declaration and the private scorer case, configuration snapshots and the judge receipt record the selection, and different judge profiles must be reported separately. Provider availability is checked on request; an unavailable model produces an unmeasured result without fallback.",
+          "status": "measurement"
+        }
+      ],
       "dataset": "strongreject",
       "demand": "reasoning",
       "exercises": [
@@ -700,18 +740,18 @@
     {
       "blockers": [
         {
-          "id": "retain-contract-refusal",
-          "family": "contract-refusal",
-          "status": "external",
-          "observed": "Independent user simulation and judge-dependent assertions are unavailable; required user actions cannot be supplied by the actor.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "data/datasets/tau2_bench.py",
-              "locator": "REFUSED ="
+              "locator": "REFUSED =",
+              "path": "data/datasets/tau2_bench.py"
             }
           ],
-          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric."
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Retain the explicit refusal and current exclusion; do not provision or run this dataset or substitute its metric.",
+          "observed": "Independent user simulation and judge-dependent assertions are unavailable; required user actions cannot be supplied by the actor.",
+          "status": "external"
         }
       ],
       "dataset": "tau2_bench",
@@ -774,18 +814,18 @@
       ],
       "historical_runs": [
         {
-          "record_id": "twowiki-original-invalid-pilot",
-          "run_id": null,
-          "status": "partial-measurement",
           "effect": null,
-          "observation": "Original 50-task pilot had 48 scored tasks, two malformed-output invalids and mixed legacy Answer F1/structured Joint F1. Reported original curve 0.5081597292 is not full comparable coverage. Exact original run ID not specified.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/adapter-integration-journal.md",
-              "locator": "- Local results: MuSiQue capped train pilot"
+              "locator": "- Local results: MuSiQue capped train pilot",
+              "path": "docs/adapter-integration-journal.md"
             }
-          ]
+          ],
+          "observation": "Original 50-task pilot had 48 scored tasks, two malformed-output invalids and mixed legacy Answer F1/structured Joint F1. Reported original curve 0.5081597292 is not full comparable coverage. Exact original run ID not specified.",
+          "record_id": "twowiki-original-invalid-pilot",
+          "run_id": null,
+          "status": "partial-measurement"
         }
       ],
       "shared_blockers": [],

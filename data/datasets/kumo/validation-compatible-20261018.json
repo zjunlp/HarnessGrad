@@ -1,0 +1,44 @@
+{
+  "schema": "kumo.integration.validation.v1",
+  "date": "2026-10-18",
+  "revision_of": "5ab95cab",
+  "scope": "Restore all shared execution behavior to pre-KUMO baseline",
+  "shared_baseline": "89626402",
+  "identical_shared_files_sha256": {
+    "eval/run/runner.py": "e4996f08d2e870c38c5945858b702a5f0a5e96f782632324be25c047a8746974",
+    "eval/run/tool_relay.py": "19eef8c350b96244c452d5713524f4d88c5789ba0213b4ef48aa1517a06f7b2f",
+    "eval/observe/tracing.py": "b5e5ba13d02e06e8f7f2f9071aba18780841ba68c354856da80c810053e9188b",
+    "INTERFACE.md": "a13be197bcca9c5aa9fb1dae4be6994e7c535ed4fbe531d7203f9095a2333063",
+    "tools/datasets.py": "d575614f2780e2a33b7474491f47b5b3b079b245fdcfd907cee8db0cf077fa15"
+  },
+  "shared_runtime_changes_retained": [],
+  "tests": {
+    "relevant_passed": 180,
+    "subtests_passed": 38,
+    "deselected": 26,
+    "kumo_tests": 16,
+    "selection_note": "Same focused suite as validation-minimal-20261018; removed three tests for withdrawn shared cleanup fixes. Existing deselections unchanged; not a full-suite claim."
+  },
+  "controls": {
+    "local_oracle": 1,
+    "local_noop": 0,
+    "platform_oracle": 1,
+    "platform_noop": 0,
+    "cleanup_owner": "Test fixtures and external validation TemporaryDirectory; not the shared runner"
+  },
+  "dataset_lint": "pass",
+  "api_requests": 0,
+  "compatibility_evidence": "Shared implementation restored byte-for-byte, not successful ALFWorld/AgentDojo live regression. Prior impact checks had 63 passed, 8 skipped and 3 failures from missing provisioned data.",
+  "limitations": [
+    "Baseline runner leaves relay staging; startup failures can leave staging too",
+    "Explicit ToolRelay.cleanup ignores deletion errors as before",
+    "No claim of verified relay cleanup in KUMO API diagnostic",
+    "No new real API run; prior receipts describe prior implementations"
+  ],
+  "artifact_root": "/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/datasets/kumo",
+  "artifacts": {
+    "compatible-tests-20261018.log": "5011f8a3198f63651cd770c720b3fe6f4a8bd0d1e6e18a5b8cf8a3ca4b0ce3e2",
+    "compatible-controls-20261018.json": "122a0cb40603e471db815b396036e426b65dd385e562468597b301c24b8ce4fe",
+    "relay-impact-20261018.log": "d464544251a249eb75a12d74a5405818d7d1b0f60dd4e6d2e9bc4e241f235e47"
+  }
+}
