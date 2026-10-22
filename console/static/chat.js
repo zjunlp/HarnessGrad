@@ -333,13 +333,20 @@
   }
 
   /* ── 绑定 ─────────────────────────────────────────── */
-  $("#send").onclick = send;
-  $("#open-settings").onclick = (e) => { e.preventDefault(); openSettings(); };
-  $("#close4").onclick = closeSettings;
-  $("#save4").onclick = saveSettings;
+  // **Every binding is null-safe.** A page cached from before the settings panel has no
+  // `#open-settings`, and one unguarded `.onclick` on a missing element throws -- which killed
+  // every binding after it, so "跑实验" and "发送" did nothing at all while the console looked fine.
+  const bind = (sel, fn, event = "onclick") => {
+    const el = typeof sel === "string" ? $(sel) : sel;
+    if (el) el[event] = fn;
+    return el;
+  };
+  bind("#send", send);
+  bind("#open-settings", (e) => { e.preventDefault(); openSettings(); });
+  bind("#close4", closeSettings);
+  bind("#save4", saveSettings);
   for (const side of ["task", "chat"]) {
-    const btn = document.querySelector(`[data-probe="${side}"]`);
-    if (btn) btn.onclick = () => probeSide(side);
+    bind(document.querySelector(`[data-probe="${side}"]`), () => probeSide(side));
   }
   $("#say").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
@@ -347,10 +354,11 @@
   $("#say").addEventListener("input", () => {
     const el = $("#say"); el.style.height = "auto"; el.style.height = Math.min(160, el.scrollHeight) + "px";
   });
-  $("#open-skill").onclick = () => openCard(null);
-  $("#close3").onclick = closeCard;
-  $("#confirm3").onclick = confirmCard;
-  $("#mask3").addEventListener("click", (e) => { if (e.target.id === "mask3") closeCard(); });
+  bind("#open-skill", () => openCard(null));
+  bind("#close3", closeCard);
+  bind("#confirm3", confirmCard);
+  const mask3 = $("#mask3");
+  if (mask3) mask3.addEventListener("click", (e) => { if (e.target.id === "mask3") closeCard(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCard(); });
 
   status(); render();
