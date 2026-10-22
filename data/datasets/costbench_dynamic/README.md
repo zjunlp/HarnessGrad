@@ -133,7 +133,7 @@ unchanged. Other limits remained 32 model calls, 2,048 output tokens per call,
 60,000 history characters and 20 environment turns. These are small integration
 diagnostics, not default-display performance or a paired comparison of modes.
 
-The [accepted-cohort report][dynamic-api-summary]
+The accepted-cohort report
 (`costbench-dynamic-ling31-coverage-20261021-01`) retains 24 measured tasks from
 37 attempts. Thirteen initial API 429 failures were excluded and rerun, with
 their original receipts preserved. There were no other invalid attempts.
@@ -159,37 +159,34 @@ aggregate metrics use their own eligibility denominators, retained in the
 report. In the original `steplen_change/test` cell, no event occurred and all
 official aggregate denominators were zero, so those metrics are `null`.
 All accepted trajectories had zero output clipping; all 37 attempts completed
-relay cleanup. [Integrity checks][dynamic-api-audit] and the
-[independent final review][dynamic-api-review] passed. Source identities,
-resource limits and cleanup are retained in [provenance][dynamic-api-provenance]
-and the [cleanup receipt][dynamic-api-cleanup]. Thirteen failed attempts lack
+relay cleanup. Integrity checks and the
+independent final review passed. Source identities,
+resource limits and cleanup are retained in provenance
+and the cleanup receipt. Thirteen failed attempts lack
 final provider usage, so recorded token totals do not establish the full API bill.
 
-The separate [three-task supplement][dynamic-api-supplement]
+The separate three-task supplement
 (`costbench-dynamic-steplen-test-ling31-3-20261021-01`) preselected fresh
 `steplen_change/test` tasks `Query00002`, `Query00401` and `Query00798`, spanning
 location, accommodation and dining. All three were measured, triggered an actual
 and effective step-length change, matched the reference path and answered
 correctly. There were no provider failures, other invalid attempts, API retries
 or output clipping. Each trajectory's cost matched its reference within `1e-8`.
-The [supplement audit][dynamic-api-supplement-audit] and
-[cleanup checks][dynamic-api-supplement-cleanup] passed.
+The supplement audit and
+cleanup checks passed.
 
-The [coverage closure receipt][dynamic-api-closure] therefore establishes real
+The coverage closure receipt therefore establishes real
 event execution in **all eight mode/split cells**, up from seven in the original
 cohort. The supplement remains a separate diagnostic: the original 24-task
 results and receipts are unchanged, and these three successes are not pooled
-into the original scores. A separate [cost/reference review][dynamic-api-cost-review]
+into the original scores. A separate cost/reference review
 recomputed representative official and adapter results without finding a
 discrepancy; the segmented reference is not a globally minimum-cost episode.
 
-[dynamic-api-summary]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/summary.json
-[dynamic-api-audit]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/integrity-audit.json
-[dynamic-api-review]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/final-review.json
-[dynamic-api-provenance]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/provenance.json
-[dynamic-api-cleanup]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/cleanup.json
-[dynamic-api-supplement]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/summary.json
-[dynamic-api-supplement-audit]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/integrity-audit.json
-[dynamic-api-supplement-cleanup]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/cleanup.json
-[dynamic-api-closure]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/coverage-closure.json
-[dynamic-api-cost-review]: /mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/costbench-dynamic-ling31-coverage-20261021-01/cost-reference-review.json
+The evidence files below are retained only in the author's local workspace,
+under `/mnt/40t/wangyenan/Projects/HarnessGrad-Workspace/runs/`. They are not
+checked into this repository and are not accessible through GitHub links.
+The validation results and their limitations are summarized above.
+
+- `costbench-dynamic-ling31-coverage-20261021-01/`: `summary.json`, `integrity-audit.json`, `final-review.json`, `provenance.json`, `cleanup.json`, `cost-reference-review.json`.
+- `costbench-dynamic-steplen-test-ling31-3-20261021-01/`: `summary.json`, `integrity-audit.json`, `cleanup.json`, `coverage-closure.json`.
