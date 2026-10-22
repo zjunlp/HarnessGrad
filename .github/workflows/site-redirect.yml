@@ -1,0 +1,49 @@
+# Point the old project-page URL at the site's own repository.
+#
+# `zjunlp.github.io/HarnessGrad/` was the site until 2026-10-27, when the site moved to
+# `zjunlp/HarnessGrad-Hub` (its own repository, so a page change no longer shares a CI queue
+# with the Python platform). What is published from here now is two static pages:
+#
+#   /HarnessGrad/         -> `site-redirect/index.html`, a redirect to the new front page
+#   /HarnessGrad/<path>   -> `site-redirect/404.html`, which maps <path> onto the new site
+#
+# GitHub Pages serves `404.html` for any path it does not have, so deep links that were
+# published for two weeks keep working. The artifact is 2 kB of HTML with no build step: nothing
+# here can fail for a dependency reason, which is exactly what the previous deploy did (its last
+# run, 2026-10-25, failed on a lockfile/overrides mismatch and left the site frozen).
+name: Site redirect
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site-redirect/**'
+      - '.github/workflows/site-redirect.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-redirect
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

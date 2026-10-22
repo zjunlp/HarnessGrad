@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="6 10 51 48" role="img" aria-label="HarnessGrad" width="510" height="480">
+  <!-- The repository's canonical mark: the platform's own output, a run's rounds read as four
+       rising marks with the newest last. The square version for the site is
+       website/src/assets/mark.svg; favicon.svg adds the background plate.
+
+       This one is deliberately a SINGLE colour. A README is rendered by GitHub, which picks its
+       own theme (light / dark / auto), so an SVG keyed to `prefers-color-scheme` cannot be
+       trusted to match the page it lands on -- a near-black mark would disappear on GitHub's
+       dark background. Clay reads on both, so no variant, no <picture>, no theme coupling. -->
+  <g fill="#a94e2e">
+    <rect x="8"    y="48" width="9.5" height="8"  rx="2.5" />
+    <rect x="20.5" y="42" width="9.5" height="14" rx="2.5" />
+    <rect x="33"   y="31" width="9.5" height="25" rx="2.5" />
+    <rect x="45.5" y="12" width="9.5" height="44" rx="2.5" />
+  </g>
+</svg>

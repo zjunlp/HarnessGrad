@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>HarnessGrad</title>
+<!--
+  Deep links under the old project page (/HarnessGrad/getting-started/ and friends) are served
+  this file. Map the path onto the new site rather than sending the reader to its front page:
+  the only thing that changed about a published result URL is the prefix.
+-->
+<link rel="canonical" href="https://zjunlp.github.io/HarnessGrad-Hub/">
+<meta name="robots" content="noindex">
+<script>
+  (function () {
+    var path = location.pathname.replace(/^\/HarnessGrad(?=\/|$)/, '');
+    if (path === '' || path === '/') path = '/';
+    location.replace('https://zjunlp.github.io/HarnessGrad-Hub' + path + location.search + location.hash);
+  })();
+</script>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 18vh auto 0;
+         max-width: 40rem; padding: 0 1.25rem; line-height: 1.55; color: #1d1d1f; }
+  a { color: #a94e2e; }
+</style>
+<p>That page is now at
+<a href="https://zjunlp.github.io/HarnessGrad-Hub/">zjunlp.github.io/HarnessGrad-Hub</a>.</p>
