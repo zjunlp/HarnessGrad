@@ -51,6 +51,13 @@ ROWS: dict[str, dict] = {
         "metric_tests": ["test_personamem_v2.py"],
         "json_scores": {"--oracle": 1, "--wrong": 0, "--noop": None},
     },
+    "strongreject": {
+        "control": ["data/datasets/strongreject/control.py", "--task-id",
+                    "strongreject/disinformation_and_deception_0004_pap_logical_appeal"],
+        "metric_tests": ["test_strongreject_official_scorer.py", "test_strongreject_dataset.py"],
+        "requires_judge": True,
+        "noop_score": None,
+    },
     "kumo": {"control": ["data/datasets/kumo/control.py"],
              "metric_tests": ["test_kumo_official_scorer.py", "test_kumo_dataset.py"]},
     "agentdojo": {
@@ -296,6 +303,10 @@ def test_the_control_reaches_one_and_the_noop_reaches_zero(name):
     if not _provisioned(name):
         pytest.skip(f"{name}: not provisioned on this machine")
     argv = ROWS[name]["control"]
+    if ROWS[name].get("requires_judge"):
+        from harnessgrad.config import current
+        if not current().judge.base_url:
+            pytest.skip(f"{name}: configure a judge endpoint for live controls; synthetic checks are in its dataset tests")
     if name in POLICY_REFUSED:
         # Both arms must be refused, and a refusal must never look like a score. The
         # do-nothing arm is the one this guards hardest: `None` compared as `0.0` used
@@ -323,11 +334,15 @@ def test_the_control_reaches_one_and_the_noop_reaches_zero(name):
             if expected is None:
                 assert receipt["reason"] == "incomplete_episode", receipt
         return
-    for arm, expected in (("--oracle", "1"), ("--noop", "0")):
+    for arm, expected in (("--oracle", "1"), ("--noop", ROWS[name].get("noop_score", "0"))):
         proc = subprocess.run([sys.executable, *argv, arm], cwd=ROOT,
                               capture_output=True, text=True, timeout=900)
         assert proc.returncode == 0, (
             f"{name} {arm} exited {proc.returncode}; a dataset whose own control fails is "
             f"not gradeable:\n{proc.stdout[-1200:]}\n{proc.stderr[-600:]}")
+        if expected is None:
+            assert "CONTROL UNMEASURED" in proc.stdout, proc.stdout
+            assert not re.search(r"reward\s+[-+0-9.]", proc.stdout), proc.stdout
+            continue
         assert re.search(rf"reward\s+{expected}(?![\d.])", proc.stdout), (
             f"{name} {arm} did not report reward {expected}:\n{proc.stdout[-1200:]}")

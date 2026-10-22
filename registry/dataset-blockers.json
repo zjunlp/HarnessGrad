@@ -646,6 +646,17 @@
       "surface": "reasoning"
     },
     {
+      "blockers": [],
+      "dataset": "strongreject",
+      "demand": "reasoning",
+      "exercises": [
+        "safety"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
       "blockers": [
         {
           "id": "retain-contract-refusal",

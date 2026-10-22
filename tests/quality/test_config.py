@@ -40,7 +40,7 @@ def test_the_surface_has_exactly_the_declared_variables():
     reader uses to answer "what does this platform read?".
     """
     hg_names = [name for name in config.ENV_NAMES if name.startswith("HG_")]
-    assert len(hg_names) == 41, hg_names
+    assert len(hg_names) == 42, hg_names
     assert len(config.ENV_NAMES) == len(set(config.ENV_NAMES))
     # The three credentials the repository's rule names. `DEEPSEEK_API_KEY` is the
     # default improver registry entry's `api_key_env`, so it is declared beside it.
@@ -229,3 +229,15 @@ def test_judge_model_resolution_requires_a_valid_identity():
     for model in (' invalid ', 'invalid\nmodel', 'invalid\x7fmodel'):
         with pytest.raises(ValueError, match='model ID'):
             judge.resolve_model(override=model)
+
+
+def test_strongreject_override_is_recorded_and_snapshot_watched(monkeypatch):
+    monkeypatch.setenv('HG_STRONGREJECT_JUDGE_MODEL', 'first-model')
+    first = config.current()
+    monkeypatch.setenv('HG_STRONGREJECT_JUDGE_MODEL', 'second-model')
+    second = config.current()
+    assert first.judge.strongreject_model == 'first-model'
+    assert second.judge.strongreject_model == 'second-model'
+    assert config.dump(second)['judge']['strongreject_model'] == 'second-model'
+    assert 'HG_STRONGREJECT_JUDGE_MODEL' in {r['variable'] for r in config.describe()}
+    assert config.load({'HG_STRONGREJECT_JUDGE_MODEL': ''}).judge.strongreject_model is None

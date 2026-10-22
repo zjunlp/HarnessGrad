@@ -1,0 +1,782 @@
+{
+  "schema": 1,
+  "task_revision": "9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f",
+  "evaluator_revision": "7a551d5b440ec7b75d4f6f5bb7c1719965b76b47",
+  "files": [
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0004_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0004_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "10c518b41948072f8e760d2e2709dac66b5dbb07e8663bccb56cb4d1fed9e671"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0004_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0004_poems/tests/task_metadata.json",
+      "sha256": "b8df1cb42ceaf0af011c569b2db5fb683d8bd9c37ffab8c9c0f64f869ecb4ef8"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0004_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0004_prefix_injection/tests/task_metadata.json",
+      "sha256": "d3fae6c2d3122c76946ccce36148caefb6129872edfe71e636c804deafb5c79b"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0006_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0006_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "af6a20afb046f9a457e4fc692457ac2e306509438e4ccf81b83be0593a8ffeb7"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0006_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0006_poems/tests/task_metadata.json",
+      "sha256": "e6359e0d784727988dd3e12dfaf84b26053ab00270023120175f752414478c64"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0006_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0006_prefix_injection/tests/task_metadata.json",
+      "sha256": "31e3bafac73e7e117be629efc062cb8cc884a744a147aecbf15749e9e0eeeaf5"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0008_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0008_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "708d21a1411fa6b5f154a4f0fe5b679cacf41c4db613603820f1b4e9e336ceeb"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0008_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0008_poems/tests/task_metadata.json",
+      "sha256": "8aad7b00e915052e409689f24412434561607408db7c63d0eb86886607b0edb1"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0008_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0008_prefix_injection/tests/task_metadata.json",
+      "sha256": "97c31aa254acab938ce7489fb63c34badac8875812b3fec6245fa8249e1fae97"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0009_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0009_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "a6f0ba942c58044d1c8b52be36b603d7ec63e69234037928c67b3090cc7bfdca"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0009_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0009_poems/tests/task_metadata.json",
+      "sha256": "f8383133d44160b9e4466b5ad61e9fbffec53072bb69a27f7c65f6465aa6ea3b"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0009_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0009_prefix_injection/tests/task_metadata.json",
+      "sha256": "7fd686bb9df4c1c38d3ba1cbc67d9b7729219b75edd11483f73bfd7a2d61603a"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0018_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0018_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "492aa10ec9c12eb0fc5c8145894b8107562c4bd0e7f505b6b53702e50124f88c"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0018_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0018_poems/tests/task_metadata.json",
+      "sha256": "61a92d59e5db578ca7807fdbb7f8593fd98e06d9bc843c24f86525791d6b3196"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0018_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0018_prefix_injection/tests/task_metadata.json",
+      "sha256": "eaa47d5ecfc406c7b51b34809d52dbfde8e37b2adb4c470baa43d2ffa5ff5b57"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0045_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0045_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "c3b549b59cdb2c88da3a7ece2ebb6bba56fba839b167131e59d719cb2ce72cff"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0045_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0045_poems/tests/task_metadata.json",
+      "sha256": "3bd06f0380ad0f9168cf0db2ade485604a7d91e809d558e2e125a66816657cae"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0045_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0045_prefix_injection/tests/task_metadata.json",
+      "sha256": "ae31c35f3c994100cce8b00476a43ce86e61b2216fc0212cbbd496317b966af2"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0047_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0047_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "02cdf48f007ba894327f6d15c7d57891efeaeb8fdc9409a4498d456f60beb9cc"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0047_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0047_poems/tests/task_metadata.json",
+      "sha256": "db6489d9ad51abdfe5ff26b74c9016d958061c4dbea579e426d1329f271163e2"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0047_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0047_prefix_injection/tests/task_metadata.json",
+      "sha256": "087505699f6f0bb536d8878086ef0ca2b6fcde88540a1255c9ced419bb983da9"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0049_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0049_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "4221bdd409040bc5f1b4f4e732d8c5d6ea22b09b446dbee31bb5c264b19162e0"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0049_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0049_poems/tests/task_metadata.json",
+      "sha256": "1bf57945610d30274e97d20bf81ee525014628cf863d388bc81f211aa9b9c714"
+    },
+    {
+      "path": "tasks/strongreject_disinformation_and_deception_0049_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0049_prefix_injection/tests/task_metadata.json",
+      "sha256": "78173bb340f3b45c06ec3927bb1aa10c5f89ab30d25a6e14050387e0ec93906b"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0000_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0000_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "ffdb8d8cb1887c126011eb21b22d90721f556a40adb88d19bdb7a3cd78880178"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0000_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0000_poems/tests/task_metadata.json",
+      "sha256": "5793e6fa761c2c59950699e9df25c883b732e01d679fda634ac94660f82f30cb"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0000_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0000_prefix_injection/tests/task_metadata.json",
+      "sha256": "790b279f6551b94e95844cd3fbbc4d5f8b993d107f3d06ea2e08a5913491d91e"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0007_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0007_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "9443861bf265290589ddd5804d8babef76dccfc804f26c604d64b77e2e7ebc07"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0007_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0007_poems/tests/task_metadata.json",
+      "sha256": "fc07dfe5dfc86c11633ca4d6196eae7c8b26cc23ec98f3b9dbee55f200463dff"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0007_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0007_prefix_injection/tests/task_metadata.json",
+      "sha256": "dfda69254fca2f0f80caaedbeaffdffec01aca2432f97e421af9a626ec949d0d"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0012_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0012_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "1c72eb15682da8aca090a4baabe2f6a190b58a0eead99e10174127e4c348c1dd"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0012_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0012_poems/tests/task_metadata.json",
+      "sha256": "f27b2a8211734fabd01d1adfbc0531ba122f5d8e139555e2272b5a49f54bbcbb"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0012_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0012_prefix_injection/tests/task_metadata.json",
+      "sha256": "9e1ddcfe8136958270b72606d8e56ffbd930a3477ecd8b919771f6a7960d8474"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0016_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0016_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "de0d3f8ab525edff98ed1b3e7ad93e1a409b09cfa7abe7a11af47df993767275"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0016_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0016_poems/tests/task_metadata.json",
+      "sha256": "2dcf90c7fe6a1ade0d546be4955ce3d2eae49c06622a02d0c48e06077ae7eca4"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0016_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0016_prefix_injection/tests/task_metadata.json",
+      "sha256": "c5e1444b57ca1c88d286c292df68094f071e64983ed0ad831a2a7bd8ff7e010b"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0020_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0020_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "bd72112ff28fcf368b5d9d8d14342c340540002900235f2db440236a05846232"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0020_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0020_poems/tests/task_metadata.json",
+      "sha256": "8e1ea97d4cf9a325d91aa2f88d87e1276ff9b7a8773d6f0ff8a69ba7784ee938"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0020_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0020_prefix_injection/tests/task_metadata.json",
+      "sha256": "f87862b6fdbccaa179cc0cd5816895d6136930e5afcd4466e3fb2812288a2bad"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0024_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0024_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "3138736e6cd5e3abd7d6b174a19bc31ff85d04759613f5d943ea81f103e35e35"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0024_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0024_poems/tests/task_metadata.json",
+      "sha256": "e0783b09ea674ed640baee1d607d87c5d240e705ed5a56b2bcfb05578f91e874"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0024_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0024_prefix_injection/tests/task_metadata.json",
+      "sha256": "3cdaf3f386fd9e89ad1f3eee0f96c17d4fbb40c4e5fc1f2d9c7e89788bfa675e"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0026_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0026_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "3053cfe076ebb47ee3cf88fbed7160a045b8370a07842182af9a8b96d162015a"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0026_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0026_poems/tests/task_metadata.json",
+      "sha256": "677f725e75e4d59ff261e993842ae6affe027c44be00681e5207939850d11cb4"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0026_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0026_prefix_injection/tests/task_metadata.json",
+      "sha256": "915393e93757ed859d3ee6ed6122e10f58f5d70e0e1d177586595831a904fb61"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0032_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0032_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "39872a1aeb7b1905e7a2898ccc8e4d32d07cae787de1e7df0dd149b45e56ea40"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0032_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0032_poems/tests/task_metadata.json",
+      "sha256": "0232f5b7221f797b161c457f0019d66612d169321d885f65f5fbf3f16dc5eb32"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0032_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0032_prefix_injection/tests/task_metadata.json",
+      "sha256": "8d971460533ad641fe518ba48d91753b9766daa7ba9bc492b8a9eacff25f7b4b"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0036_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0036_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "68a7ed223ba8dab4b0639582b51f63b6a977bfee4faa09a870aa4dcce7d165d6"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0036_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0036_poems/tests/task_metadata.json",
+      "sha256": "30dd43dd91444452cce94e3d2feb90644a235596b91adf2b7abd311251480504"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0036_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0036_prefix_injection/tests/task_metadata.json",
+      "sha256": "0d6180e9d9651fbd27d0f7920374db095f52fb9095a6c7bd00161f2370881285"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0038_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0038_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "7f611c7f9df3cb9c9ab85d47b129a979235c3c22eba761552761a030fc096732"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0038_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0038_poems/tests/task_metadata.json",
+      "sha256": "ed9a763f1030ff188707a319ccb15a944509fdd5c414a23bb4a2372a6bda2cf2"
+    },
+    {
+      "path": "tasks/strongreject_hate_harassment_and_discrimination_0038_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_hate_harassment_and_discrimination_0038_prefix_injection/tests/task_metadata.json",
+      "sha256": "110125b58f006b7deb55e47f3fcb59326926973602efa8945a0a0793c5d326ed"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0001_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0001_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "51e7f1ce3980f1c8a2984854230c3a3938661d89544b8d9767dd77023065c20d"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0001_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0001_poems/tests/task_metadata.json",
+      "sha256": "136564668ec1a1f2acac0e5dd224504304773ce4b5d3c0d009b36fcf99811284"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0001_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0001_prefix_injection/tests/task_metadata.json",
+      "sha256": "251301691c4f7b577737bc33c90b49362679d8be0a363207e25e12ba762d41c5"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0011_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0011_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "757666542969a6bb3b73045f8fe9c14eb0efed48a71bc8f8cd5646909aca3655"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0011_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0011_poems/tests/task_metadata.json",
+      "sha256": "bb9836fde71a84f23a1fe3d2f783f9af5b6681ce636886d9c62245aeebb2681b"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0011_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0011_prefix_injection/tests/task_metadata.json",
+      "sha256": "5077a9f166e4b839ce280d8b1b51e7818523747d30390e87af33e8cc42094cf9"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0013_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0013_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "e94ffa2601a10df5efeb707725a390720b264b050cbae9da40af89548667d4b9"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0013_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0013_poems/tests/task_metadata.json",
+      "sha256": "f8c8807a875ff2c4bb02985a57638954a095f61d2cf279641226160bcddab1c4"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0013_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0013_prefix_injection/tests/task_metadata.json",
+      "sha256": "4a35d21ae80ea38324b19f683a8e8ae1d63fac0504e5984a5cdc440b95f96b3a"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0014_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0014_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "373acab92e815ca7005407bdac99a5f2f0aa1829abe2faae87ad08a9f18e8f94"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0014_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0014_poems/tests/task_metadata.json",
+      "sha256": "63709f1313374ebd31775efe7bb3d87b4197071bdcacce0ffdb3e87d23d4d667"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0014_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0014_prefix_injection/tests/task_metadata.json",
+      "sha256": "369a66ebdd41a39b936a5781ff214eabf555875f22478a667383e3a3c66217e2"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0028_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0028_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "d83ee93f0a6e9c89787efe633c4d2f38ddfa4bb48381ae50356ea7f534f0e827"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0028_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0028_poems/tests/task_metadata.json",
+      "sha256": "7096237f799560c8806dc286c2e16507b8397631d99359f171cf1aba01b5d33c"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0028_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0028_prefix_injection/tests/task_metadata.json",
+      "sha256": "ea36eef4c20a7de90598f9b0890ff6d5c22fc1e5cae2c39138f042fe36bf63d9"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0030_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0030_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "10b31b3d2b7b1cf0b0d2a46f1c6f2d5a85e7f0a725835b0f8378a0c5f0e0529a"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0030_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0030_poems/tests/task_metadata.json",
+      "sha256": "3b8104af0b2a6449e8ae9b3a871dbfed9258e022fdbbefb52a4e4c4aadd9c344"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0030_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0030_prefix_injection/tests/task_metadata.json",
+      "sha256": "8e5bb47e3186efcf95d2ec0fa4e64fd445e1050b6f66da7bb1f3c4a59907b0cd"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0034_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0034_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "e5d9a46fc29c2dae78050e69e780ee2a2b7cdcc505ba83f2ce5f6452ec9a1880"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0034_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0034_poems/tests/task_metadata.json",
+      "sha256": "d0a0ec9bf23a2f18f5b877f876c9e77cd6a0b416e0a343591e13c6d99a14b7bb"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0034_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0034_prefix_injection/tests/task_metadata.json",
+      "sha256": "6d96b95aa01c87021a465a6bc7305e95737d763a129fff51c7b21dbd9f9406ba"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0040_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0040_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "6858c3537c093ce1af2206d5cd4716622849105285157f0540909c5ecc55cf49"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0040_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0040_poems/tests/task_metadata.json",
+      "sha256": "8eb642d58bc75cf575f92ce2801a838175883911189dcf7aa89c6a41aaea172b"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0040_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0040_prefix_injection/tests/task_metadata.json",
+      "sha256": "6bf122b1d81487da53599907d316b10a3a0d08c875cfb6f20bdec09e476a9dcd"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0043_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0043_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "7f8c2060992968865db0551433ea8f94681141756bd4af8489ebda836db7c0dd"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0043_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0043_poems/tests/task_metadata.json",
+      "sha256": "f541e931b0f678657eac4e7bcf25b257baada5565bff0d2b8b767de1e159f502"
+    },
+    {
+      "path": "tasks/strongreject_illegal_goods_and_services_0043_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_illegal_goods_and_services_0043_prefix_injection/tests/task_metadata.json",
+      "sha256": "4922fda1c39052908bccf1968bdc8e70b39b69b9347b68af6a993cb8fe703d7e"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0003_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0003_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "39262046bd0d28cff746309c0b44d2a2e00e238745efd63468308b525cc7bb32"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0003_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0003_poems/tests/task_metadata.json",
+      "sha256": "3f50eab2068c8c8dc56056130f4e04bd435c65b301bea501e24c02ea1accb178"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0003_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0003_prefix_injection/tests/task_metadata.json",
+      "sha256": "303cc1cd09f306fc42123d5c37bcd0dd7d869480be8a44fbf79cce46ea1eb5e2"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0021_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0021_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "d70a0e4b51b8371949bce4c367cc9f594c82f2705dbb9febd6aff8f97250a369"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0021_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0021_poems/tests/task_metadata.json",
+      "sha256": "58d14d93d2cbabd0fb3dd3c74168cda5213db6b715167b7cfaecf453d2d7a78a"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0021_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0021_prefix_injection/tests/task_metadata.json",
+      "sha256": "676c234c2d6ac76e732114a7b44d24ec1f01acf9f819a9682ae251af6c35f6f7"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0025_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0025_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "4ef7c397faa50066b64abce7e32e8a9c3aaeddcc52579671298d1ffd7c548725"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0025_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0025_poems/tests/task_metadata.json",
+      "sha256": "b8d94062d382f7febd615192ff35167ffe300176ad6a9a2803f022affdaf2932"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0025_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0025_prefix_injection/tests/task_metadata.json",
+      "sha256": "f65231d22c70b6ae12078a3a25fe7d677d19cb1c9e885104936397c48ee1ede8"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0027_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0027_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "85548bf2f3fb0120494a255997e73b1587d242a66b84f34de9c2527e2e99e76a"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0027_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0027_poems/tests/task_metadata.json",
+      "sha256": "fbfbd31ca95a3d7a43e2c803b2ac3bec21bdb8ef98cdc7a01e94264b7524e2c8"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0027_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0027_prefix_injection/tests/task_metadata.json",
+      "sha256": "4ba8cd4c3f6f89210575b37d646ea982a89909ae56974d80f528456a56b0f79a"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0029_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0029_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "519d3944636ea7893ba7c36c2344a7db48909bfb6dfcc457a88c9d965889ade5"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0029_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0029_poems/tests/task_metadata.json",
+      "sha256": "24b68e19d0ddd6628e5ce53198a71464399dafb1bdba351afb6a9caf71652e04"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0029_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0029_prefix_injection/tests/task_metadata.json",
+      "sha256": "cf08a8e8df5b19fd0ed4cb98a5459bb705552458bf45bbbcae58ea9c1416a5f5"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0037_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0037_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "cec35d2d1735f24c8227d81601219cd219c4cbfbb3aa14fa6a93c5560a5ab939"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0037_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0037_poems/tests/task_metadata.json",
+      "sha256": "64210f5974f9afbbfe7879b92aa681e062d78bd8df3bfb5567a7a2ce67879295"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0037_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0037_prefix_injection/tests/task_metadata.json",
+      "sha256": "4c4a968a14893204a6d4f7875e0b903cf59e7aedfe7e531282c5c88e56e33c1e"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0042_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0042_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "98455c01389c4b218f9357808fbf25e6c0cf0af19d72c37ea16f9fd27625d206"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0042_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0042_poems/tests/task_metadata.json",
+      "sha256": "ea3cf490b36cbbaf5bc01d5151f94fdee8f30565aaa92733b1dbcb98dfdc0b5f"
+    },
+    {
+      "path": "tasks/strongreject_non-violent_crimes_0042_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_non-violent_crimes_0042_prefix_injection/tests/task_metadata.json",
+      "sha256": "0998a33a4072e845716eb84ec16bca857b92e19ff3d000b2f007a541290e2516"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0005_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0005_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "472b1931d61c90d5e0f2c30adbbde2cd23c81489be6ceb4467c9c3401a732811"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0005_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0005_poems/tests/task_metadata.json",
+      "sha256": "fbded97dc6c828cc2bcdc2d880bbd0482cea548b3b374fe90759f7517de77207"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0005_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0005_prefix_injection/tests/task_metadata.json",
+      "sha256": "e87ff2f1289718db68c73547f95a36b0efff301eb44bda196a80bdb17cffdfdc"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0015_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0015_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "6e0c76a8eeafb3b1aee54d279ca82462b2d0dd705586ce2f2f86ea2bdc99c4e0"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0015_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0015_poems/tests/task_metadata.json",
+      "sha256": "18e2b5b551e6b474d87bb357e063c68f5c5d7e51c3fea15ccdbee9b9971d1c0e"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0015_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0015_prefix_injection/tests/task_metadata.json",
+      "sha256": "eb7cdcad07d48640d04619d8407256f842d24b2b2f525a2264463469baa0ebc2"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0022_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0022_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "791e86a57676b79aa81899c5dc96d108369fdbd146c5acf75a9517fb66769696"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0022_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0022_poems/tests/task_metadata.json",
+      "sha256": "f2b96215f9c727e336fff2ceb6a9385bdfccf779fca164ccfbf65bfdaecfa81c"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0022_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0022_prefix_injection/tests/task_metadata.json",
+      "sha256": "e171a389ec16dc902053704f68c927184e563a9050387052daf5478e615e9b57"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0023_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0023_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "b567bb26a2a864ef3a1afacd8a788fafd35b65051764bba4932786a5ccd8d6c3"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0023_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0023_poems/tests/task_metadata.json",
+      "sha256": "87cd30a07c13f810b3991889842013b079907c5d75462edbad00aa5eb57efa97"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0023_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0023_prefix_injection/tests/task_metadata.json",
+      "sha256": "9c924c0231934ca2fdbf2a6834b8e905a15ecbfb937b602f7f3162edd1ebf4e9"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0031_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0031_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "b0dfa5f92cafa70567b4b0f22a8622835734cbb15603d0c397f227e644290ff6"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0031_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0031_poems/tests/task_metadata.json",
+      "sha256": "de5dfe0567b6a25b88a7b0fdbc12430ec3782cf8fc01ed1473c34a3504b3e254"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0031_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0031_prefix_injection/tests/task_metadata.json",
+      "sha256": "5813d90356c8736eeccbb484029fb77723cc208d853d04c0a87328a4a38f6929"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0035_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0035_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "24cbe97d938ab85797e91c2fb36a7699aacf2e783f64c4e6fa4ac7a3800bb79a"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0035_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0035_poems/tests/task_metadata.json",
+      "sha256": "a8cd15de9e361da781cd0fbab9c7afe2ba51c471b2b9d435077bfb7ad468fb8f"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0035_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0035_prefix_injection/tests/task_metadata.json",
+      "sha256": "f2773db857604a782ea6cccf77cf450e07d6d135613663d770db1b03ae9de3c3"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0039_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0039_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "c59508466130270f9dd12fbf3cf66690fe1496057d81c329abdcb4f63d0b20da"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0039_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0039_poems/tests/task_metadata.json",
+      "sha256": "b04a75e1d99133cdbcc6838b7b2fefcac7218328bca00f9768befb4f4c572fbc"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0039_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0039_prefix_injection/tests/task_metadata.json",
+      "sha256": "444ec6da6a836aa4a149271e7524275c5df0df2180c9dea30e22b61356fe14b6"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0041_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0041_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "17547ca45aee08774f6d8ad7cd255196faaa4de387c3f11078144c8300607b2d"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0041_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0041_poems/tests/task_metadata.json",
+      "sha256": "76b39c089ffe0208d64a3f3609b6df82c5f4aee39634b0c50886eb90876fd45c"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0041_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0041_prefix_injection/tests/task_metadata.json",
+      "sha256": "16c7e3f93a9718d0d6913680b1d87921152339f0114f8abb1c583f0616990768"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0048_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0048_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "37ac4dac4a3001e02b11631cb0b743a5e07cfdcbac35ebf3bf935ee3ca14da78"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0048_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0048_poems/tests/task_metadata.json",
+      "sha256": "a0acb6c8fbe9fb4e312f213a54f11041df0086e593e5ef183a92202cac63fee3"
+    },
+    {
+      "path": "tasks/strongreject_sexual_content_0048_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_sexual_content_0048_prefix_injection/tests/task_metadata.json",
+      "sha256": "4b64e61e7b78131999c6295c4eba4afcd369dd3f8fd2325e96751a04b9acdc45"
+    },
+    {
+      "path": "tasks/strongreject_violence_0002_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0002_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "96351c2180ae317780a7525f049f287d83037348cbf469fa6bcf212de7d5db49"
+    },
+    {
+      "path": "tasks/strongreject_violence_0002_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0002_poems/tests/task_metadata.json",
+      "sha256": "8a8eea58c26557a391858fa941cd4f65c658b3db70df114d226c1e5264a595f4"
+    },
+    {
+      "path": "tasks/strongreject_violence_0002_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0002_prefix_injection/tests/task_metadata.json",
+      "sha256": "9005bfacb18ad16128e4c87c1731b9a5cf1fed6720c99bf6e9adf4ecedfe92e7"
+    },
+    {
+      "path": "tasks/strongreject_violence_0010_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0010_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "166f6c7970aaad3dc48cd849740fc93a5c298da634ebdde6c7212e26bec0da86"
+    },
+    {
+      "path": "tasks/strongreject_violence_0010_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0010_poems/tests/task_metadata.json",
+      "sha256": "e7c6bb3f03cd2f70a5c965f290719ced93ac92c98c9ca71f07efda1ccc5a9422"
+    },
+    {
+      "path": "tasks/strongreject_violence_0010_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0010_prefix_injection/tests/task_metadata.json",
+      "sha256": "ca5f8a721eaa1f0de82d8f75d19f54698522ad8f57392a3c6f78bd6e3f6a9b67"
+    },
+    {
+      "path": "tasks/strongreject_violence_0017_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0017_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "897dc8490b23be59763cf2c97b57a67a6533e6618d6caf203251d14cdc8a6e74"
+    },
+    {
+      "path": "tasks/strongreject_violence_0017_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0017_poems/tests/task_metadata.json",
+      "sha256": "7845e15b130e0ea88d8f786635c686c6a9cfca68a09ef8da25f005324ca6d00e"
+    },
+    {
+      "path": "tasks/strongreject_violence_0017_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0017_prefix_injection/tests/task_metadata.json",
+      "sha256": "8631e9c5a4fda92516ee3278f48b991a1be5a7ee054f24a13c3022bb50706421"
+    },
+    {
+      "path": "tasks/strongreject_violence_0019_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0019_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "bc1e9681d77c4950263eaa4067bcd80b173ec6ed713c5ccb85b723c23173df86"
+    },
+    {
+      "path": "tasks/strongreject_violence_0019_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0019_poems/tests/task_metadata.json",
+      "sha256": "db309f5301b77be7231c73cfab9dc315253ba5ae6934b7f5ee09543af105bfc4"
+    },
+    {
+      "path": "tasks/strongreject_violence_0019_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0019_prefix_injection/tests/task_metadata.json",
+      "sha256": "372aaf620f5c173222590d5fd137544b974295864ca41d91e8c3b780cd411df5"
+    },
+    {
+      "path": "tasks/strongreject_violence_0033_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0033_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "e95f4a1d2adc013d9030aec66e64a1037437f6bd190368c576cecc33e4b3bc00"
+    },
+    {
+      "path": "tasks/strongreject_violence_0033_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0033_poems/tests/task_metadata.json",
+      "sha256": "6e4536ff2c9acd522830eaa5522b8a89934faed60a1e0d99581c93580e85b2a5"
+    },
+    {
+      "path": "tasks/strongreject_violence_0033_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0033_prefix_injection/tests/task_metadata.json",
+      "sha256": "c68c3a216e6e95766a0821540d10012747ba58ee233452e659652ba9432a3f54"
+    },
+    {
+      "path": "tasks/strongreject_violence_0044_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0044_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "ca4862cd0b91279b2f4b8f8b06cb46c704c57ffb89e1a251df0ebef43da3ba6f"
+    },
+    {
+      "path": "tasks/strongreject_violence_0044_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0044_poems/tests/task_metadata.json",
+      "sha256": "802ca2420bb2afcf4fffdf4235e1ef7090ce00fedcf67b7f35bd12da5f2ec891"
+    },
+    {
+      "path": "tasks/strongreject_violence_0044_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0044_prefix_injection/tests/task_metadata.json",
+      "sha256": "3bd55b04363e9f5180fa8253eb6b2e2b8b9eccaec2ec9f5dd732cab54a4697ce"
+    },
+    {
+      "path": "tasks/strongreject_violence_0046_pap_logical_appeal.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0046_pap_logical_appeal/tests/task_metadata.json",
+      "sha256": "fb2096ef480967bf48627c9849bb7f8034dd2309be461cd19ab4c43e5792374d"
+    },
+    {
+      "path": "tasks/strongreject_violence_0046_poems.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0046_poems/tests/task_metadata.json",
+      "sha256": "2af3d5146a139c27789ef5dce73d8b563ad3f9d1550d605f428c08f40545d46e"
+    },
+    {
+      "path": "tasks/strongreject_violence_0046_prefix_injection.json",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_violence_0046_prefix_injection/tests/task_metadata.json",
+      "sha256": "fcad2976eb6471b9ca9605ef7e2d2247c4773074eeb7cb3e021333c07203d846"
+    },
+    {
+      "path": "upstream-evaluate.py",
+      "url": "https://raw.githubusercontent.com/dsbowen/strong_reject/7a551d5b440ec7b75d4f6f5bb7c1719965b76b47/strong_reject/evaluate.py",
+      "sha256": "bc36ff35e5822f67a05969fa18cbbee7361652c6dbddb8f60e8b34bbceea3851"
+    },
+    {
+      "path": "upstream-judge_templates.json",
+      "url": "https://raw.githubusercontent.com/dsbowen/strong_reject/7a551d5b440ec7b75d4f6f5bb7c1719965b76b47/strong_reject/eval_files/judge_templates.json",
+      "sha256": "6d01841899e99f1f57c4f19153056051684ede2a7e1b54ebbb37b5ddff981768"
+    },
+    {
+      "path": "upstream-dataset.csv",
+      "url": "https://raw.githubusercontent.com/alexandrasouly/strongreject/f7cad6c17e624e21d8df2278e918ae1dddb4cb56/strongreject_dataset/strongreject_dataset.csv",
+      "sha256": "4dd70357e4ff8b5d0ba5ebafecab5d6dd5633ce8046e3dd1c8bd93e64de44381"
+    },
+    {
+      "path": "harbor-solve.sh",
+      "url": "https://raw.githubusercontent.com/laude-institute/harbor-datasets/9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f/datasets/strongreject/strongreject_disinformation_and_deception_0004_pap_logical_appeal/solution/solve.sh",
+      "sha256": "3374984f4bd791906d2dad702cf86e64a88c3078020cbcb73ddaf01d323e2140"
+    },
+    {
+      "path": "upstream-LICENSE",
+      "url": "https://raw.githubusercontent.com/dsbowen/strong_reject/7a551d5b440ec7b75d4f6f5bb7c1719965b76b47/LICENSE",
+      "sha256": "bf21192441d08cf7a24eb55746a0f4d557a1ae3736b475bf3b7e5e8f04a56262"
+    }
+  ]
+}

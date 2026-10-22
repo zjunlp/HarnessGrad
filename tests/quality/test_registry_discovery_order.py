@@ -53,6 +53,7 @@ EXPECTED_DATASETS = (
     "sportsunderstanding",
     "spreadsheetbench",
     "strategyqa",
+    "strongreject",
     "tau2_bench",
     "tau_bench",
     "terminal_bench",

@@ -17,12 +17,13 @@ smokes are retained, with no task tuning or budget increase authorized here.
 
 ## Dataset integration summary
 
-KUMO and PersonaMem-v2 are registered
+KUMO, PersonaMem-v2 and StrongREJECT are registered
 adapters. Their READMEs define the current task scope, splits, scoring, preparation
 and controls:
 
 - [KUMO](../data/datasets/kumo/README.md)
 - [PersonaMem-v2](../data/datasets/personamem_v2/README.md)
+- [StrongREJECT](../data/datasets/strongreject/README.md)
 
 The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction
 records, judge/environment model channels, repeated trials and fixed peer execution.
