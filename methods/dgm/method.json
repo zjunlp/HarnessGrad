@@ -7,8 +7,8 @@
  "deviations": [
   {
    "what": "The round's target is chosen from two trace-derived failure categories (never submitted, context trimmed) instead of upstream's four entries.",
-   "why": "solve_empty_patches and solve_contextlength are episode properties this platform records; the other two need repeated trials or a continuous per-task score, which it does not have. Before this the target was 'N/90 tasks fail' every round, which made each edit a broad rewrite.",
-   "direction": "closer to upstream than the broad rule, still narrower than upstream"
+   "why": "solve_empty_patches and solve_contextlength are episode properties this platform records; the other two need repeated trials or a continuous per-task score, which it does not have. Before this the target was 'N/90 tasks fail' every round, which made each edit a broad rewrite. Direction in the lint's terms: closer to upstream than the broad rule, still narrower than upstream.",
+   "direction": "weaker"
   },
   {
    "what": "The diagnostic prompt carries no gold patch, no private test patch and no test log.",
