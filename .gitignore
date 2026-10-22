@@ -1,0 +1,461 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging.
+# **Anchored to the repository root.** Every one of these is the Python packaging
+# convention for a directory *beside setup.py*, and unanchored they match anywhere in the
+# tree: `lib/` was silently ignoring `web/src/lib/` -- the whole API client and four
+# utilities -- and `dist/` was ignoring `web/dist/`, the built SPA that is committed on
+# purpose so a demo needs no npm. A frontend that builds to `dist/` is not a Python
+# packaging artefact, and a pattern that cannot tell the two apart is a pattern that loses
+# files. Found by a worker whose new test file under `web/src/lib/` did not appear in
+# `git status`.
+.Python
+/build/
+develop-eggs/
+/dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+lib64/
+/parts/
+/sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#   Usually these files are written by a python script from a template
+#   before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+# Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+# uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+# poetry.lock
+# poetry.toml
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
+# pdm.lock
+# pdm.toml
+.pdm-python
+.pdm-build/
+
+# pixi
+#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
+# pixi.lock
+#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
+#   in the .venv directory. It is recommended not to include this directory in version control.
+.pixi
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# Redis
+*.rdb
+*.aof
+*.pid
+
+# RabbitMQ
+mnesia/
+rabbitmq/
+rabbitmq-data/
+
+# ActiveMQ
+activemq-data/
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.envrc
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#   JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#   be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#   and can be added to the global gitignore or merged into this file.  For a more nuclear
+#   option (not recommended) you can uncomment the following to ignore the entire idea folder.
+# .idea/
+
+# Abstra
+#   Abstra is an AI-powered process automation framework.
+#   Ignore directories containing user credentials, local state, and settings.
+#   Learn more at https://abstra.io/docs
+.abstra/
+
+# Visual Studio Code
+#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
+#   and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#   you could uncomment the following to ignore the entire vscode folder
+# .vscode/
+# Temporary file for partial code execution
+tempCodeRunnerFile.py
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Method sources and run artifacts
+# ---------------------------------------------------------------------------
+# The methods HarnessGrad adapts are OTHER PEOPLE'S repositories. They are not
+# vendored: legacy/adapters/SOURCES.md records what was read and legacy/adapters/fetch.sh
+# retrieves it. They live as a sibling directory of this repo, so a clone of
+# this repo contains code and records -- not datasets, papers or their licenses.
+*_runs/
+
+# Run artifacts: every run contains a workspace that is itself a git repo, so
+# committing runs/ would nest repositories and grow without bound.
+runs/
+
+# Runs archived rather than deleted, when a batch was declared meaningless. Same
+# reason as runs/, and named separately so an archive is never mistaken for a live
+# result a reader could compare against.
+runs_discarded_*/
+
+# Non-code assets that arrive attached to method repositories. Kept out so a
+# clone of this repo contains code and records, not datasets and papers.
+# NOTE: lock files are deliberately NOT ignored -- they belong in the repo,
+# they are what makes an environment reproducible.
+*.pdf
+**/docs/assets/
+**/predictions/
+**/logs/
+
+# ---------------------------------------------------------------------------
+# Credentials
+# ---------------------------------------------------------------------------
+# `.env` holds real keys for the model behind the harness. It is written by hand
+# and never committed; `.env.example` is the committed template that says which
+# variables a run needs. This rule is added before the file exists, because a
+# secret that has been committed once is compromised even after it is deleted.
+.env
+.env.local
+.env.*.local
+# `.env.example` is deliberately NOT ignored: it is the committed template that
+# says which variables a run needs. A bare `.env.*` pattern would swallow it, and
+# the negation below would not rescue it -- git does not re-include a file whose
+# own pattern matched. Enumerating the concrete names is the reliable form.
+
+# Exported harnesses: the finished artifacts of runs, browsable rather than buried
+# in a run's git. They are copies -- the commits they came from stay in runs/ --
+# so regenerating them is `python tools/export_harnesses.py`.
+current_harness/
+
+# Harness working trees. Outside the platform tree on purpose: a harness placed
+# inside it can reach the driver and .env through `..`.
+harnessgrad_work/
+
+# 服务 PID 文件:本地运行状态,不该进版本库
+.harnessgrad-state/
+
+# ---------------------------------------------------------------- local notes ---
+# Everything under `docs/` is a local working note unless it is named below. The
+# pages a user of the platform needs are re-included explicitly.
+#
+# The default is *hidden* on purpose: a new note is private until someone decides to
+# publish it, and a public page cannot be hidden by accident. INTERFACE.md, at the
+# repository root, is the contract and is public.
+/docs/*
+!/docs/resume-design.md
+!/docs/writing_a_harness.md
+!/docs/dataset-onboarding.md
+!/docs/local-model-endpoints.md
+!/docs/dataset-first-day.md
+!/docs/egress.md
+!/docs/moving-docker-data-root.md
+!/docs/architecture.md
+!/docs/import-direction.md
+!/docs/test-suite.md
+!/docs/data-split-plan.md
+!/docs/dataset-splits.md
+# The split design is a decided methodology the report cites, not a note: it carries the
+# measured reuse graph (MuSiQue 2417 -> 544 components) and the sizing rule the study set
+# depends on. Tracked by this exception rather than by `git add -f`.
+!/docs/eval-split-design.md
+# The lane assignment is not a note: `tools/run_tests.py` points at it as the reason
+# its EXCLUSIVE tuple looks the way it does, and `tests/quality/test_test_lanes.py`
+# fails without it.
+!/docs/test-lanes.md
+# Registry-linked source reviews are checked-in evidence, not private notes.
+!/docs/dataset-reviews/
+!/docs/musique-output-contract.md
+!/docs/w-fix-unknown-isolation-records.md
+!/docs/w-obs-runtime-review.md
+!/docs/w-shared-verifier-review.md
+# The three below are evidence a reader has to be able to reach without this
+# machine: an inventory that Stage D depends on, the discovery-order finding that
+# decides whether the split is a pure move, and the split construction for the
+# score(N) study. Each is cited by code or by another document, so a clone without
+# it has a dangling reference rather than a missing note.
+!/docs/tau-bench-vendoring.md
+!/docs/data-layout-open-items.md
+!/docs/registry-discovery-order.md
+!/docs/eval-split-design.md
+# A decision the registry no longer records, because the requirement was withdrawn rather
+# than met: without this file the removal of `paired-filesystem-quotas` would look like a
+# deleted blocker instead of a reviewed decision. Cited from `docs/dataset-blockers.json`.
+!/docs/filesystem-quota-decision.md
+# The sibling decision to the quota withdrawal, covering the other three requirements
+# whose only content was proof that an enforcement mechanism cannot fail. Cited from
+# `docs/dataset-blockers.json` and from `tools/check_dataset_blockers.py`.
+!/docs/enforcement-proof-decision.md
+# The deferral record for the independence and custodian-approval gates: without it the
+# withdrawal of those blockers would read as 'not needed' rather than 'operator's to
+# review'. Cited from `docs/dataset-blockers.json` and from tests/quality.
+!/docs/independent-review-deferred.md
+# The review that answers terminal-bench's `cached-runtime-admission`; the registry points
+# at it as the evidence behind that entry's `observed`.
+!/docs/terminal-bench-runtime-admission.md
+
+# The decision record for withdrawing the last three evidence blockers, and the scope note
+# that separates a `LIMIT` withdrawal from a finding of unobtainability. Without it the three
+# removals read as "not needed" rather than "withdrawn on purpose, with named limits".
+# Cited from `registry/withdrawn-requirements.md`, `registry/blocker-closure-assessment.md`
+# and `tests/quality/test_appworld_trusted_trial_writer_codex183.py`.
+!/docs/evidence-status-decision.md
+
+# The long-form companion to the front page: the reasoning behind the platform's shape,
+# the defects building it caught, and the operating rules a user must not get wrong.
+# Without it `README.md`'s "Documentation" table and its rationale pointer both dangle,
+# and the detailed design record would exist only in this machine's working tree.
+!/docs/design-notes.md
+
+# The specification for the one thing this repository cannot currently produce: the runtime
+# observation that `admit_runtime` validates and that `_refuse_unobserved_policies` refuses
+# without. It is written to be handed to whoever writes that module, so it has to be readable
+# from a clone rather than from this machine's working tree; `docs/runtime-observation-brief.md`
+# is cited by the container-dataset refusals it explains.
+!/docs/runtime-observation-brief.md
+
+# The handover for onboarding a Harbor dataset: the port-or-wrap decision, the adapter anatomy
+# (`metric.py` is the gate-3 artifact, `parity_experiment.json` its equivalence evidence), and the
+# delivery-shape rule that decides the `demand` label. It is handed to the dataset side, so it has
+# to survive a clone; `docs/dataset-onboarding.md` stays the single source for the five gates and
+# this file only records what changes when the dataset comes from Harbor.
+!/docs/harbor-dataset-handover.md
+
+# The protocol for producing an H0 -> H1 harness-evolution result: the control arm the corpus
+# proves is necessary, the two structural limits of the staged path (`staged_task_set` forces
+# `trials=1`, so `ci_available` can never be true; `_require_publication` withholds the score),
+# and the rule for what counts as a result. It has to survive a clone because a future run is
+# launched from it and because the limits are read *before* a run rather than after a receipt;
+# `docs/runtime-observation-brief.md` remains the specification for the one thing that would
+# unblock the staged path, and this file does not restate it.
+!/docs/harness-evolution-protocol.md
+
+# The measured host limit that made a 90-task pilot look like a dataset bug: each task's
+# `--internal` network came from docker's default address pool, two 16-job runs exhausted
+# it, and 77 of 90 tasks in the second run were invalid. The fix ships in the code, so the
+# page has to survive a clone twice over: a user who hits a subnet-shaped failure has to be
+# able to read why, and `tools/network_preflight.py` -- the check the page documents -- is
+# cited from `services.create_network`'s exhaustion message. Private would make both dangle.
+!/docs/network-subnets.md
+
+# A `git bundle` of this repository contains **all** of its history, including the
+# local notes above if they were ever tracked. Never committable.
+*.bundle
+
+# ------------------------------------------------------------ local scratch ---
+# Codex/review scratch trees: never source. Keep pytest basetemp outside the platform.
+.scratch/
+.overleaf-mcp/
+
+# Build output and dataset bytes do not belong in git. Both are reproducible:
+# `cd web && pnpm build` rebuilds the SPA, and `tools/datasets.py --fetch --dataset tau_bench`
+# plus tools/build_tau_bench_gt.py regenerates the tau-bench databases.
+web/dist/
+data/datasets/tau_bench/db/
+
+# --- Resource payloads must never enter git -------------------------------
+# A live-evidence worker downloaded real packages (conda/whl/tarballs) and saved
+# upstream HTTP bodies and multi-MB dumps under tests/fixtures/hg_*/ and reports/.
+# That put 516 MB of binaries into the object store for no reason: the EVIDENCE is
+# the recomputed digest list, not the payload. Keep the digests and the scripts;
+# keep the payloads on disk (they are reproducible from the recorded URLs+hashes).
+tests/fixtures/**/*.whl
+tests/fixtures/**/*.conda
+tests/fixtures/**/*.tar.bz2
+tests/fixtures/**/*.tar.gz
+tests/fixtures/**/*.tgz
+tests/fixtures/**/*.zip
+tests/fixtures/**/*.body
+tests/fixtures/**/*.strace.txt
+tests/fixtures/**/*.incomplete
+tests/fixtures/**/*.deb
+tests/fixtures/**/*.body.gz
+tests/fixtures/**/*.readelf.stdout.txt
+reports/**/*.deb
+reports/**/*.body.gz
+reports/**/*.readelf.stdout.txt
+reports/**/*.whl
+reports/**/*.conda
+reports/**/*.tar.gz
+reports/**/*.body
+
+# Per-worker evidence packets (see the note above): kept on disk, never in git.
+tests/fixtures/hg_*/
+
+# The 36 exported review documents the active registry cites as `/site/...`
+# external references ARE evidence, so they are tracked at their resolver path
+# (`tests/quality/conftest.py:24`). They were deleted from the working tree with
+# `reports/` and `docs/`; `git show 1825cd0e^:<path>` still carries every one of
+# them and `tests/fixtures/hg_migration_site/PROVENANCE.json` records the exact
+# source path, commit and digest for each. 1.8 MB of text, no payloads.
+!tests/fixtures/hg_migration_site/
+!tests/fixtures/hg_migration_site/**
+# `docs/experiment_noise.md` is cited by **six** modules -- `data/datasets/alfworld.py`,
+# `data/datasets/reasoning_gym.py`, `harnessgrad/records.py`, `harnessgrad/loops/mode_a.py`,
+# `harnessgrad/store/schema.py` and a quality test -- and it was never committed, so every
+# clone had six dangling references to a note that existed only in one working tree. It is
+# the measurement behind "a move this small is noise", which is the rule those modules apply
+# to every published number; a reader cannot check that rule without it.
+!/docs/experiment_noise.md
+
+# The audit console's UAT evidence (per-run screenshots and logs) and its explain
+# cache are outputs, not source: they are regenerated by `console/uat/smoke.py` and
+# would add ~11 MB of PNGs to the repository for no reader.
+console/uat/evidence/
+console/.cache/
+
+# Launch output from the console's run skill: per-run logs and the append-only
+# launch ledger (time, run id, full argv). Outputs, not source.
+console/.launch/
+console/.launch-log.jsonl
+
+# Local model credentials for the console's chat. Never committed: the key lives here and
+# only the server reads it.
+console/.local/
+
+# the console's endpoint settings live here and carry API keys
+.local/

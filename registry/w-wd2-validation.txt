@@ -1,0 +1,168 @@
+w-wd2: three operator-decided runtime withdrawals
+Date: 2026-10-15
+Worktree: /tmp/hg-wd2 (registered git worktree)
+Branch: wg-wd2
+Starting commit: fa15e7fb6c28a6f0695d1dd0524070cb733a36d2
+
+Scope and evidence
+------------------
+Removed only gaia/frozen-lifecycle-receipt, tau_bench/local-state-lifecycle and
+chessbench_puzzles/interruption-closure. Appended a superseding review note;
+all earlier notes remain unchanged. The withdrawal record names each former
+family/status, requested evidence, current-scope limit, former source citations
+and retained historical IDs/receipts. It corrects the earlier untouched-trio
+statement. No new search result, live receipt or authentication is claimed.
+
+docs/independent-review-deferred.md and its optional exported copy are absent
+here and in the inspected main/previous-withdrawal locations. The existing
+journal's Parent review and merge -- w-trivia -- 2026-10-15 corroborates the
+withdrawn independent-approval requirement. This availability limit is explicit
+in the new ChessBench entry; no absent document or receipt was reconstructed.
+
+Ignored source observations (not tracked)
+---------------------------------------
+The as-checked-out checker exited 2 before edits:
+  {"valid": false, "error": "bfcl_v3: missing evidence tests/fixtures/hg_bfcl/README.md"}
+Following w-wd, copied only the four missing registry-cited UTF-8 text files
+read-only from /mnt/20t/xubuqiang/Study/HarnessGrad into ignored worktree paths.
+All are below 1 MB; no main file was written and none is staged:
+  tests/fixtures/hg_bfcl/README.md       2963 bytes
+    def3ec48bbb820bcb2e46354cf65f1ac7185781de6b55ac39e3b8c8c5184007a
+  tests/fixtures/hg_bfcl/inventory.json  153710 bytes
+    425d168c19b864b3367feae22c161f377b4d080386b4ed3b491f6aeb79b17562
+  tests/fixtures/hg_trivia/README.md     5178 bytes
+    f1b33cdd6c8f2b24d56255faf9dfb7b2c423f3169e0abfb77f668b9c28810d16
+  tests/fixtures/hg_wprov/README.md      10224 bytes
+    65968fa1327f18658fd9625af26a5c4691b04b875ca371476d7b3e6364e359e1
+These existing observations restore checker availability, without changing any
+tracked AppWorld/BFCL data, skip rule or evidence claim. Optional site and B6
+packets remain absent. Fresh worktrees still need these ignored observations
+for the standalone checker; pytest skips do not substitute for evidence.
+
+Exact focused validation commands and counts
+-------------------------------------------
+python3 tools/check_dataset_blockers.py
+After provisioning, before edits, after each edit batch and at completion:
+  exit 0
+  {"valid": true, "datasets": 28, "shared_blockers": 0, "historical_records": 11, "production_authorized": false}
+
+python3 -m pytest tests/quality/test_dataset_blockers.py -q
+Before edits (after provisioning): 56 passed, 15 skipped (71 cases), exit 0.
+After: 59 passed, 15 skipped (74 cases), exit 0.
+
+python3 -m pytest tests/quality/test_dataset_blockers.py tests/quality/test_dataset_journal_coverage.py tests/quality/test_b6_blocker_evidence.py tests/quality/test_measurement_coverage_hg_b3.py -q
+Before edits (after provisioning): 76 passed, 33 skipped, 3 xfailed (112 cases), exit 0.
+After: 79 passed, 33 skipped, 3 xfailed (115 cases), exit 0.
+The three new cases pin the three withdrawals. No new skip or xfail was added;
+the existing three strict journal-gap xfails and optional evidence skips remain.
+No full-suite or benchmark pass is claimed. No pytest basetemp override was used.
+
+git diff --check
+git diff --cached --check
+After: exit 0, no output.
+
+git diff --exit-code fa15e7fb6c28a6f0695d1dd0524070cb733a36d2 -- tools/check_dataset_blockers.py tests/fixtures/dataset_blockers/history-codex178.json
+After: exit 0, no output. The checker, independent SHA pin and frozen history
+are byte-for-byte unchanged:
+  tools/check_dataset_blockers.py
+    efe9304a754731e70e8721580ab5285143ce839a9c953dcd2a36cbc6894f381e
+  tests/fixtures/dataset_blockers/history-codex178.json
+    4c778d435f4147eb04dbcee4e37a2bac3f0ac5a55584e3adf252ab12972d1300
+
+Exact structural and assertion audit command
+--------------------------------------------
+python3 - <<'PY'
+import ast,json,subprocess
+from collections import Counter
+from pathlib import Path
+base='fa15e7fb6c28a6f0695d1dd0524070cb733a36d2'
+def original(path):
+    return subprocess.check_output(['git','show',f'{base}:{path}'])
+p='registry/dataset-blockers.json'
+before=json.loads(original(p)); after=json.loads(Path(p).read_text())
+withdraw={'gaia':'frozen-lifecycle-receipt','tau_bench':'local-state-lifecycle','chessbench_puzzles':'interruption-closure'}
+for old,new in zip(before['datasets'],after['datasets'],strict=True):
+    assert old['dataset']==new['dataset']
+    assert old['historical_runs']==new['historical_runs']
+    if old['dataset'] in withdraw:
+        assert [b['id'] for b in old['blockers']]==[withdraw[old['dataset']]]
+        assert new==dict(old,blockers=[])
+    else:
+        assert new==old
+assert after['review']['notes'][:-1]==before['review']['notes']
+assert dict(after,review=before['review'],datasets=before['datasets'])==before
+for doc,label in ((before,'BEFORE'),(after,'AFTER')):
+    print(label, 'datasets',len(doc['datasets']),'shared',len(doc['shared_blockers']),
+          'dataset_blockers',sum(len(d['blockers']) for d in doc['datasets']),
+          'historical',sum(len(d['historical_runs']) for d in doc['datasets']),
+          'statuses',dict(Counter(b['status'] for d in doc['datasets'] for b in d['blockers'])),
+          'production_authorized',doc['review']['production_authorized'])
+for p in ('tools/check_dataset_blockers.py','tests/fixtures/dataset_blockers/history-codex178.json'):
+    assert Path(p).read_bytes()==original(p)
+p='docs/adapter-integration-journal.md'
+assert Path(p).read_bytes().startswith(original(p))
+p='tests/quality/test_dataset_blockers.py'
+old_tree=ast.parse(original(p)); new_tree=ast.parse(Path(p).read_text())
+old_funcs={n.name:n for n in old_tree.body if isinstance(n,ast.FunctionDef)}
+new_funcs={n.name:n for n in new_tree.body if isinstance(n,ast.FunctionDef)}
+changed=[n for n in old_funcs if ast.dump(old_funcs[n])!=ast.dump(new_funcs[n])]
+assert changed==['test_chess_future_launch_guidance_requires_new_ids_and_preserves_history']
+old_asserts=[ast.dump(n) for n in ast.walk(old_funcs[changed[0]]) if isinstance(n,ast.Assert)]
+new_asserts=[ast.dump(n) for n in ast.walk(new_funcs[changed[0]]) if isinstance(n,ast.Assert)]
+for assertion in old_asserts:
+    if 'interruption-closure' not in assertion:
+        assert assertion in new_asserts
+print('Assert statements',sum(isinstance(n,ast.Assert) for n in ast.walk(old_tree)),
+      '->',sum(isinstance(n,ast.Assert) for n in ast.walk(new_tree)))
+print('PASS: one existing assertion rewritten, none retired, seven sites added; history and protected datasets/files unchanged.')
+PY
+
+Observed audit output:
+BEFORE datasets 28 shared 0 dataset_blockers 17 historical 11 statuses {'external': 6, 'measurement': 8, 'runtime': 3} production_authorized False
+AFTER datasets 28 shared 0 dataset_blockers 14 historical 11 statuses {'external': 6, 'measurement': 8} production_authorized False
+Assert statements 113 -> 120
+PASS: one existing assertion rewritten, none retired, seven sites added; history and protected datasets/files unchanged.
+
+Assertion accounting
+--------------------
+One existing assertion changes: ChessBench interruption-closure presence becomes
+absence. Zero assertions are retired: absence plus documented withdrawal replaces
+the former active-gate expectation, so there is no obsolete assertion to remove.
+Seven assertion sites are added: one documentation assertion in the ChessBench
+test and six in the new three-case parameterized test. The latter require absence,
+the precise withdrawal heading, former family/runtime status, all four evidence/
+retention labels, each dataset's reason and retained facts, and no production
+authorization. The blocker file has 113 -> 120 assert statements.
+
+Every other pre-existing test function is AST-identical. All pre-existing
+historical_runs equality, incomplete/partial-measurement, effect=null, historical
+mutation rejection, independent SHA-pin and retained run-ID assertions remain
+unchanged. All 28 historical_runs arrays are identical; all 25 other dataset
+entries, including appworld, bfcl_v3 and the four permanent refusals, are identical.
+
+Repository footprint check
+--------------------------
+python3 - <<'PY'
+import subprocess
+paths=subprocess.check_output(['git','diff','--cached','--name-only','-z']).decode().split('\0')
+sizes=[]
+for path in filter(None,paths):
+    raw=subprocess.check_output(['git','show',':'+path])
+    raw.decode('utf-8')
+    assert len(raw)<1000000,(path,len(raw))
+    sizes.append((len(raw),path))
+print('Staged UTF-8 files:',len(sizes))
+print('Largest staged blob:',max(sizes))
+PY
+Verified: exactly five UTF-8 files, each below 1 MB; no downloaded binary payload,
+bulk dump or ignored observation is staged. Largest staged blob is the existing
+docs/adapter-integration-journal.md with this task's append-only entry.
+
+Disposition
+-----------
+Registry valid: 28 datasets, 0 shared blockers, 14 dataset blockers, 11 historical
+records, production_authorized=false. All three former runtime blockers are gone;
+the remaining 14 comprise 6 external and 8 measurement blockers.
+Ready for parent diff review and merge. Commit only on wg-wd2 in this registered
+worktree, never main. No main write, frozen receipt read/edit/rerun, old-ID reuse,
+benchmark execution, model/endpoint/paid call or server startup was performed.

@@ -1,0 +1,2 @@
+# This entry is executed directly by WSL as well as native Linux.
+methods/dsh-improver text eol=lf

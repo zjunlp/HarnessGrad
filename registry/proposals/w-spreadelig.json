@@ -1,0 +1,36 @@
+{
+  "worker": "w-spreadelig",
+  "dataset": "spreadsheetbench",
+  "blocker": "dataset-journal-gap",
+  "proposal_kind": "observed-append-and-next-action-replacement-only",
+  "next_action_base_sha256": "4a4959789eb705e71359bd91c06052181d03d6617a1e1d3874daa293a9cf0cf1",
+  "observed_base_sha256": "b762fde102ab90335c0d0fafd543be1359bd96b8993da7ce3ff6c6680f82d571",
+  "structural_rows": 400,
+  "structurally_gradable": 394,
+  "range_zero_policy_only": 1,
+  "not_gradable_as_installed": 5,
+  "policy_inclusive_candidate_denominator": 395,
+  "execution_eligible": null,
+  "selected": null,
+  "task_coverage": null,
+  "trial_coverage": null,
+  "invalid": null,
+  "unmeasured": null,
+  "run_id": null,
+  "production_authorized": false,
+  "status_change": null,
+  "observed_append": "Installed structural eligibility - w-spreadelig: authenticated metadata and all 800 installed loader-selected workbook byte buffers match the pinned local Verified-400 archive, reusing the retained canonical release mapping rather than claiming new upstream authentication. All 400 rows have unique single-variant pairs; 794 workbooks load in both openpyxl 3.1.2 modes. Closed classes: 394 structurally gradable, 1 explicit range-zero-policy-only (283-32), and 5 not gradable as installed: accepted empty expansion 73-45, comma-containing sheet reference split 130-9, and both-mode workbook load refusals 51090/54590/36764. All 400 released rows stay visible; structural candidate denominator including compatibility zero is 395, default hash train/eval candidate counts 287/108. Formula/array/detection-bypass and metadata exclude flags are explicit; their execution eligibility and score implications remain UNKNOWN. Inventory binds observed checker e7131a2649a89d818a73b6b83e1b66892e41b93c53a7fee8330749146ad3ee46, differing from the task-supplied alternate pin, which requires parent reconciliation. This is structural/ineligible-task evidence only, with no scorer, comparator, engine, model, GPU, benchmark or dataset run. No measured coverage, score, diagnostic or authorization follows; selection/task/trial/invalid/unmeasured/run fields remain null. Report and reproducible commands: registry/w-spreadelig-eligibility.md, registry/w-spreadelig-validation.txt, tests/fixtures/hg_spreadelig/. No blocker closure/status/history/journal/shared-gate changes or reinstatement of withdrawn requirements.",
+  "next_action_replacement": "Retain the authenticated installed structural eligibility inventory in registry/w-spreadelig-eligibility.md and tests/fixtures/hg_spreadelig/: 400 released rows, 394 structurally gradable, 1 range-zero-policy-only (283-32), and 5 not gradable as installed (73-45, 130-9, 51090, 54590, 36764); 395 policy-inclusive structural candidates, not execution eligibility or measured coverage. Keep all 400 rows visible and expose any authorized filter and changed denominator; preserve metadata exclude flags without treating them as newly verified scores. The inventory binds observed checker e7131a2649a89d818a73b6b83e1b66892e41b93c53a7fee8330749146ad3ee46; reconcile the task-supplied alternate checker pin before reuse, and revalidate structural decisions for any changed inputs/parser/library. Establish actual eligible/selected/task/trial/invalid/unmeasured execution coverage under the explicit official-range-zero compatibility policy, with the declared split/side and structural-problem rows visible; formula/array runtime eligibility remains UNKNOWN. Retain established complete installed workbook/mirror authentication and bounded first-five selected-only custody; reconcile any separately authorized diagnostic manifest, workbook/task-input binding and chosen split mode/side with tests/fixtures/hg_wsel/spreadsheetbench.json, whose selected=5 mixed-side packet is neither gradable eligibility nor an accepted single-side diagnostic specification. Retain dataset-specific scorer custody established by registry/w-spreadrt-runtime.md; selected official scorer execution remains unobserved. Review/fix the synthetic stale-cache formula-conversion failure; the separate required-reward-loss zero path has since been FIXED by the parent and is pinned by a regression test (registry/w-vfix-validation.txt), so it is no longer open work. Then obtain fresh bounded no-model regressions with actual engine invocation, correct fresh cached values and explicit network isolation. Preserve initial failed receipts and report missing engine package archives, conditional native/replay and read-only result-path observations as explicit bounded limits; do not turn them into withdrawn shared admission requirements. Review stale integration fixtures that omit selected task_id; direct checker subset passing does not establish cross-layer persistence. Retain the measured-zero denominator for released colon-range parser ValueError, including prior audited 283-32 when selected and reached, distinguish compatibility zeros from completed comparisons, and never publish infrastructure failures as scores. Adopt the one-released-variant named-cell metric statement in registry/w-metriccmp-comparability.md; do not identify it with the upstream three-variant soft_restriction mean or hard_restriction all-pass aggregate. Do not promote synthetic/local controls to production evidence. Preserve all shared-requirement withdrawals and recorded future pristine opt-in boundaries in registry/withdrawn-requirements.md; scorer-offline-closure, artifact-only-state-export, pristine-verifier and runtime-observations do not condition closure or admission. No diagnostic or pilot is authorized by this proposal.",
+  "evidence": [
+    {
+      "kind": "repository",
+      "path": "registry/w-spreadelig-eligibility.md",
+      "locator": "# Installed SpreadsheetBench Verified-400 structural eligibility — w-spreadelig"
+    },
+    {
+      "kind": "repository",
+      "path": "tests/fixtures/hg_spreadelig/eligibility.jsonl",
+      "locator": "\"task_id\":\"283-32\""
+    }
+  ]
+}

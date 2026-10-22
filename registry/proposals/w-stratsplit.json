@@ -1,0 +1,87 @@
+{
+  "worker": "w-stratsplit",
+  "dataset": "strategyqa",
+  "blocker": "dataset-journal-gap",
+  "split_outcome": "found",
+  "comparability": "different",
+  "source_definition_obligation": "satisfied_subject_to_parent_review",
+  "status_change_requested": null,
+  "observed_append": "Source-only w-stratsplit recovered exact memberships and installed partition binding. Original split membership sources and installed partition coverage are now bound in registry/w-stratsplit-membership.md and tests/fixtures/hg_stratsplit/binding-summary.json: the complete generation-pinned ZIP Train multiset equals both the installed 2290 rows (after literal CSV prefix removal and explicit Boolean-to-Yes/No representation mapping) and the union of the author repository unofficial train/dev memberships (2061/229). The ZIP Test membership exactly equals the official evaluator published dummy-submission 490-ID key set. All installed rows are original Train; none are original Test; no installed row is unaccounted for, while all 490 original Test members are absent from the installed pool. Do not label the imposed 1520/770 hash split or the author unofficial train/dev division as original Train/Test evaluation. Two duplicate-content installed rows retain ambiguous exact qid candidates, with no partition ambiguity or invented tie-break. Direct landing-page endorsement of the ZIP remains unobserved (HTTP 403); retain the documented official-evaluator/author-content authority bridge and source namespace distinction. Evidence: registry/w-stratsplit-membership.md:1; tests/fixtures/hg_stratsplit/attempts.jsonl:1; zip-members.json:1; membership-ids.json:1; installed-row-binding.tsv:1; binding-summary.json:1 (all fixture basenames under tests/fixtures/hg_stratsplit/). No scorer/benchmark/model/GPU executes and no diagnostic is authorized.",
+  "next_action_replacement": "Retain authenticated installed CSV/member/revision and ReWOO evaluator identity and the established bounded first-five selected-only custody record. Report local normalized whole-answer exact match separately using registry/w-metriccmp-comparability.md: equality with ReWOO EM is conditional on identical supplied strings, and algorithm-dependent response parsing remains distinct. Bind original answer Accuracy separately to allenai/strategyqa-evaluator@49b88ed2b2f1b57385c13e8a0699dee1d227f83e, evaluator/eval.py SHA-256 68c0edcd2fd26daf2cec368302d9f564cbf351288aa4a2c265f47bdc00704044, using registry/w-stratqa-receipts.md: the raw Python equality and full supplied-gold denominator differ from local normalized whole-answer EM. Do not report local EM as original Accuracy. Original split membership sources and installed partition coverage are now bound in registry/w-stratsplit-membership.md and tests/fixtures/hg_stratsplit/binding-summary.json: the complete generation-pinned ZIP Train multiset equals both the installed 2290 rows (after literal CSV prefix removal and explicit Boolean-to-Yes/No representation mapping) and the union of the author repository unofficial train/dev memberships (2061/229). The ZIP Test membership exactly equals the official evaluator published dummy-submission 490-ID key set. All installed rows are original Train; none are original Test; no installed row is unaccounted for, while all 490 original Test members are absent from the installed pool. Do not label the imposed 1520/770 hash split or the author unofficial train/dev division as original Train/Test evaluation. Two duplicate-content installed rows retain ambiguous exact qid candidates, with no partition ambiguity or invented tie-break. Direct landing-page endorsement of the ZIP remains unobserved (HTTP 403); retain the documented official-evaluator/author-content authority bridge and source namespace distinction. For any separately authorized diagnostic, reconcile the run-specific selected manifest/export, exact source rows and chosen split mode/side with the existing mixed-side packet; establish deterministic offline dependencies and dataset-specific trusted verifier/runtime execution without inferring unobserved properties from source custody. Acquired evaluator bytes are not an execution-equivalence receipt; retain local EM identity, exclude F1/judge accuracy, and report eligible/selected/task/trial/invalid/unmeasured coverage. Preserve the shared-requirement withdrawals in registry/withdrawn-requirements.md; no diagnostic is authorized by this proposal. The bounded first-five custody record is the one in tests/fixtures/hg_wsel/strategyqa.json; the mixed-side packet is not an accepted single-side diagnostic specification, and actual pristine execution applies only to a future explicit pristine opt-in with the retained export/private-input and ownership boundary.",
+  "coverage": {
+    "installed_csv": {
+      "path": "/mnt/20t/xubuqiang/datasets/strategyqa/ReWOO-9cd0283043ff4be0c9d614fda2789d143ca6ffd1/data/bigbench/strategy_qa.csv",
+      "bytes": 200453,
+      "sha256": "c1fd0c271bf98741b68ac1ea3d167c5ccf2ed46da66645d5fc0ed6222e45f055",
+      "rows": 2290
+    },
+    "prefix_removed_exactly": "Answer with 'Yes' or 'No': ",
+    "original_partition_coverage": {
+      "Train": 2290,
+      "Test": 0,
+      "unaccounted_installed_rows": 0,
+      "Test_ids_missing_from_installed_pool": 490
+    },
+    "unofficial_partition_coverage": {
+      "train": 2061,
+      "dev": 229
+    },
+    "imposed_partition_coverage": {
+      "train": 1520,
+      "eval": 770
+    },
+    "unofficial_by_imposed": {
+      "train": {
+        "train": 1372,
+        "eval": 689
+      },
+      "dev": {
+        "train": 148,
+        "eval": 81
+      }
+    },
+    "id_namespaces": {
+      "distribution_train_vs_author_qid_overlap": 0
+    },
+    "exact_id_ambiguity": {
+      "installed_row_indices": [
+        42,
+        1987
+      ],
+      "count": 2,
+      "reason": "Two equal question/answer rows; retain both candidate IDs; no occurrence-order tie-break",
+      "partition_ambiguity": 0
+    },
+    "binding": {
+      "path": "/mnt/20t/xubuqiang/hg-wt/w-stratsplit/tests/fixtures/hg_stratsplit/installed-row-binding.tsv",
+      "bytes": 491438,
+      "sha256": "3015ba7fd809b6a8d85af3b4c91dc61a087dba38efb9c26dde118410729dbfd2"
+    },
+    "zip_member_count": 4,
+    "listed_gcs_objects": 36,
+    "repo_blob_count": 81,
+    "missing_brief_paths": [
+      "registry/w-journalcov-review.md",
+      "tests/fixtures/hg_wjc2"
+    ],
+    "source_sha256": {
+      "data/datasets/strategyqa.py": "eaad45dfb944241fad84eb575882560ffcf7243de40c9d34fd0766a40c16a50a",
+      "data/scaffolds/qa/base.py": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a"
+    }
+  },
+  "review_focus": "Authority bridge in report; direct landing-page ZIP endorsement remains UNKNOWN.",
+  "evidence": [
+    {
+      "path": "registry/w-stratsplit-membership.md",
+      "locator": "# w-stratsplit"
+    },
+    {
+      "path": "tests/fixtures/hg_stratsplit/binding-summary.json",
+      "locator": "original_partition_coverage"
+    },
+    {
+      "path": "registry/w-stratsplit-validation.txt",
+      "locator": "python3 tools/check_dataset_blockers.py"
+    }
+  ]
+}

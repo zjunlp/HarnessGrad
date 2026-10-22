@@ -1,0 +1,17 @@
+{
+  "worker": "w-hotpotrec",
+  "dataset": "hotpotqa",
+  "blocker": "historical-comparison-receipts",
+  "run_id_finding": "FOUND candidate hotpotqa-h0-10pct-v4 in the successful historical incomplete-index read at /home/xubuqiang/.codex/sessions/2026/10/12/rollout-2026-10-12T13-19-24-01a12e8d-26bd-7c90-ab31-5ab4e04eaaa8.jsonl:85 (verbatim registry/w-hotpotrec-evidence.json:889). The tuple binds dataset/status/run directory but not 94/1476. Preserve pinned hotpot-v4-incomplete run_id=null pending independent binding; do not substitute v5 metadata.",
+  "outcome": "found",
+  "observed_append": "Read-only enumerated search recovered partial historical metadata, not v4 trial receipts. The original incomplete-index transcript identifies candidate hotpotqa-h0-10pct-v4. Historical ls output proves v4 split/console/budget-ledger/index filenames existed, so never captured is unsupported. Original v4 manifest/trial/error/timeout/provenance/cleanup files are currently absent in the documented local scope. A separate v5 transcript recovers 492 ordered unique train IDs and v5 model/split/aggregate lifecycle metadata; these are not v4 receipts. Upstream publication and deleted/off-machine/excluded nested Git contents remain unknown. No v4 per-trial ledger or reconciliation of reported 94/1382/1476; preserve incomplete, effect=null, unknown authenticated ID and synthetic timeout closure. Evidence and exact scope: registry/w-hotpotrec-receipts.md; registry/w-hotpotrec-evidence.json; registry/w-hotpotrec-v5-train-ids.json.",
+  "next_action_replacement": "Review the observed v4 candidate/index tuple and retain the unresolved 94-trial binding and missing historical originals as explicit comparability limits; never manufacture, resume, rerun or overwrite the historical record. If authentic original receipts are independently supplied, reconcile them at their actual scope. Complete current selected scorer/control admission using the current selected packet; any separately authorized future diagnostic uses a fresh run ID under current staged policy. Preserve synthetic timeout closure, incomplete status and effect=null. Do not reinstate withdrawn shared requirements.",
+  "withdrawal_entry": null,
+  "evidence_state": "partial-historical-metadata-found-original-v4-trial-ledger-absent-in-enumerated-scope",
+  "historical_record_patch": null,
+  "registry_checker_observed": {
+    "valid": false,
+    "error": "bfcl_v3: missing evidence tests/fixtures/hg_bfcl/README.md",
+    "scope": "untouched baseline; no registry/journal edits"
+  }
+}

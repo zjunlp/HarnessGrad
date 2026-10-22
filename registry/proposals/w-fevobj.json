@@ -1,0 +1,298 @@
+{
+  "worker": "w-fevobj",
+  "dataset": "fever",
+  "blocker": "dataset-journal-gap",
+  "outcome": "two-objects-found-and-metric-named",
+  "base_commit": "065644fcbc31df63e9f7cae31a0c0abb05265ffd",
+  "apply_mode": "parent-only; append observed, replace next_action, append evidence after checking the full preimage; status/history unchanged",
+  "preconditions": {
+    "observed_sha256": "2c39d1a312e31da5e03773dd418ce4d92963138243f1b2c71db3fce52ed17469",
+    "next_action_sha256": "f99a33c16d1fa782d450a493df1916ca2ec331742c9c0839ea614b12ac629f90"
+  },
+  "observed_append": "w-fevobj recovered both previously unread public objects: historical loader at 1776db7e9abab525eae8e59c5015e3589dfe371b (7897 bytes; git hash-object ab71339be067bc98bcad7df12a12c0e05fc6b521, matching prior tree) and generated tree ad8321607bcad0e534c243ec8c108a5787cea6c8 (4596-byte HTTP 200 JSON; nine entries). Raw bodies, exact requests, hashes and redirect preserved in tests/fixtures/hg_fevobj/. No producing-execution receipt is present within the recovered loader and tree response/headers; listed binary metadata and records elsewhere remain UNKNOWN. Choose option (a): FEVER exported-row conjunctive strict@5, fever_exported_row_conjunctive_strict_at_5, equal measured exported-row weights after within-task trial means. This is a recorded metric decision, not an implemented or executed scorer change; current singleton branch still differs. No original-FEVER comparability or standing-limit decision. Sources: registry/w-fevobj-receipts.md:1; tests/fixtures/hg_fevobj/object-bindings.json:1.",
+  "next_action_replacement": "Retain established Hub/export/installed/original-group and bounded first-five custody; do not rebind it. Both previously unread objects are now FOUND (registry/w-fevobj-receipts.md:1); remove only those two unread-object caveats. Retain the earlier enumerated bounded searches plus the newly recovered loader/tree response scope; they establish no producing execution. Seek a maintainer-published execution/input/output binding for producing revision, invocation/environment, ID assignment, split/filter/omission decisions and NEI retrieval/aggregation input; global availability remains UNKNOWN. The parent alone decides any scoped standing limit. Adopt the named FEVER exported-row conjunctive strict@5 metric definition, with one complete exported group and equal measured exported-row weighting after within-task trial averaging. The current local flat branch promotes singletons: separately implement/review a conjunction-preserving projection and prediction-format handling before any measurement. Retain 1400/9525 exposed non-NEI rows (1369 at 2-5 pairs, 31 at 6-25), five-pair impossibility for those 31 without filtering, first-five branch noncoverage, 51 omitted alternative groups/42 original IDs, and unauthenticated NEI/omission decisions. No original-FEVER aggregate claim; restoring complete original groups and declared original-claim weighting/omission coverage would be a separate metric choice. For a separately authorized diagnostic resolve split/side/run and actual selected verifier/runtime evidence with metric, eligible/selected/task/trial/invalid/unmeasured coverage. Preserve all existing withdrawals and future pristine opt-in ownership boundaries in registry/withdrawn-requirements.md; do not reinstate withdrawn shared gates or official-scorer-identity. This evidence does not authorize execution.",
+  "evidence_append": [
+    {
+      "kind": "repository",
+      "path": "registry/w-fevobj-receipts.md",
+      "locator": "**Metric decision"
+    },
+    {
+      "kind": "repository",
+      "path": "tests/fixtures/hg_fevobj/object-bindings.json",
+      "locator": "git_blob_sha1_observed"
+    },
+    {
+      "kind": "repository",
+      "path": "registry/w-fevobj-validation.txt",
+      "locator": "NOT VERIFIED"
+    }
+  ],
+  "metric": {
+    "choice": "a",
+    "name": "FEVER exported-row conjunctive strict@5",
+    "id": "fever_exported_row_conjunctive_strict_at_5",
+    "max_evidence": 5,
+    "gold_projection": "one complete exported conjunction per row; four-field nested records for pinned upstream source",
+    "aggregation": "mean of within-task measured trial means; equal measured exported-row weights",
+    "original_claim_weighting": "not used; claims with multiple measured exported rows receive multiple row weights",
+    "original_fever_comparability_claim": false,
+    "implementation_state": "definition only; current singleton branch does not implement it",
+    "sources": [
+      "registry/w-fevobj-receipts.md:23",
+      "registry/w-fevobj-receipts.md:25",
+      "registry/w-fevconv-receipts.md:99",
+      "registry/w-metriccmp-comparability.md:52"
+    ]
+  },
+  "objects": {
+    "loader": {
+      "state": "FOUND",
+      "commit": "1776db7e9abab525eae8e59c5015e3589dfe371b",
+      "tree_receipt": "tests/fixtures/hg_fevhub/hub-tree-1776db7e9abab525eae8e59c5015e3589dfe371b-retry.request.json",
+      "tree_entry": {
+        "type": "file",
+        "oid": "ab71339be067bc98bcad7df12a12c0e05fc6b521",
+        "size": 7897,
+        "path": "fever_gold_evidence.py"
+      },
+      "response": "loader-resolve-download-proxy.body",
+      "response_sha256": "ad33cbaed338e94670d8d661c74fa9b8ababb3e4679f89d63bea661c0df9e35f",
+      "git_blob_sha1_observed": "ab71339be067bc98bcad7df12a12c0e05fc6b521"
+    },
+    "generated_tree": {
+      "state": "FOUND",
+      "commit": "ad8321607bcad0e534c243ec8c108a5787cea6c8",
+      "response": "generated-tree-expand-proxy.body",
+      "response_sha256": "04f6cc689ac503f4d83fa5e97249b935efafe3b77cfa66a9388da7123fc91a4b",
+      "binding": "HTTPS commit-addressed API response; no local Git commit/tree recomputation",
+      "pagination_link_observed": false,
+      "returned_entries": [
+        {
+          "type": "directory",
+          "oid": "ebad8b1e37cb41f0de1ef2257f7c601371435543",
+          "size": 0,
+          "path": "default",
+          "lastCommit": {
+            "id": "ad8321607bcad0e534c243ec8c108a5787cea6c8",
+            "title": "Update duckdb index files",
+            "date": "2023-08-21T16:51:32.000Z"
+          }
+        },
+        {
+          "type": "directory",
+          "oid": "21917e2343957ca8ddfcbbadac5aa14fdd6cefd6",
+          "size": 0,
+          "path": "default/test",
+          "lastCommit": {
+            "id": "ad8321607bcad0e534c243ec8c108a5787cea6c8",
+            "title": "Update duckdb index files",
+            "date": "2023-08-21T16:51:32.000Z"
+          }
+        },
+        {
+          "type": "directory",
+          "oid": "57fd509c1f5dd55c0654722fce4e82ff6383a340",
+          "size": 0,
+          "path": "default/train",
+          "lastCommit": {
+            "id": "8037d1d965def7cbc8d22950ca67730ab54fac77",
+            "title": "Update parquet files",
+            "date": "2023-08-21T16:07:37.000Z"
+          }
+        },
+        {
+          "type": "directory",
+          "oid": "7194d0663db5ffdca1b5d6e58dbed74a6eff3d87",
+          "size": 0,
+          "path": "default/validation",
+          "lastCommit": {
+            "id": "8037d1d965def7cbc8d22950ca67730ab54fac77",
+            "title": "Update parquet files",
+            "date": "2023-08-21T16:07:37.000Z"
+          }
+        },
+        {
+          "type": "file",
+          "oid": "9c0d86fb2eb6127d5ac5fdf3d86a3f5e746b2f62",
+          "size": 1023,
+          "path": ".gitattributes",
+          "lastCommit": {
+            "id": "ad8321607bcad0e534c243ec8c108a5787cea6c8",
+            "title": "Update duckdb index files",
+            "date": "2023-08-21T16:51:32.000Z"
+          },
+          "securityFileStatus": {
+            "status": "unscanned",
+            "protectAiScan": {
+              "status": "unscanned"
+            },
+            "avScan": {
+              "status": "unscanned"
+            },
+            "pickleImportScan": {
+              "status": "unscanned"
+            },
+            "virusTotalScan": {
+              "status": "unscanned"
+            }
+          }
+        },
+        {
+          "type": "file",
+          "oid": "266ea84509e15c5f7b55448236724271b5599da5",
+          "size": 3086367,
+          "lfs": {
+            "oid": "0bdecb262e33046ca6707dd5cf52dd0e89ba8dc4acbcbf19187497db04159261",
+            "size": 3086367,
+            "pointerSize": 132
+          },
+          "xetHash": "d91ba6b93e10cb8c993a2eb87425baa748a3392c85d76f8dd2ee2a674c573659",
+          "path": "default/test/0000.parquet",
+          "lastCommit": {
+            "id": "8037d1d965def7cbc8d22950ca67730ab54fac77",
+            "title": "Update parquet files",
+            "date": "2023-08-21T16:07:37.000Z"
+          },
+          "securityFileStatus": {
+            "status": "unscanned",
+            "protectAiScan": {
+              "status": "unscanned"
+            },
+            "avScan": {
+              "status": "unscanned"
+            },
+            "pickleImportScan": {
+              "status": "unscanned"
+            },
+            "virusTotalScan": {
+              "status": "unscanned",
+              "message": "File not scanned in VirusTotal",
+              "reportLink": "https://www.virustotal.com/gui/file/0bdecb262e33046ca6707dd5cf52dd0e89ba8dc4acbcbf19187497db04159261?utm_source=huggingface"
+            }
+          }
+        },
+        {
+          "type": "file",
+          "oid": "acff614fd9fadbe4c222dbe9bf6c0028e34dd18b",
+          "size": 9449472,
+          "lfs": {
+            "oid": "6a566db53bab5972da8832a45ffae4231a4f97061943153d28921d0ca58692ff",
+            "size": 9449472,
+            "pointerSize": 132
+          },
+          "xetHash": "fdc51768d84fcdada63887dadd92c229bcb70ce4d129ce95f0f98f11a7c98fd3",
+          "path": "default/test/index.duckdb",
+          "lastCommit": {
+            "id": "ad8321607bcad0e534c243ec8c108a5787cea6c8",
+            "title": "Update duckdb index files",
+            "date": "2023-08-21T16:51:32.000Z"
+          },
+          "securityFileStatus": {
+            "status": "queued",
+            "protectAiScan": {
+              "status": "unscanned"
+            },
+            "avScan": {
+              "status": "unscanned"
+            },
+            "pickleImportScan": {
+              "status": "unscanned"
+            },
+            "virusTotalScan": {
+              "status": "queued",
+              "message": "QUEUED",
+              "reportLink": "https://www.virustotal.com/gui/file/6a566db53bab5972da8832a45ffae4231a4f97061943153d28921d0ca58692ff?utm_source=huggingface"
+            }
+          }
+        },
+        {
+          "type": "file",
+          "oid": "a374b55be025ce0fb53e2681ea551711d40f6cda",
+          "size": 50279501,
+          "lfs": {
+            "oid": "d5651effc3a7caa442d6c6b662bb06ed80e099a2ca3a93425a7c24c2974abe7b",
+            "size": 50279501,
+            "pointerSize": 133
+          },
+          "xetHash": "ff9a0aca2af06d15b6672b4be9cf7ed0eb104487c1f736c03e3308fd70622d0d",
+          "path": "default/train/0000.parquet",
+          "lastCommit": {
+            "id": "8037d1d965def7cbc8d22950ca67730ab54fac77",
+            "title": "Update parquet files",
+            "date": "2023-08-21T16:07:37.000Z"
+          },
+          "securityFileStatus": {
+            "status": "unscanned",
+            "protectAiScan": {
+              "status": "unscanned"
+            },
+            "avScan": {
+              "status": "unscanned"
+            },
+            "pickleImportScan": {
+              "status": "unscanned"
+            },
+            "virusTotalScan": {
+              "status": "unscanned",
+              "message": "File not scanned in VirusTotal",
+              "reportLink": "https://www.virustotal.com/gui/file/d5651effc3a7caa442d6c6b662bb06ed80e099a2ca3a93425a7c24c2974abe7b?utm_source=huggingface"
+            }
+          }
+        },
+        {
+          "type": "file",
+          "oid": "a3e43e0e760479dd469ceb8f569785a3039f862d",
+          "size": 2943676,
+          "lfs": {
+            "oid": "070bf0f5b9f960e66eb72f464c63ecb7ba7499d7cda6b637327e894559d8b751",
+            "size": 2943676,
+            "pointerSize": 132
+          },
+          "xetHash": "a4ff805a265a4427554a627db44637761cabc43a0725f55e201f547b572017dd",
+          "path": "default/validation/0000.parquet",
+          "lastCommit": {
+            "id": "8037d1d965def7cbc8d22950ca67730ab54fac77",
+            "title": "Update parquet files",
+            "date": "2023-08-21T16:07:37.000Z"
+          },
+          "securityFileStatus": {
+            "status": "unscanned",
+            "protectAiScan": {
+              "status": "unscanned"
+            },
+            "avScan": {
+              "status": "unscanned"
+            },
+            "pickleImportScan": {
+              "status": "unscanned"
+            },
+            "virusTotalScan": {
+              "status": "unscanned",
+              "message": "File not scanned in VirusTotal",
+              "reportLink": "https://www.virustotal.com/gui/file/070bf0f5b9f960e66eb72f464c63ecb7ba7499d7cda6b637327e894559d8b751?utm_source=huggingface"
+            }
+          }
+        }
+      ]
+    },
+    "redirect_bodies": [
+      {
+        "request": "loader-resolve-download-proxy",
+        "body": "loader-resolve-download-proxy.redirect-0.body",
+        "status": 307,
+        "url": "https://huggingface.co/datasets/copenlu/fever_gold_evidence/resolve/1776db7e9abab525eae8e59c5015e3589dfe371b/fever_gold_evidence.py?download=true",
+        "bytes": 220,
+        "sha256": "2a8daf43b1178039fad7f477790b82d1c85b2f5e7deebf9580c44cfb6e933110"
+      }
+    ],
+    "producing_execution_receipt": {
+      "state": "ABSENT",
+      "scope": "Full recovered loader text and generated API listing/headers; listed binary payloads and .gitattributes body not read",
+      "historical_values": "UNKNOWN"
+    }
+  },
+  "standing_limit_decision": null,
+  "registry_status_change": null,
+  "diagnostic_authorized": false
+}

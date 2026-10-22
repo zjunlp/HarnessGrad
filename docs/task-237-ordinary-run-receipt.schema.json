@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Proposed non-production ordinary-run receipt; not a runtime API",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "run_kind", "evidence_class", "label", "record_origin",
+    "production_authorized", "formal_benchmark_evidence", "publication_ready",
+    "run_id", "dataset", "side", "trials", "selected_task_ids", "metric",
+    "hashes", "endpoint", "limits", "filesystem_quota", "sandbox", "coverage",
+    "outcomes", "cleanup", "snapshot", "status", "score", "comparability_notes"
+  ],
+  "properties": {
+    "schema": {"const": "harnessgrad.ordinary-run-receipt.v1"},
+    "run_kind": {"const": "ordinary"},
+    "evidence_class": {"const": "non-production"},
+    "label": {"const": "NON-PRODUCTION ORDINARY RUN — NOT FORMAL BENCHMARK EVIDENCE"},
+    "record_origin": {"enum": ["illustrative", "observed"]},
+    "production_authorized": {"type": "boolean", "const": false},
+    "formal_benchmark_evidence": {"type": "boolean", "const": false},
+    "publication_ready": {"type": "boolean", "const": false},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+    "dataset": {"$ref": "#/$defs/text"},
+    "side": {"enum": ["train", "eval"]},
+    "trials": {"type": "integer", "minimum": 1},
+    "selected_task_ids": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"$ref": "#/$defs/text"}
+    },
+    "metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "scorer_sha256", "unit", "direction", "aggregation", "official_equivalence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/text"},
+        "scorer_sha256": {"$ref": "#/$defs/nullableHash"},
+        "unit": {"$ref": "#/$defs/text"},
+        "direction": {"enum": ["higher", "lower"]},
+        "aggregation": {"const": "arithmetic_mean_all_planned_task_trials"},
+        "official_equivalence": {"enum": ["unverified", "different"]}
+      }
+    },
+    "hashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "split", "manifest", "model", "harness", "platform"],
+      "properties": {
+        "source": {"$ref": "#/$defs/nullableHash"},
+        "split": {"$ref": "#/$defs/nullableHash"},
+        "manifest": {"$ref": "#/$defs/nullableHash"},
+        "model": {"$ref": "#/$defs/nullableHash"},
+        "harness": {"$ref": "#/$defs/nullableHash"},
+        "platform": {"$ref": "#/$defs/nullableHash"}
+      }
+    },
+    "endpoint": {
+      "enum": [null, "http://127.0.0.1:8001/v1", "http://127.0.0.1:8002/v1"]
+    },
+    "limits": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resource", "budget"],
+      "properties": {
+        "resource": {"$ref": "#/$defs/declaredLimits"},
+        "budget": {"$ref": "#/$defs/declaredLimits"}
+      }
+    },
+    "filesystem_quota": {
+      "type": "object", "additionalProperties": false,
+      "required": ["enforced", "requested", "detail"],
+      "properties": {
+        "enforced": {"oneOf": [{"type": "boolean", "const": false}, {"const": "unknown"}]},
+        "requested": {
+          "type": "object", "additionalProperties": false,
+          "required": ["bytes", "inodes"],
+          "properties": {
+            "bytes": {"type": ["integer", "null"], "minimum": 1},
+            "inodes": {"type": ["integer", "null"], "minimum": 1}
+          }
+        },
+        "detail": {"$ref": "#/$defs/text"}
+      }
+    },
+    "sandbox": {
+      "type": "object", "additionalProperties": false,
+      "required": ["host", "task"],
+      "properties": {
+        "host": {"$ref": "#/$defs/boundary"},
+        "task": {"$ref": "#/$defs/boundary"}
+      }
+    },
+    "coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["eligible_tasks", "selected_tasks", "expected_task_trials", "measured_trials", "invalid_trials", "unmeasured_trials"],
+      "properties": {
+        "eligible_tasks": {"type": ["integer", "null"], "minimum": 0},
+        "selected_tasks": {"type": "integer", "minimum": 1},
+        "expected_task_trials": {"type": "integer", "minimum": 1},
+        "measured_trials": {"type": "integer", "minimum": 0},
+        "invalid_trials": {"type": "integer", "minimum": 0},
+        "unmeasured_trials": {"type": "integer", "minimum": 0}
+      }
+    },
+    "outcomes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/outcome"}},
+    "cleanup": {"$ref": "#/$defs/cleanup"},
+    "snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "detail"],
+      "properties": {
+        "status": {"enum": ["passed", "failed", "unknown", "not_required"]},
+        "detail": {"$ref": "#/$defs/text"}
+      }
+    },
+    "status": {"enum": ["measured", "invalid", "unmeasured"]},
+    "score": {"type": ["number", "null"]},
+    "comparability_notes": {
+      "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "measured"}}},
+      "then": {
+        "properties": {
+          "score": {"type": "number"},
+          "cleanup": {"properties": {"status": {"const": "passed"}}},
+          "snapshot": {"properties": {"status": {"enum": ["passed", "not_required"]}}},
+          "outcomes": {"items": {"properties": {"status": {"const": "measured"}}}},
+          "coverage": {"properties": {"invalid_trials": {"const": 0}, "unmeasured_trials": {"const": 0}}}
+        }
+      },
+      "else": {"properties": {"score": {"type": "null"}}}
+    }
+  ],
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "nullableHash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "declaredLimits": {
+      "type": ["object", "null"], "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/text"},
+      "additionalProperties": {"type": "number", "minimum": 0}
+    },
+    "boundary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requested", "effective", "plan_version", "detail"],
+      "properties": {
+        "requested": {"enum": ["bwrap", "container", "none", "unknown"]},
+        "effective": {"enum": ["bwrap", "container", "none", "unknown"]},
+        "plan_version": {"type": ["integer", "null"], "minimum": 1},
+        "detail": {"$ref": "#/$defs/text"}
+      },
+      "allOf": [
+        {"if": {"properties": {"requested": {"const": "bwrap"}}},
+         "then": {"properties": {"effective": {"enum": ["bwrap", "unknown"]}}}},
+        {"if": {"properties": {"requested": {"const": "container"}}},
+         "then": {"properties": {"effective": {"enum": ["container", "unknown"]}}}},
+        {"if": {"properties": {"requested": {"const": "none"}}},
+         "then": {"properties": {"effective": {"enum": ["none", "unknown"]}}}}
+      ]
+    },
+    "outcome": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_id", "trial", "status", "score", "reason"],
+      "properties": {
+        "task_id": {"$ref": "#/$defs/text"},
+        "trial": {"type": "integer", "minimum": 1},
+        "status": {"enum": ["measured", "invalid", "unmeasured"]},
+        "score": {"type": ["number", "null"]},
+        "reason": {"type": ["string", "null"]}
+      },
+      "if": {"properties": {"status": {"const": "measured"}}},
+      "then": {"properties": {"score": {"type": "number"}, "reason": {"type": "null"}}},
+      "else": {"properties": {"score": {"type": "null"}, "reason": {"$ref": "#/$defs/text"}}}
+    },
+    "cleanup": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "detail"],
+      "properties": {
+        "status": {"enum": ["passed", "failed", "unknown"]},
+        "detail": {"$ref": "#/$defs/text"}
+      }
+    }
+  }
+}

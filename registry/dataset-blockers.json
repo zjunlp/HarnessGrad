@@ -1,0 +1,958 @@
+{
+  "datasets": [
+    {
+      "blockers": [],
+      "dataset": "agentdojo",
+      "demand": "tool_use",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "safety"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "tool_dialogue"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## Gate disposition",
+              "path": "docs/dataset-reviews/aime.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "# AIME source-only journal review",
+              "path": "/site/dataset-reviews/aime.md"
+            }
+          ],
+          "family": "journal-coverage",
+          "id": "dataset-journal-gap",
+          "next_action": "Before any diagnostic that scores this dataset: obtain the operator-side bounded first-five selected-only custody packet (an operator artefact about selection and privacy; it cannot be produced by a worker and must not be invented), and record an independent metric-comparability statement for the port, because Harbor's parity_experiment.json does not exist for aime. Measured coverage is a precondition of any such diagnostic rather than a condition on this review: a future diagnostic needs its own authorization, a fresh run ID, an applicable split side against the imposed 37/23 hash division, and the staged policy. Do not fabricate a parity number, do not promote any coverage count, and do not treat this review as production or H0 authorization.",
+          "observed": "First adapter ported from a Harbor adapter rather than from an upstream release read directly, and the port's source-only review is docs/dataset-reviews/aime.md. Measured at this revision: the scorer is Harbor's `adapters/aime/src/aime/task-template/tests/test_outputs.py` (.strip() then exact string equality) vendored byte-for-byte with four files re-checked by git blob digest; the oracle and do-nothing controls reach 1 and 0 both by hand and through `--platform`; dataset_lint reports `ok aime`; the shared QA contract passes 12 tests and the transcription differential 34; the data is pinned to GAIR-NLP/AIME-Preview@7011a9ea... with tarball sha256 1cb67669... and 30/15/15 = 60 rows. Harbor ships NO parity_experiment.json for aime, so the transcription is the whole of the equivalence evidence and no recorded comparison establishes that Harbor's number and this platform's are the same number. AIME has never been run here: zero tasks, zero trials, no run ID, so every coverage count is absent rather than zero. The payload census over all 60 rows found answer is a digit STRING in every row (never an int), test2025-II.jsonl carries no `solution` or `url` field, ids are int in test2024 and str elsewhere, and the 60 answers hold only 55 distinct values.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "aime",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [],
+      "dataset": "alfworld",
+      "demand": "environment",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "recovery"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "embodied_text"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "REFUSED =",
+              "path": "data/datasets/api_bank.py"
+            }
+          ],
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Refused by contract, not prohibited (docs/refusal-policy.md, 2026-10-22). The metric executes the recorded call and compares replies, and the gold call reproduces its own recorded result on only 262 of 508 samples because the samples omit the dialogue state those replies depend on, so it lifts only if that state is supplied or an oracle-reaching repaired subset is named, measured and reported on its own terms. Do not provision or run this dataset, and never report the reproducible half or an execution-success rate under its name.",
+          "observed": "Recorded API results rely on missing dialogue state; the oracle cannot reproduce the released metric.",
+          "status": "external"
+        }
+      ],
+      "dataset": "api_bank",
+      "demand": "tool_use",
+      "exercises": [
+        "tools"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "tool_calling"
+    },
+    {
+      "blockers": [],
+      "dataset": "appworld",
+      "demand": "tool_use",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "recovery"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "### AppWorld real-model smoke blocker",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/101/deliverables/receipt.md"
+            }
+          ],
+          "observation": "Original actor launch failed with Docker exit 125. Later repaired smokes measured zero; they do not replace this incomplete attempt. Original failed run ID is not specified.",
+          "record_id": "appworld-initial-infrastructure-smoke",
+          "run_id": null,
+          "status": "incomplete"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "tool_dialogue"
+    },
+    {
+      "blockers": [],
+      "dataset": "bfcl_v3",
+      "demand": "tool_use",
+      "exercises": [
+        "tools"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "tool_calling"
+    },
+    {
+      "blockers": [],
+      "dataset": "bird_minidev",
+      "demand": "artifact",
+      "exercises": [
+        "context",
+        "tools",
+        "verification"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "v4 stalled and remains incomplete",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json"
+            }
+          ],
+          "observation": "V4 stalled and remains incomplete; no later V5 record supersedes it. The journal names the v4 generation but does not provide its exact run ID.",
+          "record_id": "bird-v4-incomplete",
+          "run_id": null,
+          "status": "incomplete"
+        },
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "only 28/34 tasks were measured (90 verify phases)",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json"
+            }
+          ],
+          "observation": "Historical label complete, reported score 0.3214285714; only 28/34 tasks measured, 90 verify phases. Planned 34 tasks x3 is not certified full coverage.",
+          "record_id": "bird-v5-partial-coverage",
+          "run_id": "bird-minidev-h0-10pct-v5",
+          "status": "partial-measurement"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "text_to_sql"
+    },
+    {
+      "blockers": [],
+      "dataset": "chessbench_puzzles",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "control"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "- Pilot interruption: run `chess-pilot-h0-20261013`",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md"
+            }
+          ],
+          "observation": "19 task-trials completed, 0 failed envelopes; events stopped during test/1270 trial 2 with no final verdict or aggregate curve.",
+          "record_id": "chess-original-incomplete",
+          "run_id": "chess-pilot-h0-20261013",
+          "status": "incomplete"
+        },
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "- Recovery result: `chess-pilot-h0-20261013-recovery-01`",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md"
+            }
+          ],
+          "observation": "149/150 task-trials completed, 0 failed envelopes; final test/9967 trial stopped after more than 620s with no terminal verdict/curve. Termination/cleanup closure unproven.",
+          "record_id": "chess-recovery-incomplete",
+          "run_id": "chess-pilot-h0-20261013-recovery-01",
+          "status": "incomplete"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "planning_and_search"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## Controls and tests",
+              "path": "data/datasets/cooperbench/README.md"
+            }
+          ],
+          "family": "measurement-coverage",
+          "id": "runtime-group-coverage",
+          "next_action": "Retain all 652 pair identities and explicit task/trial coverage when running candidate-harness diagnostics or broader evaluation. Do not report representative reference controls as full-benchmark model performance.",
+          "observed": "The adapter retains all 652 pair identities across 30 runtime groups. Preparation pins source, scorer, dependencies and image identities; runtime availability is checked per selected group. Two isolated workers submit patches to a fresh verifier using Harbor's merged-pair scorer. Oracle/noop controls exercise the selected runtime without measuring candidate coding quality.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "cooperbench",
+      "demand": "artifact",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "code_generation"
+    },
+    {
+      "dataset": "costbench",
+      "demand": "tool_use",
+      "surface": "tool_dialogue",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "cost"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "static-controls-not-model-evaluation",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "The static protocol targets sequence length five with no dynamic blocking and retains official train/test identity. Its primary metric is optimal-tool-path exact match, with cost and completion diagnostics retaining separate eligibility. Registration and reference controls do not establish candidate-harness performance. Train runtime uses explicitly named enum/seven-digit-ID compatibility; unchanged official answer accuracy remains distinct from repaired training interpretation.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/adapter-integration-journal.md",
+              "locator": "## CostBench static protocol — 2026-10-21"
+            }
+          ],
+          "next_action": "Before reporting candidate performance, record source/configuration, split, selected tasks, trials, metric eligibility, model identity, actual usage and cleanup. Label static/subset results explicitly; do not treat zero eligible cost samples as optimal cost or reference controls as model evaluation."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "costbench_dynamic",
+      "demand": "tool_use",
+      "surface": "tool_dialogue",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "cost",
+        "recovery"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "dynamic-controls-not-model-evaluation",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "The dynamic adapter targets four separately named one-event protocols at atomic sequence length five: cost_change, steplen_change, ban_tool and preference_change. It retains official train/test identities and reports event eligibility separately from primary path exact match. Static and dynamic protocols are one benchmark family, not independent cost coverage. Reference controls and registration do not establish candidate-harness performance. Training uses explicitly declared enum and seven-digit-ID compatibility.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/costbench_dynamic/README.md",
+              "locator": "# CostBench dynamic"
+            }
+          ],
+          "next_action": "For candidate diagnostics, retain protocol mode, source/configuration, split, task/trial coverage, actual/effective event counts, metric eligibility, model identity, usage and cleanup. Do not combine modes or promote oracle controls to model scores; preserve incomplete intervention episodes and undefined cost denominators explicitly."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "blockers": [],
+      "dataset": "ds1000",
+      "demand": "artifact",
+      "exercises": [
+        "tools",
+        "verification"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## DS1000 \u2014 host slice and timeout evidence",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/61/report.md"
+            }
+          ],
+          "observation": "Reported score 0.2076502732 over a 61-task/3-trial pilot on the 926/1000 host slice; sample/trial/timeout audit and archive append remain pending.",
+          "record_id": "ds1000-v4-pending-review",
+          "run_id": "ds1000-h0-10pct-v4",
+          "status": "pending-review"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "code_generation"
+    },
+    {
+      "blockers": [],
+      "dataset": "fever",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    },
+    {
+      "blockers": [],
+      "dataset": "gaia",
+      "demand": "evidence",
+      "exercises": [
+        "context",
+        "tools",
+        "control"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "### GAIA V2 real-model pilot attempt",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json"
+            }
+          ],
+          "observation": "17 tasks x3 planned; sealed receipt reports 9 persisted trials, events contain 10 done events. API-timeout usage unknown; coverage discrepancy unresolved.",
+          "record_id": "gaia-v2-incomplete",
+          "run_id": "gaia-validation-pilot-h0-20261117-v2",
+          "status": "incomplete"
+        },
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "### GAIA V3 real-model pilot attempt",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl"
+            }
+          ],
+          "observation": "11 trials completed normally; gaia/49 third trial reached agent completion but snapshot exited 137 before verification. No aggregate score is valid.",
+          "record_id": "gaia-v3-incomplete",
+          "run_id": "gaia-validation-pilot-h0-20261117-v3",
+          "status": "incomplete"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    },
+    {
+      "blockers": [],
+      "dataset": "gsm8k",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [],
+      "dataset": "hotpotqa",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## HotpotQA \u2014 structured evidence and time budget",
+              "path": "docs/adapter-integration-journal.md"
+            },
+            {
+              "kind": "external-reference",
+              "locator": "Journal citation only; external receipt not opened during this review.",
+              "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-incomplete-index.json"
+            }
+          ],
+          "observation": "User stopped the oversized 492-task/3-trial run at 94/1476 task-trials; the journal provides no exact run ID, so none is invented.",
+          "record_id": "hotpot-v4-incomplete",
+          "run_id": null,
+          "status": "incomplete"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    },
+    {
+      "blockers": [],
+      "dataset": "jericho",
+      "demand": "environment",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "memory"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "interactive_fiction"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "Validation",
+              "path": "data/datasets/kumo/README.md"
+            }
+          ],
+          "family": "measurement-coverage",
+          "id": "kumo-measurement-coverage",
+          "next_action": "Retain explicit subset, split and protocol identity in evaluation records; report selected and unmeasured coverage without treating a subset as a full-benchmark result.",
+          "observed": "The adapter retains 5290/5300 released standard cases under the official consistency predicate: 10 unsatisfiable cases are excluded and 35 multi-answer cases retained. It uses the query50 protocol, native oracle/noop controls and a private relay. Actor networking is inherited and the adapter does not enforce filesystem quotas.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "kumo",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "planning_and_search"
+    },
+    {
+      "blockers": [],
+      "dataset": "livecodebench",
+      "demand": "artifact",
+      "exercises": [
+        "tools",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "code_generation"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "\"locomo\": {",
+              "path": "tests/quality/test_dataset_controls.py"
+            },
+            {
+              "kind": "repository",
+              "locator": "\"locomo\": (\"evidence\", \"long_context\")",
+              "path": "tools/dataset_classes.py"
+            },
+            {
+              "kind": "repository",
+              "locator": "LoCoMo native adapter (Harbor protocol)",
+              "path": "data/datasets/locomo/README.md"
+            }
+          ],
+          "family": "measurement-coverage",
+          "id": "adapter-acceptance-pending",
+          "next_action": "Review the current Conda validation receipt and adapter documentation. Validate the intended local-model configuration and native sandbox on the target host before model evaluation. Specify task scope, model and budget for the experiment; use the manual question-weighted report with complete selected coverage and matching trial evidence. Preserve invalid and unmeasured outcomes and verification records. Formal staged evaluation remains subject to existing platform runtime and publication checks.",
+          "observed": "Native files adapter following pinned Harbor input rendering and scoring, using official LoCoMo data: 10 conversations, 1986 questions, all five categories. Complete conversation.md and questions are available at task start; the harness writes answers.json. Per-question scores are retained in standard verdict evidence. The platform uses its existing task mean; report.py provides a separately invoked question-weighted summary with explicit selected coverage. Uses Conda and the existing local HTTP model route with network none. No platform execution changes, model judge or declared study/eval split. Current implementation and validation scope are documented in data/datasets/locomo/README.md and specs/validation-20261017.json. Real local-model inference, target-host readiness and full model benchmark results are not established.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "locomo",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "long_context"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "### Model judges",
+              "path": "data/datasets/memoryagentbench/README.md"
+            },
+            {
+              "kind": "repository",
+              "locator": "class Judge",
+              "path": "eval/service/judge.py"
+            }
+          ],
+          "family": "metric-comparability",
+          "id": "judge-dependent-subset",
+          "next_action": "Before any diagnostic that scores the judge-dependent subset: configure `HG_JUDGE_BASE_URL`/`HG_JUDGE_API_KEY`, record the resolved judge model and reasoning profile on every point, and report the judge-dependent questions as unmeasured when the provider or the declared model is unavailable. Do not substitute a different judge model, do not pool points whose profiles differ, and never count an unavailable judge as a failure.",
+          "observed": "Two model-judge paths cover 105 episodes / 400 questions and the remaining questions are scored locally (data/datasets/memoryagentbench/README.md, `### Model judges`). Both paths call the verifier-only `VERIFY.judge` channel with `reasoning=\"disabled\"`, so the judge model and its reasoning policy are part of the measured metric, not a detail of the run: a record without the profile stays readable but cannot be aggregated with records that declare one. An unconfigured provider, an unsupported model, or an unavailable endpoint makes those questions unmeasured rather than wrong, and the adapter rejects unsupported models before the actor runs.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "memoryagentbench",
+      "demand": "memory",
+      "exercises": [
+        "context",
+        "memory"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "supplied_history"
+    },
+    {
+      "blockers": [],
+      "dataset": "musique",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "REFUSED =",
+              "path": "data/datasets/nestful.py"
+            }
+          ],
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Refused by contract, not prohibited (docs/refusal-policy.md, 2026-10-22). The pinned official Win Rate returned 1857 true/4 false and then 1854/7 on the same 1861 gold sequences, so it lifts only with a repaired upstream release or a deterministically pinned run record that reproduces gold. Do not provision or run this dataset; function/slot F1 and full-sequence match are separate metrics and may not be reported in Win Rate's place.",
+          "observed": "Official execution Win Rate is nondeterministic/unreproducible as released; slot/sequence metrics cannot replace it.",
+          "status": "external"
+        }
+      ],
+      "dataset": "nestful",
+      "demand": "tool_use",
+      "exercises": [
+        "tools"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "tool_calling"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "Native train row 949",
+              "path": "data/datasets/personamem_v2/README.md"
+            }
+          ],
+          "family": "measurement-coverage",
+          "id": "excluded-source-question",
+          "next_action": "Report original, excluded, eligible and measured question counts under the valid-question metric. Do not label the filtered training score as an exact full-release result or mix it with earlier metric versions; uncompleted eligible questions and runtime failures remain unmeasured.",
+          "observed": "Native train row 949 for persona 592 lacks distractors. The valid-question metric excludes only this pinned row and scores the episode's other 28 questions. All 1735 episodes remain; native train has 18548 eligible questions out of 18549 released, while val and benchmark are unchanged. Prepared artifacts and scoring evidence retain the exact exclusion and reason.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "personamem_v2",
+      "demand": "memory",
+      "exercises": [
+        "context",
+        "memory"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "supplied_history"
+    },
+    {
+      "blockers": [],
+      "dataset": "physicsquestions",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [],
+      "dataset": "reasoning_gym",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [],
+      "dataset": "scienceworld",
+      "demand": "environment",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "memory",
+        "recovery"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "## ScienceWorld \u2014 platform integrity",
+              "path": "docs/adapter-integration-journal.md"
+            }
+          ],
+          "observation": "354/354 task-trials completed, but platform-integrity mismatch invalidates run-level completeness; diagnostic mean 0.1380508475 is not an archive effect.",
+          "record_id": "scienceworld-v4-incomplete",
+          "run_id": "scienceworld-h0-10pct-v4",
+          "status": "incomplete"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "science_simulation"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "REFUSAL =",
+              "path": "data/datasets/sotuqa.py"
+            }
+          ],
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Refused by contract, not prohibited (docs/refusal-policy.md, 2026-10-22). The headline acc is an unpinned LLM judge that resolved to a retired model (text-davinci-003), so it lifts when a judge model can be named and re-run locally and recorded in the receipt's identity; the platform's judge channel now exists (eval/service/judge.py). Do not provision or run this dataset, and never report em/f1 as the benchmark: against this set's sentence-long golds they measure string overlap, not the answer.",
+          "observed": "The headline unpinned LLM-judge metric is unavailable under the platform contract; EM/F1 are not a substitute.",
+          "status": "external"
+        }
+      ],
+      "dataset": "sotuqa",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    },
+    {
+      "blockers": [],
+      "dataset": "sportsunderstanding",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [],
+      "dataset": "spreadsheetbench",
+      "demand": "artifact",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "spreadsheet"
+    },
+    {
+      "blockers": [],
+      "dataset": "strategyqa",
+      "demand": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "`HG_STRONGREJECT_JUDGE_MODEL`",
+              "path": "data/datasets/strongreject/README.md"
+            },
+            {
+              "kind": "repository",
+              "locator": "class Judge",
+              "path": "eval/service/judge.py"
+            }
+          ],
+          "family": "metric-comparability",
+          "id": "judge-model-metric-identity",
+          "next_action": "Before any diagnostic that scores this dataset: configure the judge provider, record the resolved judge model on every point (it is the metric identity), and report points measured under different judge models separately. Do not let the global `HG_JUDGE_MODEL` silently change the metric identity of a run, do not pool two judge profiles, and treat an unavailable judge model as unmeasured rather than as a low score.",
+          "observed": "Metric identity is `strongreject.rubric.defense.<model>.v1`, and the resolved judge model is selected by `HG_STRONGREJECT_JUDGE_MODEL` > `HG_JUDGE_MODEL` > `gpt-4o-mini-2024-07-18` (data/datasets/strongreject/README.md, paragraph beginning `HG_STRONGREJECT_JUDGE_MODEL`). The resolved model is frozen into the verifier declaration and the private scorer case, configuration snapshots and the judge receipt record the selection, and different judge profiles must be reported separately. Provider availability is checked on request; an unavailable model produces an unmeasured result without fallback.",
+          "status": "measurement"
+        }
+      ],
+      "dataset": "strongreject",
+      "demand": "reasoning",
+      "exercises": [
+        "safety"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "reasoning"
+    },
+    {
+      "blockers": [
+        {
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "REFUSED =",
+              "path": "data/datasets/tau2_bench.py"
+            }
+          ],
+          "family": "contract-refusal",
+          "id": "retain-contract-refusal",
+          "next_action": "Exclusion lifted conditionally by the operator on 2026-10-22 (docs/refusal-policy.md): this dataset may be provisioned and run once the platform supplies an independent user simulator (the actor never plays both sides) and the judge its metric names, both declared in the receipt's identity, with every task pinned to one upstream revision (v0.1.0 tasks.json, not the tau3 split_tasks.json). Until then the adapter returns REFUSED and no proxy number may be reported in its place: the database half alone, a communicate_info substring check, or a pooled figure under the tau2 name are different benchmarks, and a paid-endpoint judge makes a number non-publishable.",
+          "observed": "Independent user simulation and judge-dependent assertions are unavailable; required user actions cannot be supplied by the actor.",
+          "status": "code-solvable"
+        }
+      ],
+      "dataset": "tau2_bench",
+      "demand": "tool_use",
+      "exercises": [
+        "tools",
+        "control"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "tool_dialogue"
+    },
+    {
+      "dataset": "tau3_bench",
+      "demand": "tool_use",
+      "surface": "tool_dialogue",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "reliability"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "bounded-controls-not-full-evaluation",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "The pinned tau3 v1.0.1 text half-duplex adapter retains all 375 base tasks across four domains; banking uses BM25 and voice/full-duplex is outside its scope. It runs the official business tools, user simulator and ALL scorer, including every task's NL assertions. Complete pass^k reporting requires three trials per selected task.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "data/datasets/tau3_bench/README.md",
+              "locator": "A report for a selected subset is explicitly labelled; it is not a full-base result."
+            }
+          ],
+          "next_action": "Record model roles, source, split, selected tasks, trials, usage and cleanup identity. Report complete required three-trial manifests before publishing pass^k; retain missing/provider/scorer outcomes as unmeasured and label subset results explicitly."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "blockers": [],
+      "dataset": "tau_bench",
+      "demand": "tool_use",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "memory",
+        "recovery"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "tool_dialogue"
+    },
+    {
+      "blockers": [],
+      "dataset": "terminal_bench",
+      "demand": "environment",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "recovery",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "terminal"
+    },
+    {
+      "blockers": [],
+      "dataset": "triviaqa",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    },
+    {
+      "blockers": [],
+      "dataset": "twowikimultihopqa",
+      "demand": "evidence",
+      "exercises": [
+        "context"
+      ],
+      "historical_runs": [
+        {
+          "effect": null,
+          "evidence": [
+            {
+              "kind": "repository",
+              "locator": "- Local results: MuSiQue capped train pilot",
+              "path": "docs/adapter-integration-journal.md"
+            }
+          ],
+          "observation": "Original 50-task pilot had 48 scored tasks, two malformed-output invalids and mixed legacy Answer F1/structured Joint F1. Reported original curve 0.5081597292 is not full comparable coverage. Exact original run ID not specified.",
+          "record_id": "twowiki-original-invalid-pilot",
+          "run_id": null,
+          "status": "partial-measurement"
+        }
+      ],
+      "shared_blockers": [],
+      "surface": "information_seeking"
+    }
+  ],
+  "review": {
+    "date": "2026-10-14",
+    "notes": [
+      "Task capability is demand x surface; exercises is the separate harness-sensitivity axis, not isolated component measurement.",
+      "Status labels classify the work needed, not benchmark readiness: code-solvable, external, runtime or measurement.",
+      "Published coverage conservatively includes all literal KIND=dataset declarations, even refused or unprovisioned adapters; no adapter imports or task-payload reads.",
+      "Repository evidence anchors source observations. External paths and historical scores are unverified journal citations and were not opened or executed.",
+      "Shared blocker references are cumulative requirements, not a claim that every runtime mode needs a container snapshot.",
+      "Missing dataset-specific journal evidence is an explicit measurement/review gap, never a passing status.",
+      "Unknown historical run IDs remain null; historical date strings and coverage discrepancies are preserved as written.",
+      "Current AGENTS.md governs staged planning; historical 50x3 protocols are retained as history, not new-run authorization.",
+      "Operator decision 2026-10-15: snapshot and cleanup admission are best-effort with uncertainty retained; incomplete observations alone do not block, known failures and integrity mismatches still refuse. See docs/enforcement-proof-decision.md.",
+      "Source review 2026-10-15 - w-shared: pristine-verifier review action closed by the opt-in pinned offline runtime identity, stopped-instance inspection and two-projection recheck mechanism; see docs/w-shared-verifier-review.md. This is not live dataset evidence or production authorization. runtime-observations remains open: unknown-only aggregation is allowed; both code-solvable shared blockers remain unchanged.",
+      "Source/test review 2026-10-15 - w-obs, corrected by w-fix: runtime-observations source-review action closed; stepwise ChessBench records the trusted platform in-process controller class, and all-unknown aggregates/progress/curves retain complete evidence with scorer_isolation_class=unknown and scorer_isolation_comparable=false; unknown comparison and mixed-class aggregation/comparison still refuse. See docs/w-fix-unknown-isolation-records.md and reports/w-fix-validation.txt; docs/w-obs-runtime-review.md and reports/w-obs-validation.txt describe the original change. Unsupported policy-bearing paths remain blocked; both code-solvable shared blockers, dataset-local requirements and historical receipts remain unchanged. No live dataset evidence or production authorization.",
+      "w-chess3: Corrected trusted-stepwise-transport observed before execution: the solver_turn=0 falsy gate was in the AGENT'S OWN GENERATED SCRIPT (reports/w-chess2-evidence/actor-command-line-19.sh:25), not platform code. Closed only this transport blocker after w-chess3-stepwise-20261014T222208Z-728e7478 delivered a failed/wrong_move terminal exchange with exit_code=0, submissions=1 and successful relay cleanup. Raw controller score=0.0, scorer_isolation_class=in-process; staged score=null, invalid_trials=0, unmeasured_trials=1, reason=policy_enforcement_not_observed. Diagnostic control only, no model or protocol comparison. Correction and full closure evidence: reports/w-chess3-receipts.md and reports/w-chess3-evidence/corrected-blocker-before-run.json. interruption-closure and all historical/shared gates are unchanged.",
+      "Operator decision 2026-10-15: requirements that are PROVEN unobtainable are withdrawn and recorded as limits with their search evidence, rather than left open. Withdrawn: the shared blocker `scorer-offline-closure` (including clause S6 'validate live controls before pilots', which is circular - the observation flag that would clear it is hard-coded false and only flips after the admission it helps withhold) and the shared blocker `artifact-only-state-export`; and the dataset blockers livecodebench/row-attestation (zero authoritative upstream row IDs obtainable), twowikimultihopqa/hub-data-provenance (opaque ETag, no content digest), twowikimultihopqa/ujson-native-offline-closure (rebuild from the pinned commit did not reproduce; PyPI attestation 404), bird_minidev/sql-coverage-reconciliation and ds1000/host-slice-archive-review (original trial/provenance records were never captured and are not published). Evidence for each search: registry/withdrawn-requirements.md. Clauses whose evidence EXISTS are closed on that evidence, with residual gaps recorded as standing limits in the same file. Nothing is withdrawn for being merely difficult: the journal-coverage family, hotpotqa and triviaqa stay open because they need an operator-supplied selected manifest, and the operator-decided trio (gaia, tau_bench, chessbench_puzzles/interruption-closure) is untouched. The four permanent refusals are unchanged.",
+      "Operator further decision 2026-10-15 - w-wd2: withdraw gaia/frozen-lifecycle-receipt, tau_bench/local-state-lifecycle and chessbench_puzzles/interruption-closure as recorded limits. This supersedes the earlier note leaving this trio untouched. GAIA's own action forbids provisioning or running it; tau-bench's reviewed metadata lacks the clean database pair and independent selected-only/run/trial/manifest-bound lifecycle receipt; ChessBench's keep-open action depends on independent audit/receipt authentication although the independent-approval requirement was already withdrawn (docs/independent-review-deferred.md; corroborated in the journal). Evidence, missing observations and retained boundaries are documented in registry/withdrawn-requirements.md. This withdraws requirements, does not certify runtime readiness or authenticate receipts, and authorizes no pilot. GAIA policy refusal and all frozen original/recovery/V2/V3 receipts and historical_runs remain unchanged with null effects; unknown outcomes stay unmeasured. appworld, bfcl_v3, all other blockers and production_authorized=false remain unchanged.",
+      "Parent clarification 2026-10-15: several `observed` fields still contain earlier worker sentences that name the shared requirements `scorer-offline-closure`, `artifact-only-state-export`, `pristine-verifier` and `runtime-observations` as 'open' or 'required'. Those sentences are kept unedited as the dated record of the state at the time they were written, but they are superseded: those shared requirements were withdrawn by operator decision and no longer exist in this registry (see registry/withdrawn-requirements.md and the operator-decision notes above). They do not condition closure or admission for any dataset blocker, and the retained per-task export/private-input/backend-ownership boundary applies only to a future explicit pristine opt-in. Reading one of those names inside an `observed` field as a current obligation is a misreading of this record.",
+      "Parent closure 2026-10-15 (operator decision A): CLOSED `physicsquestions / dataset-journal-gap` and `sportsunderstanding / dataset-journal-gap` as completed journal-coverage reviews. Reading A applies: a `dataset-journal-gap` is discharged when the journal coverage its own `next_action` names exists, and diagnostic-time clauses are preconditions on a future separately authorized diagnostic rather than conditions on closure. At closure both blockers' every clause was satisfied or withdrawn: authenticated installed-to-ReWOO and ordered pinned-BIG-bench row linkage, the bounded operator first-five selected-only custody record, each dataset's own `docs/dataset-reviews/<dataset>.md` citation, and the separate local metric statement in `registry/w-metriccmp-comparability.md` (physicsquestions: asymmetric normalized accepted-spelling exact match, DIFFERENT from BIG-bench `exact_str_match`; sportsunderstanding: generated-text ASCII-letter-boundary label accuracy, DIFFERENT from candidate-log-probability `multiple_choice_grade`). THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: neither dataset has ever had a measured run, no coverage counts are asserted, and every diagnostic-time obligation recorded in the pre-closure `next_action` remains a requirement of any future diagnostic, which still needs its own authorization, a fresh run ID, split/side binding and the staged policy. The pre-closure texts remain readable in the git history of this file; this note is the registry-level record of the decision. Rule fixed by the operator so it does not need re-deciding: the other journal-coverage blockers (`fever`, `reasoning_gym`, `strategyqa`, `spreadsheetbench`) stay OPEN because each still has a named obligation that is not merely diagnostic-time - an upstream producing-execution receipt, an original generation receipt plus behavioural eligibility, an original scorer/split definition, or measured coverage plus scorer and formula runtime evidence.",
+      "Parent closure 2026-10-15 (operator decision A, second closure): CLOSED `reasoning_gym / dataset-journal-gap` as a completed journal-coverage review, on the same reading recorded above for physicsquestions and sportsunderstanding. At closure each of the two obligations the earlier note named as not-merely-diagnostic-time was satisfied or withdrawn, and every remaining clause is a precondition on a future separately authorized diagnostic. (1) The original pool generation environment/clock/hash-order metadata and exact reproduction from recorded original inputs is WITHDRAWN as proven unobtainable and recorded under `reasoning_gym / original-generation-process-receipt` in registry/withdrawn-requirements.md, after the enumerated machine census of 733 Codex session snapshots, 23773 stored main Git objects and 395197 Study regular files (registry/w-recgym-receipts.md, registry/w-recgym-validation.txt). (2) Independent behavioural `reference=1 / empty=0` family eligibility is SATISFIED by w-gymelig: all 89 declared families over all 20 frozen indices each, 1780 rows and 3560 direct score_answer calls, zero exceptions and zero refusals, with the 3315981-byte pool digest c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177 unchanged before and after (registry/w-gymelig-eligibility.md, tests/fixtures/hg_gymelig/). Installed distribution/source/ordered-member custody, the declared pool hash, the frozen family/order inventory, the preserved 84-row/six-family failed-regeneration evidence and the bounded operator first-five selected-only packet (tests/fixtures/hg_wsel/reasoning_gym.json) are retained as recorded. THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: reasoning_gym has never had a measured run, no coverage count is asserted anywhere, and every diagnostic-time obligation - applicable split/side and run binding, deterministic transitive dependencies without scoring extras, metric identity, actual selected scorer/runtime execution evidence, and the diagnostic's own authorization - remains a requirement of any future diagnostic. Open blockers 12 -> 11. The pre-closure text remains readable in this file's git history; this note is the registry-level record of the decision.",
+      "Parent closure 2026-10-15 (operator decision A, third closure; the first applied to a measurement-coverage blocker): CLOSED `hotpotqa / historical-comparison-receipts`. The operator confirmed applying reading A to this family after the parent filed the candidate with its clause-by-clause basis in registry/blocker-closure-assessment.md. At closure every clause of the current next_action was satisfied, recorded as a limit, or a precondition on a future diagnostic. (1) The original v4 selected-ID/trial/error/timeout receipts, its source/split/manifest/model/harness provenance receipts, and that run's measured/invalid/unmeasured counts and lifecycle/cleanup reconciliation are WITHDRAWN under `hotpotqa / historical-comparison-receipts / original-v4-receipts` in registry/withdrawn-requirements.md, over an enumerated on-machine scope: 722 ~/.codex/sessions transcripts, the full object store, history, reflog and stashes, runs/, runs_discarded_*, .hashstate, tests/fixtures/, the named archives and /mnt/20t/xubuqiang/hg-census/. (2) The candidate ID hotpotqa-h0-10pct-v4 and its unresolved binding to the reported 94/1382/1476 coverage remain recorded as an explicit comparability limit in registry/w-hotpotrec-receipts.md and registry/w-hotpotrec-evidence.json. (3) The old full-size protocol is preserved incomplete with run_id=null and effect=null and is never resumed, rerun or overwritten. (4) The timeout classification/persistence/aggregation closure and the bounded operator first-five selected-only packet (tests/fixtures/hg_wsel/hotpotqa.json) are satisfied. (5) Current selected scorer/control admission remains a precondition on any future separately authorized diagnostic, which uses a fresh run ID and the current staged policy. THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: the v4 run stays incomplete with effect=null, the 94/1382/1476 coverage stays unverified and unbound, unknown outcomes stay unmeasured and never become zeros, and no diagnostic is authorized by this closure. Open blockers 11 -> 10. The pre-closure text remains readable in this file's git history.",
+      "Parent closure 2026-10-15 (operator decision A, fourth closure): CLOSED `strategyqa / dataset-journal-gap`. The obligation this blocker was left open for - \"an original scorer/split definition\" - is now discharged in both halves. The original answer scorer was already FOUND and bound: allenai/strategyqa-evaluator@49b88ed2b2f1b57385c13e8a0699dee1d227f83e, evaluator/eval.py, 5797 bytes, SHA-256 68c0edcd2fd26daf2cec368302d9f564cbf351288aa4a2c265f47bdc00704044, reproducing upstream Git blob 9717ac6bfd7f3428cb15aa87f3e0ab5873458ce1, with raw Python equality over every supplied gold instance and DIFFERENT from the local normalized whole-answer EM. The split membership is now FOUND and bound by w-stratsplit to the generation-pinned distribution ZIP and the author repository (registry/w-stratsplit-membership.md, tests/fixtures/hg_stratsplit/): the complete ZIP Train multiset equals the installed 2290 rows (after literal prefix removal and an explicit Boolean-to-Yes/No mapping) and equals the union of the author repository's unofficial train/dev memberships (2061/229); the ZIP Test membership equals the official evaluator's published 490-ID dummy-submission key set; all installed rows are original Train, none are original Test, no installed row is unaccounted for, and all 490 original Test members are absent from the installed pool. Retained explicitly as limits: direct landing-page endorsement of the ZIP is unobserved (HTTP 403), so the binding rests on the documented official-evaluator/author-content authority bridge; two duplicate-content installed rows keep ambiguous exact qid candidates with no invented tie-break; and the imposed 1520/770 hash split and the author's unofficial train/dev division are NOT the original Train/Test evaluation. THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: strategyqa has never had a measured run here, F1 and judge accuracy stay excluded, local normalized whole-answer EM is reported separately and not as original Accuracy, and every diagnostic-time clause - run-specific selected manifest/export, split mode/side, deterministic offline dependencies, dataset-specific trusted verifier/runtime execution, eligible/selected/task/trial/invalid/unmeasured coverage recording, and the diagnostic's own authorization - remains a requirement of any future diagnostic. Open blockers 10 -> 9. The pre-closure text remains readable in this file's git history.",
+      "Parent closure 2026-10-15 (operator decision: scoped standing limit, fifth closure): CLOSED `fever / dataset-journal-gap`. Every clause is now satisfied, recorded as a limit, or a precondition on a future separately authorized diagnostic. The two historical public objects the earlier search left unread are FOUND and read - the loader at 1776db7e9abab525eae8e59c5015e3589dfe371b (7897 bytes, git blob ab71339be067bc98bcad7df12a12c0e05fc6b521, matching the recorded tree entry) and the generated tree at ad8321607bcad0e534c243ec8c108a5787cea6c8 (4596-byte HTTP 200 JSON, nine entries), preserved with their raw bodies, requests, response digests and redirect in tests/fixtures/hg_fevobj/ and enumerated in registry/w-fevobj-receipts.md - and neither contains or implies a producing-execution receipt. The flat-versus-singleton metric question is decided and named: option (a), the conjunctive per-exported-row metric `fever_exported_row_conjunctive_strict_at_5`, recorded as a definition only, with the current local flat branch still promoting singletons so a conjunction-preserving projection must be implemented and reviewed before any measurement. The producing-conversion execution, ID-assignment, split/filter/omission and NEI-input provenance obligation is WITHDRAWN as a scoped standing limit and recorded in registry/withdrawn-requirements.md under `fever / producing-conversion-execution-receipt`: the absence is bounded over the enumerated reachable scope, NOT categorical - private, unindexed, producer-held or later-deleted records remain UNKNOWN and the producer is a public third party, so a maintainer-published binding would supersede that entry at its actual scope. THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: fever has never had a measured run here, no coverage count is promoted, the 1400/9525 exposed rows, the 51 omitted alternative groups across 42 original IDs and the unauthenticated NEI/omission decisions stay recorded, and every diagnostic-time clause - applicable split/side and run binding, a conjunction-preserving projection, actual selected scorer/runtime execution evidence, and the diagnostic's own authorization - remains a requirement of any future diagnostic. Open blockers 9 -> 8. The pre-closure text remains readable in this file's git history.",
+      "Parent closure 2026-10-15 (operator decision A applied to a measurement-coverage blocker; sixth closure): CLOSED `spreadsheetbench / dataset-journal-gap`. The operator confirmed, after the parent filed the clause-by-clause candidate in registry/blocker-closure-assessment.md, that reading A covers the one remaining PENDING-RUN clause: eligible/selected/task/trial/invalid/unmeasured coverage is a precondition on a future separately authorized diagnostic, not a condition on closure - exactly as reasoning_gym closed with no measured run. Every other clause was already satisfied, and the last PENDING-WORK clause was discharged the same day by w-spreadvacuous. (1) Authenticated row-level gradable eligibility: registry/w-spreadelig-eligibility.md classifies all 400 installed rows - 394 structurally gradable without a run, 1 (`283-32`) retained only by the explicit official-range-zero compatibility policy, 5 not gradable as installed with a per-row reason; 794/800 workbooks open in both openpyxl modes and all 800 ZIP/XML structures are readable. (2) Complete installed workbook/mirror authentication and the bounded first-five selected-only packet: registry/w-jc2-review.md, registry/w-spreadrt-runtime.md, tests/fixtures/hg_wsel/spreadsheetbench.json. (3) The synthetic stale-cache formula-conversion failure is FIXED, not waived: w-spreadcache traced the cause to LibreOffice's own load policy (default OOXMLRecalcMode=1 at /usr/lib/libreoffice/share/registry/main.xcd:724); the shipped check now forces mode 0 in a private profile, strips scalar formula caches from a private ZIP copy and requires regenerated caches before the converted file may replace the candidate, so a stale-cache workbook is unmeasured rather than published as a measured score, and the opt-in real-engine control preserves the authored [999,888] -> [5,10] bar. (4) The vacuous-pass soundness hole is FIXED: a released answer_position whose range expands to zero cells (`'Sheet1'!BD2:308`; parse_cell_range gives an end column of 0) made cell_level_compare iterate nothing and return True, so a released row published an unperformed 1.0 measurement for any submission. w-spreadvacuous (commit 803ef598) makes an empty expansion exit 3 with a named reason and no reward file, and names an unaddressable component instead of skipping it; the released colon-range parser ValueError stays a measured zero exactly as before. The scorer digest is now 98dd625481f091a8684dd4d7a66c17f07cf7a36c8bba160e27353e06988b1af7 and is bound in this file's own observed field; registry/w-spreadrt-runtime.md is retained unedited as the dated e7131a26... pre-fix observation, and the superseded cache-only binding 5c247413... is recorded as dropped in the integration, not silently lost. (5) The one-released-variant named-cell metric statement and the official-range-zero compatibility policy are satisfied and recorded in registry/w-metriccmp-comparability.md and registry/w-spread2-reconciliation.md; the local score is not identified with the upstream three-variant soft_restriction mean or hard_restriction all-pass aggregate. (6) Failed receipts, missing engine package archives and the conditional native/replay and read-only result-path observations remain preserved as explicit bounded limits, and the withdrawn shared requirements (scorer-offline-closure, artifact-only-state-export, pristine-verifier, runtime-observations) stay withdrawn rather than re-imposed. THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: spreadsheetbench has never had a measured run here, no coverage count is promoted, measured/selected/trial/invalid/unmeasured and run_id stay null, and no diagnostic or pilot is authorized by this closure. The retained coverage obligation, the fresh bounded no-model regressions with real engine invocation, correct fresh cached values and explicit network isolation, and the reconciliation of any diagnostic manifest with the first-five packet all remain preconditions on a future, separately authorized diagnostic that must use its own fresh run ID and the current staged policy.",
+      "Parent custody update 2026-10-16 (fidelity phase, Range A1) - supersedes the scorer digest recorded in the preceding closure note; the closure itself is unchanged and nothing is reopened. The shipped checker `data/datasets/spreadsheetbench/verify/check.py` previously recalculated the workbook **in the frozen task tree**: `_score` resolved the candidate from `workdir` and `recalculate()` published its result with `shutil.move(converted, workbook)` onto that same file. On a real run the task tree is mounted read-only (INTERFACE.md 2.2), so the publication raised `[Errno 30] Read-only file system: '<workdir>/result.xlsx'` and the task became unmeasured - i.e. this check could not score a formula-bearing workbook at all. The checker now copies the candidate into private scratch, recalculates **that** copy, keeps it alive through comparison (an `ExitStack`, because the previous temporary-directory scope closed before the comparison ran) and never writes into the task tree. Merged from `w-sbfix2` (commit `f5af0f78`). Old digest `98dd6254...` is superseded by the new committed blob digest `4476b574c511898f7c88f20e95d5fd7f216ff9908813502b46b03b37abce16c8`. Evidence for the fix: the new authored control fails on the unfixed code with exactly that `[Errno 30]` error and passes after, and the pre-existing real-engine control was **strengthened** rather than relaxed - it now bind-mounts the task directory read-only, snapshots the frozen bytes, and asserts both that the submitted stale artifact stays `[999, 888]` and that scratch is empty afterwards (tests/quality/test_spreadsheetbench_readonly_w_sbfix2.py, tests/quality/test_spreadsheetbench_classification_w_spread2.py; registry/w-sbfix2-validation.txt). `registry/w-spreadrt-runtime.md` remains the dated pre-fix observation and is retained unedited. This note is a new entry rather than an edit of the closure note, so that note stays byte-identical; `w-sbfix2` itself refused to reopen the closed blocker to make its own proposal apply, which is the correct behaviour. No measurement is claimed and no diagnostic is authorized by this update.",
+      "Parent metric-identity qualification 2026-10-16 (fidelity phase) - NO BLOCKER STATUS CHANGES, no closure reopened, no measurement claimed. 20 of 28 datasets produce a number whose identity several records described incompletely or wrongly; the per-dataset qualification is registry/w-evidence-qualification.md, the comparison table is registry/w-evidence-disclosure.md, and the closure-side attachment is the new dated section in registry/blocker-closure-assessment.md. 13 lead with NUMBER (the fix changes the number), 6 with LABEL, 1 (appworld) with CONDITION. Because this phase runs no re-runs, no archived figure has been re-measured, so for every NUMBER row the archived value was produced by the PRE-FIX instrument and must not be reported under the new metric name. The disclosure table's first draft was written against the pre-fix tree; thirteen rows and eleven qualification mechanisms were corrected against main (agentdojo registered ignore_previous attack; alfworld STEP_BUDGET 30->50; bfcl_v3 irrelevance filter; ds1000 private tests out of actor SETUP; fever conjunctive exported-row projection; gsm8k first-marker precedence; hotpotqa reward changed from joint EM to answer F1; livecodebench 600 s clamp removed; physicsquestions symmetric period/whitespace normalization; scienceworld 1000->100 moves plus separate observed-type macro; sportsunderstanding immediate-negation handling; twowikimultihopqa EVIDENCE_AWARE declared and pair schema refused; spreadsheetbench locator drift; tau_bench service-owned recording, 347->297 lines) and verified: 199 in-range citations with zero out-of-range in the two documents, coverage still 28 registry = 28 disclosure rows = 28 qualification sections, and no test in the repository reads either document, so there is no suite impact. The three open non-refusal blockers (appworld, bfcl_v3, triviaqa) each carry the qualification appended to their observed field; their closure decisions remain with the operator and are set out with exact registry text in registry/w-decisionpack.md. Also corrected in the operator-owned handoff (gitignored, not in this commit path): its section 3.4 sentence conflated MuSiQue's answer_f1*support_f1 with 2Wiki's three-channel product-precision/recall harmonic mean, and its section 4.4 over-stated census survival - three AgentDojo fold sources are absent at the exact census paths and four further source runs retain zero verdicts, so the census is a partial substitute only.",
+      "Worker registration 2026-10-16 - aime: registered the first dataset added since this registry was pinned, and the first ported from a Harbor adapter (data/datasets/aime.py; docs/dataset-reviews/aime.md). Datasets 28 -> 29 and tools/check_dataset_blockers.py now reports {\"valid\": true, \"datasets\": 29, \"shared_blockers\": 0, \"historical_records\": 11, \"production_authorized\": false}. The row carries ONE open non-refusal blocker, aime / dataset-journal-gap (family journal-coverage), so the sentence 'No non-refusal blocker remains; the registry now carries only the four permanent refusals' in docs/evidence-status-decision.md (operator decision 2026-10-16) is superseded from this registration onward. That operator decision is unchanged and is not edited; this note is the registry-level record of the supersession. The blocker is open because the operator-side bounded first-five selected-only custody packet and an independent metric-comparability statement do not exist for this dataset, and this registry's own rule is that a cleared row needs a recorded decision (see the checker's comment on an empty blockers list). THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: aime has never been run here (zero tasks, zero trials, no run ID), every coverage count is absent rather than zero, the four permanent refusals are unchanged, no shared blocker is added or revived, and no diagnostic, pilot or production/H0 authorization follows.",
+      "Worker diagnostic 2026-10-16 - aime: ran the operator-authorized first staged diagnostic for the newly onboarded adapter. One task, one trial, jobs=1, rounds=0, train side; run id aime-diag-20261016T155636Z; harness loop; model qwen3.5-9b-local; endpoint http://127.0.0.1:8002/v1 bound in the policy evidence and checked against the live config. Receipts: hg-work/aime-diag/runs/aime-diag-20261016T155636Z/{diagnostic_receipt,diagnostic_execution,staged_plan}.json with the policy evidence at hg-work/aime-diag/policy-evidence.json. THE PLATFORM PUBLISHES NO SCORE AND NONE IS CLAIMED HERE: coverage is eligible 37 / selected 1 / expected_trials 1 / measured_trials 0 / invalid_trials 0 / unmeasured_trials 1, `score` is null, and the single outcome is status=unmeasured with reason policy_enforcement_not_observed; `enforcement` records measured=false, comparable=false, production_authorized=false under the operator authorization recorded verbatim in the receipt. The run nevertheless executed end to end: 44.3 s, exit_code 0, process_outcome completed, and the task rendered as aime/test/48 from the deterministic minimum-SHA-256 selection over the 37 train ids (eligible pool digest 63c485831fb7c8c4972190d5986d860462a5af6e3ea1e4072fa0c082c461cf85). The per-task trace records reward 1 with the metric detail \"matches '106' vs '106'\" -- that number is one unobserved train-side attempt and must never be reported as an AIME score, an accuracy, a curve point or a comparison. Two caveats recorded because they bound any later measurement: the scorer ran with scorer_isolation_class=actor-workdir, i.e. in the same workdir the actor could write to, and cleanup/snapshot are `unknown` because the driver has no verified lifecycle receipt. This diagnostic does not close aime's dataset-journal-gap, promotes no coverage count, and authorizes no expansion or production/H0 work; the train/eval division (37/23) is the platform's imposed hash third and the 23 eval tasks were untouched. Contention at launch, recorded so the 44.3 s is not read as throughput: both GPUs at 100 percent with about 36 of 40 GiB used, a chessbench_puzzles driver run active with --jobs 40, and a musique refix run active.",
+      "Operator decision 2026-10-22 (refusal policy): the four contract refusals are no longer framed as prohibitions, and the fifth name on the old AGENTS.md shortcut list (Matrix) had no adapter, no row and no blocker. tau2_bench's exclusion is lifted conditionally - its two missing facilities now ship as platform code on feat/tau3-bench, data/datasets/tau3_bench/lib/runtime.py (official UserSimulator in a private trusted process, which already constructs tau2 domain environments) and eval/service/judge.py - so its status moves external -> code-solvable and its next_action becomes the remaining pin, split spec and adapter plus the identity requirement; the adapter still returns REFUSED. api_bank, nestful and sotuqa keep status external and their adapter refusals, because what they need is an artefact this repository cannot produce (the dialogue state behind recorded replies, a repaired release, a retired judge model), but their next_action now states that a refusal is a contract statement with a named exit rather than a permanent ban, and repeats the proxy that may never be reported under each name. The operator decisions of 2026-10-15 and 2026-10-16 above are unchanged and are not edited; this note is the registry-level record of the supersession. Rationale: docs/refusal-policy.md. THIS CLOSES NO MEASUREMENT AND CLAIMS NO SCORE: no refused adapter loads, none was provisioned or run, and no diagnostic, pilot or production/H0 authorization follows."
+    ],
+    "production_authorized": false,
+    "scope": "repository-source-and-journal-only"
+  },
+  "schema_version": 1,
+  "shared_blockers": []
+}

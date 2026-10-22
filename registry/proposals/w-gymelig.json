@@ -1,0 +1,20 @@
+{
+  "worker": "w-gymelig",
+  "dataset": "reasoning_gym",
+  "blocker": "dataset-journal-gap",
+  "families_tested": 89,
+  "reference_full_credit": 89,
+  "empty_zero": 89,
+  "exceptions": 0,
+  "non_eligible": [],
+  "observed_append": "Independent frozen-pool behavioral eligibility - w-gymelig: direct installed reasoning-gym 0.1.25 family score_answer entry points pass reference=1 and empty=0 on all 20 preserved indices for each of 89 declared families (1780 rows; 3560 scalar-return calls). Full-reference families=89, empty-zero families=89, eligible-on-all-frozen-rows families=89; constructor/scorer exceptions=0, refusals=0, non-eligible=[]; actual int/float returns are preserved rather than binarized. Pool bytes remain 3315981 with SHA-256 c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177 before/after. Per-family/row verdicts, entry-point file-line identities, interpreter identity and 344 current installed package member digests are bound in tests/fixtures/hg_gymelig/ and registry/w-gymelig-eligibility.md. CPU-only synthetic controls use frozen entries with generation, Python network/child-process operations and writes outside worker scratch denied; no model output, endpoint, diagnostic or measured dataset run executes. This is host behavior, not pristine-verifier or official-scorer-execution receipt, transitive/offline closure or diagnostic admission. Original generation metadata/exact reproduction, retained selected manifest/export and future split/side/run binding, deterministic transitive dependencies/metric/runtime and explicit-opt-in pristine execution remain open; no withdrawn shared requirement is reimposed. Only the parent may integrate this proposal; registry/journal/status/history are unchanged.",
+  "next_action_replacement": "Retain authenticated distribution/source/installed-member custody and declared pool hash/family/order evidence; recover original generation environment/date/order metadata and reproduce the declared pool with recorded inputs, without changing its seed/families or overwriting original bytes. Retain the independently observed host-package two-point behavioral eligibility record: all 89 declared families, all 20 frozen indices per family, reference=1 and empty=0 on 1780 rows (3560 direct score_answer calls), with zero exceptions/refusals and unchanged pool digest, as bound in registry/w-gymelig-eligibility.md and tests/fixtures/hg_gymelig/. This satisfies only frozen-pool host behavioral eligibility; it does not establish pristine-verifier behavior, arbitrary-answer robustness, measured execution or diagnostic authorization. Retain the bounded operator first-five selected manifest/export bound to exact frozen pool rows and declared per-task sides in tests/fixtures/hg_wsel/reasoning_gym.json; this mixed-side packet is not an accepted single-side diagnostic specification. No independent seed-specific pool release or selected run manifest was authenticated from the acquired public sources; the operator selection packet is separate evidence. For any separately authorized diagnostic, resolve applicable split/side and run binding, establish deterministic transitive dependencies without scoring extras and metric identity, and obtain actual selected scorer/runtime execution evidence under the declared runtime. Actual pristine execution is a future diagnostic obligation only if that runtime is explicitly opted in, subject to the retained export/private-input and ownership boundary; absent shared gates do not condition closure or admission. The official-scorer-identity proof obligation stays withdrawn. No diagnostic is authorized.",
+  "rows_tested": 1780,
+  "score_calls": 3560,
+  "refusals": 0,
+  "eligible_families": 89,
+  "counter_scope": "reference_full_credit and empty_zero count families passing all 20 frozen rows; exceptions count scorer calls; constructor_exceptions=0",
+  "constructor_exceptions": 0,
+  "next_action_base_sha256": "e057e20542796f50d06b74e6ddb7762afc01dd343685137fce30a9c8bf24f637",
+  "production_authorized": false
+}

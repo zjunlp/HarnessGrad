@@ -1,0 +1,33 @@
+{
+  "worker": "w-trivia3",
+  "dataset": "triviaqa",
+  "blocker": "hub-export-scorer-linkage",
+  "operation": "evidence_append_only_for_parent_review",
+  "evidence_paths": [
+    "registry/w-trivia3-review.md",
+    "tests/fixtures/hg_trivia3/observations.json",
+    "tests/fixtures/hg_trivia3/external-evidence-manifest.json",
+    "registry/w-trivia3-validation.txt"
+  ],
+  "observed_append": "w-trivia3 payload-free partial export audit: 228 verified HTTP ranges (1556011 bytes), 13 complete Parquet footers and four complete key-shard inventories; no answer data pages decoded. rc.nocontext validation footer corroborates structured 17944 rows and contradicts prose 18669 for that exact split. Across rc validation shards 00002 and 00003: 8972 row occurrences, 8202 distinct QuestionIds, 770 shared QuestionIds and 1339 shared candidate QuestionId--Filename keys. All 11313 unfiltered.nocontext validation QuestionIds are unique; all 1616 IDs in measured unfiltered context shard 00003 are present in that set. Twelve-vs-eight remains a declaration/route mismatch, not observed extra members. HumanAnswers input incidence/preservation/redundancy, original Domain/VerifiedEval/source membership, complete official key mapping and numeric denominator remain UNKNOWN. No closure, withdrawal, scorer execution or production authorization. Evidence: registry/w-trivia3-review.md:1; tests/fixtures/hg_trivia3/observations.json:134,470,584,622.",
+  "findings": {
+    "rc_nocontext_validation_stored_rows": 17944,
+    "rc_validation_measured_shards": [
+      "rc/validation-00002-of-00004.parquet",
+      "rc/validation-00003-of-00004.parquet"
+    ],
+    "rc_validation_measured_question_id_rows": 8972,
+    "rc_validation_measured_distinct_question_ids": 8202,
+    "rc_validation_measured_shared_question_ids": 770,
+    "rc_validation_measured_shared_candidate_doc_keys": 1339,
+    "official_mapping": "still_undetermined",
+    "official_numeric_denominator": "still_undetermined",
+    "human_answers_input_incidence_preservation_redundancy": "unknown",
+    "original_domain_verified_membership": "unknown",
+    "execution_provenance": "not_searched_by_this_worker",
+    "acquisition_scope": "partial; 4 of 19 validation key shards complete; train/test incomplete ranges excluded from membership claims"
+  },
+  "single_settling_artifact": "Immutable producer-attested input/export membership-and-preservation audit packet binding consumed input hashes and export shard identities; per-input-key Domain/verification flags, export shard+ordinal, official key, selection/filtering, overwrite order and exact qid_list/default; HumanAnswers absent/empty/nonempty incidence plus normalized containment and preservation booleans without answer text.",
+  "proposed_status_change": null,
+  "withdrawal_proposed": false
+}
