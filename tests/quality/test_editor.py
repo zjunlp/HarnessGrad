@@ -781,15 +781,26 @@ def test_no_staged_skill_means_no_block(tmp_path):
     assert editor.skill_block(None) == ""
 
 
-def test_a_long_skill_is_truncated_loudly(tmp_path):
-    """截断不能是静默的:实测那份 skill 8407 字符而当时上限 6000,而这一轮最需要的
-    那一节正好在 5595 —— 悄悄丢掉自己的说明书,比没有说明书更糟。"""
+def test_an_oversized_skill_is_refused_not_truncated(tmp_path):
+    """超长的 skill 现在是**拒绝**,不是截断(9681385e,2026-10-20)。
+
+    截断保护的是 argv 上限,伤的却是这一轮最需要的那一节:实测那份 skill 8407 字符而当时上限
+    6000,而关键一节正好在 5595。被截一半的说明书交给一个没法自己翻盘的读者,比没有说明书更糟,
+    所以改成抛 `EvidenceTooLarge` —— 这条测试改成断言那个拒绝,而不是断言提示串。
+    """
+    import pytest
+
     import editor
 
     root = _write_harness(tmp_path / "long")
     (root / "_harnessgrad" / "SKILL.md").write_text("A" * (editor.SKILL_LIMIT + 500))
-    block = editor.skill_block(root)
-    assert "[truncated:" in block and str(editor.SKILL_LIMIT) in block
+    with pytest.raises(editor.EvidenceTooLarge) as caught:
+        editor.skill_block(root)
+    assert str(editor.SKILL_LIMIT) in str(caught.value)
+
+    # 恰好等于上限的 skill 仍然原样通过:拒绝的是"看不全",不是"长"。
+    (root / "_harnessgrad" / "SKILL.md").write_text("B" * editor.SKILL_LIMIT)
+    assert editor.skill_block(root).count("B") == editor.SKILL_LIMIT
 
 
 def test_a_prompt_without_pages_still_builds(tmp_path):
@@ -994,7 +1005,12 @@ def test_the_entrypoint_reaches_the_prompt_whole():
 
 
 def test_the_total_cap_trims_other_files_before_the_entrypoint(tmp_path):
-    """总长上限必须先削**别的**文件,入口放到最后 —— 半个入口正是历次跑偏的原因。"""
+    """总长上限必须先削**别的**文件,入口放到最后 —— 半个入口正是历次跑偏的原因。
+
+    `strict=True`(默认)在总量超限时直接拒绝(9681385e:看不全就不要请人重写)。这个"先削别人、
+    不削入口"的兜底仍然存在于 `strict=False` 那条路上 —— 它就是给"必须给点东西"的场景留的,
+    算法本身没有被删掉,所以这里用 `strict=False` 测算法。
+    """
     import editor
 
     root = tmp_path / "h"
@@ -1006,11 +1022,16 @@ def test_the_total_cap_trims_other_files_before_the_entrypoint(tmp_path):
     for name in ("big_one.py", "big_two.py"):
         (root / name).write_text("# padding\n" * 4000)  # 每个约 40000 字符
 
-    src = editor.load_sources(root, total=3000)
+    src = editor.load_sources(root, total=3000, strict=False)
     assert src["agent.py"] == entry, "入口被削了 —— 总长上限削错了对象"
     assert "TRUNCATED" in src["big_one.py"] or "TRUNCATED" in src["big_two.py"], (
         "总长超了却什么都没削,会把整条指令顶出 argv 上限")
     assert sum(len(v) for v in src.values()) < 3 * 3000
+
+    # 默认严格模式对同一棵树是拒绝,而不是悄悄给一半。
+    import pytest
+    with pytest.raises(editor.EvidenceTooLarge):
+        editor.load_sources(root, total=3000)
 
 
 def test_the_edits_land_on_the_parent_the_rule_chose(tmp_path, monkeypatch):
