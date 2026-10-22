@@ -14,7 +14,22 @@
     read() { try { return JSON.parse(sessionStorage.getItem(KEY) || "null") || { idx: 0, sessions: [] }; } catch { return { idx: 0, sessions: [] }; } },
     write(v) { sessionStorage.setItem(KEY, JSON.stringify(v)); },
   };
-  let state = store.read();
+  // **An error line is not part of the conversation.** A failed send used to be pushed into the
+  // saved history, so "提交失败：Failed to fetch" came back on every refresh long after the cause
+  // was gone. It is still shown in the moment; it is no longer stored, and a stored one from an
+  // older page is dropped on read.
+  const TRANSIENT = /^(提交失败|模型调用失败|启动失败)/;
+  const isTransient = (m) => Boolean(m) && m.role === "system" && TRANSIENT.test(String(m.content || ""));
+
+  function withoutTransient(state_) {
+    for (const session of state_.sessions || []) {
+      session.msgs = (session.msgs || []).filter((m) => !isTransient(m));
+    }
+    return state_;
+  }
+
+  let state = withoutTransient(store.read());
+  store.write(state);
   let FORM = null;          // /api/launch/form
   let card = null;          // 卡片当前值（弹窗打开时才有）
   let busy = false;
@@ -25,7 +40,8 @@
     if (!state.sessions.length) state.sessions.push({ id: Date.now(), title: "新对话", msgs: [] });
     return state.sessions[state.idx] || state.sessions[0];
   };
-  const save = () => store.write(state);
+  const save = () => store.write(withoutTransient({ idx: state.idx,
+    sessions: state.sessions.map((s) => ({ ...s, msgs: (s.msgs || []).filter((m) => !isTransient(m)) })) }));
 
   /* ── 轻量 markdown：代码块、行内 code、加粗、列表 ───────────── */
   function md(text) {
