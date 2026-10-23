@@ -32,6 +32,20 @@ ALLOWED_EVAL_CONFIG_EDGES = {
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.runner"):
+        "Dynamic protocol control validates real sandbox execution and sealed scoring.",
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.tool_relay"):
+        "Dynamic control owns the selected-task relay and trusted event record lifecycle.",
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.service.tool_transport"):
+        "Dynamic control uses the actor transport for costed, event-triggering actions.",
+    ("data-eval", "data/datasets/costbench/control.py", "eval.run.runner"):
+        "Dataset control validates the real sandbox and sealed official trajectory scorer.",
+    ("data-eval", "data/datasets/costbench/control.py", "eval.run.tool_relay"):
+        "Manual control owns the same selected-task relay and trusted record lifecycle.",
+    ("data-eval", "data/datasets/costbench/control.py", "eval.service.tool_transport"):
+        "Control executes costed tool actions through the actor's actual transport.",
+    ("data-eval", "data/datasets/costbench/relay.py", "eval.service.tool_transport"):
+        "Private CostBench environment server reuses the shared bounded transport.",
     ("data-eval", "data/datasets/personamem_v2/control.py", "eval.run.runner"):
         "Dataset control exercises the real actor and verifier namespaces.",
     ("data-eval", "data/datasets/personamem_v2/control.py", "eval.run.tool_relay"):
@@ -287,9 +301,48 @@ class ImportDirectionTests(unittest.TestCase):
         for old in ("qa", "registry.py", "command_control.py", "command_oracle_harness"):
             self.assertFalse((ROOT / "data" / old).exists(), f"old scaffold shim: {old}")
 
-    def test_publication_preserves_the_ordered_adapter_names(self):
+    def test_publication_preserves_the_reviewed_adapter_inventory(self):
         from data.scaffolds import registry
-        expected = ('agentdojo', 'aime', 'alfworld', 'api_bank', 'appworld', 'bfcl_v3', 'bird_minidev', 'chessbench_puzzles', 'cooperbench', 'ds1000', 'fever', 'gaia', 'gsm8k', 'hotpotqa', 'jericho', 'kumo', 'livecodebench', 'locomo', 'memoryagentbench', 'musique', 'nestful', 'personamem_v2', 'physicsquestions', 'reasoning_gym', 'scienceworld', 'sotuqa', 'sportsunderstanding', 'spreadsheetbench', 'strategyqa', 'strongreject', 'tau2_bench', 'tau3_bench', 'tau_bench', 'terminal_bench', 'triviaqa', 'twowikimultihopqa')
+        expected = (
+            'agentdojo',
+            'aime',
+            'alfworld',
+            'api_bank',
+            'appworld',
+            'bfcl_v3',
+            'bird_minidev',
+            'chessbench_puzzles',
+            'cooperbench',
+            'costbench',
+            'costbench_dynamic',
+            'ds1000',
+            'fever',
+            'gaia',
+            'gsm8k',
+            'hotpotqa',
+            'jericho',
+            'kumo',
+            'livecodebench',
+            'locomo',
+            'memoryagentbench',
+            'musique',
+            'nestful',
+            'personamem_v2',
+            'physicsquestions',
+            'reasoning_gym',
+            'scienceworld',
+            'sotuqa',
+            'sportsunderstanding',
+            'spreadsheetbench',
+            'strategyqa',
+            'strongreject',
+            'tau2_bench',
+            'tau3_bench',
+            'tau_bench',
+            'terminal_bench',
+            'triviaqa',
+            'twowikimultihopqa',
+        )
         self.assertEqual(registry.published(), expected)
         for name in expected:
             module = registry.importlib.import_module(registry.module_name(name))

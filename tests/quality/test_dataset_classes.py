@@ -212,15 +212,24 @@ def test_the_function_coverage_floor_matches_what_is_declared():
     """Same two-way rule as the demands: below the floor is declared, and a declaration means
     still below the floor."""
     rows = _rows()
-    counts = {f: sum(1 for r in rows if f in r["exercises"])
-              for f in dataset_classes.FUNCTIONS}
+    counts = dataset_classes.function_family_counts(rows)
     below = sorted(f for f in dataset_classes.FUNCTIONS
                    if counts[f] < dataset_classes.MIN_MEMBERS_PER_FUNCTION)
     assert below == sorted(dataset_classes.UNCOVERED_FUNCTIONS), (below, counts)
     assert set(dataset_classes.UNCOVERED_FUNCTIONS) <= set(dataset_classes.FUNCTIONS)
-    # Measured when this was written: 22 context, 16 tools, 11 control, 10 verification,
-    # 5 recovery, 3 memory, 1 safety, 0 cost, 0 delegation, 0 reliability.
     assert counts["tools"] > counts["memory"], "the scaffolds we reuse over-sample their own"
+
+
+def test_costbench_protocols_do_not_close_independent_cost_coverage():
+    rows = _declared_rows()
+    cost_rows = [row for row in rows if "cost" in row["exercises"]]
+    assert {row["dataset"] for row in cost_rows} == {"costbench", "costbench_dynamic"}
+    assert dataset_classes.function_family_counts(rows)["cost"] == 1
+    assert "cost" in dataset_classes.UNCOVERED_FUNCTIONS
+    dataset_classes._check_functions(rows)
+    dataset_classes._check_judged_axis(rows)
+    independent = {"dataset": "independent_cost_benchmark", "exercises": ["cost"]}
+    assert dataset_classes.function_family_counts(cost_rows + [independent])["cost"] == 2
 
 
 def test_a_function_inside_one_demand_is_refused():
@@ -408,7 +417,9 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "cooperbench", "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld", "tau3_bench", "tau_bench", "terminal_bench"}
+        "agentdojo", "alfworld", "appworld", "cooperbench", "costbench", "costbench_dynamic",
+        "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld",
+        "tau3_bench", "tau_bench", "terminal_bench"}
 
 
 def test_the_filters_select_what_they_say(classified):
@@ -416,7 +427,9 @@ def test_the_filters_select_what_they_say(classified):
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "cooperbench", "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld", "tau3_bench", "tau_bench", "terminal_bench"}
+        "agentdojo", "alfworld", "appworld", "cooperbench", "costbench", "costbench_dynamic",
+        "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld",
+        "tau3_bench", "tau_bench", "terminal_bench"}
 
 
 def test_the_demand_surface_and_adversarial_filters_select_what_they_say(classified):

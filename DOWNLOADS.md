@@ -226,6 +226,30 @@ loads and scores it stays in git.
 
 > Prepare with the pinned Harbor checkout, then import explicit per-group Docker images. Runtime digests, package versions and transformed runner hashes are recorded outside the source tree; measurements never download dependencies or pull; editable builds remain offline.
 
+## `costbench`
+
+### CostBench official static tasks and Python environment source (http, 6424069f3f773ade076bcedbed302ed47cfb1837)
+
+- **Version (pinned):** `6424069f3f773ade076bcedbed302ed47cfb1837`
+- **Size:** pinned source archive; 1912 train and 381 test queries
+- **URL:** https://codeload.github.com/JiayuJeff/CostBench/tar.gz/6424069f3f773ade076bcedbed302ed47cfb1837
+- **Destination:** `source.tar.gz`
+- **sha256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
+
+> Run costbench/prepare.py using Python 3.12 and requirements.lock. Static sequence5, seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. Gold audit executes every task; generated search databases stay outside git.
+
+## `costbench_dynamic`
+
+### CostBench dynamic sequence5: four one-event protocols (http, 6424069f3f773ade076bcedbed302ed47cfb1837)
+
+- **Version (pinned):** `6424069f3f773ade076bcedbed302ed47cfb1837`
+- **Size:** same pinned source; 9172 mode/query cases across train and test
+- **URL:** https://codeload.github.com/JiayuJeff/CostBench/tar.gz/6424069f3f773ade076bcedbed302ed47cfb1837
+- **Destination:** `source.tar.gz`
+- **sha256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
+
+> Prepare static costbench first, then run costbench_dynamic/prepare.py. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
+
 ## `ds1000`
 
 ### DS-1000 simplified test.jsonl (hf-dataset, 4416080ac5cb80bdf7576aefb8f9a0b4d5426a44)
@@ -441,6 +465,18 @@ loads and scores it stays in git.
 - **sha256:** `56c7c42aee979def86b69547ecd6d5a877a0e4940af8923bf4325ca0defecbaf`
 
 > Pins `lcb_runner/evaluation/testing_util.py` (the executor, including the reliability_guard upstream warns is not a sandbox -- the platform's verification namespace is) and `pass_k_utils.py` (the aggregation). Both are copied into the verification namespace as VERIFY.inputs, so the metric runs upstream's bytes; `data/datasets/livecodebench.py` also transcribes pass_k_utils.py lines 4-53 verbatim. Never enters an agent SETUP.
+
+## `locomo`
+
+### LoCoMo released conversations and all five QA categories (http, 3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376)
+
+- **Version (pinned):** `3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376`
+- **Size:** 2805274 bytes
+- **URL:** https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json
+- **Destination:** `raw/locomo10.json`
+- **sha256:** `79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4`
+
+> Official fixed data; Harbor task delivery and scorer pinned separately. All 1986 questions retained.
 
 ## `memoryagentbench`
 
