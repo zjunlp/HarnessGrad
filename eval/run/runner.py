@@ -1052,6 +1052,21 @@ def _invalid(task: dict, exc, *, stage: str, service: str | None) -> dict:
 
 
 
+def timeout_verdict(reason) -> bool:
+    """Is this unmeasured verdict a **timeout**, which is scored 0 rather than excluded?
+
+    The verifier reports `{"outcome": "timeout", "unmeasured": "the verifier timed out after
+    900s", ...}`; the process-level path reports the bare string `"timeout"` when the wrapper was
+    killed at its budget. Both are the harness's failure to finish, and both are scored 0
+    (operator decision 2026-10-23). Everything else -- `"unmeasured"` (the check wrote no reward
+    file), `"relayed_signal"`, `"stopped_by_signal"` -- stays `invalid`, because the platform,
+    not the method, failed it.
+    """
+    if isinstance(reason, dict):
+        return reason.get("outcome") == "timeout"
+    return reason == "timeout"
+
+
 def _spread(xs: list[float]) -> float:
     """Population standard deviation, with no dependency and no ambiguity.
 
@@ -1351,6 +1366,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     #: not a task that scored nothing, and putting a `0.0` here is the specific lie
     #: this whole mechanism exists to prevent.
     invalid: dict[str, dict] = {}
+    #: Tasks whose **verifier timed out**, which are scored 0 instead of excluded.
+    #: Operator decision, 2026-10-23: a harness that does not leave the environment in a state
+    #: the verifier can score inside the 900 s budget has failed that task, so the task is a 0
+    #: in the denominator rather than an exclusion. Only `outcome == "timeout"` moves; an
+    #: `unmeasured` verdict (the check wrote no reward file) or a SIGKILLed relay stays
+    #: `invalid`, because those are platform failures and charging them to the method is the
+    #: error `invalid` exists to prevent. Kept as its own dict so the score can include the 0
+    #: while the record still says *why* it is a 0.
+    timeouts: dict[str, dict] = {}
     #: Tasks the round **stopped short of**, because the harness had already failed to
     #: start on every task it had tried. Kept out of `per_task` for the same reason
     #: `invalid` is: those tasks were never measured, and a `0.0` for them would be the
@@ -1661,7 +1685,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             continue
 
         if outcome.get("invalid"):
-            invalid[tid] = outcome["invalid"]
+            reason = outcome["invalid"]
+            if timeout_verdict(reason):
+                # A timeout is a measured failure: score it 0 and keep the reason beside it.
+                timeouts[tid] = reason if isinstance(reason, dict) else {
+                    "outcome": "timeout", "detail": str(reason)}
+                per_task[tid] = 0.0
+                per_task_std[tid] = 0.0
+                continue
+            invalid[tid] = reason
             continue
 
         measured = outcome["measured"]
@@ -1880,6 +1912,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             "verdicts": verdicts,
             "evaluation_protocols": evaluation_protocols,
             "invalid": invalid,
+            "timeouts": timeouts,
             "not_run": not_run,
             "startup_failure": startup_failure,
             "harness_failed": harness_failed,

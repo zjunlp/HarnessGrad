@@ -775,6 +775,17 @@ An invalid task is also **not cached**. The evaluation cache is keyed by `(harne
 and the reason an invalid task failed is not the harness — so caching it would carry a dataset bug
 into every later round and hide the round that introduced it.
 
+**One class of unmeasured verdict is a score instead: a timeout.** Operator decision,
+2026-10-23. A verifier that times out after 900 s means the harness did not leave the environment
+in a state the verifier could score, inside a budget the platform declared — so the task is a `0.0`
+inside `per_task`, the point carries it in `timeouts` with `n_timeout`, and `n_invalid` no longer
+counts it. Nothing else moves: `unmeasured` (the check wrote no reward file), `relayed_signal` and
+`stopped_by_signal` stay `invalid`, because there the *platform* failed the task and charging that
+to the method is the error this section exists to prevent. The distinction is carried by the
+verdict's own `outcome`, so it is a property of the record rather than of a convention: `invalid`
+means "not measured", `timeouts` means "measured as a failure to finish", `n_scored` counts both
+kinds of zero plus the real scores.
+
 ##### Network: `services` is a third value, and a contradiction is refused
 
 `none` (default) → no network. `services` → an **`--internal` network shared by the services, the
