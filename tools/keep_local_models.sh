@@ -33,8 +33,20 @@ start_one() {
   echo "$!" > "$marker"
 }
 
+# **Which cards this supervises is a decision, not a constant.** The supervisor used to hard-code
+# two servers (`8001` on GPU 0 and `8002` on GPU 1), which made "give a card back" impossible
+# without editing it: killing a server only meant the supervisor started it again 30 s later. On
+# 2026-10-23 the operator needed a card for another project, and `8002` is the endpoint the
+# platform actually documents (`eval/unix_model_relay.py` hard-codes it), so the plan is now a
+# setting: `GPU:PORT` pairs, comma separated. The default is the historical pair, so a machine
+# that sets nothing behaves exactly as before.
+PLAN="${HARNESSGRAD_LOCAL_MODELS:-0:8001,1:8002}"
+IFS=',' read -r -a ENTRIES <<< "$PLAN"
 while :; do
-  start_one 0 /mnt/20t/qzs/PLMs/Qwen3.5-9B 8001 qwen3.5-9b-local
-  start_one 1 /mnt/20t/qzs/PLMs/Qwen3.5-9B 8002 qwen3.5-9b-local
+  for entry in "${ENTRIES[@]}"; do
+    gpu="${entry%%:*}"
+    port="${entry##*:}"
+    start_one "$gpu" /mnt/20t/qzs/PLMs/Qwen3.5-9B "$port" qwen3.5-9b-local
+  done
   sleep "$INTERVAL"
 done
