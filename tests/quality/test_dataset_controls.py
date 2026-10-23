@@ -67,6 +67,8 @@ ROWS: dict[str, dict] = {
         "control": ["data/datasets/cooperbench/control.py", "--task-id", "cooperbench/pallets_click_task/task2956/f1-2"],
         "metric_tests": ["test_cooperbench_dataset.py", "test_cooperbench_harbor_scoring.py", "test_cooperbench_observed_controls.py"],
     },
+    "tau3_bench": {"control": ["data/datasets/tau3_bench/control.py"],
+                   "metric_tests": ["test_tau3_bench_official_scorer.py", "test_tau3_bench_dataset.py"]},
     "kumo": {"control": ["data/datasets/kumo/control.py"],
              "metric_tests": ["test_kumo_official_scorer.py", "test_kumo_dataset.py"]},
     "agentdojo": {
