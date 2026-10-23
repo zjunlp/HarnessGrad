@@ -274,7 +274,7 @@ def level_fields(res: dict | None, task_ids) -> dict:
 def _curve_point(*, run_id, round_index, identity, sampling, scores, task_ids,
                  cost, cumulative, selection=None, label="",
                  method_reported=None, train_scores=None, train_ids=None,
-                 split=None, env_record=None, invalid=None, harness_failed=None,
+                 split=None, env_record=None, invalid=None, harness_failed=None, timeouts=None,
                  model_gateway=None, harness_runtime=None, hypothesis=None,
                  evaluation_protocols=None, per_task_scorer_isolation=None,
                  edits_applied=None, files_claimed=None, candidate_problems=None,
@@ -417,6 +417,13 @@ def _curve_point(*, run_id, round_index, identity, sampling, scores, task_ids,
         # this platform exists to preserve (INTERFACE.md §2.5.7).
         "n_invalid": len(invalid or {}),
         **({"invalid": dict(invalid)} if invalid else {}),
+        # **A timeout is scored, not excluded** (operator decision 2026-10-23): the verdict is a
+        # `0.0` inside `per_task`, and this dict says which zeros are timeouts so a reader can
+        # tell "the harness failed the task" from "the harness did not finish it in budget".
+        # `n_invalid` therefore no longer covers every unmeasured task; `n_invalid + n_timeout`
+        # are the ones that are not zeros, and only `invalid` is absent from `per_task`.
+        "n_timeout": len(timeouts or {}),
+        **({"timeouts": dict(timeouts)} if timeouts else {}),
         # Tasks that *were* measured but whose harness left no trace, with the exit code
         # and the tail of its stderr. Separate from `invalid` because the score here is
         # real; what is missing is the evidence that the harness ever got to work.
