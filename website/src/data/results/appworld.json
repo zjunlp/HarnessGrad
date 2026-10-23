@@ -1,6 +1,6 @@
 {
  "slug": "appworld",
- "generated_at": "2026-10-22T17:34:32Z",
+ "generated_at": "2026-10-23T13:37:35Z",
  "stamp": "20261020",
  "study": {
   "pool": "train",
@@ -213,7 +213,7 @@
        "train": 0.5444444444444444,
        "train_n": 90,
        "eval": {
-        "dev": 0.5892857142857143
+        "dev": 0.40350877192982454
        },
        "valid": true,
        "n_invalid": 0,
@@ -221,14 +221,14 @@
        "step": 1,
        "state": "c33ab6aad7e8",
        "eval_tokens": {
-        "dev": 6905576
+        "dev": 7082338
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 56,
-         "input": 6765401,
-         "output": 140175
+         "tasks_reporting": 55,
+         "input": 6954435,
+         "output": 127903
         }
        }
       },
@@ -237,7 +237,7 @@
        "train": 0.4777777777777778,
        "train_n": 90,
        "eval": {
-        "dev": 0.39285714285714285
+        "dev": 0.3157894736842105
        },
        "valid": true,
        "n_invalid": 0,
@@ -245,27 +245,27 @@
        "step": 1,
        "state": "b623ecc9a94a",
        "eval_tokens": {
-        "dev": 5821472
+        "dev": 5717635
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 56,
-         "input": 5721393,
-         "output": 100079
+         "tasks_reporting": 55,
+         "input": 5608560,
+         "output": 109075
         }
        }
       },
       {
        "round": 9,
-       "train": 0.6,
-       "train_n": 80,
+       "train": 0.5333333333333333,
+       "train_n": 90,
        "eval": {
-        "dev": 0.36538461538461536
+        "dev": 0.3684210526315789
        },
-       "valid": false,
-       "n_invalid": 10,
-       "train_raw": 0.6,
+       "valid": true,
+       "n_invalid": 0,
+       "train_raw": 0.5333333333333333,
        "step": 1,
        "state": "4181f66a3946",
        "eval_tokens": {
@@ -501,7 +501,7 @@
        "train": 0.7222222222222222,
        "train_n": 90,
        "eval": {
-        "dev": 0.45614035087719296
+        "dev": 0.47368421052631576
        },
        "valid": false,
        "n_invalid": 0,
@@ -2245,7 +2245,7 @@
        "train": 0.32222222222222224,
        "train_n": 90,
        "eval": {
-        "dev": 0.2857142857142857
+        "dev": 0.2807017543859649
        },
        "valid": true,
        "n_invalid": 0,
@@ -2320,7 +2320,7 @@
        "train": 0.4111111111111111,
        "train_n": 90,
        "eval": {
-        "dev": 0.3684210526315789
+        "dev": 0.2982456140350877
        },
        "valid": true,
        "n_invalid": 0,
@@ -2329,14 +2329,14 @@
        "state": "877e24f8a5f3",
        "batch": 3,
        "eval_tokens": {
-        "dev": 5392968
+        "dev": 4871423
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 57,
-         "input": 5283648,
-         "output": 109320
+         "tasks_reporting": 56,
+         "input": 4758047,
+         "output": 113376
         }
        }
       },
@@ -2345,7 +2345,7 @@
        "train": 0.35555555555555557,
        "train_n": 90,
        "eval": {
-        "dev": 0.3684210526315789
+        "dev": 0.2982456140350877
        },
        "valid": true,
        "n_invalid": 0,
@@ -2354,14 +2354,14 @@
        "state": "463e99e84b60",
        "batch": 2,
        "eval_tokens": {
-        "dev": 8403721
+        "dev": 9080804
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 57,
-         "input": 8260355,
-         "output": 143366
+         "tasks_reporting": 55,
+         "input": 8915545,
+         "output": 165259
         }
        }
       },
@@ -3046,7 +3046,7 @@
        "train": 0.5333333333333333,
        "train_n": 90,
        "eval": {
-        "dev": 0.4107142857142857
+        "dev": 0.40350877192982454
        },
        "valid": true,
        "n_invalid": 0,
@@ -3070,7 +3070,7 @@
        "train": 0.5333333333333333,
        "train_n": 90,
        "eval": {
-        "dev": 0.48214285714285715
+        "dev": 0.47368421052631576
        },
        "valid": true,
        "n_invalid": 0,
@@ -3119,7 +3119,7 @@
        "train": 0.4444444444444444,
        "train_n": 90,
        "eval": {
-        "dev": 0.25
+        "dev": 0.2807017543859649
        },
        "valid": true,
        "n_invalid": 0,
@@ -3127,14 +3127,14 @@
        "step": 1,
        "state": "d85bc54b8c41",
        "eval_tokens": {
-        "dev": 6666977
+        "dev": 6186856
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 56,
-         "input": 6538644,
-         "output": 128333
+         "tasks_reporting": 55,
+         "input": 6065194,
+         "output": 121662
         }
        }
       },
@@ -3143,7 +3143,7 @@
        "train": 0.6222222222222222,
        "train_n": 90,
        "eval": {
-        "dev": 0.44642857142857145
+        "dev": 0.43859649122807015
        },
        "valid": true,
        "n_invalid": 0,
@@ -3265,7 +3265,7 @@
        "train": 0.6333333333333333,
        "train_n": 90,
        "eval": {
-        "dev": 0.5614035087719298
+        "dev": 0.43859649122807015
        },
        "valid": true,
        "n_invalid": 0,
@@ -3273,14 +3273,14 @@
        "step": 1,
        "state": "a5501ee0613a",
        "eval_tokens": {
-        "dev": 7137139
+        "dev": 7636492
        },
        "eval_split": {
         "dev": {
          "tasks": 57,
-         "tasks_reporting": 57,
-         "input": 6998067,
-         "output": 139072
+         "tasks_reporting": 55,
+         "input": 7503189,
+         "output": 133303
         }
        }
       },
@@ -6549,10 +6549,10 @@
   {
    "method": "dream_rsi",
    "round": 17,
-   "score": 0.2756849315068493,
-   "tasks": 584,
+   "score": 0.27521367521367524,
+   "tasks": 585,
    "passed": 161,
-   "invalid": 1,
+   "invalid": 0,
    "by_split": {
     "test_normal": {
      "passed": 51,
@@ -6561,8 +6561,8 @@
     },
     "test_challenge": {
      "passed": 110,
-     "tasks": 416,
-     "score": 0.2644
+     "tasks": 417,
+     "score": 0.2638
     }
    },
    "harness_sha": "6c77eeeee29286f9fdfc4cab1204249ac1549910",
