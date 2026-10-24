@@ -18,7 +18,12 @@ ORACLE_SOURCE = 'released'
 OFFICIAL_EVAL = None
 SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'tau3_bench'
-DATASET_ROOT = Path(os.environ.get('HG_TAU3_DATA', Path(__file__).resolve().parents[3] / 'datasets/tau3_bench'))
+#: Where the prepared payload lives. The default used to be `parents[3]/datasets/tau3_bench`,
+#: which from `data/datasets/` resolves to `<checkout>/../datasets` -- a path that exists on the
+#: author's machine and nowhere else. Every other adapter on this host uses the same absolute
+#: `/mnt/20t/xubuqiang/datasets/<name>` convention, so this one does too; `HG_TAU3_DATA` still
+#: overrides it.
+DATASET_ROOT = Path(os.environ.get('HG_TAU3_DATA', '/mnt/20t/xubuqiang/datasets/tau3_bench'))
 RUNTIME = Path(os.environ.get('HG_TAU3_RUNTIME', DATASET_ROOT / 'runtime'))
 REVISION = 'fc0055dc4e0a316c3f83133267fbd6faaa770992'
 ARCHIVE_SHA256 = '7a227036d07fdeb088dbd0c99fdb40ee9b9e0ebc06aadbc4dec1217b3383e57e'

@@ -5,6 +5,15 @@ from pathlib import Path
 
 import pytest
 from data.datasets import tau3_bench as dataset
+
+#: **A fresh checkout has no payload.** `prepare.py` writes it outside the repository (see the
+#: adapter's README), so a machine that has not provisioned τ³ must skip these tests rather than
+#: fail them -- the convention every other dataset test here follows (`test_alfworld_dataset.py`
+#: does the same for its extracted data). With the payload present the tests are strict.
+if not (dataset.DATASET_ROOT / "manifest.json").is_file():
+    pytest.skip(f"no prepared tau3 payload under {dataset.DATASET_ROOT}; run "
+                "data/datasets/tau3_bench/prepare.py (its README has the commands)",
+                allow_module_level=True)
 from test_tau3_bench_official_scorer import asset, official
 
 
