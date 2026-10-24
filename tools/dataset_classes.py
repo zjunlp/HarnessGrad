@@ -413,7 +413,10 @@ def classify(name: str) -> dict:
         "adversarial": name in ADVERSARIAL,
         "exercises": list(EXERCISES.get(name, ())),
         "refused": bool(refused),
-        "env_kinds": sorted({v.get("kind") for v in module.ENV.values()}) if getattr(module, "ENV", None) else [],
+        # Filled in below, behind the same guard as `load()`: `ENV` is a lazy mapping on some
+        # adapters and evaluating it reads their prepared manifest (cooperbench does exactly that),
+        # so it can fail for the same reason `load()` does.
+        "env_kinds": [],
         # A refusal declares no tasks on purpose, so the contract axes are inapplicable.
         "verifier_kinds": [],
         "interaction": None,
@@ -425,43 +428,72 @@ def classify(name: str) -> dict:
     if refused:
         row["interaction"] = "n/a (refused)"
         return row
-    tasks = module.load()[0]
-    task_id = tasks[0]["task_id"]
-    # Prefer the scaffold's declared kind: `VERIFY` is a lazy one-entry-per-task map,
-    # so iterating it built ~83k verifier dicts to recover a single distinct value.
-    # A module that declares no kind still walks its real map, which is small.
-    declared_kinds = getattr(getattr(module, "_SPEC", None), "VERIFIER_KIND", None)
-    row["verifier_kinds"] = ([declared_kinds] if declared_kinds
-                             else sorted({v["kind"] for v in module.VERIFY.values()}))
-    scripts = _cli_scripts(module, task_id)
-    surface_names = []
-    acts = False
-    for script in scripts:
-        verbs = _declared_verbs(script)
-        if not verbs:
-            raise SystemExit(
-                f"{name}: {script} declares no verb set that this tool can read. Its CLI uses "
-                f"a spelling not covered by _VERB_PATTERNS, so the interaction axis cannot be "
-                f"derived for it. Add the spelling (and decide which of its verbs mean "
-                f"'act') rather than defaulting the dataset to single_shot.")
-        surface_names.append(f"{script.name}[{','.join(sorted(verbs))}]")
-        if verbs & set(ACT_VERBS):
-            acts = True
-    row["action_surface"] = surface_names
-    if "exec" in row["env_kinds"]:
-        row["interaction"] = "closed_loop"
-    elif acts:
-        row["interaction"] = "closed_loop"
-    else:
-        row["interaction"] = "single_shot"
-    row["tasks"] = len(tasks)
-    row["train"] = len(module.SPLIT["train"])
-    row["eval"] = len(module.SPLIT["eval"])
+    # **A dataset whose payload is not provisioned still gets a row.** The task pool lives outside
+    # the repository by design, so on a fresh checkout four adapters raised out of `classify()` and
+    # took the whole table with them (measured 2026-10-23: 23 failures in
+    # `tests/quality/test_dataset_classes.py` on a tree nobody had touched). Everything the table
+    # actually answers -- demand, surface, exercises -- is declared and needs no bytes; the counts
+    # and the derived interaction axis do, so those are what degrade, with `load_error` carrying the
+    # reason instead of a traceback.
+    #
+    # The guard is deliberately wide, because the laziness is not confined to `load()`: `ENV`,
+    # `VERIFY` and `SPLIT` are all lazy on at least one adapter, and `hasattr` itself triggers
+    # them. `SystemExit` is not caught -- a real declaration error (`EXPECTED_INTERACTION` below,
+    # or an unreadable verb set) must still fail the tool.
+    try:
+        if getattr(module, "ENV", None):
+            row["env_kinds"] = sorted({v.get("kind") for v in module.ENV.values()})
+        tasks = module.load()[0]
+        task_id = tasks[0]["task_id"]
+        # Prefer the scaffold's declared kind: `VERIFY` is a lazy one-entry-per-task map,
+        # so iterating it built ~83k verifier dicts to recover a single distinct value.
+        # A module that declares no kind still walks its real map, which is small.
+        declared_kinds = getattr(getattr(module, "_SPEC", None), "VERIFIER_KIND", None)
+        row["verifier_kinds"] = ([declared_kinds] if declared_kinds
+                                 else sorted({v["kind"] for v in module.VERIFY.values()}))
+        scripts = _cli_scripts(module, task_id)
+        surface_names = []
+        acts = False
+        for script in scripts:
+            verbs = _declared_verbs(script)
+            if not verbs:
+                raise SystemExit(
+                    f"{name}: {script} declares no verb set that this tool can read. Its CLI uses "
+                    f"a spelling not covered by _VERB_PATTERNS, so the interaction axis cannot be "
+                    f"derived for it. Add the spelling (and decide which of its verbs mean "
+                    f"'act') rather than defaulting the dataset to single_shot.")
+            surface_names.append(f"{script.name}[{','.join(sorted(verbs))}]")
+            if verbs & set(ACT_VERBS):
+                acts = True
+        row["action_surface"] = surface_names
+        if "exec" in row["env_kinds"]:
+            row["interaction"] = "closed_loop"
+        elif acts:
+            row["interaction"] = "closed_loop"
+        else:
+            row["interaction"] = "single_shot"
+        row["tasks"] = len(tasks)
+        split = getattr(module, "SPLIT", None)
+        # A dataset that publishes no split has no train/eval axis to report. `None`, not `0`:
+        # "not declared" and "empty" are different facts (locomo is the case).
+        row["train"] = len(split["train"]) if isinstance(split, dict) and "train" in split else None
+        row["eval"] = len(split["eval"]) if isinstance(split, dict) and "eval" in split else None
+        row["loaded"] = True
+    except Exception as error:                                  # noqa: BLE001 - see above
+        row["loaded"] = False
+        row["load_error"] = f"{type(error).__name__}: {str(error)[:160]}"
+        # Not "not provisioned": `tau3_bench` loads fine with a judge configured and refuses
+        # without one, because 113 of its tasks carry NL assertions. `load_error` says which.
+        row["interaction"] = "n/a (not loadable)"
+        row["tasks"] = None
+        row["train"] = None
+        row["eval"] = None
+        return row
     declared = EXPECTED_INTERACTION.get(name)
     if declared != row["interaction"]:
         raise SystemExit(
             f"{name}: the shipped program says {row['interaction']!r} (env "
-            f"{row['env_kinds']}, action surface {surface_names}) but EXPECTED_INTERACTION "
+            f"{row['env_kinds']}, action surface {row['action_surface']}) but EXPECTED_INTERACTION "
             f"says {declared!r}. Neither side is overwritten automatically: decide which is "
             f"right, then fix the other.")
     return row
@@ -587,9 +619,14 @@ def _table(rows: list[dict]) -> str:
         env = ",".join(r["env_kinds"]) or "-"
         ver = ",".join(r["verifier_kinds"]) or "-"
         mark = " *" if r["adversarial"] else ""
+
+        def count(value):
+            """`—` for a dataset whose payload is not provisioned; never a silent `0`."""
+            return "     —" if value is None else f"{value:>6d}"
+
         out.append(f"{r['dataset']:20s} {str(r['demand']):11s} {str(r['surface']):20s} "
                    f"{str(r['interaction']):12s} {env:8s} {ver:9s} "
-                   f"{r['tasks']:>6d} {r['train']:>6d} {r['eval']:>6d}{mark}")
+                   f"{count(r['tasks'])} {count(r['train'])} {count(r['eval'])}{mark}")
     closed = [r["dataset"] for r in rows if r["interaction"] == "closed_loop"]
     once = [r["dataset"] for r in rows if r["interaction"] == "single_shot"]
     out += [

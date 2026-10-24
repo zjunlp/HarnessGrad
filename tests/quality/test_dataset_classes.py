@@ -46,6 +46,21 @@ def _declared_rows() -> list[dict]:
     ]
 
 
+def _declared_closed_loop_here() -> set[str]:
+    """The declared closed-loop datasets whose payload this machine can derive the axis for.
+
+    The hard-coded set this replaces went stale twice: once when `tau3_bench` arrived, once on any
+    machine where an adapter's prepared payload is absent (`classify()` then reports
+    `n/a (not loadable)`). Deriving it keeps the assertion about the filter's *semantics* — the
+    full set is still checked, on the machines that can measure it.
+    """
+    declared = {name for name, value in dataset_classes.EXPECTED_INTERACTION.items()
+                if value == "closed_loop"}
+    unmeasurable = {row["dataset"] for row in dataset_classes.classify_all()
+                    if not row.get("loaded", True)}
+    return declared - unmeasurable
+
+
 def test_every_published_dataset_is_classified_exactly_once():
     rows = _rows()
     names = [row["dataset"] for row in rows]
@@ -314,6 +329,11 @@ def test_the_derived_interaction_agrees_with_the_declared_one():
         if row["refused"]:
             assert row["interaction"] == "n/a (refused)"
             continue
+        if not row.get("loaded", True):
+            # No payload on this machine, so there is no shipped program to derive the axis from.
+            # `test_every_published_dataset_is_classified_exactly_once` still requires the row.
+            assert row["interaction"] == "n/a (not loadable)", row
+            continue
         assert row["interaction"] == dataset_classes.EXPECTED_INTERACTION[row["dataset"]], row
 
 
@@ -354,6 +374,8 @@ def test_every_shipped_program_declares_a_readable_verb_set():
         module = registry.importlib.import_module(f"data.datasets.{name}")
         if getattr(module, "REFUSED", None):
             continue
+        if not dataset_classes.classify(name).get("loaded", True):
+            continue                      # no payload here: no shipped program to inspect
         task_id = module.load()[0][0]["task_id"]
         for script in dataset_classes._cli_scripts(module, task_id):
             verbs = dataset_classes._declared_verbs(script)
@@ -407,16 +429,14 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
     rows = json.loads(proc.stdout)
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
-    assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "cooperbench", "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld", "tau3_bench", "tau_bench", "terminal_bench"}
+    assert {row["dataset"] for row in rows} == _declared_closed_loop_here()
 
 
 def test_the_filters_select_what_they_say(classified):
     rows = dataset_classes.select(classified, interaction="closed_loop", runnable_only=True)
     assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
-    assert {row["dataset"] for row in rows} == {
-        "agentdojo", "alfworld", "appworld", "cooperbench", "gaia", "jericho", "kumo", "memoryagentbench", "personamem_v2", "scienceworld", "tau3_bench", "tau_bench", "terminal_bench"}
+    assert {row["dataset"] for row in rows} == _declared_closed_loop_here()
 
 
 def test_the_demand_surface_and_adversarial_filters_select_what_they_say(classified):
