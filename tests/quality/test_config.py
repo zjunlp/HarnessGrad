@@ -40,7 +40,7 @@ def test_the_surface_has_exactly_the_declared_variables():
     reader uses to answer "what does this platform read?".
     """
     hg_names = [name for name in config.ENV_NAMES if name.startswith("HG_")]
-    assert len(hg_names) == 44, hg_names
+    assert len(hg_names) == 45, hg_names
     assert len(config.ENV_NAMES) == len(set(config.ENV_NAMES))
     # The three credentials the repository's rule names. `DEEPSEEK_API_KEY` is the
     # default improver registry entry's `api_key_env`, so it is declared beside it.
@@ -257,3 +257,19 @@ def test_judge_overrides_are_described_recorded_and_snapshot_watched(monkeypatch
     assert recorded['memoryagentbench_max_output_tokens'] == 512
     assert 'HG_MAB_JUDGE_MAX_OUTPUT_TOKENS' in {r['variable'] for r in config.describe()}
     assert config.load({'HG_MAB_JUDGE_MAX_OUTPUT_TOKENS': ''}).judge.memoryagentbench_max_output_tokens is None
+
+
+def test_tau3_judge_model_precedence_and_empty_overrides():
+    variable = 'HG_TAU3_JUDGE_MODEL'
+    for env, expected in [({}, 'official'), ({'HG_JUDGE_MODEL': 'global'}, 'global'),
+                          ({variable: 'specific'}, 'specific'),
+                          ({variable: 'specific', 'HG_JUDGE_MODEL': 'global'}, 'specific'),
+                          ({variable: '', 'HG_JUDGE_MODEL': 'global'}, 'global')]:
+        cfg = config.load(env)
+        assert cfg.judge.resolve_model(override=cfg.judge.tau3_model, default='official') == expected
+    cfg = config.load({})
+    with pytest.raises(ValueError, match='configure a judge model'):
+        cfg.judge.resolve_model(override=cfg.judge.tau3_model)
+    cfg = config.load({variable: ' invalid '})
+    with pytest.raises(ValueError, match='model ID'):
+        cfg.judge.resolve_model(override=cfg.judge.tau3_model)

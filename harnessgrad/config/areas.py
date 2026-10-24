@@ -298,6 +298,8 @@ class JudgeConfig:
     model: str | None = _var("HG_JUDGE_MODEL", None, "Default verifier judge model; dataset overrides take precedence.", kind="opt")
     base_url: str | None = _var("HG_JUDGE_BASE_URL", None, "Verifier judge endpoint.", kind="opt")
     api_key: str | None = _var("HG_JUDGE_API_KEY", None, "Verifier-only credential.", kind="opt", secret=True)
+    tau3_model: str | None = _var(
+        "HG_TAU3_JUDGE_MODEL", None, "Tau3 judge override; otherwise global model; no implicit default.", kind="opt")
 
     memoryagentbench_model: str | None = _var(
         "HG_MAB_JUDGE_MODEL", None, "MemoryAgentBench judge override; otherwise global model, then source official default.", kind="opt")
