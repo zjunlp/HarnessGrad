@@ -210,6 +210,33 @@ broker 记录的 API 响应、预算或传输故障会使结果标记为 `unmeas
 缺失回答、正常答错、未完成 episode 的官方处理由 adapter 明确声明，不统一改写为某个分数。
 未声明 `result_contract` 时不启用上述结果约束。
 
+### 5.1 显式宿主评分运行目录
+
+`VERIFY.runtime_paths` 是可选的绝对目录字符串列表，仅供评分进程使用。
+它复用原生沙箱的同路径只读挂载，不改变 actor 的挂载或宿主 `PATH`。
+未声明该字段时，原有评分命令、环境和挂载路径保持不变。
+
+```python
+VERIFY[task_id] = {
+    "kind": "command",
+    "argv": ["/opt/scorer-venv/bin/python", "-I", "check.py"],
+    "runtime_paths": ["/opt/scorer-venv", "/opt/base-python"],
+    "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
+    "reward_file": "/verifier/reward.txt",
+    "inputs": scorer_inputs,
+}
+```
+
+支持 `sandbox=True`、`ENV.kind=files`、普通 command verifier，含 verifier judge。
+须声明 `result_contract.require_exit_zero=true`，以便启动或运行失败不能成为普通零分。
+不支持无沙箱、容器、services、native_runtime、container_runtime 或 pristine-offline 路径；
+显式声明不适用的组合会返回 `unmeasured`，不会忽略字段。
+
+目录须存在，不含符号链接路径组件，不得与可写任务目录重叠，也不得落在平台或私有 `/tmp`
+等被隔离规则隐藏的目录中。`argv[0]` 须为可执行的绝对路径；它和解析符号链接后的目标
+都必须在声明目录或沙箱已有的系统运行目录内。缺失、不可见或无效的声明保持不可测。
+解释器版本及依赖要求由适配器确定，通用平台不要求某个 Python 版本。
+
 ## 6. 完整重复试验报告
 
 所有选中任务的 VERIFY 声明同一个协议：

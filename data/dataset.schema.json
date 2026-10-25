@@ -54,7 +54,8 @@
   "verify": {
     "kinds": ["answer", "command"],
     "command_required": ["argv", "reward_file"],
-    "command_optional": ["cwd", "inputs", "pass_when", "stdout", "timeout_s", "evidence_file", "image", "scorer_input", "native_runtime", "judge", "result_contract", "trial_protocol", "container_runtime"],
+    "command_optional": ["cwd", "inputs", "pass_when", "stdout", "timeout_s", "evidence_file", "image", "scorer_input", "native_runtime", "judge", "result_contract", "trial_protocol", "container_runtime", "runtime_paths"],
+    "runtime_paths": "Optional absolute host runtime directories, bound read-only for sandboxed files command verification with an absolute executable and result_contract.require_exit_zero=true. Unsupported routes, missing/hidden/symlink directories and task-storage overlaps are unmeasured; absence preserves the existing launch.",
     "container_runtime": "Optional observed-v1 Docker command verifier. Requires sandboxed files parent, result_contract, local pinned image and bounded filesystems. Same declaration as Docker worker env; no judge/native_runtime combination.",
     "judge": "Optional verifier-only model broker: model, max_calls, max_output_tokens, timeout_s, parameters. Requires sandboxed files command verification and result_contract v1.",
     "result_contract": "Optional version=1 and score_range=[min,max], with optional boolean require_exit_zero (default false). Invalid/nonfinite/out-of-range or measured:false results carry no score. require_exit_zero rejects a nonzero command exit before reading score files; unsupported for pristine-offline. Omission preserves legacy interpretation.",

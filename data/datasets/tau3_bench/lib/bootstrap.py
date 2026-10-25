@@ -8,6 +8,8 @@ import sys
 REVISION = 'fc0055dc4e0a316c3f83133267fbd6faaa770992'
 
 def bootstrap(bundle, runtime=None):
+    if sys.version_info[:2] != (3, 12):
+        raise ValueError('tau3 requires Python 3.12 before loading its pinned dependencies')
     bundle = Path(bundle).resolve()
     raw = (bundle / 'manifest.json').read_bytes()
     if hashlib.sha256(raw).hexdigest() != 'b534b3c0c068bdb647c130c05431b73566a1c94ff54eaa6e414c27a20ba44b4a':

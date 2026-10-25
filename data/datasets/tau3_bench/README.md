@@ -37,8 +37,9 @@ gate prevents the upstream empty-result `all([])` case from becoming a success.
 
 ## Preparation
 
-Use Python 3.12 for the driver and the isolated dependency runtime. Keep the
-following directory outside the repository:
+Use Python 3.12 for the isolated dependency runtime and direct runtime tests.
+The platform driver may use its own supported Python. Keep the following directory
+outside the repository and outside the sandbox's private `/tmp`:
 
 ```bash
 export HG_TAU3_DATA=/absolute/datasets/tau3_bench
@@ -55,6 +56,15 @@ The runtime bundle omits task sets, gold trajectories and historical model resul
 Preparation requires a fresh root.
 No model is called during preparation. `PYTHON_DOTENV_DISABLED=1` prevents upstream
 imports from reading ambient credential files.
+
+The relay and verifier both launch `HG_TAU3_RUNTIME/bin/python`. Verifier declarations
+include read-only `runtime_paths` for that environment and its base Python prefixes,
+queried from the selected interpreter once per runtime configuration. Host `PATH`
+and the driver's Python do not select the scoring interpreter. The local startup
+probe has a 10-second management timeout; it is not an episode or model-call limit.
+Missing or non-3.12 runtime installations refuse configuration. At verification,
+invalid mounts or runtime failures remain unmeasured; bootstrap checks Python 3.12
+before importing pinned dependencies. No system-Python fallback is used.
 
 ## Model roles and trials
 

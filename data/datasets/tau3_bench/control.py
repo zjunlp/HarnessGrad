@@ -115,7 +115,7 @@ def run(oracle, platform, work, *, attack=False):
             else:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(entry['from'], dest)
-        proc = subprocess.run([sys.executable, *verifier['argv'][1:]], cwd=work, capture_output=True, text=True)
+        proc = subprocess.run(verifier['argv'], cwd=work, capture_output=True, text=True)
         reward = work / 'verifier/reward.txt'
         evidence = work / 'verifier/evidence.json'
         return (float(reward.read_text()) if reward.exists() else None), {'returncode': proc.returncode, 'stderr': proc.stderr, 'evidence': json.loads(evidence.read_text()) if evidence.exists() else None}

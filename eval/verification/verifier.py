@@ -259,6 +259,11 @@ def _verify_container_state(snapshot: str, verifier, *, task_mount: str,
                             declared_network: str = "none",
                             limits: dict | None = None,
                             expected_snapshot: str | None = None) -> dict:
+    if "runtime_paths" in (verifier or {}):
+        return record_class({"kind": "command", "passed": False, "score": None,
+                             "outcome": "unmeasured",
+                             "unmeasured": "verifier runtime_paths requires sandboxed files command verification"},
+                            verifier, "unknown")
     if declared_class(verifier) not in ("unknown", "snapshot-service"):
         return record_class({"kind": "command", "passed": False, "score": None,
                              "unmeasured": "scorer declaration cannot run on actor snapshot"},
@@ -486,6 +491,54 @@ def _copy_relative_input(name: str, entry: dict, staging: Path,
     target = staging / "rel"
     _materialize(target, [entry], PLATFORM_ROOT)
     container_mod.cp_in(name, target / rel, f"{task_mount}/{rel}")
+
+
+def _verifier_runtime_paths(workdir: Path, spec: dict, options: dict, bindings) -> tuple[Path, ...]:
+    """Admit explicit host scorer dependencies without changing legacy launches."""
+    contract = spec.get("result_contract")
+    if (not options.get("sandbox") or spec.get("kind") != "command"
+            or (options.get("env") or {}).get("kind", "files") != "files"
+            or options.get("running") is not None or options.get("service_specs")
+            or options.get("native_runtime") is not None
+            or "native_runtime" in spec or "container_runtime" in spec
+            or declared_class(spec) not in ("unknown", "actor-workdir")
+            or not isinstance(contract, dict) or contract.get("require_exit_zero") is not True):
+        raise ValueError("requires sandboxed files command verification with require_exit_zero")
+    raw = spec["runtime_paths"]
+    if not isinstance(raw, list) or any(not isinstance(p, str) or not p for p in raw):
+        raise ValueError("must be a list of absolute directory paths")
+    work_root = Path(os.environ.get("HARNESSGRAD_WORK_ROOT")
+                     or (workdir if bindings else workdir.parent.parent))
+    hidden = sandbox_mod.hidden_trees(work_root, PLATFORM_ROOT)
+    task = workdir.resolve()
+    paths = []
+    for value in raw:
+        path = Path(value)
+        if not path.is_absolute() or ".." in path.parts or path == Path("/"):
+            raise ValueError(f"invalid runtime directory: {value}")
+        if any(p.is_symlink() for p in (path, *path.parents)) or not path.is_dir():
+            raise ValueError(f"runtime must be an existing non-symlink directory: {value}")
+        if path == task or task in path.parents or path in task.parents:
+            raise ValueError(f"runtime overlaps writable task storage: {value}")
+        if any(path == tree or tree in path.parents for tree in hidden):
+            raise ValueError(f"runtime would be hidden by sandbox isolation: {value}")
+        if path not in paths:
+            paths.append(path)
+    argv = spec.get("argv")
+    if not isinstance(argv, (list, tuple)) or not argv or not isinstance(argv[0], str):
+        raise ValueError("requires an explicit absolute executable")
+    executable = Path(argv[0])
+    if (not executable.is_absolute() or ".." in executable.parts
+            or not executable.is_file() or not os.access(executable, os.X_OK)):
+        raise ValueError(f"executable is absent, not executable or not absolute: {argv[0]}")
+    visible = (*paths, *(Path(p) for p in sandbox_mod.RUNTIME))
+    for target in (executable, executable.resolve(strict=True)):
+        if (any(target == tree or tree in target.parents for tree in hidden)
+                or not any(target == root or root in target.parents for root in visible)):
+            raise ValueError(f"executable or symlink target is outside declared runtimes: {target}")
+    return tuple(paths)
+
+
 def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dict:
     """Fail closed on runtime bind errors, then dispatch the existing scorer routes."""
     try:
@@ -498,6 +551,11 @@ def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dic
             if declared_class(verifier or {}) == "pristine-offline":
                 raise ImmutableRuntimeUnavailable("this verification boundary cannot express immutable runtime binds")
             targets(workdir, bindings)
+        if "runtime_paths" in (verifier or {}):
+            try:
+                options["runtime_paths"] = _verifier_runtime_paths(workdir, verifier, options, bindings)
+            except (OSError, ValueError, RuntimeError) as exc:
+                raise ImmutableRuntimeUnavailable(f"verifier runtime_paths: {exc}") from exc
         from eval.verification.result_contract import apply, validate as validate_result
         contract = (verifier or {}).get("result_contract")
         judge_spec = (verifier or {}).get("judge")
@@ -576,7 +634,7 @@ def _verify_existing(workdir: Path, verifier: dict | None, answer: str,
             service_specs: list[dict] | None = None,
             running=None, task_id: str | None = None,
             run_id: str | None = None, trial_id: str | None = None,
-            native_runtime=None, immutable_runtimes=(), judge=None) -> dict:
+            native_runtime=None, immutable_runtimes=(), judge=None, runtime_paths=()) -> dict:
     """Run a verifier with platform-owned output storage for exec reward checks."""
     spec = verifier or {"kind": "answer", "expected": None}
     env_spec = env or {"kind": "files"}
@@ -621,7 +679,8 @@ def _verify_existing(workdir: Path, verifier: dict | None, answer: str,
     verdict = _verify_inner(workdir, verifier, answer, sandbox=sandbox,
                          timeout_s=timeout_s, env=env,
                          service_specs=service_specs, running=running, native_runtime=native_runtime,
-                         immutable_runtimes=immutable_runtimes, judge=judge)
+                         immutable_runtimes=immutable_runtimes, judge=judge,
+                         **({"runtime_paths": runtime_paths} if "runtime_paths" in spec else {}))
     return record_class(_enforce_scorer_input(verdict, binding), spec, actual)
 
 
@@ -649,7 +708,7 @@ def _verify_inner(workdir: Path, verifier: dict | None, answer: str,
             env: dict | None = None,
             service_specs: list[dict] | None = None,
             running=None, verdict_dir: Path | None = None, native_runtime=None,
-            immutable_runtimes=(), judge=None) -> dict:
+            immutable_runtimes=(), judge=None, runtime_paths=()) -> dict:
     """Decide whether the task was completed. Returns {kind, passed, detail}.
 
     `answer` is the legacy path and stays byte-for-byte what it was: stripped,
@@ -781,7 +840,8 @@ def _verify_inner(workdir: Path, verifier: dict | None, answer: str,
                                    timeout_s=timeout_s,
                                    cwd=cwd, repo=workdir, task_dir_writable=False,
                                    immutable_runtimes=immutable_runtimes,
-                                   writable_paths=(reward_dir,) if reward_dir else (), **judge_options)
+                                   writable_paths=(reward_dir,) if reward_dir else (), **judge_options,
+                                   **({"runtime_paths": runtime_paths} if "runtime_paths" in spec else {}))
         else:
             proc = subprocess.run(argv, capture_output=True, text=True, errors="replace",
                                   timeout=timeout_s, cwd=cwd,

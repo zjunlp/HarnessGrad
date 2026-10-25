@@ -87,7 +87,7 @@ def test_incomplete_episode_preserves_evidence_but_failed_scorer_cannot_publish(
     row = dataset.roster()[tid]
     spec = dataset.VERIFY[tid]
     if failed_process:
-        spec['argv'] = ['python3', '-I', '-c',
+        spec['argv'] = [spec['argv'][0], '-I', '-c',
             "from pathlib import Path; import sys; "
             "Path('verifier/reward.txt').write_text('1'); "
             "Path('verifier/evidence.json').write_text('{\"measured\":true}'); sys.exit(3)"]

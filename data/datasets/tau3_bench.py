@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import random
+import subprocess
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
@@ -110,14 +111,42 @@ def _setup(tid, row):
                            'max_calls': None, 'deadline_s': None, 'max_line_bytes': None}}
 
 
+@lru_cache(maxsize=1)
+def _python_runtime(runtime):
+    """Inspect the selected scorer Python once; the driver may use another runtime."""
+    runtime = Path(runtime)
+    if not runtime.is_absolute():
+        raise ValueError('tau3 runtime must be an absolute directory')
+    python = runtime / 'bin/python'
+    probe = ('import json, sys; print(json.dumps({"version": list(sys.version_info[:2]), '
+             '"prefix": sys.prefix, "base_prefix": sys.base_prefix, '
+             '"base_exec_prefix": sys.base_exec_prefix}))')
+    try:
+        # Startup inspection only, not an episode/model/verification budget.
+        proc = subprocess.run([str(python), '-I', '-c', probe], capture_output=True,
+                              text=True, check=True, timeout=10)
+        info = json.loads(proc.stdout)
+        if info['version'] != [3, 12]:
+            raise ValueError('tau3 requires Python 3.12 in its selected runtime')
+        prefixes = [info[key] for key in ('prefix', 'base_prefix', 'base_exec_prefix')]
+        if any(not isinstance(p, str) or not Path(p).is_absolute() or not Path(p).is_dir()
+               for p in prefixes) or Path(prefixes[0]).resolve() != runtime.resolve():
+            raise ValueError('tau3 interpreter prefixes do not match the selected runtime')
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as exc:
+        raise ValueError(f'cannot bind tau3 Python runtime {python}: {exc}') from exc
+    return str(python), tuple(dict.fromkeys([str(runtime), *prefixes]))
+
+
 def _verify(tid, row):
+    python, runtime_paths = _python_runtime(RUNTIME)
     inputs = [{'path': 'tau3_code', 'from': str(ASSETS), 'immutable': True},
               {'path': 'tau3_private.json', 'from': str(DATASET_ROOT / row['path'] / 'private.json')},
               {'path': 'tau3_transport_runtime', 'from': str(TRANSPORT.resolve().parent), 'immutable': True},
               {'path': 'tau3_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True},
               {'path': 'tau3_runtime', 'from': str(RUNTIME), 'immutable': True}]
-    result = {'kind': 'command', 'argv': ['python3', '-I', 'tau3_code/verify/check.py', '--task-id', tid,
+    result = {'kind': 'command', 'argv': [python, '-I', 'tau3_code/verify/check.py', '--task-id', tid,
                                        '--case-sha256', row['private_sha256']],
+              'runtime_paths': list(runtime_paths),
               'inputs': inputs, 'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
               'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
               'trial_protocol': dict(TRIAL_PROTOCOL)}
