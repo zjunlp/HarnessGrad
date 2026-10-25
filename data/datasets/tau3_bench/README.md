@@ -24,6 +24,10 @@ scorer and every task's original reward basis. All 113 tasks declaring
 score scripts are read-only verifier projections; they are unavailable to the actor.
 Missing stop signals, provider failures and scorer errors remain unmeasured.
 Official max-step/error terminations retain their official zero reward.
+Malformed actor transport requests are rejected before entering the runtime and
+recorded in `transport.request_errors`. They do not change native step/error counts
+or invalidate a later completed episode. Service failures and explicit resource-limit
+refusals remain unmeasured.
 NL judge output must contain one strict boolean decision for each requested assertion;
 missing, duplicate, foreign or malformed decisions are unmeasured. This validity
 gate prevents the upstream empty-result `all([])` case from becoming a success.

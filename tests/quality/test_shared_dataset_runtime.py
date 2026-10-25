@@ -164,14 +164,53 @@ def test_cleanup_failure_is_reported_without_overwriting_receipt(tmp_path,monkey
     h.cleanup()
 
 
-def test_invalid_json_request_does_not_kill_server(tmp_path):
+@pytest.mark.parametrize('frame,error', [
+    (b'{not-json}', 'bad_request'),
+    (b'\xff', 'bad_request'),
+    (b'[' * 2000, 'bad_request'),
+    (b'[]', 'bad_request'),
+    (b'null', 'bad_request'),
+    (b'{}', 'bad_op'),
+    (b'{"op": ""}', 'bad_op'),
+    (b'{"op": 1}', 'bad_op'),
+    (b'{"op": "ping", "args": [1]}', 'bad_args'),
+])
+def test_invalid_json_request_does_not_kill_server(tmp_path, frame, error):
     from eval.service.tool_transport import Relay,call
     import socket
     with Relay(tmp_path/'test.sock',lambda op,args:'alive') as server:
         with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
-            client.connect(str(server.path));client.sendall(b'[]\n')
-            assert json.loads(client.recv(4096))['error']=='bad_request'
+            client.connect(str(server.path));client.sendall(frame + b'\n')
+            assert json.loads(client.recv(4096)) == {'ok': False, 'error': error}
         assert call(server.path,'ping')=='alive'
+        assert server.receipt['calls'] == 1
+        assert server.receipt['errors'] == server.receipt['request_errors'] == 1
+        assert server.receipt['refused'] == 0
+
+
+@pytest.mark.parametrize('failure', ['handler', 'serialization'])
+def test_service_errors_are_not_classified_as_invalid_requests(tmp_path, failure):
+    from eval.service.tool_transport import Relay, ToolTransportError, call
+    def handle(op, args):
+        if failure == 'handler':
+            raise RuntimeError('fixture service failed')
+        return {1, 2, 3}
+    with Relay(tmp_path/'test.sock', handle) as server:
+        with pytest.raises(ToolTransportError):
+            call(server.path, 'ping')
+        assert server.receipt['errors'] == 1
+        assert server.receipt['request_errors'] == 0
+
+
+def test_parser_runtime_failure_is_not_an_invalid_request(tmp_path, monkeypatch):
+    from eval.service import tool_transport
+    def failed_parser(raw):
+        raise MemoryError('fixture parser failure')
+    monkeypatch.setattr(tool_transport.json, 'loads', failed_parser)
+    server = tool_transport.Relay(tmp_path/'test.sock', lambda *_: 'unused')
+    assert server._handle(b'{}') == {'ok': False, 'error': 'bad_request'}
+    assert server.receipt['errors'] == 1
+    assert server.receipt['request_errors'] == 0
 
 
 def test_recording_symlink_is_rejected(tmp_path):

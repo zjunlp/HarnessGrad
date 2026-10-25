@@ -102,7 +102,8 @@ def main():
         with service.lock:
             if not clean:
                 service.failure = 'service_deadline'
-            elif relay.receipt['errors'] or relay.receipt['refused']:
+            elif (relay.receipt['errors'] > relay.receipt['request_errors']
+                  or relay.receipt['refused']):
                 service.failure = 'transport_failure'
             Path(os.environ['HG_RELAY_RECORD_PATH']).write_text(json.dumps(service.episode()))
     args.receipt.write_text(json.dumps({'transport': relay.receipt, 'stopped_cleanly': clean,

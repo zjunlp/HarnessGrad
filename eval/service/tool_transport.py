@@ -93,7 +93,8 @@ class Relay:
         self._stop = threading.Event()
         self._sock = None
         self._thread = None
-        self.receipt = {"calls": 0, "refused": 0, "errors": 0, "connections": 0,
+        self.receipt = {"calls": 0, "refused": 0, "errors": 0, "request_errors": 0,
+                        "connections": 0,
                         "started_utc": None, "stopped_utc": None,
                         "limits": {"max_calls": max_calls, "max_line_bytes": max_line_bytes,
                                    "deadline_s": deadline_s}}
@@ -205,27 +206,33 @@ class Relay:
         except OSError:
             return False
 
+    def _request_error(self, error: str) -> dict:
+        # Keep the legacy total while identifying malformed envelopes that never
+        # reached the handler. The adapter decides their effect on its episode.
+        with self.receipt_lock:
+            self.receipt["errors"] += 1
+            self.receipt["request_errors"] += 1
+        return {"ok": False, "error": error}
+
     def _handle(self, line: bytes) -> dict:
         try:
             request = json.loads(line)
+        except (ValueError, RecursionError):
+            return self._request_error("bad_request")
         except Exception:
+            # A parser/runtime failure (for example MemoryError) is not a
+            # malformed actor request that an adapter may safely disregard.
             with self.receipt_lock:
                 self.receipt["errors"] += 1
             return {"ok": False, "error": "bad_request"}
         if not isinstance(request, dict):
-            with self.receipt_lock:
-                self.receipt["errors"] += 1
-            return {"ok": False, "error": "bad_request"}
+            return self._request_error("bad_request")
         op = request.get("op")
         args = request.get("args") or {}
         if not isinstance(op, str) or not op:
-            with self.receipt_lock:
-                self.receipt["errors"] += 1
-            return {"ok": False, "error": "bad_op"}
+            return self._request_error("bad_op")
         if not isinstance(args, dict):
-            with self.receipt_lock:
-                self.receipt["errors"] += 1
-            return {"ok": False, "error": "bad_args"}
+            return self._request_error("bad_args")
         if self._deadline is not None and time.monotonic() > self._deadline:
             with self.receipt_lock:
                 self.receipt["refused"] += 1

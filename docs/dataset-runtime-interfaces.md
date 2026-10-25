@@ -91,6 +91,11 @@ runner 在正常、异常及提前返回路径中停止、清理 relay；启动�
 progress 记录保留该信息。relay 私有目录删除失败保留原任务结果，
 通过 `cleanup` 报告错误；不能据此认定运行已完整清理。
 
+共享 `Relay` 的 `errors` 保留原有总错误计数，新增的 `request_errors` 是其中
+在进入 handler 前因 JSON、`op` 或 `args` 格式错误被拒绝的请求数。
+handler 异常和响应序列化错误不计入 `request_errors`；资源限制仍计入 `refused`。
+适配器决定这些请求错误对数据集协议的影响；新增分类不会改变其他服务原有的失败策略。
+
 ## 4. verifier judge 与环境模拟器的模型通道
 
 ```python
