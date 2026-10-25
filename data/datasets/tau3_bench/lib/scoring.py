@@ -3,10 +3,6 @@ from copy import deepcopy
 from collections import Counter
 
 
-class IncompleteConversation(ValueError):
-    """Validly inspected episode without the required termination signal."""
-
-
 def score(config, episode):
     from tau2.data_model.tasks import Task
     from tau2.data_model.simulation import SimulationRun, TerminationReason
@@ -19,9 +15,18 @@ def score(config, episode):
         raise ValueError('episode task identity mismatch')
     if episode.get('failure'):
         raise RuntimeError('private runtime failed: ' + episode['failure'])
-    termination = episode.get('termination_reason')
+    termination = episode['termination_reason']
     if termination is None:
-        raise IncompleteConversation('incomplete_conversation_without_stop_signal')
+        # The relay is sealed after the candidate exits. A healthy unfinished
+        # conversation is a candidate failure, evaluated by the official early-
+        # termination rule. Missing health/termination fields are damaged evidence,
+        # not proof of an unfinished conversation. Never alter the recorded messages
+        # or invent a successful STOP on the candidate's behalf.
+        if episode['failure'] is not None:
+            raise ValueError('unfinished episode must explicitly report failure: null')
+        termination = TerminationReason.AGENT_ERROR.value
+    if not isinstance(episode['messages'], list):
+        raise ValueError('episode messages must be a list')
     messages = to_tau2_messages(deepcopy(episode['messages']))
     for index, message in enumerate(messages):
         message.turn_idx = index

@@ -113,12 +113,11 @@ def test_rejected_actor_requests_preserve_official_scoring(tmp_path, monkeypatch
     assert sealed['payload']['failure'] is None
     assert sealed['payload']['num_errors'] == (10 if mode == 'official_limit' else 0)
     verdict = result['verdict']
+    assert verdict['evidence']['measured'] is True
+    assert verdict['score'] == float(mode == 'success')
     if mode == 'incomplete':
         assert sealed['payload']['termination_reason'] is None
-        assert verdict['score'] is None and verdict['outcome'] == 'unmeasured'
-        assert verdict['evidence']['error'] == 'IncompleteConversation'
+        assert verdict['evidence']['completion']['reason'] == 'incomplete_conversation_without_stop_signal'
     else:
         expected = {'success': 'agent_stop', 'user_stop': 'user_stop', 'official_limit': 'too_many_errors'}[mode]
         assert sealed['payload']['termination_reason'] == expected
-        assert verdict['evidence']['measured'] is True
-        assert verdict['score'] == float(mode == 'success')

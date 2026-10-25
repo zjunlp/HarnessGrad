@@ -5,6 +5,7 @@ metrics/agent_metrics.py:113-135. No NL criterion is removed for oracle runs.
 """
 import importlib.util
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -66,10 +67,11 @@ def test_incomplete_conversation_is_official_failure(official, reason):
     assert asset('scoring').score(config, {**episode, 'termination_reason': reason})['reward'] == 0
 
 
-def test_transport_failure_cannot_be_scored_as_wrong_answer(official):
+@pytest.mark.parametrize('reason', ['agent_stop', None])
+def test_transport_failure_cannot_be_scored_as_wrong_answer(official, reason):
     config, episode = official
     with pytest.raises(RuntimeError, match='private runtime failed'):
-        asset('scoring').score(config, {**episode, 'failure': 'provider_error'})
+        asset('scoring').score(config, {**episode, 'termination_reason': reason, 'failure': 'provider_error'})
 
 
 def test_no_reward_basis_removed_and_nl_uses_official_prompt(official, monkeypatch):
@@ -104,10 +106,44 @@ def test_pass_hat_k_formula_and_full_manifest(official):
     assert aggregate(manifest, rows[:-1], [1, 2, 3])['metrics'] is None
 
 
-def test_missing_termination_is_unmeasured(official):
+@pytest.mark.parametrize('progress', ['empty', 'partial_conversation', 'all_business_actions'])
+def test_candidate_exit_without_stop_is_official_failure(official, progress):
+    from tau2.data_model.tasks import Task
+    from tau2.data_model.simulation import SimulationRun, TerminationReason
+    from tau2.evaluator.evaluator import evaluate_simulation, EvaluationType
+    from tau2.utils.llm_utils import to_tau2_messages
+    from tau2.utils.utils import get_now
     config, episode = official
-    with pytest.raises(ValueError, match='incomplete_conversation'):
-        asset('scoring').score(config, {**episode, 'termination_reason': None})
+    messages = {'empty': [], 'partial_conversation': [
+        {'role': 'user', 'content': 'Please help me.'},
+        {'role': 'assistant', 'content': 'Let me check.'}],
+        'all_business_actions': episode['messages'][:-1]}[progress]
+    unfinished = {**episode, 'termination_reason': None, 'failure': None, 'messages': messages}
+    original = deepcopy(unfinished)
+    direct = evaluate_simulation(SimulationRun(
+        id='independent', task_id=episode['task_id'], start_time=get_now(),
+        end_time=get_now(), duration=0, termination_reason=TerminationReason.AGENT_ERROR,
+        messages=to_tau2_messages(deepcopy(messages))),
+        Task.model_validate(config['task']), EvaluationType.ALL, False, 'airline')
+    result = asset('scoring').score(config, unfinished)
+    assert result == direct.model_dump(mode='json')
+    assert result['reward'] == 0
+    assert unfinished == original  # No final text or STOP is inserted into the record.
+
+
+def test_missing_termination_field_is_not_candidate_failure(official):
+    config, episode = official
+    broken = {k: v for k, v in episode.items() if k != 'termination_reason'}
+    with pytest.raises(KeyError, match='termination_reason'):
+        asset('scoring').score(config, broken)
+
+
+@pytest.mark.parametrize('messages', [None, {}, [{'role': 'unknown', 'content': 'broken'}]])
+def test_corrupt_unfinished_messages_are_not_candidate_failure(official, messages):
+    config, episode = official
+    with pytest.raises(ValueError):
+        asset('scoring').score(config, {**episode, 'termination_reason': None,
+                                      'failure': None, 'messages': messages})
 
 
 @pytest.mark.parametrize('reply', [{}, {'results': []}, {'results': [
@@ -125,10 +161,14 @@ def test_official_nl_empty_or_wrong_coverage_is_unmeasured(official, monkeypatch
         asset('scoring').score(config, episode)
 
 
-@pytest.mark.parametrize('reason', ['max_steps', 'too_many_errors'])
-def test_real_nl_task_official_early_stop_remains_zero(official, reason):
+@pytest.mark.parametrize('reason', ['max_steps', 'too_many_errors', None])
+def test_real_nl_task_official_early_stop_remains_zero(official, monkeypatch, reason):
+    import tau2.evaluator.evaluator_nl_assertions as module
+    def unexpected_judge(**kwargs):
+        pytest.fail('premature termination must not invoke the NL judge')
+    monkeypatch.setattr(module, 'generate', unexpected_judge)
     config = json.loads((dataset.DATASET_ROOT / 'cases/retail/2/private.json').read_text())
     assert config['task']['evaluation_criteria']['nl_assertions']
     episode = {'task_id': config['task']['id'], 'domain': 'retail', 'seed': 123,
-               'termination_reason': reason, 'messages': []}
+               'termination_reason': reason, 'failure': None, 'messages': []}
     assert asset('scoring').score(config, episode)['reward'] == 0

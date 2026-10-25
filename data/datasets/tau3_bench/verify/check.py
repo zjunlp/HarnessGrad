@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 sys.path.insert(0, str(Path('tau3_transport_runtime').resolve()))
 from bootstrap import bootstrap
-from scoring import score, IncompleteConversation
+from scoring import score
 
 
 def main():
@@ -40,10 +40,13 @@ def main():
         result = score(config, sealed['payload'])
         evidence.update(measured=True, official=result, revision=config['revision'],
                         scorer_input={'task_id': args.task_id, 'sha256': args.case_sha256, 'verified': True})
+        if sealed['payload']['termination_reason'] is None:
+            evidence['completion'] = {
+                'reason': 'incomplete_conversation_without_stop_signal',
+                'recorded_termination_reason': None,
+                'scorer_termination_reason': 'agent_error',
+            }
         reward_file.write_text(str(result['reward']) + '\n')
-        code = 0
-    except IncompleteConversation as exc:
-        evidence.update(measured=False, error=type(exc).__name__, detail=str(exc))
         code = 0
     except Exception as exc:
         evidence.update(measured=False, error=type(exc).__name__, detail=str(exc)[:1000])

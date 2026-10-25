@@ -22,7 +22,14 @@ actor reset, configure, seed override or episode upload API.
 scorer and every task's original reward basis. All 113 tasks declaring
 `NL_ASSERTION` keep it, including oracle controls. Source code, dependencies and
 score scripts are read-only verifier projections; they are unavailable to the actor.
-Missing stop signals, provider failures and scorer errors remain unmeasured.
+When the candidate exits with a healthy, valid sealed episode but no stop signal,
+the adapter maps its explicit `termination_reason: null` to the official
+`AGENT_ERROR` termination for scoring. The official early-termination rule returns
+zero, which counts as a measured failure in the trial statistics. This mapping is
+an adapter policy: the original episode stays unchanged, no message or stop signal
+is added, and verifier evidence records the mapping and the incomplete-conversation
+reason. Missing or malformed records, provider failures and scorer errors remain
+unmeasured; an unfinished episode must explicitly report `failure: null`.
 Official max-step/error terminations retain their official zero reward.
 Malformed actor transport requests are rejected before entering the runtime and
 recorded in `transport.request_errors`. They do not change native step/error counts
@@ -142,7 +149,8 @@ against the original `split_tasks.json` files.
 The released airline/8 oracle executes real business actions and official scoring.
 The negative control starts and stops a conversation without business actions;
 it receives official zero. An empty exit without a benchmark stop is tested
-separately as unmeasured. Controls use a deterministic local HTTP response through
+separately as a measured zero, alongside unmeasured service and record failures.
+Controls use a deterministic local HTTP response through
 the official user simulator to validate execution and scoring without inference.
 
 Keep live API receipts and trial records outside the repository.
