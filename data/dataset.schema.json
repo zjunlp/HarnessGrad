@@ -28,7 +28,8 @@
   },
   "task": {
     "required": ["task_id", "goal"],
-    "optional": ["inputs", "interaction"],
+    "optional": ["inputs", "interaction", "submission"],
+    "submission": "Optional public delivery hint: {kind: text} or {kind: files, paths: [workdir-relative file paths]}. Contains no expected contents or verifier metadata. Omission preserves a harness's existing behavior; goal remains sufficient for older harnesses.",
     "interaction": "Explicit per-task opt-in; chessbench_puzzles.stepwise.v1 selects trusted live board/UCI exchange on the native files sandbox. Omission preserves the existing protocol.",
     "task_id": "non-empty unique string",
     "goal": "non-empty string"

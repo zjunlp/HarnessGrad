@@ -90,9 +90,9 @@ RUNTIME = ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc")
 #: Sub-paths of `/etc` that carry DNS. `/etc/resolv.conf` is a symlink into
 #: `/run/systemd/resolve` on this distribution, and binding only `/etc` leaves it
 #: dangling -- which presents as "model call failed", the worst possible shape for
-#: a sandbox bug, because it looks like a harness defect. Measured: without this,
-#: every live call dies with `Temporary failure in name resolution`.
-DNS = ("/run/systemd/resolve",)
+#: a sandbox bug, because it looks like a harness defect. WSL instead points at
+#: /mnt/wsl/resolv.conf; bind only that generated file, not the shared WSL tree.
+DNS = ("/run/systemd/resolve", "/mnt/wsl/resolv.conf")
 
 
 class SandboxUnavailable(RuntimeError):

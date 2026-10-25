@@ -5,9 +5,12 @@ same candidate entrypoint with a different task, namespace, scratch and mailbox.
 The dataset supplies prompts/files and a combined verifier, never solver code.
 """
 from __future__ import annotations
+
+from ckpt.source_tree import copy_harness, has_bun_runtime
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -33,7 +36,9 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
     from eval.run import runner
     from eval.observe.tracing import _materialize, process_outcome
     from eval.policy.runtime_policy import phase_timeout
+    from eval.containers import bun_runtime
     workers=setup['workers']
+    bun_identity=None
     try:
         validate_workers(workers)
         mailbox = setup.get('mailbox', {'max_messages': 4096, 'max_message_bytes': 65536,
@@ -45,6 +50,8 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
             raise ValueError('workers require a combined command verifier')
         for w in workers:
             if w.get('env', {}).get('backend') == 'observed-v1':
+                if has_bun_runtime(Path(repo)):
+                    raise ValueError('Declared Bun runtimes are not supported by observed workers')
                 from eval.containers.observed import validate
                 validate(w['env'])
             else:
@@ -52,6 +59,9 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
                 if refusal is not None:return refusal
                 if w.get('env',{}).get('kind','files')!='files':
                     raise ValueError('Docker workers require backend=observed-v1')
+        if has_bun_runtime(Path(repo)):
+            bun_runtime.admit(Path(repo), os.environ)
+            bun_identity=bun_runtime.identity(Path(repo))
     except ValueError as exc:
         return runner._invalid(task,exc,stage='workers admission',service=None)
     root=Path(tempfile.mkdtemp(prefix='hg-workers-'))
@@ -83,7 +93,7 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
             # Only candidate code is copied. Run state and git metadata are not a
             # communication channel between peers. Symlinks remain namespace-confined.
             code=private/'candidate'
-            shutil.copytree(repo,code,symlinks=True,ignore=shutil.ignore_patterns('.git','.state','__pycache__'))
+            copy_harness(repo,code,symlinks=True,ignore=shutil.ignore_patterns('.git','.state','__pycache__'))
             channel=root/(w['id']+'.sock')
             relay=Relay(channel,handler(w['id']),max_calls=mailbox.get('max_calls'),
                         max_line_bytes=mailbox.get('max_line_bytes')).start();relays.append(relay)
@@ -118,10 +128,14 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
                  'workers':{name:{'exit_code':r.get('exit_code'),'stderr':r.get('stderr'),
                      'usage':_worker_usage(r), 'invalid':r.get('invalid'),
                      'runtime_services': r.get('runtime_services'),
+                     'harness_runtime': r.get('harness_runtime'),
                      'artifacts':{p:{k:v for k,v in a.items() if k!='base64'}
                                   for p,a in r.get('artifacts',{}).items()}}
                             for name,r in outcomes.items()}}
         failed={name:r.get('invalid') for name,r in outcomes.items() if r.get('invalid')}
+        mismatched=[w['id'] for w in workers
+                    if (outcomes.get(w['id'],{}).get('harness_runtime') or {}).get('bun') != bun_identity
+                    ] if bun_identity is not None else []
         transport_failed = any(r.receipt.get('refused') or r.receipt.get('errors') for r in relays)
         if failed:
             result=runner._invalid(task,json.dumps(failed),stage='worker execution',service=None)
@@ -129,6 +143,11 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
         elif transport_failed:
             result=runner._invalid(task,'worker mailbox resource limit or transport failure',
                                    stage='worker mailbox',service=None)
+            result['worker_group'] = summary
+        elif mismatched:
+            result=runner._invalid(task,
+                'Workers missing the admitted Bun runtime identity: '+', '.join(mismatched),
+                stage='worker runtime identity',service=None)
             result['worker_group'] = summary
         else:
             combined=root/'verify';combined.mkdir()
@@ -165,13 +184,19 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
                                    unmeasured=f'worker {name} failed: {failure}')
             usage_records=[summary['workers'][name]['usage'] for name in outcomes]
             trace=json.dumps({'worker_group':summary})+'\n'
-            if all(isinstance(u,dict) and all(type(u.get(k)) is int and u[k]>=0
-                         for k in ('input_tokens','output_tokens','calls')) for u in usage_records):
-                trace=json.dumps({'usage':{k:sum(u[k] for u in usage_records)
-                       for k in ('input_tokens','output_tokens','calls')},'source':'worker totals'})+'\n'
+            # Providers can report tokens without a total call count. Keep each
+            # complete metric independently, without treating missing peers as zero.
+            totals={k:sum(u[k] for u in usage_records)
+                    for k in ('input_tokens','output_tokens','calls')
+                    if usage_records and all(isinstance(u,dict) and
+                        type(u.get(k)) is int and u[k]>=0 for u in usage_records)}
+            if totals:
+                trace=json.dumps({'usage':totals,'source':'worker totals'})+'\n'
             verdict['worker_group']=summary
             result={'task_id':task['task_id'],'answer':'','trace':trace,'exit_code':0,'stderr':'',
                     'verdict':verdict,'worker_group':summary,'env_usage':{},'identity':None}
+            if bun_identity is not None:
+                result['harness_runtime']={'bun':bun_identity}
         if recordings_root is not None:
             dest=Path(recordings_root);dest.mkdir(parents=True,exist_ok=True)
             archive=Path(tempfile.mkdtemp(prefix='workers-',dir=dest))
@@ -191,4 +216,9 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
         try:shutil.rmtree(root)
         except OSError as exc:cleanup_errors.append(str(exc))
         if result is not None:
-            result.setdefault('runtime_services',{})['workers']={'cleanup':{'complete':not root.exists(),'errors':cleanup_errors}}
+            result.setdefault('runtime_services',{})['workers']={
+                'worker_group':result['worker_group'],
+                'cleanup':{'complete':not root.exists(),'errors':cleanup_errors}}
+            if (result.get('harness_runtime') or {}).get('bun') is not None:
+                result['runtime_services']['bun']={
+                    'identity':bun_identity,'workers':[w['id'] for w in workers]}

@@ -40,7 +40,7 @@ def test_the_surface_has_exactly_the_declared_variables():
     reader uses to answer "what does this platform read?".
     """
     hg_names = [name for name in config.ENV_NAMES if name.startswith("HG_")]
-    assert len(hg_names) == 45, hg_names
+    assert len(hg_names) == 46, hg_names
     assert len(config.ENV_NAMES) == len(set(config.ENV_NAMES))
     # The three credentials the repository's rule names. `DEEPSEEK_API_KEY` is the
     # default improver registry entry's `api_key_env`, so it is declared beside it.

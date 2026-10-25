@@ -1,8 +1,8 @@
 """Calling an external method, and keeping it out of the platform.
 
 A method is code the platform did not write. It runs in the same sandbox a harness does,
-with one difference: the platform is hidden **except** `methods/`, because a method cannot
-be given less than its own program and must not be given more.
+with one difference: the platform is hidden except `methods/` and the single public
+`ckpt/bun_dependencies.py` helper. No scorer or private task data is exposed.
 
 Two checks live here and they are different in kind. `_check_method_entrypoint` refuses an
 unusable entrypoint at the door, before anything has been paid for. `_call_method` hashes
@@ -25,20 +25,19 @@ from harnessgrad import PLATFORM_ROOT
 import eval.containers.sandbox as sandbox
 
 def _check_method_entrypoint(argv: list[str]) -> str | None:
-    """一个相对的脚本路径会让方法静默地跑不起来,所以在这里挡住。
+    """Reject relative script paths that fail from the harness worktree.
 
-    方法是在 harness 的工作树里执行的(`cwd=work`),所以 `python methods/x/run.py`
-    会被解析成 `<work>/methods/x/run.py` —— 那个文件不存在,方法以 exit 2 结束,
-    而平台把它记成"方法写不出 trajectory"。现象是**曲线停在 round 0,没有任何
-    东西说入口找错了**。
+    Methods run with `cwd=work`, so `python methods/x/run.py` resolves to
+    `<work>/methods/x/run.py`. A missing script exits with code 2 and looks like
+    a missing trajectory, leaving the curve at round 0 without a useful cause.
 
-    实测:我自己就这么写了一次,并且在"53 个测试全绿"的情况下没发现。所以这里
-    不猜、也不自动改写(猜错会更难查),而是拒绝并说清正确写法。
+    This configuration error once escaped 53 passing tests. Reject it with an
+    actionable message instead of guessing or silently rewriting the command.
 
-    返回错误信息,或者 None 表示没问题。
+    Return an error message, or None when the command is valid.
     """
     for part in argv:
-        # 只看像脚本的参数。路径可以出现在任何位置:解释器、-m、或者包装脚本。
+        # Inspect script-like arguments anywhere: interpreter, -m, or wrapper.
         if not part.endswith(".py"):
             continue
         if Path(part).is_absolute():
@@ -46,8 +45,8 @@ def _check_method_entrypoint(argv: list[str]) -> str | None:
         resolved = Path(part)
         hint = ""
         if resolved.exists():
-            # 它相对于当前目录是存在的,那相对工作树多半就不存在了
-            hint = f"(它相对于当前目录存在,但方法不在当前目录里执行:{resolved.resolve()})"
+            # A path present in the current directory may be absent in the worktree.
+            hint = f"(it exists relative to the current directory, but the method runs elsewhere: {resolved.resolve()})"
         return (f"method entrypoint names a relative script path: {part!r} {hint}\n"
                 f"  The method runs with cwd set to the harness working tree, so a\n"
                 f"  relative path resolves there and does not exist. Use an absolute\n"
@@ -80,9 +79,9 @@ def _method_sandbox_plan(work: Path, argv: list[str], scratch: Path,
     nobody had used it. The trees come from `tools/improver.py` (`runtime_trees`), which
     is where the improver was resolved and the only place that knows what it needs.
     """
-    # Platform paths that survive the hide: its own program, and nothing else. Plus
-    # any path the caller names that must be visible but not writable.
-    visible = [PLATFORM_ROOT / "methods", *readonly]
+    # The stdlib-only link helper is shared with trusted preparation; exposing
+    # one file avoids duplicating runtime logic or revealing the ckpt directory.
+    visible = [PLATFORM_ROOT / "methods", PLATFORM_ROOT / "ckpt/bun_dependencies.py", *readonly]
     # Its own script, wherever it is -- a test fixture's method lives outside the
     # platform, and a method that cannot be read cannot start.
     for arg in argv:
@@ -191,8 +190,17 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
     """
     env = _method_env(work, improver)
     where = cwd or scratch or work
-    payload = json.dumps(request)
     try:
+        # A method copies source without installations. Supply the prepared,
+        # read-only dependency store so its candidate can self-test before editing.
+        # This is task-harness setup, independent of the improver's configuration.
+        from eval.containers.bun_runtime import prepare, RuntimeUnavailable
+        base = request.get("base_harness")
+        prepared = prepare(Path(base)) if base else None
+        if prepared:
+            request = {**request, "harness_runtime": prepared}
+            runtime = tuple(dict.fromkeys((*runtime, *prepared["runtime_paths"], sys.prefix)))
+        payload = json.dumps(request)
         if sandboxed:
             plan = _method_sandbox_plan(work, argv, scratch or where, readonly,
                                         runtime)
@@ -206,6 +214,8 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
             )
     except subprocess.TimeoutExpired:
         return {"_error": f"entrypoint timed out after {timeout_s}s"}
+    except RuntimeUnavailable as exc:
+        return {"_error": f"method candidate runtime unavailable: {exc}"}
     except OSError as exc:
         return {"_error": f"entrypoint could not start: {exc}"}
     except sandbox.SandboxUnavailable as exc:

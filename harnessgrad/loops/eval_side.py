@@ -180,6 +180,23 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     return None
 
 
+def _resume_runtime_mismatch(work: Path, prior: dict[str, dict]) -> str | None:
+    """Resume may not bypass current Bun/transport admission or mix old trials."""
+    from eval.containers import bun_runtime
+    try:
+        current = bun_runtime.identity(work)
+    except bun_runtime.RuntimeUnavailable as exc:
+        return str(exc)
+    if current is None:
+        return None
+    for task_id, record in prior.items():
+        services = record.get("runtime_services") or []
+        if (not services or len(services) != record.get("n_trials")
+                or any(((item or {}).get("bun") or {}).get("identity") != current for item in services)):
+            return f"{task_id}: missing or changed Bun/Responses overlay identity; use a fresh run ID"
+    return None
+
+
 def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     """Fold the already-scored tasks back into a fresh `evaluate()` result.
 
@@ -191,9 +208,23 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     per_task = dict(merged.get("per_task") or {})
     invalid = dict(merged.get("invalid") or {})
     failed = dict(merged.get("harness_failed") or {})
+    # The runtime bookkeeping the OpenCode feature needs. The branch's side of this conflict made
+    # `invalid`/`failed` lists and derived `known`/`known_failed` from them, but the loop below
+    # calls `invalid.setdefault(...)` -- a list has no such method, and `known`/`known_failed` are
+    # never read. Kept main's dict shape and added what is actually used.
+    runtimes = list(merged.get("harness_runtime") or [])
+    diagnostics = dict(merged.get("runtime_diagnostics") or {})
     for task_id, record in prior.items():
         if task_id in per_task:
             continue
+        for services in record.get("runtime_services") or []:
+            if services:
+                diagnostics[task_id] = services
+                bun = services.get("bun") or {}
+                if bun.get("identity") is not None:
+                    runtime = {"bun": bun["identity"]}
+                    if runtime not in runtimes:
+                        runtimes.append(runtime)
         outcome = record.get("process_outcome")
         if outcome == "completed" and record.get("score") is not None:
             per_task[task_id] = float(record["score"])
@@ -205,6 +236,8 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     merged["per_task"] = per_task
     merged["invalid"] = invalid
     merged["harness_failed"] = failed
+    merged["harness_runtime"] = runtimes
+    merged["runtime_diagnostics"] = diagnostics
     return merged
 
 
@@ -279,6 +312,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         if prior:
             why = _resume_mismatch(run_dir, args,
                                    os.environ.get("HG_ALFWORLD_POOL", ""), sha)
+            why = why or _resume_runtime_mismatch(work, prior)
             if why:
                 console.note(f"refusing --resume: {why}", level="error")
                 return 2

@@ -5,7 +5,7 @@
 `methods/codex/run.py`, and `methods/` is supposed to hold the decision rules a paper
 proposes. "Run the improver the platform resolved" is not a rule: it is the *improver layer*,
 the same job `editor.py` does for a chat endpoint, and a method that is nothing but that
-layer is a tool wearing a method's name -- it would also make `方法 = codex` a true sentence
+layer is a tool wearing a method's name -- it would also make `method = codex` a true sentence
 about a run, when codex is a tool and the method is whichever rule wrapped it. So it moved
 here. **No method in `methods/` calls it today**, and that is the honest state: the reference
 method (`llm_improver`) delegated to it for one afternoon, and the delegation was withdrawn
@@ -41,6 +41,7 @@ where the tool can read it, the prompt, the timeout, and the report. That is thi
 from __future__ import annotations
 
 import os
+import signal
 import shlex
 import shutil
 import subprocess
@@ -49,6 +50,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from source_tree import copy_harness
+from bun_workspace import stage_candidate
 import editor                                              # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -209,14 +212,17 @@ def instruction(prompt: str | None, evidence: str = "", facts: str = "") -> str:
 def applies(req: dict) -> bool:
     """Is the improver this run resolved a **command**, rather than an endpoint?
 
-    True when the operator named one (`HG_IMPROVER`) or when the platform's resolution
-    carries a `path` and no `base_url`. The distinction matters because the two are driven
+    True when the operator named one (`HG_IMPROVER`) or the declared kind is `cli`.
+    Older records without a kind use `path` and absence of `base_url`. A CLI may itself
+    use a custom endpoint. The distinction matters because the two are driven
     completely differently: an endpoint is a chat call (`editor.ask`), a CLI is a
     subprocess in the candidate tree.
     """
     if os.environ.get("HG_IMPROVER"):
         return True
     improver = req.get("improver") or {}
+    if improver.get("kind"):
+        return improver["kind"] == "cli" and bool(improver.get("path"))
     return bool(improver.get("path")) and not improver.get("base_url")
 
 
@@ -494,11 +500,17 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     """
     workspace = Path(req["workspace"])
     candidate = Path(req.get("candidate") or (workspace / "candidate"))
-    if candidate.exists():
+    if req.get("exclusive_candidate"):
+        if os.path.lexists(candidate):
+            raise FileExistsError(f"Refusing to replace an existing candidate: {candidate}")
+        # copytree(exist_ok=False) also refuses a concurrent creation after this
+        # check. Exclusive mode must never enter the legacy deletion branch.
+    elif candidate.exists():
         shutil.rmtree(candidate)
     # A git repo, because codex's own `apply_patch` works through one, and because a harness
     # *is* a git repo on this platform (`ckpt/git_state.py`).
-    shutil.copytree(parent, candidate, ignore=shutil.ignore_patterns(".git"))
+    copy_harness(parent, candidate, ignore=shutil.ignore_patterns(".git"))
+    selftest = stage_candidate(candidate, req.get("harness_runtime"))
     subprocess.run(["git", "init", "-q", str(candidate)], check=True)
     # **Only when the harness has none.** This used to write unconditionally, and the
     # harness tree the platform stages already carries a `.gitignore` of its own
@@ -514,6 +526,21 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
             "_harnessgrad/\n__pycache__/\n*.pyc\n.state/\n")
 
     _stage_evidence(candidate, req)
+    if selftest:
+        guide = ("Prepared dependencies are attached before this turn; do not install packages.\n"
+                 "Workspace imports resolve into this candidate; third-party packages are shared read-only.\n"
+                 "Run public source tests from the candidate root (OpenCode examples):\n"
+                 "  .state/self-test unit packages/core test/tool-read-filesystem.test.ts\n"
+                 "  .state/self-test typecheck packages/core\n"
+                 "Other packages/test files may be selected. Each call has a 120-second limit, "
+                 "no network and no inherited credentials. Test failures/timeouts are not passes.\n"
+                 "The runtime dependency cache may omit root development dependencies: full typecheck "
+                 "can report missing types/tools even on the original source. Record that separately "
+                 "from candidate regressions; do not install packages to hide it.\n"
+                 "These self-tests do not replace independent platform acceptance.\n")
+        (candidate / "evidence").mkdir(exist_ok=True)
+        (candidate / "evidence/SELF_TEST.md").write_text(guide)
+        facts += "\nDependencies are ready. See evidence/SELF_TEST.md for the offline self-test entry."
 
     # **Which CLI this is, is declared, not assumed.** This used to append codex's argv
     # unconditionally, with a comment saying a second CLI would earn a proper argument
@@ -542,13 +569,19 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
 
     transcript = ""
     try:
-        proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout,
-                              cwd=str(candidate), env=env)
+        if req.get("exclusive_candidate"):
+            # The single-rewrite entry owns a fresh tree and a real process budget.
+            # The outer PID namespace also kills descendants that change sessions.
+            proc = _run_bounded(argv, timeout=min(timeout, 600), cwd=candidate, env=env)
+        else:
+            proc = subprocess.run(argv, capture_output=True, text=True, timeout=timeout,
+                                  cwd=str(candidate), env=env)
         transcript = (proc.stdout or "") + (proc.stderr or "")
         code = proc.returncode
     except subprocess.TimeoutExpired as exc:
-        transcript = ((exc.stdout or "") if isinstance(exc.stdout, str) else "") \
-            + ((exc.stderr or "") if isinstance(exc.stderr, str) else "")
+        def decoded(value):
+            return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else (value or "")
+        transcript = decoded(exc.stdout) + decoded(exc.stderr)
         code = -1
     (workspace / "improver.log").write_text(transcript[-200_000:], encoding="utf-8")
 
@@ -571,6 +604,22 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     return {"candidate": candidate, "changed": changed, "files": changed,
             "protected": protected, "exit_code": code, "seconds": reported["seconds"],
             "note": summary, "reported": reported, "transcript": transcript}
+
+
+def _run_bounded(argv, *, timeout, cwd, env):
+    """Method-local equivalent of the platform group deadline (platform is hidden)."""
+    with subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          text=True, errors="replace", start_new_session=True,
+                          cwd=cwd, env=env) as proc:
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except BaseException:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            raise
+        return subprocess.CompletedProcess(argv, proc.returncode, stdout, stderr)
 
 
 def run(req: dict, base: Path, *, method: str) -> int:

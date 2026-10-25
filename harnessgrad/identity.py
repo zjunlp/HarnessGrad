@@ -93,8 +93,9 @@ def _skill_sha() -> str | None:
 #: chat model asked to "propose one change" does. `improver.kind` is the difference between
 #: "an RSI rule driving codex" and "an RSI rule driving a bare model", and the record has to
 #: carry it for the method to know which it is.
-#: `base_url` is here for one reason: it is the **only** field that separates an endpoint
-#: from a CLI once `resolve` has run, because an endpoint carries `path` = its base URL
+#: `base_url` records the selected endpoint. `kind` distinguishes a CLI using a custom
+#: endpoint from a direct endpoint improver, whose `path` is its base URL.
+#: Historically, the absence of `base_url` was the CLI discriminator
 #: (`tools/improver.py:resolve`). Without it in the record, the method-side test
 #: "does this improver carry a path and no base_url?" -- the fallback `cli_improver.applies`
 #: has always documented -- could not tell them apart, and every endpoint improver was
@@ -110,7 +111,8 @@ def _skill_sha() -> str | None:
 #: handed codex's `exec --sandbox ... -C` and died looking like a method bug; recorded on the
 #: point, it is also what tells two improvers sharing one model apart.
 IMPROVER_IDENTITY_FIELDS = ("name", "kind", "argv_style", "base_url", "version", "sha256",
-                            "model", "requested", "modified", "path")
+                            "model", "requested", "modified", "path",
+                            "provider", "profile", "wire", "api_key_env")
 
 
 def _improver_identity(improver: dict | None) -> dict:
