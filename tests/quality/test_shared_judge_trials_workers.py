@@ -104,7 +104,8 @@ def test_incomplete_trials_do_not_publish_a_smaller_denominator(tmp_path,monkeyp
                            verifiers={'a':{'trial_protocol':PROTOCOL}})
     report=result['repeated_trials']
     assert not report['complete'] and report['metrics'] is None
-    assert len(report['invalid'])==1 and len(report['missing'])==1
+    assert n==3 and len(report['results'])==3
+    assert len(report['invalid'])==1 and report['missing']==[]
 
 
 def test_manifest_rejects_duplicate_and_unexpected_trials():

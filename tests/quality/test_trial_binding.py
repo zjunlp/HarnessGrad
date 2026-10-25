@@ -96,6 +96,36 @@ def test_foreign_verdict_is_refused_by_aggregation(tmp_path, scorer, docker_doub
     assert "binding" in json.dumps(measured["invalid"])
 
 
+@pytest.mark.parametrize("foreign_index", [0, 1, 2])
+def test_foreign_trial_verdict_stays_unmeasured_when_declared_trials_continue(
+        tmp_path, scorer, docker_double, monkeypatch, foreign_index):
+    work = actor(tmp_path)
+    calls = []
+
+    def run_one(_repo, _task, **kwargs):
+        trial_id = "foreign-trial" if len(calls) == foreign_index else kwargs["trial_id"]
+        calls.append(kwargs["run_seed"])
+        verdict = invoke(work, scorer, trial_id=trial_id)
+        assert verdict["score"] == 1
+        return dict(verdict=verdict, trace="", exit_code=0, stderr="")
+
+    monkeypatch.setattr(runner, "run_one", run_one)
+    protocol = dict(version=1, metric="pass^k", trials=3, ks=[1, 2, 3], seeds=[10, 20, 30])
+    result = runner._evaluate(tmp_path, [{"task_id": "t"}], {}, trials=3,
+        run_id=IDENTITY["outer_run_id"], sandbox=False,
+        verifiers={"t": {**scorer, "trial_protocol": protocol}}, progress_dir=tmp_path / "records")
+    assert calls == ["10", "20", "30"]
+    report = result["repeated_trials"]
+    assert report["missing"] == [] and len(report["invalid"]) == 1
+    assert not report["complete"] and report["metrics"] is None
+    for index, row in enumerate(report["results"]):
+        if index == foreign_index:
+            assert row["status"] == "unmeasured" and row["score"] is None
+            assert "binding refused" in row["reason"]
+        else:
+            assert row["status"] == "measured" and row["score"] == 1
+
+
 def test_verifier_dispatch_refuses_foreign_returned_verdict(tmp_path, scorer, docker_double, monkeypatch):
     from eval.verification import pristine
     verdict = invoke(actor(tmp_path), scorer)

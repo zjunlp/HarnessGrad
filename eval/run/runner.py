@@ -1559,6 +1559,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # One task, `trials` times. See `evaluate` for why one is not enough.
         measured: list[dict] = []
         unmeasured: dict | None = None
+        unmeasured_result: dict | None = None
         trial_marker = None
         if trial_protocol and progress_dir is not None:
             trial_marker = repeated_trials.start_task(
@@ -1586,6 +1587,13 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     held.failed(f"{type(exc).__name__}: {exc}")
                     raise
 
+                # Validate the trial identity before either report consumes its
+                # score; a refused verdict must remain unmeasured in pass^k too.
+                if not result.get("invalid") and declared_class((verifiers or {}).get(tid)) == "pristine-offline":
+                    result["verdict"] = enforce_verdict_binding(
+                        result.get("verdict") or {}, task_id=tid, run_id=run_id,
+                        trial_id=trial_identity(trial))
+
                 # A task the platform could not measure never reaches scoring. It is *not*
                 # cached either: the cache key names the harness, and the reason this
                 # task failed was not the harness, so caching it would carry a dataset bug
@@ -1601,12 +1609,13 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                         result, plan, provider_failure=provider))
                 if result.get("invalid"):
                     unmeasured = result["invalid"]
+                    unmeasured_result = result
                     held.failed(str(unmeasured.get("detail") or "")[:200])
+                    # Declared trials are independent planned measurements. Keep
+                    # this failure without cancelling the remaining trial seeds.
+                    if trial_protocol:
+                        continue
                     break
-                if declared_class((verifiers or {}).get(tid)) == "pristine-offline":
-                    result["verdict"] = enforce_verdict_binding(
-                        result.get("verdict") or {}, task_id=tid, run_id=run_id,
-                        trial_id=trial_identity(trial))
                 # **The harness died because it could not reach the model endpoint.**
                 # `_provider_failure` has existed since the bug it describes was measured
                 # and was, until this call, only ever exercised by its own tests -- so a run
@@ -1634,7 +1643,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                         "detail": (f"the harness could not reach the model endpoint and "
                                    f"exited {provider['exit_code']}: {provider['line']}")
                                   + modelgate_mod.describe(result.get("model_gateway"))}
+                    unmeasured_result = result
                     held.failed(str(unmeasured["detail"])[:200])
+                    if trial_protocol:
+                        continue
                     break
                 # **A check that never ran is not a zero.** The platform can prove it when the
                 # check was supposed to leave a machine-readable report and did not
@@ -1650,7 +1662,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     if result["verdict"].get("protocol"):
                         unmeasured.update(protocol=result["verdict"]["protocol"],
                                           receipt=result["verdict"].get("evidence"))
+                    unmeasured_result = result
                     held.failed(str(unmeasured["detail"])[:200])
+                    if trial_protocol:
+                        continue
                     break
 
                 # The score the platform computed for this task. Set on the holder so the
@@ -1680,11 +1695,14 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             # Not cached, and deliberately: the cache key names the harness, and the reason
             # this task failed was not the harness, so caching it would carry a dataset bug
             # into every later round and hide the round where it was introduced.
+            # Later declared trials may have succeeded; diagnostics must still
+            # come from the trial that supplied this unmeasured reason.
+            diagnostic = unmeasured_result or result
             _write_progress(progress_dir, round_no, tid, [], unmeasured,
-                            diagnostic=result, enforcement=enforcement)
+                            diagnostic=diagnostic, enforcement=enforcement)
             return {"task_id": tid, "invalid": unmeasured,
-                    "harness_runtime": (result or {}).get("harness_runtime"),
-                    "runtime_services": (result or {}).get("runtime_services")}
+                    "harness_runtime": (diagnostic or {}).get("harness_runtime"),
+                    "runtime_services": (diagnostic or {}).get("runtime_services")}
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
         if trial_marker is not None:
             trial_marker.unlink()

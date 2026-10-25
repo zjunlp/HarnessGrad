@@ -222,6 +222,11 @@ runner 的 `trials` 必须一致；一个 evaluation 不能混用有/无协议�
 每个 trial 的显式 seed 转成字符串传入 `run_one.run_seed`；启用 `tool_relay.record` 后，
 relay 可从 context 读取它。
 
+某次 trial 返回 `invalid`、评分器 `unmeasured` 或 provider 故障时，runner 保留该次失败，
+继续执行其余已声明的 trial。任务级错误原因与诊断来自同一次失败 trial，
+不会配上后来成功 trial 的 trace。该继续执行规则仅适用于显式 `trial_protocol`；
+取消或未捕获的执行异常仍可中断运行。
+
 结果通过 `repeated_trials` 字段返回；提供 `progress_dir` 时持久保存到：
 
 `<progress_dir>/protocols/round-<N>/<report-key>/repeated-trials.json`
