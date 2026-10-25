@@ -1,0 +1,1 @@
+{"name":"costbench-control","version":"1","entrypoint":"agent.py","backend":"cli","env_kinds":["files"],"install":null,"role":"control","notes":"Gold-path reachability control; no model calls. Not an evaluated planning harness."}

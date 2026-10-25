@@ -17,8 +17,8 @@ smokes are retained, with no task tuning or budget increase authorized here.
 
 ## Dataset integration summary
 
-KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT, τ³ and CooperBench are registered
-adapters. Their READMEs define the current task scope, splits, scoring, preparation
+KUMO, MemoryAgentBench, PersonaMem-v2, StrongREJECT, τ³, CooperBench and CostBench
+are registered adapters. Their READMEs define the current task scope, splits, scoring, preparation
 and controls:
 
 - [KUMO](../data/datasets/kumo/README.md)
@@ -27,11 +27,107 @@ and controls:
 - [StrongREJECT](../data/datasets/strongreject/README.md)
 - [τ³](../data/datasets/tau3_bench/README.md)
 - [CooperBench](../data/datasets/cooperbench/README.md)
+- [CostBench static](../data/datasets/costbench/README.md)
+- [CostBench dynamic](../data/datasets/costbench_dynamic/README.md)
 
 The [runtime interface](dataset-runtime-interfaces.md) defines trusted interaction
 records, judge/environment model channels, repeated trials and fixed peer execution.
 Dataset tests cover these integrations; API receipts and validation artifacts are
 kept outside the repository.
+
+## CostBench static protocol — 2026-10-21
+
+The adapter targets the official `6424069f3f773ade076bcedbed302ed47cfb1837`
+release's static sequence-length-five setting: refinement level 2, no dynamic
+blocking, and tools that solve the complete task in one call disabled. Official
+train and test files remain separate. The release contains 1,912 training queries
+and 381 test queries; the paper's training count of 1,902 is not substituted for
+the released file count. The training runtime requires explicitly named enum and
+seven-digit-ID compatibility repairs: the shipped enums cover test values and
+the official answer parser recognizes five-digit IDs. The official test protocol
+and repaired training interpretation must not be pooled into a single official
+answer-accuracy claim.
+
+The full model-free gold audit executed all 2,293 retained tasks and recorded
+2,293 optimal-path matches. The unchanged official parser accepts all 381 test
+answers and rejects all 1,912 seven-digit training answers; the separately named
+training-ID-compatible check accepts all 1,912. Training answers are deliberately
+not relabelled as official parser successes.
+The original training runtime audit records 1,912/1,912 failures before the enum
+repair. Evidence: external dataset-root `gold-audit.json` (SHA256
+`7f98434190fb53a46aae338b1067f7c55bd6623e3c74ccc1baa52fb564260d89`),
+`raw-train-audit.json`, and `prepared-v1/manifest.json`; source and protocol pins
+are retained in the adapter and preparation code. These are deterministic
+reference checks, not model measurements.
+
+The primary metric is official optimal-tool-path exact match. Cost, path distance,
+answer accuracy and invalid-tool statistics remain separately identifiable with
+their official eligibility rules. Simulated tool prices are not actual model-token
+costs or a hard compute budget. CostBench adds the first `cost` function member;
+the coverage floor of two remains unmet.
+
+The adapter reuses the existing private tool relay, sealed interaction record and
+command verifier. Candidate harnesses choose their own actions; the reference
+solver and gold state remain in trusted runtime/verifier inputs. Dataset scope,
+preparation, controls and comparison limits live in the
+[CostBench README](../data/datasets/costbench/README.md). Reproducible validation
+entry point: `python3 tools/run_tests.py --dataset costbench --with-registry`.
+Source-only discovery, layout, blocker and journal checks pass (90 tests);
+`tools/check_dataset_blockers.py` validates 37 entries; CostBench-only lint and
+classification pass with 1,912 train / 381 eval tasks and a closed-loop interface.
+The broader registry tests are not all green on this host: unrelated legacy
+adapters require inaccessible `/mnt/20t/xubuqiang/datasets` data or missing
+packages/checkouts, and the import-direction guard finds existing unregistered
+edges in MemoryAgentBench, PersonaMem-v2 and StrongREJECT. Representative failures
+also reproduce on the unchanged `feat/dataset-integrations` worktree.
+The three CostBench test files pass all 62 tests with prepared data (no skips),
+including train/test gold and no-op sandbox controls, six-domain execution,
+actor scorer/record forgery attempts, malformed calls and database corruption.
+A fresh-root regeneration reproduces both complete database index hashes and
+all public/private/oracle hashes for twelve queries spanning both splits and all
+six domains. The six-domain test-evidence report smoke also passes its explicit
+cell manifest. Receipts live outside git under the dataset root in
+`integration-validation-20261021/` and `registry-validation-20261021/`.
+
+The full 37-entry download index was rendered with `tools.datasets.render_index`.
+For five legacy adapters that cannot import on this host, only their source-defined
+`downloads()` functions and literal metadata were evaluated; this preserves their
+existing entries without inventing data availability. Regeneration also restores
+the previously omitted, already registered LoCoMo download entry.
+
+No candidate-harness evaluation or full-benchmark model performance is claimed
+by registration or reference controls. Dynamic blocking remains outside this
+adapter's static protocol.
+
+### Real API receipts and static aggregation follow-up — 2026-10-21
+
+The subsequent `Ling-3.1-flash` diagnostic at static commit `d970a47d`
+completed 24/24 measured tasks (12 train, 12 test), with no invalid or excluded
+attempts. Reference path matches were 5/12 train and 4/12 test; answer correctness
+was 7/12 on each split, using the named compatibility check for train. Ten parsing
+retry endings remain measured zeros. Official path/answer/cost denominators are
+seven per split, so their filtered metrics differ from these all-measured counts.
+The [static README](../data/datasets/costbench/README.md#real-api-validation-2026-10-21)
+records these results, earlier Ling-3.0/display diagnostics, resource limits,
+and source identities. Run receipts remain outside Git.
+
+The Ling-3.1 run used a temporary child-process display limit of 50,000 characters;
+loop source and `.env` were unchanged. They are small integration diagnostics,
+not default-display or full-benchmark performance estimates. All 24 final-run
+relay cleanups passed; prior interrupted/invalid receipts remain preserved.
+
+`costbench.run_reward` is declared as `arithmetic_mean` over `measured_tasks`
+in `data/aggregation_policies.json`. The aggregation regression inventory
+includes the static registration.
+
+Follow-up validation used the project's Python 3.12 environment:
+`python -m pytest -q tests/quality/test_aggregation_policies.py` passed 58 tests;
+two existing inventory checks still fail only for `memoryagentbench`,
+`personamem_v2`, and `strongreject`. CostBench is absent from both failure lists.
+A direct replay of the five historical aggregation inputs passed for `costbench`.
+`tests/quality/test_dataset_journal_coverage.py` passed both tests,
+and `python3 tools/check_dataset_blockers.py` validated the registry.
+This follow-up made no API calls or loop changes.
 
 ## `data/` split complete: scaffolds and datasets separated — 2026-10-14 — ds, ds2, ds3, ds4
 
@@ -5855,3 +5951,104 @@ No API calls were made for this layout change.
 - Conda validation: **60 passed**, including the optional pinned-data comparisons over all 10 conversations and 1,986 questions. LoCoMo dataset lint and `git diff --check` pass. No model calls.
 
 - API connectivity check after cleanup: Conda + standard `driver.py` + unchanged `loop`, one full conv-26 transcript with only its first three questions, one trial, jobs=1, rounds=0. Six successful calls to the configured `Ling-3.1-flash` API; driver exited 0, all three answers and per-question records saved, task/curve/manual-summary scores agree. The temporary loopback HTTP-to-HTTPS bridge was needed by the existing HTTP-only native model route; no platform code was changed. Test artifacts are outside Git at `datasets/locomo/audit-20261018/api-cleanup-01/`. The test is not comparable to a full benchmark, and does not establish direct HTTPS support. Runner temporary files, bridge and work root cleaned; source data hash unchanged.
+
+## CostBench one-event dynamic protocols — 2026-10-21
+
+`costbench_dynamic` registers four distinct protocols: `cost_change`,
+`steplen_change`, `ban_tool`, and `preference_change`, each with one event and
+atomic sequence length five. Each mode includes all 1,912 released train and
+381 test queries (9,172 mode/query cases). The adapter reuses the pinned official
+blocker, solver, tool generator and evaluator. Future plans and references stay
+private; the existing trusted relay exports the sealed scoring record, while
+`show` exposes current schemas and user requirements after changes. No shared
+loop or execution-platform behavior changes.
+
+The branch also supplies the previously missing static CostBench aggregation
+declaration alongside the dynamic one: both standard run means divide by measured
+tasks.
+
+The upstream event order, charged failed bans, independently chosen reference
+ban, tool-length filtering, and effective-event counting are preserved. A task
+that ends before its event is a measured primary zero with separately reported
+upstream eligibility; a missing reference or service/scorer fault is unmeasured.
+Train enum and seven-digit answer compatibility remains explicit and separate
+from raw official scores. The blocker's hardcoded test database path is routed
+to the selected digest-checked split. Replacement preferences stay within that
+split. Static and dynamic protocols count as one benchmark family for cost
+coverage, and cost remains simulated tool-price units.
+
+See the [dynamic adapter README](../data/datasets/costbench_dynamic/README.md)
+for protocol details, preparation and controls. Mixed or multiple interventions
+are outside this version. The initial integration validation below used no
+model/API calls. Subsequent dynamic API receipts are recorded separately below;
+historical static API results are not dynamic performance evidence.
+
+Validation: **9,172/9,172** full gold trajectories, **158** CostBench tests, both
+dataset lints, and **16** direct controls / **8** report CLI checks passed. The
+manifest is pinned to `a424801c3d156bfc9527534e715e40ed02cd812889ae0d1c711c9d8c792e4c14`.
+Source/catalog checks additionally passed 38 tests and 38 subtests; seven focused
+classification tests passed (26 live-registry tests deselected). Four broader
+checks remain red and were reproduced on static `d970a47d`: import boundaries,
+unavailable host dependencies, and aggregation inventory/declarations for
+`memoryagentbench`, `personamem_v2`, and `strongreject`. The static CostBench
+aggregation omission found in that baseline is fixed here. This is not a
+repository-wide green claim. The outside-Git validation receipt is workspace
+`datasets/costbench/dynamic-integration-validation-20261021/summary.json`.
+
+### Dynamic real API coverage and step-length supplement — 2026-10-21
+
+At dynamic source commit `2f88e25e`, `Ling-3.1-flash` exercised the four modes
+on both splits with three preselected tasks per cell. The accepted-cohort report
+`runs/costbench-dynamic-ling31-coverage-20261021-01/summary.json` contains 24
+measurements from 37 attempts: 13 initial provider 429 failures were excluded and
+rerun, no other attempts were invalid, and nine normal parsing-retry zeros remain.
+The shared runner's terminal-429 classification gap remains a platform follow-up;
+this report explicitly excludes those failed attempts even where raw platform
+records store zero. The 24 accepted tasks produced seven reference-path matches,
+11 correct answers (training compatibility kept separate), and 15 actual/effective
+events across seven of the eight mode/split cells. Official aggregate eligibility
+and denominators remain explicit, including the zero-denominator/null metrics
+for the original `steplen_change/test` cell.
+
+The independent supplement
+`runs/costbench-dynamic-steplen-test-ling31-3-20261021-01/summary.json` used three
+fresh `steplen_change/test` queries (`Query00002`, `Query00401`, `Query00798`).
+All three had valid measurements, actual/effective events, reference-path matches
+and correct answers, with no provider failures, other invalid attempts, API retries
+or output clipping. The supplement's `coverage-closure.json` closes real event
+execution coverage for **8/8 mode/split cells** and verifies that the original
+24-task reports were preserved. It does not replace the original three zero-score
+tasks or improve the original cohort's scores.
+
+Both runs used the same temporary 50,000-character display configuration and
+unchanged loop source and `.env`. The original cohort's integrity audit and
+independent final review passed; the supplement's three-task audit passed.
+All attempts completed relay cleanup, and scratch directories were archived and
+removed. Failed initial attempts have incomplete provider usage, so no complete
+API spending claim is made. The
+[dynamic README](../data/datasets/costbench_dynamic/README.md#real-api-validation-and-event-supplement-2026-10-21)
+summarizes the per-cell counts, validation and comparison limits. Run receipts
+remain outside Git. This closes the missing real-event coverage within the four
+single-event protocols; it is not a full-benchmark or cross-mode performance estimate.
+
+## CostBench registration and validation notes — 2026-10-22
+
+The CLI and in-process closed-loop expectations now include both `costbench` and
+`costbench_dynamic`, alongside the existing adapters. Both READMEs retain the
+test commands, validation summaries and limitations; local receipt path lists
+have been removed. Run logs and validation artifacts remain outside Git.
+CostBench execution, preparation, scoring, pinned resources and test assertions
+are unchanged; an unused test import was removed.
+
+Validation on the shared-runtime and five-dataset stack: **158 CostBench tests**,
+**2 common controls** and **7 focused taxonomy checks** passed. The two CostBench
+adapters classify and filter as closed-loop; both complete expected-name sets
+match the declarations. Blocker registry validation passed for 38 datasets.
+The broader registration selection returned **178 passed, 3 failed**, plus
+38 passing subtests: one inventory failure concerns five unavailable existing
+adapters; two aggregation failures concern missing policies/inventory entries
+for `personamem_v2`, `memoryagentbench` and `strongreject`. The earlier import-edge
+failure is resolved by the stack's existing registrations. Both full-catalog
+filter tests stop on missing AgentDojo prepared data before their assertions
+(one failure, one setup error); a passing full-catalog run is not claimed.
+Validation used prepared local data and mock controls, with no model calls.

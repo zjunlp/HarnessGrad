@@ -35,6 +35,8 @@ EXPECTED_DATASETS = (
     "bird_minidev",
     "chessbench_puzzles",
     "cooperbench",
+    "costbench",
+    "costbench_dynamic",
     "ds1000",
     "fever",
     "gaia",

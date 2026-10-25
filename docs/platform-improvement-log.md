@@ -83,3 +83,15 @@ Validation: 58 shared/KUMO/Docker controls passed. Expanded regression had 578
 passes, 22 failures reproduced on baseline `7dd15360`, and 45 skips. One-off logs
 and validation records are archived outside the repository; automated tests remain
 under `tests/quality/`.
+
+
+## CostBench static reuses trusted interaction records — 2026-10-21
+
+CostBench static uses the existing native relay, sealed episode projection and
+command verifier to distinguish actual tool execution from actor-written output.
+No new shared runtime interface is required. Dataset-owned scoring preserves
+cost-metric eligibility separately from task failure, and registration distinguishes
+simulated tool-cost optimization from actual model spend or hard-budget management.
+See the [integration journal](adapter-integration-journal.md#costbench-static-protocol--2026-10-21)
+and [dataset contract](../data/datasets/costbench/README.md). This entry describes
+interface reuse and makes no standalone claim about validation or model performance.
