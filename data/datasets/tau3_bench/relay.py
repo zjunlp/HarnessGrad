@@ -58,7 +58,8 @@ class Service:
             try:
                 return {'result': operations[op][0](**args)}
             except Exception as exc:
-                self.failure = type(exc).__name__
+                if self.failure is None:
+                    self.failure = type(exc).__name__
                 raise
 
     def episode(self):
@@ -100,14 +101,16 @@ def main():
         # Wait for any current simulator/tool operation before sealing. The platform
         # bounds graceful exit; an unfinished call cannot create an accepted episode.
         with service.lock:
-            if not clean:
-                service.failure = 'service_deadline'
-            elif (relay.receipt['errors'] > relay.receipt['request_errors']
-                  or relay.receipt['refused']):
-                service.failure = 'transport_failure'
+            # Generic shutdown failures must not replace the first known exception.
+            if service.failure is None:
+                if not clean:
+                    service.failure = 'service_deadline'
+                elif (relay.receipt['errors'] > relay.receipt['request_errors']
+                      or relay.receipt['refused']):
+                    service.failure = 'transport_failure'
             Path(os.environ['HG_RELAY_RECORD_PATH']).write_text(json.dumps(service.episode()))
     args.receipt.write_text(json.dumps({'transport': relay.receipt, 'stopped_cleanly': clean,
-                                      'task_id': config['task_id']}))
+                                      'task_id': config['task_id'], 'failure': service.failure}))
     return 0 if clean and service.failure is None else 1
 
 if __name__ == '__main__':

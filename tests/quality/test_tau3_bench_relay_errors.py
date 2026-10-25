@@ -95,6 +95,7 @@ def test_rejected_actor_requests_preserve_official_scoring(tmp_path, monkeypatch
     if mode in ('provider', 'budget'):
         assert result['invalid']['stage'] == 'tool relay', result
         assert relay['faults'] and relay['recording'] is None
+        assert relay['receipt']['failure'] == ('ToolTransportError' if mode == 'provider' else 'transport_failure')
         assert transport['request_errors'] == 4
         if mode == 'provider':
             assert transport['errors'] == 5
@@ -105,6 +106,7 @@ def test_rejected_actor_requests_preserve_official_scoring(tmp_path, monkeypatch
 
     assert 'invalid' not in result and result['exit_code'] == 0, result
     assert not relay['faults']
+    assert relay['receipt']['failure'] is None
     assert transport['errors'] == transport['request_errors'] == 8
     sealed = json.loads(Path(relay['recording']['archive']).read_text())
     assert sealed['binding']['trial_id'] == mode
