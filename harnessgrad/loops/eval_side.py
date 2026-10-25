@@ -268,7 +268,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     # scored once must not be scored again, because two measurements of one task are two
     # numbers and picking either is a choice the record cannot defend.
     prior: dict[str, dict] = {}
-    from eval.run import repeated_trials
+    from eval.run import repeated_trials, trial_evidence
     protocol = repeated_trials.protocol_for(tasks, verifiers or {}, args.trials)
     trial_plan = None
     old_trial_rows = []
@@ -305,7 +305,10 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         if trial_plan:
             try:
                 old_trial_rows = repeated_trials.resume_rows(
-                    repeated_trials.report_root(run_dir, 0, sha), trial_plan, prior)
+                    repeated_trials.report_root(run_dir, 0, sha), trial_plan, prior,
+                    evidence_tasks={t['task_id'] for t in tasks
+                                    if trial_evidence.enabled((verifiers or {}).get(t['task_id']))},
+                    progress_dir=run_dir)
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 console.note(f'refusing repeated-trial resume: {exc}', level='error')
                 return 2

@@ -149,7 +149,8 @@ def _verify(tid, row):
               'runtime_paths': list(runtime_paths),
               'inputs': inputs, 'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
               'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
-              'trial_protocol': dict(TRIAL_PROTOCOL)}
+              'trial_protocol': dict(TRIAL_PROTOCOL),
+              'trial_evidence': {'version': 1}}
     if row['needs_judge']:
         result['judge'] = model_spec('judge')
     return result

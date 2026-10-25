@@ -289,6 +289,43 @@ eval 断点续跑还会保存 `<progress_dir>/protocols/round-0/resume-plan.json
 未绑定 trial seed 的 `tool_relay.model` 不单独触发此规则。
 其他任务按常规 measurement cache 规则处理。
 
+### 6.1 可选的逐次完整证据归档
+
+```python
+VERIFY[task_id]["trial_evidence"] = {"version": 1}
+```
+
+默认关闭，单独声明 `trial_protocol` 不会开启。目前 τ³ 适配器显式开启此扩展。
+v1 要求已有 `trial_protocol`、sandboxed `files` 环境、无 `workers`，
+并向 evaluation 提供 `progress_dir`。归档目录必须位于 Harness 及其可见 work root 之外。
+不满足条件会在执行前报错，不静默降级成未保存证据的评测。
+
+每次 `run_one` 返回后、执行下一次试验前，原子写入一个不可覆盖的 JSON：
+
+`<progress_dir>/trial-evidence/round-<N>/<report-key>/<sha256(task_id)>/<sha256(trial_id)>.json`
+
+`report-key` 与上述重复试验报告相同。正常结果和不可测结果都保存，包含：
+
+- `binding`：run、round、harness、task、trial 和 seed；
+- `configuration` 和 `outcome`：原始试验协议、该次测量状态与分数；
+- `result`：完整返回值，包括 verdict 及其 evidence、Harness 轨迹、服务回执和已封存交互记录的引用；
+- `result.trial_evidence_output`：清理临时目录前收集的可用 trace、stdout、stderr、实际退出码或启动异常。
+
+relay 故障提前返回时仍收集输出，但不继续调用评分器。轨迹由 Harness 提供，属于未经信任的诊断数据；
+缺失、不可读、链接或非普通文件会明确记为缺失/采集失败，不影响原始评分。异常 UTF-8 另存 base64 原始字节。
+这项扩展不增加轨迹字节截断；实际归档大小取决于运行输出。
+
+重复试验报告的每行增加 `trial_evidence.path/sha256`，路径相对本次 run 的 `progress_dir`。
+归档写入失败会中止本次评测并保留已完成归档和进行中标记；不发布声称证据齐全的结果。
+未返回结果的中断试验不保证有完整归档，之前返回的试验文件仍保留。
+eval 续跑在跳过已完成任务前检查文件存在、内容 hash 和身份绑定；
+缺失或不一致时拒绝复用。原有部分分组/进行中任务的续跑限制保持不变，不自动重试。
+
+此目录与正常结果共用 run 输出根目录，但不加入现有 `traces/trial_traces/trial_verdicts`
+或方法反馈通道。完整分组的原有输出保持不变；不完整分组中的有效单次结果可供审查，
+不会因此变成完整分组、缩小分母或获得正式 `pass^k`。未开启的任务不采集或写入此扩展归档。
+直接调用 `run_one` 只返回采集数据；逐次持久化由 evaluation 负责。
+
 ## 7. 固定 peer 执行接口
 
 ```python
@@ -447,6 +484,8 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 
 - `tests/quality/test_shared_dataset_runtime.py`
 - `tests/quality/test_shared_judge_trials_workers.py`
+- `tests/quality/test_trial_evidence.py`
+- `tests/quality/test_trial_evidence_resume.py`
 - `tests/quality/test_judge_model_api.py`
 - `tests/quality/test_observed_workers.py`
 - `tests/quality/test_registry_selection.py`

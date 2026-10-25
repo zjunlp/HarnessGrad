@@ -191,7 +191,7 @@ def test_three_trials_emit_complete_domain_report(tmp_path, monkeypatch):
     manifest['runtime_paths'] = list(dict.fromkeys([sys.prefix, sys.base_prefix,
         str(Path(sys._base_executable).parent.parent)]))
     (harness / 'harness.json').write_text(json.dumps(manifest))
-    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(tmp_path))
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness))
     with control.Endpoint() as endpoint:
         result = evaluate(harness, [dataset.control_task(tid)], {tid: dataset.METRIC},
                           setups={tid: dataset.SETUP[tid]}, verifiers={tid: dataset.VERIFY[tid]},
@@ -206,6 +206,13 @@ def test_three_trials_emit_complete_domain_report(tmp_path, monkeypatch):
     assert grouped['groups'] == {'airline': {'1': 0, '2': 0, '3': 0}}
     assert grouped['selected_tasks'] == 1 and not grouped['official_full_base']
     assert list((tmp_path / 'progress').rglob('repeated-trials.json'))
+    for row in repeated['results']:
+        saved = json.loads((tmp_path / 'progress' / row['trial_evidence']['path']).read_text())
+        assert saved['result']['verdict']['evidence']['measured'] is True
+        assert saved['result']['verdict']['score'] == 0
+        assert saved['result']['trial_evidence_output']['launch_attempted']
+        archive = Path(saved['result']['runtime_services']['tool_relay']['recording']['archive'])
+        assert json.loads(archive.read_text())['binding']['trial_id'] == row['trial_id']
 
 
 def test_official_user_tool_roundtrip_through_http_broker(official, monkeypatch, tmp_path):

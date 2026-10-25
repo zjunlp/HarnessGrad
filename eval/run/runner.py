@@ -23,7 +23,7 @@ from eval.containers.process import run as run_process
 import eval.service.services as services_mod
 from eval.service.unix_stepwise_relay import StepwiseRelay
 from eval.run import tool_relay as tool_relay_mod
-from eval.run import chess_stepwise
+from eval.run import chess_stepwise, trial_evidence
 import tools.web_gateway as web_gateway_mod
 from ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT, diff, snapshot
@@ -322,6 +322,10 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             trial_id: str | None = None,
             observation: dict | None = None,
             _worker: dict | None = None) -> dict:
+    evidence_output = None
+    if trial_evidence.enabled(verifier):
+        trial_evidence.admit_execution(sandbox=sandbox, setup=setup, env=env)
+        evidence_output = {'launch_attempted': False, 'trace_status': 'not_started'}
     if diagnostic_authorization is not None:
         diagnostic_authorization.require_scope(run_id, [task["task_id"]])
     refusal = _refuse_unobserved_policies(
@@ -346,7 +350,10 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
     result = refusal if refusal is not None else _run_one(
         repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
         env, run_id, run_seed, recordings_root, trial_id=trial_id,
-        runtime_receipt=runtime_receipt, worker=_worker)
+        runtime_receipt=runtime_receipt, worker=_worker,
+        **({'evidence_output': evidence_output} if evidence_output is not None else {}))
+    if evidence_output is not None:
+        result['trial_evidence_output'] = evidence_output
     if runtime_receipt:
         result["runtime_services"] = runtime_receipt
         if runtime_receipt.get("bun"):
@@ -372,7 +379,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             env: dict | None = None,
             run_id: str = "", run_seed: str = "",
             recordings_root: Path | None = None, *, trial_id: str | None = None,
-            runtime_receipt: dict | None = None, worker: dict | None = None) -> dict:
+            runtime_receipt: dict | None = None, worker: dict | None = None,
+            evidence_output: dict | None = None) -> dict:
     """Run the harness on one task in a throwaway dir, off the platform's disk.
 
     Returns {task_id, answer, trace, exit_code}. A non-zero exit is recorded as
@@ -490,6 +498,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     stepwise_dir = None
     tool_relay = None
     package_overlays = ()
+    proc, launch_error, launch_attempted = None, None, False
     workdir = Path(tempfile.mkdtemp(prefix="hg-task-"))
     try:
         if (bun_preparation or {}).get("responses_overlay"):
@@ -788,7 +797,12 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 if stepwise_relay is not None:
                     stepwise_relay.start()
                 try:
-                    proc = launch()
+                    launch_attempted = True
+                    try:
+                        proc = launch()
+                    except BaseException as exc:
+                        launch_error = exc
+                        raise
                 finally:
                     if stepwise_relay is not None:
                         stepwise_relay.stop()
@@ -915,6 +929,9 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                 if web_gateway is not None else None),
                 "identity": _last_identity(trace)}
     finally:
+        if evidence_output is not None:
+            evidence_output.update(trial_evidence.capture_output(
+                workdir, attempted=launch_attempted, process=proc, error=launch_error))
         if (bun_preparation or {}).get("responses_overlay"):
             from eval.containers.responses_overlay import collect_capture
             runtime_receipt["responses_capture"] = collect_capture(workdir)
@@ -1350,6 +1367,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
 
     from eval.run import repeated_trials
     trial_protocol = repeated_trials.protocol_for(tasks, verifiers or {}, trials)
+    evidence_tasks = {t['task_id'] for t in tasks
+                      if trial_evidence.enabled((verifiers or {}).get(t['task_id']))}
+    if evidence_tasks:
+        trial_evidence.admit_archive(repo, progress_dir)
+        for tid in evidence_tasks:
+            trial_evidence.admit_execution(sandbox=sandbox, setup=(setups or {}).get(tid),
+                                           env=(envs or {}).get(tid))
+    evidence_plan = {'configuration': trial_protocol, 'run_id': run_id,
+                     'round': round_no, 'harness_sha': harness_sha}
     trial_rows = {t["task_id"]: [] for t in tasks} if trial_protocol else {}
     def fresh_measurement(tid):
         spec = (verifiers or {}).get(tid) or {}
@@ -1605,8 +1631,11 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     plan = {"task_id": tid, "trial_id": trial_identity(trial),
                             "seed": str(trial_protocol["seeds"][trial])}
                     provider = _provider_failure(result)
-                    trial_rows[tid].append(repeated_trials.result_row(
-                        result, plan, provider_failure=provider))
+                    row = repeated_trials.result_row(result, plan, provider_failure=provider)
+                    if tid in evidence_tasks:
+                        row['trial_evidence'] = trial_evidence.save(
+                            progress_dir, evidence_plan, row, result)
+                    trial_rows[tid].append(row)
                 if result.get("invalid"):
                     unmeasured = result["invalid"]
                     unmeasured_result = result

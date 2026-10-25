@@ -135,7 +135,7 @@ def start_task(root, task_plan):
     return marker
 
 
-def resume_rows(root, full_plan, prior):
+def resume_rows(root, full_plan, prior, *, evidence_tasks=(), progress_dir=None):
     """Require actual complete per-trial evidence for every skipped progress task."""
     if any((Path(root) / 'in-flight').glob('*.json')):
         raise ValueError('resume refuses an interrupted in-flight trial task; use a fresh run')
@@ -165,6 +165,10 @@ def resume_rows(root, full_plan, prior):
         checked = aggregate(manifest, report['results'], full_plan['configuration']['ks'])
         if not checked['complete']:
             raise ValueError('resume task has incomplete or unmeasured trial evidence')
+        if task_id in evidence_tasks:
+            from eval.run.trial_evidence import validate_saved
+            for row in checked['results']:
+                validate_saved(progress_dir, full_plan, row)
         scores = [row['score'] for row in checked['results']]
         if (progress.get('n_trials') != len(scores)
                 or progress.get('trial_scores') != scores

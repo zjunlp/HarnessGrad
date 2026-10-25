@@ -100,6 +100,21 @@ Only complete, binary task × trial results publish `C(s,k)/C(n,k)`; missing or
 unmeasured trials never shrink the denominator or become zeros. The ordinary
 `run_reward` is a separate task mean, not the reliability metric.
 
+The adapter also opts into `trial_evidence={"version": 1}`. Every returned trial,
+including an unmeasured trial or a successful trial in an incomplete group, is
+archived under `<run-dir>/trial-evidence/`. Each JSON keeps the full verdict and
+grading evidence, available Harness trace/stdout/stderr, service receipts and
+sealed episode references, bound to run/round/harness/task/trial/seed. The trial
+report links each archive by relative path and SHA-256. Relay faults still skip
+scoring, but available Harness output is collected before cleanup.
+
+This archive is independent of scoring and method feedback. Incomplete groups
+still have no formal `pass^k`; no automatic retries are added. A write failure
+stops publication, and resume rejects missing or changed archives. Use a run
+output directory outside the Harness's visible work root. See the shared
+[archive contract](../../../docs/dataset-runtime-interfaces.md#61-可选的逐次完整证据归档)
+for supported execution paths and interruption behavior.
+
 The platform emits `repeated-trials.json`; add task-weighted domain metrics with:
 
 ```bash

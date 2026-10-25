@@ -33,6 +33,9 @@ def invalid_requests():
             client.sendall(frame + b'\\n')
             assert json.loads(client.recv(4096)) == {'ok': False, 'error': error}
 invalid_requests()
+(work/'trace.jsonl').write_text('tau3 trace before start')
+print('tau3 actor stdout')
+print('tau3 actor stderr', file=sys.stderr)
 call(sock, 'start', timeout_s=30)
 if fixture['mode'] == 'success':
     for action in fixture['actions']:
@@ -97,6 +100,11 @@ def test_rejected_actor_requests_preserve_official_scoring(tmp_path, monkeypatch
         assert relay['faults'] and relay['recording'] is None
         assert relay['receipt']['failure'] == ('ToolTransportError' if mode == 'provider' else 'transport_failure')
         assert transport['request_errors'] == 4
+        output = result['trial_evidence_output']
+        assert output['trace'] == 'tau3 trace before start'
+        assert output['stdout'] == 'tau3 actor stdout\n'
+        assert 'tau3 actor stderr' in output['stderr']
+        assert output['launch_attempted'] and output['exit_code'] is not None
         if mode == 'provider':
             assert transport['errors'] == 5
             assert relay['model']['faults']
@@ -121,3 +129,61 @@ def test_rejected_actor_requests_preserve_official_scoring(tmp_path, monkeypatch
     else:
         expected = {'success': 'agent_stop', 'user_stop': 'user_stop', 'official_limit': 'too_many_errors'}[mode]
         assert sealed['payload']['termination_reason'] == expected
+
+
+def test_incomplete_group_archives_middle_success_and_both_provider_failures(tmp_path, monkeypatch):
+    import io
+    from eval.run.runner import evaluate
+
+    tid = 'tau3_bench/airline/8'
+    harness = tmp_path / 'harness'
+    harness.mkdir()
+    (harness / 'agent.py').write_text(ACTOR)
+    (harness / 'harness.json').write_text(json.dumps({
+        'entrypoint': 'agent.py',
+        'runtime_paths': list(dict.fromkeys([sys.prefix, sys.base_prefix,
+            str(Path(sys._base_executable).parent.parent)])),
+    }))
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness))
+    with control_module().Endpoint() as endpoint:
+        handler_class = endpoint.server.RequestHandlerClass
+        original = handler_class.do_POST
+
+        def fail_outer_seeds(handler):
+            stream = handler.rfile
+            body = stream.read(int(handler.headers['Content-Length']))
+            if json.loads(body)['seed'] != dataset.TRIAL_PROTOCOL['seeds'][1]:
+                endpoint.requests.append(json.loads(body))
+                handler.send_error(503, 'fixture provider unavailable')
+                return
+            handler.rfile = io.BytesIO(body)
+            try:
+                original(handler)
+            finally:
+                handler.rfile = stream
+
+        monkeypatch.setattr(handler_class, 'do_POST', fail_outer_seeds)
+        setup = dataset.SETUP[tid]
+        config = json.loads((dataset.DATASET_ROOT / dataset.roster()[tid]['path'] / 'private.json').read_text())
+        setup['files'].append({'path': '.oracle/control.json', 'content': json.dumps({
+            'mode': 'success', 'actions': config['task']['evaluation_criteria']['actions'],
+        })})
+        result = evaluate(harness, [dataset.control_task(tid)], {tid: dataset.METRIC},
+            setups={tid: setup}, verifiers={tid: dataset.VERIFY[tid]}, envs={tid: dataset.ENV[tid]},
+            sandbox=True, trials=3, jobs=1, run_id='tau3-incomplete-control', harness_sha='fixture',
+            progress_dir=tmp_path / 'run', recordings_root=tmp_path / 'run/recordings')
+
+    report = result['repeated_trials']
+    assert not report['complete'] and report['metrics'] is None
+    assert [row['score'] for row in report['results']] == [None, 1.0, None]
+    assert result['per_task'] == {} and result['traces'] == {}
+    for i, row in enumerate(report['results']):
+        raw = json.loads((tmp_path / 'run' / row['trial_evidence']['path']).read_text())['result']
+        assert raw['trial_evidence_output']['trace'] == 'tau3 trace before start'
+        assert raw['runtime_services']['tool_relay']['cleanup']['complete']
+        if i == 1:
+            assert raw['verdict']['score'] == 1.0 and raw['verdict']['evidence']['measured'] is True
+            sealed = Path(raw['runtime_services']['tool_relay']['recording']['archive'])
+            assert json.loads(sealed.read_text())['payload']['termination_reason'] == 'agent_stop'
+        else:
+            assert raw['invalid']['stage'] == 'tool relay' and raw.get('verdict') is None
