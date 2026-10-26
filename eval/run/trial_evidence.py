@@ -52,29 +52,31 @@ def capture_output(workdir, *, attempted, process, error):
     """Collect before cleanup, including the relay-fault early-return path.
 
     Never follow actor links or block on a FIFO. Read only the observed file size;
-    a malformed/missing trace is recorded explicitly, not a new scoring outcome.
+    unavailable files are recorded explicitly. The verifier still owns scoring.
     """
     output = {'launch_attempted': attempted,
               'exit_code': process.returncode if process is not None else None,
               'stdout': _text(process.stdout if process is not None else getattr(error, 'stdout', None)),
               'stderr': _text(process.stderr if process is not None else getattr(error, 'stderr', None)),
               'launch_error': {'type': type(error).__name__, 'detail': str(error)} if error else None}
-    try:
-        fd = os.open(Path(workdir) / 'trace.jsonl', os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        with os.fdopen(fd, 'rb') as stream:
-            info = os.fstat(stream.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                raise ValueError('trace must be a regular file with one link')
-            data = stream.read(info.st_size)
-        output.update(trace=data.decode('utf-8', errors='replace'), trace_status='captured')
+    for name, filename in (('trace', 'trace.jsonl'), ('answer', 'answer.txt')):
         try:
-            data.decode('utf-8')
-        except UnicodeDecodeError:
-            output['trace_bytes_base64'] = base64.b64encode(data).decode('ascii')
-    except FileNotFoundError:
-        output.update(trace=None, trace_status='missing' if attempted else 'not_started')
-    except (OSError, ValueError) as exc:
-        output.update(trace=None, trace_status='unreadable', trace_error=str(exc))
+            fd = os.open(Path(workdir) / filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, 'rb') as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    raise ValueError(f'{name} must be a regular file with one link')
+                data = stream.read(info.st_size)
+            output[name] = data.decode('utf-8', errors='replace')
+            output[name + '_status'] = 'captured'
+            try:
+                data.decode('utf-8')
+            except UnicodeDecodeError:
+                output[name + '_bytes_base64'] = base64.b64encode(data).decode('ascii')
+        except FileNotFoundError:
+            output.update({name: None, name + '_status': 'missing' if attempted else 'not_started'})
+        except (OSError, ValueError) as exc:
+            output.update({name: None, name + '_status': 'unreadable', name + '_error': str(exc)})
     return output
 
 

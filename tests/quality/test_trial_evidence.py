@@ -172,9 +172,10 @@ def test_legacy_nonprotocol_evaluation_keeps_early_stop_and_no_archive(evaluatio
     assert not (tmp_path / 'run/trial-evidence').exists()
 
 
-@pytest.mark.parametrize('kind', ['symlink', 'hardlink', 'fifo', 'invalid-utf8', 'missing'])
-def test_capture_preserves_bytes_or_reports_unavailable_trace_without_following_links(tmp_path, kind):
-    path = tmp_path / 'trace.jsonl'
+@pytest.mark.parametrize('name,filename', [('trace', 'trace.jsonl'), ('answer', 'answer.txt')])
+@pytest.mark.parametrize('kind', ['symlink', 'hardlink', 'fifo', 'directory', 'invalid-utf8', 'missing'])
+def test_capture_preserves_bytes_or_reports_unavailable_output_without_following_links(tmp_path, kind, name, filename):
+    path = tmp_path / filename
     private = tmp_path / 'private'
     private.write_text('must never be copied')
     if kind == 'symlink':
@@ -183,16 +184,18 @@ def test_capture_preserves_bytes_or_reports_unavailable_trace_without_following_
         os.link(private, path)
     elif kind == 'fifo':
         os.mkfifo(path)
+    elif kind == 'directory':
+        path.mkdir()
     elif kind == 'invalid-utf8':
         path.write_bytes(b'\xff\n')
     output = trial_evidence.capture_output(tmp_path, attempted=True,
         process=subprocess.CompletedProcess([], 7, 'stdout', 'stderr'), error=None)
     assert output['exit_code'] == 7 and output['stdout'] == 'stdout'
     assert 'must never be copied' not in json.dumps(output)
-    assert output['trace_status'] == ('captured' if kind == 'invalid-utf8'
+    assert output[name + '_status'] == ('captured' if kind == 'invalid-utf8'
                                       else 'missing' if kind == 'missing' else 'unreadable')
     if kind == 'invalid-utf8':
-        assert output['trace_bytes_base64'] == '/wo='
+        assert output[name + '_bytes_base64'] == '/wo='
 
 
 def test_timeout_retains_partial_process_output_and_trace(tmp_path):

@@ -329,7 +329,8 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
     capture_evidence = trial_evidence.enabled(verifier)
     if capture_evidence or _private_paths:
         trial_evidence.admit_execution(sandbox=sandbox, setup=setup, env=env)
-    if capture_evidence:
+        # Host collection has the same private boundary as actor execution,
+        # including tasks that do not themselves write an archive.
         evidence_output = {'launch_attempted': False, 'trace_status': 'not_started'}
     if diagnostic_authorization is not None:
         diagnostic_authorization.require_scope(run_id, [task["task_id"]])
@@ -358,7 +359,7 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         runtime_receipt=runtime_receipt, worker=_worker,
         **({'private_paths': _private_paths} if _private_paths else {}),
         **({'evidence_output': evidence_output} if evidence_output is not None else {}))
-    if evidence_output is not None:
+    if capture_evidence:
         result['trial_evidence_output'] = evidence_output
     if runtime_receipt:
         result["runtime_services"] = runtime_receipt
@@ -869,14 +870,16 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                     workdir, attempted=launch_attempted, process=proc, error=launch_error))
                 output_collected = True
             answer_path = workdir / "answer.txt"
-            answer = (answer_path.read_text()
-                      if stepwise_relay is None and answer_path.exists() else "")
             trace_path = workdir / "trace.jsonl"
             if evidence_output is not None:
                 # Preserve read_text's universal-newline semantics for existing
                 # feedback. The independent archive retains the original bytes.
+                answer = ((evidence_output.get('answer') or '').replace('\r\n', '\n').replace('\r', '\n')
+                          if stepwise_relay is None else "")
                 trace = (evidence_output.get('trace') or '').replace('\r\n', '\n').replace('\r', '\n')
             else:
+                answer = (answer_path.read_text()
+                          if stepwise_relay is None and answer_path.exists() else "")
                 trace = trace_path.read_text() if trace_path.exists() else ""
 
         # The harness has exited. Grade the controller's completed live exchange,
