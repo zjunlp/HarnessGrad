@@ -37,9 +37,11 @@ and it is recorded rather than turned into a zero.
     excepted: a cell the platform could not measure is dropped from that task's
     correlation and counted, never filled with a zero.
 
-The measurement itself is the platform's own `eval.run.runner.evaluate`, with one cache shared
-across all harnesses (keyed by content hash, task and trial count), so re-running this cost
-nothing and a run that is interrupted can be resumed by re-running it.
+The measurement uses `eval.run.runner.evaluate`, with a cache shared across harnesses
+for cache-eligible tasks. Declared independent trials require fresh measurements;
+this tool does not resume their interrupted groups. Opted-in trial evidence is saved
+under the study's run directory. Each harness gets its own recording round (its
+position in --harnesses), with label and content hash in harnesses/<round>.json.
 """
 from __future__ import annotations
 
@@ -49,6 +51,7 @@ import json
 import math
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -60,6 +63,8 @@ from data.scaffolds import registry                                          # n
 from driver import load_env                                        # noqa: E402
 from eval.observe.console import CONSOLE as console                         # noqa: E402
 from eval.run.runner import evaluate                                    # noqa: E402
+from eval.run import trial_evidence                                      # noqa: E402
+from eval.run.repeated_trials import immutable_json                     # noqa: E402
 from harnessgrad.records import _require_untampered                 # noqa: E402
 
 
@@ -214,17 +219,25 @@ def _measure(specs: list[tuple[str, Path]], tasks: list[dict], scorable: dict,
     """
     scores: dict[str, dict[str, float | None]] = {t["task_id"]: {} for t in tasks}
     invalid: dict[str, dict] = {}
-    for label, path in specs:
+    archive = any(trial_evidence.enabled(verifiers.get(t['task_id'])) for t in tasks)
+    for index, (label, path) in enumerate(specs):
         work = work_root / f"hs-{label}"
         stage_workspace(path, work)
         sha = commit_state(work, f"sensitivity: {label}")
+        if archive:
+            # A single private archive root covers every harness. Distinct rounds
+            # also separate identical harness contents evaluated under two labels.
+            immutable_json(run_dir / 'harnesses' / f'{index}.json', {
+                'label': label, 'harness_sha': sha, 'round': index, 'run_id': run_dir.name,
+            }, reuse=False)
         console.note(f"measuring {label} ({sha[:10]}) on {len(tasks)} task(s)")
         t0 = time.time()
         res = evaluate(work, tasks, scorable, cache, harness_sha=sha, sandbox=args.sandbox,
                        setups=setups, verifiers=verifiers, envs=envs,
                        run_id=run_dir.name, run_seed=args.seed,
-                       recordings_root=run_dir / "recordings", round_no=0,
-                       trials=args.trials, jobs=args.jobs)
+                       recordings_root=run_dir / "recordings", round_no=index if archive else 0,
+                       trials=args.trials, jobs=args.jobs,
+                       **({'progress_dir': run_dir} if archive else {}))
         _require_untampered(res)
         for tid, value in (res.get("per_task") or {}).items():
             scores.setdefault(tid, {})[label] = float(value)
@@ -317,8 +330,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     runs_root = ROOT / "runs"
-    run_dir = runs_root / f"sensitivity-{int(time.time())}"
-    run_dir.mkdir(parents=True, exist_ok=True)
+    runs_root.mkdir(parents=True, exist_ok=True)
+    run_dir = Path(tempfile.mkdtemp(prefix=f"sensitivity-{int(time.time())}-", dir=runs_root))
     work_root = Path(os.environ.get("HARNESSGRAD_WORK_ROOT", ROOT.parent / "harnessgrad_work"))
     work_root = work_root / "sensitivity"
     cache: dict = {}

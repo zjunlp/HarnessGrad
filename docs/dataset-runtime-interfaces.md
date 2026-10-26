@@ -374,6 +374,12 @@ eval 续跑在跳过已完成任务前检查文件存在、内容 hash 和身份
 不会因此变成完整分组、缩小分母或获得正式 `pass^k`。未开启的任务不返回采集回执或写入此扩展归档。
 直接调用 `run_one` 只返回采集数据；逐次持久化由 evaluation 负责。
 
+`tools/task_sensitivity.py` 对开启归档的任务使用本次 run 作为 `progress_dir`，
+以 Harness 列表序号分配独立的记录 round，在 `harnesses/<序号>.json` 保存名称和代码 hash。
+这里的 round 用于区分各 Harness 的测量，不代表改进轮次。
+同代码、不同名称的 Harness 也有独立记录；所有记录共用一个受保护的归档根目录。
+每次 CLI 调用创建新 run；此工具不自动续跑声明独立试验协议的任务，普通任务的缓存路径保持不变。
+
 ## 7. 固定 peer 执行接口
 
 ```python
