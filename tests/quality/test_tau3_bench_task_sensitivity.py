@@ -58,4 +58,3 @@ def test_sensitivity_runs_all_tau3_trials_for_identical_harnesses(tmp_path, monk
     reports = [json.loads(p.read_text()) for p in (run/'protocols').rglob('repeated-trials.json')]
     assert len(reports) == 2 and all(r['complete'] for r in reports)
     assert all(all(score == 1 for score in r['metrics'].values()) for r in reports)
-

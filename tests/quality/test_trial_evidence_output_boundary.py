@@ -121,4 +121,3 @@ def test_no_private_archives_keep_the_existing_output_reader(tmp_path, monkeypat
     assert result['exit_code'] == 0 and result['verdict']['passed']
     assert result['answer'] == 'yes' and result['trace'] == 'ordinary trace'
     assert 'trial_evidence_output' not in result
-

@@ -109,4 +109,3 @@ def test_cli_creates_a_fresh_run_even_in_the_same_second(tmp_path, monkeypatch):
     assert ts.main(argv) == ts.main(argv) == 0
     assert len(set(runs)) == 2
     assert all((run/'sensitivity.json').is_file() for run in runs)
-
