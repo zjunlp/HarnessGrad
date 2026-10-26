@@ -67,12 +67,12 @@ def capture_output(workdir, *, attempted, process, error):
                 if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                     raise ValueError(f'{name} must be a regular file with one link')
                 data = stream.read(info.st_size)
-            output[name] = data.decode('utf-8', errors='replace')
-            output[name + '_status'] = 'captured'
             try:
-                data.decode('utf-8')
+                output[name] = data.decode('utf-8')
             except UnicodeDecodeError:
+                output[name] = data.decode('utf-8', errors='replace')
                 output[name + '_bytes_base64'] = base64.b64encode(data).decode('ascii')
+            output[name + '_status'] = 'captured'
         except FileNotFoundError:
             output.update({name: None, name + '_status': 'missing' if attempted else 'not_started'})
         except (OSError, ValueError) as exc:
