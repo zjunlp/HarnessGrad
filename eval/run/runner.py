@@ -376,7 +376,7 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
     if diagnostic_authorization is not None:
         result["enforcement"] = diagnostic_authorization.record()
     if model_failure.enabled(verifier):
-        failure = model_failure.failure(result)
+        failure = model_failure.failure(result, verifier['model_failure_policy'])
         if failure is not None:
             result['invalid'] = failure
     return result

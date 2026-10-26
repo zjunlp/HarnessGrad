@@ -1,4 +1,4 @@
-"""Official tau3 scoring cannot turn a terminal agent HTTP outage into a valid zero."""
+"""Official tau3 scoring cannot turn a confirmed agent HTTP 503 into a valid zero."""
 import json
 
 import pytest
@@ -12,7 +12,8 @@ from test_shared_dataset_runtime import harness
 
 @pytest.mark.skipif(not (dataset.DATASET_ROOT/'manifest.json').exists(), reason='prepared tau3 payload required')
 @pytest.mark.parametrize('enabled', [False, True])
-def test_agent_503_with_healthy_official_environment(tmp_path, monkeypatch, endpoint, enabled):
+@pytest.mark.parametrize('handling', ['sdk', 'wrapped', 'swallowed'])
+def test_agent_503_with_healthy_official_environment(tmp_path, monkeypatch, endpoint, enabled, handling):
     url, statuses, requests = endpoint
     statuses[:] = [503]
     for role in ('AGENT', 'ENV', 'JUDGE'):
@@ -25,10 +26,14 @@ def test_agent_503_with_healthy_official_environment(tmp_path, monkeypatch, endp
     reset()
     work = tmp_path/'work'
     work.mkdir()
-    repo = harness(work, '''from openai import OpenAI
-OpenAI(base_url=os.environ['HG_AGENT_BASE_URL'], api_key=os.environ['HG_AGENT_API_KEY'],
-       max_retries=0, timeout=10).chat.completions.create(model='fixture',
-       messages=[{'role':'user','content':'synthetic error test'}], max_tokens=1)
+    repo = harness(work, f'''from openai import OpenAI
+try:
+    OpenAI(base_url=os.environ['HG_AGENT_BASE_URL'], api_key=os.environ['HG_AGENT_API_KEY'],
+           max_retries=0, timeout=10).chat.completions.create(model='fixture',
+           messages=[{{'role':'user','content':'synthetic error test'}}], max_tokens=1)
+except Exception as exc:
+    if {handling!r} == 'sdk': raise
+    if {handling!r} == 'wrapped': raise RuntimeError('custom failure wrapper') from exc
 ''')
     (repo/'harness.json').write_text(json.dumps({'entrypoint': 'agent.py',
         'runtime_paths': list(dataset._python_runtime(dataset.RUNTIME)[1])}))
@@ -45,7 +50,9 @@ OpenAI(base_url=os.environ['HG_AGENT_BASE_URL'], api_key=os.environ['HG_AGENT_AP
     row = repeated_trials.result_row(result, {'task_id': tid, 'trial_id': 'fixture-1', 'seed': '626729'},
                                     provider_failure=runner._provider_failure(result))
     assert len(requests) == 1 and not statuses  # Environment/judge made no model calls.
-    assert result['exit_code'] == 1 and 'InternalServerError' in result['stderr']
+    assert result['exit_code'] == (0 if handling == 'swallowed' else 1)
+    if handling != 'swallowed':
+        assert 'InternalServerError' in result['stderr']
     relay = result['runtime_services']['tool_relay']
     assert relay['receipt']['failure'] is None and relay['cleanup']['complete']
     assert result['verdict']['evidence']['completion']['scorer_termination_reason'] == 'agent_error'

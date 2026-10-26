@@ -37,6 +37,7 @@ def test_all_four_domains_manifest_and_private_material(monkeypatch):
         assert not any('private' in str(f) or 'runtime' in f['path'] for f in setup['files'])
         assert verifier['trial_protocol']['trials'] == 3
         assert verifier['result_contract']['require_exit_zero'] is True
+        assert verifier['model_failure_policy'] == {'version': 1, 'invalidate_on_http_status': [503]}
         assert ('judge' in verifier) == row['needs_judge']
     assert sum(r['needs_judge'] for r in rows.values()) == 113
 

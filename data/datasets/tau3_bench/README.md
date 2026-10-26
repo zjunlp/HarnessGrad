@@ -31,14 +31,20 @@ is added, and verifier evidence records the mapping and the incomplete-conversat
 reason. Missing or malformed records, provider failures and scorer errors remain
 unmeasured; an unfinished episode must explicitly report `failure: null`.
 Official max-step/error terminations retain their official zero reward.
-The adapter explicitly enables `model_failure_policy: {version: 1}` independently
-of evidence archival. The platform's native model route observes HTTP metadata:
-a completed inference 429/5xx with a matching terminal SDK/HTTP exception and a nonzero
-unsuccessful actor exit is unmeasured. Independent successful requests do not prove
-that the failed request recovered. Recovered errors, successful verdicts
-and request/context 4xx keep their existing meaning. This does not modify the
-official reward or the sealed episode. Unsupported/incomplete HTTP observations
-and errors hidden by the candidate do not establish a terminal provider failure.
+The adapter explicitly enables
+`model_failure_policy: {version: 1, invalidate_on_http_status: [503]}` independently
+of evidence archival. A platform-observed agent-model inference HTTP 503 makes the trial
+unmeasured even if the Harness wraps or hides the error, retries successfully,
+exits zero or obtains a successful official reward. This is an adapter validity
+policy: service outages introduce interference into this task evaluation.
+It does not assert that the outage caused the Harness to terminate. A confirmed
+response status remains evidence if its body or another connection is incomplete;
+an error string alone or a non-inference response does not qualify.
+The original official reward, sealed episode and available Harness output remain
+in the existing evidence archive; the invalid trial has no formal score and its
+`pass^k` group remains incomplete. Other status codes retain existing rules,
+including the v1 terminal 429/5xx exception rule and request/context 4xx behavior.
+Unrecognized traffic without a confirmed status does not establish HTTP 503.
 Malformed actor transport requests are rejected before entering the runtime and
 recorded in `transport.request_errors`. They do not change native step/error counts
 or invalidate a later completed episode. Service failures and explicit resource-limit

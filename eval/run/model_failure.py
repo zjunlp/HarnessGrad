@@ -1,4 +1,4 @@
-"""Opt-in terminal HTTP provider-failure classification, independent of archives."""
+"""Opt-in HTTP interference and terminal provider-failure classification."""
 import os
 import re
 
@@ -20,13 +20,29 @@ def admit(*, sandbox, setup, env):
         raise ValueError('model_failure_policy v1 requires sandboxed files without workers and an isolated live model route')
 
 
-def failure(result):
-    # Successful output or recovery is positive evidence, even if earlier requests
-    # failed. Never classify arbitrary nonzero exits or all HTTP 4xx as providers.
-    if (result.get('invalid') or not result.get('exit_code')
-            or (result.get('verdict') or {}).get('passed')):
+def failure(result, policy=None):
+    if result.get('invalid'):
         return None
     report = (result.get('runtime_services') or {}).get('agent_model_http') or {}
+    statuses = (policy or {}).get('invalidate_on_http_status', [])
+    if report.get('version') == 1:
+        for index, call in enumerate(report.get('calls', [])):
+            if (call.get('operation') in ('chat.completions', 'completions', 'responses')
+                    and call.get('status') in statuses):
+                # The observer has matched final response headers to an inference
+                # request. A partial body or another broken connection cannot
+                # erase that status. This policy excludes interference; it does
+                # not claim that the error caused the Harness to terminate.
+                status = call['status']
+                return {'stage': 'harness model call', 'service': 'agent model',
+                        'detail': f'Platform observed inference HTTP {status}; configured trial validity policy excludes this trial regardless of recovery or task score',
+                        'http_status': status, 'operation': call['operation'], 'call_index': index,
+                        'reason': 'configured_http_status', 'policy': 'model_failure_policy.v1'}
+
+    # Keep the existing terminal-failure rule when no configured status matched.
+    if (not result.get('exit_code')
+            or (result.get('verdict') or {}).get('passed')):
+        return None
     if not report.get('complete'):
         return None
     lines = (result.get('stderr') or '').strip().splitlines()

@@ -105,8 +105,12 @@ def test_all_tasks_completed_resume_reuses_evidence_and_existing_report(session,
         assert path.read_bytes() == before
 
 
-@pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration', 'removed_protocol'])
+@pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration', 'removed_protocol', 'model_policy'])
 def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(session, change):
+    if change == 'model_policy':
+        session.args.sandbox = True
+        for verifier in session.verifiers.values():
+            verifier['model_failure_policy'] = {'version': 1}
     interrupted(session)
     path = next((session.root / 'tasks').glob('*.json'))
     if change == 'missing':
@@ -125,6 +129,9 @@ def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(sessi
             verifier.pop('trial_protocol')
     elif change == 'selection':
         session.tasks = session.tasks[:1]
+    elif change == 'model_policy':
+        for verifier in session.verifiers.values():
+            verifier['model_failure_policy']['invalidate_on_http_status'] = [503]
     else:
         session.verifiers['a']['argv'] = ['different-scorer']
     assert session.execute() == 2

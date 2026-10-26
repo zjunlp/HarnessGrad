@@ -150,7 +150,8 @@ def _verify(tid, row):
               'inputs': inputs, 'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
               'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
               'trial_protocol': dict(TRIAL_PROTOCOL),
-              'trial_evidence': {'version': 1}, 'model_failure_policy': {'version': 1}}
+              'trial_evidence': {'version': 1},
+              'model_failure_policy': {'version': 1, 'invalidate_on_http_status': [503]}}
     if row['needs_judge']:
         result['judge'] = model_spec('judge')
     return result
