@@ -47,6 +47,12 @@ aggregate eligibility filters. Reports retain those original results, explicit
 denominators and an `event_incomplete_count`. Missing reference data, service
 failures and scorer failures remain unmeasured errors.
 
+All four modes use the static adapter's [measurement-validity policy](../costbench/README.md#metrics-and-cost-meaning):
+native sandboxed execution with `network=none`, an observed agent model route,
+and unmeasured outcomes for inference HTTP 429/5xx even after recovery.
+Raw scorer evidence is preserved and
+must not be reported as a valid measurement when the platform result is `invalid`.
+
 The evaluator compares against its segmented dynamic reference, including
 charged failed ban attempts. A correct final answer need not have an optimal
 path. Tool prices are simulated benchmark units, not API spending or model-token
@@ -135,10 +141,11 @@ The accepted-cohort report
 (`costbench-dynamic-ling31-coverage-20261021-01`) retains 24 measured tasks from
 37 attempts. Thirteen initial API 429 failures were excluded and rerun, with
 their original receipts preserved. There were no other invalid attempts.
-The shared runner can store a raw zero for terminal 429 failures; this report
-explicitly treats those failed attempts as unmeasured. That generic provider
-classification gap remains a platform follow-up. Nine normal parsing-retry
-endings remain measured zeros and were not rerun to improve scores.
+At that adapter revision the shared runner could store a raw zero for terminal
+429 failures; this historical report explicitly treated those attempts as
+unmeasured. Current platform execution uses the HTTP validity policy above;
+historical receipts are unchanged. Nine normal parsing-retry endings remain
+measured zeros and were not rerun to improve scores.
 
 | Mode | Split | Accepted | Actual / effective event tasks | Reference path matches | Correct answers |
 | --- | --- | --- | --- | --- | --- |

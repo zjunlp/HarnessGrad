@@ -59,6 +59,19 @@ The scalar reward is `evaluate_single_query()['tool_path_exact_match']`, named
 **every measured task/trial**. A no-op scores zero. Runtime, integrity or scorer
 failures are unmeasured and cannot silently become task zeros.
 
+Platform execution requires a native files sandbox with `network=none`. Live
+agent inference uses the platform's observed model route to the HTTP endpoint in
+`HG_AGENT_BASE_URL`. HTTPS providers require an external HTTPS forwarder with a
+local HTTP entrance, as used in the existing tau3 experiments.
+An observed inference HTTP 429 or 5xx makes the measurement unmeasured, even if
+the harness catches the error or retries and completes the task. The task runner
+adds `invalid` to its raw result without changing the scorer verdict and records
+the observed status in the HTTP receipt. Check `invalid` before extracting
+standalone scorer evidence for a report. This is the
+adapter's measurement-validity policy, not a change to the official scorer.
+Other HTTP statuses retain existing classification; stderr text alone does not
+activate this policy. Mock controls make no model requests.
+
 The separate official aggregate retains upstream eligibility masks and raw
 results. In particular, upstream aggregate EMR excludes conversations with at
 most three messages; its denominator can differ from the primary metric's.
@@ -111,6 +124,7 @@ python3 data/datasets/costbench/control.py --noop --platform \
 python3 -m pytest -q tests/quality/test_costbench_dataset.py \
   tests/quality/test_costbench_official_scorer.py \
   tests/quality/test_costbench_preparation.py \
+  tests/quality/test_costbench_model_failure.py \
   --basetemp=/tmp/hg-costbench-tests
 ```
 
