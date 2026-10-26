@@ -49,8 +49,9 @@ failures and scorer failures remain unmeasured errors.
 
 All four modes use the static adapter's [measurement-validity policy](../costbench/README.md#metrics-and-cost-meaning):
 native sandboxed execution with `network=none`, an observed agent model route,
-and unmeasured outcomes for inference HTTP 429/5xx even after recovery.
-Raw scorer evidence is preserved and
+and unmeasured outcomes for inference HTTP 429/5xx even after recovery. Rejected
+relay request envelopes do not invalidate subsequent execution; genuine runtime
+failures and relay limit refusals still do. Raw scorer evidence is preserved and
 must not be reported as a valid measurement when the platform result is `invalid`.
 
 The evaluator compares against its segmented dynamic reference, including

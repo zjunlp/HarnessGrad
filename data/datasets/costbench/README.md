@@ -72,6 +72,10 @@ adapter's measurement-validity policy, not a change to the official scorer.
 Other HTTP statuses retain existing classification; stderr text alone does not
 activate this policy. Mock controls make no model requests.
 
+Malformed relay request envelopes are rejected before execution and do not
+consume benchmark turns or invalidate later tool execution. Genuine handler
+failures and relay limit refusals remain unmeasured.
+
 The separate official aggregate retains upstream eligibility masks and raw
 results. In particular, upstream aggregate EMR excludes conversations with at
 most three messages; its denominator can differ from the primary metric's.
@@ -125,6 +129,7 @@ python3 -m pytest -q tests/quality/test_costbench_dataset.py \
   tests/quality/test_costbench_official_scorer.py \
   tests/quality/test_costbench_preparation.py \
   tests/quality/test_costbench_model_failure.py \
+  tests/quality/test_costbench_relay_errors.py \
   --basetemp=/tmp/hg-costbench-tests
 ```
 
