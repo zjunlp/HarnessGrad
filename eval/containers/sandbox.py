@@ -187,7 +187,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
             model_path: str = "",
             tool_socket: Path | None = None,
             package_overlays: tuple[tuple[Path, Path], ...] = (),
-            immutable_runtimes: tuple[tuple[Path, str], ...] = ()) -> list[str]:
+            immutable_runtimes: tuple[tuple[Path, str], ...] = (),
+            private_paths: tuple[Path, ...] = ()) -> list[str]:
     """Wrap `argv` so it runs with the platform off its disk.
 
     Raises rather than degrading. A sandbox that quietly did not apply would make
@@ -416,6 +417,10 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
                            model_route.ROOT),
             writable_paths=(task_dir, *writable_paths, *state_dirs))
 
+    if private_paths:
+        from eval.containers.private_mounts import reject_visible
+        reject_visible(plan, private_paths)
+
     #: Variables the platform itself sets to a filesystem path. Only these are
     #: checked against the hidden tree, and the list is explicit because guessing
     #: is what went wrong twice: `HG_AGENT_MODEL=deepseek-flash` is not a path, but
@@ -465,7 +470,8 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
         model_path: str = "",
         tool_socket: Path | None = None,
         package_overlays: tuple[tuple[Path, Path], ...] = (),
-        immutable_runtimes: tuple[tuple[Path, str], ...] = ()):
+        immutable_runtimes: tuple[tuple[Path, str], ...] = (),
+        private_paths: tuple[Path, ...] = ()):
     """`subprocess.run` with the namespace in place. Same return type.
 
     `input_text` exists because a *method* is driven over stdin (it reads one JSON
@@ -484,7 +490,8 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
                           network=network, package_overlays=package_overlays,
                           model_socket=model_socket, model_path=model_path,
                           tool_socket=tool_socket,
-                          immutable_runtimes=immutable_runtimes)
+                          immutable_runtimes=immutable_runtimes,
+                          **({'private_paths': private_paths} if private_paths else {}))
     except SandboxUnavailable as exc:
         if immutable_runtimes:
             raise ImmutableRuntimeUnavailable(str(exc)) from exc

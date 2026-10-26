@@ -119,7 +119,9 @@ scoring, but available Harness output is collected before cleanup.
 This archive is independent of scoring and method feedback. Incomplete groups
 still have no formal `pass^k`; no automatic retries are added. A write failure
 stops publication, and resume rejects missing or changed archives. Use a run
-output directory outside the Harness's visible work root. See the shared
+output directory outside the Harness's visible work root and runtime/input mounts.
+The final ordered sandbox mounts are checked before every actor launch, including
+aliases and projections that could expose the archive at another path. See the shared
 [archive contract](../../../docs/dataset-runtime-interfaces.md#62-可选的逐次完整证据归档)
 for supported execution paths and interruption behavior.
 

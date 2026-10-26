@@ -97,6 +97,8 @@ def test_switch_changes_only_archive_references_not_scoring_or_feedback(evaluati
     enabled_calls = copy.deepcopy(enabled_calls)
     for call in enabled_calls:
         call['verifier'].pop('trial_evidence', None)
+        assert call.pop('_private_paths') == (tmp_path / 'run/trial-evidence',)
+    assert all('_private_paths' not in call for call in disabled_calls)
     assert enabled_calls == disabled_calls and enabled_cache == disabled_cache == {}
     for row in enabled['repeated_trials']['results']:
         row.pop('trial_evidence')

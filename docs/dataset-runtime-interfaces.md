@@ -314,6 +314,9 @@ VERIFY[task_id]["trial_evidence"] = {"version": 1}
 默认关闭，单独声明 `trial_protocol` 不会开启。目前 τ³ 适配器显式开启此扩展。
 v1 要求已有 `trial_protocol`、sandboxed `files` 环境、无 `workers`，
 并向 evaluation 提供 `progress_dir`。归档目录必须位于 Harness 及其可见 work root 之外。
+每次 actor 启动前还依据最终沙箱挂载方案检查归档可见性，包括系统/解释器目录、
+额外 runtime、包/不可变输入投影以及路径别名；按挂载顺序处理隐藏与重新暴露。
+任何仍能访问归档的挂载会在启动前被拒绝并指出冲突路径。检查只随本扩展启用。
 不满足条件会在执行前报错，不静默降级成未保存证据的评测。
 
 每次 `run_one` 返回后、执行下一次试验前，原子写入一个不可覆盖的 JSON：

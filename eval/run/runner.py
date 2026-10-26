@@ -321,7 +321,8 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             diagnostic_authorization: Authorization | None = None,
             trial_id: str | None = None,
             observation: dict | None = None,
-            _worker: dict | None = None) -> dict:
+            _worker: dict | None = None,
+            _private_paths: tuple[Path, ...] = ()) -> dict:
     evidence_output = None
     if model_failure.enabled(verifier):
         model_failure.admit(sandbox=sandbox, setup=setup, env=env)
@@ -353,6 +354,7 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
         env, run_id, run_seed, recordings_root, trial_id=trial_id,
         runtime_receipt=runtime_receipt, worker=_worker,
+        **({'private_paths': _private_paths} if _private_paths else {}),
         **({'evidence_output': evidence_output} if evidence_output is not None else {}))
     if evidence_output is not None:
         result['trial_evidence_output'] = evidence_output
@@ -386,7 +388,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             run_id: str = "", run_seed: str = "",
             recordings_root: Path | None = None, *, trial_id: str | None = None,
             runtime_receipt: dict | None = None, worker: dict | None = None,
-            evidence_output: dict | None = None) -> dict:
+            evidence_output: dict | None = None,
+            private_paths: tuple[Path, ...] = ()) -> dict:
     """Run the harness on one task in a throwaway dir, off the platform's disk.
 
     Returns {task_id, answer, trace, exit_code}. A non-zero exit is recorded as
@@ -797,7 +800,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                    tool_socket=(worker["socket"] if worker is not None else
                                                 tool_relay.path if tool_relay is not None else None),
                                    package_overlays=package_overlays,
-                                   immutable_runtimes=immutable_runtimes)
+                                   immutable_runtimes=immutable_runtimes,
+                                   **({'private_paths': private_paths} if private_paths else {}))
 
         try:
             with phases("agent"):
@@ -1610,6 +1614,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                                             total=len(tasks)) as held:
                 try:
                     result = run_one(repo, task, sandbox=sandbox,
+                                     **({'_private_paths': (Path(progress_dir) / 'trial-evidence',)}
+                                        if tid in evidence_tasks else {}),
                                      setup=(setups or {}).get(tid),
                                      verifier=(verifiers or {}).get(tid),
                                      env=(envs or {}).get(tid),
