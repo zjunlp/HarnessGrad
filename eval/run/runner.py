@@ -508,6 +508,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     tool_relay = None
     package_overlays = ()
     proc, launch_error, launch_attempted = None, None, False
+    output_collected = False
     workdir = Path(tempfile.mkdtemp(prefix="hg-task-"))
     try:
         if (bun_preparation or {}).get("responses_overlay"):
@@ -859,11 +860,22 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             raise
 
         with phases("collect"):
+            if evidence_output is not None:
+                # Use the safe collector on the normal path too. An earlier
+                # read_text() could raise/block before finally could archive it.
+                evidence_output.update(trial_evidence.capture_output(
+                    workdir, attempted=launch_attempted, process=proc, error=launch_error))
+                output_collected = True
             answer_path = workdir / "answer.txt"
             answer = (answer_path.read_text()
                       if stepwise_relay is None and answer_path.exists() else "")
             trace_path = workdir / "trace.jsonl"
-            trace = trace_path.read_text() if trace_path.exists() else ""
+            if evidence_output is not None:
+                # Preserve read_text's universal-newline semantics for existing
+                # feedback. The independent archive retains the original bytes.
+                trace = (evidence_output.get('trace') or '').replace('\r\n', '\n').replace('\r', '\n')
+            else:
+                trace = trace_path.read_text() if trace_path.exists() else ""
 
         # The harness has exited. Grade the controller's completed live exchange,
         # or its frozen artifacts on the existing offline path (§2.2 and §2.4).
@@ -940,7 +952,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                 if web_gateway is not None else None),
                 "identity": _last_identity(trace)}
     finally:
-        if evidence_output is not None:
+        if evidence_output is not None and not output_collected:
             evidence_output.update(trial_evidence.capture_output(
                 workdir, attempted=launch_attempted, process=proc, error=launch_error))
         if (bun_preparation or {}).get("responses_overlay"):
