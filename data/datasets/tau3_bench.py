@@ -142,8 +142,7 @@ def _verify(tid, row):
     inputs = [{'path': 'tau3_code', 'from': str(ASSETS), 'immutable': True},
               {'path': 'tau3_private.json', 'from': str(DATASET_ROOT / row['path'] / 'private.json')},
               {'path': 'tau3_transport_runtime', 'from': str(TRANSPORT.resolve().parent), 'immutable': True},
-              {'path': 'tau3_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True},
-              {'path': 'tau3_runtime', 'from': str(RUNTIME), 'immutable': True}]
+              {'path': 'tau3_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True}]
     result = {'kind': 'command', 'argv': [python, '-I', 'tau3_code/verify/check.py', '--task-id', tid,
                                        '--case-sha256', row['private_sha256']],
               'runtime_paths': list(runtime_paths),

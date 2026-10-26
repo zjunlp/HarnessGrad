@@ -81,7 +81,8 @@ imports from reading ambient credential files.
 
 The relay and verifier both launch `HG_TAU3_RUNTIME/bin/python`. Verifier declarations
 include read-only `runtime_paths` for that environment and its base Python prefixes,
-queried from the selected interpreter once per runtime configuration. Host `PATH`
+queried from the selected interpreter once per runtime configuration. The verifier
+imports dependencies from that interpreter's own site-packages. Host `PATH`
 and the driver's Python do not select the scoring interpreter. The local startup
 probe has a 10-second management timeout; it is not an episode or model-call limit.
 Missing or non-3.12 runtime installations refuse configuration. At verification,

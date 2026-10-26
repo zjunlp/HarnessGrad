@@ -34,10 +34,15 @@ def test_official_score_uses_selected_runtime_with_system_path(tmp_path, officia
     probe = '''
 import json, os, runpy, sys
 from pathlib import Path
-Path('verifier/python.json').write_text(json.dumps({
-    'executable': sys.executable, 'prefix': sys.prefix, 'version': list(sys.version_info[:2]),
-    'readonly': bool(os.statvfs(sys.prefix).f_flag & os.ST_RDONLY)}))
-runpy.run_path('tau3_code/verify/check.py', run_name='__main__')
+try:
+    runpy.run_path('tau3_code/verify/check.py', run_name='__main__')
+finally:
+    Path('verifier/python.json').write_text(json.dumps({
+        'executable': sys.executable, 'prefix': sys.prefix, 'version': list(sys.version_info[:2]),
+        'readonly': bool(os.statvfs(sys.prefix).f_flag & os.ST_RDONLY),
+        'site_paths': [p for p in sys.path if p.endswith('site-packages')],
+        'pydantic_origin': getattr(sys.modules.get('pydantic'), '__file__', None),
+        'runtime_projection_present': Path('tau3_runtime').exists()}))
 '''
     spec['argv'][2] = 'python_probe.py'
     spec['inputs'].extend([{'path': 'trusted_episode', 'from': str(record), 'immutable': True},
@@ -65,6 +70,10 @@ Path(sys.argv[4]).write_text(json.dumps(result))
     assert info['version'] == [3, 12] and info['readonly'], info
     assert info['executable'] == str(dataset.RUNTIME / 'bin/python')
     assert Path(info['prefix']).resolve() == dataset.RUNTIME.resolve()
+    site = dataset.RUNTIME / 'lib/python3.12/site-packages'
+    assert info['site_paths'] == [str(site)], info
+    assert Path(info['pydantic_origin']).is_relative_to(site), info
+    assert not info['runtime_projection_present'], info
 
 
 def test_bootstrap_rejects_wrong_python_before_loading_dependencies(tmp_path, monkeypatch):

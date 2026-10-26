@@ -33,7 +33,7 @@ def main():
                 or sealed['payload']['case_sha256'] != args.case_sha256
                 or str(sealed['payload']['seed']) != sealed['binding']['seed']):
             raise ValueError('trusted episode identity mismatch')
-        bootstrap('tau3_bundle', 'tau3_runtime')
+        bootstrap('tau3_bundle')
         from model import install
         from tool_transport import call
         install('judge', call)
