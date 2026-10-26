@@ -326,8 +326,10 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
     evidence_output = None
     if model_failure.enabled(verifier):
         model_failure.admit(sandbox=sandbox, setup=setup, env=env)
-    if trial_evidence.enabled(verifier):
+    capture_evidence = trial_evidence.enabled(verifier)
+    if capture_evidence or _private_paths:
         trial_evidence.admit_execution(sandbox=sandbox, setup=setup, env=env)
+    if capture_evidence:
         evidence_output = {'launch_attempted': False, 'trace_status': 'not_started'}
     if diagnostic_authorization is not None:
         diagnostic_authorization.require_scope(run_id, [task["task_id"]])
@@ -1398,9 +1400,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             model_failure.admit(sandbox=sandbox, setup=(setups or {}).get(tid), env=(envs or {}).get(tid))
     evidence_tasks = {t['task_id'] for t in tasks
                       if trial_evidence.enabled((verifiers or {}).get(t['task_id']))}
-    if evidence_tasks:
+    archive_root = Path(progress_dir) / 'trial-evidence' if progress_dir is not None else None
+    private_paths = ()
+    # Every actor shares the same private run storage. On resume, all tasks that
+    # opted into archival may already be complete and absent from this task list.
+    if evidence_tasks or (archive_root is not None and os.path.lexists(archive_root)):
         trial_evidence.admit_archive(repo, progress_dir)
-        for tid in evidence_tasks:
+        private_paths = (archive_root,)
+        for task in tasks:
+            tid = task['task_id']
             trial_evidence.admit_execution(sandbox=sandbox, setup=(setups or {}).get(tid),
                                            env=(envs or {}).get(tid))
     evidence_plan = {'configuration': trial_protocol, 'run_id': run_id,
@@ -1626,8 +1634,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                                             total=len(tasks)) as held:
                 try:
                     result = run_one(repo, task, sandbox=sandbox,
-                                     **({'_private_paths': (Path(progress_dir) / 'trial-evidence',)}
-                                        if tid in evidence_tasks else {}),
+                                     **({'_private_paths': private_paths} if private_paths else {}),
                                      setup=(setups or {}).get(tid),
                                      verifier=(verifiers or {}).get(tid),
                                      env=(envs or {}).get(tid),

@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+from eval.run import runner
 from test_repeated_trial_resume import session, interrupted
 
 
@@ -25,6 +26,29 @@ def test_resume_reuses_unchanged_archives_without_running_completed_task(archive
     report = archived.results[-1]['repeated_trials']
     assert report['complete'] and len(report['results']) == 6
     assert all((archived.run / row['trial_evidence']['path']).is_file() for row in report['results'])
+
+
+def test_mixed_resume_protects_remaining_task_without_enabling_its_archive(session, monkeypatch):
+    session.args.sandbox = True
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(session.run.parent/'harness'))
+    session.verifiers['a']['trial_evidence'] = {'version': 1}
+    calls = []
+    original = runner.run_one
+
+    def actor(repo, task, **kwargs):
+        calls.append((task['task_id'], kwargs.get('_private_paths')))
+        return original(repo, task, **kwargs)
+
+    monkeypatch.setattr(runner, 'run_one', actor)
+    interrupted(session)
+    saved = {p: p.read_bytes() for p in (session.run/'trial-evidence').rglob('*.json')}
+    assert len(saved) == 3
+    assert session.execute() == 0
+    assert calls == [(tid, (session.run/'trial-evidence',)) for tid in ['a'] * 3 + ['b'] * 3]
+    report = session.results[-1]['repeated_trials']
+    assert report['complete'] and len(report['results']) == 6
+    assert all(('trial_evidence' in row) == (row['task_id'] == 'a') for row in report['results'])
+    assert {p: p.read_bytes() for p in (session.run/'trial-evidence').rglob('*.json')} == saved
 
 
 @pytest.mark.parametrize('change', ['missing', 'content', 'reference', 'binding', 'symlink',
