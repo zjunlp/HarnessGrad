@@ -277,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", default="sensitivity")
     ap.add_argument("--out", default=None, help="where the JSON report goes")
     ap.add_argument("--cache", default=None,
-                    help="a JSON cache shared across harnesses; re-running is then free")
+                    help="a JSON cache shared across harnesses; reuses cache-eligible task measurements")
     ap.add_argument("--strata", type=int, default=3)
     ap.add_argument("--per-stratum", type=int, default=2)
     ap.add_argument("--split-seed", type=int, default=20260716)

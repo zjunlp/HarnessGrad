@@ -44,8 +44,8 @@ The original official reward, sealed episode and available Harness output remain
 in the existing evidence archive; the invalid trial has no formal score and its
 `pass^k` group remains incomplete. Other 4xx, including request/context errors, retain
 existing rules. Unrecognized traffic without a confirmed status does not establish
-an HTTP service fault. The expanded policy changes the resume configuration digest;
-records produced under the earlier 503-only policy cannot be resumed under this policy.
+an HTTP service fault. The policy is part of the resume configuration; resuming
+requires the same policy.
 Malformed actor transport requests are rejected before entering the runtime and
 recorded in `transport.request_errors`. They do not change native step/error counts
 or invalidate a later completed episode. Service failures and explicit resource-limit
