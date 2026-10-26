@@ -52,9 +52,9 @@ def upstream():
         thread.join()
 
 
-@pytest.fixture
-def route(upstream):
-    route = NativeModelRoute(upstream[0]).start()
+@pytest.fixture(params=[False, True], ids=['legacy', 'observed'])
+def route(upstream, request):
+    route = NativeModelRoute(upstream[0], observe_http=request.param).start()
     try:
         yield route
     finally:
@@ -164,6 +164,10 @@ print(json.dumps({'url':os.environ['HG_AGENT_BASE_URL'], 'net':os.readlink('/pro
     assert [(p, h) for p, h, _ in upstream[1]] == [
         ("/v1/chat/completions", "203.0.113.1"), ("http://203.0.113.1/escape", "203.0.113.1")]
     assert route.account()["connections"] == 1
+    if route.http is not None:
+        report = route.http.report()
+        assert report['complete'], report
+        assert [c['status'] for c in report['calls']] == [201, 201]
 
 
 @pytest.mark.parametrize("authorized", [False, True])

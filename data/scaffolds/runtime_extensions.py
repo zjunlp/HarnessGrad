@@ -100,6 +100,12 @@ def validate_trial_evidence(spec):
         raise ValueError('trial_evidence requires exactly version=1')
 
 
+def validate_model_failure_policy(spec):
+    if (not isinstance(spec, dict) or set(spec) != {'version'}
+            or type(spec['version']) is not int or spec['version'] != 1):
+        raise ValueError('model_failure_policy requires exactly version=1')
+
+
 def validate_mailbox(spec):
     allowed = {'max_messages', 'max_message_bytes', 'max_calls', 'max_line_bytes'}
     if not isinstance(spec, dict) or set(spec) - allowed:

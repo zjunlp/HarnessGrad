@@ -35,10 +35,16 @@ class _Handler(socketserver.BaseRequestHandler):
             upstream.connect(owner.target)
             upstream.settimeout(None)
             conn = {}
+            client_reader, upstream_reader = self.request, upstream
+            if owner.http is not None:
+                from eval.service.http_observation import ObservedReader
+                observation = owner.http.connection()
+                client_reader = ObservedReader(self.request, observation, 'client')
+                upstream_reader = ObservedReader(upstream, observation, 'upstream')
             send = threading.Thread(target=_pump, args=(
-                self.request, upstream, "client", owner.stats, conn), daemon=True)
+                client_reader, upstream, "client", owner.stats, conn), daemon=True)
             send.start()
-            _pump(upstream, self.request, "upstream", owner.stats, conn)
+            _pump(upstream_reader, self.request, "upstream", owner.stats, conn)
             send.join()
         except OSError as exc:
             owner.stats.connect_failed(exc)
@@ -53,7 +59,7 @@ class _Server(socketserver.ThreadingUnixStreamServer):
 
 
 class NativeModelRoute:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, *, observe_http=False):
         parsed = urlsplit(base_url)
         # TLS/userinfo need a different transport contract. Fail rather than
         # quietly dropping encryption, credentials or URL semantics.
@@ -63,6 +69,10 @@ class NativeModelRoute:
         self.target = (parsed.hostname, parsed.port or 80)
         self.path = parsed.path
         self.stats = GatewayStats()
+        self.http = None
+        if observe_http:
+            from eval.service.http_observation import HTTPObservation
+            self.http = HTTPObservation()
         self.directory = None
         self.socket_path = None
         self.server = None

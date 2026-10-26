@@ -284,12 +284,28 @@ eval 断点续跑还会保存 `<progress_dir>/protocols/round-0/resume-plan.json
 这些规则仅适用于声明 `trial_protocol` 的任务。
 
 `repeated_trials` 是独立报告，不能用 `run_reward/per_task/per_task_trials` 替代。
-声明 `trial_protocol`、`judge`、`result_contract`、`tool_relay.record`、`workers`
+声明 `trial_protocol`、`judge`、`result_contract`、`model_failure_policy`、`tool_relay.record`、`workers`
 或 `tool_relay.model.seed_source="trial"` 时，该任务不读写 measurement cache。
 未绑定 trial seed 的 `tool_relay.model` 不单独触发此规则。
 其他任务按常规 measurement cache 规则处理。
 
-### 6.1 可选的逐次完整证据归档
+### 6.1 可选的模型服务故障分类
+
+`VERIFY[task_id]["model_failure_policy"] = {"version": 1}` 默认关闭，独立于证据归档。
+v1 适用于 sandboxed `files`、无 `workers`；真实模型必须走 `network="none"`
+下的原生模型通道。mock 后端不产生模型通道回执。τ³ 显式启用；其他任务沿用原分类。
+
+平台被动观察 HTTP/1 请求和响应的边界，不改写字节、流式输出、重试或预算，
+只保留操作类别、状态码和完整性。`runtime_services.agent_model_http` 不含请求/响应正文、
+URL 或凭据。支持 OpenAI-compatible POST chat/completions、completions、responses。
+只有完整推理响应中有 429/5xx、Harness 非零退出、最终异常行匹配该类 SDK/HTTP 错误，
+且未得到成功 verdict 时，才新增 `invalid`，使该次结果为不可测并保留原始评分证据。
+独立请求可能乱序完成；另一个请求成功不证明失败请求已恢复，最终异常仍须匹配故障。
+503 后恢复、错误参数和上下文超限的 4xx、不相关的 Harness 错误不由此策略改判。
+未知协议、损坏或未完成的 HTTP 观察标记完整性不足，不作为新的故障归因依据；
+Harness 隐藏异常或自行以零退出时，该策略不能证明其终止原因。原有连接故障规则仍适用。
+
+### 6.2 可选的逐次完整证据归档
 
 ```python
 VERIFY[task_id]["trial_evidence"] = {"version": 1}

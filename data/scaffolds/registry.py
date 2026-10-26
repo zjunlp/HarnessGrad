@@ -717,6 +717,9 @@ def _check_verifier(spec, tid: str, name: str) -> None:
     if "trial_protocol" in spec:
         from data.scaffolds.runtime_extensions import validate_trials
         validate_trials(spec["trial_protocol"])
+    if "model_failure_policy" in spec:
+        from data.scaffolds.runtime_extensions import validate_model_failure_policy
+        validate_model_failure_policy(spec["model_failure_policy"])
     if "trial_evidence" in spec:
         from data.scaffolds.runtime_extensions import validate_trial_evidence
         validate_trial_evidence(spec["trial_evidence"])

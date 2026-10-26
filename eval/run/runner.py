@@ -23,7 +23,7 @@ from eval.containers.process import run as run_process
 import eval.service.services as services_mod
 from eval.service.unix_stepwise_relay import StepwiseRelay
 from eval.run import tool_relay as tool_relay_mod
-from eval.run import chess_stepwise, trial_evidence
+from eval.run import chess_stepwise, trial_evidence, model_failure
 import tools.web_gateway as web_gateway_mod
 from ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT, diff, snapshot
@@ -323,6 +323,8 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             observation: dict | None = None,
             _worker: dict | None = None) -> dict:
     evidence_output = None
+    if model_failure.enabled(verifier):
+        model_failure.admit(sandbox=sandbox, setup=setup, env=env)
     if trial_evidence.enabled(verifier):
         trial_evidence.admit_execution(sandbox=sandbox, setup=setup, env=env)
         evidence_output = {'launch_attempted': False, 'trace_status': 'not_started'}
@@ -369,6 +371,10 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         result["verdict"].setdefault("scorer_isolation_class", "unknown")
     if diagnostic_authorization is not None:
         result["enforcement"] = diagnostic_authorization.record()
+    if model_failure.enabled(verifier):
+        failure = model_failure.failure(result)
+        if failure is not None:
+            result['invalid'] = failure
     return result
 
 
@@ -686,7 +692,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 base = child_env.get("HG_AGENT_BASE_URL")
                 if not base:
                     raise modelgate_mod.GatewayUnavailable("live offline agent needs HG_AGENT_BASE_URL")
-                model_gateway = NativeModelRoute(base).start()
+                model_gateway = NativeModelRoute(
+                    base, **({'observe_http': True} if model_failure.enabled(verifier) else {})).start()
             except (modelgate_mod.GatewayUnavailable, ValueError) as exc:
                 return _invalid(task, exc, stage="native model route admission", service=None)
 
@@ -947,6 +954,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # isolation that is not there. `stop()` never raises.
         if model_gateway is not None:
             model_gateway.stop()
+            if isinstance(model_gateway, NativeModelRoute) and model_gateway.http is not None:
+                runtime_receipt['agent_model_http'] = model_gateway.http.report()
         if web_gateway is not None:
             web_gateway.stop()
         if owns_network and network_name is not None:
@@ -1367,6 +1376,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
 
     from eval.run import repeated_trials
     trial_protocol = repeated_trials.protocol_for(tasks, verifiers or {}, trials)
+    for task in tasks:
+        tid = task['task_id']
+        if model_failure.enabled((verifiers or {}).get(tid)):
+            model_failure.admit(sandbox=sandbox, setup=(setups or {}).get(tid), env=(envs or {}).get(tid))
     evidence_tasks = {t['task_id'] for t in tasks
                       if trial_evidence.enabled((verifiers or {}).get(t['task_id']))}
     if evidence_tasks:
@@ -1380,7 +1393,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     def fresh_measurement(tid):
         spec = (verifiers or {}).get(tid) or {}
         relay = ((setups or {}).get(tid) or {}).get("tool_relay") or {}
-        return bool(trial_protocol or spec.get("judge") or spec.get("result_contract") or relay.get("record")
+        return bool(trial_protocol or spec.get("judge") or spec.get("result_contract") or spec.get("model_failure_policy") or relay.get("record")
                     or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 

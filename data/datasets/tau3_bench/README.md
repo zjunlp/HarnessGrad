@@ -31,6 +31,14 @@ is added, and verifier evidence records the mapping and the incomplete-conversat
 reason. Missing or malformed records, provider failures and scorer errors remain
 unmeasured; an unfinished episode must explicitly report `failure: null`.
 Official max-step/error terminations retain their official zero reward.
+The adapter explicitly enables `model_failure_policy: {version: 1}` independently
+of evidence archival. The platform's native model route observes HTTP metadata:
+a completed inference 429/5xx with a matching terminal SDK/HTTP exception and a nonzero
+unsuccessful actor exit is unmeasured. Independent successful requests do not prove
+that the failed request recovered. Recovered errors, successful verdicts
+and request/context 4xx keep their existing meaning. This does not modify the
+official reward or the sealed episode. Unsupported/incomplete HTTP observations
+and errors hidden by the candidate do not establish a terminal provider failure.
 Malformed actor transport requests are rejected before entering the runtime and
 recorded in `transport.request_errors`. They do not change native step/error counts
 or invalidate a later completed episode. Service failures and explicit resource-limit
@@ -112,7 +120,7 @@ This archive is independent of scoring and method feedback. Incomplete groups
 still have no formal `pass^k`; no automatic retries are added. A write failure
 stops publication, and resume rejects missing or changed archives. Use a run
 output directory outside the Harness's visible work root. See the shared
-[archive contract](../../../docs/dataset-runtime-interfaces.md#61-可选的逐次完整证据归档)
+[archive contract](../../../docs/dataset-runtime-interfaces.md#62-可选的逐次完整证据归档)
 for supported execution paths and interruption behavior.
 
 The platform emits `repeated-trials.json`; add task-weighted domain metrics with:
