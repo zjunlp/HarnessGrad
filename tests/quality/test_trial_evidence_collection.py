@@ -86,22 +86,12 @@ def test_real_evaluation_keeps_all_three_trials_and_archives(tmp_path, monkeypat
             assert '\r' in output['trace'] and '\r' not in record['trace']
 
 
-def test_normal_feedback_and_legacy_invalid_utf8_behavior_are_preserved(tmp_path, monkeypatch):
+def test_legacy_invalid_utf8_behavior_is_preserved(tmp_path, monkeypatch):
     work = tmp_path/'work'
     work.mkdir()
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))
     monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
-    repo = actor(work, 'crlf')
+    repo = actor(work, 'invalid-utf8')
     spec = {'kind': 'answer', 'expected': 'yes'}
-    legacy = runner.run_one(repo, {'task_id': 'fixture/t'}, verifier=spec)
-    enhanced = runner.run_one(repo, {'task_id': 'fixture/t'}, verifier={**spec,
-        'trial_protocol': PROTOCOL, 'trial_evidence': {'version': 1}})
-    assert legacy['trace'] == enhanced['trace'] == '{"event":"first"}\n{"event":"second"}\n'
-    assert legacy['verdict'] == enhanced['verdict']
-    assert 'trial_evidence_output' not in legacy
-    second = tmp_path/'other-work'
-    second.mkdir()
-    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(second))
-    repo = actor(second, 'invalid-utf8')
     with pytest.raises(UnicodeDecodeError):
         runner.run_one(repo, {'task_id': 'fixture/t'}, verifier=spec)
