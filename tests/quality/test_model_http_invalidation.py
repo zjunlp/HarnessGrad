@@ -44,15 +44,17 @@ def test_confirmed_503_invalidates_every_outcome_without_changing_raw_result(ove
 
 
 @pytest.mark.parametrize('status', [200, 400, 401, 413, 429, 500, 502, 504])
-def test_other_statuses_are_not_added_to_the_unconditional_rule(status):
-    result = observed(status, stderr='', exit_code=0, verdict={'passed': True, 'score': 1})
+@pytest.mark.parametrize('exit_code', [0, 1])
+def test_unlisted_statuses_are_not_invalidated_by_exception_text(status, exit_code):
+    result = observed(status, stderr=f'HTTPError: HTTP Error {status}', exit_code=exit_code)
     assert model_failure.failure(result, POLICY) is None
 
 
 def test_policy_is_opt_in_and_dataset_selects_the_statuses():
     result = observed(503, stderr='', exit_code=0, verdict={'passed': True, 'score': 1})
-    assert model_failure.failure(result) is None
-    assert model_failure.failure(result, {'version': 1}) is None
+    assert not model_failure.enabled({})
+    with pytest.raises(ValueError, match='invalidate_on_http_status'):
+        model_failure.enabled({'model_failure_policy': {'version': 1}})
     result['runtime_services']['agent_model_http']['calls'][0]['status'] = 429
     assert model_failure.failure(result, {'version': 1, 'invalidate_on_http_status': [429]})['http_status'] == 429
 
@@ -106,10 +108,11 @@ def test_partial_headers_and_body_text_are_not_a_confirmed_error_status(response
 
 
 @pytest.mark.parametrize('enabled', [False, True])
-@pytest.mark.parametrize('mode', ['wrapped', 'swallowed', 'recovered', 'clean', 'spoofed', 'other'])
+@pytest.mark.parametrize('mode', ['wrapped', 'swallowed', 'recovered', 'clean', 'spoofed', 'other',
+                                  'independent', 'pass-before-fault'])
 def test_real_route_classifies_independently_of_harness_output(tmp_path, monkeypatch, endpoint, enabled, mode):
     url, statuses, requests = endpoint
-    sequence = [503, 200] if mode == 'recovered' else [200 if mode in ('clean', 'spoofed') else 503]
+    sequence = [503, 200] if mode in ('recovered', 'independent') else [200 if mode in ('clean', 'spoofed') else 503]
     statuses[:] = sequence * 3
     work = tmp_path/'work'
     work.mkdir()
@@ -122,12 +125,21 @@ def request():
     path = '/models' if mode == 'other' else '/chat/completions'
     return urllib.request.urlopen(urllib.request.Request(os.environ['HG_AGENT_BASE_URL']+path,
         data=b'{{}}', headers={{'Content-Type':'application/json'}})).read()
-try:
-    request()
-except urllib.error.HTTPError as exc:
-    if mode == 'wrapped': raise RuntimeError('custom wrapper') from exc
-    if mode == 'recovered': request()
-    elif mode != 'swallowed': raise
+if mode == 'pass-before-fault': (w/'answer.txt').write_text('yes')
+if mode == 'independent':
+    from concurrent.futures import ThreadPoolExecutor, wait
+    with ThreadPoolExecutor() as pool:
+        failed = pool.submit(request)
+        wait([failed])
+        pool.submit(request).result()
+        failed.result()
+else:
+    try:
+        request()
+    except urllib.error.HTTPError as exc:
+        if mode == 'wrapped': raise RuntimeError('custom wrapper') from exc
+        if mode == 'recovered': request()
+        elif mode != 'swallowed': raise
 if mode == 'spoofed': raise RuntimeError('HTTP 503: provider unavailable')
 if mode in ('clean', 'recovered'): (w/'answer.txt').write_text('yes')
 ''')
@@ -137,10 +149,10 @@ if mode in ('clean', 'recovered'): (w/'answer.txt').write_text('yes')
     result = runner.evaluate(repo, [{'task_id': 'fixture/t', 'goal': ''}], {}, trials=3, jobs=1,
         envs={'fixture/t': {'kind': 'files', 'network': 'none'}}, verifiers={'fixture/t': spec},
         run_id='fixture', harness_sha='fixture', progress_dir=tmp_path/'run')
-    invalid = enabled and mode in ('wrapped', 'swallowed', 'recovered')
+    invalid = enabled and mode in ('wrapped', 'swallowed', 'recovered', 'independent', 'pass-before-fault')
     rows = result['repeated_trials']['results']
     assert [r['status'] for r in rows] == ['unmeasured' if invalid else 'measured'] * 3
-    assert [r['score'] for r in rows] == [None if invalid else int(mode in ('clean', 'recovered'))] * 3
+    assert [r['score'] for r in rows] == [None if invalid else int(mode in ('clean', 'recovered', 'pass-before-fault'))] * 3
     assert result['repeated_trials']['complete'] == (not invalid)
     assert all(('agent_model_http' in (r['runtime_services'] or {})) == enabled for r in rows)
     assert len(requests) == len(sequence)*3 and not statuses

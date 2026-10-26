@@ -42,9 +42,7 @@ response status remains evidence if its body or another connection is incomplete
 an error string alone or a non-inference response does not qualify.
 The original official reward, sealed episode and available Harness output remain
 in the existing evidence archive; the invalid trial has no formal score and its
-`pass^k` group remains incomplete. This covers the same HTTP service-fault category
-as the legacy terminal-error rule, without depending on a Harness's exception format
-or whether recovery succeeded. Other 4xx, including request/context errors, retain
+`pass^k` group remains incomplete. Other 4xx, including request/context errors, retain
 existing rules. Unrecognized traffic without a confirmed status does not establish
 an HTTP service fault. The expanded policy changes the resume configuration digest;
 records produced under the earlier 503-only policy cannot be resumed under this policy.

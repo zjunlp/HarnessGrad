@@ -101,15 +101,14 @@ def validate_trial_evidence(spec):
 
 
 def validate_model_failure_policy(spec):
-    if (not isinstance(spec, dict) or set(spec) - {'version', 'invalidate_on_http_status'}
+    if (not isinstance(spec, dict) or set(spec) != {'version', 'invalidate_on_http_status'}
             or type(spec.get('version')) is not int or spec['version'] != 1):
-        raise ValueError('model_failure_policy requires version=1 and optional invalidate_on_http_status')
-    if 'invalidate_on_http_status' in spec:
-        statuses = spec['invalidate_on_http_status']
-        if (not isinstance(statuses, list) or not statuses
-                or any(type(status) is not int or not 400 <= status <= 599 for status in statuses)
-                or len(set(statuses)) != len(statuses)):
-            raise ValueError('model_failure_policy.invalidate_on_http_status requires unique HTTP error statuses (400..599)')
+        raise ValueError('model_failure_policy requires version=1 and explicit invalidate_on_http_status')
+    statuses = spec['invalidate_on_http_status']
+    if (not isinstance(statuses, list) or not statuses
+            or any(type(status) is not int or not 400 <= status <= 599 for status in statuses)
+            or len(set(statuses)) != len(statuses)):
+        raise ValueError('model_failure_policy.invalidate_on_http_status requires unique HTTP error statuses (400..599)')
 
 
 def validate_mailbox(spec):

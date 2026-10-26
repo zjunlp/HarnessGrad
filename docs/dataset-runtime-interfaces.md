@@ -291,7 +291,8 @@ eval 断点续跑还会保存 `<progress_dir>/protocols/round-0/resume-plan.json
 
 ### 6.1 可选的模型服务故障分类
 
-`VERIFY[task_id]["model_failure_policy"] = {"version": 1}` 默认关闭，独立于证据归档。
+`VERIFY[task_id]["model_failure_policy"]` 默认关闭，独立于证据归档。
+启用时须同时声明 `version=1` 和明确的 `invalidate_on_http_status` 列表。
 v1 适用于 sandboxed `files`、无 `workers`；真实模型必须走 `network="none"`
 下的原生模型通道。mock 后端不产生模型通道回执。未声明的任务沿用原分类。
 
@@ -308,7 +309,7 @@ VERIFY[task_id]["model_failure_policy"] = {
 }
 ```
 
-`invalidate_on_http_status` 是可选的非空、不重复整数列表，取值为 400–599。
+`invalidate_on_http_status` 是必填的非空、不重复整数列表，取值为 400–599。
 平台只要观察到推理请求的最终 HTTP 响应状态命中列表，就新增 `invalid`，
 不依赖 Harness 异常格式、退出码、后续重试结果或原始评分；已有 `invalid` 原因保留。
 回执记录命中的状态码、操作类别与 `calls` 中从零开始的索引，原因是试验受到已声明的服务干扰，
@@ -317,13 +318,11 @@ VERIFY[task_id]["model_failure_policy"] = {
 原始 verdict、回执和已有轨迹保留，正式 trial 分数为 null；声明 `trial_evidence` 时沿用原归档。
 含此类试验的 `pass^k` 分组仍是不完整分组，不发布完整指标。
 
-未配置此列表或没有命中时，v1 既有规则保持不变：完整 HTTP 观察中有 429/5xx、
-Harness 非零退出、最终异常行匹配该类 SDK/HTTP 错误且没有成功 verdict 时，才新增不可测判定。
-独立请求可能乱序完成，另一个请求成功不证明失败请求已恢复。未知/损坏/未完成的观察
-不作为这一终止故障规则的依据。原有连接故障规则仍适用。
+未命中列表时，此扩展不新增不可测判定，也不根据 stderr 匹配异常类型。
+仅含 `version=1` 的旧声明在配置校验阶段拒绝，不能隐式选择错误分类规则。
+平台原有的连接故障和超时处理独立保留。
 τ³ 把 429 和全部 5xx（500–599）加入无条件失效列表，统一按模型服务干扰处理；
-这与既有终止故障规则涵盖的 HTTP 类别一致，但不依赖 Harness 异常文本或恢复结果。
-其他 4xx（包括上下文超限）维持原语义。未启用该列表的任务继续使用既有规则。
+其他 4xx（包括上下文超限）维持原语义。未启用此扩展的任务继续使用既有规则。
 策略声明参与已有续跑配置摘要，修改后不能沿用旧配置的试验记录。
 
 ### 6.2 可选的逐次完整证据归档

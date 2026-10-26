@@ -110,9 +110,7 @@ def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(sessi
     if change in ('model_policy', 'model_policy_statuses'):
         session.args.sandbox = True
         for verifier in session.verifiers.values():
-            verifier['model_failure_policy'] = {'version': 1}
-            if change == 'model_policy_statuses':
-                verifier['model_failure_policy']['invalidate_on_http_status'] = [503]
+            verifier['model_failure_policy'] = {'version': 1, 'invalidate_on_http_status': [503]}
     interrupted(session)
     path = next((session.root / 'tasks').glob('*.json'))
     if change == 'missing':
@@ -133,8 +131,10 @@ def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(sessi
         session.tasks = session.tasks[:1]
     elif change in ('model_policy', 'model_policy_statuses'):
         for verifier in session.verifiers.values():
-            verifier['model_failure_policy']['invalidate_on_http_status'] = (
-                [503] if change == 'model_policy' else [429, *range(500, 600)])
+            if change == 'model_policy':
+                verifier.pop('model_failure_policy')
+            else:
+                verifier['model_failure_policy']['invalidate_on_http_status'] = [429, *range(500, 600)]
     else:
         session.verifiers['a']['argv'] = ['different-scorer']
     assert session.execute() == 2
