@@ -304,7 +304,7 @@ URL 或凭据。支持 OpenAI-compatible POST chat/completions、completions、r
 ```python
 VERIFY[task_id]["model_failure_policy"] = {
     "version": 1,
-    "invalidate_on_http_status": [503],
+    "invalidate_on_http_status": [429, *range(500, 600)],
 }
 ```
 
@@ -321,7 +321,9 @@ VERIFY[task_id]["model_failure_policy"] = {
 Harness 非零退出、最终异常行匹配该类 SDK/HTTP 错误且没有成功 verdict 时，才新增不可测判定。
 独立请求可能乱序完成，另一个请求成功不证明失败请求已恢复。未知/损坏/未完成的观察
 不作为这一终止故障规则的依据。原有连接故障规则仍适用。
-τ³ 仅把 503 加入无条件失效列表，其他状态码（包括上下文超限的 4xx）维持原语义。
+τ³ 把 429 和全部 5xx（500–599）加入无条件失效列表，统一按模型服务干扰处理；
+这与既有终止故障规则涵盖的 HTTP 类别一致，但不依赖 Harness 异常文本或恢复结果。
+其他 4xx（包括上下文超限）维持原语义。未启用该列表的任务继续使用既有规则。
 策略声明参与已有续跑配置摘要，修改后不能沿用旧配置的试验记录。
 
 ### 6.2 可选的逐次完整证据归档

@@ -105,12 +105,14 @@ def test_all_tasks_completed_resume_reuses_evidence_and_existing_report(session,
         assert path.read_bytes() == before
 
 
-@pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration', 'removed_protocol', 'model_policy'])
+@pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration', 'removed_protocol', 'model_policy', 'model_policy_statuses'])
 def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(session, change):
-    if change == 'model_policy':
+    if change in ('model_policy', 'model_policy_statuses'):
         session.args.sandbox = True
         for verifier in session.verifiers.values():
             verifier['model_failure_policy'] = {'version': 1}
+            if change == 'model_policy_statuses':
+                verifier['model_failure_policy']['invalidate_on_http_status'] = [503]
     interrupted(session)
     path = next((session.root / 'tasks').glob('*.json'))
     if change == 'missing':
@@ -129,9 +131,10 @@ def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(sessi
             verifier.pop('trial_protocol')
     elif change == 'selection':
         session.tasks = session.tasks[:1]
-    elif change == 'model_policy':
+    elif change in ('model_policy', 'model_policy_statuses'):
         for verifier in session.verifiers.values():
-            verifier['model_failure_policy']['invalidate_on_http_status'] = [503]
+            verifier['model_failure_policy']['invalidate_on_http_status'] = (
+                [503] if change == 'model_policy' else [429, *range(500, 600)])
     else:
         session.verifiers['a']['argv'] = ['different-scorer']
     assert session.execute() == 2

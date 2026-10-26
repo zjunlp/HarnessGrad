@@ -147,9 +147,9 @@ if mode in ('clean', 'recovered'): (w/'answer.txt').write_text('yes')
     assert not (tmp_path/'run/trial-evidence').exists()
 
 
-def test_recovered_success_keeps_archive_but_not_a_formal_score(tmp_path, monkeypatch, endpoint):
+def recovered_success_archive(tmp_path, monkeypatch, endpoint, *, policy, status):
     url, statuses, requests = endpoint
-    statuses[:] = [503, 200, 200, 200]  # First trial recovers; the next two are clean.
+    statuses[:] = [status, 200, 200, 200]  # First trial recovers; the next two are clean.
     work = tmp_path/'work'
     work.mkdir()
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))
@@ -173,7 +173,7 @@ Path('verifier/evidence.json').write_text(json.dumps({'matched': True}))
     spec = {'kind': 'command', 'argv': ['python', 'check.py'],
             'inputs': [{'path': 'check.py', 'content': check}],
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
-            'trial_protocol': PROTOCOL, 'model_failure_policy': POLICY, 'trial_evidence': {'version': 1}}
+            'trial_protocol': PROTOCOL, 'model_failure_policy': policy, 'trial_evidence': {'version': 1}}
     result = runner.evaluate(repo, [{'task_id': 'fixture/t', 'goal': ''}], {}, trials=3, jobs=1,
         envs={'fixture/t': {'kind': 'files', 'network': 'none'}}, verifiers={'fixture/t': spec},
         run_id='fixture', harness_sha='fixture', progress_dir=tmp_path/'run')
@@ -191,6 +191,10 @@ Path('verifier/evidence.json').write_text(json.dumps({'matched': True}))
         assert raw['trace'] == '{"event":"completed"}\n'
         assert raw['trial_evidence_output']['trace'] == raw['trace']
     invalid = archives[0]
-    assert invalid['outcome']['score'] is None and invalid['result']['invalid']['http_status'] == 503
-    assert [c['status'] for c in invalid['result']['runtime_services']['agent_model_http']['calls']] == [503, 200]
+    assert invalid['outcome']['score'] is None and invalid['result']['invalid']['http_status'] == status
+    assert [c['status'] for c in invalid['result']['runtime_services']['agent_model_http']['calls']] == [status, 200]
     assert all('invalid' not in a['result'] for a in archives[1:])
+
+
+def test_recovered_success_keeps_archive_but_not_a_formal_score(tmp_path, monkeypatch, endpoint):
+    recovered_success_archive(tmp_path, monkeypatch, endpoint, policy=POLICY, status=503)
