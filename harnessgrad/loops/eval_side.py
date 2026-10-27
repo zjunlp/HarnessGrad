@@ -235,6 +235,10 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
 
     merged = dict(res)
     per_task = dict(merged.get("per_task") or {})
+    multiple_trials = merged.get("trials", 1) > 1
+    trial_scores = dict(merged.get("per_task_trials") or {})
+    per_task_std = dict(merged.get("per_task_std") or {})
+    missing_trial_scores = False
     isolation = dict(merged.get("per_task_scorer_isolation") or {})
     invalid = dict(merged.get("invalid") or {})
     failed = dict(merged.get("harness_failed") or {})
@@ -264,10 +268,30 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
             if record.get("score") is not None:
                 per_task[task_id] = float(record["score"])
                 isolation[task_id] = observed_class(record)
+                if multiple_trials:
+                    scores = record.get("trial_scores")
+                    if scores:
+                        trial_scores[task_id] = list(scores)
+                        per_task_std[task_id] = statistics.pstdev(scores)
+                    else:
+                        missing_trial_scores = True
             if outcome != "completed" or record.get("score") is None:
                 failed.setdefault(task_id, {'reason': record.get('detail') or str(outcome),
                                             'exit_code': record.get('exit_code')})
     merged["per_task"] = per_task
+    if multiple_trials:
+        merged["per_task_trials"] = trial_scores
+        merged["per_task_std"] = per_task_std
+        if missing_trial_scores:
+            # Legacy means alone cannot establish the full pool's trial spread.
+            merged.pop("score_std", None)
+        elif trial_scores:
+            # Match the runner: spread of trial-wise task means, using the common
+            # measured width when ordinary provider failures discarded attempts.
+            width = min(len(scores) for scores in trial_scores.values())
+            merged["score_std"] = statistics.pstdev([
+                sum(scores[i] for scores in trial_scores.values()) / len(trial_scores)
+                for i in range(width)])
     merged["per_task_scorer_isolation"] = isolation
     merged["invalid"] = invalid
     merged["harness_failed"] = failed
@@ -468,6 +492,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         cumulative=cumulative, label="exam", side="eval",
         evaluated_from=eval_from, n_trials=res.get("trials"),
         score_std=res.get("score_std"), per_task_std=res.get("per_task_std"),
+        per_task_trials=res.get("per_task_trials"),
         **_test_rate_fields(res),
         **_level_fields(res, scored))
     point["measured_by_platform"] = True
