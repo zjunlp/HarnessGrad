@@ -25,7 +25,7 @@ from eval.service.unix_stepwise_relay import StepwiseRelay
 from eval.run import tool_relay as tool_relay_mod
 from eval.run import chess_stepwise, trial_evidence, model_failure
 import tools.web_gateway as web_gateway_mod
-from ckpt.git_state import STATE_DIRNAME
+from eval.ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT, diff, snapshot
 # The three layers this module used to contain, now separate modules. `runner` decides
 # what a round is and what a curve point says; `tracing` reads what a run left behind,

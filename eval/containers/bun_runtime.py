@@ -17,8 +17,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from ckpt.source_tree import runtime_spec, BUN_GENERATED
-from ckpt.bun_dependencies import (RuntimeUnavailable, source_files, dependency_identity,
+from eval.ckpt.source_tree import runtime_spec, BUN_GENERATED
+from eval.ckpt.bun_dependencies import (RuntimeUnavailable, source_files, dependency_identity,
                                    _module_dirs, attach_layout)
 
 

@@ -542,9 +542,9 @@ def improvers() -> list[dict]:
     operator sees. The record still stores the registry id (`dsh`), because `--improver` and every
     curve point use it -- only the label changes.
     """
-    data = read_json(PLATFORM / "improvers" / "improvers.json")
+    data = read_json(PLATFORM / "harnessgrad" / "improvers" / "improvers.json")
     wanted = data.get("improvers") if isinstance(data.get("improvers"), dict) else {}
-    declared = read_json(PLATFORM / "improvers" / "launchable.json").get("improvers")
+    declared = read_json(PLATFORM / "harnessgrad" / "improvers" / "launchable.json").get("improvers")
     out = []
     if isinstance(declared, list) and declared:
         for row in declared:

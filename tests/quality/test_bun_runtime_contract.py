@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness
 from eval.containers import bun_runtime as runtime
 
 
@@ -82,7 +82,7 @@ def test_explicit_setup_then_source_rewrite_reuses_store(tmp_path, monkeypatch):
 @pytest.mark.parametrize("field,value", [("source", "../other"), ("entrypoint", "/tmp/entry.ts"),
                                          ("kind", "unknown"), ("source", "engine\\other")])
 def test_invalid_declaration_is_rejected(tmp_path, field, value):
-    from ckpt.source_tree import runtime_spec
+    from eval.ckpt.source_tree import runtime_spec
     repo = harness(tmp_path)
     manifest = json.loads((repo / "harness.json").read_text())
     manifest["runtime"][field] = value

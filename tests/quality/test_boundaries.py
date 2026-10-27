@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # implementation moved out of `driver.py`, a check pinned to that one path would have
 # failed a refactor that changed no behaviour -- which is R6's own argument, written down
 # before this move happened.
-PLATFORM_PACKAGES = ["eval", "ckpt", "data", "harnessgrad"]
+PLATFORM_PACKAGES = ["eval", "data", "harnessgrad"]
 PLATFORM_FILES = ["driver.py"]
 
 
@@ -160,9 +160,9 @@ def test_r4_harness_state_never_contains_platform_channel_or_pycache():
     `test_states.py::test_the_instruments_own_state_never_moves_the_harness_identity` is
     the behavioural half of this rule.
     """
-    from ckpt.git_state import IGNORED_HARNESS_STATE  # noqa: PLC0415
+    from eval.ckpt.git_state import IGNORED_HARNESS_STATE  # noqa: PLC0415
 
-    src = (ROOT / "ckpt" / "git_state.py").read_text()
+    src = (ROOT / "eval" / "ckpt" / "git_state.py").read_text()
     assert "_harnessgrad/" in IGNORED_HARNESS_STATE
     assert "__pycache__/" in IGNORED_HARNESS_STATE
     for rule in IGNORED_HARNESS_STATE:

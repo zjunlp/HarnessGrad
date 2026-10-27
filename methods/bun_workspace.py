@@ -9,7 +9,7 @@ from pathlib import Path
 # The sandbox exposes this single stdlib-only checkpoint helper read-only. It
 # contains no scorer, task data or platform entrypoint; the rest of ckpt is hidden.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from ckpt.bun_dependencies import attach_fresh, dependency_identity, _module_dirs
+from eval.ckpt.bun_dependencies import attach_fresh, dependency_identity, _module_dirs
 
 
 def source_for(candidate, receipt):

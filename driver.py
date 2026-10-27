@@ -31,7 +31,7 @@ import data.scaffolds.registry as datasets
 from tools.improver import forbidden_reason
 from tools.improver import load_config as load_improvers
 from tools.improver import resolve as resolve_improver
-from ckpt.git_state import STATE_DIRNAME, commit_state, manifest, stage_workspace
+from eval.ckpt.git_state import STATE_DIRNAME, commit_state, manifest, stage_workspace
 from eval.observe.console import CONSOLE as console
 from eval.run.metrics import select_task_set
 from eval.run import metrics
@@ -595,7 +595,7 @@ def _main(attempt: dict) -> int:
     # 版本和哈希会进每个曲线点(INTERFACE.md §4.49)。放在命令行而不是只读配置:
     # 一次实验"用哪个改进器"正是最该被显式记录、最不该靠环境变量碰运气的东西。
     ap.add_argument("--improver", default=None,
-                    help="improvers/improvers.json 里的名字,或一个可执行文件的路径")
+                    help="harnessgrad/improvers/improvers.json 里的名字,或一个可执行文件的路径")
     ap.add_argument("--improver-model", default=None, help="覆盖改进器自己的模型")
     ap.add_argument("--improver-effort", default=None,
                     help="codex 系:low|medium|high|xhigh")

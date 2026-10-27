@@ -59,8 +59,13 @@ from pathlib import Path
 #: Listing it would flag the one write the platform exists to make. A run's
 #: workspaces live outside the platform root entirely, so no legitimate write
 #: lands in the paths below.
-PLATFORM = ("driver.py", "harnessgrad", "eval", "ckpt", "data", "tools", "methods",
-            "tests", "docs", "improvers", "INTERFACE.md", ".env")
+#: `ckpt/` and `improvers/` used to be top-level entries here; on 2026-10-27 they moved under
+#: `eval/` and `harnessgrad/` (they are platform code and platform data, not siblings of it),
+#: so the tuple names their parents instead. A run recorded before that date carries a sha
+#: computed over the old tuple; the pre-slim tree is in the backup bundle the slim commit
+#: names, and `docs/architecture.md` records the move.
+PLATFORM = ("driver.py", "harnessgrad", "eval", "data", "tools", "methods",
+            "tests", "docs", "INTERFACE.md", ".env")
 
 #: Top-level entries that are deliberately **not** hashed, each with its reason.
 #:

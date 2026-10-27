@@ -1415,7 +1415,7 @@ Four more fields exist so that two runs can be told apart at all -- and one of t
 last, is not about telling runs apart but about telling *candidates* apart:
 
 * **`identity.skill_sha`** — sha256 of the platform skill the method was offered
-  (`improvers/skill.md`), read when the point is written. `improver` says which tool composed
+  (`harnessgrad/improvers/skill.md`), read when the point is written. `improver` says which tool composed
   the edits; this says what the tool was told, and the same tool with a different skill
   produces different edits. Omitted when no skill was staged.
 * **`cost.method_generation_input` / `method_generation_output` / `method_model_calls` /
@@ -1835,7 +1835,7 @@ The split is now explicit:
 | part | what it is | who owns it |
 |---|---|---|
 | **the improved harness** | the task-solving loop (`base_harness/loop`, `base_harness/cli_agent`, …) | the run |
-| **the improver** | an external command that takes a prompt and works in a directory (`improvers/improvers.json`) | the experiment, resolved once per run |
+| **the improver** | an external command that takes a prompt and works in a directory (`harnessgrad/improvers/improvers.json`) | the experiment, resolved once per run |
 | **the method** | a decision rule, plus optional `skill.md` and a declared `improver` | `methods/<name>/` |
 
 What lands on every curve point is `identity.improver`: `name`, `version`, `sha256`,
@@ -1885,7 +1885,7 @@ fact the platform is responsible for recording.
 
 ##### The default skill, and why it is not the method
 
-`improvers/skill.md` is the platform's default: it says what a harness is, where the evidence
+`harnessgrad/improvers/skill.md` is the platform's default: it says what a harness is, where the evidence
 is (`_harnessgrad/traces/`, `tasks/`, `states/`), what an edit sequence looks like, what
 phase 2 may do, and the three failure modes measured on this platform (a loop that ends on
 one unparseable reply; a budget that runs out with nothing submitted; a deliverable written
@@ -1945,7 +1945,7 @@ report the same two run-level fields, so their curves can be read on one axis.
 
 ### 4.49.1 Open decision: which improver is the *default*, and what a method owes it
 
-`improvers/improvers.json` names **codex -- a CLI -- as the default**, so an ordinary run
+`harnessgrad/improvers/improvers.json` names **codex -- a CLI -- as the default**, so an ordinary run
 resolves a CLI improver, records it in `identity.improver`, and binds its runtime trees.
 
 Meanwhile every method in `methods/` carries its own editor: the seven ports and
@@ -1969,7 +1969,7 @@ Two coherent fixes, and no third:
    (`editor.model_settings` is the single place that can say so). Cost: a method can no
    longer carry its own editor without saying why, which is most of what the ports are.
 
-**Decided 2026-10-04: option 1.** `improvers/improvers.json` now names `deepseek` as the
+**Decided 2026-10-04: option 1.** `harnessgrad/improvers/improvers.json` now names `deepseek` as the
 default, so an ordinary run resolves an endpoint, `_method_env` injects its base URL, model
 and credential into the method, and the record and the run agree by construction -- every
 method in `methods/` reaches a model through `editor.ask`, which reads `HG_METHOD_*`.
@@ -2021,7 +2021,7 @@ worth keeping: **a method cannot look the improver up for itself.** A method run
 mount namespace with the platform hidden except `methods/` (§4.8), so:
 
 * `tools/improver.py` -- the resolver -- is not on its disk;
-* `improvers/skill.md` -- the default skill §4.49 promises it -- is not on its disk either;
+* `harnessgrad/improvers/skill.md` -- the default skill §4.49 promises it -- is not on its disk either;
 * the improver's own runtime is not on its disk: the namespace binds `/usr`, `/bin`, `/lib`,
   the interpreter's prefix, the work root and the method's own directory, and **nothing under
   `$HOME`**, which is where a node-based CLI and its credentials live.
@@ -2352,7 +2352,7 @@ is `run_meta.json`, written before round 0 so that even a failed run says which
 workspace holds its commits.
 
 What is hashed is the referee, not the candidate: `driver.py`, `harnessgrad/`, `eval/`,
-`ckpt/`, `data/`, `tools/`, `methods/`, `tests/`, `docs/`, `INTERFACE.md` and `.env` —
+`eval/ckpt/`, `data/`, `tools/`, `methods/`, `tests/`, `docs/`, `INTERFACE.md` and `.env` —
 everything the platform reads to decide what a number means, plus the credentials
 that paid for it. `base_harness/` is excluded on purpose: it is a candidate, and
 every run copies it into a workspace before anything edits it.
@@ -2465,7 +2465,7 @@ HarnessGrad/
 │   ├── registry.py
 │   └── <dataset adapters>
 ├── eval/                   ← scoring, CI, resumption-safe caching
-├── ckpt/                   ← git-backed harness state management
+│   ├── ckpt/               ← git-backed harness state management
 ├── tools/                  ← human-facing tooling (the ops layer; the UI is the SPA in web/)
 ├── runs/                   ← artifacts (gitignored)
 └── tests/

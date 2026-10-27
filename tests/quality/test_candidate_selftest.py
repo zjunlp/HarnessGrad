@@ -82,7 +82,7 @@ def test_selftest_rejects_changed_dependency_inputs(tmp_path, monkeypatch):
 def test_selftest_hides_credentials_private_files_and_network(tmp_path, monkeypatch):
     from methods.bun_selftest import command
     from methods.bun_workspace import stage_candidate
-    from ckpt.source_tree import copy_harness
+    from eval.ckpt.source_tree import copy_harness
     parent, receipt, _ = prepared(tmp_path, monkeypatch)
     candidate = tmp_path / "fresh"
     copy_harness(parent, candidate)
@@ -125,7 +125,7 @@ def test_selftest_hides_credentials_private_files_and_network(tmp_path, monkeypa
 def test_selftest_refuses_dependency_change_after_staging(tmp_path, monkeypatch):
     from methods.bun_selftest import command
     from methods.bun_workspace import stage_candidate
-    from ckpt.source_tree import copy_harness
+    from eval.ckpt.source_tree import copy_harness
     parent, receipt, _ = prepared(tmp_path, monkeypatch)
     candidate = tmp_path / "fresh"
     copy_harness(parent, candidate)
@@ -138,7 +138,7 @@ def test_selftest_refuses_dependency_change_after_staging(tmp_path, monkeypatch)
 def test_editor_cli_bridge_reuses_runtime_for_source_only_archive_parent(tmp_path, monkeypatch):
     import cli_improver as bridge
     from methods import editor
-    from ckpt.source_tree import copy_harness
+    from eval.ckpt.source_tree import copy_harness
     base, _, calls = prepared(tmp_path, monkeypatch)
     parent = tmp_path / "archive-parent"
     copy_harness(base, parent)

@@ -12,7 +12,7 @@ failed step rather than drawn on the curve.
 
 from __future__ import annotations
 
-from ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness
 
 from pathlib import Path
 import json
@@ -23,8 +23,8 @@ import sys
 import tempfile
 import time
 
-from ckpt.git_state import commit_state
-from ckpt.git_state import reset_hard
+from eval.ckpt.git_state import commit_state
+from eval.ckpt.git_state import reset_hard
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from harnessgrad import PLATFORM_API_VERSION

@@ -12,7 +12,7 @@ would otherwise have happened.
 
 from __future__ import annotations
 
-from ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness
 
 from pathlib import Path
 import json

@@ -33,7 +33,7 @@ from eval.run.integrity import (PLATFORM, diff, snapshot,  # noqa: E402
 #: even an instant can crash a concurrent process with a `FileNotFoundError`
 #: for a file it briefly created or removed.
 _GUARDED = ("driver.py", "harnessgrad", "eval", "data", "tools", "methods",
-            "tests", "docs", "improvers", "base_harness")
+            "tests", "docs", "base_harness")
 
 
 def _platform_stat(root: Path | None = None) -> dict[str, tuple[int, int]]:

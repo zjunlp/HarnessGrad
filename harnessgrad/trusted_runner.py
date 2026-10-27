@@ -8,7 +8,7 @@ and requests are idempotent by operation and key.
 """
 from __future__ import annotations
 
-from ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness
 
 import hashlib
 import json
@@ -62,7 +62,7 @@ def _tree_sha(root: Path) -> str:
     entries: list[dict[str, Any]] = []
     root = Path(root)
     ignored = {".git", ".state", "_harnessgrad", "__pycache__"}
-    from ckpt.source_tree import has_bun_runtime
+    from eval.ckpt.source_tree import has_bun_runtime
     if has_bun_runtime(root):
         ignored.update({"node_modules", ".opencode-state"})
     for path in sorted(root.rglob("*")):
@@ -587,7 +587,7 @@ class TrustedRunnerFacade:
                            for task in evaluation.get("task_outcomes", [])
                            for trial in task.get("trials", [])] for evaluation in evals]
         runtime_records = [record for group in runtime_groups for record in group]
-        from ckpt.source_tree import has_bun_runtime
+        from eval.ckpt.source_tree import has_bun_runtime
         declared_bun = any(has_bun_runtime(Path(candidate["workspace"]))
                            for evaluation in evals
                            if (candidate := self.candidates.get(evaluation["candidate_id"]))

@@ -11,8 +11,8 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "methods"))
 
 import editor
-from ckpt.git_state import commit_state, init_repo, materialize
-from ckpt.source_tree import copy_harness
+from eval.ckpt.git_state import commit_state, init_repo, materialize
+from eval.ckpt.source_tree import copy_harness
 from harnessgrad.loops import mode_a
 
 
@@ -65,7 +65,7 @@ def test_formal_round_preserves_public_channel_and_cli_dispatch(tmp_path, monkey
         assert identity == improver
         assert parent == root
         assert (root / "_harnessgrad/SKILL.md").read_text() == (
-            ROOT / "improvers/skill.md").read_text()
+            ROOT / "harnessgrad/improvers/skill.md").read_text()
         return {"no_change": "offline CLI dispatch verified"}
 
     monkeypatch.setattr(editor, "_ask_cli", cli_reply)

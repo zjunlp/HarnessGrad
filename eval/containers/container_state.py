@@ -26,7 +26,7 @@ import eval.observe.progress as progress_mod
 import eval.service.services as services_mod
 import tools.web_gateway as web_gateway_mod
 from eval.service.services import label
-from ckpt.git_state import STATE_DIRNAME
+from eval.ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT
 from eval.run.task_contract import runtime_task
 from eval.observe.tracing import _last_identity, _materialize

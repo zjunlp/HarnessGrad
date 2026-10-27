@@ -16,7 +16,7 @@ import os
 import statistics
 import time
 
-from ckpt.git_state import commit_state
+from eval.ckpt.git_state import commit_state
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from harnessgrad import policies

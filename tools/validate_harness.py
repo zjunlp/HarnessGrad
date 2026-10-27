@@ -143,7 +143,7 @@ def validate(root: Path, smoke: bool) -> list[str]:
     if role not in ROLES:
         errs.append(f"role {role!r} is not one of {list(ROLES)}")
 
-    from ckpt.source_tree import runtime_spec
+    from eval.ckpt.source_tree import runtime_spec
     try:
         runtime_spec(root)
     except ValueError as exc:

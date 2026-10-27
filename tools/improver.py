@@ -56,7 +56,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CONFIG = ROOT / "improvers" / "improvers.json"
+DEFAULT_CONFIG = ROOT / "harnessgrad" / "improvers" / "improvers.json"
 
 #: `harnessgrad.config` lives at the repository root, which is on `sys.path` when this
 #: module is imported as `tools.improver` (the driver and the UI do that) but *not*

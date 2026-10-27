@@ -6,7 +6,7 @@ The dataset supplies prompts/files and a combined verifier, never solver code.
 """
 from __future__ import annotations
 
-from ckpt.source_tree import copy_harness, has_bun_runtime
+from eval.ckpt.source_tree import copy_harness, has_bun_runtime
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import json

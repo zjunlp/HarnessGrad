@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 
 import pytest
-from ckpt.git_state import stage_workspace
-from ckpt.git_state import commit_state, content_sha
+from eval.ckpt.git_state import stage_workspace
+from eval.ckpt.git_state import commit_state, content_sha
 from methods.apply import apply
 
 

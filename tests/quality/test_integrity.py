@@ -73,9 +73,9 @@ def test_the_default_improver_skill_is_protected():
     是同一种病的两个阶段。
     """
     snap = snapshot(PLATFORM_ROOT)
-    assert "improvers/skill.md" in snap, \
+    assert "harnessgrad/improvers/skill.md" in snap, \
         "默认 skill 没有被 hash:方法可以改掉它即将收到的那份说明"
-    assert "improvers/improvers.json" in snap, \
+    assert "harnessgrad/improvers/improvers.json" in snap, \
         "改进器注册表没有被 hash:方法可以改掉'跑哪个改进器'"
 
 

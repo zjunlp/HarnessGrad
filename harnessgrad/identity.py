@@ -73,7 +73,7 @@ def _skill_sha() -> str | None:
     """
     try:
         return hashlib.sha256(
-            (PLATFORM_ROOT / "improvers" / "skill.md").read_bytes()).hexdigest()
+            (PLATFORM_ROOT / "harnessgrad" / "improvers" / "skill.md").read_bytes()).hexdigest()
     except OSError:
         return None
 

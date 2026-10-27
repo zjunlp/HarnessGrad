@@ -72,7 +72,7 @@ from eval.containers.immutable_runtime import ImmutableRuntimeUnavailable, targe
 from eval.containers import model_route, tool_route
 from eval.containers.process import run as run_process
 
-from ckpt.git_state import STATE_DIRNAME
+from eval.ckpt.git_state import STATE_DIRNAME
 from harnessgrad.config import current as current_config
 
 #: The mount plan's version. Bump it whenever what the subject can see changes.

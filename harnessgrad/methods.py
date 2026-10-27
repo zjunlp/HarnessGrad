@@ -81,7 +81,7 @@ def _method_sandbox_plan(work: Path, argv: list[str], scratch: Path,
     """
     # The stdlib-only link helper is shared with trusted preparation; exposing
     # one file avoids duplicating runtime logic or revealing the ckpt directory.
-    visible = [PLATFORM_ROOT / "methods", PLATFORM_ROOT / "ckpt/bun_dependencies.py", *readonly]
+    visible = [PLATFORM_ROOT / "methods", PLATFORM_ROOT / "eval/ckpt/bun_dependencies.py", *readonly]
     # Its own script, wherever it is -- a test fixture's method lives outside the
     # platform, and a method that cannot be read cannot start.
     for arg in argv:

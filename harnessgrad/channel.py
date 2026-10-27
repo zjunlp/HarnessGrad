@@ -20,7 +20,7 @@ import os
 import shutil
 import subprocess
 
-from ckpt.git_state import materialize
+from eval.ckpt.git_state import materialize
 from eval.observe.tracing import loop_facts as _loop_facts
 from eval.observe.tracing import task_file
 
@@ -320,7 +320,7 @@ def _write_trace_with_index(dest: Path, name: str, body: str) -> None:
 
 def _stage_default_skill(channel: Path) -> None:
     """Deliver the public contract before the method's sandbox hides the platform."""
-    skill = PLATFORM_ROOT / "improvers" / "skill.md"
+    skill = PLATFORM_ROOT / "harnessgrad" / "improvers" / "skill.md"
     if skill.is_file():
         channel.mkdir(parents=True, exist_ok=True)
         (channel / "SKILL.md").write_text(skill.read_text(encoding="utf-8"), encoding="utf-8")

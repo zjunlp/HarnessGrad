@@ -39,7 +39,7 @@ import uuid
 from pathlib import Path
 from contextlib import contextmanager
 
-from ckpt.git_state import STATE_DIRNAME
+from eval.ckpt.git_state import STATE_DIRNAME
 from eval.containers.immutable_runtime import ImmutableRuntimeUnavailable, targets
 
 #: The mount plan's version, in the same sense as `eval/containers/sandbox.py`'s: bump it when

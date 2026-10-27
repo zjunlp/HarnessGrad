@@ -15,7 +15,7 @@ try:
     from .bun_workspace import source_for
 except ImportError:
     from bun_workspace import source_for
-from ckpt.bun_dependencies import _module_dirs
+from eval.ckpt.bun_dependencies import _module_dirs
 
 
 def command(candidate, receipt, mode, package, tests):

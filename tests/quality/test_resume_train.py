@@ -21,7 +21,7 @@ def _state(tmp_path: Path, name: str, body: str) -> Path:
     """A saved harness state, exactly as `records._save_round_state` writes one: no `.git`."""
     import shutil
 
-    from ckpt.git_state import stage_workspace
+    from eval.ckpt.git_state import stage_workspace
 
     source = tmp_path / f"src-{name}"
     source.mkdir()
@@ -36,7 +36,7 @@ def _address(tmp_path: Path, name: str) -> str:
     """The content address of a saved state: restage it and read the tree hash."""
     import shutil
 
-    from ckpt.git_state import commit_state, stage_workspace
+    from eval.ckpt.git_state import commit_state, stage_workspace
 
     probe = tmp_path / f"probe-{name}"
     stage_workspace(tmp_path / name, probe)
@@ -182,7 +182,7 @@ def test_nothing_to_do_when_the_budget_is_already_measured(tmp_path: Path) -> No
 
 def test_the_restaged_tree_keeps_the_recorded_content_address(tmp_path: Path) -> None:
     """Re-staging the saved state must reproduce the address the curve already names."""
-    from ckpt.git_state import commit_state, stage_workspace
+    from eval.ckpt.git_state import commit_state, stage_workspace
 
     run_dir = tmp_path / "runs" / "rsi10-test-train"
     run_dir.mkdir(parents=True)
@@ -219,7 +219,7 @@ def test_a_resume_restores_the_base_tree_a_shared_h0_left_behind(tmp_path: Path)
     tree 对象从来没进过那个对象库。修法是先重铺 round 0 的保存态：tree hash 是内容寻址的，
     同样的文件在这里重新提交就会得到同一个地址，`reset_hard` 也就能取到它。
     """
-    from ckpt.git_state import reset_hard
+    from eval.ckpt.git_state import reset_hard
 
     run_dir = _run(tmp_path, platform=None)
     got = _resume_train_state(_args(), run_dir, None, tmp_path / "work")

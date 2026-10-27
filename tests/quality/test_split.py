@@ -330,7 +330,7 @@ def test_every_past_rounds_train_traces_are_staged(tmp_path):
     直接调 `_stage_for_method`,不起 driver:方法的输入现在是平台之外的一个临时目录,
     跑完之后就没了,从 run 目录里看不到。测通道的布局就该测那个函数本身。
     """
-    from ckpt.git_state import commit_state, init_repo
+    from eval.ckpt.git_state import commit_state, init_repo
 
     work = tmp_path / "work"
     work.mkdir()

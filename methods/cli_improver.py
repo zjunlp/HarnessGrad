@@ -418,7 +418,7 @@ def _stage_evidence(workspace: Path, req: dict) -> Path:
     # chat call: one staged skill, two ways of handing it over.
     if not (dest / "SKILL.md").is_file():
         override = os.environ.get("HG_IMPROVER_SKILL")
-        skill = Path(override) if override else (ROOT / "improvers" / "skill.md")
+        skill = Path(override) if override else (ROOT / "harnessgrad" / "improvers" / "skill.md")
         if skill.is_file():
             (dest / "SKILL.md").write_text(skill.read_text(encoding="utf-8"),
                                            encoding="utf-8")

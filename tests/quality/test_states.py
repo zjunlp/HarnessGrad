@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 
 from harnessgrad import channel as channel_mod                # noqa: E402
 from harnessgrad.channel import _stage_for_method              # noqa: E402
-from ckpt.git_state import (commit_state, init_repo, materialize,  # noqa: E402
+from eval.ckpt.git_state import (commit_state, init_repo, materialize,  # noqa: E402
                             reset_hard)
 
 
@@ -142,7 +142,7 @@ def test_the_default_skill_travels_in_the_channel(tmp_path):
     _stage_for_method(work, _history(shas)[-1], {}, history=_history(shas))
     staged = work / "_harnessgrad" / "SKILL.md"
     assert staged.is_file(), "默认 skill 没有进通道"
-    platform_copy = ROOT / "improvers" / "skill.md"
+    platform_copy = ROOT / "harnessgrad" / "improvers" / "skill.md"
     assert staged.read_text() == platform_copy.read_text()
 
 
@@ -161,7 +161,7 @@ def test_the_instruments_own_state_never_moves_the_harness_identity(tmp_path):
 
     行为测试而不是字符串断言:它真的建 repo、真的写这些文件、真的比较 sha。
     """
-    from ckpt.git_state import IGNORED_HARNESS_STATE, content_sha  # noqa: PLC0415
+    from eval.ckpt.git_state import IGNORED_HARNESS_STATE, content_sha  # noqa: PLC0415
 
     work, _ = _repo(tmp_path, ["print('v0')\n"])
     before = content_sha(work)
