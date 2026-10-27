@@ -61,8 +61,8 @@ failures are unmeasured and cannot silently become task zeros.
 
 Platform execution requires a native files sandbox with `network=none`. Live
 agent inference uses the platform's observed model route to the HTTP endpoint in
-`HG_AGENT_BASE_URL`. HTTPS providers require an external HTTPS forwarder with a
-local HTTP entrance, as used in the existing tau3 experiments.
+`HG_AGENT_BASE_URL`. HTTPS providers use an external forwarder with a local HTTP
+entrance; see [HTTPS API configuration](#https-api-configuration).
 An observed inference HTTP 429 or 5xx makes the measurement unmeasured, even if
 the harness catches the error or retries and completes the task. The task runner
 adds `invalid` to its raw result without changing the scorer verdict and records
@@ -157,6 +157,99 @@ costs and zero normalized edit distance. Test answer correctness is 381/381 unde
 the original scorer; training answer correctness is 1,912/1,912 under the named
 compatibility metric (the original training answer scorer remains 0/1,912).
 These are no-model reachability controls, not model performance measurements.
+
+## HTTPS API configuration
+
+The validated route is: Harness -> platform-observed model route -> local HTTP
+forwarder -> HTTPS provider. The existing helper from the serial CostBench run is
+`<workspace>/reports/costbench-live-serial-20261026-ndc6u_zt/https_forwarder.py`,
+with SHA-256 `0afaa40f0bb243f15fb59a124f5e732f7a72c8ae720082f17c28330ce148817c`.
+It is a retained local validation artifact outside Git, so a repository checkout
+alone does not contain it. Set `COSTBENCH_FORWARDER` to that file or a verified copy.
+It exposes a `Forwarder` class; executing the file alone does not start a server.
+
+Keep the upstream settings in the existing `.env`:
+
+| Variable | Value used by this example |
+| --- | --- |
+| `HG_AGENT_BACKEND` | `openai` |
+| `HG_AGENT_MODEL` | The provider's model ID |
+| `HG_AGENT_BASE_URL` | The HTTPS API base URL, including its API prefix such as `/v1` |
+| `HG_AGENT_API_KEY` | The existing provider credential |
+| `HG_AGENT_TIMEOUT_S` | Optional upstream timeout in seconds; the launcher defaults to 180 |
+
+Run from the repository root with the Python 3.12 platform environment. Set the
+workspace and `.env` paths for your checkout. Exported `HG_AGENT_*` values take
+precedence over `.env`, following the driver's normal configuration rules.
+The following command checks launcher startup and shutdown with `driver.py --help`;
+it makes no model request.
+
+```bash
+export COSTBENCH_WORKSPACE=/absolute/path/to/HarnessGrad-Workspace
+export COSTBENCH_ENV_FILE="$COSTBENCH_WORKSPACE/HarnessGrad/.env"
+export COSTBENCH_FORWARDER="$COSTBENCH_WORKSPACE/reports/costbench-live-serial-20261026-ndc6u_zt/https_forwarder.py"
+mkdir -p "$COSTBENCH_WORKSPACE/reports"
+export COSTBENCH_FORWARDER_LOG_DIR="$(mktemp -d "$COSTBENCH_WORKSPACE/reports/costbench-https-XXXXXXXX")"
+
+python3 - driver.py --help <<'PY'
+import hashlib
+import importlib.util
+import os
+from pathlib import Path
+import subprocess
+import sys
+from driver import load_env
+
+env_file = Path(os.environ['COSTBENCH_ENV_FILE'])
+if not env_file.is_file():
+    raise SystemExit('COSTBENCH_ENV_FILE must name the existing .env file')
+load_env(env_file)
+if os.environ.get('HG_AGENT_BACKEND') != 'openai':
+    raise SystemExit('This example requires HG_AGENT_BACKEND=openai')
+for key in ('HG_AGENT_MODEL', 'HG_AGENT_BASE_URL', 'HG_AGENT_API_KEY'):
+    if not os.environ.get(key):
+        raise SystemExit('Missing ' + key)
+helper = Path(os.environ['COSTBENCH_FORWARDER'])
+expected = '0afaa40f0bb243f15fb59a124f5e732f7a72c8ae720082f17c28330ce148817c'
+if hashlib.sha256(helper.read_bytes()).hexdigest() != expected:
+    raise SystemExit('Forwarder differs from the recorded validation helper')
+spec = importlib.util.spec_from_file_location('costbench_https_forwarder', helper)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+record = Path(os.environ['COSTBENCH_FORWARDER_LOG_DIR']) / 'http-requests.json'
+if record.exists():
+    raise SystemExit('Use a fresh forwarder log directory for each invocation')
+forwarder = module.Forwarder(
+    os.environ['HG_AGENT_BASE_URL'], os.environ['HG_AGENT_API_KEY'], record,
+    float(os.environ.get('HG_AGENT_TIMEOUT_S', '180')))
+try:
+    child_env = dict(os.environ, HG_AGENT_BASE_URL=forwarder.local_url,
+                     HG_EXEC_MODEL_ROUTE='unix', PYTHON_DOTENV_DISABLED='1')
+    print('Local model endpoint:', forwarder.local_url, flush=True)
+    print('Forwarder request log:', record, flush=True)
+    raise SystemExit(subprocess.call([sys.executable, *sys.argv[1:]], env=child_env))
+finally:
+    forwarder.stop()
+PY
+```
+
+For evaluation, replace `driver.py --help` with the existing Python evaluation
+entrypoint and its arguments. Keep tasks serial (`--jobs 1`), use a fresh run ID,
+and retain the evaluation's normal admission and selection options; driver
+`--sampling diagnostic` also requires its `--policy-evidence` input. The launcher
+keeps the model and credential, replaces only the child's agent base URL with the
+allocated loopback HTTP address, and preserves the upstream API prefix. It leaves
+`.env` unchanged. The forwarder stops when the child exits or the launcher receives
+Ctrl-C; request logs remain in the new report directory.
+
+This helper forwards `POST <api-prefix>/chat/completions`, including streaming
+responses, and preserves upstream HTTP statuses. It does not serve `/models` or
+the Responses API. After a real inference, inspect `http-requests.json` for
+`http_status`, `response_bytes` and any `error_type`; `--help` produces no request
+log. Compare those statuses with `result.runtime_services.agent_model_http.calls`
+in the trial archives and inspect final task progress for platform validity.
+HTTP 429/5xx retain the measurement policy described above. The forwarder log
+records timing, sizes and hashes rather than credentials or request/response bodies.
 
 ## Aggregating an evaluation
 
