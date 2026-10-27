@@ -149,7 +149,12 @@ Platform reward is the mean over eligible questions within an episode (28 for
 train persona 592); the excluded question is not a zero. Platform averaging across
 episodes is not the benchmark's question-weighted accuracy. `aggregate(records,
 selected_task_ids=...)` reports question-weighted accuracy **per native split**,
-with selected/measured coverage. Verifier evidence and split summaries include
+with selected/measured coverage. `data/aggregation_policies.json` declares
+`run_reward` as an arithmetic mean over measured episodes (`measured_tasks`),
+and `corpus_metrics` as an arithmetic mean over eligible selected MCQs (`gold_rows`)
+within each native split. The latter counts questions after fixed source exclusions;
+missing or incomplete episodes still leave the split score unset.
+Verifier evidence and split summaries include
 `original_questions`, eligible `expected_questions`, `excluded_question_count`
 and the exact `excluded_questions` with reasons. The full native train denominator
 is 18,548 eligible questions, not 18,549 released questions. Report this explicitly

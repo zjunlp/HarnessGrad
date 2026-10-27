@@ -155,6 +155,10 @@ def control_task(tid):
 def aggregate(records, selected_task_ids=None):
     """Question micro-accuracy over the fixed eligible pool, with source coverage."""
     from data.datasets.personamem_v2.lib.protocol import METRIC, SPLITS, coverage
+    from data.scaffolds.aggregation import aggregation_denominator, aggregation_policy
+
+    if aggregation_policy("personamem_v2", "corpus_metrics")["aggregation"] != "arithmetic_mean":
+        raise ValueError("personamem_v2 corpus_metrics requires arithmetic_mean over eligible questions")
     ids = list(rows()) if selected_task_ids is None else list(selected_task_ids)
     if len(ids) != len(set(ids)) or set(ids) - rows().keys():
         raise ValueError("duplicate or unknown selected task")
@@ -180,7 +184,9 @@ def aggregate(records, selected_task_ids=None):
         selected = [tid for tid in ids if rows()[tid]["split"] == split]
         if not selected:
             continue
-        expected = sum(rows()[tid]["question_count"] for tid in selected)
+        # Gold rows are eligible MCQs in this native split, not episodes or submissions.
+        expected = aggregation_denominator("personamem_v2", "corpus_metrics",
+                                           gold_rows=sum(rows()[tid]["question_count"] for tid in selected))
         complete = [evidence[tid] for tid in selected if tid in evidence and evidence[tid].get("measured")]
         for row in complete:
             if (row["expected_questions"] != rows()[row["task_id"]]["question_count"]

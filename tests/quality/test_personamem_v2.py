@@ -383,6 +383,82 @@ def test_reporting_refuses_incomplete_denominators(prepared):
         dataset.aggregate([evidence, evidence], [tid])
 
 
+@pytest.fixture
+def unequal_episode_results(monkeypatch):
+    # Authored question scores: the train episode mean is 1/2, but its MCQ mean is 1/4.
+    pool, records = {}, []
+    for split, persona, scores in (("train", 1, [1]), ("train", 2, [0, 0, 0]),
+                                   ("benchmark", 1, [1, 1])):
+        tid = storage.task_id(split, persona)
+        excluded = ([{"split": split, "persona_id": persona, "row_index": 7,
+                      "row_sha256": "a" * 64, "reason": "missing_mcq_distractors"}]
+                    if persona == 2 else [])
+        pool[tid] = {"task_id": tid, "split": split, "persona_id": persona,
+                     "input_sha256": digest(tid), "question_count": len(scores),
+                     "original_question_count": len(scores) + len(excluded),
+                     "excluded_questions": excluded}
+        records.append({"task_id": tid, "split": split, "metric": METRIC, "measured": True,
+                        "artifacts": {"input_sha256": pool[tid]["input_sha256"]},
+                        "expected_questions": len(scores),
+                        "original_questions": len(scores) + len(excluded),
+                        "excluded_question_count": len(excluded), "excluded_questions": excluded,
+                        "questions": [{"score": score} for score in scores],
+                        "score": sum(scores) / len(scores)})
+    monkeypatch.setattr(dataset, "rows", lambda: pool)
+    return list(pool), records
+
+
+def test_reporting_uses_eligible_question_rows_per_native_split(unequal_episode_results):
+    from eval.metrics import mean
+
+    ids, records = unequal_episode_results
+    report = dataset.aggregate(records, ids)
+    assert set(report) == {"train", "benchmark"}
+    train = report["train"]
+    assert train["score"] == 0.25
+    assert mean([r["score"] for r in records[:2]], dataset="personamem_v2") == 0.5
+    assert train["selected_episodes"] == train["measured_episodes"] == 2
+    assert train["expected_questions"] == train["measured_questions"] == 4
+    assert train["original_questions"] == 5 and train["excluded_question_count"] == 1
+    assert report["benchmark"]["score"] == 1
+    assert report["benchmark"]["expected_questions"] == 2
+    assert dataset.aggregate(records[:1], ids[:1])["train"]["score"] == 1
+    assert dataset.aggregate(list(reversed(records)), ids) == report
+
+
+@pytest.mark.parametrize("missing", [True, False], ids=["absent", "unmeasured"])
+def test_reporting_keeps_selected_denominator_when_episode_is_incomplete(unequal_episode_results, missing):
+    ids, records = unequal_episode_results
+    if missing:
+        records.pop(1)
+    else:
+        records[1].update(measured=False, questions=[{"score": 1}], score=None)
+    report = dataset.aggregate(records, ids)
+    train = report["train"]
+    assert train["score"] is None
+    assert train["expected_questions"] == 4 and train["measured_questions"] == 1
+    assert train["original_questions"] == 5 and train["excluded_question_count"] == 1
+    assert train["unmeasured_task_ids"] == [ids[1]]
+    assert report["benchmark"]["score"] == 1
+
+
+@pytest.mark.parametrize("change,message", [
+    ({"denominator": "measured_tasks"}, "measured_tasks needs"),
+    ({"aggregation": "ordered_macro_mean"}, "requires arithmetic_mean"),
+])
+def test_corpus_aggregation_declaration_is_live(unequal_episode_results, monkeypatch, tmp_path,
+                                             change, message):
+    from data.scaffolds import aggregation
+
+    policies = json.loads(aggregation.POLICIES.read_text())
+    policies["personamem_v2"]["corpus_metrics"].update(change)
+    path = tmp_path / "aggregation_policies.json"
+    path.write_text(json.dumps(policies))
+    monkeypatch.setattr(aggregation, "POLICIES", path)
+    with pytest.raises(ValueError, match=message):
+        dataset.aggregate(unequal_episode_results[1], unequal_episode_results[0])
+
+
 def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monkeypatch):
     from data.datasets.personamem_v2 import prepare
     raw = tmp_path / "raw"
