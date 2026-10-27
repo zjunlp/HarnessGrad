@@ -212,8 +212,8 @@ ROWS: dict[str, dict] = {
             "Docker, which is why no arm has been exercised."),
     },
     "api_bank": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
-    "fever": {"control": [], "metric_tests": ["test_qa_evidence_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
-    "hotpotqa": {"control": [], "metric_tests": ["test_qa_evidence_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
+    "fever": {"control": [], "metric_tests": ["test_qa_dataset_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
+    "hotpotqa": {"control": [], "metric_tests": ["test_qa_dataset_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
     "sotuqa": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
     "tau2_bench": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
 }
