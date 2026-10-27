@@ -322,6 +322,8 @@ VERIFY[task_id]["model_failure_policy"] = {
 平台原有的连接故障和超时处理独立保留。
 策略声明参与已有续跑配置摘要，修改后不能沿用旧配置的试验记录。
 
+<a id="trial-evidence"></a>
+
 ### 6.2 可选的逐次完整证据归档
 
 ```python
@@ -354,6 +356,7 @@ v1 要求 sandboxed `files` 环境、无 `workers`，
 
 relay 故障提前返回时仍收集输出，但不继续调用评分器。私有 `result.trial_evidence_output.tool_relay`
 保存可用 relay 日志、receipt 和失败 episode 的有界诊断；截断、偏移、原大小及 hash 均明确记录。
+失败 episode 只作诊断，不接受为评分输入；首个环境异常与关闭阶段异常分别保存。
 公共 `runtime_services`、progress 和 invalid 只保留诊断元数据及简短原因，不传递这些私有正文。
 启动阶段也在 relay 清理前采集诊断。未开启归档且不共享私有归档的执行保留既有诊断行为。
 答案和轨迹都由 Harness 提供；

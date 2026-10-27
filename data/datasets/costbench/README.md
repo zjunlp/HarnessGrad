@@ -76,18 +76,14 @@ Malformed relay request envelopes are rejected before execution and do not
 consume benchmark turns or invalidate later tool execution. Genuine handler
 failures and relay limit refusals remain unmeasured.
 
-Both adapters enable private per-trial evidence. `evaluate` requires a persistent
-`progress_dir` outside the harness and its visible work root. Each returned trial,
-including an unmeasured one, retains the full result, Harness stdout/stderr, exit
-or launch failure, trace and answer, with explicit states for unavailable files.
-Failed relay receipts, logs and available episode snapshots are diagnostic evidence;
-they are never accepted as scorer inputs. The first environment exception is kept
-separately from shutdown failures. Collection limits and truncation are recorded.
-The evaluation's `trial_evidence` index references immutable archives by hash and
-run/round/task/trial/seed/Harness identity. Ordinary trial counts, seeds and early
-stopping still apply. `run_one` returns collected evidence without persisting it;
-its caller must retain that result. Historical failures with missing diagnostics
-remain unresolved; a successful replay cannot establish their original cause.
+Both adapters enable private per-trial evidence for Harness output and relay
+failure diagnostics. `evaluate` requires sandboxed files without workers and a
+persistent `progress_dir` outside the harness and its visible work root.
+See the [shared trial-evidence contract](../../../docs/dataset-runtime-interfaces.md#trial-evidence)
+for collection, privacy, archive layout and resume semantics, and
+[Aggregating an evaluation](#aggregating-an-evaluation) for report inputs and commands.
+Historical failures with missing diagnostics remain unresolved; a successful
+replay cannot establish their original cause.
 
 The separate official aggregate retains upstream eligibility masks and raw
 results. In particular, upstream aggregate EMR excludes conversations with at
