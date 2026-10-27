@@ -96,10 +96,9 @@ def ordinary_session(session, monkeypatch):
     return session
 
 
-def test_ordinary_resume_validates_and_reuses_archives_and_original_seed(ordinary_session, monkeypatch):
+def test_ordinary_resume_validates_and_reuses_archives_and_original_seed(ordinary_session):
     state = ordinary_session
     saved = {path: path.read_bytes() for path in (state.run / 'trial-evidence').rglob('*.json')}
-    monkeypatch.setenv('HARNESSGRAD_SEED', 'new-driver-random-seed')
     assert state.execute() == 0
     assert [call[0] for call in state.calls] == ['a'] * 3 + ['b'] * 3
     assert {call[2] for call in state.calls} == {'0'}

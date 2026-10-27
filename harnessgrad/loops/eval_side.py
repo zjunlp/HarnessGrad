@@ -146,6 +146,32 @@ def _progress_results(run_dir: Path) -> dict[str, dict]:
     return out
 
 
+def _eval_resume_seed(run_dir: Path, tasks, verifiers, trials, requested_seed) -> str | None:
+    """Resolve ordinary archive seeds before the driver records effective config."""
+    from eval.run import repeated_trials, trial_evidence
+
+    path = run_dir / 'trial-evidence/ordinary/round-0/resume-plan.json'
+    ordinary = (repeated_trials.protocol_for(tasks, verifiers, trials) is None
+                and any(trial_evidence.enabled(verifiers.get(t['task_id'])) for t in tasks))
+    if not ordinary:
+        if path.exists():
+            raise ValueError('the original ordinary archive configuration was removed')
+        return None
+    if not path.is_file():
+        raise ValueError('ordinary evidence resume requires its original full manifest')
+    saved = json.loads(path.read_text())
+    configuration = saved.get('configuration') if isinstance(saved, dict) else None
+    if (not isinstance(configuration, dict) or configuration.get('version') != 1
+            or configuration.get('execution') != 'ordinary'):
+        raise ValueError('invalid ordinary evidence resume configuration')
+    seed = configuration.get('run_seed')
+    if not isinstance(seed, str) or not seed:
+        raise ValueError('ordinary evidence resume requires a nonempty saved seed')
+    if requested_seed is not None and requested_seed != seed:
+        raise ValueError('requested seed differs from the original ordinary evidence seed')
+    return seed
+
+
 def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     """Why this run cannot be resumed, or None when it can.
 
@@ -285,15 +311,6 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     ordinary_plan = None
     old_evidence_rows = []
     if protocol is None and evidence_tasks:
-        if getattr(args, 'resume', False) and ordinary_plan_path.is_file() and not getattr(args, 'seed', None):
-            try:
-                # The driver otherwise creates a fresh random seed on every
-                # invocation. Resume the saved seed unless explicitly overridden.
-                saved = json.loads(ordinary_plan_path.read_text())
-                os.environ['HARNESSGRAD_SEED'] = saved['configuration']['run_seed']
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                console.note(f'refusing ordinary evidence resume: {exc}', level='error')
-                return 2
         ordinary_plan = trial_evidence.ordinary_plan(
             [task for task in tasks if task['task_id'] in evidence_tasks], trials=args.trials,
             run_seed=os.environ['HARNESSGRAD_SEED'], run_id=run_id, round_no=0, harness_sha=sha)

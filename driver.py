@@ -68,7 +68,7 @@ from harnessgrad.environments import (
     _check_env_kinds, _env_record, _narrow_to_run, _report_harness_failed,
     _report_invalid, _required_env_kinds, _resolve_envs, _warn_missing_overlay)
 from harnessgrad.identity import _identity
-from harnessgrad.loops.eval_side import _eval_from_record, _eval_source, _run_eval_side
+from harnessgrad.loops.eval_side import _eval_from_record, _eval_resume_seed, _eval_source, _run_eval_side
 from harnessgrad.loops.mode_a import _run_mode_a
 from harnessgrad.methods import PlatformTampered, _check_method_entrypoint
 from harnessgrad.records import (
@@ -912,6 +912,16 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
+    # Resolve the saved seed before any metadata write or workspace restaging.
+    # A rejected explicit override must not rewrite the interrupted run's config.
+    resumed_seed = None
+    if args.side == 'eval' and args.resume:
+        try:
+            resumed_seed = _eval_resume_seed(run_dir, tasks_all, verifiers, args.trials, args.seed)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            console.note(f'refusing ordinary evidence resume: {exc}', level='error')
+            return 2
+
     diagnostic_authorization = (Authorization(run_id, side_ids[0],
                                 args.authorize_unobserved_diagnostic)
                                 if args.authorize_unobserved_diagnostic else None)
@@ -1269,7 +1279,7 @@ def _main(attempt: dict) -> int:
     # environment is described. `secrets` rather than `random`: this seeds an
     # environment a method may be trying to fit to, and a predictable seed is a
     # predictable environment. A write for the same reason as the work root above.
-    os.environ["HARNESSGRAD_SEED"] = args.seed or secrets.token_hex(8)
+    os.environ["HARNESSGRAD_SEED"] = resumed_seed or args.seed or secrets.token_hex(8)
     if any(services_mod.requires_model(spec.get("services") or [])
            for spec in envs.values()):
         # An environment-side model is a third budget. Refused when a service needs one
