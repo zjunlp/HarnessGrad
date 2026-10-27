@@ -110,6 +110,34 @@ def test_ordinary_resume_validates_and_reuses_archives_and_original_seed(ordinar
     assert len(state.calls) == 6
 
 
+@pytest.mark.parametrize('prefix', ['costbench/test', 'costbench_dynamic/cost_change/test'])
+def test_ordinary_resume_reuses_completed_namespaced_tasks(session, monkeypatch, prefix):
+    ids = [f'{prefix}/Query00001', f'{prefix}/Query00002']
+    verifiers = list(session.verifiers.values())
+    session.verifiers.clear()
+    for task, task_id, verifier in zip(session.tasks, ids, verifiers):
+        task['task_id'] = task_id
+        verifier.pop('trial_protocol')
+        verifier['trial_evidence'] = {'version': 1}
+        session.verifiers[task_id] = verifier
+    session.args.sandbox = True
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(session.run.parent / 'harness'))
+    session.interrupt = ids[1]
+    with pytest.raises(KeyboardInterrupt):
+        session.execute()
+    assert [call[0] for call in session.calls] == [ids[0]] * 3
+    saved = {path: path.read_bytes() for path in (session.run / 'trial-evidence').rglob('*.json')}
+    session.interrupt = None
+    session.args.resume = True
+    assert session.execute() == 0
+    assert [call[0] for call in session.calls] == [ids[0]] * 3 + [ids[1]] * 3
+    assert all(path.read_bytes() == content for path, content in saved.items())
+    assert len(session.results[-1]['trial_evidence']['results']) == 6
+    assert session.execute() == 0
+    assert len(session.calls) == 6
+
+
 @pytest.mark.parametrize('change', ['missing', 'content', 'binding', 'progress', 'index',
                                    'removed', 'trials', 'seed', 'declaration', 'selection', 'harness', 'symlink',
                                    'published-incomplete', 'published-corrupt'])

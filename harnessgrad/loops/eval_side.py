@@ -134,7 +134,8 @@ def _progress_results(run_dir: Path) -> dict[str, dict]:
     trusting a receipt count.
     """
     out: dict[str, dict] = {}
-    for path in sorted((run_dir / "progress").glob("round-0/*.json")):
+    # task_file preserves namespaced task IDs as nested paths.
+    for path in sorted((run_dir / "progress" / "round-0").rglob("*.json")):
         try:
             record = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
@@ -204,8 +205,11 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     point's `n_invalid`/`n_harness_failed` describe the whole pool rather than the half that
     this process re-measured.
     """
+    from eval.verification.isolation import observed_class
+
     merged = dict(res)
     per_task = dict(merged.get("per_task") or {})
+    isolation = dict(merged.get("per_task_scorer_isolation") or {})
     invalid = dict(merged.get("invalid") or {})
     failed = dict(merged.get("harness_failed") or {})
     # The runtime bookkeeping the OpenCode feature needs. The branch's side of this conflict made
@@ -226,14 +230,19 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
                     if runtime not in runtimes:
                         runtimes.append(runtime)
         outcome = record.get("process_outcome")
-        if outcome == "completed" and record.get("score") is not None:
-            per_task[task_id] = float(record["score"])
-        elif outcome in ("invalid", "unmeasured"):
+        if outcome in ("invalid", "unmeasured"):
             invalid.setdefault(task_id, {'stage': 'resume', 'detail': record.get('detail') or outcome})
         else:
-            failed.setdefault(task_id, {'reason': record.get('detail') or str(outcome),
-                                        'exit_code': record.get('exit_code')})
+            # A scored artifact can outlive an actor crash or its declared budget.
+            # Reuse the platform's measurement, keeping process failure separate.
+            if record.get("score") is not None:
+                per_task[task_id] = float(record["score"])
+                isolation[task_id] = observed_class(record)
+            if outcome != "completed" or record.get("score") is None:
+                failed.setdefault(task_id, {'reason': record.get('detail') or str(outcome),
+                                            'exit_code': record.get('exit_code')})
     merged["per_task"] = per_task
+    merged["per_task_scorer_isolation"] = isolation
     merged["invalid"] = invalid
     merged["harness_failed"] = failed
     merged["harness_runtime"] = runtimes
