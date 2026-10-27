@@ -66,8 +66,8 @@ local HTTP entrance, as used in the existing tau3 experiments.
 An observed inference HTTP 429 or 5xx makes the measurement unmeasured, even if
 the harness catches the error or retries and completes the task. The task runner
 adds `invalid` to its raw result without changing the scorer verdict and records
-the observed status in the HTTP receipt. Check `invalid` before extracting
-standalone scorer evidence for a report. This is the
+the observed status in the HTTP receipt. The report reads complete platform trial
+archives and final task progress before using scorer evidence. This is the
 adapter's measurement-validity policy, not a change to the official scorer.
 Other HTTP statuses retain existing classification; stderr text alone does not
 activate this policy. Mock controls make no model requests.
@@ -165,19 +165,33 @@ These are no-model reachability controls, not model performance measurements.
 ## Aggregating an evaluation
 
 Build `expected-cells.json` before evaluation as a JSON list of
-`{"task_id": "...", "run_id": "...", "trial_id": "..."}` objects. Extract each
-trusted verifier evidence object from the corresponding HarnessGrad result into
-a separate file, then run:
+`{"task_id": "...", "run_id": "...", "trial_id": "..."}` objects. Supply the complete
+`harnessgrad.trial-evidence.v1` JSON archives referenced by the evaluation's
+`trial_evidence` index, retaining their standard run directory layout, then run:
 
 ```bash
 python3 data/datasets/costbench/report.py \
   --bundle "$HG_COSTBENCH_DATA/bundle" \
   --runtime "$HG_COSTBENCH_DATA/runtime" \
-  --expected-cells /path/to/expected-cells.json /path/to/evidence/*.json
+  --expected-cells /path/to/expected-cells.json \
+  /path/to/run/trial-evidence/round-0/*/*/*.json
 ```
 
-The report refuses missing, duplicate, unexpected, unmeasured or unverified
-cells. Use an expected manifest for the intended split; keep training diagnostics
+The report refuses missing, duplicate, unexpected, platform-invalid, unmeasured
+or unverified cells and mismatched archive/scorer identities. It reads each
+archive's final `progress/round-N/<task_id>.json`, checks the ordinary task index's
+progress hash, and verifies the archive reference hash and outcome. Final progress
+must account for every returned trial: if a run discarded a provider-failed
+attempt and only retained a shorter score list, the report refuses to guess which
+archive corresponds to an accepted score. A valid task zero is accepted, including
+a scored artifact left by a nonzero Harness exit.
+Raw verifier evidence is no longer accepted: it omits the platform's `invalid`
+decision even when the scorer recorded success. Scripts that previously extracted
+`verdict.evidence` must pass complete trial archives instead. Keep the associated
+`progress` and `trial-evidence/ordinary` directories: the whole run directory can
+move, but a detached archive or bare evidence file cannot establish final platform
+validity. Existing historical reports are unchanged.
+Use an expected manifest for the intended split; keep training diagnostics
 and official test results separate. Preserve incomplete receipts and correct
 infrastructure failures before making complete-split comparisons.
 

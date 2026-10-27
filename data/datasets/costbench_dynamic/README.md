@@ -51,8 +51,8 @@ All four modes use the static adapter's [measurement-validity policy](../costben
 native sandboxed execution with `network=none`, an observed agent model route,
 and unmeasured outcomes for inference HTTP 429/5xx even after recovery. Rejected
 relay request envelopes do not invalidate subsequent execution; genuine runtime
-failures and relay limit refusals still do. Raw scorer evidence is preserved and
-must not be reported as a valid measurement when the platform result is `invalid`.
+failures and relay limit refusals still do. Raw scorer evidence is preserved;
+the report checks complete trial archives and final progress, refusing platform-invalid results.
 All modes also enable the same private trial evidence archives for Harness output
 and relay failure diagnostics; evaluation requires a persistent `progress_dir`.
 
@@ -105,9 +105,11 @@ oracle and no-op arms, current-schema inspection, denied reconfiguration and
 forged actor records. These are no-model controls, not model performance results;
 the previous static API runs do not constitute a dynamic API evaluation.
 
-Aggregate sealed evidence with `data/datasets/costbench/report.py --mode MODE`
+Aggregate complete platform trial archives with `data/datasets/costbench/report.py --mode MODE`
 and an explicit `--expected-cells` manifest, plus the same `--bundle`, `--runtime`
-and evidence arguments used by the static report. A report accepts one mode and
+and archive arguments used by the static report. Bare verifier evidence is not
+accepted because it omits platform validity; retain the standard run layout with
+final progress and ordinary task indexes. A report accepts one mode and
 rejects static/dynamic or cross-mode mixing; compare train and test separately.
 
 ## Validation (2026-10-21)
