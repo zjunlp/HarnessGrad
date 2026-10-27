@@ -8,6 +8,7 @@ from pathlib import Path
 import signal
 import sys
 import threading
+import traceback
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
@@ -24,26 +25,37 @@ class Service:
         else:
             self.state = CostBenchRuntime(config, public)
         self.failure = None
+        self.failure_detail = None
+        self.shutdown_failure = None
         self.lock = threading.Lock()
 
     def handle(self, op, args):
         with self.lock:
-            if not isinstance(args, dict):
-                return {'error': 'arguments_must_be_object'}
-            if op == 'show' and not args and hasattr(self.state, 'show'):
-                return self.state.show()
-            if op == 'status' and not args:
-                return self.state.status()
-            if op != 'turn' or set(args) != {'content', 'calls'}:
-                return {'error': 'unsupported_operation_or_fields'}
             try:
+                if not isinstance(args, dict):
+                    return {'error': 'arguments_must_be_object'}
+                if op == 'show' and not args and hasattr(self.state, 'show'):
+                    return self.state.show()
+                if op == 'status' and not args:
+                    return self.state.status()
+                if op != 'turn' or set(args) != {'content', 'calls'}:
+                    return {'error': 'unsupported_operation_or_fields'}
                 return self.state.turn(**args)
             except Exception as exc:
-                self.failure = type(exc).__name__
+                # The transport also writes the exception immediately to the
+                # private relay log. Keep the first cause in the final receipt.
+                if self.failure is None:
+                    self.failure = type(exc).__name__
+                    self.failure_detail = {
+                        'type': self.failure, 'message': str(exc),
+                        'traceback': ''.join(traceback.format_exception(exc)),
+                        'operation': op, 'step': self.state.steps,
+                    }
                 raise
 
     def episode(self):
-        return {**self.state.episode(), 'failure': self.failure}
+        return {**self.state.episode(), 'failure': self.failure,
+                'failure_detail': self.failure_detail, 'shutdown_failure': self.shutdown_failure}
 
 
 def checked_json(path, expected):
@@ -85,15 +97,19 @@ def main():
         clean = stop.wait(args.deadline_s)
         with service.lock:
             if not clean:
-                service.failure = 'service_deadline'
+                service.shutdown_failure = 'service_deadline'
             # Malformed actor envelopes never reached the environment. Keep
             # those rejections separate from handler failures and resource refusals.
             elif (relay.receipt['errors'] > relay.receipt['request_errors']
                   or relay.receipt['refused']):
-                service.failure = 'transport_failure'
+                service.shutdown_failure = 'transport_failure'
+            if service.failure is None:
+                service.failure = service.shutdown_failure
             Path(os.environ['HG_RELAY_RECORD_PATH']).write_text(json.dumps(service.episode()))
     args.receipt.write_text(json.dumps({'transport': relay.receipt, 'stopped_cleanly': clean,
-                                      'task_id': config['task_id']}))
+                                      'task_id': config['task_id'], 'failure': service.failure,
+                                      'failure_detail': service.failure_detail,
+                                      'shutdown_failure': service.shutdown_failure}))
     return 0 if clean and service.failure is None else 1
 
 

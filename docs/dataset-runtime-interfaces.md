@@ -328,8 +328,8 @@ VERIFY[task_id]["model_failure_policy"] = {
 VERIFY[task_id]["trial_evidence"] = {"version": 1}
 ```
 
-默认关闭，单独声明 `trial_protocol` 不会开启。目前 τ³ 适配器显式开启此扩展。
-v1 要求已有 `trial_protocol`、sandboxed `files` 环境、无 `workers`，
+默认关闭，单独声明 `trial_protocol` 不会开启，归档也不要求声明 `trial_protocol`。
+v1 要求 sandboxed `files` 环境、无 `workers`，
 并向 evaluation 提供 `progress_dir`。归档目录必须位于 Harness 及其可见 work root 之外。
 每次 actor 启动前还依据最终沙箱挂载方案检查归档可见性，包括系统/解释器目录、
 额外 runtime、包/不可变输入投影以及路径别名；按挂载顺序处理隐藏与重新暴露。
@@ -345,14 +345,18 @@ v1 要求已有 `trial_protocol`、sandboxed `files` 环境、无 `workers`，
 
 `<progress_dir>/trial-evidence/round-<N>/<report-key>/<sha256(task_id)>/<sha256(trial_id)>.json`
 
-`report-key` 与上述重复试验报告相同。正常结果和不可测结果都保存，包含：
+`report-key` 为 `sha256(harness_sha)` 的前 16 位，与上述重复试验报告相同。正常结果和不可测结果都保存，包含：
 
 - `binding`：run、round、harness、task、trial 和 seed；
-- `configuration` 和 `outcome`：原始试验协议、该次测量状态与分数；
+- `configuration` 和 `outcome`：已声明的试验协议及测量状态，或普通 trial 的原始执行配置和返回状态；
 - `result`：完整返回值，包括 verdict 及其 evidence、Harness 轨迹、服务回执和已封存交互记录的引用；
 - `result.trial_evidence_output`：清理临时目录前收集的可用 answer、trace、stdout、stderr、实际退出码或启动异常。
 
-relay 故障提前返回时仍收集输出，但不继续调用评分器。答案和轨迹都由 Harness 提供；
+relay 故障提前返回时仍收集输出，但不继续调用评分器。私有 `result.trial_evidence_output.tool_relay`
+保存可用 relay 日志、receipt 和失败 episode 的有界诊断；截断、偏移、原大小及 hash 均明确记录。
+公共 `runtime_services`、progress 和 invalid 只保留诊断元数据及简短原因，不传递这些私有正文。
+启动阶段也在 relay 清理前采集诊断。未开启归档且不共享私有归档的执行保留既有诊断行为。
+答案和轨迹都由 Harness 提供；
 安全读取只接受单链接普通文件，拒绝跟随符号链接或读取 FIFO。
 缺失、不可读、链接或非普通文件会记为缺失/采集失败，在普通返回值中使用空文本；
 轨迹采集状态本身不决定得分，答案交给原验证器按提交规则评分。
@@ -361,11 +365,25 @@ relay 故障提前返回时仍收集输出，但不继续调用评分器。答�
 反馈中的有效文本保持原有换行语义，独立归档保留原始输出字节。
 这项扩展不增加轨迹字节截断；实际归档大小取决于运行输出。
 
-重复试验报告的每行增加 `trial_evidence.path/sha256`，路径相对本次 run 的 `progress_dir`。
+声明 `trial_protocol` 时，重复试验报告的每行增加 `trial_evidence.path/sha256`，路径相对本次 run 的 `progress_dir`。
+未声明协议时，普通 `--trials` 次数、同一 run seed、早停条件和原有分数聚合保持不变，
+不产生 `repeated_trials` 或 `pass^k`。`evaluate` 返回 `trial_evidence` 归档索引
+（schema `harnessgrad.trial-evidence-index.v1`），其中 `results` 按计划顺序列出实际返回的试验，
+包含身份、`status: returned`、原始 `raw_verdict_score` 和 `trial_evidence.path/sha256`；
+`raw_verdict_score` 仅记录 verdict 自带 score，没有该字段时为 null，不代替任务正式分数。
+`not_returned` 记录计划中未返回的身份，包含原有早停留下的次数，不推断为零分或重试。
+每题 progress JSON 的 `trial_evidence` 保存该题同样的引用行。
+普通索引位于 `trial-evidence/ordinary/round-<N>/<report-key>/index.json`，逐题索引另绑定 progress hash。
 归档写入失败会中止本次评测并保留已完成归档和进行中标记；不发布声称证据齐全的结果。
-未返回结果的中断试验不保证有完整归档，之前返回的试验文件仍保留。
-eval 续跑在跳过已完成任务前检查文件存在、内容 hash 和身份绑定；
-缺失或不一致时拒绝复用。原有部分分组/进行中任务的续跑限制保持不变，不自动重试。
+可识别的启动 `OSError`、沙箱不可用或容器启动异常，仍按原行为向上抛出；
+清理后采集数据由异常的 `trial_evidence_result` 携带，evaluation 在重抛前保存 `status: raised` 归档，
+并将 `path/sha256` 放入异常的 `trial_evidence`，不发布完成索引或移除进行中标记。
+其他未返回结果的中断试验不保证有完整归档，之前返回的试验文件仍保留。
+eval 续跑在跳过已完成任务前检查原计划、任务声明、progress、文件存在、内容 hash 和身份绑定；
+缺失或不一致时拒绝复用。普通 eval 续跑未显式传 seed 时恢复原 run seed，显式不同 seed 会被拒绝。
+原有部分分组/进行中任务的续跑限制保持不变，不自动重试。
+没有最终索引的中断运行可从已完成的任务边界继续；已发布普通最终索引且仍有未完成归档任务时，
+续跑在启动 actor 前拒绝，要求新 run，避免追加测量后覆盖历史索引。
 
 此目录与正常结果共用 run 输出根目录，但不加入现有 `traces/trial_traces/trial_verdicts`
 或方法反馈通道。对可读、合法 UTF-8 的单链接普通答案和轨迹文件，原有评分与反馈文本保持不变。
@@ -539,6 +557,8 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 - `tests/quality/test_shared_judge_trials_workers.py`
 - `tests/quality/test_trial_evidence.py`
 - `tests/quality/test_trial_evidence_resume.py`
+- `tests/quality/test_trial_evidence_ordinary.py`
+- `tests/quality/test_trial_evidence_launch.py`
 - `tests/quality/test_judge_model_api.py`
 - `tests/quality/test_observed_workers.py`
 - `tests/quality/test_registry_selection.py`

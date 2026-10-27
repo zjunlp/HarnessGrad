@@ -423,7 +423,8 @@ def process_outcome(exit_code, stderr, wrapper: bool = False) -> str | None:
 def _write_progress(progress_dir, round_no: int, tid: str,
                     measured: list[dict], unmeasured: dict | None,
                     *, diagnostic: dict | None = None,
-                    enforcement: dict | None = None) -> None:
+                    enforcement: dict | None = None,
+                    trial_evidence: list[dict] | None = None) -> None:
     """Write one task's result the moment it exists, not at the end of the round.
 
     **Measured, twice, and the second time cost two hours.** A round's results were
@@ -445,8 +446,8 @@ def _write_progress(progress_dir, round_no: int, tid: str,
     `verdicts/`: a partial round must not look like a complete one. The end-of-round
     savers remain the authoritative record; these are what survives a kill.
 
-    Never raises. A progress write that fails must not turn a measured task into a
-    failed one -- the same rule the teardown helpers follow, for the same reason.
+    Legacy progress writes warn on failure. Explicit ordinary trial evidence
+    requires its references to persist, so those writes fail visibly instead.
     """
     if progress_dir is None:
         return
@@ -459,6 +460,8 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                       "process_outcome": unmeasured.get("outcome")}
             if enforcement is not None:
                 record["enforcement"] = enforcement
+            if trial_evidence is not None:
+                record['trial_evidence'] = trial_evidence
             if diagnostic is not None:
                 record["harness_output"] = {
                     "exit_code": diagnostic.get("exit_code"),
@@ -536,6 +539,7 @@ def _write_progress(progress_dir, round_no: int, tid: str,
             "complete": True,
             **({"level": level} if level is not None else {}),
             **({"enforcement": enforcement} if enforcement is not None else {}),
+            **({'trial_evidence': trial_evidence} if trial_evidence is not None else {}),
         }, indent=1, ensure_ascii=False), encoding="utf-8")
         traces = dest / "traces"
         traces.mkdir(exist_ok=True)
@@ -545,5 +549,7 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                 task_file(traces, f"{tid}.trial{index}.jsonl").write_text(
                     body, encoding="utf-8")
     except (OSError, ValueError, TypeError) as exc:                      # noqa: BLE001
+        if trial_evidence is not None:
+            raise
         print(f"warning: could not write the progress record for {tid}: {exc}",
               file=sys.stderr)

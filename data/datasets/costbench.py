@@ -107,6 +107,7 @@ def _verify(tid, row):
                        {'path': 'costbench_runtime', 'from': str(RUNTIME), 'immutable': True}],
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
             'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
+            'trial_evidence': {'version': 1},
             'model_failure_policy': {'version': 1, 'invalidate_on_http_status': [429, *range(500, 600)]}}
 
 

@@ -25,6 +25,7 @@ appears as a fault here.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -36,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 from pathlib import Path
 
 from data.scaffolds.runtime_extensions import validate_record as validate_record
@@ -47,12 +49,82 @@ TOOL_SOCKET = "/run/harnessgrad-tool/tool.sock"
 #: How long a relay may take to bind before the task is called unmeasured.
 READY_TIMEOUT_S = 60.0
 
+# Retention limits follow the transport's default frame limit and the existing
+# recording limit. They bound private diagnostics, never task execution or scores.
+DIAGNOSTIC_FILE_BYTES = 8 * 1024 * 1024
+DIAGNOSTIC_EPISODE_BYTES = 32 * 1024 * 1024
+
+
+def _diagnostic_file(path: Path, limit: int, *, tail=False) -> dict:
+    result = {'state': 'missing', 'bytes': None, 'captured_bytes': 0,
+              'sha256': None, 'limit_bytes': limit, 'offset': 0}
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise ValueError('diagnostic source is not a private regular file')
+            result['bytes'] = info.st_size
+            offset = max(0, info.st_size - limit) if tail else 0
+            stream.seek(offset)
+            raw = stream.read(limit)
+        try:
+            content, encoding = raw.decode('utf-8'), 'utf-8'
+        except UnicodeDecodeError:
+            content, encoding = base64.b64encode(raw).decode('ascii'), 'base64'
+        result.update(state='truncated' if len(raw) < info.st_size else 'captured',
+                      captured_bytes=len(raw), offset=offset,
+                      sha256=hashlib.sha256(raw).hexdigest(),
+                      hash_scope='captured_bytes', content=content, encoding=encoding)
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError) as exc:
+        result.update(state='unreadable', error={'type': type(exc).__name__})
+    return result
+
+
+def _diagnostic_metadata(value):
+    """Raw files and exception details belong only in private trial evidence."""
+    if isinstance(value, dict):
+        return {key: _diagnostic_metadata(item) for key, item in value.items()
+                if key not in ('content', 'message', 'traceback')}
+    if isinstance(value, list):
+        return [_diagnostic_metadata(item) for item in value]
+    return value
+
+
+def _snapshot(directory, context, *, stage, record_spec=None, exception=None, recording=None):
+    limit = (record_spec or {}).get('max_bytes', DIAGNOSTIC_EPISODE_BYTES)
+    limit = min(limit, DIAGNOSTIC_EPISODE_BYTES) if limit is not None else DIAGNOSTIC_EPISODE_BYTES
+    result = {'schema': 'harnessgrad.tool-relay-diagnostic.v1', 'binding': dict(context),
+              'stage': stage, 'scorable': False, 'files': {
+                  'relay.log': _diagnostic_file(directory / 'relay.log', DIAGNOSTIC_FILE_BYTES, tail=True),
+                  'receipt.json': _diagnostic_file(directory / 'receipt.json', DIAGNOSTIC_FILE_BYTES),
+                  'episode.json': ({'state': 'not_needed', 'recording': dict(recording)} if recording is not None
+                                   else _diagnostic_file(directory / 'episode.json', limit))}, 'errors': []}
+    if exception is not None:
+        message = str(exception)
+        trace = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
+        result['exception'] = {'type': type(exception).__name__, 'message': message[:8192],
+                               'traceback': trace[:32768],
+                               'truncated': len(message) > 8192 or len(trace) > 32768}
+    return result
+
+
+class ToolRelayStartError(RuntimeError):
+    """Startup failed; metadata is public, original evidence stays private."""
+    def __init__(self, message, *, safe_message, report, diagnostic):
+        super().__init__(message)
+        self.safe_message = safe_message
+        self.report = report
+        self.diagnostic = diagnostic
+
 
 class ToolRelay:
     """One task's environment process. Use as a context manager."""
 
     def __init__(self, path: Path, directory: Path, proc: subprocess.Popen,
-                 receipt_path: Path, log_path: Path):
+                 receipt_path: Path, log_path: Path, *, private_diagnostics=False):
         self.path = path
         self.directory = directory
         self.proc = proc
@@ -66,6 +138,8 @@ class ToolRelay:
         self.record_spec: dict | None = None
         self.recording: dict | None = None
         self.model = None
+        self.diagnostic: dict | None = None
+        self.private_diagnostics = private_diagnostics
 
     def __enter__(self) -> "ToolRelay":
         return self
@@ -99,7 +173,8 @@ class ToolRelay:
             self.faults.append("relay did not exit after SIGKILL")
         code = self.proc.returncode
         if code not in ((0, -15) if was_running else (0,)):
-            self.faults.append(f"relay exited {code}: {self._tail()}")
+            suffix = '' if self.private_diagnostics else ': ' + self._tail()
+            self.faults.append(f"relay exited {code}{suffix}")
         try:
             value = json.loads(self.receipt_path.read_text())
             if not isinstance(value, dict):
@@ -110,7 +185,10 @@ class ToolRelay:
 
     def _tail(self, limit: int = 800) -> str:
         try:
-            return self.log_path.read_text(errors="replace")[-limit:]
+            with self.log_path.open('rb') as stream:
+                stream.seek(0, os.SEEK_END)
+                stream.seek(max(0, stream.tell() - limit * 4))
+                return stream.read(limit * 4).decode(errors='replace')[-limit:]
         except OSError:
             return "(no log)"
 
@@ -124,14 +202,39 @@ class ToolRelay:
     def cleanup(self) -> None:
         """Idempotent cleanup; errors are evidence, never a replacement exception."""
         self.stop()
+        if self.private_diagnostics or self.fault():
+            self.capture_diagnostic()
         if self.model is not None:
-            self.model.close()
+            try:
+                self.model.close()
+            except Exception as exc:
+                self.cleanup_errors.append(f'model cleanup failed: {type(exc).__name__}')
         try:
             shutil.rmtree(self.directory)
         except FileNotFoundError:
             pass
         except OSError as exc:
             self.cleanup_errors.append(f"{type(exc).__name__}: {exc}")
+
+    def capture_diagnostic(self, *, stage='runtime') -> dict:
+        """Retain a bounded private snapshot before cleanup, without scoring it.
+
+        The runner places this full value only in private trial evidence; report()
+        exposes metadata. Idempotence keeps the evidence available after deletion.
+        Collection errors are secondary and must not replace the original fault.
+        """
+        if self.diagnostic is not None:
+            return self.diagnostic
+        try:
+            self.stop()
+            self.diagnostic = _snapshot(self.directory, self.context, stage=stage,
+                                        record_spec=self.record_spec,
+                                        recording=self.recording if not self.fault() else None)
+        except Exception as exc:
+            self.diagnostic = {'schema': 'harnessgrad.tool-relay-diagnostic.v1',
+                               'binding': dict(self.context), 'stage': stage, 'scorable': False,
+                               'files': {}, 'errors': [{'type': type(exc).__name__}]}
+        return self.diagnostic
 
     def recording_input(self, *, archive_root: Path | None = None) -> dict | None:
         """Seal a service-owned JSON payload after stop; project it only for scoring.
@@ -174,9 +277,11 @@ class ToolRelay:
         return {"path": self.record_spec["path"], "from": str(sealed), "immutable": True}
 
     def report(self) -> dict:
-        return {"receipt": self.receipt, "faults": list(self.faults),
+        return {"receipt": (_diagnostic_metadata(self.receipt) if self.private_diagnostics else self.receipt),
+                "faults": list(self.faults),
                 "model": self.model.report() if self.model is not None else None,
                 "recording": self.recording,
+                "diagnostic": _diagnostic_metadata(self.diagnostic),
                 "cleanup": {"complete": not self.directory.exists(),
                             "errors": list(self.cleanup_errors)}}
 
@@ -186,7 +291,7 @@ def declaration(setup: dict | None) -> dict | None:
 
 
 def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
-          context: dict | None = None) -> ToolRelay | None:
+          context: dict | None = None, private_diagnostics=False) -> ToolRelay | None:
     """Start the relay `setup` declares, or return `None` for a task that needs none.
 
     A declared relay that cannot start raises `RuntimeError` rather than returning `None`:
@@ -207,6 +312,7 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
     directory = Path(tempfile.mkdtemp(prefix="hg-toolrelay-"))
     handle = None
     model = None
+    binding = dict(context or {})
     try:
         os.chmod(directory, 0o700)
         state = directory / "state"
@@ -262,16 +368,16 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
         finally:
             log.close()
 
-        handle = ToolRelay(sock, directory, proc, receipt_path, log_path)
+        handle = ToolRelay(sock, directory, proc, receipt_path, log_path,
+                           private_diagnostics=private_diagnostics)
         handle.model = model
         handle.record_spec = decl.get("record")
-        if handle.record_spec is not None:
-            handle.context = binding
+        handle.context = binding
         deadline = time.monotonic() + ready_timeout_s
         while True:
             if proc.poll() is not None:
-                handle.faults.append(f"relay exited during startup: {handle._tail()}")
-                raise RuntimeError(handle.fault())
+                handle.faults.append(f"relay exited during startup (code {proc.returncode})")
+                raise RuntimeError(f"{handle.fault()}: {handle._tail()}")
             if sock.exists():
                 probe = socket_mod.socket(socket_mod.AF_UNIX, socket_mod.SOCK_STREAM)
                 probe.settimeout(2.0)
@@ -288,18 +394,40 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
                 raise RuntimeError(handle.fault())
             time.sleep(0.05)
     except BaseException as exc:
-        if model is not None:
-            model.close()
         if handle is not None:
+            handle.capture_diagnostic(stage='startup')
             handle.cleanup()
+            diagnostic = handle.diagnostic
+            report = handle.report()
+            safe_message = (f'tool relay startup failed: {type(exc).__name__}; '
+                            f'relay exit code {handle.proc.returncode}')
         else:
+            try:
+                diagnostic = _snapshot(directory, binding, stage='startup',
+                                       record_spec=decl.get('record'), exception=exc)
+            except Exception as capture_exc:
+                diagnostic = {'schema': 'harnessgrad.tool-relay-diagnostic.v1',
+                              'binding': binding, 'stage': 'startup', 'scorable': False, 'files': {},
+                              'exception': {'type': type(exc).__name__},
+                              'errors': [{'stage': 'capture', 'type': type(capture_exc).__name__}]}
+            if model is not None:
+                try:
+                    model.close()
+                except Exception as cleanup_exc:
+                    diagnostic['errors'].append({'stage': 'model cleanup', 'type': type(cleanup_exc).__name__})
             try:
                 shutil.rmtree(directory)
             except OSError as cleanup_exc:
-                raise RuntimeError(f"{exc}; relay cleanup failed: {cleanup_exc}") from exc
+                diagnostic['errors'].append({'stage': 'cleanup', 'type': type(cleanup_exc).__name__})
+            safe_message = f'tool relay startup failed: {type(exc).__name__}'
+            report = {'receipt': None, 'faults': [safe_message], 'model': None, 'recording': None,
+                      'diagnostic': _diagnostic_metadata(diagnostic),
+                      'cleanup': {'complete': not directory.exists(),
+                                  'errors': list(diagnostic['errors'])}}
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
         detail = str(exc)
         if handle is not None and handle.cleanup_errors:
             detail += f"; cleanup: {handle.cleanup_errors}"
-        raise RuntimeError(detail) from exc
+        raise ToolRelayStartError(detail, safe_message=safe_message,
+                                  report=report, diagnostic=diagnostic) from exc

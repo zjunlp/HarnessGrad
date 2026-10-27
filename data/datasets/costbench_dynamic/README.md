@@ -53,6 +53,8 @@ and unmeasured outcomes for inference HTTP 429/5xx even after recovery. Rejected
 relay request envelopes do not invalidate subsequent execution; genuine runtime
 failures and relay limit refusals still do. Raw scorer evidence is preserved and
 must not be reported as a valid measurement when the platform result is `invalid`.
+All modes also enable the same private trial evidence archives for Harness output
+and relay failure diagnostics; evaluation requires a persistent `progress_dir`.
 
 The evaluator compares against its segmented dynamic reference, including
 charged failed ban attempts. A correct final answer need not have an optimal
