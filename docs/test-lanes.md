@@ -20,7 +20,8 @@ the **signals** an entry must show, the **method** used to derive them, the
 ## The signals
 
 Every `EXCLUSIVE` entry must trip at least one of these, and the definition is
-kept in one place: `tests/quality/test_test_lanes.py`. That guard fails if an
+kept in one place: `tests/quality/test_test_lanes.py` (deleted 2026-10-27 with the
+slim). That guard failed if an
 entry exists with no signal, if an entry names a file that no longer exists, if the
 tuple repeats itself, or if `SLOW` and `EXCLUSIVE` drift into an undocumented
 overlap.

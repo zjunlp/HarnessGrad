@@ -82,7 +82,11 @@ into every other dataset's selection too.
 Files that are about one dataset without being named after it are listed explicitly
 in `EXTRA`; each entry is a decision, not a guess.
 
-`tests/quality/test_test_scope.py` guards the rule: it fails if a dataset is added
+**2026-10-27:** the scoping helper (`tests/quality/test_test_scope.py` and `test_scope.py`)
+and the audit-round tests it selected were deleted with the repo slim; the suite is now run
+whole (`python3 -m pytest tests/quality`). The paragraph below is the historical rule.
+
+`tests/quality/test_test_scope.py` guarded the rule: it failed if a dataset was added
 with no test file, if an `EXTRA` entry points at a file that no longer exists, or if
 a registry-wide file starts being scoped to individual datasets. It also pins a real
 coverage gap it found: **8 of 29 datasets have no dedicated adapter test file** and
@@ -96,7 +100,7 @@ own test files, and the total went 28 → 29 with the port.)
 1. Add the adapter under `data/` and classify it in `tools/dataset_classes.py`.
 2. Add `tests/quality/test_<dataset>_*.py`.
 3. Run `python3 tools/run_tests.py --dataset <dataset> --with-registry`.
-4. Run `python3 tools/run_tests.py --file test_test_scope` to confirm the scoping
+4. Run `python3 -m pytest tests/quality` to confirm the suite
    guard accepts the new name.
 
 ## Where the temporary directories go

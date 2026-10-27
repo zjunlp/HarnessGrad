@@ -126,5 +126,8 @@ contract" rather than "permanent".
   `tau2_bench`; statuses as above; checker still `{"valid": true, "datasets": 35, …}`.
 * `data/datasets/tau2_bench.py` — docstring and `REFUSED` point here.
 * `docs/evidence-status-decision.md` — the "four permanent refusals" section is superseded.
-* Tests: `tests/quality/test_dataset_refusals.py`, `test_dataset_blockers.py`,
-  `test_closure_assessment.py`, `test_apply_blocker_proposal.py`.
+* Tests: `tests/quality/test_dataset_refusals.py` and `test_apply_blocker_proposal.py`.
+  The two prose-police tests this line used to name (`test_dataset_blockers.py`,
+  `test_closure_assessment.py`) were deleted in the 2026-10-27 slim; what enforces the
+  registry now is `tools/check_dataset_blockers.py`, which `test_apply_blocker_proposal.py`
+  runs on every write.
