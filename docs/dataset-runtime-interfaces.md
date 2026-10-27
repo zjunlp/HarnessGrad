@@ -558,8 +558,9 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 
 - `tests/quality/test_shared_dataset_runtime.py`
 - `tests/quality/test_shared_judge_trials_workers.py`
-- `tests/quality/test_trial_evidence.py`
-- `tests/quality/test_trial_evidence_resume.py`
+- `tests/quality/test_ordinary_evidence_collection.py`
+- `tests/quality/test_ordinary_evidence_output_boundary.py`
+- `tests/quality/test_repeated_trial_resume.py`
 - `tests/quality/test_trial_evidence_ordinary.py`
 - `tests/quality/test_trial_evidence_launch.py`
 - `tests/quality/test_judge_model_api.py`
