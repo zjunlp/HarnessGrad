@@ -159,7 +159,7 @@ def main():
     parser.add_argument('archives', nargs='+', type=Path,
                         help='Trial archives in their run layout, alongside final progress and ordinary task indexes')
     args = parser.parse_args()
-    queries, splits = collect([load_trial(p) for p in args.archives],
+    queries, splits = collect((load_trial(p) for p in args.archives),
                              json.loads(args.expected_cells.read_text()), include_splits=True,
                              mode=args.mode)
     bootstrap(args.bundle, args.runtime)
