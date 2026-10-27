@@ -242,10 +242,8 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     isolation = dict(merged.get("per_task_scorer_isolation") or {})
     invalid = dict(merged.get("invalid") or {})
     failed = dict(merged.get("harness_failed") or {})
-    # The runtime bookkeeping the OpenCode feature needs. The branch's side of this conflict made
-    # `invalid`/`failed` lists and derived `known`/`known_failed` from them, but the loop below
-    # calls `invalid.setdefault(...)` -- a list has no such method, and `known`/`known_failed` are
-    # never read. Kept main's dict shape and added what is actually used.
+    # Merge runtime identities and per-task service diagnostics so resumed receipts
+    # describe both completed and newly evaluated tasks.
     runtimes = list(merged.get("harness_runtime") or [])
     diagnostics = dict(merged.get("runtime_diagnostics") or {})
     for task_id, record in prior.items():

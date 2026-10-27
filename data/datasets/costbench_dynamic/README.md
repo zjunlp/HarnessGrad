@@ -114,20 +114,25 @@ rejects static/dynamic or cross-mode mixing; compare train and test separately.
 
 ## Validation (2026-10-21)
 
+These checks were recorded for the initial dynamic adapter at commit
+`2f88e25e891dc7a60b835308e9a246fc3d2fad05`, against static base
+`d970a47da83d1f2845afe9e8a05ff2596593a48a`.
+
 All 9,172 gold trajectories passed the complete audit. The frozen manifest SHA256
 is `a424801c3d156bfc9527534e715e40ed02cd812889ae0d1c711c9d8c792e4c14`.
 CostBench regression/runtime/scoring tests passed 104 cases; the prepared-data
 integration suite passed 54, including both splits, all modes, and non-location
-preference notifications. Both dataset declarations pass lint. Sixteen direct
-oracle/no-op controls and eight report CLI checks preserve measured zeros and
+preference notifications. Both dataset declarations passed lint. Sixteen direct
+oracle/no-op controls and eight report CLI checks preserved measured zeros and
 the upstream cost/answer denominators. Cost equality uses tolerance `1e-8` for
 ordinary floating-point summation differences.
 
-The broader source/catalog checks have four existing failures reproduced on the
-static base: unrelated import edges, unavailable adapter dependencies, and
-missing aggregation declarations/inventory entries for other datasets. This
-branch supplies the missing static CostBench aggregation declaration as well as
-the dynamic one. It does not claim a green repository-wide suite.
+At that revision, the broader source/catalog checks recorded four failures also
+reproduced on the static base: unrelated import edges, unavailable adapter
+dependencies, and missing aggregation declarations/inventory entries for other
+datasets. The adapter commit added both static and dynamic CostBench aggregation
+declarations. These historical checks did not establish a green repository-wide
+suite; the current checkout's status requires its own validation.
 Local logs, source hashes and report receipts are retained outside Git.
 
 ## Real API validation and event supplement (2026-10-21)
