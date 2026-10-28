@@ -159,6 +159,13 @@ records. Records containing `trials` or `trial_scores` are rejected, including
 one-item or empty histories: a filtered history does not establish a single-trial
 measurement. Select one trial explicitly across the selected episode pool before
 reporting; the platform's saved mean across trials remains a separate measurement.
+The verifier's standard `scorer_error` records count as unmeasured episodes, keep
+the full selected question denominator, and leave the split score unset. Their
+details are retained in `scorer_errors`, keyed by task ID, on affected splits.
+The platform preserves this explicit failure evidence when the scorer exits
+nonzero; the verdict and saved record remain unmeasured with no published score.
+Other malformed evidence is rejected; successful and incomplete episode evidence
+still require matching metric, input identity, native split and source coverage.
 Verifier evidence and split summaries include
 `original_questions`, eligible `expected_questions`, `excluded_question_count`
 and the exact `excluded_questions` with reasons. The full native train denominator

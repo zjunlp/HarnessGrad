@@ -181,8 +181,22 @@ def aggregate(records, selected_task_ids=None):
         tid = row.get("task_id")
         if tid not in ids:
             raise ValueError("record outside selected pool")
-        if tid in evidence or row.get("metric") != METRIC:
-            raise ValueError("duplicate evidence or incompatible metric")
+        if any("task_id" in item and item["task_id"] != tid for item in wrappers):
+            raise ValueError("record and evidence task identity mismatch")
+        if tid in evidence:
+            raise ValueError("duplicate evidence")
+        if row.get("reason") == "scorer_error":
+            # check.py cannot attest gold-derived metadata when scoring fails.
+            # Accept only its explicit error schema, never arbitrary damaged evidence.
+            if (set(row) != {"schema", "task_id", "measured", "reason", "detail"}
+                    or row["schema"] != "personamem-v2-verdict-v1"
+                    or row["measured"] is not False
+                    or not isinstance(row["detail"], str) or not row["detail"].strip()):
+                raise ValueError("invalid scorer_error evidence")
+            evidence[tid] = row
+            continue
+        if row.get("metric") != METRIC:
+            raise ValueError("incompatible metric")
         if (row.get("artifacts", {}).get("input_sha256") != rows()[tid]["input_sha256"]
                 or row.get("split") != rows()[tid]["split"]):
             raise ValueError("evidence input or native split mismatch")
@@ -213,4 +227,8 @@ def aggregate(records, selected_task_ids=None):
                          "measured_questions": sum(len(e["questions"]) for e in complete),
                          "unmeasured_task_ids": missing,
                          "score": None if missing else sum(q["score"] for e in complete for q in e["questions"]) / expected}
+        errors = {tid: evidence[tid]["detail"] for tid in missing
+                  if tid in evidence and evidence[tid].get("reason") == "scorer_error"}
+        if errors:
+            result[split]["scorer_errors"] = errors
     return result

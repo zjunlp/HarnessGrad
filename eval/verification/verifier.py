@@ -244,13 +244,26 @@ def _check_output_detail(out: str, err: str) -> str:
         parts.append(f"stderr {err.strip()[-VERDICT_STDERR_TAIL:]}")
     return " | ".join(parts)
 def _command_exit_failure(spec, code, out, err):
-    """Opt-in command completion check, before trusting any scorer output file."""
+    """Opt-in command completion check, before trusting any scorer reward."""
     if not (spec.get('result_contract') or {}).get('require_exit_zero') or code == 0:
         return None
     reason = f'verifier command exited {code}; result_contract requires exit 0'
     return {'kind': 'command', 'passed': False, 'score': None,
             'outcome': 'unmeasured', 'unmeasured': reason, 'exit_code': code,
             'detail': (reason + ' | ' + _check_output_detail(out, err))[:VERDICT_DETAIL_LIMIT]}
+
+
+def _preserve_failure_evidence(failure, path: Path | None, root: Path):
+    """Keep explicit nonmeasurement diagnostics without admitting a failed score."""
+    if (path is not None and not root.is_symlink()
+            and _verdict_parent_is_safe(path, root)
+            and not path.is_symlink() and path.is_file()):
+        evidence = _read_json(path)
+        # Successful-looking output from a failed command must not escape the
+        # exit contract through a dataset reader that consumes evidence directly.
+        if evidence is not None and evidence.get("measured") is False:
+            failure["evidence"] = evidence
+    return failure
 
 
 def _verify_container_state(snapshot: str, verifier, *, task_mount: str,
@@ -304,6 +317,7 @@ def _verify_container_state_inner(snapshot: str, verifier, *, task_mount: str,
     created = False
     startup = ExitStack()
     verdict_dir: Path | None = None
+    failure_evidence: Path | None = None
     try:
         reward_file = spec.get("reward_file")
         if reward_file:
@@ -312,6 +326,12 @@ def _verify_container_state_inner(snapshot: str, verifier, *, task_mount: str,
             # for this check; otherwise a harness can pre-seed a passing verdict.
             verdict_dir = staging / "verdict"
             verdict_dir.mkdir(parents=True, exist_ok=True)
+            evidence_file = spec.get("evidence_file")
+            if ((spec.get("result_contract") or {}).get("require_exit_zero")
+                    and evidence_file and Path(evidence_file).parent == Path(reward_file).parent):
+                failure_evidence = verdict_dir / Path(evidence_file).name
+                if not verdict_dir.is_symlink():
+                    _clear_verdict_file(failure_evidence)
         extra_mounts = ()
         if verdict_dir is not None:
             extra_mounts = ("--mount",
@@ -358,7 +378,9 @@ def _verify_container_state_inner(snapshot: str, verifier, *, task_mount: str,
 
         failure = _command_exit_failure(spec, code, out, err)
         if failure is not None:
-            return failure
+            # Only the verifier-owned mount can supply fresh diagnostics. Never
+            # copy a purported error from the harness's snapshot filesystem.
+            return _preserve_failure_evidence(failure, failure_evidence, verdict_dir or staging)
 
         # Step 9. `reward_file` first: the real task set writes 1/0 into a file and exits
         # 0 either way, so the exit code is not a fallback, it is noise.
@@ -857,7 +879,13 @@ def _verify_inner(workdir: Path, verifier: dict | None, answer: str,
 
     failure = _command_exit_failure(spec, code, out, proc.stderr)
     if failure is not None:
-        return failure
+        evidence_file = host_evidence_path
+        if exec_verdict_dir is not None:
+            declared_evidence = spec.get("evidence_file")
+            if (declared_evidence
+                    and Path(declared_evidence).parent == Path(spec["reward_file"]).parent):
+                evidence_file = exec_verdict_dir / Path(declared_evidence).name
+        return _preserve_failure_evidence(failure, evidence_file, exec_verdict_dir or workdir)
 
     # ---- a host (`files`) check's reward and evidence files ------------------
     #

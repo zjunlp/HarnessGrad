@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import random
+import subprocess
 import sys
 import textwrap
 import types
@@ -497,6 +498,107 @@ def test_reporting_accepts_saved_single_trial(prepared, tmp_path, answer, score)
     assert expected["train"]["score"] == score
     assert dataset.aggregate([saved], [tid]) == expected
     assert dataset.aggregate([{"verdict": saved}], [tid]) == expected
+
+
+@pytest.fixture
+def scorer_error_record(unequal_episode_results, tmp_path):
+    tid = unequal_episode_results[0][1]
+    output, reward = tmp_path / "error.json", tmp_path / "reward.txt"
+    result = subprocess.run([
+        sys.executable, str(dataset.ASSETS / "verify/check.py"),
+        "--gold", str(tmp_path / "missing-gold.json"), "--gold-sha256", "0" * 64,
+        "--task-id", tid, "--input-sha256", digest(tid), "--relay-sha256", "0" * 64,
+        "--reward-file", str(reward), "--evidence-file", str(output),
+    ], capture_output=True, text=True)
+    assert result.returncode == 3, result.stderr
+    assert not reward.exists()
+    evidence = json.loads(output.read_text())
+    assert evidence["measured"] is False and evidence["reason"] == "scorer_error"
+    return evidence
+
+
+@pytest.mark.parametrize("form", ["evidence", "verdict", "saved"])
+def test_reporting_retains_real_scorer_errors(unequal_episode_results, scorer_error_record, tmp_path, form):
+    ids, records = unequal_episode_results
+    error = scorer_error_record
+    verdict = {"kind": "command", "score": None, "unmeasured": error["detail"], "evidence": error}
+    failed = {"evidence": error, "verdict": {"verdict": verdict},
+              "saved": saved_episode(tmp_path, ids[1], [verdict])}[form]
+    records[1] = failed
+    original = copy.deepcopy(records)
+    report = dataset.aggregate(records, ids)
+    train = report["train"]
+    assert train["score"] is None
+    assert train["selected_episodes"] == 2 and train["measured_episodes"] == 1
+    assert train["expected_questions"] == 4 and train["measured_questions"] == 1
+    assert train["original_questions"] == 5 and train["excluded_question_count"] == 1
+    assert train["unmeasured_task_ids"] == [ids[1]]
+    assert train["scorer_errors"] == {ids[1]: error["detail"]}
+    assert report["benchmark"]["score"] == 1
+    assert "scorer_errors" not in report["benchmark"]
+    without_error = dataset.aggregate([records[0], records[2]], ids)
+    assert {k: v for k, v in train.items() if k != "scorer_errors"} == without_error["train"]
+    assert records == original
+    with pytest.raises(ValueError, match="duplicate"):
+        dataset.aggregate(records + [failed], ids)
+    with pytest.raises(ValueError, match="outside selected pool"):
+        dataset.aggregate([failed], ids[:1])
+    with pytest.raises(ValueError, match="task identity mismatch"):
+        dataset.aggregate([{"task_id": ids[0], "evidence": error}], ids)
+
+
+@pytest.mark.parametrize("change", [
+    {"schema": "other"}, {"measured": True}, {"measured": 0}, {"measured": "false"},
+    {"detail": None}, {"detail": ""}, {"metric": "other"}, {"reason": "incomplete_episode"},
+])
+def test_reporting_rejects_malformed_scorer_errors(unequal_episode_results, scorer_error_record, change):
+    with pytest.raises(ValueError):
+        dataset.aggregate([{**scorer_error_record, **change}], unequal_episode_results[0])
+
+
+@pytest.mark.parametrize("fault", ["gold-checksum", "missing-record"])
+def test_platform_scorer_error_survives_sandbox_save_and_aggregate(prepared, tmp_path, monkeypatch, fault):
+    from eval.verification.verifier import _verify
+
+    tid, _, _ = prepared
+    spec = dataset.verifier(tid)
+    # Bind the test interpreter explicitly; the scorer still uses the adapter's
+    # real command, immutable code inputs, gold pin and strict exit contract.
+    spec["argv"][0] = sys.executable
+    spec["runtime_paths"] = list(dict.fromkeys([sys.prefix, sys.base_prefix,
+                                               str(Path(sys._base_executable).parent.parent)]))
+    if fault == "gold-checksum":
+        # Corrupt only this synthetic pool, after the adapter admitted its pin.
+        (dataset.PREPARED_ROOT / f"gold/{tid}.json").write_text("{}")
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(work))
+    verdict = _verify(work, spec, "", sandbox=True, timeout_s=30)
+    emitted = json.loads((work / "verifier/evidence.json").read_text())
+    assert emitted["reason"] == "scorer_error" and emitted["measured"] is False
+    assert ("gold checksum mismatch" if fault == "gold-checksum" else "FileNotFoundError") in emitted["detail"]
+    assert verdict["exit_code"] == 3 and verdict["score"] is None
+    assert verdict["outcome"] == "unmeasured" and not verdict["passed"]
+    assert verdict["evidence"] == emitted
+    assert not (work / "verifier/reward.txt").exists()
+    saved = saved_episode(tmp_path / "run", tid, [verdict])
+    assert saved["score"] is None and saved["evidence"] == emitted
+    report = dataset.aggregate([saved], [tid])["train"]
+    assert report["score"] is None
+    assert report["selected_episodes"] == report["expected_questions"] == 1
+    assert report["measured_episodes"] == report["measured_questions"] == 0
+    assert report["unmeasured_task_ids"] == [tid]
+    assert report["scorer_errors"] == {tid: emitted["detail"]}
+
+
+@pytest.mark.parametrize("field", ["metric", "artifacts", "split", "expected_questions", "original_questions"])
+@pytest.mark.parametrize("measured", [True, False])
+def test_reporting_rejects_damaged_evidence(unequal_episode_results, field, measured):
+    ids, records = unequal_episode_results
+    records[0]["measured"] = measured
+    del records[0][field]
+    with pytest.raises(ValueError):
+        dataset.aggregate(records, ids)
 
 
 @pytest.mark.parametrize("change,message", [
