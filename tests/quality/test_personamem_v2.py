@@ -442,6 +442,63 @@ def test_reporting_keeps_selected_denominator_when_episode_is_incomplete(unequal
     assert report["benchmark"]["score"] == 1
 
 
+def saved_episode(tmp_path, tid, verdicts):
+    from harnessgrad.records import _save_verdicts
+
+    scores = [v.get("score") for v in verdicts]
+    result = {"verdicts": {tid: verdicts[-1]},
+              "per_task": {} if None in scores else {tid: sum(scores) / len(scores)}}
+    if len(verdicts) > 1:
+        result["trial_verdicts"] = {tid: verdicts}
+    _save_verdicts(tmp_path, 0, result, [tid])
+    return json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text())
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_reporting_rejects_saved_trial_histories(prepared, tmp_path, reverse, wrapped):
+    tid, payload, gold = prepared
+    verdicts = []
+    for trial, answer in enumerate(("", r"\boxed{c}"), 1):
+        record = completed_record(payload, answer)
+        record["binding"]["trial_id"] = f"trial-{trial}"
+        evidence = verify(gold, record, task_id=tid, input_sha256=payload["input_sha256"],
+                          relay_sha256=hashlib.sha256(canonical(payload).encode()).hexdigest())
+        verdicts.append({"kind": "command", "score": evidence["score"],
+                         "evidence": evidence, "trial": trial})
+    if reverse:
+        verdicts.reverse()
+    saved = saved_episode(tmp_path, tid, verdicts)
+    assert saved["score"] == 0.5
+    assert saved["trial_scores"] == ([1.0, 0.0] if reverse else [0.0, 1.0])
+    with pytest.raises(ValueError, match="single-trial.*trial histories"):
+        dataset.aggregate([{"verdict": saved} if wrapped else saved], [tid])
+
+
+@pytest.mark.parametrize("history", [
+    {"trials": []}, {"trials": None}, {"trials": {}}, {"trials": [{}]},
+    {"trial_scores": [0, 1]}, {"trial_scores": []}, {"trial_scores": None},
+])
+def test_reporting_rejects_partial_trial_histories(unequal_episode_results, history):
+    ids, records = unequal_episode_results
+    with pytest.raises(ValueError, match="single-trial.*trial histories"):
+        dataset.aggregate([{"evidence": records[0], **history}], ids[:1])
+
+
+@pytest.mark.parametrize("answer,score", [("", 0), (r"\boxed{c}", 1)])
+def test_reporting_accepts_saved_single_trial(prepared, tmp_path, answer, score):
+    tid, payload, gold = prepared
+    evidence = verify(gold, completed_record(payload, answer), task_id=tid,
+                      input_sha256=payload["input_sha256"],
+                      relay_sha256=hashlib.sha256(canonical(payload).encode()).hexdigest())
+    saved = saved_episode(tmp_path, tid, [{"kind": "command", "score": score, "evidence": evidence}])
+    assert "trials" not in saved and "trial_scores" not in saved
+    expected = dataset.aggregate([evidence], [tid])
+    assert expected["train"]["score"] == score
+    assert dataset.aggregate([saved], [tid]) == expected
+    assert dataset.aggregate([{"verdict": saved}], [tid]) == expected
+
+
 @pytest.mark.parametrize("change,message", [
     ({"denominator": "measured_tasks"}, "measured_tasks needs"),
     ({"aggregation": "ordered_macro_mean"}, "requires arithmetic_mean"),

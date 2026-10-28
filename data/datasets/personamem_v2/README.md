@@ -154,6 +154,11 @@ with selected/measured coverage. `data/aggregation_policies.json` declares
 and `corpus_metrics` as an arithmetic mean over eligible selected MCQs (`gold_rows`)
 within each native split. The latter counts questions after fixed source exclusions;
 missing or incomplete episodes still leave the split score unset.
+This corpus report accepts single-trial evidence, command verdicts, or saved task
+records. Records containing `trials` or `trial_scores` are rejected, including
+one-item or empty histories: a filtered history does not establish a single-trial
+measurement. Select one trial explicitly across the selected episode pool before
+reporting; the platform's saved mean across trials remains a separate measurement.
 Verifier evidence and split summaries include
 `original_questions`, eligible `expected_questions`, `excluded_question_count`
 and the exact `excluded_questions` with reasons. The full native train denominator

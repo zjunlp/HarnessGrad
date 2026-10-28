@@ -153,7 +153,7 @@ def control_task(tid):
 
 
 def aggregate(records, selected_task_ids=None):
-    """Question micro-accuracy over the fixed eligible pool, with source coverage."""
+    """Single-trial question micro-accuracy over the fixed eligible pool."""
     from data.datasets.personamem_v2.lib.protocol import METRIC, SPLITS, coverage
     from data.scaffolds.aggregation import aggregation_denominator, aggregation_policy
 
@@ -164,8 +164,20 @@ def aggregate(records, selected_task_ids=None):
         raise ValueError("duplicate or unknown selected task")
     evidence = {}
     for record in records:
-        row = record.get("verdict", record)
-        row = row.get("evidence", row)
+        row, wrappers = record, [record]
+        for field in ("verdict", "evidence"):
+            if not isinstance(row, Mapping):
+                raise ValueError("invalid aggregate record")
+            if field in row:
+                row = row[field]
+                wrappers.append(row)
+        if not isinstance(row, Mapping):
+            raise ValueError("invalid aggregate evidence")
+        # Saved evidence describes the last trial; even a one-item history may
+        # be a filtered survivor of multiple attempts, not a single-trial run.
+        if any("trials" in item or "trial_scores" in item for item in wrappers):
+            raise ValueError("personamem_v2 aggregate accepts single-trial records only; "
+                             "trial histories require an explicit trial selection")
         tid = row.get("task_id")
         if tid not in ids:
             raise ValueError("record outside selected pool")
