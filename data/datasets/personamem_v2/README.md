@@ -158,15 +158,17 @@ This corpus report accepts single-trial evidence, command verdicts, or saved tas
 records. Records containing `trials` or `trial_scores` are rejected, including
 one-item or empty histories: a filtered history does not establish a single-trial
 measurement. Select one trial explicitly across the selected episode pool before
-reporting; the platform's saved mean across trials remains a separate measurement.
+reporting, keeping its `invalid`/`unmeasured` fields alongside its evidence;
+the platform's saved mean across trials remains a separate measurement.
 The verifier's standard `scorer_error` records count as unmeasured episodes, keep
 the full selected question denominator, and leave the split score unset. Their
 details are retained in `scorer_errors`, keyed by task ID, on affected splits.
 The platform preserves this explicit failure evidence when the scorer exits
 nonzero; the verdict and saved record remain unmeasured with no published score.
 Batch evaluation retains these diagnostic verdicts and, for multi-trial runs,
-the history of actual attempts. Measured evidence with a platform `invalid` or
-`unmeasured` marker is rejected rather than restoring an excluded task's score.
+the history of actual attempts with each attempt's platform exclusion reason.
+Measured evidence with a platform `invalid` or `unmeasured` marker is rejected
+rather than restoring an excluded task's score.
 Other malformed evidence is rejected; successful and incomplete episode evidence
 still require matching metric, input identity, native split and source coverage.
 Verifier evidence and split summaries include

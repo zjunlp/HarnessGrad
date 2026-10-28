@@ -806,6 +806,80 @@ def test_corpus_aggregation_declaration_is_live(unequal_episode_results, monkeyp
         dataset.aggregate(unequal_episode_results[1], unequal_episode_results[0])
 
 
+@pytest.mark.parametrize("declared,failed_index,jobs", [
+    (False, 1, 1), (False, 1, 3),
+    (True, 0, 1), (True, 0, 3),
+    (True, 1, 1), (True, 1, 3),
+    (True, 2, 1), (True, 2, 3),
+])
+def test_selected_trial_retains_platform_runtime_exclusion(
+        batch_episodes, tmp_path, monkeypatch, declared, failed_index, jobs):
+    from eval.containers import bun_runtime
+    from eval.run import runner
+    from harnessgrad.records import _save_verdicts
+
+    ids = list(batch_episodes)[:2]
+    trials = 3 if declared else 2
+    admitted_runtime = {"version": "admitted-test-runtime"}
+    monkeypatch.setattr(bun_runtime, "admit", lambda *_args: None)
+    monkeypatch.setattr(bun_runtime, "identity", lambda _repo: admitted_runtime)
+    evidence = {}
+    for index, tid in enumerate(ids):
+        payload = storage.artifact(dataset.PREPARED_ROOT, f"service/{tid}.json")
+        gold = storage.artifact(dataset.PREPARED_ROOT, f"gold/{tid}.json")
+        evidence[tid] = verify(
+            gold, completed_record(payload, r"\boxed{c}" if index == 0 else r"\boxed{a}"),
+            task_id=tid, input_sha256=payload["input_sha256"],
+            relay_sha256=hashlib.sha256(canonical(payload).encode()).hexdigest())
+    attempts, original_verdicts = {tid: [] for tid in ids}, {tid: [] for tid in ids}
+
+    def actor(_repo, task, **_kwargs):
+        tid = task["task_id"]
+        index = len(attempts[tid])
+        score = evidence[tid]["score"]
+        result = {"verdict": {"kind": "command", "score": score, "passed": score == 1,
+                              "evidence": copy.deepcopy(evidence[tid])},
+                  "trace": "", "exit_code": 0, "stderr": "",
+                  "harness_runtime": {"bun": ({"version": "changed-test-runtime"}
+                                              if index == failed_index else admitted_runtime)}}
+        original_verdicts[tid].append(copy.deepcopy(result["verdict"]))
+        attempts[tid].append(result)
+        return result
+
+    monkeypatch.setattr(runner, "run_one", actor)
+    protocol = {"version": 1, "metric": "pass^k", "trials": trials,
+                "ks": list(range(1, trials + 1)), "seeds": list(range(trials))}
+    cache = {}
+    result = runner.evaluate(
+        tmp_path, [dataset.control_task(tid) for tid in ids], dict.fromkeys(ids, METRIC),
+        trials=trials, jobs=jobs, cache=cache, progress_dir=tmp_path / "progress",
+        verifiers={tid: {"trial_protocol": protocol} for tid in ids} if declared else {})
+    assert result["per_task"] == {} and cache == {}
+    assert set(result["invalid"]) == set(ids)
+    _save_verdicts(tmp_path, 0, result, ids)
+    saved = [json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text()) for tid in ids]
+    for tid, record in zip(ids, saved):
+        assert record["score"] is None
+        assert record["invalid"]["stage"] == "harness runtime identity"
+        assert len(record["trials"]) == trials
+        for index, cell in enumerate(record["trials"]):
+            assert cell["evidence"] == evidence[tid]
+            assert attempts[tid][index]["verdict"] == original_verdicts[tid][index]
+            if index == failed_index:
+                # Selecting this cell must not discard the platform's exclusion
+                # and turn the retained successful scorer evidence into a score.
+                with pytest.raises(ValueError, match="measured evidence.*invalid or unmeasured"):
+                    dataset.aggregate([cell], [tid])
+                assert cell["invalid"] == record["invalid"]
+            else:
+                assert not cell.get("invalid") and not cell.get("unmeasured")
+                assert dataset.aggregate([cell], [tid])["train"]["score"] == evidence[tid]["score"]
+    for index in range(trials):
+        if index != failed_index:
+            selected = [record["trials"][index] for record in saved]
+            assert dataset.aggregate(selected, ids)["train"]["score"] == 0.5
+
+
 def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monkeypatch):
     from data.datasets.personamem_v2 import prepare
     raw = tmp_path / "raw"

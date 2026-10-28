@@ -1624,7 +1624,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # round all along; only the live record had lost the number.
         # One task, `trials` times. See `evaluate` for why one is not enough.
         measured: list[dict] = []
-        attempted_verdicts: list[dict] = []
+        attempted: list[tuple[dict, dict]] = []
         unmeasured: dict | None = None
         unmeasured_result: dict | None = None
         trial_marker = None
@@ -1662,9 +1662,11 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                         result.get("verdict") or {}, task_id=tid, run_id=run_id,
                         trial_id=trial_identity(trial))
 
-                # Keep every attempted trial, including one that cannot be scored.
-                # An empty cell records an attempt without inventing scorer evidence.
-                attempted_verdicts.append(dict(result.get("verdict") or {}))
+                # Keep scorer facts separate from the platform's later exclusion
+                # decision. Pair each copy with its result: skipped provider trials
+                # mean the measured list no longer has the same indices.
+                trial_verdict = dict(result.get("verdict") or {})
+                attempted.append((result, trial_verdict))
 
                 # A task the platform could not measure never reaches scoring. It is *not*
                 # cached either: the cache key names the harness, and the reason this
@@ -1684,6 +1686,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     trial_rows[tid].append(row)
                 if result.get("invalid"):
                     unmeasured = result["invalid"]
+                    trial_verdict["invalid"] = unmeasured
                     unmeasured_result = result
                     held.failed(str(unmeasured.get("detail") or "")[:200])
                     # Declared trials are independent planned measurements. Keep
@@ -1708,16 +1711,18 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 provider = _provider_failure(result)
                 if (provider is not None and not (result.get("verdict") or {}).get("passed")
                         and (result.get("verdict") or {}).get("protocol") != chess_stepwise.STEPWISE):
+                    provider_reason = {
+                        "stage": "harness model call",
+                        "detail": (f"the harness could not reach the model endpoint and "
+                                   f"exited {provider['exit_code']}: {provider['line']}")
+                                  + modelgate_mod.describe(result.get("model_gateway"))}
+                    trial_verdict["invalid"] = provider_reason
                     if measured:
                         print(f"warning: {tid}: trial {trial + 1} died reaching the model "
                               f"endpoint ({provider['line']}); keeping the "
                               f"{len(measured)} measured trial(s)", file=sys.stderr)
                         continue
-                    unmeasured = {
-                        "stage": "harness model call",
-                        "detail": (f"the harness could not reach the model endpoint and "
-                                   f"exited {provider['exit_code']}: {provider['line']}")
-                                  + modelgate_mod.describe(result.get("model_gateway"))}
+                    unmeasured = provider_reason
                     unmeasured_result = result
                     held.failed(str(unmeasured["detail"])[:200])
                     if trial_protocol:
@@ -1758,6 +1763,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             stopped = _stopped_by_signals(measured)
             if stopped is not None:
                 unmeasured = stopped
+                for attempt, trial_verdict in attempted:
+                    if trial_verdict.get("invalid"):
+                        continue
+                    trial_stopped = _stopped_by_signals([attempt])
+                    if trial_stopped is not None:
+                        trial_verdict["invalid"] = trial_stopped
 
         if trial_protocol and progress_dir is not None:
             repeated_trials.save_task(
@@ -1781,7 +1792,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             if diagnostic.get("verdict"):
                 outcome["verdict"] = dict(diagnostic["verdict"])
             if trials > 1:
-                outcome["trial_verdicts"] = attempted_verdicts
+                outcome["trial_verdicts"] = [verdict for _, verdict in attempted]
             return outcome
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
         if trial_marker is not None:
