@@ -1624,6 +1624,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # round all along; only the live record had lost the number.
         # One task, `trials` times. See `evaluate` for why one is not enough.
         measured: list[dict] = []
+        attempted_verdicts: list[dict] = []
         unmeasured: dict | None = None
         unmeasured_result: dict | None = None
         trial_marker = None
@@ -1660,6 +1661,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     result["verdict"] = enforce_verdict_binding(
                         result.get("verdict") or {}, task_id=tid, run_id=run_id,
                         trial_id=trial_identity(trial))
+
+                # Keep every attempted trial, including one that cannot be scored.
+                # An empty cell records an attempt without inventing scorer evidence.
+                attempted_verdicts.append(dict(result.get("verdict") or {}))
 
                 # A task the platform could not measure never reaches scoring. It is *not*
                 # cached either: the cache key names the harness, and the reason this
@@ -1770,9 +1775,14 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             diagnostic = unmeasured_result or result
             _write_progress(progress_dir, round_no, tid, [], unmeasured,
                             diagnostic=diagnostic, enforcement=enforcement)
-            return {"task_id": tid, "invalid": unmeasured,
-                    "harness_runtime": (diagnostic or {}).get("harness_runtime"),
-                    "runtime_services": (diagnostic or {}).get("runtime_services")}
+            outcome = {"task_id": tid, "invalid": unmeasured,
+                       "harness_runtime": (diagnostic or {}).get("harness_runtime"),
+                       "runtime_services": (diagnostic or {}).get("runtime_services")}
+            if diagnostic.get("verdict"):
+                outcome["verdict"] = dict(diagnostic["verdict"])
+            if trials > 1:
+                outcome["trial_verdicts"] = attempted_verdicts
+            return outcome
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
         if trial_marker is not None:
             trial_marker.unlink()
@@ -1830,6 +1840,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
 
         if outcome.get("invalid"):
             reason = outcome["invalid"]
+            # Nonmeasurement still has scorer facts. Preserve them independently
+            # of the score/exclusion decision and never put them in the cache.
+            if outcome.get("verdict"):
+                verdicts[tid] = outcome["verdict"]
+            if "trial_verdicts" in outcome:
+                trial_verdicts[tid] = outcome["trial_verdicts"]
             # Both sides of this conflict are kept: the runtime records are the OpenCode
             # admission evidence and must be collected whatever the verdict is, and the timeout
             # rule decides whether the verdict is a score or an exclusion.

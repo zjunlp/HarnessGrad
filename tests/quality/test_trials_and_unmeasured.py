@@ -350,3 +350,202 @@ def test_a_real_run_leaves_a_progress_record(tmp_path):
     files = sorted(p.name for p in dest.glob("*.json"))
     assert files, f"没有 progress 记录:{sorted(dest.parent.iterdir())}"
     assert all(json.loads((dest / f).read_text()).get("complete") for f in files)
+
+
+# Batch reduction must retain scorer facts even when they do not produce a score.
+# These tests use the public evaluate() entry and the real final-record serializer;
+# the run_one double isolates the boundary that previously discarded the verdict.
+
+def _recorded_batch(tmp_path, monkeypatch, outcomes, *, trials=1, jobs=1,
+                    declared=False, cache=None):
+    from harnessgrad.records import _save_verdicts
+
+    attempts = {tid: [] for tid in outcomes}
+
+    def actor(_repo, task, **_kwargs):
+        tid = task["task_id"]
+        index = len(attempts[tid])
+        status = outcomes[tid][index]
+        evidence = {"task_id": tid, "attempt": index + 1, "status": status,
+                    "diagnostic": {"detail": "原始评分证据", "items": [0, None]}}
+        verdict = {"kind": "command", "passed": status == "one",
+                   "score": float(status == "one"),
+                   "detail": f"{tid}: trial {index + 1} {status}",
+                   "scorer_isolation_class": "actor-workdir", "evidence": evidence}
+        result = {"verdict": verdict, "trace": "", "exit_code": 0, "stderr": ""}
+        if status in {"unmeasured", "timeout"}:
+            verdict.update(score=None, unmeasured=verdict["detail"])
+            if status == "timeout":
+                verdict["outcome"] = "timeout"
+        elif status in {"invalid", "absent"}:
+            result["invalid"] = {"stage": "prepare", "detail": verdict["detail"]}
+            verdict["score"] = None
+            if status == "absent":
+                result.pop("verdict")
+        elif status == "provider":
+            result.update(exit_code=1, stderr="APIConnectionError: Connection error")
+        attempts[tid].append(result)
+        return result
+
+    monkeypatch.setattr(runner, "run_one", actor)
+    protocol = {"version": 1, "metric": "pass^k", "trials": trials,
+                "ks": list(range(1, trials + 1)), "seeds": list(range(trials))}
+    result = runner.evaluate(
+        tmp_path, [{"task_id": tid} for tid in outcomes], {}, trials=trials, jobs=jobs,
+        cache=cache, harness_sha="batch-evidence-sha", progress_dir=tmp_path,
+        verifiers={tid: {"trial_protocol": protocol} for tid in outcomes} if declared else {})
+    _save_verdicts(tmp_path, 0, result, outcomes)
+    saved = {tid: json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text())
+             for tid in outcomes}
+    return result, saved, attempts
+
+
+@pytest.mark.parametrize("status", ["unmeasured", "invalid", "provider"])
+def test_batch_saves_unmeasured_verdict_without_scoring_or_caching(
+        tmp_path, monkeypatch, status):
+    from harnessgrad.loops.eval_side import _progress_results
+
+    cache = {}
+    result, saved, attempts = _recorded_batch(
+        tmp_path, monkeypatch, {"t": [status]}, cache=cache)
+    original = attempts["t"][0]["verdict"]
+    assert result["per_task"] == {} and "t" in result["invalid"]
+    assert cache == {} and result["cached_tasks"] == []
+    assert result["verdicts"]["t"] == original
+    assert result["trial_verdicts"] == {}
+    assert saved["t"]["score"] is None
+    assert saved["t"]["evidence"] == original["evidence"]
+    assert saved["t"]["detail"] == original["detail"]
+    assert saved["t"]["invalid"] == result["invalid"]["t"]
+    assert "trials" not in saved["t"] and "trial_scores" not in saved["t"]
+    if status == "unmeasured":
+        assert saved["t"]["unmeasured"] == original["unmeasured"]
+    progress = json.loads((tmp_path / "progress/round-0/t.json").read_text())
+    assert progress["invalid"] == result["invalid"]["t"]
+    assert not progress.get("complete") and _progress_results(tmp_path) == {}
+
+
+@pytest.mark.parametrize("trials", [1, 3])
+def test_batch_does_not_invent_verdicts_for_unmeasured_attempts(tmp_path, monkeypatch, trials):
+    result, saved, attempts = _recorded_batch(
+        tmp_path, monkeypatch, {"t": ["absent", "one", "one"]}, trials=trials)
+    assert len(attempts["t"]) == 1
+    assert "t" not in result["verdicts"] and result["per_task"] == {}
+    assert saved["t"]["score"] is None and "evidence" not in saved["t"]
+    if trials == 1:
+        assert result["trial_verdicts"] == {} and "trials" not in saved["t"]
+    else:
+        assert result["trial_verdicts"] == {"t": [{}]}
+        assert saved["t"]["trial_scores"] == [None]
+        assert len(saved["t"]["trials"]) == 1
+        assert "evidence" not in saved["t"]["trials"][0]
+
+
+def test_batch_admission_refusal_does_not_invent_attempted_trials(tmp_path, monkeypatch):
+    reason = {"stage": "environment admission", "detail": "backend was not observed"}
+    monkeypatch.setattr(runner, "_refuse_unobserved_policies",
+                        lambda *_args, **_kwargs: {"invalid": reason})
+    result, saved, attempts = _recorded_batch(
+        tmp_path, monkeypatch, {"t": ["one", "one", "one"]}, trials=3)
+    assert attempts == {"t": []}
+    assert result["verdicts"] == result["trial_verdicts"] == result["per_task"] == {}
+    assert saved["t"]["score"] is None and saved["t"]["invalid"] == reason
+    assert "evidence" not in saved["t"] and "trials" not in saved["t"]
+
+
+@pytest.mark.parametrize("outcomes", [
+    ["one", "unmeasured", "zero"],
+    ["unmeasured", "one", "zero"],
+])
+def test_batch_retains_attempted_trials_when_ordinary_trials_stop(
+        tmp_path, monkeypatch, outcomes):
+    result, saved, attempts = _recorded_batch(
+        tmp_path, monkeypatch, {"t": outcomes}, trials=3)
+    count = outcomes.index("unmeasured") + 1
+    expected = [attempt["verdict"] for attempt in attempts["t"]]
+    assert len(expected) == count
+    assert result["verdicts"]["t"] == expected[-1]
+    assert result["trial_verdicts"]["t"] == expected
+    assert result["per_task"] == result["per_task_trials"] == result["per_task_std"] == {}
+    assert saved["t"]["score"] is None
+    assert saved["t"]["evidence"] == expected[-1]["evidence"]
+    assert saved["t"]["trial_scores"] == [v["score"] for v in expected]
+    assert [v["evidence"] for v in saved["t"]["trials"]] == [v["evidence"] for v in expected]
+
+
+@pytest.mark.parametrize(("outcomes", "failed_index"), [
+    (["unmeasured", "zero", "one"], 0),
+    (["one", "invalid", "one"], 1),
+    (["one", "zero", "unmeasured"], 2),
+    (["invalid", "unmeasured", "one"], 1),
+    (["provider", "zero", "one"], 0),
+])
+def test_batch_declared_trials_keep_failed_diagnostic_and_every_attempt(
+        tmp_path, monkeypatch, outcomes, failed_index):
+    cache = {}
+    result, saved, attempts = _recorded_batch(
+        tmp_path, monkeypatch, {"t": outcomes}, trials=3, declared=True, cache=cache)
+    expected = [attempt["verdict"] for attempt in attempts["t"]]
+    assert len(expected) == 3
+    assert result["verdicts"]["t"] == expected[failed_index]
+    assert result["trial_verdicts"]["t"] == expected
+    assert result["per_task"] == {} and cache == {}
+    assert saved["t"]["score"] is None
+    assert saved["t"]["evidence"] == expected[failed_index]["evidence"]
+    assert saved["t"]["detail"] == expected[failed_index]["detail"]
+    assert saved["t"]["trial_scores"] == [v["score"] for v in expected]
+    assert [v["evidence"] for v in saved["t"]["trials"]] == [v["evidence"] for v in expected]
+    assert len(result["repeated_trials"]["results"]) == 3
+    assert result["repeated_trials"]["complete"] is False
+    assert result["repeated_trials"]["metrics"] is None
+
+
+@pytest.mark.parametrize("trials", [1, 3])
+def test_batch_parallel_reduction_preserves_records_and_timeout_policy(
+        tmp_path, monkeypatch, trials):
+    outcomes = {"one": ["one"] * trials, "missing": ["unmeasured"],
+                "zero": ["zero"] * trials, "timeout": ["timeout"],
+                "invalid": ["invalid"], "absent": ["absent"]}
+    if trials > 1:
+        outcomes["missing"].insert(0, "one")
+        outcomes["timeout"].insert(0, "zero")
+    sequential, sequential_saved, _ = _recorded_batch(
+        tmp_path / "sequential", monkeypatch, outcomes, jobs=1, trials=trials)
+    parallel, parallel_saved, attempts = _recorded_batch(
+        tmp_path / "parallel", monkeypatch, outcomes, jobs=3, trials=trials)
+    for key in ("per_task", "invalid", "timeouts", "verdicts", "trial_verdicts",
+                "per_task_trials", "per_task_std", "cached_tasks"):
+        assert parallel[key] == sequential[key], key
+    assert parallel_saved == sequential_saved
+    assert list(parallel["verdicts"]) == [tid for tid in outcomes if tid != "absent"]
+    assert parallel["per_task"] == {"one": 1.0, "zero": 0.0, "timeout": 0.0}
+    assert set(parallel["invalid"]) == {"missing", "invalid", "absent"}
+    assert set(parallel["timeouts"]) == {"timeout"}
+    for tid in outcomes:
+        assert len(attempts[tid]) == len(outcomes[tid])
+        assert parallel_saved[tid]["score"] == parallel["per_task"].get(tid)
+        if tid != "absent":
+            assert parallel_saved[tid]["evidence"] == attempts[tid][-1]["verdict"]["evidence"]
+        if trials > 1:
+            expected = [attempt.get("verdict", {}) for attempt in attempts[tid]]
+            assert parallel["trial_verdicts"][tid] == expected
+            assert parallel_saved[tid]["trial_scores"] == [v.get("score") for v in expected]
+            assert [v.get("evidence") for v in parallel_saved[tid]["trials"]] == [
+                v.get("evidence") for v in expected]
+
+
+def test_batch_retries_unmeasured_tasks_and_reuses_only_measured_records(tmp_path, monkeypatch):
+    cache = {}
+    outcomes = {"zero": ["zero"], "one": ["one"], "missing": ["unmeasured"]}
+    first, first_saved, first_attempts = _recorded_batch(
+        tmp_path / "first", monkeypatch, outcomes, cache=cache)
+    assert len(cache) == 2
+    second, second_saved, second_attempts = _recorded_batch(
+        tmp_path / "second", monkeypatch, outcomes, cache=cache)
+    assert all(len(attempts) == 1 for attempts in first_attempts.values())
+    assert second_attempts["zero"] == second_attempts["one"] == []
+    assert len(second_attempts["missing"]) == 1
+    assert second["cached_tasks"] == ["zero", "one"]
+    assert second["per_task"] == first["per_task"] == {"zero": 0.0, "one": 1.0}
+    assert first_saved == second_saved
+    assert second_saved["missing"]["evidence"] == second_attempts["missing"][0]["verdict"]["evidence"]

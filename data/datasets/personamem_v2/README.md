@@ -164,6 +164,9 @@ the full selected question denominator, and leave the split score unset. Their
 details are retained in `scorer_errors`, keyed by task ID, on affected splits.
 The platform preserves this explicit failure evidence when the scorer exits
 nonzero; the verdict and saved record remain unmeasured with no published score.
+Batch evaluation retains these diagnostic verdicts and, for multi-trial runs,
+the history of actual attempts. Measured evidence with a platform `invalid` or
+`unmeasured` marker is rejected rather than restoring an excluded task's score.
 Other malformed evidence is rejected; successful and incomplete episode evidence
 still require matching metric, input identity, native split and source coverage.
 Verifier evidence and split summaries include

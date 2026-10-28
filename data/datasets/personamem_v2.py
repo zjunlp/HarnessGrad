@@ -185,6 +185,11 @@ def aggregate(records, selected_task_ids=None):
             raise ValueError("record and evidence task identity mismatch")
         if tid in evidence:
             raise ValueError("duplicate evidence")
+        # The runner may retain a scorer's result for a task the platform
+        # subsequently excluded. Diagnostic evidence cannot restore its score.
+        if row.get("measured") and any(item.get("invalid") or item.get("unmeasured")
+                                       for item in wrappers):
+            raise ValueError("measured evidence on an invalid or unmeasured record")
         if row.get("reason") == "scorer_error":
             # check.py cannot attest gold-derived metadata when scoring fails.
             # Accept only its explicit error schema, never arbitrary damaged evidence.

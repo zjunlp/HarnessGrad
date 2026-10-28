@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import random
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -591,6 +592,159 @@ def test_platform_scorer_error_survives_sandbox_save_and_aggregate(prepared, tmp
     assert report["scorer_errors"] == {tid: emitted["detail"]}
 
 
+@pytest.fixture
+def batch_episodes(prepared):
+    """Five authored episodes: both measured scores and two distinct nonmeasurements."""
+    _, template_input, template_gold = prepared
+    rows, artifacts, modes = [], {}, {}
+    for split, persona, mode in (("train", 78, "oracle"), ("train", 79, "wrong"),
+                                 ("train", 80, "noop"), ("train", 81, "scorer_error"),
+                                 ("benchmark", 78, "oracle")):
+        tid = storage.task_id(split, persona)
+        payload, gold = copy.deepcopy(template_input), copy.deepcopy(template_gold)
+        payload["task_id"] = tid
+        payload["questions"][0]["id"] = inputs.question_id(tid, payload["questions"][0]["text"])
+        del payload["input_sha256"]
+        payload["input_sha256"] = digest(payload)
+        gold.update(task_id=tid, split=split, persona_id=persona, input_sha256=payload["input_sha256"])
+        gold["questions"][0]["id"] = payload["questions"][0]["id"]
+        rows.append({"task_id": tid, "split": split, "persona_id": persona,
+                     "input_sha256": payload["input_sha256"], "question_count": 1,
+                     "chunk_count": 2, "original_question_count": 1, "excluded_questions": []})
+        artifacts.update({f"service/{tid}.json": payload, f"gold/{tid}.json": gold})
+        modes[tid] = mode
+    artifacts["pool.json"] = rows
+    hashes = {}
+    for name, value in artifacts.items():
+        path = dataset.PREPARED_ROOT / name
+        path.write_text(canonical(value) + "\n")
+        hashes[name] = storage.file_sha(path)
+    metadata = json.loads((dataset.PREPARED_ROOT / "manifest.json").read_text())
+    metadata["artifacts"] = hashes
+    (dataset.PREPARED_ROOT / "manifest.json").write_text(canonical(metadata))
+    dataset.rows.cache_clear()
+    return modes
+
+
+@pytest.mark.parametrize("jobs", [1, 3])
+@pytest.mark.parametrize("trials", [1, 2])
+def test_evaluate_preserves_episode_evidence_through_saved_reports(batch_episodes, tmp_path, monkeypatch,
+                                                                 jobs, trials):
+    from eval.run.runner import evaluate
+    from harnessgrad.records import _save_verdicts
+
+    work, harness = tmp_path / "work", tmp_path / "harness"
+    work.mkdir()
+    monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(work))
+    shutil.copytree(dataset.ASSETS / "oracle_harness", harness)
+    metadata = json.loads((harness / "harness.json").read_text())
+    metadata["runtime_paths"] = list(dict.fromkeys([sys.prefix, sys.base_prefix,
+                                                  str(Path(sys._base_executable).parent.parent)]))
+    (harness / "harness.json").write_text(json.dumps(metadata))
+    setups, verifiers = {}, {}
+    for tid, mode in batch_episodes.items():
+        setup = copy.deepcopy(dataset.SETUP[tid])
+        gold = storage.artifact(dataset.PREPARED_ROOT, f"gold/{tid}.json")
+        answers = {q["id"]: r"\boxed{a}" if mode == "wrong" else r"\boxed{c}" for q in gold["questions"]}
+        setup["files"].append({"path": ".control.json", "content": json.dumps({
+            "mode": "noop" if mode == "noop" else "oracle", "answers": answers})})
+        setups[tid] = setup
+        verifiers[tid] = dataset.verifier(tid)
+        verifiers[tid]["argv"][0] = sys.executable
+        verifiers[tid]["runtime_paths"] = metadata["runtime_paths"]
+        if mode == "scorer_error":
+            (dataset.PREPARED_ROOT / f"gold/{tid}.json").write_text("{}")
+    ids, cache = list(batch_episodes), {}
+    result = evaluate(harness, [dataset.control_task(tid) for tid in ids], dict.fromkeys(ids, METRIC),
+                      setups=setups, verifiers=verifiers, envs={tid: dataset.ENV[tid] for tid in ids},
+                      sandbox=True, run_id="synthetic-batch", harness_sha="control", cache=cache,
+                      trials=trials, jobs=jobs, recordings_root=tmp_path / "recordings",
+                      progress_dir=tmp_path / "progress")
+    assert result["per_task"] == {ids[0]: 1, ids[1]: 0, ids[4]: 1}
+    assert set(result["invalid"]) == {ids[2], ids[3]}
+    assert set(result["verdicts"]) == set(ids)
+    assert cache == {} and result["cached_tasks"] == []
+    run = tmp_path / "run"
+    _save_verdicts(run, 0, result, ids)
+    saved = [json.loads((run / "verdicts/round-0" / f"{tid}.json").read_text()) for tid in ids]
+    for tid, entry in zip(ids, saved):
+        assert entry["evidence"] == result["verdicts"][tid]["evidence"]
+        assert result["runtime_diagnostics"][tid]["tool_relay"]["cleanup"] == {"complete": True, "errors": []}
+        if tid in result["invalid"]:
+            assert entry["score"] is None and entry["invalid"] == result["invalid"][tid]
+        else:
+            assert entry["score"] == result["per_task"][tid]
+        if trials > 1:
+            # Failed legacy trials stop early, but still must carry a history
+            # marker so a one-item survivor cannot look like a single-trial run.
+            assert len(entry["trials"]) == (1 if tid in result["invalid"] else trials)
+    assert saved[2]["evidence"]["reason"] == "incomplete_episode"
+    assert saved[3]["evidence"]["reason"] == "scorer_error"
+    assert "gold checksum mismatch" in saved[3]["evidence"]["detail"]
+    if trials > 1:
+        with pytest.raises(ValueError, match="single-trial"):
+            dataset.aggregate(saved, ids)
+    else:
+        report = dataset.aggregate(saved, ids)
+        assert report["train"]["score"] is None
+        assert report["train"]["expected_questions"] == report["train"]["selected_episodes"] == 4
+        assert report["train"]["measured_questions"] == report["train"]["measured_episodes"] == 2
+        assert report["train"]["unmeasured_task_ids"] == ids[2:4]
+        assert report["train"]["scorer_errors"] == {ids[3]: saved[3]["evidence"]["detail"]}
+        assert report["benchmark"]["score"] == 1
+        assert dataset.aggregate(saved[:2], ids[:2])["train"]["score"] == 0.5
+
+
+def test_driver_persists_incomplete_episode_evidence(batch_episodes, tmp_path):
+    complete, tid = list(batch_episodes)[:2]
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    (harness / "harness.json").write_text(json.dumps({
+        "name": "synthetic-mixed", "version": "1", "entrypoint": "agent.py", "backend": "cli",
+        "runtime_paths": list(dict.fromkeys([sys.prefix, sys.base_prefix,
+                                             str(Path(sys._base_executable).parent.parent)]))}))
+    # One complete synthetic task keeps the CLI run scoreable, while the other
+    # exercises a genuine incomplete relay episode in the same saved round.
+    (harness / "agent.py").write_text(textwrap.dedent(f"""\
+        import argparse, json, sys
+        from pathlib import Path
+        p = argparse.ArgumentParser()
+        p.add_argument('--task'); p.add_argument('--workdir')
+        a = p.parse_args()
+        sys.path.insert(0, a.workdir)
+        from personamem_transport import call
+        if json.loads(Path(a.task).read_text())['task_id'] == {complete!r}:
+            while True:
+                item = call('/run/harnessgrad-tool/tool.sock', 'next')
+                if item['kind'] == 'done':
+                    break
+                if item['kind'] == 'chunk':
+                    op, key = 'ack', 'chunk_id'
+                    fields = {{key: item[key]}}
+                else:
+                    op, key = 'submit', 'question_id'
+                    fields = {{key: item[key], 'answer': r'\\boxed{{c}}'}}
+                fields['request_id'] = op + '-' + item[key]
+                assert call('/run/harnessgrad-tool/tool.sock', op, fields)['accepted']
+        Path(a.workdir, 'trace.jsonl').write_text(json.dumps(
+            {{'usage': {{'input_tokens': 0, 'output_tokens': 0, 'calls': 0}}}}) + '\\n')
+        """))
+    runs = tmp_path / "runs"
+    proc = subprocess.run([sys.executable, "driver.py", "--dataset", "personamem_v2",
+                           "--harness", str(harness), "--sampling", "all", "--tasks", complete + "," + tid,
+                           "--rounds", "0", "--trials", "1", "--run-id", "synthetic-incomplete",
+                           "--runs-root", str(runs), "--work-root", str(tmp_path / "work")],
+                          cwd=dataset.ASSETS.parents[2], capture_output=True, text=True, timeout=90,
+                          env={**os.environ, "HG_PERSONAMEM_V2_DATA": str(dataset.PREPARED_ROOT.parent)})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    success = json.loads((runs / "synthetic-incomplete/verdicts/round-0" / f"{complete}.json").read_text())
+    assert success["score"] == 1 and success["evidence"]["measured"] is True
+    saved = json.loads((runs / "synthetic-incomplete/verdicts/round-0" / f"{tid}.json").read_text())
+    assert saved["score"] is None and saved["evidence"]["reason"] == "incomplete_episode"
+    summary = dataset.aggregate([saved], [tid])["train"]
+    assert summary["score"] is None and summary["unmeasured_task_ids"] == [tid]
+
+
 @pytest.mark.parametrize("field", ["metric", "artifacts", "split", "expected_questions", "original_questions"])
 @pytest.mark.parametrize("measured", [True, False])
 def test_reporting_rejects_damaged_evidence(unequal_episode_results, field, measured):
@@ -599,6 +753,40 @@ def test_reporting_rejects_damaged_evidence(unequal_episode_results, field, meas
     del records[0][field]
     with pytest.raises(ValueError):
         dataset.aggregate(records, ids)
+
+
+@pytest.mark.parametrize("field", ["invalid", "unmeasured"])
+@pytest.mark.parametrize("layer", ["record", "verdict", "evidence"])
+def test_reporting_rejects_measured_evidence_on_excluded_records(unequal_episode_results, field, layer):
+    ids, evidence = unequal_episode_results
+    record = {"task_id": ids[0], "score": None, "verdict": {"evidence": evidence[0]}}
+    target = {"record": record, "verdict": record["verdict"], "evidence": evidence[0]}[layer]
+    target[field] = "platform rejected this measurement"
+    with pytest.raises(ValueError, match="measured evidence.*invalid or unmeasured"):
+        dataset.aggregate([record], ids[:1])
+
+
+@pytest.mark.parametrize("field", ["invalid", "unmeasured"])
+def test_evaluate_saved_platform_exclusion_cannot_become_a_score(
+        unequal_episode_results, tmp_path, monkeypatch, field):
+    from eval.run import runner
+    from harnessgrad.records import _save_verdicts
+
+    ids, evidence = unequal_episode_results
+    tid = ids[0]
+    attempt = {"verdict": {"passed": True, "score": 1.0, "evidence": evidence[0]}}
+    if field == "invalid":
+        attempt["invalid"] = {"stage": "model call", "detail": "platform rejected this measurement"}
+    else:
+        attempt["verdict"]["unmeasured"] = "platform rejected this measurement"
+    monkeypatch.setattr(runner, "run_one", lambda *_args, **_kwargs: attempt)
+    result = runner.evaluate(tmp_path, [{"task_id": tid}], {tid: METRIC})
+    assert result["per_task"] == {} and tid in result["invalid"]
+    _save_verdicts(tmp_path, 0, result, [tid])
+    saved = json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text())
+    assert saved["score"] is None and saved["evidence"] == evidence[0]
+    with pytest.raises(ValueError, match="measured evidence.*invalid or unmeasured"):
+        dataset.aggregate([saved], [tid])
 
 
 @pytest.mark.parametrize("change,message", [
