@@ -82,9 +82,9 @@ into every other dataset's selection too.
 Files that are about one dataset without being named after it are listed explicitly
 in `EXTRA`; each entry is a decision, not a guess.
 
-**2026-10-27:** the scoping helper (`tests/quality/test_test_scope.py` and `test_scope.py`)
-and the audit-round tests it selected were deleted with the repo slim; the suite is now run
-whole (`python3 -m pytest tests/quality`). The paragraph below is the historical rule.
+**2026-10-27:** the *test* of the scoping helper (`tests/quality/test_test_scope.py`) was
+deleted with the audit-round tests it selected; the helper itself (`tools/test_scope.py`) is
+still what `tools/run_tests.py` uses to build its lanes.
 
 `tests/quality/test_test_scope.py` guarded the rule: it failed if a dataset was added
 with no test file, if an `EXTRA` entry points at a file that no longer exists, or if

@@ -22,83 +22,43 @@
 
 ---
 
-Every harness-improvement method reports a final delta. None can say what the delta is *made of*,
-and none report it on a curve another method can be compared against. HarnessGrad defines that
-measurement: the framework owns the tasks, the sandbox, the scoring and the record; a **method**
-lives outside the harness, is handed a pristine copy, and returns a candidate that the platform
-then measures itself.
+HarnessGrad measures harness self-improvement round by round instead of a single before/after delta: the platform owns the tasks, the sandbox, the scoring and the record, and a **method** is an external program that returns a candidate harness which the platform then measures itself.
 
-The unit of comparison is a **plasticity/stability pair over a curriculum of rounds**, not one
-before/after delta — a round can raise the score while silently breaking tasks an earlier round
-passed, and that is a measurement, not an anecdote. We do **not** propose improvement methods:
-we build the instrument that decides whether any of them worked.
-
-## What one measurement is
-
-| stage | pool | what it decides |
-| --- | --- | --- |
-| study | train | each round's harness is fitted and scored |
-| checkpoint selection | dev | every checkpoint is scored; the best is kept |
-| exam | test, reported **per pool** | the kept checkpoint, measured once |
-
-Two pools, never one average: on AppWorld `dev` over-estimates the exam by ~25 points, and the
-gap is almost entirely on `test_challenge` (dev .439 → .156 for one method). Dev also ranks
-methods differently from the exam (Kendall τ ≈ +0.43 — the dev leader finished fourth), so
-selection on dev is itself a measured variable.
-
-## Measured so far
-
-| benchmark | methods | pools | data |
-| --- | --- | --- | --- |
-| AppWorld | 7 | train 90 / dev 57 / test 585 (`test_normal` 168 + `test_challenge` 417) | [Hub](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/main/Experiments/AppWorld) |
-| ALFWorld | 9 (7 plotted) | train 100 / `valid_seen` 140, `valid_unseen` 134, `valid_train` 200 | [Hub](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/main/Experiments/ALFWorld) |
-
-Each published point carries the harness that earned it, the edit that produced it, its cost in
-tokens, and the per-task verdicts. A score without those is a claim nobody can check.
+The unit is a **plasticity/stability pair** — what a round gains, and what it silently breaks — written as a curve another method can be compared against. We do not propose improvement methods; we build the instrument that decides whether one worked.
 
 ## 📦 Install
 
-`bubblewrap`, `git`, `python3 >= 3.10`. The platform itself has **no third-party Python
-dependencies**.
+`bubblewrap`, `git`, `python3 >= 3.10`; the platform itself has **no third-party Python dependencies**.
 
 ```bash
 ./install.sh --check      # verify only, change nothing
 ./install.sh              # install what is missing, then verify
 ```
 
-> [!IMPORTANT]
-> `bwrap` being present is not the same as the sandbox working — a kernel with unprivileged user
-> namespaces disabled leaves it installed and failing at runtime. `install.sh` builds a real
-> namespace and looks for itself inside it, and refuses to call the machine ready if that fails,
-> rather than letting a run fall back to `--no-sandbox`.
+`bwrap` being installed is not the same as a working sandbox, so `install.sh` builds a real namespace and looks for itself inside it, and refuses to call the machine ready if that fails.
 
 ## 🚀 Run it
 
-Zero network, zero cost: the loop, the curve points, the checkpoints and the cost accounting,
-end to end.
+Zero network, zero cost: two rounds, the curve, the checkpoints and the cost accounting, end to end.
 
 ```bash
 export HG_AGENT_BACKEND=mock
 M="python $PWD/methods/echo_base/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 \
-    --run-id control --method-entrypoint "python $PWD/methods/noop/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 \
-    --run-id treat-A --method-entrypoint "$M"
+python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id control --method-entrypoint "python $PWD/methods/noop/run.py"
+python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id treat-A --method-entrypoint "$M"
 python3 tools/plot_curve.py runs/control runs/treat-A
 ```
 
-> [!WARNING]
-> `--sampling all` selects the ordinary demo path. The CLI default is staged `diagnostic`, which
-> requires `--policy-evidence`, one task, one trial and zero improvement rounds. **The demo
-> grants no production authorization.**
+`--sampling all` is the ordinary demo path; the CLI default is the staged `diagnostic`, which requires `--policy-evidence`, one task, one trial and zero improvement rounds. The demo grants no production authorization.
 
-## 🧪 Test the part you changed
+## 🧪 Test
 
 ```bash
-python3 tools/run_tests.py --dataset gsm8k   # that dataset plus the core platform tests
+python3 tools/run_tests.py                  # every lane: parallel plus exclusive
+python3 tools/run_tests.py --dataset gsm8k  # that dataset plus the core platform tests
 ```
 
-`--basetemp` must be **outside** the platform tree; the runner refuses a work root inside it.
+`--basetemp` must be **outside** the platform tree, and the runner enforces it.
 
 ## 📚 Documentation
 
@@ -107,25 +67,17 @@ python3 tools/run_tests.py --dataset gsm8k   # that dataset plus the core platfo
 | 📜 [`INTERFACE.md`](INTERFACE.md) | the measurement contract: what a harness may declare, what the platform guarantees |
 | 🗺️ [`docs/architecture.md`](docs/architecture.md) | repository map and dependency direction |
 | 🧭 [`docs/design-notes.md`](docs/design-notes.md) | why it is shaped this way, and what building it caught |
-| 🎯 [`docs/claims.md`](docs/claims.md) | what the numbers may and may not be used to claim |
 | 🛠️ [`docs/writing_a_harness.md`](docs/writing_a_harness.md) · [`docs/dataset-onboarding.md`](docs/dataset-onboarding.md) | contributing a harness, adding a dataset |
 | 🧪 [`docs/test-suite.md`](docs/test-suite.md) | test lanes and the `--basetemp` rule |
-| 🤖 [`AGENTS.md`](AGENTS.md) | operational rules, including the staged-pilot policy |
+| 🤖 [`AGENTS.md`](AGENTS.md) | operating rules, including the staged-pilot policy |
 
 ## ⚠️ Status and limits
 
-> [!CAUTION]
-> The mount namespace constrains the filesystem and nothing else. A harness keeps the network and
-> the agent's API key — it cannot run without them — so it could exfiltrate that key. Closing this
-> needs egress filtering; see `INTERFACE.md` §4.8.
+The mount namespace constrains the filesystem and nothing else: a harness keeps the network and the agent's API key, so egress filtering is still open (`INTERFACE.md` §4.8).
 
-* 🚫 **`--no-sandbox` is a debugging decision**, never an automatic fallback. Runs with and
-  without it are not comparable, and `tools/plot_curve.py` refuses to silently mix them.
-* 🔬 **Contamination is not detectable from inside the framework.** Whether the agent model has
-  seen the benchmark tasks is the largest threat to any curve this produces.
-* 📋 **Per-dataset enforcement gaps are tracked, not hidden** — see
-  [`registry/dataset-blockers.json`](registry/dataset-blockers.json). Such a gap is not an
-  ordinary zero score.
+* 🚫 `--no-sandbox` is a debugging decision, never an automatic fallback; runs with and without it are not comparable, and `tools/plot_curve.py` refuses to mix them.
+* 🔬 Contamination is not detectable from inside the framework — whether the agent model has already seen the benchmark is the largest threat to any curve this produces.
+* 📋 Per-dataset enforcement gaps are tracked, not hidden, in [`registry/dataset-blockers.json`](registry/dataset-blockers.json); such a gap is not an ordinary zero score.
 
 ## 📄 License
 
