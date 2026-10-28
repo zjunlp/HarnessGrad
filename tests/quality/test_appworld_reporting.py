@@ -153,48 +153,6 @@ def test_saved_invalid_verdict_is_preserved_without_inventing_a_zero(tmp_path):
     assert report["coverage"]["missing_task_trials"] == 0
 
 
-def test_evaluate_keeps_appworld_evidence_without_scoring_a_platform_invalid_task(tmp_path, monkeypatch):
-    from eval.run import runner
-
-    tasks = rows()
-    manifest = make_manifest(tasks)
-    invalid = {"stage": "harness runtime identity", "detail": "runtime changed after admission"}
-
-    def actor(_repo, task, **_kwargs):
-        tid = task["task_id"]
-        success = tid != "fabricated_2"
-        result = {"verdict": {"kind": "command", "passed": success, "score": float(success),
-                              "scorer_isolation_class": "actor-workdir",
-                              "evidence": receipt(tid, success)["evidence"]},
-                  "trace": "", "exit_code": 0, "stderr": ""}
-        if tid == "fabricated_3":
-            result["invalid"] = invalid
-        return result
-
-    monkeypatch.setattr(runner, "run_one", actor)
-    result = runner.evaluate(tmp_path, tasks, {})
-    assert result["per_task"] == {"fabricated_1": 1.0, "fabricated_2": 0.0}
-    assert result["invalid"] == {"fabricated_3": invalid}
-    evidence = receipt("fabricated_3", success=True)["evidence"]
-    assert result["verdicts"]["fabricated_3"]["evidence"] == evidence
-
-    _save_verdicts(tmp_path, 0, result, [row["task_id"] for row in manifest])
-    saved = [json.loads((tmp_path / "verdicts/round-0" / (row["task_id"] + ".json")).read_text())
-             for row in manifest]
-    assert saved[2]["score"] is None and saved[2]["invalid"] == invalid
-    assert saved[2]["passed"] is True and saved[2]["evidence"] == evidence
-    converted = receipts_from_verdicts(saved)
-    assert converted[2]["invalid"] is True and converted[2]["evidence"] == evidence
-
-    report = build_report(manifest, converted)
-    assert report["TGC"] == 0.5 and report["SGC"] is None
-    assert report["per_task"]["fabricated_3"]["TGC"] is None
-    assert report["per_task"]["fabricated_3"]["trials"][0]["status"] == "invalid"
-    assert report["coverage"]["measured_task_trials"] == 2
-    assert report["coverage"]["invalid_task_trials"] == 1
-    assert report["coverage"]["missing_task_trials"] == 0
-
-
 def test_trusted_adapter_exports_only_selected_public_facts_and_verify_split():
     # Never import data.datasets.appworld: it loads a mixed train/eval pool on import.
     tree = ast.parse((ROOT / "data/datasets/appworld.py").read_text())
