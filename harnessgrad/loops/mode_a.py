@@ -122,6 +122,28 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
     return None
 
 
+def _runtime_declaration_problems(source: Path) -> list[str]:
+    """What stops this candidate's runtime declaration from being admitted, if anything.
+
+    Read before the candidate is copied into the workspace, because the strict copier parses
+    the same declaration and would raise instead of leaving a refusal on the record -- the
+    difference between "this candidate was rejected" and "the round died".
+
+    `OSError` is caught beside `ValueError` on purpose: `source` is a path the *method* named,
+    so it can be a symlink to something unreadable, or a file that was deleted between the
+    manifest check and the read. A path the method controls must not be able to end a run
+    with an exception, and there is nothing to learn from the difference: both mean the
+    declaration was not admitted.
+    """
+    try:
+        runtime_spec(source)
+    except ValueError as exc:
+        return [str(exc)]
+    except OSError as exc:
+        return [f"the candidate's harness.json could not be read: {exc}"]
+    return []
+
+
 def _declared_no_change(step: dict, curve: list[dict], sha: str, trials: int, *,
                         has_manifest: bool) -> tuple[dict | None, dict | None]:
     """The point a step's `decision: "no_change"` claim is allowed to reuse, and the note.
@@ -585,11 +607,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # Check before replacing the current tree: strict source copying parses
         # the runtime declaration and would raise before a malformed candidate
         # reached the platform's refusal record. Rejected trees are evidence only.
-        candidate_problems = []
-        try:
-            runtime_spec(Path(src))
-        except ValueError as exc:
-            candidate_problems.append(str(exc))
+        candidate_problems = _runtime_declaration_problems(Path(src))
         copier = copy_rejected_harness if candidate_problems else copy_harness
         # Swap the candidate in so its actual source and diff can be recorded.
         reset_hard(work, h0_sha)

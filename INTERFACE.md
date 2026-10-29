@@ -1237,6 +1237,27 @@ exam" is the baseline every later eval is read against.
 `--side eval` needs `--from-run`, and refuses without it: an eval run does not evolve
 anything, so with nothing to measure there is nothing to do.
 
+**A rejected candidate leaves a state too, and that state is evidence rather than an
+artifact.** The round still writes `state_after_round<N>/` and its diff, because "why was
+this rejected" cannot be answered from a reason string alone -- the manifest bytes, the
+files the method claimed and the tree it actually produced are the record. Two properties
+follow, and both are load-bearing:
+
+* **The copy does not admit the candidate.** `copy_rejected_harness` keeps the source and
+  the original manifest bytes without parsing the runtime declaration, which a malformed
+  manifest would otherwise raise on before the refusal could be written. `runtime_spec` and
+  `prepare` are never run on that tree, so nothing executes it.
+* **Symbolic links are preserved as the method wrote them**, not dereferenced: the tree is a
+  copy of what was submitted, and dereferencing a method-supplied link during a copy would
+  read files the method was not given. A reader must therefore treat that state as text and
+  links. Anything that would *execute* a harness validates it first
+  (`eval/run/candidate.py:validate`, `tools/validate_harness.py`), and a rejected round
+  carries `unmeasured` instead of a score -- never `0.000`.
+
+An eval run that names such a round with `--from-round` refuses it by name and points at
+the reason on the round's point, rather than staging an unadmitted tree and failing inside
+admission.
+
 #### 2.5.10 Deliberately still not designed
 
 * **Multi-container tasks.** Not designed, and **no Terminal-Bench 2 task needs it** —
