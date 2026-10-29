@@ -853,6 +853,22 @@ def _main(attempt: dict) -> int:
         print(f'refusing --scenario: {exc}', file=sys.stderr)
         return 2
 
+    if args.harness_path is not None:
+        if args.from_run is not None or args.from_round is not None:
+            print('cannot combine --harness-path with --from-run or --from-round', file=sys.stderr)
+            return 2
+        if args.side == 'eval':
+            if args.resume:
+                print('direct --harness-path eval does not support --resume; use a fresh run ID', file=sys.stderr)
+                return 2
+            if args.rounds not in (None, 0):
+                print('direct --harness-path eval requires --rounds 0', file=sys.stderr)
+                return 2
+            if args.sampling != 'all':
+                print('direct --harness-path eval requires --sampling all', file=sys.stderr)
+                return 2
+            args.rounds = 0
+
     staged = args.sampling in ("diagnostic", "pilot_10pct")
     if args.rounds is None:
         args.rounds = 0 if staged else 3
@@ -889,21 +905,7 @@ def _main(attempt: dict) -> int:
     runs_root = Path(args.runs_root)
     eval_from = None
     harness_source = None
-    if args.harness_path is not None and args.side == 'eval':
-        print('--harness-path on --side eval is not supported yet; use --from-run', file=sys.stderr)
-        return 2
-    if args.side == "eval":
-        # The "harness" of an eval run is a state a train run produced. Pointing
-        # `harness_src` at it before anything else means staging, the manifest, the
-        # header, the sandbox and the method channel all work on it unchanged -- there
-        # is no second code path for "a harness that came out of a run".
-        try:
-            harness_src, _round = _eval_source(args, runs_root)
-        except SystemExit as exc:
-            print(exc, file=sys.stderr)
-            return 2
-        eval_from = _eval_from_record(runs_root, args.from_run, _round)
-    elif args.harness_path is not None:
+    if args.harness_path is not None:
         harness_src = Path(args.harness_path)
         if not harness_src.is_absolute():
             print('--harness-path must be an absolute directory', file=sys.stderr)
@@ -931,6 +933,14 @@ def _main(attempt: dict) -> int:
                 print('refusing --harness-path: input and run/work output directories overlap',
                       file=sys.stderr)
                 return 2
+    elif args.side == "eval":
+        # Checkpoint eval retains its original source and provenance helpers.
+        try:
+            harness_src, _round = _eval_source(args, runs_root)
+        except SystemExit as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        eval_from = _eval_from_record(runs_root, args.from_run, _round)
     else:
         harness_src = Path(__file__).parent / "base_harness" / args.harness
         if not harness_src.is_dir():

@@ -79,7 +79,14 @@ def test_relative_harness_path_is_refused(tmp_path, value):
 
 def test_external_source_is_not_silently_ignored_on_eval(tmp_path):
     source = _harness(tmp_path)
-    _refused(_run(tmp_path, '--harness-path', str(source), '--side', 'eval'), 'harness-path')
+    proc = _run(tmp_path, '--harness-path', str(source), '--side', 'eval')
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    meta = json.loads((tmp_path/'runs/a1-test/run_meta.json').read_text())
+    assert meta['harness'] == 'external-test'
+    assert meta['harness_source'] == validator.source_identity(source)
+    point = json.loads((tmp_path/'runs/a1-test/curve.jsonl').read_text().splitlines()[0])
+    assert point['side'] == 'eval'
+    assert set(point['per_task']) == {'t05', 't06', 't07', 't08'}
 
 
 def test_external_default_run_id_does_not_use_manifest_path_segments(tmp_path):
