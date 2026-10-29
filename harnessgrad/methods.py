@@ -177,7 +177,8 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
                      scratch: Path | None = None, cwd: Path | None = None,
                      readonly: tuple[Path, ...] = (),
                      runtime: tuple[str, ...] = (),
-                     improver: dict | None = None) -> dict:
+                     improver: dict | None = None,
+                     rejected_candidate: bool = False) -> dict:
     """Invoke a method entrypoint as a SUBPROCESS and parse its one JSON object.
 
     Never an import. A method that rewrites its own source must still be
@@ -196,7 +197,9 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
         # This is task-harness setup, independent of the improver's configuration.
         from eval.containers.bun_runtime import prepare, RuntimeUnavailable
         base = request.get("base_harness")
-        prepared = prepare(Path(base)) if base else None
+        # A rejected tree is input for repair, not an admitted runtime. Let the
+        # external method inspect it without preparing or executing that harness.
+        prepared = prepare(Path(base)) if base and not rejected_candidate else None
         if prepared:
             request = {**request, "harness_runtime": prepared}
             runtime = tuple(dict.fromkeys((*runtime, *prepared["runtime_paths"], sys.prefix)))
@@ -234,7 +237,8 @@ def _call_method(work: Path, argv: list[str], request: dict, timeout_s: int,
                  *, sandboxed: bool = True, scratch: Path | None = None,
                  cwd: Path | None = None, readonly: tuple[Path, ...] = (),
                  runtime: tuple[str, ...] = (),
-                 improver: dict | None = None) -> dict:
+                 improver: dict | None = None,
+                 rejected_candidate: bool = False) -> dict:
     """Invoke a method with the platform's own files checked before and after.
 
     Detection, not prevention: a method runs as an ordinary subprocess with the
@@ -245,7 +249,8 @@ def _call_method(work: Path, argv: list[str], request: dict, timeout_s: int,
     before = snapshot(PLATFORM_ROOT)
     reply = _call_entrypoint(work, argv, request, timeout_s=timeout_s,
                              sandboxed=sandboxed, scratch=scratch, cwd=cwd,
-                             readonly=readonly, runtime=runtime, improver=improver)
+                             readonly=readonly, runtime=runtime, improver=improver,
+                             rejected_candidate=rejected_candidate)
     changes = diff(before, snapshot(PLATFORM_ROOT))
     touched = changes["added"] + changes["removed"] + changes["modified"]
     if touched:

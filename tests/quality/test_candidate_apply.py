@@ -208,15 +208,20 @@ Deliberately uncooperative: `editor.report` refuses an invalid candidate, so the
 to reach the platform's own check is to skip it. That is exactly the case the check exists
 for -- a method is code the platform did not write.
 """
-import json, sys
+import json, shutil, sys
 from pathlib import Path
 
 req = json.load(sys.stdin)
+bad_manifest = b"{ this is not json"
 dest = Path(req["workspace"]) / "candidate"
 dest.mkdir(parents=True, exist_ok=True)
-# A manifest that does not parse, and no entrypoint.
-(dest / "harness.json").write_text("{ this is not json")
-(dest / "agent.py").write_text("print('x')\\n")
+# After a rejected round, the next method call must still be able to repair it.
+if req["round_index"] > 1:
+    assert (Path(req["base_harness"]) / "harness.json").read_bytes() == bad_manifest
+    shutil.copytree(req["pristine_harness"], dest, dirs_exist_ok=True)
+else:
+    (dest / "harness.json").write_bytes(bad_manifest)
+    (dest / "agent.py").write_text("print('x')\\n")
 
 Path(req["trajectory_out"]).write_text(json.dumps({
     "steps": [{"harness_dir": str(dest), "label": "bad candidate",
@@ -232,7 +237,8 @@ sys.stdout.write(json.dumps({"changed": True, "files": ["harness.json"],
 '''
 
 
-def test_a_bad_candidate_is_unmeasured_not_scored_zero(tmp_path):
+@pytest.mark.parametrize("manifest", [b"{ this is not json", b'["not a manifest"]', b"\xff"])
+def test_a_bad_candidate_is_unmeasured_not_scored_zero(tmp_path, manifest):
     """**平台不能把「我产出的东西不是 harness」记成「我得了 0 分」。**
 
     这是本轮的核心。三件事在旧代码里长得一样:方法决定不改、edit 没 apply 上、产出的
@@ -243,7 +249,8 @@ def test_a_bad_candidate_is_unmeasured_not_scored_zero(tmp_path):
     import subprocess
 
     method = tmp_path / "bad_method.py"
-    method.write_text(_BAD_METHOD, encoding="utf-8")
+    method.write_text(_BAD_METHOD.replace('b"{ this is not json"', repr(manifest)),
+                      encoding="utf-8")
     runs = tmp_path / "runs"
     proc = subprocess.run(
         [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
@@ -276,6 +283,88 @@ def test_a_bad_candidate_is_unmeasured_not_scored_zero(tmp_path):
         point["edits_applied"]
     assert point["files_claimed"] == ["harness.json"], point["files_claimed"]
     assert point["method_hypothesis"] == "I broke the manifest on purpose"
+    # Refusal still keeps the exact rejected input for review, after both the
+    # candidate import and the per-round snapshot. No task was scored for it.
+    state = runs / "bad-candidate" / f"state_after_round{point['round']}"
+    assert (state / "harness.json").read_bytes() == manifest
+    assert not (state / "_harnessgrad").exists()
+    assert not (state / ".git").exists()
+
+
+@pytest.mark.parametrize("manifest", [
+    "{ this is not json", '["not a manifest"]',
+    '{"runtime": {"kind": "unknown"}}',
+])
+def test_rejected_candidate_copy_preserves_evidence_without_admitting_runtime(tmp_path, manifest):
+    from eval.ckpt import source_tree
+    from harnessgrad.records import _save_round_state
+
+    source = tmp_path / "candidate"
+    source.mkdir()
+    (source / "harness.json").write_text(manifest)
+    (source / "agent.py").write_text("raise RuntimeError('must never run')\n")
+    for name in (".git", "_harnessgrad", "node_modules", ".state", "__pycache__"):
+        (source / name).mkdir()
+        (source / name / "private").write_text("not harness source")
+    outside = tmp_path / "outside"
+    outside.write_text("do not dereference")
+    (source / "link").symlink_to(outside)
+
+    # Strict copying and runtime admission must keep refusing the same input.
+    with pytest.raises(ValueError):
+        source_tree.copy_harness(source, tmp_path / "strict")
+    assert not (tmp_path / "strict").exists()
+    copied = tmp_path / "rejected"
+    source_tree.copy_rejected_harness(source, copied)
+    assert (copied / "harness.json").read_text() == manifest
+    assert (copied / "agent.py").read_text().startswith("raise RuntimeError")
+    assert (copied / "link").is_symlink()
+    assert all(not (copied / name).exists() for name in source_tree.BUN_GENERATED)
+    with pytest.raises(ValueError):
+        source_tree.runtime_spec(copied)
+
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    _save_round_state(runs, 1, copied, rejected_candidate=True)
+    state = runs / "state_after_round1"
+    assert (state / "harness.json").read_text() == manifest
+    assert (state / "link").is_symlink()
+
+
+@pytest.mark.parametrize("manifest", [b'["not a manifest"]', b"\xff"])
+def test_invalid_manifest_does_not_break_candidate_code_diagnostics(tmp_path, manifest):
+    from harnessgrad import code_metrics
+
+    (tmp_path / "harness.json").write_bytes(manifest)
+    (tmp_path / "agent.py").write_text("print('source only')\n")
+    assert code_metrics.measure(tmp_path)["language"] == "python"
+
+
+def test_a_rejected_candidate_can_be_repaired_in_the_next_round(tmp_path):
+    import os
+    import subprocess
+
+    method = tmp_path / "repair_method.py"
+    method.write_text(_BAD_METHOD, encoding="utf-8")
+    runs = tmp_path / "runs"
+    proc = subprocess.run(
+        [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+         "--rounds", "2", "--run-id", "repair-candidate", "--dataset", "demo",
+         "--sampling", "all", "--side", "train",
+         "--runs-root", str(runs), "--work-root", str(tmp_path / "work"),
+         "--method-entrypoint", f"{sys.executable} {method}"],
+        cwd=ROOT, capture_output=True, text=True, timeout=600,
+        env={**os.environ, "HG_AGENT_BACKEND": "mock"})
+    assert proc.returncode == 0, (proc.stdout + proc.stderr)[-2000:]
+    points = [json.loads(line) for line in
+              (runs / "repair-candidate/curve.jsonl").read_text().splitlines()]
+    assert len(points) == 3, (proc.stdout + proc.stderr)[-4000:]
+    assert points[1]["unmeasured"]["problems"]
+    assert points[1]["n_scored"] == 0
+    assert points[2]["measured_by_platform"] is True
+    assert "unmeasured" not in points[2]
+    assert points[2]["n_scored"] == 4
+    assert set(points[2]["per_task"]) == {"t01", "t02", "t03", "t04"}
 
 
 # --------------------- 一个 step = 两个阶段,缺一个就不是一次测量 ---

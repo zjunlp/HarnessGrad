@@ -12,7 +12,7 @@ would otherwise have happened.
 
 from __future__ import annotations
 
-from eval.ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness, copy_rejected_harness
 
 from pathlib import Path
 import json
@@ -93,7 +93,8 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
         "wall_clock_s": round(wall_s, 1),
     }
 
-def _save_round_state(run_dir: Path, round_no: int, work: Path) -> None:
+def _save_round_state(run_dir: Path, round_no: int, work: Path, *,
+                      rejected_candidate: bool = False) -> None:
     """Keep the harness as it stands at the end of a round, inside the run's record.
 
     **An eval run measures a state, so a state has to survive the run that made it.**
@@ -110,12 +111,16 @@ def _save_round_state(run_dir: Path, round_no: int, work: Path) -> None:
 
     Round 0 included, because "measure H0 on the exam" is the most useful baseline there
     is and it needs the same thing a later round does.
+
+    Rejected candidates are retained only as evidence. Their manifest can be
+    malformed, so copying that evidence must not try to admit its runtime again.
     """
     dest = run_dir / f"state_after_round{round_no}"
     if dest.exists():
         shutil.rmtree(dest)
     try:
-        copy_harness(work, dest, ignore=shutil.ignore_patterns(".git"))
+        copier = copy_rejected_harness if rejected_candidate else copy_harness
+        copier(work, dest, ignore=shutil.ignore_patterns(".git"))
     except OSError as exc:
         # Not fatal: the round's numbers are already recorded, and a run that measured
         # correctly must not be lost because a copy failed.

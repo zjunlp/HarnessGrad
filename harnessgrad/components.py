@@ -67,7 +67,10 @@ def declared_components(root: Path) -> dict[str, list[str]]:
     if not manifest.is_file():
         return {}
     try:
-        block = (json.loads(manifest.read_text(encoding="utf-8")) or {}).get(DECLARATION_KEY)
+        declaration = json.loads(manifest.read_text(encoding="utf-8"))
+        if not isinstance(declaration, dict):
+            raise ValueError("harness.json must contain a JSON object")
+        block = declaration.get(DECLARATION_KEY)
     except (OSError, ValueError) as exc:
         raise ComponentDeclarationError(f"harness.json is not readable JSON: {exc}") from exc
     if block is None:

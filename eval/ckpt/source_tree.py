@@ -50,9 +50,24 @@ def has_bun_runtime(root: Path) -> bool:
 def copy_harness(source, target, **kwargs):
     """Keep declared Bun source separate from dependencies and generated state."""
     if has_bun_runtime(Path(source)):
-        previous = kwargs.get("ignore")
-        kwargs["ignore"] = lambda directory, names: (
-            set(names) & BUN_GENERATED
-        ) | (set(previous(directory, names)) if previous else set())
-        kwargs["symlinks"] = True
+        return _copy_source_only(source, target, **kwargs)
+    return shutil.copytree(source, target, **kwargs)
+
+
+def copy_rejected_harness(source, target, **kwargs):
+    """Preserve a rejected candidate as evidence, without runtime admission.
+
+    Its manifest may not parse. Use the conservative source-only policy even
+    then, retaining symlinks rather than dereferencing method-supplied targets.
+    Callers must keep this tree unmeasured; normal copies remain strict.
+    """
+    return _copy_source_only(source, target, **kwargs)
+
+
+def _copy_source_only(source, target, **kwargs):
+    previous = kwargs.get("ignore")
+    kwargs["ignore"] = lambda directory, names: (
+        set(names) & BUN_GENERATED
+    ) | (set(previous(directory, names)) if previous else set())
+    kwargs["symlinks"] = True
     return shutil.copytree(source, target, **kwargs)
