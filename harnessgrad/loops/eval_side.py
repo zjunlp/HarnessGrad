@@ -101,7 +101,38 @@ def _eval_source(args, runs_root: Path) -> tuple[Path, int]:
     if want not in found:
         raise SystemExit(
             f"run {args.from_run!r} has no round {want}; it has {sorted(found)}")
+    # **A round the platform refused has a state and no measurement.** The state was kept as
+    # evidence -- so its manifest may not parse -- and pointing an eval run at it would send
+    # an unadmitted tree through admission, which raises somewhere deep instead of saying
+    # what happened. Naming it is a reader's mistake the record can answer directly.
+    refused = _unmeasured_rounds(src)
+    if want in refused:
+        raise SystemExit(
+            f"round {want} of run {args.from_run!r} was rejected: the candidate was not a "
+            f"harness the platform could measure, so there is nothing to evaluate. The "
+            f"reason is on its one curve point (`unmeasured.problems`); the state is kept "
+            f"as evidence and is not admitted.")
     return found[want], want
+
+
+def _unmeasured_rounds(run_dir: Path) -> dict[int, dict]:
+    """The rounds in a train run's curve that carry an `unmeasured` record, by round."""
+    out: dict[int, dict] = {}
+    curve = Path(run_dir) / "curve.jsonl"
+    try:
+        lines = curve.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return out
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            point = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(point, dict) and point.get("unmeasured"):
+            out[int(point.get("round") or 0)] = point["unmeasured"]
+    return out
 
 def _eval_from_record(runs_root: Path, run_id: str, round_no: int) -> dict:
     """What the train run's own record says about the state being measured.
