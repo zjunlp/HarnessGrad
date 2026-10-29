@@ -170,6 +170,20 @@ def _declared_no_change(step: dict, curve: list[dict], sha: str, trials: int, *,
     return prior, None
 
 
+def _trials_of(res: dict | None, planned: int) -> int:
+    """How many task trials this round actually spent.
+
+    Zero when the round reused an earlier measurement: those trials belong to the round the
+    number came from, and `reused_from` already names it. Everything else spends the whole
+    planned set, because a round that ran tasks runs all of them.
+    """
+    if res is None:
+        return 0
+    if res.get("reused_from") is not None:
+        return 0
+    return planned
+
+
 def _copy_round_traces(run_dir: Path, source_round: int, target_round: int) -> None:
     """Give the reused round its predecessor's traces, so the record stays complete.
 
@@ -623,6 +637,14 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             console.note(
                 f"round {r}: the method declared no change, but {declaration['ignored']}; "
                 f"measuring the candidate instead", level="warn")
+        # **When the task set was actually run.** Both reuse paths below skip the `evaluate`
+        # call, so `t0` used to be assigned only on the measured path and the `dt` below then
+        # raised `UnboundLocalError` -- latent for as long as `--reuse-identical` was its only
+        # trigger, because no run had ever passed the flag. Measured 2026-10-29: the first run
+        # that reused a measurement (`s1-verify`, a method's declared no-change) crashed here
+        # after committing the round, so the round had a state and a diff and no curve point.
+        # A reused round spends no evaluation time, which is what `dt` should then say.
+        t0 = time.time()
         prior_point = declared_point
         if prior_point is None:
             prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
@@ -671,8 +693,14 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 + (f"; {len(skipped)} task(s) left unrun" if skipped else ""),
                 level="error")
         dt = time.time() - t0
+        # **A reused measurement is not a trial of this round.** The tasks ran at the round
+        # named by `reused_from`; charging them here as well would make a free round look
+        # paid for, and a cost table that cannot tell the two apart is the first thing a
+        # reader of "we saved 29%" would have to distrust. Same reason the point's own
+        # `evaluation_trials` is 0 below.
+        measured_trials = _trials_of(res, len(tasks))
         if res is not None:
-            cumulative["evaluation_trials"] += len(tasks)
+            cumulative["evaluation_trials"] += measured_trials
             cumulative["env_generation_tokens"] += (res.get("env_usage") or {}).get(
                 "input", 0) + (res.get("env_usage") or {}).get("output", 0)
         cumulative["wall_clock_s"] += dt
@@ -699,7 +727,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             evaluation_protocols=(res or {}).get("evaluation_protocols"),
             split=split,
             env_record=_env_record(envs, task_ids if res else []),
-            cost=_cost_of(res, len(tasks), dt + gen_share,
+            cost=_cost_of(res, measured_trials, dt + gen_share,
                           step.get("claimed_cost")),
             cumulative=cumulative,
             n_trials=(res or {}).get("trials"), score_std=(res or {}).get("score_std"),
@@ -726,6 +754,20 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if (res or {}).get("reused_from") is not None:
             point["reused_from"] = res["reused_from"]
             point["reused_reason"] = "candidate content identical to an already-measured state"
+        if (res or {}).get("reused_from") is not None:
+            # **A reused point inherits how the measurement was taken.** The round did not
+            # run, so the facts that say *how* it was measured cannot be re-derived: the
+            # scorer's isolation class, the check's own tally, the verifier kinds. Left
+            # empty they say "unknown", and `eval/verification/isolation.py` then refuses the
+            # whole curve for mixing `actor-workdir` with `unknown` -- measured 2026-10-29 on
+            # the first run that reused a measurement, after the round had been committed.
+            for key in ("scorer_isolation_class", "scorer_isolation_comparable",
+                        "per_task_scorer_isolation", "per_task_test_rate", "test_rate",
+                        "test_rate_n_tasks", "per_task_test_rate_trials", "tests_passed",
+                        "tests_total", "per_level", "verifier_kinds", "per_task_std",
+                        "per_task_trials", "score_std"):
+                if key in prior_point:
+                    point[key] = prior_point[key]
         if declared_point is not None:
             # Who ended this round, and why. `reused_from` alone says the number came from
             # an earlier measurement; it does not say the *method* asked for that, which is
