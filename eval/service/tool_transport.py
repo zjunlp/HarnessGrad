@@ -52,14 +52,21 @@ import json
 import os
 import socket
 import stat
+import sys
 import threading
 import time
+import traceback
 from pathlib import Path
 
 #: Legacy defaults. Callers may declare another positive bound or None.
 MAX_CALLS = 4096
 MAX_LINE = 8 * 1024 * 1024
 READY_TIMEOUT_S = 30.0
+
+# Diagnostic limits bound private evidence, not requests or environment execution.
+MAX_DIAGNOSTIC_EVENTS = 64
+MAX_DIAGNOSTIC_MESSAGE = 8192
+MAX_DIAGNOSTIC_TRACEBACK = 32768
 
 
 class ToolTransportError(RuntimeError):
@@ -98,6 +105,40 @@ class Relay:
                         "started_utc": None, "stopped_utc": None,
                         "limits": {"max_calls": max_calls, "max_line_bytes": max_line_bytes,
                                    "deadline_s": deadline_s}}
+        self.receipt['diagnostics'] = {'count': 0, 'logged': 0, 'dropped': 0,
+                                       'first_failure': None, 'log_error': None}
+
+    def _diagnostic(self, category, exc=None, *, message=None):
+        """Flush original errors to private stderr without request bodies or locals.
+
+        The parent redirects stderr to its private relay.log. Only category/type
+        counters enter the public receipt. Reserve the first non-request failure
+        even when malformed actor requests have exhausted the diagnostic budget.
+        Logging failures must never replace the operation's original outcome.
+        """
+        with self._lock:
+            summary = self.receipt['diagnostics']
+            summary['count'] += 1
+            kind = type(exc).__name__ if exc is not None else 'ToolTransportError'
+            identity = {'category': category, 'type': kind, 'sequence': summary['count']}
+            first_failure = category != 'request' and summary['first_failure'] is None
+            if first_failure:
+                summary['first_failure'] = identity
+            if summary['logged'] >= MAX_DIAGNOSTIC_EVENTS and not first_failure:
+                summary['dropped'] += 1
+                return
+            try:
+                text = str(exc) if exc is not None else (message or '')
+                trace = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__)) if exc is not None else None
+                event = {'schema': 'harnessgrad.tool-relay-error.v1', **identity,
+                         'message': text[:MAX_DIAGNOSTIC_MESSAGE],
+                         'traceback': trace[:MAX_DIAGNOSTIC_TRACEBACK] if trace is not None else None,
+                         'truncated': len(text) > MAX_DIAGNOSTIC_MESSAGE
+                                      or (trace is not None and len(trace) > MAX_DIAGNOSTIC_TRACEBACK)}
+                print(json.dumps(event, ensure_ascii=True), file=sys.stderr, flush=True)
+                summary['logged'] += 1
+            except Exception as logging_exc:
+                summary['log_error'] = {'type': type(logging_exc).__name__}
 
     # -- lifecycle -----------------------------------------------------------
     def start(self) -> "Relay":
@@ -155,12 +196,19 @@ class Relay:
                 conn, _addr = self._sock.accept()
             except (socket.timeout, TimeoutError):
                 continue
-            except OSError:
+            except OSError as exc:
+                if not self._stop.is_set():
+                    self._diagnostic('transport', exc)
                 break
             with self.receipt_lock:
                 self.receipt["connections"] += 1
             try:
                 self._session(conn)
+            except Exception as exc:
+                self._diagnostic('transport', exc)
+                with self.receipt_lock:
+                    self.receipt['errors'] += 1
+                return
             finally:
                 try:
                     conn.close()
@@ -177,7 +225,9 @@ class Relay:
                 chunk = conn.recv(65536)
             except (socket.timeout, TimeoutError):
                 continue
-            except OSError:
+            except OSError as exc:
+                if not self._stop.is_set():
+                    self._diagnostic('transport', exc)
                 return
             if not chunk:
                 return
@@ -185,6 +235,7 @@ class Relay:
             if self._max_line_bytes is not None and len(buffer) > self._max_line_bytes:
                 with self.receipt_lock:
                     self.receipt['refused'] += 1
+                self._diagnostic('refusal', message='frame_too_large')
                 self._reply(conn, {"ok": False, "error": "frame_too_large"})
                 return
             while b"\n" in buffer:
@@ -197,33 +248,44 @@ class Relay:
     def _reply(self, conn, payload: dict) -> bool:
         try:
             raw = json.dumps(payload).encode() + b"\n"
+        except Exception as exc:
+            self._diagnostic('serialization', exc)
+            with self.receipt_lock:
+                self.receipt['errors'] += 1
+            return False
+        try:
             if self._max_line_bytes is not None and len(raw) > self._max_line_bytes:
                 with self.receipt_lock:
                     self.receipt['refused'] += 1
+                self._diagnostic('refusal', message='reply_too_large')
                 raw = b'{"ok": false, "error": "reply_too_large"}\n'
             conn.sendall(raw)
             return True
-        except OSError:
+        except OSError as exc:
+            if not self._stop.is_set():
+                self._diagnostic('transport', exc)
             return False
 
-    def _request_error(self, error: str) -> dict:
+    def _request_error(self, error: str, exc=None) -> dict:
         # Keep the legacy total while identifying malformed envelopes that never
         # reached the handler. The adapter decides their effect on its episode.
         with self.receipt_lock:
             self.receipt["errors"] += 1
             self.receipt["request_errors"] += 1
+        self._diagnostic('request', exc, message=error)
         return {"ok": False, "error": error}
 
     def _handle(self, line: bytes) -> dict:
         try:
             request = json.loads(line)
-        except (ValueError, RecursionError):
-            return self._request_error("bad_request")
-        except Exception:
+        except (ValueError, RecursionError) as exc:
+            return self._request_error("bad_request", exc)
+        except Exception as exc:
             # A parser/runtime failure (for example MemoryError) is not a
             # malformed actor request that an adapter may safely disregard.
             with self.receipt_lock:
                 self.receipt["errors"] += 1
+            self._diagnostic('parser', exc)
             return {"ok": False, "error": "bad_request"}
         if not isinstance(request, dict):
             return self._request_error("bad_request")
@@ -236,23 +298,30 @@ class Relay:
         if self._deadline is not None and time.monotonic() > self._deadline:
             with self.receipt_lock:
                 self.receipt["refused"] += 1
+            self._diagnostic('refusal', message='deadline')
             return {"ok": False, "error": "deadline"}
         with self.receipt_lock:
-            if self._max_calls is not None and self.receipt["calls"] >= self._max_calls:
+            refused = self._max_calls is not None and self.receipt["calls"] >= self._max_calls
+            if refused:
                 self.receipt["refused"] += 1
-                return {"ok": False, "error": "call_budget"}
-            self.receipt["calls"] += 1
+            else:
+                self.receipt["calls"] += 1
+        if refused:
+            self._diagnostic('refusal', message='call_budget')
+            return {"ok": False, "error": "call_budget"}
         try:
             result = self._handler(op, args)
         except Exception as exc:  # noqa: BLE001 - a failed tool call is not an empty result
             with self.receipt_lock:
                 self.receipt["errors"] += 1
+            self._diagnostic('handler', exc)
             return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
         try:
             json.dumps(result)
-        except TypeError as exc:
+        except Exception as exc:
             with self.receipt_lock:
                 self.receipt["errors"] += 1
+            self._diagnostic('serialization', exc)
             return {"ok": False, "error": f"result_not_serialisable: {exc}"}
         return {"ok": True, "result": result}
 

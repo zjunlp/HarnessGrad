@@ -47,6 +47,15 @@ aggregate eligibility filters. Reports retain those original results, explicit
 denominators and an `event_incomplete_count`. Missing reference data, service
 failures and scorer failures remain unmeasured errors.
 
+All four modes use the static adapter's [measurement-validity policy](../costbench/README.md#metrics-and-cost-meaning):
+native sandboxed execution with `network=none`, an observed agent model route,
+and unmeasured outcomes for inference HTTP 429/5xx even after recovery. Rejected
+relay request envelopes do not invalidate subsequent execution; genuine runtime
+failures and relay limit refusals still do. Raw scorer evidence is preserved;
+the report checks complete trial archives and final progress, refusing platform-invalid results.
+All modes also enable the same private trial evidence archives for Harness output
+and relay failure diagnostics; evaluation requires a persistent `progress_dir`.
+
 The evaluator compares against its segmented dynamic reference, including
 charged failed ban attempts. A correct final answer need not have an optimal
 path. Tool prices are simulated benchmark units, not API spending or model-token
@@ -96,27 +105,34 @@ oracle and no-op arms, current-schema inspection, denied reconfiguration and
 forged actor records. These are no-model controls, not model performance results;
 the previous static API runs do not constitute a dynamic API evaluation.
 
-Aggregate sealed evidence with `data/datasets/costbench/report.py --mode MODE`
+Aggregate complete platform trial archives with `data/datasets/costbench/report.py --mode MODE`
 and an explicit `--expected-cells` manifest, plus the same `--bundle`, `--runtime`
-and evidence arguments used by the static report. A report accepts one mode and
+and archive arguments used by the static report. Bare verifier evidence is not
+accepted because it omits platform validity; retain the standard run layout with
+final progress and ordinary task indexes. A report accepts one mode and
 rejects static/dynamic or cross-mode mixing; compare train and test separately.
 
 ## Validation (2026-10-21)
+
+These checks were recorded for the initial dynamic adapter at commit
+`2f88e25e891dc7a60b835308e9a246fc3d2fad05`, against static base
+`d970a47da83d1f2845afe9e8a05ff2596593a48a`.
 
 All 9,172 gold trajectories passed the complete audit. The frozen manifest SHA256
 is `a424801c3d156bfc9527534e715e40ed02cd812889ae0d1c711c9d8c792e4c14`.
 CostBench regression/runtime/scoring tests passed 104 cases; the prepared-data
 integration suite passed 54, including both splits, all modes, and non-location
-preference notifications. Both dataset declarations pass lint. Sixteen direct
-oracle/no-op controls and eight report CLI checks preserve measured zeros and
+preference notifications. Both dataset declarations passed lint. Sixteen direct
+oracle/no-op controls and eight report CLI checks preserved measured zeros and
 the upstream cost/answer denominators. Cost equality uses tolerance `1e-8` for
 ordinary floating-point summation differences.
 
-The broader source/catalog checks have four existing failures reproduced on the
-static base: unrelated import edges, unavailable adapter dependencies, and
-missing aggregation declarations/inventory entries for other datasets. This
-branch supplies the missing static CostBench aggregation declaration as well as
-the dynamic one. It does not claim a green repository-wide suite.
+At that revision, the broader source/catalog checks recorded four failures also
+reproduced on the static base: unrelated import edges, unavailable adapter
+dependencies, and missing aggregation declarations/inventory entries for other
+datasets. The adapter commit added both static and dynamic CostBench aggregation
+declarations. These historical checks did not establish a green repository-wide
+suite; the current checkout's status requires its own validation.
 Local logs, source hashes and report receipts are retained outside Git.
 
 ## Real API validation and event supplement (2026-10-21)
@@ -135,10 +151,11 @@ The accepted-cohort report
 (`costbench-dynamic-ling31-coverage-20261021-01`) retains 24 measured tasks from
 37 attempts. Thirteen initial API 429 failures were excluded and rerun, with
 their original receipts preserved. There were no other invalid attempts.
-The shared runner can store a raw zero for terminal 429 failures; this report
-explicitly treats those failed attempts as unmeasured. That generic provider
-classification gap remains a platform follow-up. Nine normal parsing-retry
-endings remain measured zeros and were not rerun to improve scores.
+At that adapter revision the shared runner could store a raw zero for terminal
+429 failures; this historical report explicitly treated those attempts as
+unmeasured. Current platform execution uses the HTTP validity policy above;
+historical receipts are unchanged. Nine normal parsing-retry endings remain
+measured zeros and were not rerun to improve scores.
 
 | Mode | Split | Accepted | Actual / effective event tasks | Reference path matches | Correct answers |
 | --- | --- | --- | --- | --- | --- |

@@ -134,7 +134,8 @@ def _progress_results(run_dir: Path) -> dict[str, dict]:
     trusting a receipt count.
     """
     out: dict[str, dict] = {}
-    for path in sorted((run_dir / "progress").glob("round-0/*.json")):
+    # task_file preserves namespaced task IDs as nested paths.
+    for path in sorted((run_dir / "progress" / "round-0").rglob("*.json")):
         try:
             record = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
@@ -143,6 +144,32 @@ def _progress_results(run_dir: Path) -> dict[str, dict]:
         if task_id and record.get("complete"):
             out[task_id] = record
     return out
+
+
+def _eval_resume_seed(run_dir: Path, tasks, verifiers, trials, requested_seed) -> str | None:
+    """Resolve ordinary archive seeds before the driver records effective config."""
+    from eval.run import repeated_trials, trial_evidence
+
+    path = run_dir / 'trial-evidence/ordinary/round-0/resume-plan.json'
+    ordinary = (repeated_trials.protocol_for(tasks, verifiers, trials) is None
+                and any(trial_evidence.enabled(verifiers.get(t['task_id'])) for t in tasks))
+    if not ordinary:
+        if path.exists():
+            raise ValueError('the original ordinary archive configuration was removed')
+        return None
+    if not path.is_file():
+        raise ValueError('ordinary evidence resume requires its original full manifest')
+    saved = json.loads(path.read_text())
+    configuration = saved.get('configuration') if isinstance(saved, dict) else None
+    if (not isinstance(configuration, dict) or configuration.get('version') != 1
+            or configuration.get('execution') != 'ordinary'):
+        raise ValueError('invalid ordinary evidence resume configuration')
+    seed = configuration.get('run_seed')
+    if not isinstance(seed, str) or not seed:
+        raise ValueError('ordinary evidence resume requires a nonempty saved seed')
+    if requested_seed is not None and requested_seed != seed:
+        raise ValueError('requested seed differs from the original ordinary evidence seed')
+    return seed
 
 
 def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
@@ -204,14 +231,19 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     point's `n_invalid`/`n_harness_failed` describe the whole pool rather than the half that
     this process re-measured.
     """
+    from eval.verification.isolation import observed_class
+
     merged = dict(res)
     per_task = dict(merged.get("per_task") or {})
+    multiple_trials = merged.get("trials", 1) > 1
+    trial_scores = dict(merged.get("per_task_trials") or {})
+    per_task_std = dict(merged.get("per_task_std") or {})
+    missing_trial_scores = False
+    isolation = dict(merged.get("per_task_scorer_isolation") or {})
     invalid = dict(merged.get("invalid") or {})
     failed = dict(merged.get("harness_failed") or {})
-    # The runtime bookkeeping the OpenCode feature needs. The branch's side of this conflict made
-    # `invalid`/`failed` lists and derived `known`/`known_failed` from them, but the loop below
-    # calls `invalid.setdefault(...)` -- a list has no such method, and `known`/`known_failed` are
-    # never read. Kept main's dict shape and added what is actually used.
+    # Merge runtime identities and per-task service diagnostics so resumed receipts
+    # describe both completed and newly evaluated tasks.
     runtimes = list(merged.get("harness_runtime") or [])
     diagnostics = dict(merged.get("runtime_diagnostics") or {})
     for task_id, record in prior.items():
@@ -226,14 +258,39 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
                     if runtime not in runtimes:
                         runtimes.append(runtime)
         outcome = record.get("process_outcome")
-        if outcome == "completed" and record.get("score") is not None:
-            per_task[task_id] = float(record["score"])
-        elif outcome in ("invalid", "unmeasured"):
+        if outcome in ("invalid", "unmeasured"):
             invalid.setdefault(task_id, {'stage': 'resume', 'detail': record.get('detail') or outcome})
         else:
-            failed.setdefault(task_id, {'reason': record.get('detail') or str(outcome),
-                                        'exit_code': record.get('exit_code')})
+            # A scored artifact can outlive an actor crash or its declared budget.
+            # Reuse the platform's measurement, keeping process failure separate.
+            if record.get("score") is not None:
+                per_task[task_id] = float(record["score"])
+                isolation[task_id] = observed_class(record)
+                if multiple_trials:
+                    scores = record.get("trial_scores")
+                    if scores:
+                        trial_scores[task_id] = list(scores)
+                        per_task_std[task_id] = statistics.pstdev(scores)
+                    else:
+                        missing_trial_scores = True
+            if outcome != "completed" or record.get("score") is None:
+                failed.setdefault(task_id, {'reason': record.get('detail') or str(outcome),
+                                            'exit_code': record.get('exit_code')})
     merged["per_task"] = per_task
+    if multiple_trials:
+        merged["per_task_trials"] = trial_scores
+        merged["per_task_std"] = per_task_std
+        if missing_trial_scores:
+            # Legacy means alone cannot establish the full pool's trial spread.
+            merged.pop("score_std", None)
+        elif trial_scores:
+            # Match the runner: spread of trial-wise task means, using the common
+            # measured width when ordinary provider failures discarded attempts.
+            width = min(len(scores) for scores in trial_scores.values())
+            merged["score_std"] = statistics.pstdev([
+                sum(scores[i] for scores in trial_scores.values()) / len(trial_scores)
+                for i in range(width)])
+    merged["per_task_scorer_isolation"] = isolation
     merged["invalid"] = invalid
     merged["harness_failed"] = failed
     merged["harness_runtime"] = runtimes
@@ -270,6 +327,18 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     prior: dict[str, dict] = {}
     from eval.run import repeated_trials, trial_evidence
     protocol = repeated_trials.protocol_for(tasks, verifiers or {}, args.trials)
+    evidence_tasks = {t['task_id'] for t in tasks
+                      if trial_evidence.enabled((verifiers or {}).get(t['task_id']))}
+    ordinary_plan_path = run_dir / 'trial-evidence/ordinary/round-0/resume-plan.json'
+    ordinary_plan = None
+    old_evidence_rows = []
+    if protocol is None and evidence_tasks:
+        ordinary_plan = trial_evidence.ordinary_plan(
+            [task for task in tasks if task['task_id'] in evidence_tasks], trials=args.trials,
+            run_seed=os.environ['HARNESSGRAD_SEED'], run_id=run_id, round_no=0, harness_sha=sha)
+    elif getattr(args, 'resume', False) and ordinary_plan_path.exists():
+        console.note('refusing ordinary evidence resume: the original archive configuration was removed', level='error')
+        return 2
     trial_plan = None
     old_trial_rows = []
     plan_path = run_dir / 'protocols/round-0/resume-plan.json'
@@ -279,6 +348,8 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     if protocol:
         trial_plan = repeated_trials.plan(tasks, protocol, run_id=run_id,
                                          round_no=0, harness_sha=sha)
+    execution_plan = trial_plan or ordinary_plan
+    if execution_plan:
         # Bind the selected declarations too: same seeds with a different user,
         # judge, task input or endpoint are not the same measurement.
         declarations = {'tasks': tasks, 'scorable': {t['task_id']: scorable[t['task_id']] for t in tasks},
@@ -289,16 +360,17 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                         'models': {k: os.environ.get(k) for k in (
                             'HG_AGENT_BACKEND', 'HG_AGENT_MODEL', 'HG_AGENT_BASE_URL',
                             'HG_ENV_BASE_URL', 'HG_JUDGE_BASE_URL')}}
-        # The explicit protocol replaces the outer run seed for every trial;
-        # HARNESSGRAD_SEED is also excluded from the actor environment.
-        trial_plan['declarations_sha256'] = hashlib.sha256(json.dumps(
+        # Protocol seeds or the ordinary run seed are already bound in the plan.
+        execution_plan['declarations_sha256'] = hashlib.sha256(json.dumps(
             declarations, sort_keys=True, default=str).encode()).hexdigest()
+        selected_plan_path = plan_path if trial_plan else ordinary_plan_path
+        plan_label = 'repeated-trial' if trial_plan else 'ordinary evidence'
         try:
-            if getattr(args, 'resume', False) and not plan_path.is_file():
-                raise ValueError('repeated-trial resume requires its original full manifest')
-            repeated_trials.immutable_json(plan_path, trial_plan)
+            if getattr(args, 'resume', False) and not selected_plan_path.is_file():
+                raise ValueError(f'{plan_label} resume requires its original full manifest')
+            repeated_trials.immutable_json(selected_plan_path, execution_plan)
         except (OSError, ValueError) as exc:
-            console.note(f'refusing repeated-trial resume: {exc}', level='error')
+            console.note(f'refusing {plan_label} resume: {exc}', level='error')
             return 2
     if getattr(args, "resume", False):
         prior = _progress_results(run_dir)
@@ -311,6 +383,12 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                     progress_dir=run_dir)
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 console.note(f'refusing repeated-trial resume: {exc}', level='error')
+                return 2
+        if ordinary_plan:
+            try:
+                old_evidence_rows = trial_evidence.resume_ordinary(run_dir, ordinary_plan, prior)
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                console.note(f'refusing ordinary evidence resume: {exc}', level='error')
                 return 2
         if prior:
             why = _resume_mismatch(run_dir, args,
@@ -334,7 +412,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        setups=setups, verifiers=verifiers, envs=envs, run_id=run_id,
                        run_seed=os.environ["HARNESSGRAD_SEED"],
                        recordings_root=run_dir / "recordings", round_no=0,
-                       **({'persist_trial_report': False} if trial_plan else {}))
+                       **({'persist_trial_report': False} if execution_plan else {}))
     if prior:
         res = _merge_prior(res, prior)
     if trial_plan:
@@ -361,6 +439,15 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         res['score_std'] = statistics.pstdev([
             sum(values[i] for values in scores.values()) / len(scores)
             for i in range(protocol['trials'])])
+    if ordinary_plan:
+        rows = old_evidence_rows + (res.get('trial_evidence') or {}).get('results', [])
+        report = trial_evidence.ordinary_index(ordinary_plan, rows)
+        try:
+            trial_evidence.persist_ordinary(run_dir, report)
+        except (OSError, ValueError) as exc:
+            console.note(f'refusing ordinary evidence publication: {exc}', level='error')
+            return 2
+        res['trial_evidence'] = report
     complete_measurement = after_evaluation(res) if after_evaluation is not None else True
     _require_untampered(res)
     _report_invalid(res, args.dataset)
@@ -403,6 +490,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         cumulative=cumulative, label="exam", side="eval",
         evaluated_from=eval_from, n_trials=res.get("trials"),
         score_std=res.get("score_std"), per_task_std=res.get("per_task_std"),
+        per_task_trials=res.get("per_task_trials"),
         **_test_rate_fields(res),
         **_level_fields(res, scored))
     point["measured_by_platform"] = True

@@ -353,12 +353,26 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             cooperative.setdefault("env_observation", observation)
         return cooperative
     runtime_receipt = {}
-    result = refusal if refusal is not None else _run_one(
-        repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
-        env, run_id, run_seed, recordings_root, trial_id=trial_id,
-        runtime_receipt=runtime_receipt, worker=_worker,
-        **({'private_paths': _private_paths} if _private_paths else {}),
-        **({'evidence_output': evidence_output} if evidence_output is not None else {}))
+    try:
+        result = refusal if refusal is not None else _run_one(
+            repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
+            env, run_id, run_seed, recordings_root, trial_id=trial_id,
+            runtime_receipt=runtime_receipt, worker=_worker,
+            **({'private_paths': _private_paths} if _private_paths else {}),
+            **({'evidence_output': evidence_output} if evidence_output is not None else {}))
+    except BaseException as exc:
+        # Expected launch failures retain their original exception behavior. The
+        # collector has already run in finally; carry its private result to the
+        # evaluation owner so it can persist it before propagating the failure.
+        launch_failure = isinstance(exc, (OSError, sandbox_mod.SandboxUnavailable,
+                                         container_mod.ContainerUnavailable)) or (
+            isinstance(exc, SystemExit) and isinstance(exc.__context__, sandbox_mod.SandboxUnavailable))
+        if (capture_evidence and launch_failure and evidence_output.get('launch_attempted')
+                and evidence_output.get('launch_error')):
+            exc.trial_evidence_result = {'task_id': task['task_id'],
+                'exception': {'type': type(exc).__name__, 'detail': str(exc)},
+                'trial_evidence_output': evidence_output, 'runtime_services': runtime_receipt}
+        raise
     if capture_evidence:
         result['trial_evidence_output'] = evidence_output
     if runtime_receipt:
@@ -745,9 +759,15 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 tool_relay = tool_relay_mod.start(setup, **({"context": {
                     "task_id": task["task_id"], "run_id": run_id or "direct",
                     "trial_id": trial_id or "trial-1", "seed": run_seed}}
-                    if record_spec is not None or model_trial_seed else {}))
+                    if record_spec is not None or model_trial_seed else {}),
+                    **({'private_diagnostics': True} if evidence_output is not None else {}))
             except RuntimeError as exc:
-                return _invalid(task, exc, stage="tool relay", service=None)
+                if getattr(exc, 'report', None) is not None:
+                    runtime_receipt['tool_relay'] = exc.report
+                if evidence_output is not None and getattr(exc, 'diagnostic', None) is not None:
+                    evidence_output['tool_relay'] = exc.diagnostic
+                reason = getattr(exc, 'safe_message', exc) if evidence_output is not None else exc
+                return _invalid(task, reason, stage="tool relay", service=None)
 
         def launch():
             if is_exec:
@@ -966,6 +986,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         if tool_relay is not None:
             tool_relay.cleanup()
             runtime_receipt["tool_relay"] = tool_relay.report()
+            if evidence_output is not None and getattr(tool_relay, 'diagnostic', None) is not None:
+                evidence_output['tool_relay'] = tool_relay.diagnostic
         if stepwise_relay is not None:
             stepwise_relay.stop()
         if stepwise_dir is not None:
@@ -1414,13 +1436,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             tid = task['task_id']
             trial_evidence.admit_execution(sandbox=sandbox, setup=(setups or {}).get(tid),
                                            env=(envs or {}).get(tid))
-    evidence_plan = {'configuration': trial_protocol, 'run_id': run_id,
-                     'round': round_no, 'harness_sha': harness_sha}
-    trial_rows = {t["task_id"]: [] for t in tasks} if trial_protocol else {}
+    ordinary_plan = (trial_evidence.ordinary_plan(
+        [task for task in tasks if task['task_id'] in evidence_tasks], trials=trials,
+        run_seed=run_seed, run_id=run_id, round_no=round_no, harness_sha=harness_sha)
+        if evidence_tasks and trial_protocol is None else None)
+    evidence_plan = ordinary_plan or {'configuration': trial_protocol, 'run_id': run_id,
+                                    'round': round_no, 'harness_sha': harness_sha}
+    trial_rows = {t["task_id"]: [] for t in tasks} if trial_protocol or ordinary_plan else {}
     def fresh_measurement(tid):
         spec = (verifiers or {}).get(tid) or {}
         relay = ((setups or {}).get(tid) or {}).get("tool_relay") or {}
-        return bool(trial_protocol or spec.get("judge") or spec.get("result_contract") or spec.get("model_failure_policy") or relay.get("record")
+        return bool(trial_protocol or tid in evidence_tasks or spec.get("judge") or spec.get("result_contract") or spec.get("model_failure_policy") or relay.get("record")
                     or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
@@ -1627,11 +1653,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         unmeasured: dict | None = None
         unmeasured_result: dict | None = None
         trial_marker = None
+        ordinary_task_plan = None
         if trial_protocol and progress_dir is not None:
             trial_marker = repeated_trials.start_task(
                 repeated_trials.report_root(progress_dir, round_no, harness_sha),
                 repeated_trials.plan([task], trial_protocol, run_id=run_id,
                                      round_no=round_no, harness_sha=harness_sha))
+        elif ordinary_plan and tid in evidence_tasks:
+            ordinary_task_plan = {**ordinary_plan, 'manifest': [row for row in ordinary_plan['manifest']
+                                                               if row['task_id'] == tid]}
+            trial_marker = repeated_trials.start_task(
+                trial_evidence.ordinary_root(progress_dir, round_no, harness_sha), ordinary_task_plan)
         for trial in range(trials):
             with progress_mod.task_progress(tid, round_no=round_no, index=task_index,
                                             total=len(tasks)) as held:
@@ -1652,6 +1684,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 except BaseException as exc:
                     # The record says the task died and why; the exception still travels.
                     held.failed(f"{type(exc).__name__}: {exc}")
+                    captured = getattr(exc, 'trial_evidence_result', None)
+                    if tid in evidence_tasks and captured is not None:
+                        row = {'task_id': tid, 'trial_id': trial_identity(trial),
+                               'seed': str(trial_protocol['seeds'][trial]) if trial_protocol else str(run_seed),
+                               'status': 'raised', 'exception_type': type(exc).__name__}
+                        exc.trial_evidence = trial_evidence.save(progress_dir, evidence_plan, row, captured)
                     raise
 
                 # Validate the trial identity before either report consumes its
@@ -1668,11 +1706,11 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 if bun_identity is not None and (result.get("harness_runtime") or {}).get("bun") != bun_identity:
                     result.setdefault("invalid", {"stage": "harness runtime identity",
                         "detail": "Runtime changed after evaluation admission; refusing mixed measurements"})
-                if trial_protocol:
+                if trial_protocol or ordinary_task_plan:
                     plan = {"task_id": tid, "trial_id": trial_identity(trial),
-                            "seed": str(trial_protocol["seeds"][trial])}
-                    provider = _provider_failure(result)
-                    row = repeated_trials.result_row(result, plan, provider_failure=provider)
+                            "seed": str(trial_protocol["seeds"][trial]) if trial_protocol else str(run_seed)}
+                    row = (repeated_trials.result_row(result, plan, provider_failure=_provider_failure(result))
+                           if trial_protocol else trial_evidence.ordinary_row(plan, result))
                     if tid in evidence_tasks:
                         row['trial_evidence'] = trial_evidence.save(
                             progress_dir, evidence_plan, row, result)
@@ -1769,11 +1807,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             # come from the trial that supplied this unmeasured reason.
             diagnostic = unmeasured_result or result
             _write_progress(progress_dir, round_no, tid, [], unmeasured,
-                            diagnostic=diagnostic, enforcement=enforcement)
+                            diagnostic=diagnostic, enforcement=enforcement,
+                            **({'trial_evidence': trial_rows[tid]} if ordinary_task_plan else {}))
+            if ordinary_task_plan:
+                trial_evidence.save_ordinary_task(progress_dir, ordinary_task_plan, trial_rows[tid])
             return {"task_id": tid, "invalid": unmeasured,
                     "harness_runtime": (diagnostic or {}).get("harness_runtime"),
                     "runtime_services": (diagnostic or {}).get("runtime_services")}
-        _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement)
+        _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement,
+                        **({'trial_evidence': trial_rows[tid]} if ordinary_task_plan else {}))
+        if ordinary_task_plan:
+            trial_evidence.save_ordinary_task(progress_dir, ordinary_task_plan, trial_rows[tid])
         if trial_marker is not None:
             trial_marker.unlink()
         return {"task_id": tid, "measured": measured}
@@ -2031,6 +2075,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             "not_run": sorted(not_run),
         }
     repeated = {}
+    if ordinary_plan:
+        index = trial_evidence.ordinary_index(ordinary_plan,
+            [row for task in tasks for row in trial_rows[task['task_id']]])
+        repeated['trial_evidence'] = index
+        if persist_trial_report:
+            trial_evidence.persist_ordinary(progress_dir, index)
     if trial_protocol:
         manifest = [{"task_id": t["task_id"], "trial_id": trial_identity(i),
                      "seed": str(trial_protocol["seeds"][i])}
