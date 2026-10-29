@@ -345,3 +345,35 @@ def test_unchanged_resume_admission_keeps_metadata(tmp_path, scenario):
     args = SimpleNamespace(resume=True, run_id="run", runs_root=str(tmp_path))
     driver._check_scenario_resume(args, scenario)
     assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("stage", ["load_split", "oracle_source", "load_tasks", "load_envs"])
+def test_lazy_dataset_failures_are_named_before_execution(tmp_path, monkeypatch, capsys, stage):
+    import driver
+    tasks = [{"task_id": "t01", "goal": "train"}, {"task_id": "t02", "goal": "eval"}]
+    monkeypatch.setattr(driver, "load_scenario", lambda *a: (_spec(), {}))
+    monkeypatch.setattr(driver.datasets, "published", lambda: ("terminal_bench",))
+    monkeypatch.setattr(driver.datasets, "load_split", lambda *a: (
+        tasks, {"t01": "alpha", "t02": "beta"}, {"train": ["t01"], "eval": ["t02"]}))
+    monkeypatch.setattr(driver.datasets, "oracle_source", lambda *a: ("released", None))
+    monkeypatch.setattr(driver.datasets, "load_tasks", lambda *a, **kw: (tasks, {}, {}))
+    monkeypatch.setattr(driver.datasets, "load_envs", lambda *a, **kw: {})
+
+    def unavailable(*a, **kw):
+        raise ValueError(f"terminal_bench: missing local declarations at {stage}")
+
+    monkeypatch.setattr(driver.datasets, stage, unavailable)
+    monkeypatch.setattr(driver, "evaluate", lambda *a, **kw: pytest.fail("runner started"))
+    monkeypatch.setattr(sys, "argv", _entry_args(tmp_path))
+    assert driver.main() == 2
+    stderr = capsys.readouterr().err
+    assert "terminal_bench" in stderr and stage in stderr and "Traceback" not in stderr
+    assert not (tmp_path/"runs").exists()
+
+
+def test_large_integer_limit_receives_named_refusal(tmp_path):
+    import driver
+    root, _ = _scenario(tmp_path, _spec(limits={"agent_timeout_s": 10**400}))
+    with pytest.raises(ValueError, match="limits"):
+        spec, _ = _load("unit", root)
+        driver._check_scenario_runtime(spec, {"backend": "mock"}, {}, {})

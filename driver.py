@@ -977,8 +977,15 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
-    tasks_all, scorable, split = datasets.load_split(args.dataset)
-    oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
+    try:
+        tasks_all, scorable, split = datasets.load_split(args.dataset)
+        oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
+    except (OSError, ValueError, ImportError) as exc:
+        if scenario_spec is None:
+            raise  # Keep legacy callers' error handling unchanged.
+        print(f'refusing --scenario: dataset {args.dataset!r} could not be loaded: {exc}',
+              file=sys.stderr)
+        return 2
     # **Whose division this run uses.** The train/eval division is a property of the
     # experiment protocol, not of the benchmark: the same dataset supports "study the
     # official train split and report on the official test split" and "study a third of the
@@ -1074,8 +1081,15 @@ def _main(attempt: dict) -> int:
     # Resolve only the selected task declarations. Lazy adapters may require private
     # inputs, runtimes or model configuration when a value is read; an unselected
     # task must not block this run before the subsequent runtime preflight.
-    _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=side_ids)
-    envs = datasets.load_envs(args.dataset, task_ids=side_ids)
+    try:
+        _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=side_ids)
+        envs = datasets.load_envs(args.dataset, task_ids=side_ids)
+    except (OSError, ValueError, ImportError) as exc:
+        if scenario_spec is None:
+            raise
+        print(f'refusing --scenario: dataset {args.dataset!r} declarations could not be loaded: {exc}',
+              file=sys.stderr)
+        return 2
     setups, verifiers, envs = _narrow_to_run(setups, verifiers, envs, side_ids)
     if scenario_spec is not None:
         try:

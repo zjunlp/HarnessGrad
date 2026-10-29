@@ -45,7 +45,8 @@ def _validate(spec: dict, expected_name: str) -> None:
         if not isinstance(limits, dict):
             raise ValueError('scenario limits must be an object')
         for field, value in limits.items():
-            if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+            if (type(value) not in (int, float) or value <= 0
+                    or (type(value) is float and not math.isfinite(value))):
                 raise ValueError(f'scenario limits.{field} must be a finite positive number')
     if 'note' in spec and not isinstance(spec['note'], str):
         raise ValueError('scenario note must be a string')
