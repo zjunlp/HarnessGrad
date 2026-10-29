@@ -35,6 +35,29 @@ records, judge/environment model channels, repeated trials and fixed peer execut
 Dataset tests cover these integrations; API receipts and validation artifacts are
 kept outside the repository.
 
+## CostBench follow-up migration to rebuilt main — 2026-10-27
+
+The eleven CostBench follow-up commits were replayed onto upstream
+`aa8b12e6656716df1657dc1c3b84946a703d9c79` after the upstream history rebuild.
+The previous tip, `a220e5d03c592f39002494cbabac6609b59fe46d`, remains under
+`backup/costbench-pre-main-refresh-20261027`. The individual fixes retain their
+commit boundaries and incorporate upstream's Python import and dataset-root changes.
+
+Upstream removed three older evidence-test modules. The required ordinary-trial
+collection and output-isolation regressions now live in
+`test_ordinary_evidence_collection.py` and `test_ordinary_evidence_output_boundary.py`,
+with their shared fixture in `ordinary_evidence_helpers.py`; these functions match
+their previous syntax trees. The remaining historical tests were not restored.
+
+Validation covered CostBench, ordinary evidence and resume, repeated trials, model
+failure policy, relay diagnostics and shared runtime controls. Of 425 selected
+pytest cases, 424 passed across the initial run and targeted environment-corrected
+rerun. The remaining ALFWorld relay control failed because `textworld` is absent
+from the local platform interpreter; its adapter and test are unchanged from
+upstream. Both CostBench dataset lint checks passed. Commands, logs, commit mapping
+and the initial failure evidence are retained outside Git under
+`<workspace>/reports/costbench-main-refresh-20261027-4liuydy0/`.
+
 ## CostBench static protocol — 2026-10-21
 
 The adapter targets the official `6424069f3f773ade076bcedbed302ed47cfb1837`

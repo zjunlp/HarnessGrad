@@ -28,7 +28,7 @@ def metric(mode):
     return f'costbench.dynamic.sequence5.{mode}.block1.per_query_path_exact_match.v1'
 
 TRANSPORT = Path(__file__).resolve().parents[2] / 'eval/service/tool_transport.py'
-DEFAULT_ENV = {'kind': 'files'}
+DEFAULT_ENV = {'kind': 'files', 'network': 'none'}
 GOAL = '''Complete the CostBench travel task using a minimum-total-cost tool path.
 Read `python3 costbench.py show` for the official task, instructions and tool schemas.
 Invoke a tool with `python3 costbench.py call TOOL_NAME '{"ParameterType":"value"}'`.
@@ -110,7 +110,9 @@ def _verify(tid, row):
                        {'path': 'costbench_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True},
                        {'path': 'costbench_runtime', 'from': str(RUNTIME), 'immutable': True}],
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
-            'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
+            'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
+            'trial_evidence': {'version': 1},
+            'model_failure_policy': {'version': 1, 'invalidate_on_http_status': [429, *range(500, 600)]}}
 
 
 class _Tasks(Mapping):

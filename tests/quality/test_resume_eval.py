@@ -9,7 +9,10 @@ risky for.
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
+
+import pytest
 
 from harnessgrad.loops.eval_side import (
     _merge_prior,
@@ -20,9 +23,9 @@ from harnessgrad.loops.eval_side import (
 
 def _progress(run_dir: Path, task_id: str, *, score=None, outcome="completed",
               complete=True, detail="") -> None:
-    d = run_dir / "progress" / "round-0"
+    d = (run_dir / "progress" / "round-0" / task_id).parent
     d.mkdir(parents=True, exist_ok=True)
-    (d / f"{task_id}.json").write_text(json.dumps({
+    (d / f"{Path(task_id).name}.json").write_text(json.dumps({
         "task_id": task_id, "round": 0, "complete": complete,
         "process_outcome": outcome, "score": score, "detail": detail}))
 
@@ -39,6 +42,19 @@ def test_progress_results_reads_only_complete_records(tmp_path: Path) -> None:
     _progress(run_dir, "c", score=None, complete=False)
     got = _progress_results(run_dir)
     assert set(got) == {"a", "b"}, "an incomplete task must not count as a result"
+
+
+def test_progress_results_reads_namespaced_tasks_in_round_zero_only(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    ids = {"flat", "costbench/test/Query00001",
+           "costbench_dynamic/cost_change/test/Query00001"}
+    for task_id in ids:
+        _progress(run_dir, task_id, score=0.0)
+    _progress(run_dir, "costbench/test/unfinished", complete=False)
+    other_round = run_dir / "progress/round-1/other.json"
+    other_round.parent.mkdir()
+    other_round.write_text(json.dumps({"task_id": "other", "complete": True}))
+    assert set(_progress_results(run_dir)) == ids
 
 
 def test_merge_keeps_every_task_exactly_once(tmp_path: Path) -> None:
@@ -61,6 +77,58 @@ def test_merge_does_not_duplicate_an_overlap(tmp_path: Path) -> None:
     prior = _progress_results(run_dir)
     merged = _merge_prior({"per_task": {"a": 0.0}, "invalid": {}, "harness_failed": {}}, prior)
     assert merged["per_task"] == {"a": 0.0}, "the fresh measurement wins, not a duplicate key"
+
+
+def test_merge_keeps_observed_scorer_isolation_for_reused_tasks():
+    prior = {"costbench/test/Query00001": {"score": 1, "process_outcome": "completed",
+              "scorer_isolation_class": "in-process"}}
+    fresh = {"per_task": {"costbench/test/Query00002": 0},
+             "per_task_scorer_isolation": {"costbench/test/Query00002": "in-process"}}
+    merged = _merge_prior(fresh, prior)
+    assert merged["per_task_scorer_isolation"] == {
+        "costbench/test/Query00001": "in-process", "costbench/test/Query00002": "in-process"}
+    assert fresh["per_task_scorer_isolation"] == {"costbench/test/Query00002": "in-process"}
+
+
+@pytest.mark.parametrize('outcome,score', [('harness_crash', 1), ('platform_timeout', 0)])
+def test_resume_keeps_measured_scores_separate_from_actor_failure(outcome, score):
+    tid = 'costbench/test/Query00001'
+    result = _merge_prior({}, {tid: {'score': score, 'process_outcome': outcome,
+                                    'scorer_isolation_class': 'in-process', 'exit_code': 1}})
+    assert result['per_task'] == {tid: score}
+    assert tid in result['harness_failed']
+    assert result['per_task_scorer_isolation'] == {tid: 'in-process'}
+
+
+@pytest.mark.parametrize('outcome', ['completed', 'harness_crash'])
+def test_merge_trial_statistics_uses_measured_scores_and_common_trial_width(outcome):
+    # Ordinary provider failures may leave fewer measured scores than attempts.
+    fresh = {'trials': 3, 'per_task': {'b': 2 / 3},
+             'per_task_trials': {'b': [1, 0, 1]},
+             'per_task_std': {'b': 0.4714045207910317}, 'score_std': 0.4714045207910317}
+    prior = {'a': {'score': .5, 'process_outcome': outcome, 'trial_scores': [0, 1]},
+             'b': {'score': 0, 'process_outcome': 'completed', 'trial_scores': [0, 0, 0]},
+             'c': {'score': 1, 'process_outcome': 'invalid', 'trial_scores': [1]},
+             'd': {'score': 1, 'process_outcome': 'unmeasured', 'trial_scores': [1]}}
+    before = deepcopy((fresh, prior))
+    result = _merge_prior(fresh, prior)
+    assert result['per_task_trials'] == {'a': [0, 1], 'b': [1, 0, 1]}
+    assert result['per_task_std'] == pytest.approx({'a': .5, 'b': 0.4714045207910317})
+    # The first two run means are both .5; averaging task spreads would be wrong.
+    assert result['score_std'] == 0.0
+    assert set(result['invalid']) == {'c', 'd'}
+    assert ('a' in result['harness_failed']) == (outcome == 'harness_crash')
+    assert (fresh, prior) == before
+
+
+def test_merge_does_not_claim_full_spread_without_legacy_trial_scores():
+    result = _merge_prior(
+        {'trials': 3, 'per_task': {'b': 1}, 'per_task_trials': {'b': [1, 1, 1]},
+         'per_task_std': {'b': 0}, 'score_std': 0},
+        {'a': {'score': 1 / 3, 'process_outcome': 'completed'}})
+    assert result['per_task'] == {'a': 1 / 3, 'b': 1}
+    assert result.get('score_std') is None
+    assert result['per_task_trials'] == {'b': [1, 1, 1]}
 
 
 def test_resume_refuses_a_different_state_or_pool(tmp_path: Path) -> None:

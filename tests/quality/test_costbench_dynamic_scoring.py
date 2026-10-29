@@ -6,6 +6,7 @@ import sys
 import types
 
 import pytest
+from test_costbench_official_scorer import archive
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / 'data/datasets/costbench'
@@ -177,7 +178,7 @@ def reporting_functions():
     tree = ast.parse((ASSETS / 'report.py').read_text())
     namespace = {'METRIC': static_scoring.METRIC, 'REVISION': scoring.REVISION, 'dynamic_metric': scoring.metric}
     functions = ast.Module(body=[node for node in tree.body if isinstance(node, ast.FunctionDef)
-                                and node.name in ('cell', 'collect')], type_ignores=[])
+                                and node.name in ('cell', 'archive_evidence', 'collect')], type_ignores=[])
     exec(compile(functions, str(ASSETS / 'report.py'), 'exec'), namespace)
     return namespace['collect']
 
@@ -185,20 +186,20 @@ def reporting_functions():
 def evidence(mode='cost_change'):
     tid = f'costbench_dynamic/{mode}/test/Query00001'
     return {'measured': True, 'metric': scoring.metric(mode), 'revision': scoring.REVISION,
-            'task_id': tid, 'binding': {'task_id': tid, 'run_id': 'fixture', 'trial_id': 'trial-1'},
+            'task_id': tid, 'binding': {'task_id': tid, 'run_id': 'fixture', 'trial_id': 'trial-1', 'seed': '42'},
             'scorer_input': {'task_id': tid, 'verified': True},
-            'official': {'query_result': query(mode), 'split': 'test', 'mode': mode}}
+            'official': {'query_result': query(mode), 'split': 'test', 'mode': mode, 'reward': 1}}
 
 
 def test_dynamic_report_requires_explicit_single_matching_mode():
     collect = reporting_functions()
-    first, second = evidence(), evidence('ban_tool')
-    assert len(collect([first], [first['binding']], mode='cost_change')) == 1
+    first, second = archive(evidence()), archive(evidence('ban_tool'))
+    assert len(collect([first], [first['archive']['binding']], mode='cost_change')) == 1
     with pytest.raises(ValueError, match='only measured'):
-        collect([first], [first['binding']])
+        collect([first], [first['archive']['binding']])
     with pytest.raises(ValueError, match='only measured'):
-        collect([first, second], [first['binding'], second['binding']], mode='cost_change')
+        collect([first, second], [first['archive']['binding'], second['archive']['binding']], mode='cost_change')
     with pytest.raises(ValueError, match='missing'):
-        collect([], [first['binding']], mode='cost_change')
+        collect([], [first['archive']['binding']], mode='cost_change')
     with pytest.raises(ValueError, match='duplicate'):
-        collect([first, first], [first['binding']], mode='cost_change')
+        collect([first, first], [first['archive']['binding']], mode='cost_change')

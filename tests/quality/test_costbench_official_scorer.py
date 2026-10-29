@@ -171,7 +171,8 @@ def reporting_functions():
     source = ast.parse((ASSETS / 'report.py').read_text())
     namespace = {'METRIC': scoring.METRIC, 'REVISION': scoring.REVISION}
     functions = ast.Module(body=[node for node in source.body
-                                if isinstance(node, ast.FunctionDef) and node.name in ('cell', 'collect')],
+                                if isinstance(node, ast.FunctionDef)
+                                and node.name in ('cell', 'archive_evidence', 'collect')],
                            type_ignores=[])
     exec(compile(functions, str(ASSETS / 'report.py'), 'exec'), namespace)
     return namespace['collect']
@@ -179,36 +180,53 @@ def reporting_functions():
 
 def evidence(task='costbench/test/1', trial='trial-1'):
     return {'measured': True, 'metric': scoring.METRIC, 'revision': scoring.REVISION,
-            'task_id': task, 'binding': {'task_id': task, 'run_id': 'fixture', 'trial_id': trial},
+            'task_id': task, 'binding': {'task_id': task, 'run_id': 'fixture', 'trial_id': trial, 'seed': '42'},
             'scorer_input': {'task_id': task, 'verified': True},
-            'official': {'query_result': query(), 'split': 'test'}}
+            'official': {'query_result': query(), 'split': 'test', 'reward': 1}}
+
+
+def archive(evidence):
+    binding = evidence['binding']
+    record = {'schema': 'harnessgrad.trial-evidence.v1',
+            'binding': {**binding, 'round': 0, 'harness_sha': 'fixture'},
+            'configuration': {'version': 1, 'execution': 'ordinary', 'trials': 1, 'run_seed': binding['seed']},
+            'outcome': {**{key: binding[key] for key in ('task_id', 'trial_id', 'seed')},
+                        'status': 'returned', 'raw_verdict_score': evidence['official']['reward']},
+            'result': {'task_id': evidence['task_id'], 'exit_code': 0,
+                       'verdict': {'score': evidence['official']['reward'], 'evidence': evidence}}}
+    reference = {'path': 'trial-evidence/fixture.json', 'sha256': 'fixture-digest'}
+    progress = {'task_id': evidence['task_id'], 'round': 0, 'complete': True,
+                'n_trials': 1, 'trial_scores': [evidence['official']['reward']],
+                'trial_evidence': [{**deepcopy(record['outcome']), 'trial_evidence': deepcopy(reference)}]}
+    return {'archive': record, 'progress': progress, 'reference': reference}
 
 
 def test_report_enforces_complete_unique_declared_cells():
     collect = reporting_functions()
-    first = evidence()
-    second = evidence(trial='trial-2')
-    expected = [first['binding'], second['binding']]
+    first = archive(evidence())
+    second = archive(evidence(trial='trial-2'))
+    expected = [first['archive']['binding'], second['archive']['binding']]
     assert len(collect([second, first], expected)) == 2
     with pytest.raises(ValueError, match='missing'):
         collect([first], expected)
     with pytest.raises(ValueError, match='duplicate'):
         collect([first, first], expected)
     with pytest.raises(ValueError, match='unexpected'):
-        collect([first, second], [first['binding']])
+        collect([first, second], [first['archive']['binding']])
     with pytest.raises(ValueError, match='duplicates'):
-        collect([first], [first['binding'], first['binding']])
+        collect([first], [first['archive']['binding'], first['archive']['binding']])
 
 
 def test_report_rejects_unmeasured_or_unverified_records():
     collect = reporting_functions()
-    failed = evidence()
-    expected = [failed['binding']]
-    failed['measured'] = False
+    failed = archive(evidence())
+    expected = [failed['archive']['binding']]
+    inner = failed['archive']['result']['verdict']['evidence']
+    inner['measured'] = False
     with pytest.raises(ValueError, match='only measured'):
         collect([failed], expected)
-    failed['measured'] = True
-    failed['scorer_input']['verified'] = False
+    inner['measured'] = True
+    inner['scorer_input']['verified'] = False
     with pytest.raises(ValueError, match='only measured'):
         collect([failed], expected)
 

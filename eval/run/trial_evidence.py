@@ -20,9 +20,8 @@ def enabled(verifier):
     if 'trial_evidence' not in (verifier or {}):
         return False
     validate_trial_evidence(verifier['trial_evidence'])
-    if 'trial_protocol' not in verifier:
-        raise ValueError('trial_evidence requires trial_protocol')
-    validate_trials(verifier['trial_protocol'])
+    if 'trial_protocol' in verifier:
+        validate_trials(verifier['trial_protocol'])
     return True
 
 
@@ -125,3 +124,105 @@ def validate_saved(progress_dir, plan, row):
             or record.get('configuration') != plan['configuration']
             or record.get('outcome') != outcome or not isinstance(record.get('result'), dict)):
         raise ValueError('trial_evidence archive differs from its trial report')
+
+
+def ordinary_plan(tasks, *, trials, run_seed, run_id, round_no, harness_sha):
+    """Archive identities only; ordinary scoring and stopping stay in the runner."""
+    return {'configuration': {'version': 1, 'execution': 'ordinary', 'trials': trials,
+                              'run_seed': str(run_seed)},
+            'run_id': run_id, 'round': round_no, 'harness_sha': harness_sha,
+            'manifest': [{'task_id': task['task_id'],
+                          'trial_id': f'round-{round_no}.harness-{harness_sha}.trial-{i + 1}',
+                          'seed': str(run_seed)} for task in tasks for i in range(trials)]}
+
+
+def ordinary_root(progress_dir, round_no, harness_sha):
+    return (Path(progress_dir) / 'trial-evidence' / 'ordinary' / f'round-{round_no}'
+            / hashlib.sha256(harness_sha.encode()).hexdigest()[:16])
+
+
+def ordinary_index(plan, rows):
+    expected = {(row['task_id'], row['trial_id']): row for row in plan['manifest']}
+    if len(expected) != len(plan['manifest']):
+        raise ValueError('duplicate ordinary trial evidence identity')
+    found = {}
+    for row in rows:
+        key = (row['task_id'], row['trial_id'])
+        if key not in expected or key in found or row['seed'] != expected[key]['seed']:
+            raise ValueError('ordinary trial evidence differs from its plan')
+        found[key] = row
+    return {'schema': 'harnessgrad.trial-evidence-index.v1', **plan,
+            'results': [found[key] for key in expected if key in found],
+            'not_returned': [expected[key] for key in expected if key not in found]}
+
+
+def ordinary_row(identity, result):
+    # pass^k intentionally excludes some outcomes that ordinary evaluation keeps.
+    # Do not borrow its validity or binary-score rules for this archival index.
+    return {**identity, 'status': 'returned',
+            'raw_verdict_score': (result.get('verdict') or {}).get('score')}
+
+
+def save_ordinary_task(progress_dir, plan, rows):
+    from eval.observe.tracing import task_file
+    task_id = plan['manifest'][0]['task_id']
+    progress = task_file(Path(progress_dir) / 'progress' / f"round-{plan['round']}", task_id + '.json')
+    report = ordinary_index(plan, rows)
+    report['progress_sha256'] = hashlib.sha256(progress.read_bytes()).hexdigest()
+    root = ordinary_root(progress_dir, plan['round'], plan['harness_sha'])
+    immutable_json(root / 'tasks' / (hashlib.sha256(task_id.encode()).hexdigest() + '.json'), report)
+
+
+def persist_ordinary(progress_dir, report):
+    root = ordinary_root(progress_dir, report['round'], report['harness_sha'])
+    immutable_json(root / 'index.json', report)
+
+
+def resume_ordinary(progress_dir, full_plan, prior):
+    """Validate archived attempts before ordinary eval skips completed tasks."""
+    from eval.observe.tracing import task_file
+    root = ordinary_root(progress_dir, full_plan['round'], full_plan['harness_sha'])
+    if any((root / 'in-flight').glob('*.json')):
+        raise ValueError('ordinary trial evidence has an interrupted in-flight task; use a fresh run')
+    expected_tasks = {row['task_id'] for row in full_plan['manifest']}
+    stored = {}
+    for path in (root / 'tasks').glob('*.json'):
+        if path.resolve() != path.absolute():
+            raise ValueError('ordinary trial evidence index must not use symlinks')
+        report = json.loads(path.read_text())
+        ids = {row['task_id'] for row in report['manifest']}
+        if len(ids) != 1:
+            raise ValueError('ordinary trial evidence index must name one task')
+        task_id = next(iter(ids))
+        if task_id in stored or task_id not in expected_tasks:
+            raise ValueError('unexpected ordinary trial evidence index')
+        stored[task_id] = report
+    if set(stored) != (set(prior) & expected_tasks):
+        raise ValueError('ordinary trial evidence and completed progress disagree; use a fresh run')
+    rows = []
+    for task_id, report in stored.items():
+        manifest = [row for row in full_plan['manifest'] if row['task_id'] == task_id]
+        if (report.get('manifest') != manifest or any(report.get(key) != full_plan[key]
+                for key in ('configuration', 'run_id', 'round', 'harness_sha'))):
+            raise ValueError('ordinary trial evidence execution identity differs')
+        checked = ordinary_index({key: report[key] for key in (
+            'configuration', 'run_id', 'round', 'harness_sha', 'manifest')}, report['results'])
+        if (report.get('schema') != checked['schema']
+                or report.get('not_returned') != checked['not_returned']
+                or prior[task_id].get('trial_evidence') != report['results']):
+            raise ValueError('ordinary trial evidence index differs from progress')
+        progress = task_file(Path(progress_dir) / 'progress' / f"round-{full_plan['round']}", task_id + '.json')
+        if hashlib.sha256(progress.read_bytes()).hexdigest() != report.get('progress_sha256'):
+            raise ValueError('ordinary trial evidence progress hash differs')
+        for row in checked['results']:
+            validate_saved(progress_dir, full_plan, row)
+        rows.extend(checked['results'])
+    published = root / 'index.json'
+    if os.path.lexists(published):
+        if published.resolve() != published.absolute():
+            raise ValueError('ordinary trial evidence index must not use symlinks')
+        if json.loads(published.read_text()) != ordinary_index(full_plan, rows):
+            raise ValueError('published ordinary trial evidence differs from saved trials')
+        if expected_tasks - set(prior):
+            raise ValueError('ordinary trial evidence already published with unfinished tasks; use a fresh run')
+    return rows
