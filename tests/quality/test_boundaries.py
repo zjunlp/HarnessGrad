@@ -14,8 +14,9 @@ in milliseconds and they fail loudly.
 from __future__ import annotations
 
 import ast
-import re
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -81,11 +82,20 @@ def test_r1_platform_does_not_import_a_method():
         # only when it is `module_name(...)`, and only after `test_registry_resolver_...`
         # below has shown that resolver returns a `data.datasets.*` name. Renaming it to
         # reach a method fails both halves.
-        for call in re.finditer(r"importlib\.import_module\(([^)]*)\)", src):
-            arg = call.group(1).strip()
-            # The capture stops at the first `)`, so a nested call arrives truncated
-            # (`module_name(name`); match the resolver by prefix rather than equality.
-            resolved_dataset = arg.startswith("module_name(")
+        # Read actual calls: vendored build-hook scripts and examples can contain
+        # the same text inside strings or comments without importing a method here.
+        for call in ast.walk(ast.parse(src)):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                    and isinstance(call.func.value, ast.Name)
+                    and call.func.value.id == "importlib"
+                    and call.func.attr == "import_module"):
+                continue
+            argument = call.args[0] if call.args else next(
+                (kw.value for kw in call.keywords if kw.arg == "name"), None)
+            arg = ast.unparse(argument) if argument is not None else ""
+            resolved_dataset = (isinstance(argument, ast.Call)
+                                and isinstance(argument.func, ast.Name)
+                                and argument.func.id == "module_name")
             if "method" in arg or "base_harness" in arg or (
                     not resolved_dataset and '"' not in arg and "'" not in arg):
                 bad.append(f"{path.relative_to(ROOT)} dynamically imports "
@@ -116,6 +126,31 @@ def test_the_registry_resolver_only_ever_names_a_dataset():
         resolved = registry.module_name(name)
         assert resolved.startswith("data."), (name, resolved)
         assert "methods" not in resolved and "base_harness" not in resolved, (name, resolved)
+
+
+@pytest.mark.parametrize("source, forbidden", [
+    ('script = "importlib.import_module(name)"', False),
+    ('# importlib.import_module(name)', False),
+    ('importlib.import_module("data.demo")', False),
+    ('importlib.import_module(module_name(name))', False),
+    ('importlib.import_module(f"data.datasets.{name}")', False),
+    ('import methods.editor', True),
+    ('from base_harness import loop', True),
+    ('importlib.import_module("methods.editor")', True),
+    ('importlib.import_module(name)', True),
+    ('importlib.import_module(\n    name\n)', True),
+])
+def test_r1_checks_calls_without_mistaking_script_text_for_imports(
+        tmp_path, monkeypatch, source, forbidden):
+    path = tmp_path / "platform.py"
+    path.write_text(source, encoding="utf-8")
+    monkeypatch.setitem(globals(), "ROOT", tmp_path)
+    monkeypatch.setitem(globals(), "_platform_sources", lambda: [path])
+    if forbidden:
+        with pytest.raises(AssertionError, match="manifest entrypoints"):
+            test_r1_platform_does_not_import_a_method()
+    else:
+        test_r1_platform_does_not_import_a_method()
 
 
 def test_r2_platform_never_writes_into_a_method_directory():

@@ -97,9 +97,13 @@ def validate(root: Path, smoke: bool) -> list[str]:
         return [f"no harness.json at {root} (required: F1 in "
                 "docs/writing_a_harness.md)"]
     try:
-        man = json.loads(man_path.read_text())
+        man = json.loads(man_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return [f"harness.json is not valid JSON: {exc}"]
+    except (OSError, UnicodeError) as exc:
+        return [f"harness.json could not be read as UTF-8 JSON: {exc}"]
+    if not isinstance(man, dict):
+        return ["harness.json must contain a JSON object"]
 
     for field in REQUIRED:
         if not man.get(field):

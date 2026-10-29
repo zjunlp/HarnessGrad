@@ -69,7 +69,7 @@ def validate(repo: Path, *, base_manifest: dict | None = None) -> list[str]:
     problems.extend(validate_source(repo))
     try:
         man = json.loads((repo / "harness.json").read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError):
         return problems or ["harness.json is unreadable"]
     if not isinstance(man, dict):
         return problems + ["harness.json is not an object"]
