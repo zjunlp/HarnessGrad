@@ -363,6 +363,100 @@ def test_controls_real_relay_and_verifier(prepared, tmp_path, monkeypatch, mode,
         assert result["detail"]["cleanup"] == {"complete": True, "errors": []}
 
 
+@pytest.mark.parametrize("mode,score,batch", [
+    ("oracle", 1, False), ("wrong", 0, False), ("noop", None, False),
+    ("oracle", 1, True), ("wrong", 0, True),
+])
+def test_malformed_requests_preserve_relay_scoring(prepared, tmp_path, monkeypatch, mode, score, batch):
+    from eval.run.runner import evaluate, run_one
+    from harnessgrad.records import _save_verdicts
+
+    tid, payload, _ = prepared
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    (harness / "agent.py").write_text(r'''
+import argparse, json, socket, sys
+from pathlib import Path
+parser = argparse.ArgumentParser()
+parser.add_argument('--task')
+parser.add_argument('--workdir', type=Path)
+work = parser.parse_args().workdir
+sys.path.insert(0, str(work))
+from personamem_transport import call
+sock = '/run/harnessgrad-tool/tool.sock'
+config = json.loads((work / '.control.json').read_text())
+def reject_requests():
+    for frame, error in [(b'{broken', 'bad_request'), (b'[]', 'bad_request'),
+                         (b'{"op": 1}', 'bad_op'),
+                         (b'{"op": "next", "args": [1]}', 'bad_args')]:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+            client.settimeout(10)
+            client.connect(sock)
+            client.sendall(frame + b'\n')
+            with client.makefile('rb') as stream:
+                assert json.loads(stream.readline()) == {'ok': False, 'error': error}
+reject_requests()
+if config['mode'] != 'noop':
+    while True:
+        item = call(sock, 'next')
+        if item['kind'] == 'done':
+            break
+        if item['kind'] == 'chunk':
+            op, fields = 'ack', {'chunk_id': item['chunk_id'], 'request_id': item['chunk_id']}
+        else:
+            op, fields = 'submit', {'question_id': item['question_id'],
+                'request_id': item['question_id'], 'answer': config['answer']}
+        assert call(sock, op, fields)['accepted']
+reject_requests()
+(work / 'trace.jsonl').write_text(json.dumps({'harness_identity': {
+    'harness': 'personamem-request-error-control', 'agent_model': 'oracle'}}) + '\n')
+''')
+    (harness / "harness.json").write_text(json.dumps({
+        "entrypoint": "agent.py", "runtime_paths": list(dict.fromkeys([
+            sys.prefix, sys.base_prefix, str(Path(sys._base_executable).parent.parent)])),
+    }))
+    monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(tmp_path))
+    setup = dataset.SETUP[tid]
+    answer = r"\boxed{c}" if mode == "oracle" else r"\boxed{a}"
+    setup["files"].append({"path": ".control.json", "content": json.dumps({
+        "mode": mode, "answer": answer})})
+    task = dataset.control_task(tid)
+    common = {"sandbox": True, "run_id": "personamem-request-errors",
+              "recordings_root": tmp_path / "recordings"}
+    if batch:
+        result = evaluate(harness, [task], {tid: METRIC}, setups={tid: setup},
+                          verifiers={tid: dataset.VERIFY[tid]}, envs={tid: dataset.ENV[tid]},
+                          trials=1, jobs=1, **common)
+        assert result["per_task"] == {tid: score}, result
+        assert not result["invalid"], result
+        verdict = result["verdicts"][tid]
+        relay = result["runtime_diagnostics"][tid]["tool_relay"]
+        _save_verdicts(tmp_path, 0, result, [tid])
+        saved = json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text())
+        assert dataset.aggregate([saved], [tid])["train"]["score"] == score
+    else:
+        result = run_one(harness, task, setup=setup, verifier=dataset.VERIFY[tid],
+                         env=dataset.ENV[tid], **common)
+        assert "invalid" not in result and result["exit_code"] == 0, result
+        verdict = result["verdict"]
+        relay = result["runtime_services"]["tool_relay"]
+
+    assert verdict["score"] == score
+    assert verdict["evidence"]["measured"] is (score is not None)
+    if score is None:
+        assert verdict["evidence"]["reason"] == "incomplete_episode"
+    assert not relay["faults"] and relay["receipt"]["stopped_cleanly"]
+    transport = relay["receipt"]["transport"]
+    assert transport["errors"] == transport["request_errors"] == 8
+    assert transport["refused"] == relay["receipt"]["protocol_rejections"] == 0
+    record = json.loads(Path(relay["recording"]["archive"]).read_text())["payload"]
+    assert record["complete"] is (score is not None)
+    assert record["acked_chunks"] == (0 if score is None else len(payload["chunks"]))
+    assert record["answers"] == ([] if score is None else [
+        {"question_id": payload["questions"][0]["id"], "answer": answer}])
+    assert relay["cleanup"] == {"complete": True, "errors": []}
+
+
 def test_actor_cannot_shadow_verifier(prepared, tmp_path, monkeypatch):
     work = tmp_path / "control"
     work.mkdir()

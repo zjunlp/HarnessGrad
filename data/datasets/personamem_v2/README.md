@@ -124,6 +124,12 @@ provide future history or questions. Successful request IDs are idempotent for i
 answers cannot be revised. The final harness `answer.txt` is not a submission.
 On `done`, finish.
 
+Malformed JSON or invalid request envelopes are rejected before reaching the
+episode state and may be corrected; they remain counted in the relay receipt but
+do not invalidate an otherwise healthy service. Handler/runtime failures,
+resource-limit refusals and failure to stop cleanly still invalidate the service.
+Scoring still requires a complete, valid episode.
+
 The metric is `personamem_v2.text32k.memagent_mcq_accuracy.valid_questions.v1`.
 Four options are
 shuffled using `random.Random(42 + original_split_row_index)`, matching official
