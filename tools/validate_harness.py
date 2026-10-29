@@ -49,9 +49,17 @@ DOCUMENTATION_ONLY = ("notes",)
 _NOT_SOURCE = (".git", "__pycache__", "_harnessgrad", "node_modules", ".state")
 
 
+def _resolve(path: Path) -> Path:
+    """Normalize old pathlib's loop RuntimeError into a refused input."""
+    try:
+        return path.resolve(strict=True)
+    except RuntimeError as exc:  # Python 3.10-3.12; newer Python raises OSError.
+        raise ValueError(f'unsafe path {path}: {exc}') from exc
+
+
 def _owned(root: Path, path: Path) -> Path:
     """Resolve before reading; a lexical child may point outside the artifact."""
-    resolved = path.resolve(strict=True)
+    resolved = _resolve(path)
     if not resolved.is_relative_to(root):
         raise ValueError(f"unsafe path {path}: target is outside the harness")
     return resolved
@@ -96,7 +104,7 @@ def source_identity(root: Path) -> dict:
     cyclic links are refused. No input files are excluded (including Bun state).
     This is the submission contract's `path\\0content` hash, not a Git tree SHA.
     """
-    root = Path(root).resolve(strict=True)
+    root = _resolve(Path(root))
     files = _tree_files(root)
     digest = hashlib.sha256()
     for name, path in files:
@@ -163,16 +171,18 @@ def check(root: Path) -> list[dict]:
         problems.append(item)
 
     try:
-        root = Path(root).resolve(strict=True)
+        root = _resolve(Path(root))
     except (OSError, ValueError) as exc:
         return [{'code': 'manifest-missing', 'detail': f'harness directory could not be read: {exc}'}]
     man_path = root / "harness.json"
     try:
-        _owned(root, man_path)
+        owned_manifest = _owned(root, man_path)
     except ValueError as exc:
         return [{'code': 'unsafe-path', 'detail': str(exc), 'field': 'harness.json'}]
     except OSError as exc:
         return [{'code': 'manifest-missing', 'detail': f'no readable harness.json at {root}: {exc}'}]
+    if not owned_manifest.is_file():
+        return [{'code': 'manifest-invalid', 'detail': 'harness.json must be a regular file'}]
     try:
         man = json.loads(man_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:

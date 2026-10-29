@@ -168,6 +168,26 @@ def test_bad_files_are_refused_without_exception(tmp_path, kind):
     assert validator.check(source)
 
 
+@pytest.mark.parametrize('root_cycle', [False, True])
+def test_old_python_symlink_loop_errors_are_named_refusals(tmp_path, monkeypatch, root_cycle):
+    source = _harness(tmp_path)
+    cycle = (tmp_path/'root-cycle') if root_cycle else (source/'cycle')
+    cycle.symlink_to(cycle.name)
+    original = Path.resolve
+
+    def old_python(path, *args, **kwargs):
+        if path == cycle:
+            raise RuntimeError(f"Symlink loop from {path}")
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'resolve', old_python)
+    target = cycle if root_cycle else source
+    problems = validator.check(target)
+    assert problems and 'loop' in problems[0]['detail'].lower()
+    with pytest.raises((OSError, ValueError)):
+        validator.source_identity(target)
+
+
 def test_unreadable_manifest_is_a_problem(tmp_path, monkeypatch):
     source = _harness(tmp_path)
     real_open = Path.open
@@ -179,6 +199,44 @@ def test_unreadable_manifest_is_a_problem(tmp_path, monkeypatch):
 
     monkeypatch.setattr(Path, 'open', deny)
     assert any('denied' in p['detail'] for p in validator.check(source))
+
+
+@pytest.mark.parametrize('kind', ['directory', 'fifo'])
+def test_manifest_must_be_a_regular_file_before_it_is_read(tmp_path, monkeypatch, kind):
+    source = _harness(tmp_path)
+    path = source/'harness.json'
+    path.unlink()
+    if kind == 'directory':
+        path.mkdir()
+    else:
+        os.mkfifo(path)
+    original = Path.read_text
+
+    def guarded(target, *args, **kwargs):
+        assert target != path, 'attempted to read a non-regular manifest'
+        return original(target, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'read_text', guarded)
+    assert any(p['code'] == 'manifest-invalid' for p in validator.check(source))
+
+
+@pytest.mark.parametrize('overlap', ['source-is-workspace', 'work-in-source', 'runs-in-source'])
+def test_external_input_is_not_changed_by_overlapping_outputs(tmp_path, overlap):
+    if overlap == 'source-is-workspace':
+        source = _harness(tmp_path/'work/a1-test')
+        source = source.rename(source.with_name('workspace'))
+    else:
+        source = _harness(tmp_path)
+    expected = _digest(source)
+    argv = _argv(tmp_path, '--harness-path', str(source))
+    if overlap != 'source-is-workspace':
+        flag = '--work-root' if overlap == 'work-in-source' else '--runs-root'
+        argv[argv.index(flag)+1] = str(source/'output')
+    proc = subprocess.run([sys.executable, *argv], cwd=ROOT, capture_output=True, text=True,
+                          env={**os.environ,'HG_AGENT_BACKEND':'mock'}, timeout=120)
+    _refused(proc, 'overlap')
+    assert source.is_dir() and _digest(source) == expected
+    assert not (source/'output').exists()
 
 
 def test_source_parameters_are_mutually_exclusive(tmp_path):

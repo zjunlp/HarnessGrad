@@ -809,6 +809,13 @@ def _main(attempt: dict) -> int:
         # and independent of manifest strings that can contain path separators.
         if not args.run_id:
             args.run_id = f"external-{harness_source['sha256'][:12]}-{secrets.token_hex(4)}"
+        # Existing workspace cleanup must never remove or write into the input.
+        for output_root in (args.work_root, args.runs_root):
+            output = (Path(output_root) / args.run_id).resolve()
+            if output.is_relative_to(harness_src) or harness_src.is_relative_to(output):
+                print('refusing --harness-path: input and run/work output directories overlap',
+                      file=sys.stderr)
+                return 2
     else:
         harness_src = Path(__file__).parent / "base_harness" / args.harness
         if not harness_src.is_dir():
