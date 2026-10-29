@@ -97,3 +97,16 @@ def test_the_oldest_matching_round_is_found_by_its_number_not_its_position():
         {"decision": "no_change", "incumbent_round": 3}, curve, SHA_A, 1, has_manifest=True)
     assert point is curve[2]
     assert note is None
+
+
+def test_a_reused_measurement_is_not_a_trial_of_this_round():
+    """The tasks ran at the round the number came from, and `reused_from` says which.
+
+    Charging them here makes a free round look paid for, which is the one thing a cost
+    table has to get right for "the wrapper saved this many trials" to mean anything.
+    """
+    from harnessgrad.loops.mode_a import _trials_of
+
+    assert _trials_of({"reused_from": 0}, 100) == 0
+    assert _trials_of({"per_task": {"t": 1.0}}, 100) == 100
+    assert _trials_of(None, 100) == 0, "an unmeasured round spent nothing"
