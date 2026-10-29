@@ -299,6 +299,7 @@ harnessgrad_work/
 !/docs/test-suite.md
 !/docs/data-split-plan.md
 !/docs/dataset-splits.md
+!/docs/harness-submission-api.md
 # The split design is a decided methodology the report cites, not a note: it carries the
 # measured reuse graph (MuSiQue 2417 -> 544 components) and the sizing rule the study set
 # depends on. Tracked by this exception rather than by `git add -f`.
