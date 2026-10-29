@@ -12,11 +12,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -48,7 +49,65 @@ DOCUMENTATION_ONLY = ("notes",)
 _NOT_SOURCE = (".git", "__pycache__", "_harnessgrad", "node_modules", ".state")
 
 
-def _compile_problems(base: Path) -> list[str]:
+def _owned(root: Path, path: Path) -> Path:
+    """Resolve before reading; a lexical child may point outside the artifact."""
+    resolved = path.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ValueError(f"unsafe path {path}: target is outside the harness")
+    return resolved
+
+
+def _tree_files(root: Path, ignored=(), *, boundary: Path | None = None) -> list[tuple[str, Path]]:
+    """Logical relative names and owned files, including safe directory aliases.
+
+    Track ancestors, not a global visited set: two aliases are two input paths,
+    while a directory pointing to its ancestor is a cycle, not another subtree.
+    """
+    files: list[tuple[str, Path]] = []
+    boundary = boundary if boundary is not None else root
+
+    def walk(directory: Path, relative: Path, ancestors: frozenset):
+        owned = _owned(boundary, directory)
+        if owned in ancestors:
+            raise ValueError(f"unsafe path {relative}: directory link cycle")
+        for child in owned.iterdir():
+            if child.name in ignored:
+                continue
+            name = relative / child.name
+            target = _owned(boundary, child)
+            if target.is_dir():
+                walk(target, name, ancestors | {owned})
+            elif target.is_file():
+                files.append((name.as_posix(), target))
+            else:
+                raise ValueError(f"unsafe path {name}: not a regular file or directory")
+
+    walk(root, Path(), frozenset())
+    return sorted(files, key=lambda item: item[0].encode('utf-8'))
+
+
+def source_identity(root: Path) -> dict:
+    """SHA-256 of the input tree, before staging creates Git/runtime state.
+
+    Sort regular-file paths by their relative POSIX UTF-8 bytes. For each path,
+    update SHA-256 with path bytes, one NUL byte, then the original file bytes.
+    `entries` counts these file paths; directories contribute no entry. Safe
+    in-tree links use their logical path and target bytes; escaping, broken or
+    cyclic links are refused. No input files are excluded (including Bun state).
+    This is the submission contract's `path\\0content` hash, not a Git tree SHA.
+    """
+    root = Path(root).resolve(strict=True)
+    files = _tree_files(root)
+    digest = hashlib.sha256()
+    for name, path in files:
+        digest.update(name.encode('utf-8') + b'\0')
+        with path.open('rb') as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b''):
+                digest.update(chunk)
+    return {'sha256': digest.hexdigest(), 'entries': len(files)}
+
+
+def _compile_problems(base: Path, ignored=_NOT_SOURCE, *, boundary: Path | None = None) -> list[str]:
     """Python in this harness that does not compile.
 
     **Not part of `smoke`.** `smoke` runs the harness, and the candidate path turns it
@@ -70,9 +129,9 @@ def _compile_problems(base: Path) -> list[str]:
     costs no subprocess and cannot execute anything.
     """
     problems: list[str] = []
-    for path in sorted(base.rglob("*.py")):
-        rel = path.relative_to(base)
-        if any(part in _NOT_SOURCE for part in rel.parts):
+    for name, path in _tree_files(base, ignored, boundary=boundary):
+        rel = Path(name)
+        if rel.suffix != '.py':
             continue
         try:
             source = path.read_text(encoding="utf-8")
@@ -89,80 +148,125 @@ def _compile_problems(base: Path) -> list[str]:
     return problems
 
 
-def validate(root: Path, smoke: bool) -> list[str]:
-    errs: list[str] = []
+def check(root: Path) -> list[dict]:
+    """Static problems shared by the CLI, driver and submission gate.
 
+    No code is imported/executed and nothing is printed. The legacy `validate`
+    adapter below retains string diagnostics for existing candidate callers.
+    """
+    problems: list[dict] = []
+
+    def problem(code, detail, field=None):
+        item = {'code': code, 'detail': detail}
+        if field is not None:
+            item['field'] = field
+        problems.append(item)
+
+    try:
+        root = Path(root).resolve(strict=True)
+    except (OSError, ValueError) as exc:
+        return [{'code': 'manifest-missing', 'detail': f'harness directory could not be read: {exc}'}]
     man_path = root / "harness.json"
-    if not man_path.exists():
-        return [f"no harness.json at {root} (required: F1 in "
-                "docs/writing_a_harness.md)"]
+    try:
+        _owned(root, man_path)
+    except ValueError as exc:
+        return [{'code': 'unsafe-path', 'detail': str(exc), 'field': 'harness.json'}]
+    except OSError as exc:
+        return [{'code': 'manifest-missing', 'detail': f'no readable harness.json at {root}: {exc}'}]
     try:
         man = json.loads(man_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        return [f"harness.json is not valid JSON: {exc}"]
+        return [{'code': 'manifest-invalid', 'detail': f'harness.json is not valid JSON: {exc}'}]
     except (OSError, UnicodeError) as exc:
-        return [f"harness.json could not be read as UTF-8 JSON: {exc}"]
+        return [{'code': 'manifest-invalid', 'detail': f'harness.json could not be read as UTF-8 JSON: {exc}'}]
     if not isinstance(man, dict):
-        return ["harness.json must contain a JSON object"]
+        return [{'code': 'manifest-invalid', 'detail': 'harness.json must contain a JSON object'}]
 
     for field in REQUIRED:
-        if not man.get(field):
-            errs.append(f"harness.json is missing required field {field!r}")
-
-    unknown = [k for k in man if k not in KNOWN and not k.startswith("_")]
-    if unknown:
-        # A warning rather than an error: extra keys are how a harness carries
-        # its own configuration, and the platform ignores them.
-        print(f"  note: extra manifest keys ignored by the platform: {unknown}")
+        if not isinstance(man.get(field), str) or not man[field].strip():
+            problem('manifest-invalid', f"harness.json field {field!r} must be a non-empty string", field)
 
     backend = man.get("backend", "cli")
     if backend != "cli":
-        errs.append(f"backend {backend!r} is not implemented; only 'cli' is")
+        problem('backend-unsupported', f"backend {backend!r} is not implemented; only 'cli' is", 'backend')
 
-    # The harness may be a subdirectory of a larger repo.
-    #
-    # Both of these are type-checked rather than trusted: a validator that raises on the
-    # input it exists to reject is worse than no validator, because the caller gets a
-    # traceback instead of a reason. Measured: `"entrypoint": ["python", "agent.py"]` --
-    # the argv shape the *old* method design used -- reached `Path / list` and came out as
-    # `TypeError: unsupported operand type(s) for /`, thirteen call sites deep.
+    def declared_path(base, value, field):
+        if not isinstance(value, str) or not value:
+            problem('manifest-invalid', f'`{field}` must be a non-empty string', field)
+            return None
+        if Path(value).is_absolute() or PureWindowsPath(value).drive or '..' in Path(value).parts:
+            problem('unsafe-path', f'`{field}` must be a relative path inside the harness: {value!r}', field)
+            return None
+        try:
+            return _owned(root, base / value)
+        except ValueError as exc:
+            problem('unsafe-path', str(exc), field)
+        except OSError as exc:
+            code = {'entrypoint': 'entrypoint-missing', 'install': 'install-missing'}.get(field, 'manifest-invalid')
+            problem(code, f'{field} {value!r} could not be read: {exc}', field)
+        return None
+
     sub = man.get("path", ".")
-    if not isinstance(sub, str):
-        errs.append(f"`path` must be a string, not {type(sub).__name__}")
-        sub = "."
-    base = root / sub
+    base = declared_path(root, sub, 'path')
+    if base is not None and not base.is_dir():
+        problem('manifest-invalid', '`path` must name a directory', 'path')
+        base = None
     declared = man.get("entrypoint")
-    entry = None
-    if declared is not None:
-        if not isinstance(declared, str):
-            errs.append(
-                "`entrypoint` must be a string naming one file (INTERFACE.md §1.1), "
-                f"not {type(declared).__name__}: {declared!r}")
-        else:
-            entry = base / declared
-            if not entry.is_file():
-                errs.append(f"entrypoint {declared!r} not found under {sub!r}")
+    if base is not None and isinstance(declared, str) and declared:
+        entry = declared_path(base, declared, 'entrypoint')
+        if entry is not None and not entry.is_file():
+            problem('entrypoint-missing', f'entrypoint {declared!r} is not a regular file', 'entrypoint')
+
+    install = man.get('install')
+    if base is not None and install is not None:
+        entry = declared_path(base, install, 'install')
+        if entry is not None and not entry.is_file():
+            problem('install-missing', f'install file {install!r} is not a regular file', 'install')
+
+    kinds = man.get('env_kinds')
+    if kinds is not None and (not isinstance(kinds, list) or any(not isinstance(k, str) or not k for k in kinds)):
+        problem('manifest-invalid', '`env_kinds` must be a list of non-empty strings', 'env_kinds')
 
     role = man.get("role", "harness")
     if role not in ROLES:
-        errs.append(f"role {role!r} is not one of {list(ROLES)}")
+        problem('manifest-invalid', f"role {role!r} is not one of {list(ROLES)}", 'role')
 
-    from eval.ckpt.source_tree import runtime_spec
+    from eval.ckpt.source_tree import BUN_GENERATED, runtime_spec
     try:
-        runtime_spec(root)
-    except ValueError as exc:
-        errs.append(str(exc))
+        runtime = runtime_spec(root)
+    except (OSError, ValueError) as exc:
+        problem('manifest-invalid', str(exc), 'runtime')
+        runtime = None
+    ignored = BUN_GENERATED if runtime else _NOT_SOURCE
+    try:
+        # Check links throughout the source, not only the declared entrypoint.
+        _tree_files(root, ignored)
+        if base is not None:
+            for detail in _compile_problems(base, ignored, boundary=root):
+                problem('manifest-invalid', detail)
+    except (OSError, ValueError) as exc:
+        problem('unsafe-path', f'harness source could not be read safely: {exc}')
+    return problems
 
-    # Independent of `smoke`, and that is the whole point: see `_compile_problems`.
-    errs.extend(_compile_problems(base))
 
-    install = man.get("install")
-    if install and not (base / install).is_file():
-        errs.append(f"install file {install!r} not found under "
-                    f"{man.get('path', '.')}")
-
-    if smoke and entry and entry.is_file() and not errs:
-        errs.extend(_smoke(base, entry))
+def validate(root: Path, smoke: bool) -> list[str]:
+    """Compatibility adapter for existing CLI and candidate string diagnostics."""
+    root = Path(root)
+    errs = [p['detail'] for p in check(root)]
+    if errs:
+        return errs
+    try:
+        man = json.loads((root/'harness.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        return [f'harness.json could not be read as UTF-8 JSON: {exc}']
+    if not isinstance(man, dict):
+        return ['harness.json must contain a JSON object']
+    unknown = [k for k in man if k not in KNOWN and not k.startswith('_')]
+    if unknown:
+        print(f"  note: extra manifest keys ignored by the platform: {unknown}")
+    if smoke:
+        base = root / man.get('path', '.')
+        errs.extend(_smoke(base, base / man['entrypoint']))
 
     return errs
 

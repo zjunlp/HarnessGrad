@@ -24,6 +24,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -31,7 +32,9 @@ import data.scaffolds.registry as datasets
 from tools.improver import forbidden_reason
 from tools.improver import load_config as load_improvers
 from tools.improver import resolve as resolve_improver
+from tools.validate_harness import check as check_harness, source_identity
 from eval.ckpt.git_state import STATE_DIRNAME, commit_state, manifest, stage_workspace
+from eval.ckpt.source_tree import copy_harness
 from eval.observe.console import CONSOLE as console
 from eval.run.metrics import select_task_set
 from eval.run import metrics
@@ -507,6 +510,24 @@ def describe_model() -> dict:
 
 # ----------------------------------------------------------------- main ---
 
+def _external_source_snapshot(source: Path, target: Path) -> None:
+    """Own the source before Git runs; never adopt an external Git config/hooks.
+
+    Rebase owned links onto this copy so absolute links cannot keep reaching the
+    submitted directory after staging. The input directory itself is untouched.
+    """
+    copy_harness(source, target, symlinks=True, ignore=shutil.ignore_patterns('.git'))
+    for path in target.rglob('*'):
+        if path.is_symlink():
+            origin = source / path.relative_to(target)
+            owned = origin.resolve(strict=True)
+            if not owned.is_relative_to(source):
+                raise ValueError(f'unsafe source link {origin}: target is outside the harness')
+            path.unlink()
+            path.symlink_to(os.path.relpath(target / owned.relative_to(source), path.parent),
+                            target_is_directory=owned.is_dir())
+
+
 def _config_help() -> str:
     """The configuration surface, rendered for `--help`.
 
@@ -536,7 +557,10 @@ def _main(attempt: dict) -> int:
             "blocked and invalid/unmeasured, never an ordinary zero score.\n"
             "Synthetic checks do not authorize production diagnostics or H0."),
         epilog=_config_help())
-    ap.add_argument("--harness", default="loop")
+    source_args = ap.add_mutually_exclusive_group()
+    source_args.add_argument("--harness", default="loop")
+    source_args.add_argument("--harness-path", metavar="DIR",
+                             help="external harness directory (absolute path)")
     ap.add_argument("--dataset", default="demo")
     ap.add_argument("--sampling", default="diagnostic",
                     help="diagnostic (one task, default) | pilot_10pct (temporary rerun: "
@@ -749,6 +773,10 @@ def _main(attempt: dict) -> int:
 
     runs_root = Path(args.runs_root)
     eval_from = None
+    harness_source = None
+    if args.harness_path is not None and args.side == 'eval':
+        print('--harness-path on --side eval is not supported yet; use --from-run', file=sys.stderr)
+        return 2
     if args.side == "eval":
         # The "harness" of an eval run is a state a train run produced. Pointing
         # `harness_src` at it before anything else means staging, the manifest, the
@@ -760,6 +788,27 @@ def _main(attempt: dict) -> int:
             print(exc, file=sys.stderr)
             return 2
         eval_from = _eval_from_record(runs_root, args.from_run, _round)
+    elif args.harness_path is not None:
+        harness_src = Path(args.harness_path)
+        if not harness_src.is_absolute():
+            print('--harness-path must be an absolute directory', file=sys.stderr)
+            return 2
+        problems = check_harness(harness_src)
+        if problems:
+            for problem in problems:
+                print(f"refusing --harness-path: {problem['detail']}", file=sys.stderr)
+            return 2
+        try:
+            harness_src = harness_src.resolve(strict=True)
+            harness_source = source_identity(harness_src)
+            args.harness = manifest(harness_src)['name']
+        except (OSError, ValueError) as exc:
+            print(f'refusing --harness-path: {exc}', file=sys.stderr)
+            return 2
+        # A display name is not a directory name. Keep external default IDs fresh
+        # and independent of manifest strings that can contain path separators.
+        if not args.run_id:
+            args.run_id = f"external-{harness_source['sha256'][:12]}-{secrets.token_hex(4)}"
     else:
         harness_src = Path(__file__).parent / "base_harness" / args.harness
         if not harness_src.is_dir():
@@ -1316,6 +1365,7 @@ def _main(attempt: dict) -> int:
 
     _write_run_meta(
         run_dir, run_id=run_id, mode=mode, harness=args.harness,
+        harness_source=harness_source,
         dataset=args.dataset, sampling_policy=args.sampling,
         enforcement=enforcement,
         diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
@@ -1401,7 +1451,25 @@ def _main(attempt: dict) -> int:
         fresh=not getattr(args, "resume", False),
     )
 
-    stage_workspace(harness_src, work)
+    if harness_source is not None:
+        try:
+            with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
+                snapshot = Path(staging) / 'source'
+                _external_source_snapshot(harness_src, snapshot)
+                snapshot_identity = source_identity(snapshot)
+                stage_workspace(snapshot, work)
+                if source_identity(snapshot) != snapshot_identity:
+                    raise ValueError('harness source snapshot changed during staging')
+            if source_identity(harness_src) != harness_source:
+                raise ValueError('harness source changed during staging; use a stable input directory')
+            problems = check_harness(work)
+            if problems:
+                raise ValueError('; '.join(p['detail'] for p in problems))
+        except (OSError, ValueError) as exc:
+            print(f'refusing --harness-path: {exc}', file=sys.stderr)
+            return 2
+    else:
+        stage_workspace(harness_src, work)
     man = manifest(work)
     # `_check_env_kinds` already ran, against this same manifest read from the source --
     # see the note beside `envs, env_problem = _resolve_envs(envs)` for why it has to be
