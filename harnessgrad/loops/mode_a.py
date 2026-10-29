@@ -122,6 +122,54 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
     return None
 
 
+def _declared_no_change(step: dict, curve: list[dict], sha: str, trials: int, *,
+                        has_manifest: bool) -> tuple[dict | None, dict | None]:
+    """The point a step's `decision: "no_change"` claim is allowed to reuse, and the note.
+
+    A method may end a round by saying the candidate *is* the incumbent. The platform does
+    not take that on faith -- a wrong claim would put a number on the curve for a tree
+    nobody measured -- so three things are checked before any reuse:
+
+    * the round it names exists in this curve;
+    * that round's tree is byte-identical to the one just committed (`harness_sha` is a
+      content address, so equality means the same files, not the same commit message);
+    * the measurement it would reuse used the same `trials`, because one sample is not the
+      mean of three.
+
+    Returns `(point, None)` when the claim holds and `(None, note)` when it does not. The
+    note is recorded on the round's point: a method that claims *no change* while handing
+    over a changed tree is a fact about that method, and silencing it would leave a curve
+    that looks like the method stopped when it did not.
+    """
+    declared = step.get("decision")
+    if declared != "no_change":
+        return None, None
+    if not has_manifest:
+        return None, {"decision": declared,
+                      "ignored": "the candidate is not a harness the platform can measure"}
+    claimed = step.get("incumbent_round")
+    try:
+        claimed_round = int(claimed)
+    except (TypeError, ValueError):
+        return None, {"decision": declared,
+                      "ignored": f"incumbent_round {claimed!r} is not a round number"}
+    prior = next((q for q in curve if q.get("round") == claimed_round), None)
+    if prior is None:
+        return None, {"decision": declared,
+                      "ignored": f"round {claimed_round} is not in this curve"}
+    prior_sha = (prior.get("identity") or {}).get("harness_sha")
+    if prior_sha != sha:
+        return None, {"decision": declared, "kept_round": claimed_round,
+                      "ignored": (f"the candidate is not byte-identical to round "
+                                  f"{claimed_round} ({sha[:12]} against "
+                                  f"{str(prior_sha)[:12]})")}
+    if (prior.get("sampling") or {}).get("trials", trials) != trials:
+        return None, {"decision": declared, "kept_round": claimed_round,
+                      "ignored": (f"round {claimed_round} was measured with a different "
+                                  f"trials count")}
+    return prior, None
+
+
 def _copy_round_traces(run_dir: Path, source_round: int, target_round: int) -> None:
     """Give the reused round its predecessor's traces, so the record stays complete.
 
@@ -563,8 +611,23 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # is the most expensive way to say "no change". The point is still written -- the
         # round happened, the method's budget moves, and the curve keeps its shape -- but
         # it carries `reused_from` and the same per-task scores instead of a fresh sample.
-        prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
-                       if (has_manifest and getattr(args, "reuse_identical", False)) else None)
+        # **A round the method decided not to measure.** Its reply may declare
+        # `decision: "no_change"` -- "this candidate is the incumbent". The claim is
+        # checked rather than trusted (`_declared_no_change`), and when it holds the round
+        # reuses that round's measurement instead of spending a task-set run. Same record
+        # shape as `--reuse-identical`, but the trigger is the method's own declaration, so
+        # two arms of one comparison do not differ by a command-line option.
+        declared_point, declaration = _declared_no_change(
+            step, curve, sha, args.trials, has_manifest=has_manifest)
+        if declaration is not None:
+            console.note(
+                f"round {r}: the method declared no change, but {declaration['ignored']}; "
+                f"measuring the candidate instead", level="warn")
+        prior_point = declared_point
+        if prior_point is None:
+            prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
+                           if (has_manifest and getattr(args, "reuse_identical", False))
+                           else None)
         if prior_point is not None:
             reused_from = prior_point.get("round")
             _copy_round_traces(run_dir, reused_from, r)
@@ -663,6 +726,16 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if (res or {}).get("reused_from") is not None:
             point["reused_from"] = res["reused_from"]
             point["reused_reason"] = "candidate content identical to an already-measured state"
+        if declared_point is not None:
+            # Who ended this round, and why. `reused_from` alone says the number came from
+            # an earlier measurement; it does not say the *method* asked for that, which is
+            # the difference between a cache hit and a stop rule.
+            point["decision"] = "no_change"
+            point["reused_reason"] = (
+                f"the method declared no change; the candidate is byte-identical to round "
+                f"{declared_point.get('round')}")
+        if declaration is not None:
+            point["declaration_ignored"] = declaration
         # **The shape of the submission this step came from.** `steps_in_submission > 1`
         # means the method handed over a batch and therefore saw no score between these
         # states -- the one thing that separates "used the feedback" from "guessed a
