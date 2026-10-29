@@ -173,3 +173,64 @@ def test_formal_round_preserves_public_channel_and_cli_dispatch(tmp_path, monkey
              {"task_id": "eval", "goal": "PRIVATE_EVAL_GOAL"}],
             ["train"], None, {}, {}, {"wall_clock_s": 0, "generation_tokens": 0},
             train_ids=["train"], improver=improver)
+
+
+def _bun_candidate(root, source_name="opencode"):
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "harness.json").write_text(json.dumps({
+        "name": "opencode-agent", "version": "0.1.0", "entrypoint": "agent.py",
+        "backend": "cli",
+        "runtime": {"kind": "bun", "source": source_name,
+                    "entrypoint": "packages/cli/src/index.ts", "package": "@opencode/cli"},
+    }))
+    (root / "agent.py").write_text("raise SystemExit(0)\n")
+    return root
+
+
+def _external_source(base, source_name="opencode"):
+    source = base / source_name
+    (source / "packages/cli/src").mkdir(parents=True, exist_ok=True)
+    (source / "packages/cli/src/index.ts").write_text("// entry\n")
+    return source
+
+
+def test_a_declared_external_bun_source_is_admitted(tmp_path):
+    """A harness may name its source outside the candidate, through `runtime_paths`.
+
+    `opencode` is a 224 MB monorepo with 4,689 packages. Requiring it inside the candidate
+    would put 224 MB into every `state_after_round<N>/` and into every content address, so the
+    rule is "inside the candidate, or declared in the manifest" -- and declared is executable:
+    the platform binds exactly the paths a manifest names.
+    """
+    from eval.containers import bun_runtime
+
+    external = _external_source(tmp_path / "prior-art")
+    candidate = _bun_candidate(tmp_path / "candidate")
+    manifest = json.loads((candidate / "harness.json").read_text())
+    manifest["runtime_paths"] = [str(external)]
+    (candidate / "harness.json").write_text(json.dumps(manifest))
+
+    spec, source, entry, is_external = bun_runtime.owned_source(candidate)
+    assert is_external is True
+    assert source == external.resolve()
+    assert entry == (external / "packages/cli/src/index.ts").resolve()
+
+
+def test_an_undeclared_external_bun_source_is_refused(tmp_path):
+    from eval.containers import bun_runtime
+
+    _external_source(tmp_path / "elsewhere")
+    candidate = _bun_candidate(tmp_path / "candidate")
+    with pytest.raises(bun_runtime.RuntimeUnavailable) as refused:
+        bun_runtime.owned_source(candidate)
+    assert "runtime_paths" in str(refused.value)
+
+
+def test_a_source_inside_the_candidate_is_still_owned(tmp_path):
+    from eval.containers import bun_runtime
+
+    candidate = _bun_candidate(tmp_path / "candidate")
+    _external_source(candidate, "opencode")
+    spec, source, entry, is_external = bun_runtime.owned_source(candidate)
+    assert is_external is False
+    assert source.is_relative_to(candidate.resolve())
