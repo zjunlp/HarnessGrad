@@ -20,6 +20,60 @@ class RoundInspected(Exception):
     """Stop before any candidate measurement or external method execution."""
 
 
+def test_generated_bun_state_is_filtered_before_candidate_validation(tmp_path, monkeypatch):
+    from eval.containers import bun_runtime
+
+    work = tmp_path / "work"
+    (work / "engine").mkdir(parents=True)
+    manifest = {"name": "probe", "version": "1", "entrypoint": "agent.py",
+                "runtime": {"kind": "bun", "source": "engine",
+                            "entrypoint": "main.ts", "package": "probe"}}
+    (work / "harness.json").write_text(json.dumps(manifest))
+    (work / "agent.py").write_text("print('source only')\n")
+    (work / "engine/main.ts").write_text("export const version = 0;\n")
+    init_repo(work)
+    sha = commit_state(work, "source")
+    candidate = tmp_path / "candidate"
+    copy_harness(work, candidate)
+    (candidate / "engine/main.ts").write_text("export const version = 1;\n")
+    generated = candidate / "engine/.opencode-state/broken.py"
+    generated.parent.mkdir()
+    generated.write_text("def broken(:\n")
+    # Only the external Bun parser process is replaced. Source validation,
+    # runtime declarations, copying, commits and the measurement gate stay real.
+    monkeypatch.setattr(bun_runtime, "runtime_settings",
+                        lambda: (tmp_path / "bun", tmp_path / "cache"))
+    monkeypatch.setattr(bun_runtime, "_run", lambda *a, **kw: '{"ok":true}')
+    monkeypatch.setenv("HARNESSGRAD_SEED", "1")
+
+    def submit(work_arg, argv, request, *args, **kwargs):
+        Path(request["trajectory_out"]).write_text(json.dumps({
+            "steps": [{"harness_dir": str(candidate), "label": "filtered source"}]}))
+        return {"changed": True}
+
+    def inspect_evaluation(copied, *args, **kwargs):
+        assert not (copied / "engine/.opencode-state").exists()
+        assert generated.is_file()
+        assert (copied / "engine/main.ts").read_text() == "export const version = 1;\n"
+        raise RoundInspected
+
+    monkeypatch.setattr(mode_a, "_call_method", submit)
+    monkeypatch.setattr(mode_a, "evaluate", inspect_evaluation)
+    args = SimpleNamespace(method_entrypoint=["unused"], runs_root=tmp_path / "runs",
+                           method_timeout=1, sandbox=False, rounds=1,
+                           jobs=1, trials=1, dataset="demo", baseline=None,
+                           harness="probe", side="train", sampling="all",
+                           work_root=tmp_path)
+    point = {"round": 0, "score": 0.0, "score_kind": "train",
+             "identity": {"harness_sha": sha}}
+    with pytest.raises(RoundInspected):
+        mode_a._run_mode_a(
+            args, work, manifest, "filtered", "A", [point], sha,
+            {"traces": {}}, [{"task_id": "train", "goal": "public goal"}],
+            ["train"], None, {}, {}, {"wall_clock_s": 0, "generation_tokens": 0},
+            train_ids=["train"])
+
+
 @pytest.mark.parametrize("bun", [True, False], ids=["bun", "python"])
 def test_formal_round_preserves_public_channel_and_cli_dispatch(tmp_path, monkeypatch, bun):
     """Dropping the round channel must fail before a method can reach an endpoint."""

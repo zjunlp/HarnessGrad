@@ -12,7 +12,7 @@ failed step rather than drawn on the curve.
 
 from __future__ import annotations
 
-from eval.ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness, copy_rejected_harness, runtime_spec
 
 from pathlib import Path
 import json
@@ -159,7 +159,8 @@ def _keep_endpoint_records(source: Path, run_dir: Path, round_no: int) -> None:
     shutil.rmtree(source, ignore_errors=True)
 
 
-def _copy_method_round_input(work: Path, base_dir: Path) -> None:
+def _copy_method_round_input(work: Path, base_dir: Path, *,
+                             rejected_candidate: bool = False) -> None:
     """Copy source plus the freshly staged public channel for this method call.
 
     Candidate snapshots deliberately exclude the channel for Bun. A round input has
@@ -167,7 +168,8 @@ def _copy_method_round_input(work: Path, base_dir: Path) -> None:
     evidence as well as source. Copy that channel separately, preserving the source
     snapshot rules and keeping archive paths inside the method's readable input.
     """
-    copy_harness(work, base_dir, ignore=shutil.ignore_patterns(".git", "_harnessgrad"))
+    copier = copy_rejected_harness if rejected_candidate else copy_harness
+    copier(work, base_dir, ignore=shutil.ignore_patterns(".git", "_harnessgrad"))
     channel = base_dir / "_harnessgrad"
     shutil.copytree(work / "_harnessgrad", channel, symlinks=True)
     index_path = channel / "states" / "index.json"
@@ -294,7 +296,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         base_dir = (method_root / f"round{r}_base").resolve()
         if base_dir.exists():
             shutil.rmtree(base_dir)
-        _copy_method_round_input(work, base_dir)
+        _copy_method_round_input(work, base_dir,
+                                 rejected_candidate=bool(prior.get("unmeasured")))
 
         method_ws = (method_root / f"round{r}_ws").resolve()
         method_ws.mkdir(parents=True, exist_ok=True)
@@ -335,7 +338,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 "improver": _improver_identity(improver),
             }, args.method_timeout, sandboxed=args.sandbox,
                 scratch=method_root, cwd=method_ws, readonly=(base_dir,),
-                runtime=_improver_runtime(improver), improver=improver)
+                runtime=_improver_runtime(improver), improver=improver,
+                rejected_candidate=bool(prior.get("unmeasured")))
         gen_s = time.time() - t_gen
         cumulative["wall_clock_s"] += gen_s
         cumulative["generation_tokens"] += int(reply.get("generation_tokens") or 0)
@@ -516,13 +520,22 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # final workspace.
         shutil.rmtree(work / "_harnessgrad", ignore_errors=True)
 
-        # Swap the candidate in and measure it as the platform's own.
+        # Check before replacing the current tree: strict source copying parses
+        # the runtime declaration and would raise before a malformed candidate
+        # reached the platform's refusal record. Rejected trees are evidence only.
+        candidate_problems = []
+        try:
+            runtime_spec(Path(src))
+        except ValueError as exc:
+            candidate_problems.append(str(exc))
+        copier = copy_rejected_harness if candidate_problems else copy_harness
+        # Swap the candidate in so its actual source and diff can be recorded.
         reset_hard(work, h0_sha)
         for child in list(work.iterdir()):
             if child.name == ".git":
                 continue
             shutil.rmtree(child) if child.is_dir() else child.unlink()
-        copy_harness(Path(src), work, dirs_exist_ok=True)
+        copier(Path(src), work, dirs_exist_ok=True)
         # **The channel is never part of a measured tree.** `src` is method-supplied, so
         # it can name anything -- and on the error path `editor.fail` names the pristine
         # `base_dir`, which is a copy of `work` taken *after* staging and therefore
@@ -540,7 +553,11 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # harness is recorded as **unmeasured** rather than scored: there is no
         # measurement to report, and a `0.000` here would be indistinguishable from a
         # harness that ran and was weak (§2.5.7's distinction, one level up).
-        candidate_problems = candidate.validate(work, base_manifest=man)
+        # Validate the copied source, after runtime-generated state was filtered.
+        # A runtime declaration rejected before copying remains a named refusal.
+        for problem in candidate.validate(work, base_manifest=man):
+            if problem not in candidate_problems:
+                candidate_problems.append(problem)
         has_manifest = not candidate_problems
         sha = commit_state(work, f"round {r}: {step.get('label', 'method step')}")
         diff = _save_round_diff(run_dir, r, work,
@@ -556,7 +573,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # The method's claim is kept beside it (`files_claimed`) rather than dropped: a
         # method that names a file it did not change is itself a finding.
         changed_files = [f["path"] for f in (diff.get("files") or [])]
-        _save_round_state(run_dir, r, work)
+        _save_round_state(run_dir, r, work, rejected_candidate=not has_manifest)
         # **An identical candidate costs nothing to measure.** A method without an early
         # stop that has nothing left to change still has to spend its remaining rounds,
         # and re-running 100 task evaluations to learn a number the record already holds
