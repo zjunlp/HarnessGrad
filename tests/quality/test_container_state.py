@@ -502,7 +502,7 @@ def test_every_scratch_directory_the_environment_names_exists():
     "/scratch-XXXXXX")` needs the *parent* to be there, and the `ENOENT` it gets instead is
     a failure the platform caused.
 
-    Measured 2026-10-06 on the `dsh_agent` harness: DSH's spill store died on exactly that
+    Measured 2026-10-06 on the `deepseek-harness` harness: DSH's spill store died on exactly that
     `mkdtemp` and took the whole plugin tree with it, reporting `dsh: plugin tree failed to
     load: ... failed to apply loader entry spill-local` -- naming neither `TMPDIR` nor the
     platform, at the end of a four-layer hunt through a silent `catch {}`.

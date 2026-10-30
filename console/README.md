@@ -262,7 +262,7 @@ python3 server.py --port 4460
 
 `base_harness/*/` 的清单（原来是技能 A 第 1 步的候选起点，那个卡已删；现在版本屏的
 基线起点只读 `base_harness/loop`）：`loop`、`loop_plain`、
-`loop_rrsi_parse`、`dsh_agent`、`cli_agent`、`codex_agent`、`oracle`）。
+`loop_rrsi_parse`、`deepseek-harness`、`cli_agent`、`codex`、`oracle`）。
 只读目录和 `harness.json`，不复制、不执行。
 
 ```json

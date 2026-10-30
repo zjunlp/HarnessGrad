@@ -489,7 +489,7 @@ def base_harnesses() -> list[str]:
     """The task harnesses this console may launch.
 
     `base_harness/` also holds the platform's own probes and the improver agents
-    (`cli_agent`, `codex_agent`, `dsh_agent`, `oracle`, …): they are harnesses, but they are not
+    (`cli_agent`, `codex`, `deepseek-harness`, `oracle`, …): they are harnesses, but they are not
     task harnesses, and offering them in the launcher invited a run whose baseline was an
     improver. The launchable set is declared in `base_harness/launchable.json`; when that file is
     missing the console falls back to every directory, which keeps an older checkout usable.
