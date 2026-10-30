@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ENTRY = ROOT / "base_harness/opencode_agent/agent.py"
+ENTRY = ROOT / "base_harness/opencode/agent.py"
 
 
 def event(kind, message="m1", **part):

@@ -230,7 +230,7 @@ def _loader_probe(home: Path, env: dict) -> dict:
 #: the developer's own `settings.yaml` present the same patch is silently beaten by it --
 #: which is why the container, whose `HOME` starts empty, is the case that matters.
 _MODEL_PATCH = """\
-# Written by the harnessgrad `dsh_agent` adapter. Do not edit: it is rebuilt per task from
+# Written by the harnessgrad `deepseek-harness` adapter. Do not edit: it is rebuilt per task from
 # HG_AGENT_MODEL and HG_AGENT_BASE_URL so the recorded model is the model that ran.
 - id: llm-pi-ai
   config:

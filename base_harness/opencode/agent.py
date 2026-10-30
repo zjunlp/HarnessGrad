@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OpenCode source CLI -> HarnessGrad task/answer/trace contract.
 
-Follows codex_agent's per-task process/config pattern. Unlike a chat-summary wrapper,
+Follows codex's per-task process/config pattern. Unlike a chat-summary wrapper,
 preserves task-created answer.txt, JSON submissions, files and environment state.
 No dependency installation, dataset lookup, grading, or improver invocation occurs here.
 """

@@ -47,7 +47,7 @@ def _declared_roots(repo) -> list[Path]:
     A bun candidate normally carries its own source, and the platform's rule has been that it
     must -- `state_after_round<N>/` is a copy of the tree, and a candidate whose source lives
     somewhere else is not the artifact anyone measured. That rule broke on real harnesses:
-    `opencode_agent` needs the opencode monorepo, 224 MB and 4,689 packages, and every round
+    `opencode` needs the opencode monorepo, 224 MB and 4,689 packages, and every round
     would copy it into the run record and re-hash it.
 
     So a harness may now **declare** its source outside the candidate: the path goes in the

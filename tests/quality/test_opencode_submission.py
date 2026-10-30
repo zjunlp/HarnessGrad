@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.fixture
 def adapter():
     spec = importlib.util.spec_from_file_location(
-        "opencode_submission_adapter", ROOT / "base_harness/opencode_agent/agent.py")
+        "opencode_submission_adapter", ROOT / "base_harness/opencode/agent.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

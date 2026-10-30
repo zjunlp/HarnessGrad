@@ -106,7 +106,7 @@ def test_evaluate_accepts_real_bun_worker_aggregate_and_diagnostics(group, monke
 
 
 def opencode_worker_usage():
-    from base_harness.opencode_agent.agent import EventCollector
+    from base_harness.opencode.agent import EventCollector
     collector = EventCollector(lambda record: None)
     collector.session_tokens = {"input": 10, "output": 3, "reasoning": 1,
                                 "cache": {"read": 4, "write": 2}}

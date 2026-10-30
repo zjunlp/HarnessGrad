@@ -477,7 +477,7 @@ def writable_env_dirs(task_mount: str) -> tuple[str, ...]:
     needs the *parent* to be there, and `ENOENT` when it is not is a failure caused by the
     platform, not by the harness.
 
-    Measured 2026-10-06, on the `dsh_agent` harness: DSH's spill store died on exactly that
+    Measured 2026-10-06, on the `deepseek-harness` harness: DSH's spill store died on exactly that
     `mkdtemp` and took its whole plugin tree with it, reporting `dsh: plugin tree failed to
     load: ... failed to apply loader entry spill-local` -- a message naming neither `TMPDIR`
     nor this module, at the end of a four-layer hunt. Returning the list instead of doing
