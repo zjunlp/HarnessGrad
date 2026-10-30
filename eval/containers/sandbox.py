@@ -599,6 +599,75 @@ def envelope(*, limits: dict | None = None) -> dict:
     return {"limits": limits, **_ENVELOPE_CACHE[key]}
 
 
+# --- The userspace record -------------------------------------------------------
+#
+# An `exec` point is pinned by `env.image_digest`: two points from two images are two
+# quantities, and the record says which. A `files` point had `image_digest: null` and
+# nothing else that could differ, so a run on a new kernel with a new node and a new
+# bubblewrap was **byte-identical** in `env` to one from six months earlier -- and
+# therefore quotable as the same quantity, which is the one thing §2.5.4 exists to
+# prevent.
+#
+# What a `files` subject depends on beyond the harness itself: the kernel (its namespaces,
+# its seccomp), bubblewrap (the plan is its argv), the mount plan's version, and the
+# interpreters its harness shells out to. Those are the facts, recorded as strings rather
+# than as a hash: a hash can only say "different", and the reader's next question is
+# always "different how".
+
+#: One probe per process. None of this can change mid-run, and every point would otherwise
+#: pay four subprocess starts.
+_USERSPACE: dict | None = None
+
+
+def _version(argv: list[str]) -> str | None:
+    """The first line a tool prints for `--version`, or None.
+
+    Not an error when it fails: a system can be perfectly good and not answer this.
+    Recording `null` is honest; guessing a version is not.
+    """
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, errors="replace",
+                              timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()
+    return lines[0][:120] if lines else None
+
+
+def userspace() -> dict:
+    """The host userspace a `files` point was measured in.
+
+    Deliberately describes **the host**, not the sandbox's view of it: the question this
+    answers is "would a rerun on another machine be the same experiment", and the answer
+    is a property of the machine, not of the mount plan.
+    """
+    global _USERSPACE
+    if _USERSPACE is not None:
+        return dict(_USERSPACE)
+    bwrap = shutil.which("bwrap") or current_config().sandbox.bwrap
+    interpreters: dict[str, dict] = {}
+    for name in ("python", "node", "bun"):
+        found = shutil.which(name)
+        interpreters[name] = {"path": found,
+                              "version": _version([found, "--version"]) if found else None}
+    _USERSPACE = {
+        "platform": sys.platform,
+        "kernel": os.uname().release,
+        "plan_version": PLAN_VERSION,
+        "bwrap": {"path": bwrap,
+                  "version": _version([bwrap, "--version"]) if bwrap else None},
+        # The platform's own interpreter is the one that runs a `files` harness on a host
+        # whose `python` is this same one; recorded beside the PATH answer because those
+        # two disagree on an activated venv, and that difference is exactly the kind of
+        # thing a reader is trying to find.
+        "platform_python": sys.version.split()[0],
+        "interpreters": interpreters,
+    }
+    return dict(_USERSPACE)
+
+
 def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
         env: dict[str, str], timeout_s: int, cwd: Path | None = None,
         repo: Path | None = None, state_dirs: tuple[Path, ...] = (),

@@ -20,6 +20,7 @@ from eval.observe.console import CONSOLE as console
 import data.scaffolds.registry as datasets
 import eval.containers.container as container
 import eval.containers.harness_runtime as harness_runtime
+import eval.containers.sandbox as sandbox
 from harnessgrad.config import current as current_config
 
 def _required_env_kinds(envs: dict) -> set[str]:
@@ -143,7 +144,7 @@ def _env_record(envs: dict, task_ids) -> dict:
     # otherwise `null`, which is a fact about the run rather than a missing field.
     env_seed = os.environ.get("HARNESSGRAD_SEED") or None
     env_model = current_config().environment.model
-    record = {
+    record: dict = {
         "kind": first.get("kind", "files"),
         "image_digest": first.get("image_digest"),
         "network": first.get("network"),
@@ -155,6 +156,13 @@ def _env_record(envs: dict, task_ids) -> dict:
         "model": env_model if services_needing_model(specs) else None,
         "seed": env_seed if services_needing_seed(specs) else None,
     }
+    # The `files` half's answer to `image_digest`. Two points measured on two userspaces
+    # are two quantities; until this existed they were **identical** in `env`, so a number
+    # from a run on another kernel, another node and another bubblewrap read as the same
+    # measurement as today's. Present only for a point that has a `files` task: an `exec`
+    # point is pinned by its image, where the subject never sees this host at all.
+    if any(spec.get("kind", "files") == "files" for spec in specs):
+        record["userspace"] = sandbox.userspace()
     web_specs = [spec.get("web") for spec in specs if spec.get("web")]
     if web_specs:
         from tools.web_gateway import selected_providers
