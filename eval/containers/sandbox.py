@@ -431,6 +431,13 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     #: paths, and the platform does not get to pretend otherwise.
     path_bearing = ("HARNESSGRAD_WORKSPACE", "HARNESSGRAD_WORK_ROOT", "PYTHONPATH")
 
+    #: Directories the plan re-asserts **after** the hides. A value pointing into one of
+    #: them does survive the plan, so dropping it would be a lie in the other direction.
+    #: Resolved once: `visible` is asked about every variable in the environment, and a
+    #: symlinked `visible_path` would otherwise not match its own resolved targets.
+    survivals = tuple(Path(p).resolve()
+                      for p in (*visible_paths, *writable_paths, *state_dirs))
+
     def visible(name: str, value: str) -> bool:
         """Does this platform-set path still exist once the plan is applied?"""
         if name not in path_bearing:
@@ -439,7 +446,11 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
             target = Path(value).resolve()
         except (OSError, ValueError):
             return True
-        for anchor in (work_root, task_dir):
+        # Measured: a dependency overlay under `/tmp` was mounted and its `PYTHONPATH` was
+        # still dropped, so the import answered from the host's site-packages while the
+        # point recorded `source: overlay`. A directory the harness can read must be
+        # allowed to name itself.
+        for anchor in (work_root, task_dir, *survivals):
             if target == anchor or anchor in target.parents:
                 return True
         for tree in hidden_trees(work_root, platform):
