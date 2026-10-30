@@ -1229,7 +1229,21 @@ def _main(attempt: dict) -> int:
             return 2
         sandbox_state["active"] = True
         sandbox_state["detail"] = report["detail"]
+        # The cap, on the run itself rather than only on a task: a reader asking "could a
+        # runaway harness have taken the machine" is asking about the run, and `applied`
+        # is the answer -- false means the scope could not be created and nothing bounded
+        # the subject.
+        envelope = sandbox.envelope()
+        sandbox_state["envelope"] = envelope
         sandbox_line = "bwrap active — the harness cannot see this directory"
+        if envelope["applied"]:
+            sandbox_line += (f" · capped at {envelope['limits']['memory']}, "
+                             f"{envelope['limits']['cpus']:g} cpus, "
+                             f"{envelope['limits']['pids']} tasks")
+        else:
+            console.note(f"the sandbox has no resource envelope: {envelope['reason']}. "
+                         f"Nothing bounds a runaway harness on this run.",
+                         level="warn")
     else:
         sandbox_line = ("OFF — the harness can read the driver and .env; only the "
                         "hash check stands between it and the scorer")

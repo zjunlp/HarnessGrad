@@ -209,6 +209,10 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
                                         runtime)
             proc = sandbox.run(
                 argv, input_text=payload, timeout_s=timeout_s, cwd=where, env=env,
+                # The method is code the platform did not write either, and it runs once
+                # per round with a whole CLI behind it: the same envelope as the harness,
+                # for the same reason (`eval/containers/sandbox.py`).
+                limits=sandbox.configured_limits(),
                 **plan)
         else:
             proc = subprocess.run(

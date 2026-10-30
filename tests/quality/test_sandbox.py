@@ -381,3 +381,118 @@ def test_a_path_the_plan_rebinds_is_not_dropped_from_the_environment(tmp_path):
 
     assert setenv(visible, "PYTHONPATH") == str(overlay)
     assert setenv(declared, "PYTHONPATH") is None
+
+
+# --- The resource envelope ---------------------------------------------------------
+#
+# The namespace bounded what a subject could *see*. It did not bound what it could
+# **consume**: an `exec` task got `--memory 4g --cpus 2 --pids-limit 1024` from Docker and
+# a `files` task got nothing, so one runaway CLI could take the machine, the model server
+# and every concurrent run with it. A user scope gives the same three limits without root.
+
+
+@pytest.fixture
+def cold_envelope(monkeypatch):
+    """The probe is cached per process; every test here starts from nothing."""
+    monkeypatch.setattr(sandbox, "_ENVELOPE_CACHE", {}, raising=False)
+    return monkeypatch
+
+
+def test_the_native_envelope_is_the_container_envelope():
+    """两个链给同一个上限,否则同一次实验里的两个点不可比。
+
+    容器那条是 `--memory 4096m --cpus 2 --pids-limit 1024`(`container.limits_from` 的
+    默认值)。原生这条没有理由更宽松 —— 它只是没有 Docker 而已。
+    """
+    assert sandbox.configured_limits() == {"memory": "4096M", "cpus": 2.0, "pids": 1024}
+
+
+def test_the_envelope_is_spelled_in_cgroup_properties(cold_envelope):
+    """`CPUQuota` 是**单核**的百分比,两核就是 200%。`MemorySwapMax=0` 不是装饰:
+    能从 swap 满足的上限不是内存上限,只是更慢地用光内存。
+    """
+    props = sandbox._properties({"memory": "4096M", "cpus": 2, "pids": 1024})
+    assert props == ["-p", "MemoryMax=4096M", "-p", "MemorySwapMax=0",
+                     "-p", "CPUQuota=200%", "-p", "TasksMax=1024"]
+
+
+def test_a_missing_systemd_is_reported_rather_than_silently_uncapped(cold_envelope):
+    """没有 systemd 不是错误,但必须说出来:一个没被限制的运行和有用的运行,直到底层
+    乱来之前测量的是同一件事,而读者有权知道那层限制在不在。
+    """
+    real = shutil.which
+    cold_envelope.setattr(shutil, "which",
+                          lambda name: None if name == "systemd-run" else real(name))
+    state = sandbox.envelope()
+    assert state["applied"] is False
+    assert "systemd-run" in state["reason"]
+    # 而且真的不套:没有 scope,就没有那三个属性。
+    assert state.get("properties") is None
+
+
+@needs_bwrap
+def test_the_cap_is_real(tmp_path, cold_envelope):
+    """不是"命令里带了 `MemoryMax`",而是**真的**被杀掉。
+
+    实测:64M 上限下分配 400 MB,子进程 exit 137;同样的代码不带上限时分配成功。
+    上限只有在它真的生效时才值得记录。
+    """
+    if not shutil.which("systemd-run"):
+        pytest.skip("no systemd-run on this machine")
+    work, task = tmp_path / "work", tmp_path / "work" / "task"
+    task.mkdir(parents=True)
+    base = dict(platform=ROOT, work_root=work, task_dir=task,
+                env={"PATH": "/usr/bin:/bin", "HOME": str(work)})
+    cap = {"memory": "64M", "cpus": 2, "pids": 256}
+    killed = sandbox.run([sys.executable, "-c", "x = bytearray(400 * 1024 * 1024)"],
+                         timeout_s=120, limits=cap, **base)
+    free = sandbox.run([sys.executable, "-c", "x = bytearray(400 * 1024 * 1024)"],
+                       timeout_s=120, **base)
+    assert free.returncode == 0, free.stderr[-400:]
+    assert killed.returncode == 137, killed.stderr[-400:]
+
+
+@needs_bwrap
+def test_the_launchers_own_variables_do_not_reach_the_subject(tmp_path, cold_envelope):
+    """`systemd-run --user` 需要 `XDG_RUNTIME_DIR` 才找得到 user manager,而把它(或
+    `DBUS_SESSION_BUS_ADDRESS`)交给 harness,就是交给它一条 plan 从没打开的门。
+
+    所以启动器拿得到,`--unsetenv` 让被测进程拿不到 —— 而且只在"是平台自己加进去的"
+    时候才 unset,调用方本来就传了的值不动。
+    """
+    if not shutil.which("systemd-run"):
+        pytest.skip("no systemd-run on this machine")
+    work, task = tmp_path / "w2", tmp_path / "w2" / "task"
+    task.mkdir(parents=True)
+    base = dict(platform=ROOT, work_root=work, task_dir=task,
+                env={"PATH": "/usr/bin:/bin", "HOME": str(work)})
+    probe = "import os; print('seen' if 'XDG_RUNTIME_DIR' in os.environ else 'hidden')"
+    capped = sandbox.run([sys.executable, "-c", probe], timeout_s=120,
+                         limits={"memory": "512M", "cpus": 2, "pids": 256}, **base)
+    assert capped.returncode == 0, capped.stderr[-400:]
+    assert capped.stdout.strip().endswith("hidden"), capped.stdout
+    # 调用方自己传了的值不该被动:unset 只覆盖平台加进去的那几个。
+    plan = sandbox.command(["/bin/true"], env={"XDG_RUNTIME_DIR": "/run/user/1"},
+                           visible_paths=(), **{k: v for k, v in base.items()
+                                                if k in ("platform", "work_root",
+                                                         "task_dir")})
+    assert "--unsetenv" not in plan
+
+
+@needs_bwrap
+def test_a_capped_subject_still_times_out_through_the_scope(tmp_path, cold_envelope):
+    """scope 是**外面**那一层,所以超时仍然由 `run_process` 杀进程组。
+
+    这条存在的理由:套了一层之后,`TimeoutExpired` 还是不是 `TimeoutExpired` —— 如果
+    不是,`runner.py` 的超时路径会把每个超时都当成 harness 崩溃。
+    """
+    if not shutil.which("systemd-run"):
+        pytest.skip("no systemd-run on this machine")
+    work, task = tmp_path / "w3", tmp_path / "w3" / "task"
+    task.mkdir(parents=True)
+    with pytest.raises(subprocess.TimeoutExpired):
+        sandbox.run([sys.executable, "-c", "import time; time.sleep(60)"],
+                    platform=ROOT, work_root=work, task_dir=task,
+                    env={"PATH": "/usr/bin:/bin", "HOME": str(work)},
+                    timeout_s=2,
+                    limits={"memory": "512M", "cpus": 2, "pids": 256})
