@@ -353,3 +353,31 @@ def test_self_check_notices_a_plan_that_leaks(tmp_path):
         sandbox.command = real_command
     assert report["ok"] is False, "a plan that exposes the host root passed"
     assert "still visible" in report["detail"], report["detail"]
+
+
+@needs_bwrap
+def test_a_path_the_plan_rebinds_is_not_dropped_from_the_environment(tmp_path):
+    """`visible_paths` 在 hides **之后**重新挂载,所以指向它的变量是看得见的。
+
+    实测过相反的那一半:`HG_OVERLAY_ROOT` 指在 `/tmp` 下(每个 plan 都用 tmpfs 盖住
+    `/tmp`),overlay 绑了,`PYTHONPATH` 却被丢掉,于是 import 从宿主的 site-packages 里
+    拿到了**另一个版本**(2.21.0 而不是 3.41.0),而记录写的是 `source: overlay`。
+    能看见的路径不该被当成看不见;同一个路径在 `runtime_paths` 里时**必须**被丢掉,
+    否则 hide 就白做了。
+    """
+    work, task = tmp_path / "work", tmp_path / "work" / "task"
+    task.mkdir(parents=True)
+    # 平台自己:每个 plan 都会盖住它,所以这里不需要一个 `/tmp` 字面量,也就不会随
+    # `--basetemp` 的位置而变。
+    overlay = ROOT / "overlay-demo"
+    common = dict(platform=ROOT, work_root=work, task_dir=task,
+                  repo=ROOT / "base_harness" / "loop", env={"PYTHONPATH": str(overlay)})
+    visible = sandbox.command(["/bin/true"], visible_paths=(overlay,), **common)
+    declared = sandbox.command(["/bin/true"], runtime_paths=(overlay,), **common)
+
+    def setenv(argv, name):
+        pairs = [(argv[i + 1], argv[i + 2]) for i, a in enumerate(argv) if a == "--setenv"]
+        return dict(pairs).get(name)
+
+    assert setenv(visible, "PYTHONPATH") == str(overlay)
+    assert setenv(declared, "PYTHONPATH") is None

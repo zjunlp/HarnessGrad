@@ -815,7 +815,10 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                    env=child_env, timeout_s=timeout_s, cwd=workdir,
                                    repo=repo, state_dirs=(state_dir,),
                                    runtime_paths=runtime_paths,
-                                   visible_paths=((stepwise_dir,) if stepwise_dir else ()),
+                                   visible_paths=(((stepwise_dir,) if stepwise_dir else ())
+                                                  + harness_runtime.surfaced_paths(
+                                                      overlay, work_root=work_root,
+                                                      platform=PLATFORM_ROOT)),
                                    network=env_spec.get("network"),
                                    model_socket=(model_gateway.socket_path
                                                  if isinstance(model_gateway, NativeModelRoute) else None),
@@ -958,7 +961,13 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 "sandbox": bool(sandbox),
                 "verdict": verdict, "env_usage": env_usage,
                 "harness_runtime": harness_runtime.record(
-                    overlay, platform_interpreter=(image_python is None)),
+                    overlay, platform_interpreter=(image_python is None),
+                    # The `files` case runs on the host's `python` and the caller is the
+                    # only one that can ask which version that is; for an image the
+                    # overlay already carries it. Left unasked, a `files` point said
+                    # `python: null`, which is the one field two such points differ in.
+                    interpreter=(None if is_exec
+                                 else harness_runtime.interpreter_version(python))),
                 "runtime_boundary": {
                     "agent_timeout_s": timeout_s,
                     "verifier_timeout_s": verify_timeout_s,

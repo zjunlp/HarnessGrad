@@ -201,12 +201,16 @@ def _warn_missing_overlay(harness_src: Path, envs: dict, dataset: str) -> None:
     """Say so, with the command that fixes it, when a declared runtime is missing.
 
     One warning per run, not per task: the fact is about the harness, and 52 copies of
-    it would bury the rest of the log. Only for a run that will use a container -- a
-    `files` run uses the platform's interpreter, which usually has what is needed, and
-    warning there would be noise about a case that is not broken.
+    it would bury the rest of the log.
+
+    **Both environment kinds, for two different reasons and two different commands.** On a
+    container the harness needs the overlay because the image's interpreter is the only
+    one mounted, and a missing package there is `harness_failed`. On a `files` run the
+    harness falls back to the host interpreter's site-packages -- which *usually works*,
+    and that is exactly why it went unnoticed: `loop` declares `openai>=1.0` and ran on
+    ALFWorld because the host's anaconda happens to have `openai`. A dependency nobody
+    pinned and no record named, and the record said `platform` because that was true.
     """
-    if "exec" not in _required_env_kinds(envs):
-        return
     install = harness_runtime.install_spec(harness_src)
     if install is None:
         return
@@ -217,14 +221,22 @@ def _warn_missing_overlay(harness_src: Path, envs: dict, dataset: str) -> None:
         built = []
     if built:
         return
+    if "exec" in _required_env_kinds(envs):
+        console.note(
+            f"harness {harness_src.name!r} declares {install[1]!r}, and this run will use "
+            f"a container -- but no dependency overlay is configured, so the harness will "
+            f"run on each image's own interpreter. If an image has no such package the "
+            f"harness will die on its first import, and that is recorded as "
+            f"`harness_failed` rather than as a score. Configure it once with: python3 "
+            f"tools/configure_harness.py --harness {harness_src} --dataset {dataset}",
+            level="warn")
+        return
     console.note(
-        f"harness {harness_src.name!r} declares {install[1]!r}, and this run will use a "
-        f"container -- but no dependency overlay is configured, so the harness will run "
-        f"on each image's own interpreter. If an image has no such package the harness "
-        f"will die on its first import, and that is recorded as `harness_failed` rather "
-        f"than as a score. Configure it once with: python3 tools/configure_harness.py "
-        f"--harness {harness_src} --dataset {dataset}",
-        level="warn")
+        f"harness {harness_src.name!r} declares {install[1]!r}, and this run uses the "
+        f"host's interpreter -- so its dependencies come from that interpreter's own "
+        f"site-packages: unpinned, and recorded as `platform` rather than as an overlay. "
+        f"It will work until the host lacks one of them. Configure it once with: python3 "
+        f"tools/configure_harness.py --harness {harness_src}", level="warn")
 
 def _report_invalid(res: dict | None, dataset: str) -> None:
     """Say out loud which tasks the platform could not measure, and why.
