@@ -723,8 +723,6 @@ def _check_verifier(spec, tid: str, name: str) -> None:
     if "trial_evidence" in spec:
         from data.scaffolds.runtime_extensions import validate_trial_evidence
         validate_trial_evidence(spec["trial_evidence"])
-        if "trial_protocol" not in spec:
-            raise ValueError("trial_evidence requires trial_protocol")
     if "judge" in spec:
         from data.scaffolds.runtime_extensions import validate_judge as validate
         validate(spec["judge"])

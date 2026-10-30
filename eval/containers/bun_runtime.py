@@ -41,17 +41,59 @@ def runtime_settings():
     return bun, Path(cache_value).resolve()
 
 
+def _declared_roots(repo) -> list[Path]:
+    """The `runtime_paths` a harness declares: the trees the platform binds read-only.
+
+    A bun candidate normally carries its own source, and the platform's rule has been that it
+    must -- `state_after_round<N>/` is a copy of the tree, and a candidate whose source lives
+    somewhere else is not the artifact anyone measured. That rule broke on real harnesses:
+    `opencode_agent` needs the opencode monorepo, 224 MB and 4,689 packages, and every round
+    would copy it into the run record and re-hash it.
+
+    So a harness may now **declare** its source outside the candidate: the path goes in the
+    manifest's `runtime_paths`, which is already the platform's own declaration of "bind this
+    for the harness". Nothing is admitted that the manifest did not name, and the platform
+    still binds it read-only -- the boundary moves from "must be inside" to "must be declared".
+    """
+    try:
+        manifest = json.loads((Path(repo) / "harness.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [Path(str(entry)).expanduser() for entry in manifest.get("runtime_paths") or []]
+
+
 def owned_source(repo):
+    """The bun runtime spec and the source tree it names, inside the candidate or declared.
+
+    Returns `(spec, source, entry, external)`. `external` is true when the source came from a
+    declared `runtime_paths` entry rather than from the candidate itself; preparation and
+    validation treat those two differently (an external tree is already installed and must not
+    be written to).
+    """
     spec = runtime_spec(repo)
     if spec is None:
         return None
     root = Path(repo).resolve()
-    source = (root / spec["source"]).resolve()
-    entry = (source / spec["entrypoint"]).resolve()
-    if (not source.is_relative_to(root) or not source.is_dir()
-            or not entry.is_relative_to(source) or not entry.is_file()):
-        raise RuntimeUnavailable("Bun source and entry must belong to this candidate")
-    return spec, source, entry
+    candidates = [root] + _declared_roots(root)
+    for index, base in enumerate(candidates):
+        base = base.resolve()
+        # A declared entry may *be* the source tree, or may *contain* a directory named by
+        # `runtime.source`. Both are unambiguous once the entrypoint has to exist inside it,
+        # and the narrower one is what lets a manifest bind the source without binding its
+        # siblings: `.../prior-art/opencode` rather than all of `.../prior-art`.
+        source = base if (index and base.name == spec["source"]) else (base / spec["source"]).resolve()
+        entry = (source / spec["entrypoint"]).resolve()
+        if not source.is_dir() or not entry.is_file():
+            continue
+        if not entry.is_relative_to(source):
+            raise RuntimeUnavailable("Bun entry must belong to its declared source")
+        if index and not (source == base or source.is_relative_to(base)):
+            raise RuntimeUnavailable(
+                f"Bun source escapes its declared runtime path: {source}")
+        return spec, source, entry, bool(index)
+    raise RuntimeUnavailable(
+        "Bun source and entry must belong to this candidate, or be declared in "
+        "harness.json's `runtime_paths`")
 
 
 def admit(repo, env):
@@ -62,7 +104,7 @@ def admit(repo, env):
         spec = runtime_spec(repo)
         if spec is None:
             return {}
-        _, source, entry = owned_source(repo)
+        _, source, entry, _external = owned_source(repo)
         for name, expected in (("HG_AGENT_OPENCODE_SOURCE", source),
                                ("HG_HARNESS_SOURCE", source), ("HG_HARNESS_ENTRYPOINT", entry)):
             if env.get(name) and Path(env[name]).resolve() != expected:
@@ -90,7 +132,12 @@ def validate_source(repo: Path, *, raise_runtime_errors: bool = False) -> list[s
         owned = owned_source(repo)
         if owned is None:
             return []
-        _, source, _ = owned
+        _, source, _, external = owned
+        if external:
+            # An external tree is prepared by whoever installed it, not by this platform, and
+            # re-transpiling 4,689 packages on every round would cost more than the run. Its
+            # identity is recorded by the harness, not checked here.
+            return []
         bun, _ = runtime_settings()
         _links_owned(source)
         # Parse runtime source without importing/evaluating it. Not a TypeScript typecheck.
@@ -253,7 +300,34 @@ def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
         return None
     repo = repo.resolve()
     _owned_state(repo)
-    spec, source, _ = owned
+    spec, source, entry, external = owned
+    if external:
+        # **A declared external source is already installed; preparation is admitting it.**
+        # Copying or linking into it would write to a tree the platform bound read-only, and
+        # the offline store this function builds exists for candidates that carry their own
+        # source and rely on a cache. This tree carries its own `node_modules`, so the receipt
+        # names the paths the harness needs and nothing is touched.
+        bun = Path(os.environ.get("HG_BUN_BINARY")
+                   or os.environ.get("HG_AGENT_OPENCODE_BUN")
+                   or shutil.which("bun") or "").resolve()
+        if not bun.is_file():
+            raise RuntimeUnavailable(
+                "An external Bun source needs a Bun binary: set HG_BUN_BINARY or "
+                "HG_AGENT_OPENCODE_BUN")
+        version = _run([str(bun), "--version"], cwd=bun.parent,
+                       env={"PATH": os.environ.get("PATH", ""), "HOME": "/tmp"}).strip()
+        binary_sha256 = file_digest(bun)
+        key = "external-" + hashlib.sha256(str(source).encode()).hexdigest()[:16]
+        identity = {"kind": "bun", "binary_sha256": binary_sha256, "version": version,
+                    "dependency_key": key, "store_sha256": None, "declaration": spec,
+                    "external_source": str(source), "system": platform.system(),
+                    "arch": platform.machine(), "responses_overlay": None}
+        return {"kind": "bun", "dependency_key": key, "bun_version": version,
+                "identity": identity, "binary": str(bun), "execution_binary": str(bun),
+                "source": str(source), "external": True, "offline": True,
+                "installed": True, "cache_hit": True, "backend": "external-tree",
+                "system": platform.system(), "arch": platform.machine(),
+                "runtime_paths": [str(source), str(bun.parent)], "seconds": 0.0}
     started = time.monotonic()
     problems = validate_source(repo) if attach else []
     if problems:

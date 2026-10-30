@@ -12,7 +12,7 @@ failed step rather than drawn on the curve.
 
 from __future__ import annotations
 
-from eval.ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness, copy_rejected_harness, runtime_spec
 
 from pathlib import Path
 import json
@@ -122,6 +122,90 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
     return None
 
 
+def _runtime_declaration_problems(source: Path) -> list[str]:
+    """What stops this candidate's runtime declaration from being admitted, if anything.
+
+    Read before the candidate is copied into the workspace, because the strict copier parses
+    the same declaration and would raise instead of leaving a refusal on the record -- the
+    difference between "this candidate was rejected" and "the round died".
+
+    `OSError` is caught beside `ValueError` on purpose: `source` is a path the *method* named,
+    so it can be a symlink to something unreadable, or a file that was deleted between the
+    manifest check and the read. A path the method controls must not be able to end a run
+    with an exception, and there is nothing to learn from the difference: both mean the
+    declaration was not admitted.
+    """
+    try:
+        runtime_spec(source)
+    except ValueError as exc:
+        return [str(exc)]
+    except OSError as exc:
+        return [f"the candidate's harness.json could not be read: {exc}"]
+    return []
+
+
+def _declared_no_change(step: dict, curve: list[dict], sha: str, trials: int, *,
+                        has_manifest: bool) -> tuple[dict | None, dict | None]:
+    """The point a step's `decision: "no_change"` claim is allowed to reuse, and the note.
+
+    A method may end a round by saying the candidate *is* the incumbent. The platform does
+    not take that on faith -- a wrong claim would put a number on the curve for a tree
+    nobody measured -- so three things are checked before any reuse:
+
+    * the round it names exists in this curve;
+    * that round's tree is byte-identical to the one just committed (`harness_sha` is a
+      content address, so equality means the same files, not the same commit message);
+    * the measurement it would reuse used the same `trials`, because one sample is not the
+      mean of three.
+
+    Returns `(point, None)` when the claim holds and `(None, note)` when it does not. The
+    note is recorded on the round's point: a method that claims *no change* while handing
+    over a changed tree is a fact about that method, and silencing it would leave a curve
+    that looks like the method stopped when it did not.
+    """
+    declared = step.get("decision")
+    if declared != "no_change":
+        return None, None
+    if not has_manifest:
+        return None, {"decision": declared,
+                      "ignored": "the candidate is not a harness the platform can measure"}
+    claimed = step.get("incumbent_round")
+    try:
+        claimed_round = int(claimed)
+    except (TypeError, ValueError):
+        return None, {"decision": declared,
+                      "ignored": f"incumbent_round {claimed!r} is not a round number"}
+    prior = next((q for q in curve if q.get("round") == claimed_round), None)
+    if prior is None:
+        return None, {"decision": declared,
+                      "ignored": f"round {claimed_round} is not in this curve"}
+    prior_sha = (prior.get("identity") or {}).get("harness_sha")
+    if prior_sha != sha:
+        return None, {"decision": declared, "kept_round": claimed_round,
+                      "ignored": (f"the candidate is not byte-identical to round "
+                                  f"{claimed_round} ({sha[:12]} against "
+                                  f"{str(prior_sha)[:12]})")}
+    if (prior.get("sampling") or {}).get("trials", trials) != trials:
+        return None, {"decision": declared, "kept_round": claimed_round,
+                      "ignored": (f"round {claimed_round} was measured with a different "
+                                  f"trials count")}
+    return prior, None
+
+
+def _trials_of(res: dict | None, planned: int) -> int:
+    """How many task trials this round actually spent.
+
+    Zero when the round reused an earlier measurement: those trials belong to the round the
+    number came from, and `reused_from` already names it. Everything else spends the whole
+    planned set, because a round that ran tasks runs all of them.
+    """
+    if res is None:
+        return 0
+    if res.get("reused_from") is not None:
+        return 0
+    return planned
+
+
 def _copy_round_traces(run_dir: Path, source_round: int, target_round: int) -> None:
     """Give the reused round its predecessor's traces, so the record stays complete.
 
@@ -159,7 +243,8 @@ def _keep_endpoint_records(source: Path, run_dir: Path, round_no: int) -> None:
     shutil.rmtree(source, ignore_errors=True)
 
 
-def _copy_method_round_input(work: Path, base_dir: Path) -> None:
+def _copy_method_round_input(work: Path, base_dir: Path, *,
+                             rejected_candidate: bool = False) -> None:
     """Copy source plus the freshly staged public channel for this method call.
 
     Candidate snapshots deliberately exclude the channel for Bun. A round input has
@@ -167,7 +252,8 @@ def _copy_method_round_input(work: Path, base_dir: Path) -> None:
     evidence as well as source. Copy that channel separately, preserving the source
     snapshot rules and keeping archive paths inside the method's readable input.
     """
-    copy_harness(work, base_dir, ignore=shutil.ignore_patterns(".git", "_harnessgrad"))
+    copier = copy_rejected_harness if rejected_candidate else copy_harness
+    copier(work, base_dir, ignore=shutil.ignore_patterns(".git", "_harnessgrad"))
     channel = base_dir / "_harnessgrad"
     shutil.copytree(work / "_harnessgrad", channel, symlinks=True)
     index_path = channel / "states" / "index.json"
@@ -294,7 +380,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         base_dir = (method_root / f"round{r}_base").resolve()
         if base_dir.exists():
             shutil.rmtree(base_dir)
-        _copy_method_round_input(work, base_dir)
+        _copy_method_round_input(work, base_dir,
+                                 rejected_candidate=bool(prior.get("unmeasured")))
 
         method_ws = (method_root / f"round{r}_ws").resolve()
         method_ws.mkdir(parents=True, exist_ok=True)
@@ -335,7 +422,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 "improver": _improver_identity(improver),
             }, args.method_timeout, sandboxed=args.sandbox,
                 scratch=method_root, cwd=method_ws, readonly=(base_dir,),
-                runtime=_improver_runtime(improver), improver=improver)
+                runtime=_improver_runtime(improver), improver=improver,
+                rejected_candidate=bool(prior.get("unmeasured")))
         gen_s = time.time() - t_gen
         cumulative["wall_clock_s"] += gen_s
         cumulative["generation_tokens"] += int(reply.get("generation_tokens") or 0)
@@ -516,13 +604,18 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # final workspace.
         shutil.rmtree(work / "_harnessgrad", ignore_errors=True)
 
-        # Swap the candidate in and measure it as the platform's own.
+        # Check before replacing the current tree: strict source copying parses
+        # the runtime declaration and would raise before a malformed candidate
+        # reached the platform's refusal record. Rejected trees are evidence only.
+        candidate_problems = _runtime_declaration_problems(Path(src))
+        copier = copy_rejected_harness if candidate_problems else copy_harness
+        # Swap the candidate in so its actual source and diff can be recorded.
         reset_hard(work, h0_sha)
         for child in list(work.iterdir()):
             if child.name == ".git":
                 continue
             shutil.rmtree(child) if child.is_dir() else child.unlink()
-        copy_harness(Path(src), work, dirs_exist_ok=True)
+        copier(Path(src), work, dirs_exist_ok=True)
         # **The channel is never part of a measured tree.** `src` is method-supplied, so
         # it can name anything -- and on the error path `editor.fail` names the pristine
         # `base_dir`, which is a copy of `work` taken *after* staging and therefore
@@ -540,7 +633,11 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # harness is recorded as **unmeasured** rather than scored: there is no
         # measurement to report, and a `0.000` here would be indistinguishable from a
         # harness that ran and was weak (§2.5.7's distinction, one level up).
-        candidate_problems = candidate.validate(work, base_manifest=man)
+        # Validate the copied source, after runtime-generated state was filtered.
+        # A runtime declaration rejected before copying remains a named refusal.
+        for problem in candidate.validate(work, base_manifest=man):
+            if problem not in candidate_problems:
+                candidate_problems.append(problem)
         has_manifest = not candidate_problems
         sha = commit_state(work, f"round {r}: {step.get('label', 'method step')}")
         diff = _save_round_diff(run_dir, r, work,
@@ -556,15 +653,38 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # The method's claim is kept beside it (`files_claimed`) rather than dropped: a
         # method that names a file it did not change is itself a finding.
         changed_files = [f["path"] for f in (diff.get("files") or [])]
-        _save_round_state(run_dir, r, work)
+        _save_round_state(run_dir, r, work, rejected_candidate=not has_manifest)
         # **An identical candidate costs nothing to measure.** A method without an early
         # stop that has nothing left to change still has to spend its remaining rounds,
         # and re-running 100 task evaluations to learn a number the record already holds
         # is the most expensive way to say "no change". The point is still written -- the
         # round happened, the method's budget moves, and the curve keeps its shape -- but
         # it carries `reused_from` and the same per-task scores instead of a fresh sample.
-        prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
-                       if (has_manifest and getattr(args, "reuse_identical", False)) else None)
+        # **A round the method decided not to measure.** Its reply may declare
+        # `decision: "no_change"` -- "this candidate is the incumbent". The claim is
+        # checked rather than trusted (`_declared_no_change`), and when it holds the round
+        # reuses that round's measurement instead of spending a task-set run. Same record
+        # shape as `--reuse-identical`, but the trigger is the method's own declaration, so
+        # two arms of one comparison do not differ by a command-line option.
+        declared_point, declaration = _declared_no_change(
+            step, curve, sha, args.trials, has_manifest=has_manifest)
+        if declaration is not None:
+            console.note(
+                f"round {r}: the method declared no change, but {declaration['ignored']}; "
+                f"measuring the candidate instead", level="warn")
+        # **When the task set was actually run.** Both reuse paths below skip the `evaluate`
+        # call, so `t0` used to be assigned only on the measured path and the `dt` below then
+        # raised `UnboundLocalError` -- latent for as long as `--reuse-identical` was its only
+        # trigger, because no run had ever passed the flag. Measured 2026-10-29: the first run
+        # that reused a measurement (`s1-verify`, a method's declared no-change) crashed here
+        # after committing the round, so the round had a state and a diff and no curve point.
+        # A reused round spends no evaluation time, which is what `dt` should then say.
+        t0 = time.time()
+        prior_point = declared_point
+        if prior_point is None:
+            prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
+                           if (has_manifest and getattr(args, "reuse_identical", False))
+                           else None)
         if prior_point is not None:
             reused_from = prior_point.get("round")
             _copy_round_traces(run_dir, reused_from, r)
@@ -608,8 +728,14 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 + (f"; {len(skipped)} task(s) left unrun" if skipped else ""),
                 level="error")
         dt = time.time() - t0
+        # **A reused measurement is not a trial of this round.** The tasks ran at the round
+        # named by `reused_from`; charging them here as well would make a free round look
+        # paid for, and a cost table that cannot tell the two apart is the first thing a
+        # reader of "we saved 29%" would have to distrust. Same reason the point's own
+        # `evaluation_trials` is 0 below.
+        measured_trials = _trials_of(res, len(tasks))
         if res is not None:
-            cumulative["evaluation_trials"] += len(tasks)
+            cumulative["evaluation_trials"] += measured_trials
             cumulative["env_generation_tokens"] += (res.get("env_usage") or {}).get(
                 "input", 0) + (res.get("env_usage") or {}).get("output", 0)
         cumulative["wall_clock_s"] += dt
@@ -636,7 +762,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             evaluation_protocols=(res or {}).get("evaluation_protocols"),
             split=split,
             env_record=_env_record(envs, task_ids if res else []),
-            cost=_cost_of(res, len(tasks), dt + gen_share,
+            cost=_cost_of(res, measured_trials, dt + gen_share,
                           step.get("claimed_cost")),
             cumulative=cumulative,
             n_trials=(res or {}).get("trials"), score_std=(res or {}).get("score_std"),
@@ -663,6 +789,30 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if (res or {}).get("reused_from") is not None:
             point["reused_from"] = res["reused_from"]
             point["reused_reason"] = "candidate content identical to an already-measured state"
+        if (res or {}).get("reused_from") is not None:
+            # **A reused point inherits how the measurement was taken.** The round did not
+            # run, so the facts that say *how* it was measured cannot be re-derived: the
+            # scorer's isolation class, the check's own tally, the verifier kinds. Left
+            # empty they say "unknown", and `eval/verification/isolation.py` then refuses the
+            # whole curve for mixing `actor-workdir` with `unknown` -- measured 2026-10-29 on
+            # the first run that reused a measurement, after the round had been committed.
+            for key in ("scorer_isolation_class", "scorer_isolation_comparable",
+                        "per_task_scorer_isolation", "per_task_test_rate", "test_rate",
+                        "test_rate_n_tasks", "per_task_test_rate_trials", "tests_passed",
+                        "tests_total", "per_level", "verifier_kinds", "per_task_std",
+                        "per_task_trials", "score_std"):
+                if key in prior_point:
+                    point[key] = prior_point[key]
+        if declared_point is not None:
+            # Who ended this round, and why. `reused_from` alone says the number came from
+            # an earlier measurement; it does not say the *method* asked for that, which is
+            # the difference between a cache hit and a stop rule.
+            point["decision"] = "no_change"
+            point["reused_reason"] = (
+                f"the method declared no change; the candidate is byte-identical to round "
+                f"{declared_point.get('round')}")
+        if declaration is not None:
+            point["declaration_ignored"] = declaration
         # **The shape of the submission this step came from.** `steps_in_submission > 1`
         # means the method handed over a batch and therefore saw no score between these
         # states -- the one thing that separates "used the feedback" from "guessed a

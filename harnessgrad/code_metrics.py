@@ -85,8 +85,10 @@ def _entrypoint(root: Path) -> Path | None:
     manifest = root / "harness.json"
     if manifest.is_file():
         try:
-            declared = (json.loads(manifest.read_text()) or {}).get("entrypoint")
-        except (OSError, json.JSONDecodeError):
+            declaration = json.loads(manifest.read_text(encoding="utf-8"))
+            if isinstance(declaration, dict):
+                declared = declaration.get("entrypoint")
+        except (OSError, UnicodeError, json.JSONDecodeError):
             declared = None
     for candidate in ([declared] if declared else []) + ["agent.py"]:
         path = root / str(candidate)

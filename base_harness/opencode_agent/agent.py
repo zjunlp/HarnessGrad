@@ -21,6 +21,23 @@ ROOT = Path(__file__).resolve().parent
 IGNORED = {".git", "node_modules", ".state", "_harnessgrad", "__pycache__", ".opencode-state"}
 
 
+def bun_binary(parent: dict) -> str:
+    """The Bun executable: named, or found in the harness's own declared runtime paths."""
+    named = parent.get("HG_HARNESS_BUN") or parent.get("HG_AGENT_OPENCODE_BUN")
+    if named:
+        return named
+    try:
+        declared = json.loads((ROOT / "harness.json").read_text(encoding="utf-8")).get(
+            "runtime_paths") or []
+    except (OSError, ValueError):
+        declared = []
+    for entry in declared:
+        candidate = Path(str(entry)).expanduser() / "bun"
+        if candidate.is_file():
+            return str(candidate)
+    return "bun"
+
+
 def source_hash(source: Path) -> str:
     digest = hashlib.sha256()
     for directory, dirs, files in os.walk(source):
@@ -335,9 +352,18 @@ def run(task: dict, work: Path) -> int:
                 raise ValueError("Declare the Bun runtime in harness.json before execution")
             source = Path(parent.get("HG_HARNESS_SOURCE") or parent.get("HG_AGENT_OPENCODE_SOURCE")
                           or ROOT / declaration["source"]).resolve()
-            owned = source.is_relative_to(ROOT.resolve())
-            if not owned and parent.get("HG_AGENT_OPENCODE_EXTERNAL_SOURCE") != "1":
-                raise ValueError("Source must be inside this candidate; external source is diagnostic-only")
+            # **Inside the candidate, or declared in `runtime_paths`.** The platform binds
+            # those trees read-only, so a declared tree is readable here and nothing else is.
+            # `opencode` is a 224 MB monorepo with 4,689 packages: copying it into every
+            # candidate would put 224 MB in each `state_after_round<N>/`.
+            declared = [Path(str(p)).expanduser().resolve()
+                        for p in (json.loads((ROOT / "harness.json").read_text(encoding="utf-8"))
+                                  .get("runtime_paths") or [])]
+            owned = source.is_relative_to(ROOT.resolve()) or any(
+                source.is_relative_to(root) for root in declared)
+            if not owned:
+                raise ValueError("Source must be inside this candidate or under a declared "
+                                 "runtime path")
             entry = (source / declaration["entrypoint"]).resolve()
             if not entry.is_relative_to(source):
                 raise ValueError("Runtime entry must belong to the declared source")
@@ -354,7 +380,7 @@ def run(task: dict, work: Path) -> int:
                         "source": str(source), "source_sha256": source_hash(source),
                         "source_in_candidate": owned}
             record({"harness_identity": identity, "task_id": task.get("task_id")})
-            argv = [parent.get("HG_HARNESS_BUN") or parent.get("HG_AGENT_OPENCODE_BUN", "bun"), "--no-env-file", "--no-install",
+            argv = [bun_binary(parent), "--no-env-file", "--no-install",
                     str(entry), "run", "--standalone", "--format", "json",
                     "--model", "harnessgrad/" + parent["HG_AGENT_MODEL"], "--agent", "build"]
             before = answer_stamp(work)

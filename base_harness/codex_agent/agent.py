@@ -12,14 +12,47 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import tempfile
 
 
+def _codex_argv() -> list[str]:
+    """The Codex binary, resolved the way the *sandbox* needs it, not the way `PATH` does.
+
+    The platform binds a harness's declared `runtime_paths` read-only and does **not** put
+    them on `PATH` (`eval/containers/sandbox.py`), so a bare `codex` inside the sandbox
+    resolves only if some bound directory happens to be on `PATH` -- and it is not. Measured
+    2026-10-29: this harness exited 1 with an empty trace on every sandboxed task while the
+    same command worked outside the sandbox, and with `--no-sandbox` it ran.
+
+    So the manifest's own `runtime_paths` is consulted **first**: it names the tree the
+    platform bound for this harness, and the vendor directory it points at carries a real
+    `codex` executable. `HG_AGENT_CODEX` overrides everything (an operator or a test can pin
+    a binary), then `HG_AGENT_CODEX_COMMAND` for a wrapper, and `PATH` is the last resort.
+    """
+    configured = shlex.split(os.environ.get("HG_AGENT_CODEX_COMMAND", ""))
+    if configured:
+        return configured
+    explicit = os.environ.get("HG_AGENT_CODEX")
+    if explicit and Path(explicit).expanduser().exists():
+        return [str(Path(explicit).expanduser())]
+    try:
+        declared = json.loads(Path(__file__).with_name("harness.json").read_text())
+    except (OSError, ValueError):
+        declared = {}
+    for entry in declared.get("runtime_paths") or []:
+        candidate = Path(str(entry)).expanduser() / "codex"
+        if candidate.is_file():
+            return [str(candidate)]
+    found = shutil.which("codex")
+    if found:
+        return [found]
+    return ["codex"]
+
+
 def command(workdir: Path, answer: Path) -> list[str]:
-    argv = shlex.split(os.environ.get("HG_AGENT_CODEX_COMMAND", "codex"))
-    if not argv:
-        raise ValueError("HG_AGENT_CODEX_COMMAND is empty")
+    argv = _codex_argv()
     return argv + ["exec", "--json", "--ephemeral", "--skip-git-repo-check",
                    "--dangerously-bypass-approvals-and-sandbox", "-C", str(workdir),
                    "-o", str(answer), "-"]

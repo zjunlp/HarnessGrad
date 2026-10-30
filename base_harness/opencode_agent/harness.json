@@ -6,7 +6,10 @@
   "backend": "cli",
   "install": null,
   "env_kinds": ["files", "exec"],
-  "runtime_paths": [],
+  "runtime_paths": [
+    "/mnt/20t/xubuqiang/prior-art/opencode",
+    "/home/xubuqiang/.nvm/versions/node/v22.19.0/bin"
+  ],
   "runtime": {"kind": "bun", "source": "opencode", "entrypoint": "packages/cli/src/index.ts", "package": "@opencode/cli"},
   "notes": "Requires a prepared opencode/ source tree and Bun in the execution environment. Each candidate must own its source and workspace links. External source override is for explicit interface diagnostics only; it is refused by default. Container runtime still requires platform-specific provisioning."
 }
