@@ -210,3 +210,19 @@ def test_real_docker_exec_overrides_record_and_keep_invoking_owner(tmp_path):
         assert net["Internal"] is True
     finally:
         assert running.stop() == []
+
+
+def test_a_files_point_records_the_userspace_it_was_measured_in():
+    """`exec` 有 `image_digest` 钉住,`files` 过去只有 `image_digest: null` —— 于是两次
+    在不同内核、不同 node、不同 bubblewrap 上的测量在 `env` 里**逐字节相同**,而
+    §2.5.4 存在的理由就是不让这件事发生。
+    """
+    files = _env_record({"t": {"kind": "files"}}, ["t"])
+    userspace = files["userspace"]
+    assert userspace["kernel"] and userspace["bwrap"]["path"]
+    assert set(userspace["interpreters"]) == {"python", "node", "bun"}
+    assert isinstance(userspace["plan_version"], int)
+
+    # 一个只跑 `exec` 的点不需要它:镜像已经把被测环境钉住了,宿主它根本看不见。
+    only_exec = _env_record({"t": _env(_service())}, ["t"])
+    assert "userspace" not in only_exec

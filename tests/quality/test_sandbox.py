@@ -496,3 +496,36 @@ def test_a_capped_subject_still_times_out_through_the_scope(tmp_path, cold_envel
                     env={"PATH": "/usr/bin:/bin", "HOME": str(work)},
                     timeout_s=2,
                     limits={"memory": "512M", "cpus": 2, "pids": 256})
+
+
+# --- The userspace record ----------------------------------------------------------
+#
+# `files` points carry `image_digest: null`, so without this two runs on two different
+# kernels with two different bubbles are the same `env` — and therefore quotable as one
+# quantity, which is what §2.5.4 forbids.
+
+
+def test_the_userspace_is_probed_once_per_process(monkeypatch):
+    """四五个子进程,每个点都付一次就是每个 round 都付一次。"""
+    calls: list[str] = []
+    real = sandbox._version
+    monkeypatch.setattr(sandbox, "_USERSPACE", None, raising=False)
+    monkeypatch.setattr(sandbox, "_version",
+                        lambda argv: (calls.append(argv[0]), real(argv))[1])
+    first = sandbox.userspace()
+    before = len(calls)
+    second = sandbox.userspace()
+    assert first == second
+    assert len(calls) == before, "第二次又问了一遍版本"
+
+
+def test_a_tool_that_will_not_say_its_version_is_recorded_as_null(monkeypatch):
+    """系统可以不回答 `--version`。记 null 是诚实的,猜一个不是。"""
+    monkeypatch.setattr(sandbox, "_USERSPACE", None, raising=False)
+    assert sandbox._version(["/nonexistent-tool", "--version"]) is None
+    state = sandbox.userspace()
+    assert state["platform"] and state["kernel"]
+    assert state["bwrap"]["path"] is None or state["bwrap"]["version"]
+    for name in ("python", "node", "bun"):
+        entry = state["interpreters"][name]
+        assert set(entry) == {"path", "version"}
