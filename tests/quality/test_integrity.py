@@ -22,6 +22,8 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
@@ -106,6 +108,28 @@ def test_the_implementation_package_is_hashed():
                      "harnessgrad/loops/mode_a.py"):
         assert expected in snap, \
             f"{expected} 没有被 hash:裁判侧的实现可以被方法改掉而检测不到"
+
+
+@pytest.mark.parametrize('name', ['__init__.py', 'demo-smoke.json'])
+def test_scenario_code_and_config_changes_move_platform_identity(tmp_path, name):
+    """Both the loader and its reviewed input are platform inputs, not candidates."""
+    root = tmp_path / 'scenarios'
+    root.mkdir()
+    (root / '__init__.py').write_text('# original loader\n', encoding='utf-8')
+    (root / 'demo-smoke.json').write_text('{"rounds": 0}\n', encoding='utf-8')
+    before = snapshot(tmp_path)
+    before_sha = integrity.content_sha(tmp_path)
+    assert 'scenarios/__init__.py' in before
+    assert 'scenarios/demo-smoke.json' in before
+
+    with (root / name).open('a', encoding='utf-8') as handle:
+        handle.write(' ')
+    after = snapshot(tmp_path)
+
+    assert integrity.diff(before, after) == {
+        'added': [], 'removed': [], 'modified': [f'scenarios/{name}'],
+    }
+    assert integrity.content_sha(tmp_path) != before_sha
 
 
 def test_a_snapshot_reuses_the_digest_of_a_file_it_already_read(tmp_path, monkeypatch):

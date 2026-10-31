@@ -255,6 +255,8 @@ def __getattr__(name: str):
     on a machine where no dataset has been provisioned (`data/datasets/spreadsheetbench.py` and
     `data/datasets/bird_minidev.py` carry the same guard).
     """
+    if name not in ("ENV", "SPLIT", "SETUP", "VERIFY"):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     if name not in _BUILT:
         rows_ = rows()
         ids = [task_id(row["index"]) for row in rows_]
