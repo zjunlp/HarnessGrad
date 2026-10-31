@@ -124,6 +124,12 @@ provide future history or questions. Successful request IDs are idempotent for i
 answers cannot be revised. The final harness `answer.txt` is not a submission.
 On `done`, finish.
 
+Malformed JSON or invalid request envelopes are rejected before reaching the
+episode state and may be corrected; they remain counted in the relay receipt but
+do not invalidate an otherwise healthy service. Handler/runtime failures,
+resource-limit refusals and failure to stop cleanly still invalidate the service.
+Scoring still requires a complete, valid episode.
+
 The metric is `personamem_v2.text32k.memagent_mcq_accuracy.valid_questions.v1`.
 Four options are
 shuffled using `random.Random(42 + original_split_row_index)`, matching official
@@ -149,7 +155,30 @@ Platform reward is the mean over eligible questions within an episode (28 for
 train persona 592); the excluded question is not a zero. Platform averaging across
 episodes is not the benchmark's question-weighted accuracy. `aggregate(records,
 selected_task_ids=...)` reports question-weighted accuracy **per native split**,
-with selected/measured coverage. Verifier evidence and split summaries include
+with selected/measured coverage. `data/aggregation_policies.json` declares
+`run_reward` as an arithmetic mean over measured episodes (`measured_tasks`),
+and `corpus_metrics` as an arithmetic mean over eligible selected MCQs (`gold_rows`)
+within each native split. The latter counts questions after fixed source exclusions;
+missing or incomplete episodes still leave the split score unset.
+This corpus report accepts single-trial evidence, command verdicts, or saved task
+records. Records containing `trials` or `trial_scores` are rejected, including
+one-item or empty histories: a filtered history does not establish a single-trial
+measurement. Select one trial explicitly across the selected episode pool before
+reporting, checking task-level exclusions and preserving platform validity with
+its evidence. A saved trial cell alone may omit those exclusions. The platform's
+saved mean across trials remains a separate measurement.
+The verifier's standard `scorer_error` records count as unmeasured episodes, keep
+the full selected question denominator, and leave the split score unset. Their
+details are retained in `scorer_errors`, keyed by task ID, on affected splits.
+These adapter checks require the caller to supply the failure evidence. The shared
+verifier and runner retain their existing behavior: strict nonzero scorer exits
+and unmeasured batch tasks can lose evidence before saving. The adapter cannot
+reconstruct missing diagnostics or platform validity from such saved records.
+Measured evidence with a platform `invalid` or `unmeasured` marker is rejected
+rather than restoring an excluded task's score.
+Other malformed evidence is rejected; successful and incomplete episode evidence
+still require matching metric, input identity, native split and source coverage.
+Verifier evidence and split summaries include
 `original_questions`, eligible `expected_questions`, `excluded_question_count`
 and the exact `excluded_questions` with reasons. The full native train denominator
 is 18,548 eligible questions, not 18,549 released questions. Report this explicitly

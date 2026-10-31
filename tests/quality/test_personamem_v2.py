@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import random
+import subprocess
 import sys
 import textwrap
 import types
@@ -362,6 +363,100 @@ def test_controls_real_relay_and_verifier(prepared, tmp_path, monkeypatch, mode,
         assert result["detail"]["cleanup"] == {"complete": True, "errors": []}
 
 
+@pytest.mark.parametrize("mode,score,batch", [
+    ("oracle", 1, False), ("wrong", 0, False), ("noop", None, False),
+    ("oracle", 1, True), ("wrong", 0, True),
+])
+def test_malformed_requests_preserve_relay_scoring(prepared, tmp_path, monkeypatch, mode, score, batch):
+    from eval.run.runner import evaluate, run_one
+    from harnessgrad.records import _save_verdicts
+
+    tid, payload, _ = prepared
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    (harness / "agent.py").write_text(r'''
+import argparse, json, socket, sys
+from pathlib import Path
+parser = argparse.ArgumentParser()
+parser.add_argument('--task')
+parser.add_argument('--workdir', type=Path)
+work = parser.parse_args().workdir
+sys.path.insert(0, str(work))
+from personamem_transport import call
+sock = '/run/harnessgrad-tool/tool.sock'
+config = json.loads((work / '.control.json').read_text())
+def reject_requests():
+    for frame, error in [(b'{broken', 'bad_request'), (b'[]', 'bad_request'),
+                         (b'{"op": 1}', 'bad_op'),
+                         (b'{"op": "next", "args": [1]}', 'bad_args')]:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+            client.settimeout(10)
+            client.connect(sock)
+            client.sendall(frame + b'\n')
+            with client.makefile('rb') as stream:
+                assert json.loads(stream.readline()) == {'ok': False, 'error': error}
+reject_requests()
+if config['mode'] != 'noop':
+    while True:
+        item = call(sock, 'next')
+        if item['kind'] == 'done':
+            break
+        if item['kind'] == 'chunk':
+            op, fields = 'ack', {'chunk_id': item['chunk_id'], 'request_id': item['chunk_id']}
+        else:
+            op, fields = 'submit', {'question_id': item['question_id'],
+                'request_id': item['question_id'], 'answer': config['answer']}
+        assert call(sock, op, fields)['accepted']
+reject_requests()
+(work / 'trace.jsonl').write_text(json.dumps({'harness_identity': {
+    'harness': 'personamem-request-error-control', 'agent_model': 'oracle'}}) + '\n')
+''')
+    (harness / "harness.json").write_text(json.dumps({
+        "entrypoint": "agent.py", "runtime_paths": list(dict.fromkeys([
+            sys.prefix, sys.base_prefix, str(Path(sys._base_executable).parent.parent)])),
+    }))
+    monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(tmp_path))
+    setup = dataset.SETUP[tid]
+    answer = r"\boxed{c}" if mode == "oracle" else r"\boxed{a}"
+    setup["files"].append({"path": ".control.json", "content": json.dumps({
+        "mode": mode, "answer": answer})})
+    task = dataset.control_task(tid)
+    common = {"sandbox": True, "run_id": "personamem-request-errors",
+              "recordings_root": tmp_path / "recordings"}
+    if batch:
+        result = evaluate(harness, [task], {tid: METRIC}, setups={tid: setup},
+                          verifiers={tid: dataset.VERIFY[tid]}, envs={tid: dataset.ENV[tid]},
+                          trials=1, jobs=1, **common)
+        assert result["per_task"] == {tid: score}, result
+        assert not result["invalid"], result
+        verdict = result["verdicts"][tid]
+        relay = result["runtime_diagnostics"][tid]["tool_relay"]
+        _save_verdicts(tmp_path, 0, result, [tid])
+        saved = json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text())
+        assert dataset.aggregate([saved], [tid])["train"]["score"] == score
+    else:
+        result = run_one(harness, task, setup=setup, verifier=dataset.VERIFY[tid],
+                         env=dataset.ENV[tid], **common)
+        assert "invalid" not in result and result["exit_code"] == 0, result
+        verdict = result["verdict"]
+        relay = result["runtime_services"]["tool_relay"]
+
+    assert verdict["score"] == score
+    assert verdict["evidence"]["measured"] is (score is not None)
+    if score is None:
+        assert verdict["evidence"]["reason"] == "incomplete_episode"
+    assert not relay["faults"] and relay["receipt"]["stopped_cleanly"]
+    transport = relay["receipt"]["transport"]
+    assert transport["errors"] == transport["request_errors"] == 8
+    assert transport["refused"] == relay["receipt"]["protocol_rejections"] == 0
+    record = json.loads(Path(relay["recording"]["archive"]).read_text())["payload"]
+    assert record["complete"] is (score is not None)
+    assert record["acked_chunks"] == (0 if score is None else len(payload["chunks"]))
+    assert record["answers"] == ([] if score is None else [
+        {"question_id": payload["questions"][0]["id"], "answer": answer}])
+    assert relay["cleanup"] == {"complete": True, "errors": []}
+
+
 def test_actor_cannot_shadow_verifier(prepared, tmp_path, monkeypatch):
     work = tmp_path / "control"
     work.mkdir()
@@ -381,6 +476,216 @@ def test_reporting_refuses_incomplete_denominators(prepared):
     assert dataset.aggregate([], [tid])["train"]["score"] is None
     with pytest.raises(ValueError, match="duplicate"):
         dataset.aggregate([evidence, evidence], [tid])
+
+
+@pytest.fixture
+def unequal_episode_results(monkeypatch):
+    # Authored question scores: the train episode mean is 1/2, but its MCQ mean is 1/4.
+    pool, records = {}, []
+    for split, persona, scores in (("train", 1, [1]), ("train", 2, [0, 0, 0]),
+                                   ("benchmark", 1, [1, 1])):
+        tid = storage.task_id(split, persona)
+        excluded = ([{"split": split, "persona_id": persona, "row_index": 7,
+                      "row_sha256": "a" * 64, "reason": "missing_mcq_distractors"}]
+                    if persona == 2 else [])
+        pool[tid] = {"task_id": tid, "split": split, "persona_id": persona,
+                     "input_sha256": digest(tid), "question_count": len(scores),
+                     "original_question_count": len(scores) + len(excluded),
+                     "excluded_questions": excluded}
+        records.append({"task_id": tid, "split": split, "metric": METRIC, "measured": True,
+                        "artifacts": {"input_sha256": pool[tid]["input_sha256"]},
+                        "expected_questions": len(scores),
+                        "original_questions": len(scores) + len(excluded),
+                        "excluded_question_count": len(excluded), "excluded_questions": excluded,
+                        "questions": [{"score": score} for score in scores],
+                        "score": sum(scores) / len(scores)})
+    monkeypatch.setattr(dataset, "rows", lambda: pool)
+    return list(pool), records
+
+
+def test_reporting_uses_eligible_question_rows_per_native_split(unequal_episode_results):
+    from eval.metrics import mean
+
+    ids, records = unequal_episode_results
+    report = dataset.aggregate(records, ids)
+    assert set(report) == {"train", "benchmark"}
+    train = report["train"]
+    assert train["score"] == 0.25
+    assert mean([r["score"] for r in records[:2]], dataset="personamem_v2") == 0.5
+    assert train["selected_episodes"] == train["measured_episodes"] == 2
+    assert train["expected_questions"] == train["measured_questions"] == 4
+    assert train["original_questions"] == 5 and train["excluded_question_count"] == 1
+    assert report["benchmark"]["score"] == 1
+    assert report["benchmark"]["expected_questions"] == 2
+    assert dataset.aggregate(records[:1], ids[:1])["train"]["score"] == 1
+    assert dataset.aggregate(list(reversed(records)), ids) == report
+
+
+@pytest.mark.parametrize("missing", [True, False], ids=["absent", "unmeasured"])
+def test_reporting_keeps_selected_denominator_when_episode_is_incomplete(unequal_episode_results, missing):
+    ids, records = unequal_episode_results
+    if missing:
+        records.pop(1)
+    else:
+        records[1].update(measured=False, questions=[{"score": 1}], score=None)
+    report = dataset.aggregate(records, ids)
+    train = report["train"]
+    assert train["score"] is None
+    assert train["expected_questions"] == 4 and train["measured_questions"] == 1
+    assert train["original_questions"] == 5 and train["excluded_question_count"] == 1
+    assert train["unmeasured_task_ids"] == [ids[1]]
+    assert report["benchmark"]["score"] == 1
+
+
+def saved_episode(tmp_path, tid, verdicts):
+    from harnessgrad.records import _save_verdicts
+
+    scores = [v.get("score") for v in verdicts]
+    result = {"verdicts": {tid: verdicts[-1]},
+              "per_task": {} if None in scores else {tid: sum(scores) / len(scores)}}
+    if len(verdicts) > 1:
+        result["trial_verdicts"] = {tid: verdicts}
+    _save_verdicts(tmp_path, 0, result, [tid])
+    return json.loads((tmp_path / "verdicts/round-0" / f"{tid}.json").read_text())
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_reporting_rejects_saved_trial_histories(prepared, tmp_path, reverse, wrapped):
+    tid, payload, gold = prepared
+    verdicts = []
+    for trial, answer in enumerate(("", r"\boxed{c}"), 1):
+        record = completed_record(payload, answer)
+        record["binding"]["trial_id"] = f"trial-{trial}"
+        evidence = verify(gold, record, task_id=tid, input_sha256=payload["input_sha256"],
+                          relay_sha256=hashlib.sha256(canonical(payload).encode()).hexdigest())
+        verdicts.append({"kind": "command", "score": evidence["score"],
+                         "evidence": evidence, "trial": trial})
+    if reverse:
+        verdicts.reverse()
+    saved = saved_episode(tmp_path, tid, verdicts)
+    assert saved["score"] == 0.5
+    assert saved["trial_scores"] == ([1.0, 0.0] if reverse else [0.0, 1.0])
+    with pytest.raises(ValueError, match="single-trial.*trial histories"):
+        dataset.aggregate([{"verdict": saved} if wrapped else saved], [tid])
+
+
+@pytest.mark.parametrize("history", [
+    {"trials": []}, {"trials": None}, {"trials": {}}, {"trials": [{}]},
+    {"trial_scores": [0, 1]}, {"trial_scores": []}, {"trial_scores": None},
+])
+def test_reporting_rejects_partial_trial_histories(unequal_episode_results, history):
+    ids, records = unequal_episode_results
+    with pytest.raises(ValueError, match="single-trial.*trial histories"):
+        dataset.aggregate([{"evidence": records[0], **history}], ids[:1])
+
+
+@pytest.mark.parametrize("answer,score", [("", 0), (r"\boxed{c}", 1)])
+def test_reporting_accepts_saved_single_trial(prepared, tmp_path, answer, score):
+    tid, payload, gold = prepared
+    evidence = verify(gold, completed_record(payload, answer), task_id=tid,
+                      input_sha256=payload["input_sha256"],
+                      relay_sha256=hashlib.sha256(canonical(payload).encode()).hexdigest())
+    saved = saved_episode(tmp_path, tid, [{"kind": "command", "score": score, "evidence": evidence}])
+    assert "trials" not in saved and "trial_scores" not in saved
+    expected = dataset.aggregate([evidence], [tid])
+    assert expected["train"]["score"] == score
+    assert dataset.aggregate([saved], [tid]) == expected
+    assert dataset.aggregate([{"verdict": saved}], [tid]) == expected
+
+
+@pytest.fixture
+def scorer_error_record(unequal_episode_results, tmp_path):
+    tid = unequal_episode_results[0][1]
+    output, reward = tmp_path / "error.json", tmp_path / "reward.txt"
+    result = subprocess.run([
+        sys.executable, str(dataset.ASSETS / "verify/check.py"),
+        "--gold", str(tmp_path / "missing-gold.json"), "--gold-sha256", "0" * 64,
+        "--task-id", tid, "--input-sha256", digest(tid), "--relay-sha256", "0" * 64,
+        "--reward-file", str(reward), "--evidence-file", str(output),
+    ], capture_output=True, text=True)
+    assert result.returncode == 3, result.stderr
+    assert not reward.exists()
+    evidence = json.loads(output.read_text())
+    assert evidence["measured"] is False and evidence["reason"] == "scorer_error"
+    return evidence
+
+
+@pytest.mark.parametrize("form", ["evidence", "verdict", "saved"])
+def test_reporting_retains_real_scorer_errors(unequal_episode_results, scorer_error_record, tmp_path, form):
+    ids, records = unequal_episode_results
+    error = scorer_error_record
+    verdict = {"kind": "command", "score": None, "unmeasured": error["detail"], "evidence": error}
+    failed = {"evidence": error, "verdict": {"verdict": verdict},
+              "saved": saved_episode(tmp_path, ids[1], [verdict])}[form]
+    records[1] = failed
+    original = copy.deepcopy(records)
+    report = dataset.aggregate(records, ids)
+    train = report["train"]
+    assert train["score"] is None
+    assert train["selected_episodes"] == 2 and train["measured_episodes"] == 1
+    assert train["expected_questions"] == 4 and train["measured_questions"] == 1
+    assert train["original_questions"] == 5 and train["excluded_question_count"] == 1
+    assert train["unmeasured_task_ids"] == [ids[1]]
+    assert train["scorer_errors"] == {ids[1]: error["detail"]}
+    assert report["benchmark"]["score"] == 1
+    assert "scorer_errors" not in report["benchmark"]
+    without_error = dataset.aggregate([records[0], records[2]], ids)
+    assert {k: v for k, v in train.items() if k != "scorer_errors"} == without_error["train"]
+    assert records == original
+    with pytest.raises(ValueError, match="duplicate"):
+        dataset.aggregate(records + [failed], ids)
+    with pytest.raises(ValueError, match="outside selected pool"):
+        dataset.aggregate([failed], ids[:1])
+    with pytest.raises(ValueError, match="task identity mismatch"):
+        dataset.aggregate([{"task_id": ids[0], "evidence": error}], ids)
+
+
+@pytest.mark.parametrize("change", [
+    {"schema": "other"}, {"measured": True}, {"measured": 0}, {"measured": "false"},
+    {"detail": None}, {"detail": ""}, {"metric": "other"}, {"reason": "incomplete_episode"},
+])
+def test_reporting_rejects_malformed_scorer_errors(unequal_episode_results, scorer_error_record, change):
+    with pytest.raises(ValueError):
+        dataset.aggregate([{**scorer_error_record, **change}], unequal_episode_results[0])
+
+
+@pytest.mark.parametrize("field", ["metric", "artifacts", "split", "expected_questions", "original_questions"])
+@pytest.mark.parametrize("measured", [True, False])
+def test_reporting_rejects_damaged_evidence(unequal_episode_results, field, measured):
+    ids, records = unequal_episode_results
+    records[0]["measured"] = measured
+    del records[0][field]
+    with pytest.raises(ValueError):
+        dataset.aggregate(records, ids)
+
+
+@pytest.mark.parametrize("field", ["invalid", "unmeasured"])
+@pytest.mark.parametrize("layer", ["record", "verdict", "evidence"])
+def test_reporting_rejects_measured_evidence_on_excluded_records(unequal_episode_results, field, layer):
+    ids, evidence = unequal_episode_results
+    record = {"task_id": ids[0], "score": None, "verdict": {"evidence": evidence[0]}}
+    target = {"record": record, "verdict": record["verdict"], "evidence": evidence[0]}[layer]
+    target[field] = "platform rejected this measurement"
+    with pytest.raises(ValueError, match="measured evidence.*invalid or unmeasured"):
+        dataset.aggregate([record], ids[:1])
+
+
+@pytest.mark.parametrize("change,message", [
+    ({"denominator": "measured_tasks"}, "measured_tasks needs"),
+    ({"aggregation": "ordered_macro_mean"}, "requires arithmetic_mean"),
+])
+def test_corpus_aggregation_declaration_is_live(unequal_episode_results, monkeypatch, tmp_path,
+                                             change, message):
+    from data.scaffolds import aggregation
+
+    policies = json.loads(aggregation.POLICIES.read_text())
+    policies["personamem_v2"]["corpus_metrics"].update(change)
+    path = tmp_path / "aggregation_policies.json"
+    path.write_text(json.dumps(policies))
+    monkeypatch.setattr(aggregation, "POLICIES", path)
+    with pytest.raises(ValueError, match=message):
+        dataset.aggregate(unequal_episode_results[1], unequal_episode_results[0])
 
 
 def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monkeypatch):
