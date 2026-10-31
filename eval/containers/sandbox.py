@@ -188,7 +188,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
             tool_socket: Path | None = None,
             package_overlays: tuple[tuple[Path, Path], ...] = (),
             immutable_runtimes: tuple[tuple[Path, str], ...] = (),
-            private_paths: tuple[Path, ...] = ()) -> list[str]:
+            private_paths: tuple[Path, ...] = (),
+            unsetenv: tuple[str, ...] = ()) -> list[str]:
     """Wrap `argv` so it runs with the platform off its disk.
 
     Raises rather than degrading. A sandbox that quietly did not apply would make
@@ -431,6 +432,13 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     #: paths, and the platform does not get to pretend otherwise.
     path_bearing = ("HARNESSGRAD_WORKSPACE", "HARNESSGRAD_WORK_ROOT", "PYTHONPATH")
 
+    #: Directories the plan re-asserts **after** the hides. A value pointing into one of
+    #: them does survive the plan, so dropping it would be a lie in the other direction.
+    #: Resolved once: `visible` is asked about every variable in the environment, and a
+    #: symlinked `visible_path` would otherwise not match its own resolved targets.
+    survivals = tuple(Path(p).resolve()
+                      for p in (*visible_paths, *writable_paths, *state_dirs))
+
     def visible(name: str, value: str) -> bool:
         """Does this platform-set path still exist once the plan is applied?"""
         if name not in path_bearing:
@@ -439,7 +447,11 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
             target = Path(value).resolve()
         except (OSError, ValueError):
             return True
-        for anchor in (work_root, task_dir):
+        # Measured: a dependency overlay under `/tmp` was mounted and its `PYTHONPATH` was
+        # still dropped, so the import answered from the host's site-packages while the
+        # point recorded `source: overlay`. A directory the harness can read must be
+        # allowed to name itself.
+        for anchor in (work_root, task_dir, *survivals):
             if target == anchor or anchor in target.parents:
                 return True
         for tree in hidden_trees(work_root, platform):
@@ -454,7 +466,206 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
         if visible(name, value):
             plan += ["--setenv", name, value]
 
+    # Last, so it wins over anything above. This exists for variables the *launcher* needs
+    # and the subject must not see: `systemd-run --user` cannot reach the user manager
+    # without `XDG_RUNTIME_DIR`, and handing that (or the session bus address) to the
+    # harness would be a way out of the sandbox that the plan otherwise never opened. The
+    # caller only lists variables it added itself, so a subject's view is unchanged.
+    for name in unsetenv:
+        plan += ["--unsetenv", name]
+
     return [bwrap] + plan + ["--"] + argv
+
+
+# --- The resource envelope ------------------------------------------------------
+#
+# The namespace bounds what a subject can *see*. It did not bound what it could
+# **consume**, and that asymmetry is measurable: an `exec` task gets
+# `--memory 4g --cpus 2 --pids-limit 1024` from Docker, while a `files` task ran with no
+# limit at all -- one CLI that allocates without end takes the machine, the model server
+# and every concurrent run with it, and the run that did it is not even the one that
+# reports the damage.
+#
+# A user scope gives the same three limits without root and without a daemon:
+# `systemd-run --user --scope` is unprivileged, synchronous, and lands the child under
+# `memory.max` -- measured here: `MemoryMax=1G` produced `memory.max=1073741824` inside
+# the scope, and `MemoryMax=64M` killed a 400 MB allocation with exit 137.
+#
+# `--collect` matters: a scope that fails is garbage-collected instead of being left
+# behind as a failed unit, so a hundred tasks cannot fill the user's unit list.
+
+#: What makes `systemd-run` a synchronous, self-cleaning wrapper around one command.
+SCOPE_FLAGS = ("--user", "--scope", "--quiet", "--collect")
+
+#: Variables the scope *launcher* needs in order to find the user manager. They are
+#: handled apart from the subject's environment on purpose: `DBUS_SESSION_BUS_ADDRESS` is
+#: a way to talk to everything the operator's session can, so a harness that is given one
+#: has a door the mount plan never opened.
+MANAGER_ENV = ("XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS")
+
+#: One probe per distinct envelope, per process. The probe starts a scope, so it is the
+#: kind of thing that must not happen once per task.
+_ENVELOPE_CACHE: dict[tuple, dict] = {}
+
+
+def configured_limits() -> dict:
+    """The envelope a `files` subject gets by default: the container chain's numbers."""
+    cfg = current_config().sandbox
+    return {"memory": f"{int(cfg.memory_mb)}M",
+            "cpus": float(cfg.cpus),
+            "pids": int(cfg.pids)}
+
+
+def _properties(limits: dict) -> list[str]:
+    """The cgroup properties, in `systemd-run` spelling.
+
+    `MemorySwapMax=0` is not decoration: a cap that can be satisfied from swap is not a
+    memory cap, it is a slower way to run out of memory. Docker's `--memory` refuses swap
+    by default for the same reason.
+    """
+    props: list[str] = []
+    if limits.get("memory"):
+        props += ["-p", f"MemoryMax={limits['memory']}", "-p", "MemorySwapMax=0"]
+    if limits.get("cpus"):
+        # `CPUQuota` is a percentage of **one** CPU, so two cores is `200%`.
+        props += ["-p", f"CPUQuota={int(round(float(limits['cpus']) * 100))}%"]
+    if limits.get("pids"):
+        props += ["-p", f"TasksMax={int(limits['pids'])}"]
+    return props
+
+
+def _drop(props: list[str], name: str) -> list[str]:
+    """The same property list without one property. `_properties` always returns pairs."""
+    kept: list[str] = []
+    for i in range(0, len(props), 2):
+        if not props[i + 1].startswith(f"{name}="):
+            kept += props[i:i + 2]
+    return kept
+
+
+def _probe_envelope(limits: dict) -> dict:
+    """Whether this machine can bound a subject, proved by bounding one.
+
+    Asking `systemctl --user is-system-running` would be cheaper and wrong: it is
+    `degraded` on this host while a scope works perfectly. The only answer that means
+    anything is a scope that ran.
+
+    Two attempts, not one. `MemorySwapMax` needs systemd 243 and swap accounting, and a
+    host without either would otherwise lose the **memory** cap -- the one that matters --
+    because of a refinement. A cap that can be satisfied from swap is a slower way to run
+    out of memory, so the first attempt asks for both; if the properties themselves are
+    refused, the second keeps the cap and gives up the refinement, and says so.
+    """
+    tool = shutil.which("systemd-run")
+    if tool is None:
+        return {"applied": False,
+                "reason": "systemd-run is not installed, so a `files` subject runs with "
+                          "no memory, CPU or task cap"}
+    wanted = _properties(limits)
+    attempts = [wanted]
+    if any(prop.startswith("MemorySwapMax=") for prop in wanted):
+        attempts.append(_drop(wanted, "MemorySwapMax"))
+    failures: list[str] = []
+    for props in attempts:
+        try:
+            proc = subprocess.run([tool, *SCOPE_FLAGS, *props, "--", "/bin/true"],
+                                  capture_output=True, text=True, errors="replace",
+                                  timeout=120)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            failures.append(f"{type(exc).__name__}: {exc}")
+            continue
+        if proc.returncode == 0:
+            state = {"applied": True, "tool": tool, "properties": props}
+            if props != wanted:
+                state["degraded"] = ("this systemd refuses MemorySwapMax, so the cap can "
+                                     "be satisfied from swap")
+            return state
+        failures.append(((proc.stderr or "") + (proc.stdout or "")).strip()[-300:]
+                        or f"systemd-run exited {proc.returncode}")
+    return {"applied": False, "reason": " | ".join(failures)}
+
+
+def envelope(*, limits: dict | None = None) -> dict:
+    """The envelope in force, and whether it actually applied.
+
+    `applied: false` is not an error the run should die of -- a bounded run and an
+    unbounded one measure the same thing until the subject misbehaves -- but it is a
+    fact a reader needs, so it goes on the record and into the run's console header.
+    """
+    limits = dict(limits if limits is not None else configured_limits())
+    key = (limits.get("memory"), limits.get("cpus"), limits.get("pids"))
+    if key not in _ENVELOPE_CACHE:
+        _ENVELOPE_CACHE[key] = _probe_envelope(limits)
+    return {"limits": limits, **_ENVELOPE_CACHE[key]}
+
+
+# --- The userspace record -------------------------------------------------------
+#
+# An `exec` point is pinned by `env.image_digest`: two points from two images are two
+# quantities, and the record says which. A `files` point had `image_digest: null` and
+# nothing else that could differ, so a run on a new kernel with a new node and a new
+# bubblewrap was **byte-identical** in `env` to one from six months earlier -- and
+# therefore quotable as the same quantity, which is the one thing §2.5.4 exists to
+# prevent.
+#
+# What a `files` subject depends on beyond the harness itself: the kernel (its namespaces,
+# its seccomp), bubblewrap (the plan is its argv), the mount plan's version, and the
+# interpreters its harness shells out to. Those are the facts, recorded as strings rather
+# than as a hash: a hash can only say "different", and the reader's next question is
+# always "different how".
+
+#: One probe per process. None of this can change mid-run, and every point would otherwise
+#: pay four subprocess starts.
+_USERSPACE: dict | None = None
+
+
+def _version(argv: list[str]) -> str | None:
+    """The first line a tool prints for `--version`, or None.
+
+    Not an error when it fails: a system can be perfectly good and not answer this.
+    Recording `null` is honest; guessing a version is not.
+    """
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, errors="replace",
+                              timeout=30)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()
+    return lines[0][:120] if lines else None
+
+
+def userspace() -> dict:
+    """The host userspace a `files` point was measured in.
+
+    Deliberately describes **the host**, not the sandbox's view of it: the question this
+    answers is "would a rerun on another machine be the same experiment", and the answer
+    is a property of the machine, not of the mount plan.
+    """
+    global _USERSPACE
+    if _USERSPACE is not None:
+        return dict(_USERSPACE)
+    bwrap = shutil.which("bwrap") or current_config().sandbox.bwrap
+    interpreters: dict[str, dict] = {}
+    for name in ("python", "node", "bun"):
+        found = shutil.which(name)
+        interpreters[name] = {"path": found,
+                              "version": _version([found, "--version"]) if found else None}
+    _USERSPACE = {
+        "platform": sys.platform,
+        "kernel": os.uname().release,
+        "plan_version": PLAN_VERSION,
+        "bwrap": {"path": bwrap,
+                  "version": _version([bwrap, "--version"]) if bwrap else None},
+        # The platform's own interpreter is the one that runs a `files` harness on a host
+        # whose `python` is this same one; recorded beside the PATH answer because those
+        # two disagree on an activated venv, and that difference is exactly the kind of
+        # thing a reader is trying to find.
+        "platform_python": sys.version.split()[0],
+        "interpreters": interpreters,
+    }
+    return dict(_USERSPACE)
 
 
 def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
@@ -471,14 +682,33 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
         tool_socket: Path | None = None,
         package_overlays: tuple[tuple[Path, Path], ...] = (),
         immutable_runtimes: tuple[tuple[Path, str], ...] = (),
-        private_paths: tuple[Path, ...] = ()):
+        private_paths: tuple[Path, ...] = (),
+        limits: dict | None = None):
     """`subprocess.run` with the namespace in place. Same return type.
 
     `input_text` exists because a *method* is driven over stdin (it reads one JSON
     request and writes one JSON reply), while a harness is driven with arguments. Both
     need the same namespace, so the namespace takes the input as a parameter rather
     than the caller reaching for `subprocess` and losing the sandbox by accident.
+
+    `limits` is the resource envelope. `None` means **uncapped**, which is the default
+    because the caller knows whether it is launching a subject or a check: the harness
+    and the method opt in, the task's own verifier does not. Capping a verifier would
+    turn "this check needs 6 GB" into a failed check, which is a wrong verdict rather
+    than a bounded one.
     """
+    # The scope, if one applies, is decided **before** the plan is built: `systemd-run
+    # --user` cannot reach the user manager without `XDG_RUNTIME_DIR`, and the plan may not
+    # carry it. So whatever the launcher needs, the launcher gets, and the subject is told
+    # to drop it again (`--unsetenv`) so that its own view is exactly what it was.
+    state = envelope(limits=limits) if limits is not None else None
+    applied = bool(state and state["applied"])
+    launch_env, unsetenv = env, ()
+    if applied:
+        added = {name: os.environ[name] for name in MANAGER_ENV
+                 if name in os.environ and name not in env}
+        if added:
+            launch_env, unsetenv = {**env, **added}, tuple(added)
     try:
         wrapped = command(argv, platform=platform, work_root=work_root,
                           task_dir=task_dir, env=env, repo=repo,
@@ -491,14 +721,21 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
                           model_socket=model_socket, model_path=model_path,
                           tool_socket=tool_socket,
                           immutable_runtimes=immutable_runtimes,
-                          **({'private_paths': private_paths} if private_paths else {}))
+                          **({'private_paths': private_paths} if private_paths else {}),
+                          **({'unsetenv': unsetenv} if unsetenv else {}))
     except SandboxUnavailable as exc:
         if immutable_runtimes:
             raise ImmutableRuntimeUnavailable(str(exc)) from exc
         raise
+    if applied:
+        # Outside the namespace and around it: the scope has to contain the bwrap process,
+        # or a subject that escapes the namespace is also outside the cap. The **applied**
+        # properties, not the wanted ones -- a degraded probe must not put back the
+        # property this host refused.
+        wrapped = [state["tool"], *SCOPE_FLAGS, *state["properties"], "--"] + wrapped
     try:
         proc = run_process(wrapped, input_text=input_text,
-                           timeout_s=timeout_s, cwd=cwd, env=env)
+                           timeout_s=timeout_s, cwd=cwd, env=launch_env)
     except OSError as exc:
         if immutable_runtimes:
             raise ImmutableRuntimeUnavailable(str(exc)) from exc

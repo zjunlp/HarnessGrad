@@ -135,7 +135,7 @@ def stage_workspace(harness_src: Path, work: Path) -> None:
     **`symlinks=True`, because a harness is a repo and git stores a symlink as a symlink.**
     The default follows them instead, which fails in both directions and was measured in one
     of them. A harness that ships a link into a large tree gets that tree *copied*: the
-    `dsh_agent` harness carries 277 links into a 2 GB DSH checkout, and staging recurred
+    `deepseek-harness` harness carries 277 links into a 2 GB DSH checkout, and staging recurred
     through the dependency graph for over 800 s per attempt while the driver sat in
     `shutil.copytree` and produced nothing (`runs/dsh-probe`, 2026-10-06). The other direction
     is worse: following a link out of the harness copies whatever it names into the workspace

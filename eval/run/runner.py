@@ -769,6 +769,15 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 reason = getattr(exc, 'safe_message', exc) if evidence_output is not None else exc
                 return _invalid(task, reason, stage="tool relay", service=None)
 
+        # The subject's resource envelope, read once: the receipt and the launch must
+        # describe the same numbers, and two reads of the config are two chances for them
+        # to disagree. A container gets its envelope from Docker
+        # (`--memory 4g --cpus 2 --pids-limit 1024`); the native path had **nothing**, so
+        # one runaway CLI could take the machine, the model server and every concurrent run
+        # with it -- and the run that did it was not the one that would have reported the
+        # damage. The verifier is deliberately not capped (`sandbox.run`'s `limits`).
+        subject_limits = sandbox_mod.configured_limits()
+
         def launch():
             if is_exec:
                 # `runtime_paths` is deliberately not applied: it exists because a
@@ -815,7 +824,11 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                    env=child_env, timeout_s=timeout_s, cwd=workdir,
                                    repo=repo, state_dirs=(state_dir,),
                                    runtime_paths=runtime_paths,
-                                   visible_paths=((stepwise_dir,) if stepwise_dir else ()),
+                                   limits=subject_limits,
+                                   visible_paths=(((stepwise_dir,) if stepwise_dir else ())
+                                                  + harness_runtime.surfaced_paths(
+                                                      overlay, work_root=work_root,
+                                                      platform=PLATFORM_ROOT)),
                                    network=env_spec.get("network"),
                                    model_socket=(model_gateway.socket_path
                                                  if isinstance(model_gateway, NativeModelRoute) else None),
@@ -956,9 +969,22 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 # shape produced the code is what lets `process_outcome` tell the
                 # convention apart from a positive code a harness chose for itself.
                 "sandbox": bool(sandbox),
+                # What the launch was bounded by, and whether the bound applied. On this
+                # record it matters for one number: `relayed_signal` (137/143) is
+                # *undetermined* by construction, and an envelope turns "killed by
+                # something" into "killed while capped at 4096M -- so possibly the cap".
+                "sandbox_envelope": (sandbox_mod.envelope(limits=subject_limits)
+                                     if sandbox else
+                                     {"applied": False, "reason": "--no-sandbox"}),
                 "verdict": verdict, "env_usage": env_usage,
                 "harness_runtime": harness_runtime.record(
-                    overlay, platform_interpreter=(image_python is None)),
+                    overlay, platform_interpreter=(image_python is None),
+                    # The `files` case runs on the host's `python` and the caller is the
+                    # only one that can ask which version that is; for an image the
+                    # overlay already carries it. Left unasked, a `files` point said
+                    # `python: null`, which is the one field two such points differ in.
+                    interpreter=(None if is_exec
+                                 else harness_runtime.interpreter_version(python))),
                 "runtime_boundary": {
                     "agent_timeout_s": timeout_s,
                     "verifier_timeout_s": verify_timeout_s,

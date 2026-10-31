@@ -248,13 +248,50 @@ def extra_paths(overlay: dict | None) -> tuple[Path, ...]:
     return (Path(overlay["path"]),) if overlay else ()
 
 
-def record(overlay: dict | None, *, platform_interpreter: bool = False) -> dict:
+def surfaced_paths(overlay: dict | None, *, work_root: Path,
+                   platform: Path) -> tuple[Path, ...]:
+    """The overlay paths the sandbox plan would hide, and which must be re-asserted.
+
+    `extra_paths` are handed to the sandbox as `runtime_paths`, which are bound **before**
+    the hides -- deliberately, because a harness must not be able to declare the platform
+    back into existence. The overlay is not harness-declared, though: it is the platform's
+    own directory, and where it lives is a user choice (`HG_OVERLAY_ROOT`), which this
+    platform's own tests point at `/tmp` -- a tree every plan covers with an empty tmpfs.
+    So the plan is asked which of these it would cover, and those go on the
+    `visible_paths` list instead, which is re-bound after the hides.
+
+    Measured, not reasoned: with the overlay root under `/tmp`, the harness imported
+    `openai` from the host's site-packages while the point still recorded
+    `source: overlay`. The failure is silent in both directions -- nothing errors, and the
+    record claims the opposite of what happened.
+    """
+    if not overlay:
+        return ()
+    from eval.containers import sandbox        # local: avoids a module-level cycle
+    try:
+        hidden = sandbox.hidden_trees(Path(work_root), Path(platform))
+    except sandbox.SandboxUnavailable:
+        return ()
+    surfaced = []
+    for path in extra_paths(overlay):
+        target = path.resolve()
+        if any(target == tree or tree in target.parents for tree in hidden):
+            surfaced.append(path)
+    return tuple(surfaced)
+
+
+def record(overlay: dict | None, *, platform_interpreter: bool = False,
+           interpreter: str | None = None) -> dict:
     """The `env.harness_runtime` block for a curve point.
 
     Exactly three shapes, and the third is the one that used to be invisible:
 
-    * `{"source": "overlay", ...}` -- the image's interpreter ran the harness and its
-      dependencies came from a directory outside the task's environment.
+    * `{"source": "overlay", ...}` -- the dependencies came from a directory outside the
+      task's environment, built for the interpreter that runs the harness: the image's
+      for an `exec` point, the host's for a `files` one. `host_site_packages_visible`
+      says which, and it is the one difference a reader has to know about: on a `files`
+      point the overlay **shadows** the host's site-packages, it does not exclude them,
+      so a dependency the requirements do not name still comes from the host.
     * `{"source": "platform", ...}` -- the harness ran on an interpreter the **platform**
       provided, which is §2.5.9's case for an image that has no interpreter of its own.
       That interpreter's packages are what supply the dependencies, so this is the one
@@ -268,6 +305,10 @@ def record(overlay: dict | None, *, platform_interpreter: bool = False) -> dict:
 
     Hence `platform_interpreter` rather than a vague `fell_back`: the distinction is not
     "did we fall back" but "whose interpreter is running", and only the caller knows.
+
+    `interpreter` is the `X.Y` of whichever interpreter that is, when the caller already
+    knows it. It used to be left out, which made a `files` point say `python: null` and
+    hid the one fact a reader needs to compare two such points.
     """
     if overlay:
         prov = overlay.get("provenance") or {}
@@ -275,11 +316,12 @@ def record(overlay: dict | None, *, platform_interpreter: bool = False) -> dict:
                 "install": overlay["install"], "install_sha256": overlay["install_sha256"],
                 "path": str(overlay["path"]),
                 "built_from_image": prov.get("built_from_image"),
+                "host_site_packages_visible": bool(prov.get("host_site_packages_visible")),
                 "packages": prov.get("packages") or {}}
     if platform_interpreter:
-        return {"source": "platform", "python": None,
+        return {"source": "platform", "python": interpreter,
                 "note": "the platform's interpreter supplies the dependencies"}
-    return {"source": "declared", "python": None,
+    return {"source": "declared", "python": interpreter,
             "reason": "the harness declares dependencies and no overlay is configured "
                       "for this interpreter's Python version",
             "remedy": "python3 tools/configure_harness.py --harness <dir>"}

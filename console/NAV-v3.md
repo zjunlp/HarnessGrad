@@ -27,7 +27,7 @@
 
 | 步 | 内容 |
 | --- | --- |
-| 1 场景 | 选场景（具身 / 科学 / 其他）+ 数据集适配器 + 题池 + **基线 harness**（现有 7 个：`loop`、`loop_plain`、`dsh_agent`、`cli_agent`、`codex_agent`、`loop_rrsi_parse`、`oracle`） |
+| 1 场景 | 选场景（具身 / 科学 / 其他）+ 数据集适配器 + 题池 + **基线 harness**（现有 7 个：`loop`、`loop_plain`、`deepseek-harness`、`cli_agent`、`codex`、`loop_rrsi_parse`、`oracle`） |
 | 2 看现状 | **文件系统面板**：目录树 + 带行号的代码视图；点行/拖选 → 底部 chip 显示 `agent.py:120-133 · 14 行`，可复制为锚点 |
 | 3 声明改动 | 一句话说明（标注：人的声明，不是平台记录）+ 引用第 2 步的锚点；生成 **patch 请求预览**（M4 才执行） |
 | 4 送到实验 | 题集/轮数/并发/阻塞项/等效命令/复制/启动（禁用） |

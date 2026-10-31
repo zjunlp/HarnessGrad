@@ -204,12 +204,30 @@ class EnvironmentConfig:
 
 @dataclass(frozen=True)
 class SandboxConfig:
-    """The mount-namespace boundary the harness and the method run inside."""
+    """The mount-namespace boundary the harness and the method run inside.
+
+    The three resource fields are cgroup properties, not sandbox mounts, and they are
+    what a runaway subject cannot exceed: a container gets `--memory 4g --cpus 2
+    --pids-limit 1024` from Docker and the native path had **nothing**, so one CLI could
+    take the machine and every concurrent run with it. The defaults are the container
+    chain's, so the two agree without anyone having to think about it.
+    """
 
     bwrap: str | None = _var(
         "HG_BWRAP", None,
         "Path to the bubblewrap binary, so the installer and the platform check the "
         "same one.", kind="opt")
+    memory_mb: int = _var(
+        "HG_SANDBOX_MEMORY_MB", 4096,
+        "Memory cap for a `files` subject; the container chain's `--memory` default.",
+        kind="int")
+    cpus: float = _var(
+        "HG_SANDBOX_CPUS", 2,
+        "CPU cap for a `files` subject, in cores; the `--cpus` default.", kind="float")
+    pids: int = _var(
+        "HG_SANDBOX_PIDS", 1024,
+        "Task (thread/process) cap for a `files` subject; the `--pids-limit` default.",
+        kind="int")
 
 
 @dataclass(frozen=True)
