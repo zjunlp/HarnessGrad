@@ -140,7 +140,21 @@ model; the rest are read from their source.
 | `loop` | yes | yes | yes | yes, **v0**: `exit`/`output` inline | v0: no record, `ended` inferred |
 | `codex` | yes | yes | yes | yes (`exit_code`; a patch is `apply_patch`) | yes (when it submits) |
 | `opencode` | yes | yes | yes | yes, `returncode: null` (the CLI reports none) | yes |
-| `deepseek-harness`, `cli_agent` | not yet checked | | | | |
+| `deepseek-harness` | yes | yes (`calls: 1`, the invocation) | yes (one turn) | **no** -- its CLI prints no tool stream | yes |
+| `cli_agent` | yes | no (`calls` unknown) | no (it wraps an arbitrary CLI) | one action: the CLI itself, with its exit code | partial |
+
+### The two opaque adapters, and why they stop where they do
+
+`deepseek-harness` prints its reasoning to **stderr** and its final message to **stdout**;
+nothing in it is machine-readable, so the adapter can say "one turn, this answer, this
+model" and cannot say what the agent ran. Supporting the feedback clause needs a structured
+mode from DSH, not a cleverer wrapper.
+
+`cli_agent` wraps an arbitrary CLI and sees an exit code. It records the invocation as one
+action with an `observation` (exit code, output size) because that is what it executed, and
+it records no `calls` because one CLI invocation is not one model call. **A method that
+needs per-step feedback should use the CLI's own adapter** (`codex`, `opencode`, `miniswe`);
+the wrapper is for CLIs nobody has written one for, and it is honest about that.
 
 ### Two dialects, and why the reader learned the old one
 

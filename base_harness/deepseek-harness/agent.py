@@ -530,9 +530,20 @@ def _record_streams(out: str, err: str, record) -> None:
     for line in (err or "").splitlines():
         if line.strip():
             record({"reasoning": line.rstrip()})
-    for line in (out or "").splitlines():
-        if line.strip():
-            record({"reply": line.rstrip()})
+    # **One record for the whole final message.** A record per line made a five-line answer
+    # look like five model turns to `loop_facts`, which counts `reply` records as turns --
+    # the same double-count the miniswe and codex adapters had. Headless DSH is one shot,
+    # so its final message is one turn.
+    answer = "\n".join(line for line in (out or "").splitlines() if line.strip())
+    if answer:
+        record({"reply": answer})
+    # DSH reports no token counts, and `_ended` reads a missing `usage` as a crash (a
+    # harness killed before its own end). Recording the turn it *did* make at this boundary
+    # keeps a successful run from being reported as a crashed one, and the note says what
+    # the number is: one invocation observed here, not the model calls inside it.
+    record({"usage": {"calls": 1,
+                      "note": "dsh reports no token counts; one invocation observed at the "
+                              "harness boundary"}})
 
 
 def main() -> int:

@@ -182,6 +182,18 @@ def main() -> int:
     }
     _write_trace(workdir, [
         {"harness_identity": identity},
+        # **One action, because a wrapper has one.** The adapter contract wants a `command`
+        # and an `observation` per executed action; this adapter executes exactly one
+        # program (the operator's CLI) and can see its exit code and how much it printed.
+        # What it cannot see is the CLI's own turns and tool calls -- the CLI prints no
+        # structured stream, and inventing one here would be a shape the harness never had.
+        # A method that needs per-step feedback should use the CLI's own adapter
+        # (`codex`, `opencode`, `miniswe`), not this wrapper.
+        {"command": " ".join(argv),
+         "observation": {"kind": "other",
+                         "returncode": proc.returncode,
+                         "output_chars": len(proc.stdout or "") + len(proc.stderr or ""),
+                         "truncated": False}},
         # Translate what we can. A CLI that reports nothing gets no token count rather
         # than a zero: a zero that means "not reported" is indistinguishable from a
         # real zero, and a cost rule fed one is not a weak rule but no rule.
