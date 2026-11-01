@@ -81,9 +81,17 @@ def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path):
 # ------------------------------------------------------- what the model is told ---
 
 def test_the_goal_reaches_the_task_text(agent):
+    """The adapter carries the task, not a delivery channel.
+
+    `answer.txt` used to be named here for every task. It is now the *task's* requirement
+    (`eval/run/task_contract.py:runtime_task` injects it for answer-graded tasks, and the QA
+    datasets write their own section), so an adapter that named it again would be deciding
+    the channel for datasets whose verifier never reads that file.
+    """
     text = agent.task_text({"goal": "Find the lamp.", "task_id": "x"})
     assert "Find the lamp." in text
-    assert "answer.txt" in text
+    assert "answer.txt" not in text
+    assert "Write every file the task asks for exactly as asked." in text
 
 
 def test_a_file_submission_task_is_told_not_to_write_an_answer(agent):
