@@ -153,20 +153,55 @@ def control_task(tid):
 
 
 def aggregate(records, selected_task_ids=None):
-    """Question micro-accuracy over the fixed eligible pool, with source coverage."""
+    """Single-trial question micro-accuracy over the fixed eligible pool."""
     from data.datasets.personamem_v2.lib.protocol import METRIC, SPLITS, coverage
+    from data.scaffolds.aggregation import aggregation_denominator, aggregation_policy
+
+    if aggregation_policy("personamem_v2", "corpus_metrics")["aggregation"] != "arithmetic_mean":
+        raise ValueError("personamem_v2 corpus_metrics requires arithmetic_mean over eligible questions")
     ids = list(rows()) if selected_task_ids is None else list(selected_task_ids)
     if len(ids) != len(set(ids)) or set(ids) - rows().keys():
         raise ValueError("duplicate or unknown selected task")
     evidence = {}
     for record in records:
-        row = record.get("verdict", record)
-        row = row.get("evidence", row)
+        row, wrappers = record, [record]
+        for field in ("verdict", "evidence"):
+            if not isinstance(row, Mapping):
+                raise ValueError("invalid aggregate record")
+            if field in row:
+                row = row[field]
+                wrappers.append(row)
+        if not isinstance(row, Mapping):
+            raise ValueError("invalid aggregate evidence")
+        # Saved evidence describes the last trial; even a one-item history may
+        # be a filtered survivor of multiple attempts, not a single-trial run.
+        if any("trials" in item or "trial_scores" in item for item in wrappers):
+            raise ValueError("personamem_v2 aggregate accepts single-trial records only; "
+                             "trial histories require an explicit trial selection")
         tid = row.get("task_id")
         if tid not in ids:
             raise ValueError("record outside selected pool")
-        if tid in evidence or row.get("metric") != METRIC:
-            raise ValueError("duplicate evidence or incompatible metric")
+        if any("task_id" in item and item["task_id"] != tid for item in wrappers):
+            raise ValueError("record and evidence task identity mismatch")
+        if tid in evidence:
+            raise ValueError("duplicate evidence")
+        # The runner may retain a scorer's result for a task the platform
+        # subsequently excluded. Diagnostic evidence cannot restore its score.
+        if row.get("measured") and any(item.get("invalid") or item.get("unmeasured")
+                                       for item in wrappers):
+            raise ValueError("measured evidence on an invalid or unmeasured record")
+        if row.get("reason") == "scorer_error":
+            # check.py cannot attest gold-derived metadata when scoring fails.
+            # Accept only its explicit error schema, never arbitrary damaged evidence.
+            if (set(row) != {"schema", "task_id", "measured", "reason", "detail"}
+                    or row["schema"] != "personamem-v2-verdict-v1"
+                    or row["measured"] is not False
+                    or not isinstance(row["detail"], str) or not row["detail"].strip()):
+                raise ValueError("invalid scorer_error evidence")
+            evidence[tid] = row
+            continue
+        if row.get("metric") != METRIC:
+            raise ValueError("incompatible metric")
         if (row.get("artifacts", {}).get("input_sha256") != rows()[tid]["input_sha256"]
                 or row.get("split") != rows()[tid]["split"]):
             raise ValueError("evidence input or native split mismatch")
@@ -180,7 +215,9 @@ def aggregate(records, selected_task_ids=None):
         selected = [tid for tid in ids if rows()[tid]["split"] == split]
         if not selected:
             continue
-        expected = sum(rows()[tid]["question_count"] for tid in selected)
+        # Gold rows are eligible MCQs in this native split, not episodes or submissions.
+        expected = aggregation_denominator("personamem_v2", "corpus_metrics",
+                                           gold_rows=sum(rows()[tid]["question_count"] for tid in selected))
         complete = [evidence[tid] for tid in selected if tid in evidence and evidence[tid].get("measured")]
         for row in complete:
             if (row["expected_questions"] != rows()[row["task_id"]]["question_count"]
@@ -195,4 +232,8 @@ def aggregate(records, selected_task_ids=None):
                          "measured_questions": sum(len(e["questions"]) for e in complete),
                          "unmeasured_task_ids": missing,
                          "score": None if missing else sum(q["score"] for e in complete for q in e["questions"]) / expected}
+        errors = {tid: evidence[tid]["detail"] for tid in missing
+                  if tid in evidence and evidence[tid].get("reason") == "scorer_error"}
+        if errors:
+            result[split]["scorer_errors"] = errors
     return result

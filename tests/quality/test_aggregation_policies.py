@@ -163,7 +163,7 @@ def _replace_policy(monkeypatch, tmp_path, dataset, scope, **changes):
     monkeypatch.setattr(aggregation, "POLICIES", target)
 
 
-@pytest.mark.parametrize("dataset", sorted(json.loads(BASELINE.read_text())["outputs"]["run_means"]))
+@pytest.mark.parametrize("dataset", sorted(json.loads(aggregation.POLICIES.read_text())))
 def test_every_published_run_policy_is_live(dataset, monkeypatch, tmp_path):
     # A valid alternate rule needs a count the run does not supply. If reward code
     # ignores the declaration this will return a number and the test will fail.
@@ -296,11 +296,12 @@ def test_scienceworld_report_cli_exports_both_means_without_environment(
     assert json.loads(result.stdout) == scienceworld.aggregate(measured, step_budget=100)
 
 
-def test_recorded_reward_uses_the_policy_and_keeps_unmeasured_tasks_out(monkeypatch, tmp_path):
+@pytest.mark.parametrize("dataset", ["musique", "personamem_v2"])
+def test_recorded_reward_uses_the_policy_and_keeps_unmeasured_tasks_out(monkeypatch, tmp_path, dataset):
     from harnessgrad.records import _curve_point
 
     arguments = dict(run_id="synthetic", round_index=0, identity={},
-                     sampling={"dataset": "musique"}, scores=[1.0], task_ids=["measured"],
+                     sampling={"dataset": dataset}, scores=[1.0], task_ids=["measured"],
                      # Model the observed command route; unknown cannot be scored.
                      per_task_scorer_isolation={"measured": "actor-workdir"},
                      invalid={"unmeasured": {"reason": "synthetic scorer failure"}},
@@ -309,7 +310,7 @@ def test_recorded_reward_uses_the_policy_and_keeps_unmeasured_tasks_out(monkeypa
     assert point["score"] == 1.0
     assert point["train_score"] == 0.5
     assert point["n_invalid"] == point["n_scored"] == 1
-    _replace_policy(monkeypatch, tmp_path, "musique", "run_reward", denominator="gold_rows")
+    _replace_policy(monkeypatch, tmp_path, dataset, "run_reward", denominator="gold_rows")
     with pytest.raises(ValueError, match="gold_rows needs"):
         _curve_point(**arguments)
 
