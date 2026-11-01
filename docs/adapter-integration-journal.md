@@ -6175,3 +6175,47 @@ and the fix in the message, instead of running and recording a model it did not 
 (`HG_AGENT_DSH_KEEP_HOME=1` opts back in, for reproducing an operator configuration on
 purpose). A task container's `HOME` starts empty, so the container path is untouched. Test:
 `test_an_operator_home_is_refused_rather_than_silently_used`.
+
+## The first H0 row from the six frontier harnesses — 2026-11-01
+
+One task, one trial, one endpoint (`8001`), `jobs=1`, through the driver rather than by
+calling an entry point by hand: `demo/t01` ("Answer with the word alpha"), a **fixture**
+(`data/demo.py`, 8 trivial exact-match tasks), direct evaluation (`--rounds 0
+--sampling all`). Six runs, ids `h0-<harness>-demo-01`, receipts under
+`/tmp/hg-h0/runs/` (disposable: a fixture diagnostic, not a publishable measurement).
+Every run reported `n_invalid: 0`, `n_harness_failed: 0`, sandbox `bwrap`, and the model
+it actually used.
+
+| harness | score | calls | tokens | what the verifier read |
+| --- | --- | --- | --- | --- |
+| opencode | 1.000 | 1 | 10 819 | `alpha` |
+| deepseek-harness | 1.000 | 3 | 22 922 | `alpha` |
+| miniagent | 1.000 | 1 | 953 | `alpha` |
+| openclaw | 1.000 | 1 | 0 (reports none) | `alpha` |
+| codex | 0.000 | 1 | 17 698 | `Done. I can see the command successfully returned "alpha" as the output.` |
+| miniswe | 0.000 | 5 | 7 514 | `Wait, I need to re-read the instructions more carefully. The task says "Answer w…` |
+
+Two zeros, and neither is a capability difference: both models produced `alpha`
+somewhere and then handed over prose. That is the `final_message` path of the answer rule
+working exactly as documented -- the task said "answer with the word alpha" and did not
+ask for a file, so the harness had nothing but the last message to deliver. It is also the
+first evidence for what the paper wants to claim about harnesses: on an exact-match
+answer task, *who formats the hand-over* moves the score between 0 and 1 with the same
+model.
+
+Three things the row exposes that a single harness would not:
+
+* **Cost is not comparable yet.** 953 → 22 922 tokens for the same one-word answer, and
+  `openclaw` reports `0` because its session carries no token totals (`null`, rendered as
+  0 in this table's `cost.harness_tokens`). Any cost claim has to name which harness
+  reported and which did not.
+* **`miniagent` ran on the host interpreter** and the run said so: its
+  `requirements.txt` is unpinned until an overlay is built
+  (`tools/configure_harness.py --harness base_harness/miniagent`), so its dependencies,
+  including the `requests` bump below, are whatever the host has.
+* **Sampling parameters are not pinned by the adapter contract.** `loop` sends
+  `temperature=0.0` explicitly (`base_harness/loop/agent.py`); the six CLI harnesses leave
+  temperature, top-p and the rest to their own defaults, and no record carries them. Two
+  harnesses on one model are therefore not necessarily two samples of the same
+  distribution -- a comparability note that belongs next to every cross-harness number,
+  not only in this journal.
