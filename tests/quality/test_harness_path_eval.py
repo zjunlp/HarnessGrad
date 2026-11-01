@@ -101,7 +101,9 @@ def test_external_eval_runs_and_records_source(measured):
     root, source, names, _ = _verified(measured)
     meta, point = _record(root, names['direct'])
     assert meta['harness'] == 'external-eval-actor'
-    assert meta['harness_source'] == source_identity(source)
+    receipt = source_identity(source)
+    assert {k: meta['harness_source'][k] for k in ('submission_sha256', 'entries')} == receipt
+    assert meta['harness_source']['harness_sha'] == point['identity']['harness_sha']
     assert meta.get('evaluated_from') is None
     assert 'evaluated_from' not in point
     assert point['side'] == 'eval' and point['score_kind'] == 'exam'

@@ -290,7 +290,8 @@ def test_scenario_run_records_raw_file_identity(tmp_path, extra):
     # scenario. Measured on 2026-11-01: `entries` 3 -> 4 after the adapter tests ran, with
     # the source itself unchanged.
     from tools.validate_harness import source_identity
-    assert meta["harness_source"] == source_identity(_external(tmp_path))
+    receipt = source_identity(_external(tmp_path))
+    assert {k: meta["harness_source"][k] for k in ("submission_sha256", "entries")} == receipt
     points = [json.loads(line) for line in (tmp_path/"runs/metadata/curve.jsonl").read_text().splitlines()]
     assert len(points) == 1 and sorted(points[0]["per_task"]) == ["t01", "t02", "t03", "t04"]
     assert points[0]["measured_by_platform"] is True

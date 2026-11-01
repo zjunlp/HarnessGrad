@@ -83,10 +83,16 @@ def test_external_source_is_not_silently_ignored_on_eval(tmp_path):
     assert proc.returncode == 0, proc.stdout + proc.stderr
     meta = json.loads((tmp_path/'runs/a1-test/run_meta.json').read_text())
     assert meta['harness'] == 'external-test'
-    assert meta['harness_source'] == validator.source_identity(source)
+    receipt = validator.source_identity(source)
+    assert {k: meta['harness_source'][k] for k in ('submission_sha256', 'entries')} == receipt
+    assert meta['harness_source']['path'] == str(source)
     point = json.loads((tmp_path/'runs/a1-test/curve.jsonl').read_text().splitlines()[0])
     assert point['side'] == 'eval'
     assert set(point['per_task']) == {'t05', 't06', 't07', 't08'}
+    # The staged tree's content address, under the same name and function the point uses:
+    # `harness_sha` is always the Git tree hash of the tree that ran, and
+    # `submission_sha256` is always the digest of the directory that was handed in.
+    assert meta['harness_source']['harness_sha'] == point['identity']['harness_sha']
 
 
 def test_external_default_run_id_does_not_use_manifest_path_segments(tmp_path):
@@ -311,7 +317,7 @@ def _digest(root):
     for path in paths:
         digest.update(path.relative_to(root).as_posix().encode('utf-8') + b'\0')
         digest.update(path.read_bytes())
-    return {'sha256': digest.hexdigest(), 'entries': len(paths)}
+    return {'submission_sha256': digest.hexdigest(), 'entries': len(paths)}
 
 
 def test_source_identity_is_location_and_order_independent(tmp_path):
@@ -353,7 +359,29 @@ def test_safe_links_and_directory_aliases_are_preserved_in_identity(tmp_path):
     digest = hashlib.sha256()
     for name, data in expected:
         digest.update(name.encode() + b'\0' + data)
-    assert validator.source_identity(source) == {'sha256':digest.hexdigest(),'entries':5}
+    assert validator.source_identity(source) == {'submission_sha256':digest.hexdigest(),
+                                                 'entries':5}
+
+
+def test_bytecode_is_not_part_of_a_source_identity(tmp_path):
+    """A tree that has been imported is the same submission as one that has not.
+
+    Bytecode is derived from sources the hash already covers, and it appears or disappears
+    on its own -- measured 2026-11-01: copying `base_harness/loop` after the test suite had
+    loaded its `agent.py` produced a different receipt for identical source.
+    """
+    source = _harness(tmp_path)
+    fresh = validator.source_identity(source)
+    (source/'__pycache__').mkdir()
+    (source/'__pycache__'/'agent.cpython-312.pyc').write_bytes(b'bytes')
+    (source/'stray.pyc').write_bytes(b'bytes')
+    assert validator.source_identity(source) == fresh, 'bytecode changed the identity'
+    (source/'__pycache__/agent.cpython-312.pyc').unlink()
+    (source/'stray.pyc').unlink()
+    (source/'__pycache__').rmdir()
+    (source/'notes.txt').write_bytes(b'real input')
+    assert validator.source_identity(source)['entries'] == fresh['entries'] + 1, \
+        'a real input file still counts'
 
 
 def test_identity_rejects_unsafe_links_even_when_called_directly(tmp_path):
@@ -403,7 +431,11 @@ def test_external_run_meta_records_source_identity(tmp_path):
     proc = _run(tmp_path, '--harness-path', str(source))
     assert proc.returncode == 0, proc.stdout + proc.stderr
     meta = json.loads((tmp_path/'runs/a1-test/run_meta.json').read_text())
-    assert meta['harness_source'] == expected
+    receipt = meta['harness_source']
+    # Three facts: what was handed in, and the content address of what ran beside it.
+    assert {k: receipt[k] for k in ('submission_sha256', 'entries')} == expected
+    assert set(receipt) == {'path', 'submission_sha256', 'entries', 'harness_sha'}
+    assert receipt['path'] == str(source)
     assert _digest(source) == expected, 'the driver changed the submitted source'
 
 

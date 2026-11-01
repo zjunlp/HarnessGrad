@@ -34,7 +34,8 @@ from tools.improver import forbidden_reason
 from tools.improver import load_config as load_improvers
 from tools.improver import resolve as resolve_improver
 from tools.validate_harness import check as check_harness, source_identity
-from eval.ckpt.git_state import STATE_DIRNAME, commit_state, manifest, stage_workspace
+from eval.ckpt.git_state import (STATE_DIRNAME, commit_state, content_sha, manifest,
+                                stage_workspace)
 from eval.ckpt.source_tree import copy_harness
 from eval.observe.console import CONSOLE as console
 from eval.run.metrics import select_task_set
@@ -917,7 +918,14 @@ def _main(attempt: dict) -> int:
             return 2
         try:
             harness_src = harness_src.resolve(strict=True)
-            harness_source = source_identity(harness_src)
+            source_receipt = source_identity(harness_src)
+            # Two identities, named apart and never interchangeable: `submission_sha256` is
+            # the digest of the directory that was handed in, `harness_sha` is the Git tree
+            # hash of the staged copy that ran -- the same name and function the curve point
+            # carries, and it is added after staging.
+            harness_source = {'path': str(harness_src),
+                              'submission_sha256': source_receipt['submission_sha256'],
+                              'entries': source_receipt['entries']}
             args.harness = manifest(harness_src)['name']
         except (OSError, ValueError) as exc:
             print(f'refusing --harness-path: {exc}', file=sys.stderr)
@@ -925,7 +933,8 @@ def _main(attempt: dict) -> int:
         # A display name is not a directory name. Keep external default IDs fresh
         # and independent of manifest strings that can contain path separators.
         if not args.run_id:
-            args.run_id = f"external-{harness_source['sha256'][:12]}-{secrets.token_hex(4)}"
+            args.run_id = (f"external-{harness_source['submission_sha256'][:12]}-"
+                           f"{secrets.token_hex(4)}")
         # Existing workspace cleanup must never remove or write into the input.
         for output_root in (args.work_root, args.runs_root):
             output = (Path(output_root) / args.run_id).resolve()
@@ -1642,8 +1651,11 @@ def _main(attempt: dict) -> int:
                 stage_workspace(snapshot, work)
                 if source_identity(snapshot) != snapshot_identity:
                     raise ValueError('harness source snapshot changed during staging')
-            if source_identity(harness_src) != harness_source:
+            if source_identity(harness_src) != source_receipt:
                 raise ValueError('harness source changed during staging; use a stable input directory')
+            # What actually ran, in the name the curve point uses for the same function.
+            harness_source['harness_sha'] = content_sha(work)
+            _write_run_meta(run_dir, harness_source=harness_source)
             problems = check_harness(work)
             if problems:
                 raise ValueError('; '.join(p['detail'] for p in problems))

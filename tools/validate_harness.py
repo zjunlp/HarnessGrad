@@ -94,25 +94,42 @@ def _tree_files(root: Path, ignored=(), *, boundary: Path | None = None) -> list
     return sorted(files, key=lambda item: item[0].encode('utf-8'))
 
 
+#: Bytecode is the one thing excluded from a source identity. It is *derived* from sources
+#: that are hashed anyway, and it appears or disappears depending on whether the tree has
+#: ever been imported -- measured 2026-11-01: a `base_harness/loop` copy gained a
+#: `__pycache__/` when the test suite loaded its `agent.py`, and the same submission then
+#: hashed differently. Everything else stays in, including Bun state, because that is what
+#: actually ran.
+_BYTECODE = '__pycache__'
+
+
 def source_identity(root: Path) -> dict:
-    """SHA-256 of the input tree, before staging creates Git/runtime state.
+    """`submission_sha256` of the input tree, before staging creates Git/runtime state.
 
     Sort regular-file paths by their relative POSIX UTF-8 bytes. For each path,
     update SHA-256 with path bytes, one NUL byte, then the original file bytes.
     `entries` counts these file paths; directories contribute no entry. Safe
     in-tree links use their logical path and target bytes; escaping, broken or
-    cyclic links are refused. No input files are excluded (including Bun state).
-    This is the submission contract's `path\\0content` hash, not a Git tree SHA.
+    cyclic links are refused. Bytecode (`__pycache__/`, `*.pyc`) is excluded -- see
+    `_BYTECODE`; every other input file is included, including Bun state.
+
+    **This is the submission contract's `path\\0content` hash, not a Git tree hash.** The
+    platform records two identities for an external harness and they are different
+    functions of the same tree, so they are named apart: `submission_sha256` (here) is the
+    digest of the directory that was handed in, and `harness_sha`
+    (`eval/ckpt/git_state.py:content_sha`) is the Git tree hash of the staged copy that
+    actually ran -- the same name and the same function the curve point carries.
     """
     root = _resolve(Path(root))
-    files = _tree_files(root)
+    files = [(name, path) for name, path in _tree_files(root, ignored=(_BYTECODE,))
+             if not name.endswith('.pyc')]
     digest = hashlib.sha256()
     for name, path in files:
         digest.update(name.encode('utf-8') + b'\0')
         with path.open('rb') as source:
             for chunk in iter(lambda: source.read(1024 * 1024), b''):
                 digest.update(chunk)
-    return {'sha256': digest.hexdigest(), 'entries': len(files)}
+    return {'submission_sha256': digest.hexdigest(), 'entries': len(files)}
 
 
 def _compile_problems(base: Path, ignored=_NOT_SOURCE, *, boundary: Path | None = None) -> list[str]:
