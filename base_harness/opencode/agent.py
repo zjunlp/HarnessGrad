@@ -208,6 +208,75 @@ def child_environment(parent: dict, state: Path, version: str = "0.0.0") -> dict
     return env
 
 
+def workdir_tsconfig(package_dir: Path, work: Path) -> Path | None:
+    """Give bun an entry-graph tsconfig that works from the **task** directory.
+
+    bun reads one tsconfig as the default for everything it compiles, from
+    `$cwd/tsconfig.json`. Two of its fields matter here and neither survives a different
+    cwd unchanged:
+
+    * `jsx`/`jsxImportSource` -- the tree compiles `.tsx` with `preserve` and the Solid
+      transform, which arrives through a **bunfig `preload`**
+      (`packages/opencode/bunfig.toml` -> `@opentui/solid/preload`). Without the tsconfig
+      bun falls back to the React runtime and the CLI dies on
+      `Cannot find module 'react/jsx-dev-runtime'`.
+    * `paths` -- `./src/*` is resolved **relative to the cwd**, so from a task directory it
+      points at the task's own `src/` and every `@/...` import fails
+      (`Cannot find module '@/bus/bus-event'`). Absolute targets make it
+      location-independent.
+
+    Returns the path written, or `None` when the task brought its own `tsconfig.json` --
+    in which case the task's file is left alone and the run is recorded as having used it.
+    """
+    target = work / "tsconfig.json"
+    if target.exists():
+        return None
+    source = package_dir / "tsconfig.json"
+    try:
+        data = json.loads(source.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    options = dict(data.get("compilerOptions") or {})
+    options.pop("$schema", None)
+    paths = {}
+    for alias, targets in (options.pop("paths", None) or {}).items():
+        paths[alias] = [str((package_dir / target_path).resolve())
+                        for target_path in targets]
+    if paths:
+        options["paths"] = paths
+    target.write_text(json.dumps({"compilerOptions": options}, indent=1) + "\n",
+                      encoding="utf-8")
+    return target
+
+
+def workdir_bunfig(package_dir: Path, work: Path) -> Path | None:
+    """Give bun the tree's `preload` without the tree's cwd.
+
+    `packages/opencode/bunfig.toml` is one line -- `preload = ["@opentui/solid/preload"]`
+    -- and it is what registers the Solid JSX transform. bun reads `$cwd/bunfig.toml` and
+    resolves the preload from the cwd, so from a task directory the bare package name
+    resolves to nothing and the process exits **silently** (measured: exit 0, no stdout, no
+    stderr, no log directory) rather than reporting a missing module.
+
+    So the same file is written into the task directory with the preload resolved to an
+    absolute path. `--config` is not the answer here: pointing bun at the tree's own bunfig
+    with that flag makes the CLI exit 0 with no output at all, in every cwd, including the
+    one where it works without the flag.
+    """
+    solid = package_dir / "node_modules" / "@opentui" / "solid"
+    if not solid.exists():
+        solid = package_dir.parent.parent / "node_modules" / "@opentui" / "solid"
+    preload = solid / "scripts" / "preload.ts"
+    if not preload.is_file():
+        return None
+    target = work / "bunfig.toml"
+    if target.exists():
+        return None
+    target.write_text('preload = [' + json.dumps(str(preload.resolve())) + ']\n',
+                      encoding="utf-8")
+    return target
+
+
 def timeout_seconds(env: dict) -> float:
     configured = float(env.get("HG_AGENT_OPENCODE_TIMEOUT_S", "300"))
     if configured <= 0:
@@ -462,22 +531,34 @@ def run(task: dict, work: Path) -> int:
                         "source": str(source), "source_sha256": source_hash(source),
                         "source_in_candidate": owned}
             record({"harness_identity": identity, "task_id": task.get("task_id")})
-            # The CLI's own working directory is the *package* the entrypoint lives in:
-            # `packages/cli` in the 2.0 preview, `packages/opencode` in the v1 line. Derived
-            # from the entrypoint rather than hard-coded, because the layout moved between
-            # those two releases and a hard-coded path is what made the first run print help
-            # and exit 1.
+            # Where the entrypoint lives, used to find the tree's `bunfig.toml` and its
+            # tsconfig. Not the process's cwd any more: v1 takes its *project root* from
+            # `process.cwd()` (`cli/cmd/run.ts:575`), so running from here made the agent's
+            # bash tool, its edits and its snapshots all point at the harness's own source
+            # tree. The CLI runs from the task directory and is told where its config is
+            # (`--config`) instead.
             package_dir = entry.parent.parent
+            # Two files the CLI's compiler needs and the task never asked for. Both are
+            # written here and removed in the `finally`: bun reads them from the *cwd*, and
+            # the cwd is now the task directory because that is what v1 uses as the project
+            # root. `tsconfig.json` carries the tree's JSX settings with absolute `paths`;
+            # `bunfig.toml` carries its preload (the Solid JSX transform).
+            written = [path for path in (workdir_tsconfig(package_dir, work),
+                                         workdir_bunfig(package_dir, work)) if path]
             # `--standalone` existed in the preview CLI and not in v1: v1's `run` accepts
             # `--format json` and rejects an unknown flag outright.
             preload = write_preload(work / ".opencode-state", version)
-            argv = [bun_binary(parent), "--no-env-file", "--no-install",
-                    "--preload", str(preload),
+            # `--config`: bun reads `$cwd/bunfig.toml`, and the tree's own bunfig is what
+            # registers the Solid JSX transform (`preload = ["@opentui/solid/preload"]`).
+            # Running from the task directory without it makes every `.tsx` fall back to
+            # the React runtime -- measured, `Cannot find module 'react/jsx-dev-runtime'`.
+            prefix = [bun_binary(parent), "--no-env-file", "--no-install"]
+            argv = [*prefix, "--preload", str(preload),
                     str(entry), "run", "--format", "json",
                     "--model", "harnessgrad/" + parent["HG_AGENT_MODEL"], "--agent", "build"]
             before = answer_stamp(work)
             process = subprocess.Popen(
-                argv, cwd=package_dir, env=env, stdin=subprocess.PIPE,
+                argv, cwd=work, env=env, stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, encoding="utf-8", errors="replace", start_new_session=os.name != "nt")
             timed_out = False
@@ -507,8 +588,13 @@ def run(task: dict, work: Path) -> int:
                 raise ValueError("Expected exactly one OpenCode session in the JSON stream")
             # Export is a local state read, not another model request. It supplies finish
             # and usage even when noninteractive.ts reconstructed only text/tool events.
-            export_argv = argv[:4] + ["session", "export", next(iter(stream.sessions))]
-            export = subprocess.Popen(export_argv, cwd=source / "packages/cli", env=env,
+            # Built from `prefix` rather than `argv[:4]`: an earlier version sliced the
+            # launch arguments, which silently cut `--preload` from its value and pointed
+            # the export at the preview's `packages/cli`. It also has to run from the task
+            # directory, or it opens a different project than the session it is asked about.
+            export_argv = [*prefix, str(entry), "session", "export",
+                           next(iter(stream.sessions))]
+            export = subprocess.Popen(export_argv, cwd=work, env=env,
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                       text=True, encoding="utf-8", errors="replace",
                                       start_new_session=os.name != "nt")
@@ -518,11 +604,25 @@ def run(task: dict, work: Path) -> int:
                 stop_process_tree(export)
                 export.communicate()
                 raise ValueError("OpenCode session export exceeded the task deadline")
-            if export.returncode:
-                raise ValueError("OpenCode session export failed: " + redact(export_error[-2000:], parent))
-            snapshot_text = redact(snapshot_text, parent)
-            (work / "opencode.session.json").write_text(snapshot_text, encoding="utf-8")
-            stream.reconcile(json.loads(snapshot_text))
+            if export.returncode or not snapshot_text.strip():
+                # **Best effort, and the run continues.** The export supplies `finish` and
+                # per-step usage when the JSON stream did not; both are already in the
+                # stream here (`step_finish` carries tokens), and the final message comes
+                # from the stream too. Failing the task for it would record a plumbing
+                # failure as a harness failure -- the one attribution mistake this platform
+                # spends most of its machinery avoiding.
+                #
+                # Measured 2026-11-01: `session export` exits non-zero with **empty stderr**
+                # from a task directory, while the same command works when the tree's
+                # `bunfig.toml`/`tsconfig.json` are in the cwd -- and the harness removes
+                # those before the next task.
+                record({"export": {"ok": False,
+                                   "exit_code": export.returncode,
+                                   "detail": redact(export_error[-800:], parent)}})
+            else:
+                snapshot_text = redact(snapshot_text, parent)
+                (work / "opencode.session.json").write_text(snapshot_text, encoding="utf-8")
+                stream.reconcile(json.loads(snapshot_text))
             answer, origin = save_answer(work, before, stream.final_text(), task=task)
             record({"submitted": True, "answer": answer, "answer_source": origin,
                     **({"submitted_files": submission_paths(task)} if origin == "files" else {})})
@@ -535,6 +635,11 @@ def run(task: dict, work: Path) -> int:
             # A submission/export failure still consumed model tokens. Report what
             # was observed once; missing provider usage stays unknown, never zero.
             record({"usage": stream.usage(), "elapsed_s": time.monotonic() - started})
+            for path in written:
+                # Platform plumbing for the CLI's compiler, not part of the task's result:
+                # leaving it would hand a verifier a file the harness wrote and the task
+                # never asked for.
+                path.unlink(missing_ok=True)
 
 
 def main():
