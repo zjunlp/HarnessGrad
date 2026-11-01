@@ -12,8 +12,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
+import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -298,36 +301,161 @@ def validate(root: Path, smoke: bool) -> list[str]:
     return errs
 
 
-def _smoke(base: Path, entry: Path) -> list[str]:
+_SMOKE_TIMEOUT = 120
+
+
+def _smoke_tail(stdout, stderr) -> str:
+    def tail(value):
+        if isinstance(value, bytes):
+            value = value.decode('utf-8', errors='replace')
+        return '\n'.join((value or '').splitlines()[-20:])[-16000:]
+    return f"stdout tail:\n{tail(stdout)}\nstderr tail:\n{tail(stderr)}"
+
+
+@contextmanager
+def _smoke_temporary(parent, prefix, io_budget=None):
+    """Reserve before writing; release transient bytes only after owned cleanup."""
+    reserved = 0
+    directory = None
+    def charge(amount):
+        nonlocal reserved
+        if io_budget is not None:
+            io_budget(amount)
+        reserved += amount
+    try:
+        charge(4096)
+        directory = Path(tempfile.mkdtemp(prefix=prefix,dir=parent))
+        yield directory,charge
+    finally:
+        if directory is not None:
+            shutil.rmtree(directory)
+        if reserved and io_budget is not None:
+            io_budget(-reserved)
+
+
+def _smoke_copy(source, target, charge, *, root):
+    mode = source.lstat().st_mode
+    if stat.S_ISDIR(mode):
+        charge(4096)
+        target.mkdir()
+        for child in source.iterdir():
+            if source == root and child.name == '.state':
+                continue  # State is per-task tmpfs, never the uploaded cache contents.
+            _smoke_copy(child,target/child.name,charge,root=root)
+    elif stat.S_ISREG(mode):
+        charge(4096)
+        with source.open('rb') as incoming, target.open('xb') as output:
+            while chunk := incoming.read(65536):
+                charge(len(chunk))
+                output.write(chunk)
+        target.chmod(0o644 | (mode & 0o111))
+    else:
+        raise OSError(f'smoke source contains a nonordinary entry: {source.name}')
+
+
+def _smoke_work_root(path, io_budget):
+    if path.is_dir():
+        return
+    _smoke_work_root(path.parent,io_budget)
+    if io_budget is not None:
+        io_budget(4096)
+    path.mkdir()
+
+
+def _smoke(base: Path, entry: Path, *, runner=None, temp_root=None, io_budget=None) -> list[str]:
     """Run the harness on a trivial task and check it writes an answer.
 
     Deliberately trivial: this checks the *contract*, not the harness's quality.
     """
     errs: list[str] = []
-    with tempfile.TemporaryDirectory(prefix="hg-validate-") as tmp:
-        tmpd = Path(tmp)
+    with _smoke_temporary(temp_root,'hg-validate-',io_budget) as (tmpd,charge):
         task = tmpd / "task.json"
-        task.write_text(json.dumps({
+        payload = json.dumps({
             "task_id": "smoke",
             "goal": "Write the word ok into answer.txt.",
-        }))
+        }).encode('utf-8')
+        charge(4096+len(payload))
+        task.write_bytes(payload)
         try:
-            proc = subprocess.run(
-                [sys.executable, str(entry.resolve()), "--task", str(task),
-                 "--workdir", str(tmpd)],
-                capture_output=True, text=True, errors="replace", timeout=120, cwd=tmpd,
-            )
-        except subprocess.TimeoutExpired:
-            return ["smoke run timed out after 120s"]
+            argv = [sys.executable, str(entry.resolve()), "--task", str(task),
+                    "--workdir", str(tmpd)]
+            proc = (runner(argv, tmpd) if runner is not None else subprocess.run(
+                argv, capture_output=True, text=True, errors="replace",
+                timeout=_SMOKE_TIMEOUT, cwd=tmpd))
+        except subprocess.TimeoutExpired as exc:
+            return [f"smoke run timed out after {_SMOKE_TIMEOUT}s; "
+                    + _smoke_tail(exc.stdout, exc.stderr)]
         except OSError as exc:
             return [f"smoke run could not start: {exc}"]
 
         if proc.returncode != 0:
-            errs.append(f"smoke run exited {proc.returncode}; stderr tail: "
-                        f"{proc.stderr[-300:]}")
+            errs.append(f"smoke run exited {proc.returncode}; "
+                        + _smoke_tail(proc.stdout, proc.stderr))
         if not (tmpd / "answer.txt").exists():
-            errs.append("smoke run did not write answer.txt (required: F3)")
+            errs.append("smoke run did not write answer.txt (required: F3); "
+                        + _smoke_tail(proc.stdout, proc.stderr))
     return errs
+
+
+def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> list[dict]:
+    """Shared smoke contract in the existing sandbox, with no host fallback.
+
+    Uploaded paths are never runtime mounts. A charged private copy stays read-only,
+    with the runner's per-task state tmpfs and a separate writable task directory.
+    This is an interface probe, not a benchmark measurement.
+    """
+    from eval.containers import sandbox
+
+    root, platform, work_root = Path(root).resolve(), Path(platform).resolve(), Path(work_root).resolve()
+    if (work_root == platform or work_root.is_relative_to(platform)
+            or root == work_root or root.is_relative_to(work_root)
+            or work_root.is_relative_to(root)):
+        return [{'code': 'service-not-ready', 'detail': 'smoke work root must be separate from platform and source'}]
+    problems = check(root)
+    if problems:
+        return problems
+    state = root/'.state'
+    if state.is_symlink() or (state.exists() and not state.is_dir()):
+        return [{'code':'smoke-failed','detail':'.state must be an ordinary directory'}]
+    man = json.loads((root/'harness.json').read_text(encoding='utf-8'))
+    env = {'PATH': '/usr/bin:/bin', 'HOME': '/tmp', 'TMPDIR': '/tmp',
+           'HG_AGENT_BACKEND': 'mock', 'PYTHONDONTWRITEBYTECODE': '1'}
+    limits = sandbox.configured_limits()
+
+    def run(argv, task_dir):
+        try:
+            # Check infrastructure with trusted code before interpreting subject exit.
+            try:
+                ready = sandbox.run(['/bin/true'], platform=platform, work_root=work_root,
+                                    task_dir=task_dir, env=env, repo=copy_root,
+                                    timeout_s=_SMOKE_TIMEOUT, cwd=task_dir, network='none')
+            except subprocess.TimeoutExpired as exc:
+                raise sandbox.SandboxUnavailable('smoke namespace readiness probe timed out') from exc
+            if ready.returncode:
+                raise sandbox.SandboxUnavailable('smoke namespace could not start: '
+                                                 + _smoke_tail(ready.stdout, ready.stderr))
+            return sandbox.run(argv, platform=platform, work_root=work_root,
+                               task_dir=task_dir, env=env, repo=copy_root,state_dirs=(state,),
+                               timeout_s=_SMOKE_TIMEOUT, cwd=task_dir, network='none',
+                               limits=limits)
+        except OSError as exc:
+            raise sandbox.SandboxUnavailable(f'smoke sandbox could not start: {exc}') from exc
+
+    try:
+        _smoke_work_root(work_root,io_budget)
+        with _smoke_temporary(work_root,'hg-smoke-source-',io_budget) as (temporary,charge):
+            copy_root = temporary/'harness'
+            _smoke_copy(root,copy_root,charge,root=root)
+            state = copy_root/'.state'
+            charge(4096)
+            state.mkdir()
+            env['HARNESSGRAD_STATE'] = str(state)
+            base = copy_root/man.get('path','.')
+            errors = _smoke(base, base/man['entrypoint'],runner=run,
+                            temp_root=work_root.parent,io_budget=io_budget)
+    except (sandbox.SandboxUnavailable, OSError) as exc:
+        return [{'code': 'service-not-ready', 'detail': str(exc)}]
+    return [{'code': 'smoke-failed', 'detail': error} for error in errors]
 
 
 def main() -> int:

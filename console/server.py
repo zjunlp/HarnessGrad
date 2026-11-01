@@ -60,6 +60,10 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import ipaddress
+import tempfile
+from email import policy as email_policy
+from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -2715,6 +2719,174 @@ def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
     return 200, payload
 
 
+def _submission_backend():
+    """Load the adjacent service for both standalone CLI and importlib tests."""
+    if str(ROOT.parent) not in sys.path:
+        sys.path.insert(0, str(ROOT.parent))
+    from console import submissions
+    return submissions
+
+
+def _submission_reject(code, detail, field=None):
+    _submission_backend()._reject(code, detail, field)
+
+
+def submission_origin(headers, *, port: int) -> None:
+    hosts = headers.get_all('Host', [])
+    try:
+        if len(hosts) != 1 or any(c in hosts[0] for c in '/@?#\\\r\n '):
+            raise ValueError('one numeric loopback Host is required')
+        url = urlparse('//' + hosts[0])
+        if not ipaddress.ip_address(url.hostname).is_loopback or url.port != port:
+            raise ValueError('Host must use a loopback address and this server port')
+    except (ValueError, TypeError) as exc:
+        _submission_reject('bad-host', str(exc), 'Host')
+    origins = headers.get_all('Origin', [])
+    if origins and origins != [f'http://127.0.0.1:{port}']:
+        _submission_reject('origin-forbidden', 'Origin must match this loopback service', 'Origin')
+
+
+def submission_length(headers) -> int:
+    values = headers.get_all('Content-Length', [])
+    if headers.get_all('Transfer-Encoding') or len(values) != 1 or not re.fullmatch(r'[0-9]+', values[0]):
+        _submission_reject('bad-multipart', 'one Content-Length and no Transfer-Encoding are required')
+    # Bound integer parsing as well as allocation.
+    if len(values[0]) > 10:
+        _submission_reject('payload-too-large', 'multipart envelope exceeds 20 MiB + 64 KiB')
+    length = int(values[0])
+    if length > 20*1024*1024 + 65536:
+        _submission_reject('payload-too-large', 'multipart envelope exceeds 20 MiB + 64 KiB')
+    return length
+
+
+def submission_form(headers, body: bytes) -> tuple[bytes, dict]:
+    if len(body) != submission_length(headers):
+        _submission_reject('bad-multipart', 'multipart body is incomplete')
+    types = headers.get_all('Content-Type', [])
+    if len(types) != 1 or len(types[0]) > 1024 or '\r' in types[0] or '\n' in types[0]:
+        _submission_reject('bad-multipart', 'one bounded Content-Type is required')
+    prefix = b'Content-Type: ' + types[0].encode('ascii', errors='replace') + b'\r\nMIME-Version: 1.0\r\n\r\n'
+    header = BytesParser(policy=email_policy.default).parsebytes(prefix, headersonly=True)
+    boundary = header.get_boundary()
+    if not boundary or not boundary.isascii() or not 1 <= len(boundary) <= 70:
+        _submission_reject('bad-multipart', 'a bounded ASCII boundary is required')
+    delimiter = re.compile(rb'(?:^|\r\n)--' + re.escape(boundary.encode()) + rb'(?:--)?[ \t]*(?:\r\n|$)')
+    if sum(1 for _ in delimiter.finditer(body)) > 5:
+        _submission_reject('bad-multipart', 'multipart accepts at most four parts')
+    try:
+        message = BytesParser(policy=email_policy.default).parsebytes(prefix + body)
+    except (RecursionError, ValueError) as exc:
+        _submission_reject('bad-multipart', f'multipart nesting or encoding is invalid: {exc}')
+    if message.get_content_type() != 'multipart/form-data' or not message.is_multipart() or message.defects:
+        _submission_reject('bad-multipart', 'valid multipart/form-data with a closing boundary is required')
+    fields = {}
+    archive = None
+    for part in message.iter_parts():
+        if part.is_multipart() or part.defects or part.get_content_disposition() != 'form-data':
+            _submission_reject('bad-multipart', 'nested or malformed multipart part')
+        if (len(part.get_all('Content-Disposition', [])) != 1
+                or sum(len(k)+len(str(v)) for k, v in part.raw_items()) > 8192
+                or part.get('Content-Transfer-Encoding', 'binary').lower() not in ('binary', '8bit')):
+            _submission_reject('bad-multipart', 'invalid multipart part headers or encoding')
+        names = [v for k, v in part.get_params(header='content-disposition', failobj=[]) if k == 'name']
+        name = names[0] if len(names) == 1 else None
+        if name not in ('archive', 'scenario', 'label', 'contact'):
+            _submission_reject('bad-multipart', 'unknown or missing multipart field', name or 'part')
+        if name in fields or (name == 'archive' and archive is not None):
+            _submission_reject('bad-multipart', f'duplicate {name} part', name)
+        raw = part.get_payload(decode=True)
+        if raw is None:
+            _submission_reject('bad-multipart', 'part must contain bytes', name)
+        if name == 'archive':
+            if len(raw) > 20*1024*1024:
+                _submission_reject('payload-too-large', 'archive exceeds 20 MiB', 'archive')
+            archive = raw
+        else:
+            if len(raw) > 4096:
+                _submission_reject('bad-multipart', f'{name} is too long', name)
+            try:
+                fields[name] = raw.decode('utf-8')
+            except UnicodeError:
+                _submission_reject('bad-multipart', f'{name} must be UTF-8', name)
+    if archive is None:
+        _submission_reject('bad-multipart', 'archive part is required', 'archive')
+    if not fields.get('scenario'):
+        _submission_reject('bad-multipart', 'scenario part is required', 'scenario')
+    label, contact = fields.get('label', ''), fields.get('contact', '')
+    if label and not re.fullmatch(r'[A-Za-z0-9._-]{1,64}', label):
+        _submission_reject('bad-multipart', 'label must match [A-Za-z0-9._-] and be <=64 characters', 'label')
+    if len(contact) > 200:
+        _submission_reject('bad-multipart', 'contact must be <=200 characters', 'contact')
+    return archive, fields
+
+
+def submission_query(query: dict, *, for_log: bool = False) -> dict:
+    allowed = {'tail'} if for_log else {'limit', 'cursor'}
+    for key, values in query.items():
+        if key not in allowed or len(values) != 1:
+            _submission_reject('bad-query', 'unknown or repeated query field', key)
+    key, default, maximum = ('tail', 20000, 200000) if for_log else ('limit', 50, 200)
+    value = query.get(key, [str(default)])[0]
+    if not re.fullmatch(r'[0-9]{1,6}', value) or not 1 <= int(value) <= maximum:
+        _submission_reject('bad-query', f'{key} must be an integer in 1..{maximum}', key)
+    result = {key: int(value)}
+    if not for_log:
+        cursor = query.get('cursor', [None])[0]
+        if cursor is not None and not re.fullmatch(r'sub-\d{8}T\d{6}Z-[0-9a-f]{8}', cursor):
+            _submission_reject('bad-query', 'cursor must be a submission ID', 'cursor')
+        result['cursor'] = cursor
+    return result
+
+
+_submission_init_lock = threading.Lock()
+
+
+def submission_service(httpd):
+    root = os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT')
+    if not root:
+        _submission_reject('service-not-ready', 'configure HG_CONSOLE_SUBMISSIONS_ROOT outside the platform')
+    if httpd.server_address[0] != '127.0.0.1':
+        _submission_reject('service-not-ready', 'submission service requires a 127.0.0.1 listener')
+    with _submission_init_lock:
+        if not hasattr(httpd, '_submission_service'):
+            try:
+                config = {
+                    'max_queue':int(os.environ.get('HG_CONSOLE_SUBMISSIONS_MAX_QUEUE','16')),
+                    'quota_bytes':int(os.environ.get('HG_CONSOLE_SUBMISSIONS_QUOTA_BYTES',str(5*1024**3))),
+                    'retention_seconds':float(os.environ.get('HG_CONSOLE_SUBMISSIONS_RETENTION_SECONDS',str(30*86400))),
+                    'sweep_seconds':float(os.environ.get('HG_CONSOLE_SUBMISSIONS_SWEEP_SECONDS','1'))}
+            except (ValueError,OverflowError):
+                _submission_reject('service-not-ready','invalid submission queue/quota/retention configuration')
+            httpd._submission_service = _submission_backend().SubmissionService(
+                platform_root=PLATFORM, submissions_root=pathlib.Path(root), runs_root=RUNS,
+                work_root=pathlib.Path(os.environ.get('HG_CONSOLE_SUBMISSIONS_WORK','/tmp/hg-submissions-work')),
+                budget_dir=BUDGET_DIR, liveness=lambda:(procfs_readable(), live_drivers_by_run()),
+                env_resolver=submission_env,**config)
+        return httpd._submission_service
+
+
+def submission_env(scenario_name, *, settings=None, base_env=None):
+    backend = _submission_backend()
+    spec, _ = backend._scenario(scenario_name, PLATFORM)
+    env = dict(os.environ if base_env is None else base_env)
+    # Native files tasks launch "python". Starting this server by absolute venv
+    # interpreter must work just as activating that venv before starting it.
+    env['PATH'] = str(pathlib.Path(sys.executable).parent) + os.pathsep + env.get('PATH','/usr/bin:/bin')
+    if spec['model']['backend'] == 'mock':
+        env['HG_AGENT_BACKEND'] = 'mock'
+        for name in ('HG_AGENT_MODEL','HG_AGENT_BASE_URL','HG_AGENT_API_KEY'):
+            env[name] = ''  # Keep driver.load_env's setdefault from repopulating them.
+    else:
+        task = (load_settings() if settings is None else settings)['task']
+        env['HG_AGENT_BACKEND'] = env.get('HG_AGENT_BACKEND') or 'openai'
+        if env['HG_AGENT_BACKEND'] == 'mock':
+            env['HG_AGENT_BACKEND'] = 'openai'
+        for key, variable in (('model','HG_AGENT_MODEL'),('base_url','HG_AGENT_BASE_URL'),('api_key','HG_AGENT_API_KEY')):
+            if task.get(key):
+                env[variable] = task[key]
+    return backend.scenario_environment(spec, env)
+
+
 # ─────────────────────────────────────────────────────── HTTP
 class Handler(BaseHTTPRequestHandler):
     server_version = "hg-console/0.2"
@@ -2742,10 +2914,94 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, message: str, status: int = 400) -> None:
         self._send({"error": message}, status)
 
+    def _submission_error(self, exc) -> None:
+        if isinstance(exc, _submission_backend().SubmissionRejected):
+            source = exc.problems[0]
+        else:
+            source = {'code':'internal-error','detail':f'submission operation failed: {exc}'}
+        problem = {k:source[k] for k in ('code','detail','field','existing_submission_id') if k in source}
+        code = problem['code']
+        status = {'bad-host':400, 'origin-forbidden':403, 'submission-not-found':404,
+                  'bad-query':400, 'payload-too-large':413, 'archive-too-large':413,
+                  'service-not-ready':503, 'internal-error':500}.get(code,
+                  409 if code in ('scenario-not-available','duplicate-submission','queue-full','running','not-started') else 400)
+        self._send({'api_version':'1','error':problem}, status)
+
+    def _submission_get(self, parts, query) -> None:
+        try:
+            service = submission_service(self.server)
+            if parts == ['api','scenarios']:
+                if query:
+                    _submission_reject('bad-query','scenarios does not accept query fields',next(iter(query)))
+                settings, base_env = load_settings(), dict(os.environ)
+                payload = service.scenarios(driver_env=base_env, env_for_scenario=lambda name:
+                    submission_env(name, settings=settings, base_env=base_env))
+                return self._send(payload)
+            if parts == ['api','submissions']:
+                return self._send(service.list(**submission_query(query)))
+            if len(parts) == 4 and parts[3] == 'log':
+                raw = service.log(parts[2], **submission_query(query,for_log=True))
+                return self._send(raw, ctype='text/plain; charset=utf-8')
+            if len(parts) == 3:
+                if query:
+                    _submission_reject('bad-query','detail does not accept query fields',next(iter(query)))
+                return self._send(service.get(parts[2]))
+            _submission_reject('submission-not-found','submission route was not found')
+        except (ValueError,OSError,TypeError) as exc:
+            self._submission_error(exc)
+
+    def _submission_post(self) -> None:
+        token = None
+        service = None
+        try:
+            submission_origin(self.headers,port=self.server.server_port)
+            service = submission_service(self.server)
+            service._guard()  # Reject resource/config failures before reading an upload.
+            length = submission_length(self.headers)
+            token = service.reserve_upload(length)
+            self.connection.settimeout(30)
+            raw, fields = submission_form(self.headers,self.rfile.read(length))
+            service._quota_reserve(token,4096+len(raw)-length)
+            path = token['directory']/'archive.bin'
+            path.write_bytes(raw)  # Client filename is never used.
+            code, payload = service.submit(path,fields['scenario'],label=fields.get('label',''),
+                                           contact=fields.get('contact',''),upload_token=token,
+                                           driver_env=submission_env(fields['scenario']))
+            return self._send(payload,code)
+        except TimeoutError:
+            self.close_connection = True
+            self._submission_error(_submission_backend().SubmissionRejected([
+                {'code':'bad-multipart','detail':'upload read timed out'}]))
+        except (ValueError,OSError,TypeError) as exc:
+            self.close_connection = True
+            self._submission_error(exc)
+        finally:
+            if service is not None:
+                service.release_upload(token)
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        url = urlparse(self.path)
+        parts = [unquote(p) for p in url.path.strip('/').split('/') if p]
+        try:
+            submission_origin(self.headers,port=self.server.server_port)
+            if parts[:2] != ['api','submissions'] or len(parts) != 3:
+                _submission_reject('submission-not-found','submission route was not found')
+            if url.query:
+                _submission_reject('bad-query','DELETE does not accept query fields')
+            service = submission_service(self.server)
+            service.start()
+            code,payload = service.delete(parts[2])
+            return self._send(payload,code)
+        except (ValueError,OSError,TypeError) as exc:
+            self._submission_error(exc)
+
     def do_GET(self) -> None:  # noqa: N802
         url = urlparse(self.path)
         parts = [unquote(p) for p in url.path.strip("/").split("/") if p]
         query = parse_qs(url.query)
+
+        if parts[:2] == ['api','submissions'] or parts == ['api','scenarios']:
+            return self._submission_get(parts,parse_qs(url.query,keep_blank_values=True))
 
         if not parts or parts[0] != "api":
             return self._static(url.path)
@@ -2900,6 +3156,12 @@ class Handler(BaseHTTPRequestHandler):
         """The console's write surface: one launch, one chat, and the endpoint settings."""
         url = urlparse(self.path)
         route = url.path.strip("/")
+        if route == 'api/submissions':
+            if url.query:
+                self.close_connection = True
+                return self._submission_error(_submission_backend().SubmissionRejected([
+                    {'code':'bad-query','detail':'upload does not accept query fields'}]))
+            return self._submission_post()
         if route == "api/chat":
             try:
                 length = int(self.headers.get("Content-Length") or 0)
@@ -2969,17 +3231,28 @@ class Handler(BaseHTTPRequestHandler):
 class ConsoleServer(ThreadingHTTPServer):
     daemon_threads = True
 
+    def server_close(self):
+        try:
+            if hasattr(self,'_submission_service'):
+                self._submission_service.close()
+        finally:
+            super().server_close()
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=4460)
     ap.add_argument("--host", default="127.0.0.1")
     args = ap.parse_args()
+    if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT') and args.host != '127.0.0.1':
+        raise SystemExit('submission service requires --host 127.0.0.1')
     if not RUNS.is_dir():
         raise SystemExit(f"runs root not found: {RUNS}")
     httpd = ConsoleServer((args.host, args.port), Handler)
     print(f"hg-console on http://{args.host}:{args.port}  (runs={RUNS})", flush=True)
     try:
+        if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT'):
+            submission_service(httpd).start()
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
