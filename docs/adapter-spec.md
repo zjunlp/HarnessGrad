@@ -140,15 +140,29 @@ model; the rest are read from their source.
 | `loop` | yes | yes | yes | yes, **v0**: `exit`/`output` inline | v0: no record, `ended` inferred |
 | `codex` | yes | yes | yes | yes (`exit_code`; a patch is `apply_patch`) | yes (when it submits) |
 | `opencode` | yes | yes | yes | yes, `returncode: null` (the CLI reports none) | yes |
-| `deepseek-harness` | yes | yes (`calls: 1`, the invocation) | yes (one turn) | **no** -- its CLI prints no tool stream | yes |
+| `deepseek-harness` | yes | yes (real tokens, from the session log) | yes | yes (`tool/call` / `tool/result`, `returncode` from `meta.exitCode`) | yes (`turn/end`) |
 | `cli_agent` | yes | no (`calls` unknown) | no (it wraps an arbitrary CLI) | one action: the CLI itself, with its exit code | partial |
 
 ### The two opaque adapters, and why they stop where they do
 
-`deepseek-harness` prints its reasoning to **stderr** and its final message to **stdout**;
-nothing in it is machine-readable, so the adapter can say "one turn, this answer, this
-model" and cannot say what the agent ran. Supporting the feedback clause needs a structured
-mode from DSH, not a cleverer wrapper.
+`deepseek-harness` prints its reasoning to **stderr** and its final message to **stdout**,
+and for a while this document said that made the feedback clause unreachable -- that DSH
+would have to grow a structured mode. That was wrong. DSH **flushes a session log** on exit
+(`sessions.flush`, before the headless runner prints its answer):
+`<DSH_HOME>/sessions/<cwd-key>/<session-id>/session.v<N>.jsonl[.zstd]`, carrying `turn/*`,
+`step/*`, `assistant/message` with `usage`, `tool/call` (`name`, `arguments`) and
+`tool/result` (`message`, `error`, `meta`). The adapter was reading the two pipes and
+ignoring the file.
+
+Measured on a real log on this host (330 events, 98 tool calls, 29 assistant messages): the
+translation yields `model_calls 29, commands 98, observations 98, tokens 233 527` -- the
+token count this adapter previously reported as **nothing at all**. It is also the only
+adapter besides `codex` whose `returncode` is a real exit code (`meta.exitCode`, from the
+bash tool's own `ShellRunResult`), and `null` where a tool reports none.
+
+The log is versioned (`session.v3`), optionally zstd-compressed, and written at the end --
+so a killed run may leave none, and the two text streams remain as the fallback. Which path
+was taken is on the record (`session_log.translated`).
 
 `cli_agent` wraps an arbitrary CLI and sees an exit code. It records the invocation as one
 action with an `observation` (exit code, output size) because that is what it executed, and
