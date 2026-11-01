@@ -6075,3 +6075,37 @@ failure is resolved by the stack's existing registrations. Both full-catalog
 filter tests stop on missing AgentDojo prepared data before their assertions
 (one failure, one setup error); a passing full-catalog run is not claimed.
 Validation used prepared local data and mock controls, with no model calls.
+
+## codex and opencode: why they were not launchable, and their first live traces — 2026-11-01
+
+`base_harness/launchable.json` was created in `3a8dfd0` holding
+`["loop", "deepseek_harness"]`, and its `_why` line called `codex_agent`, `dsh_agent`
+and `cli_agent` "the improver agents" and therefore "not a task agent a study should
+start from". That was the classification of the day, not a test result. `miniswe`
+(`44e1dc9`), `miniagent` and `openclaw` (`6680d7b`) were added to the list as they
+were integrated; `codex` and `opencode` never received the same edit, so their
+absence was an omission rather than a refusal. Neither failed a gate: both declare
+`env_kinds: ["files", "exec"]` like `deepseek-harness`, both adapters translate every
+record the contract asks for, and `tests/quality/test_codex_adapter.py` plus
+`test_opencode_adapter.py` pass (24 tests).
+
+What was actually missing was evidence from a real run: all of the archive's runs are
+on `loop`, so neither had ever driven its own CLI against this platform's endpoint.
+Two host-side smokes on 2026-11-01, one prompt each, `HG_AGENT_BASE_URL` at the local
+`8001`, no dataset and no verifier:
+
+* **codex** — 11 trace records, `tools/check_trace_contract.py` OK `[v1]`,
+  `usage.calls: 1`, 9 003 input / 33 output tokens. The adapter took the CLI's final
+  message as the answer, and that message carried the model's narration
+  (`"The user wants me to calculate 17*23 and reply with only the number.\n\n\n17*23 = 391"`).
+  So a task scored on exact answer text would fail on the narration, not on the
+  arithmetic -- a property of this model at this prompt, recorded rather than fixed.
+* **opencode** — 8 records, contract OK `[v1]`, `calls: 1`, 10 826 input / 4 output
+  tokens, `answer.txt` exactly `391`, `answer_source: final_message`, 7.3 s. Its
+  session export exits 1 (`export.ok: false`); that path is best-effort and the answer
+  did not depend on it.
+
+Both are now on the launchable list, which restores what the manifest already claimed.
+Neither is a measured point: no dataset, no verifier, no receipt, so no number is
+claimed here. The next step is the ordinary one -- a one-task diagnostic per harness
+through the driver, with the receipt the staged pilot policy requires.

@@ -1,10 +1,12 @@
 {
- "_why": "Which base_harness/ directories the console may launch as a *task* harness. The directory holds more than that: `oracle` runs the dataset's own reference solution, `codex`/`opencode` are also registered as improver-side harnesses, and the six adapters translate somebody else's agent rather than stating anything about ours. Declaring the set here keeps the console from hard-coding it while still refusing to offer the rest; making another directory launchable is one line in this file, not a code change. The platform's two test instruments are deliberately not here at all: `loop_plain` (the deterministic floor) and `cli_agent` (the generic CLI wrapper) live in tests/fixtures/base_harness/ since 2026-11-01, because neither is a harness a study may start from.",
+ "_why": "Which base_harness/ directories the console may launch as a *task* harness. Declaring the set here keeps the console from hard-coding it while still refusing to offer the rest; making another directory launchable is one line in this file, not a code change. What is deliberately absent: `oracle` (it runs the dataset's own reference solution, so its score is the scorer's check, not a harness's), and the platform's two test instruments -- `loop_plain` (the deterministic floor) and `cli_agent` (the generic CLI wrapper), both in tests/fixtures/base_harness/ since 2026-11-01. `codex` and `opencode` were added on 2026-11-01 with live evidence rather than by inspection: each drove its own CLI against the local endpoint and wrote a trace `tools/check_trace_contract.py` accepts (codex 11 records, `usage.calls: 1`; opencode 8 records, `answer.txt` = the bare answer). Being on this list does not make a harness measured -- a curve point still needs an admitted diagnostic run.",
  "harnesses": [
   "loop",
   "deepseek-harness",
   "miniswe",
   "miniagent",
-  "openclaw"
+  "openclaw",
+  "codex",
+  "opencode"
  ]
 }
