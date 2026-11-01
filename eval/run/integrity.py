@@ -64,7 +64,7 @@ from pathlib import Path
 #: so the tuple names their parents instead. A run recorded before that date carries a sha
 #: computed over the old tuple; the pre-slim tree is in the backup bundle the slim commit
 #: names, and `docs/architecture.md` records the move.
-PLATFORM = ("driver.py", "harnessgrad", "eval", "data", "tools", "methods",
+PLATFORM = ("driver.py", "harnessgrad", "eval", "data", "tools", "methods", "scenarios",
             "tests", "docs", "INTERFACE.md", ".env")
 
 #: Top-level entries that are deliberately **not** hashed, each with its reason.

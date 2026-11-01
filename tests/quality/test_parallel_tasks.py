@@ -242,7 +242,7 @@ def test_jobs_reaches_the_run_through_the_driver(tmp_path, isolated_platform):
     # checkout's provisioned datasets or inheriting its .env.
     platform = isolated_platform
     shutil.copy2(ROOT / "driver.py", platform / "driver.py")
-    for name in ("eval", "harnessgrad", "tools", "methods"):
+    for name in ("eval", "harnessgrad", "tools", "methods", "scenarios"):
         shutil.copytree(ROOT / name, platform / name, symlinks=True,
                         ignore=shutil.ignore_patterns("__pycache__"))
     (platform / "data").mkdir()

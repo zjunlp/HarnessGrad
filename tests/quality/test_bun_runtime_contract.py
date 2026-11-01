@@ -131,7 +131,7 @@ def test_source_symlink_escape_is_rejected(tmp_path, monkeypatch):
     outside.write_text("export const n = 9")
     (repo / "engine/app/main.ts").unlink()
     (repo / "engine/app/main.ts").symlink_to(outside)
-    with pytest.raises(runtime.RuntimeUnavailable, match="candidate"):
+    with pytest.raises(runtime.RuntimeUnavailable, match="declared source"):
         runtime.prepare(repo)
 
 

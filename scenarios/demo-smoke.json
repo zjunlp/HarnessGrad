@@ -1,0 +1,13 @@
+{
+  "name": "demo-smoke",
+  "dataset": "demo",
+  "split": "declared",
+  "side": "train",
+  "sampling": "all",
+  "rounds": 0,
+  "trials": 1,
+  "env_kinds": ["files"],
+  "budget": {"jobs": 1},
+  "model": {"backend": "mock"},
+  "note": "Local mock smoke fixture explicitly required by the backend assignment."
+}

@@ -24,14 +24,18 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 import data.scaffolds.registry as datasets
+from scenarios import load as load_scenario
 from tools.improver import forbidden_reason
 from tools.improver import load_config as load_improvers
 from tools.improver import resolve as resolve_improver
+from tools.validate_harness import check as check_harness, source_identity
 from eval.ckpt.git_state import STATE_DIRNAME, commit_state, manifest, stage_workspace
+from eval.ckpt.source_tree import copy_harness
 from eval.observe.console import CONSOLE as console
 from eval.run.metrics import select_task_set
 from eval.run import metrics
@@ -507,6 +511,121 @@ def describe_model() -> dict:
 
 # ----------------------------------------------------------------- main ---
 
+_SCENARIO_ARG_DEFAULTS = {'dataset': 'demo', 'split': None, 'side': 'train',
+                          'pool': None, 'sampling': 'diagnostic', 'rounds': None,
+                          'trials': 1, 'jobs': 1}
+
+
+def _apply_scenario(args: argparse.Namespace, spec: dict, explicit: set[str]) -> None:
+    """Bind reviewed values before policy selection; never silently override an explicit flag."""
+    values = {key: spec[key] for key in ('dataset', 'split', 'side', 'sampling', 'rounds', 'trials')}
+    values.update(pool=spec.get('pool'), jobs=spec['budget']['jobs'])
+    split = values['split']
+    if split not in ('declared', 'default', 'official'):
+        path = (PLATFORM_ROOT / split).resolve(strict=True)
+        if not path.is_relative_to(PLATFORM_ROOT.resolve()) or not path.is_file():
+            raise ValueError('scenario split must be a readable file inside the platform')
+        values['split'] = str(path)
+    try:
+        select_task_set({}, values['sampling'])
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"scenario sampling is not supported: {exc}") from exc
+    if values['side'] == 'eval' and values['sampling'] != 'all':
+        raise ValueError('scenario eval sampling must be all; other policies need separate admission')
+    for field, value in values.items():
+        actual = getattr(args, field)
+        if field == 'split' and field in explicit and actual not in ('declared', 'default', 'official'):
+            actual = str(Path(actual).resolve(strict=True))
+        if field in explicit and actual != value:
+            raise ValueError(f'scenario {field} conflicts with explicit --{field}')
+        setattr(args, field, value)
+
+
+def _scenario_pool_env(dataset: str, pool: str | None) -> dict[str, str]:
+    """Reuse existing adapter pool selectors, before an adapter can be imported."""
+    if pool is None:
+        return {}
+    key = {'appworld': 'HG_APPWORLD_POOL', 'alfworld': 'HG_ALFWORLD_POOL'}.get(dataset)
+    if key:
+        return {key: pool}
+    if pool in ('train', 'eval'):
+        return {}  # This is already the side selected by the driver.
+    raise ValueError(f'pool {pool!r} has no existing selector for dataset {dataset!r}')
+
+
+def _check_scenario_dataset(spec: dict) -> None:
+    """Published datasets, plus the senior-approved local mock/train smoke fixture."""
+    name = spec['dataset']
+    if (name == 'demo' and spec['name'] == 'demo-smoke' and spec['side'] == 'train'
+            and spec['model']['backend'] == 'mock'):
+        return
+    if name in datasets.published():
+        return
+    if name.isidentifier() and (PLATFORM_ROOT / 'data/datasets' / f'{name}.py').is_file():
+        try:
+            datasets.kind_of(name)
+        except (ImportError, OSError, ValueError) as exc:
+            raise ValueError(f'dataset {name!r} is not provisioned: {exc}') from exc
+        raise ValueError(f'dataset {name!r} is not currently published')
+    raise ValueError(f'unknown dataset {name!r} in scenario (not a published dataset)')
+
+
+def _check_scenario_runtime(spec: dict, model: dict, man: dict, envs: dict) -> None:
+    """Check actual capabilities; a configured field is not proof of enforcement."""
+    wanted = spec['model']['backend']
+    if wanted == 'mock' and model['backend'] != 'mock':
+        raise ValueError('scenario model.backend=mock conflicts with the actual agent backend')
+    if wanted == 'live' and (not model.get('live') or not platform_config.current().agent.base_url):
+        raise ValueError('scenario model.backend=live requires a configured model endpoint and credentials')
+    problem = _check_env_kinds(man, set(spec['env_kinds']) | _required_env_kinds(envs))
+    if problem:
+        raise ValueError(f'scenario environment requirements: {problem}')
+    if spec.get('limits'):
+        fields = ', '.join(sorted(spec['limits']))
+        raise ValueError(f'scenario limits ({fields}) cannot yet be enforced by this CLI')
+
+
+def _check_scenario_resume(args, receipt: dict | None) -> None:
+    """Refuse changed scenario identity before the existing resume path writes metadata."""
+    if not args.resume:
+        return
+    if not args.run_id:
+        if receipt is not None:
+            raise ValueError('scenario resume requires an explicit --run-id')
+        return
+    path = Path(args.runs_root) / args.run_id / 'run_meta.json'
+    try:
+        saved = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        if receipt is not None:
+            raise ValueError(f'scenario resume needs readable original metadata: {exc}') from exc
+        return  # Preserve the legacy resume path's own refusals.
+    prior = saved.get('scenario') if isinstance(saved, dict) else None
+    if receipt is None and prior is None:
+        return
+    if (not isinstance(prior, dict) or receipt is None or not prior.get('sha256')
+            or any(prior.get(k) != receipt.get(k) for k in ('name', 'sha256'))):
+        raise ValueError('scenario identity is missing or changed; use the original scenario or a fresh run ID')
+
+
+def _external_source_snapshot(source: Path, target: Path) -> None:
+    """Own the source before Git runs; never adopt an external Git config/hooks.
+
+    Rebase owned links onto this copy so absolute links cannot keep reaching the
+    submitted directory after staging. The input directory itself is untouched.
+    """
+    copy_harness(source, target, symlinks=True, ignore=shutil.ignore_patterns('.git'))
+    for path in target.rglob('*'):
+        if path.is_symlink():
+            origin = source / path.relative_to(target)
+            owned = origin.resolve(strict=True)
+            if not owned.is_relative_to(source):
+                raise ValueError(f'unsafe source link {origin}: target is outside the harness')
+            path.unlink()
+            path.symlink_to(os.path.relpath(target / owned.relative_to(source), path.parent),
+                            target_is_directory=owned.is_dir())
+
+
 def _config_help() -> str:
     """The configuration surface, rendered for `--help`.
 
@@ -536,9 +655,13 @@ def _main(attempt: dict) -> int:
             "blocked and invalid/unmeasured, never an ordinary zero score.\n"
             "Synthetic checks do not authorize production diagnostics or H0."),
         epilog=_config_help())
-    ap.add_argument("--harness", default="loop")
-    ap.add_argument("--dataset", default="demo")
-    ap.add_argument("--sampling", default="diagnostic",
+    source_args = ap.add_mutually_exclusive_group()
+    source_args.add_argument("--harness", default="loop")
+    source_args.add_argument("--harness-path", metavar="DIR",
+                             help="external harness directory (absolute path)")
+    ap.add_argument("--scenario", metavar="NAME", help="reviewed JSON scenario from scenarios/")
+    ap.add_argument("--dataset", default=argparse.SUPPRESS)
+    ap.add_argument("--sampling", default=argparse.SUPPRESS,
                     help="diagnostic (one task, default) | pilot_10pct (temporary rerun: "
                          "ceil(10%%), capped at 30; reviewed diagnostic required) | "
                          "all | below_X | above_X | random_N. "
@@ -551,7 +674,7 @@ def _main(attempt: dict) -> int:
     ap.add_argument("--authorize-unobserved-diagnostic", metavar="OPERATOR_REASON",
                     help="explicitly authorize one train-side diagnostic attempt with policy "
                          "enforcement NOT observed; no measured score, curve or production authorization")
-    ap.add_argument("--rounds", type=int, default=None,
+    ap.add_argument("--rounds", type=int, default=argparse.SUPPRESS,
                     help="improvement rounds (default 0 for staged runs, 3 otherwise)")
     #: How many times each (harness, task) pair is measured. One is one sample, and one
     #: sample cannot tell an edit's effect from the noise: measured here, the same
@@ -559,7 +682,7 @@ def _main(attempt: dict) -> int:
     #: model intermittently emits a tool call the harness cannot parse. Costs `trials`x
     #: the wall clock -- 88% of a run is the harness loop -- so a first look uses 1 and a
     #: claim about an edit uses 3.
-    ap.add_argument("--trials", type=int, default=1,
+    ap.add_argument("--trials", type=int, default=argparse.SUPPRESS,
                     help="measure each task N times; the point carries n_trials and "
                          "score_std. Default 1 (one sample, no spread recorded)")
     #: How many tasks are measured **at the same time**. The other axis from `--trials`,
@@ -580,7 +703,7 @@ def _main(attempt: dict) -> int:
     ap.add_argument("--gpu-budget-dir", default=None, metavar="DIR",
                     help="where the budget's slot locks live (default: $TMPDIR/hg-gpu-slots). "
                          "Two batches with different capacities must not share a directory")
-    ap.add_argument("--jobs", type=int, default=1,
+    ap.add_argument("--jobs", type=int, default=argparse.SUPPRESS,
                     help="measure up to N tasks concurrently (default 1). The tasks share "
                          "one model endpoint and one host, so raise it deliberately")
     ap.add_argument("--mode", default="A", choices=["A", "B"],
@@ -616,14 +739,16 @@ def _main(attempt: dict) -> int:
                          "dropping one would produce a curve whose task count does not "
                          "match what was asked for, which is the kind of difference "
                          "nobody notices until they compare two runs.")
-    ap.add_argument("--side", choices=("train", "eval"), default="train",
+    ap.add_argument("--side", choices=("train", "eval"), default=argparse.SUPPRESS,
                     help="which side of the dataset's split this run is about. A run "
                          "evaluates ONE side: a train run evolves the harness and shows "
                          "the method the traces of the tasks it is scored on, and an "
                          "eval run measures one state of a train run on the exam. They "
                          "are separate runs so that the exam's traces are not in the "
                          "train run at all -- an absence, not a withheld field.")
-    ap.add_argument("--split", default=None,
+    ap.add_argument("--pool", default=argparse.SUPPRESS,
+                    help="existing adapter pool selector (e.g. appworld dev); no inferred pools")
+    ap.add_argument("--split", default=argparse.SUPPRESS,
                     help="which division of the dataset this run uses, when the caller "
                          "does not want the one the dataset declares. `declared` (the "
                          "default) uses the adapter's own SPLIT; `default` uses the "
@@ -701,6 +826,11 @@ def _main(attempt: dict) -> int:
                          "environment variables, after `.env` is folded in) as JSON "
                          "and exit 0 without running anything")
     args = ap.parse_args()
+    explicit = set(vars(args)) & _SCENARIO_ARG_DEFAULTS.keys()
+    for field, default in _SCENARIO_ARG_DEFAULTS.items():
+        if not hasattr(args, field):
+            setattr(args, field, default)
+    scenario_spec = scenario_receipt = None
 
     if (args.run_id or "").startswith("task25-") and not args.budget_profile:
         print("refusing approved Task25 run without --budget-profile", file=sys.stderr)
@@ -713,6 +843,31 @@ def _main(attempt: dict) -> int:
         load_env(Path(__file__).parent / ".env")
         print(json.dumps(platform_config.dump(), indent=2))
         return 0
+
+    try:
+        if args.scenario is not None:
+            scenario_spec, scenario_receipt = load_scenario(args.scenario)
+            _apply_scenario(args, scenario_spec, explicit)
+        _check_scenario_resume(args, scenario_receipt)
+    except (OSError, ValueError) as exc:
+        print(f'refusing --scenario: {exc}', file=sys.stderr)
+        return 2
+
+    if args.harness_path is not None:
+        if args.from_run is not None or args.from_round is not None:
+            print('cannot combine --harness-path with --from-run or --from-round', file=sys.stderr)
+            return 2
+        if args.side == 'eval':
+            if args.resume:
+                print('direct --harness-path eval does not support --resume; use a fresh run ID', file=sys.stderr)
+                return 2
+            if args.rounds not in (None, 0):
+                print('direct --harness-path eval requires --rounds 0', file=sys.stderr)
+                return 2
+            if args.sampling != 'all':
+                print('direct --harness-path eval requires --sampling all', file=sys.stderr)
+                return 2
+            args.rounds = 0
 
     staged = args.sampling in ("diagnostic", "pilot_10pct")
     if args.rounds is None:
@@ -749,11 +904,37 @@ def _main(attempt: dict) -> int:
 
     runs_root = Path(args.runs_root)
     eval_from = None
-    if args.side == "eval":
-        # The "harness" of an eval run is a state a train run produced. Pointing
-        # `harness_src` at it before anything else means staging, the manifest, the
-        # header, the sandbox and the method channel all work on it unchanged -- there
-        # is no second code path for "a harness that came out of a run".
+    harness_source = None
+    if args.harness_path is not None:
+        harness_src = Path(args.harness_path)
+        if not harness_src.is_absolute():
+            print('--harness-path must be an absolute directory', file=sys.stderr)
+            return 2
+        problems = check_harness(harness_src)
+        if problems:
+            for problem in problems:
+                print(f"refusing --harness-path: {problem['detail']}", file=sys.stderr)
+            return 2
+        try:
+            harness_src = harness_src.resolve(strict=True)
+            harness_source = source_identity(harness_src)
+            args.harness = manifest(harness_src)['name']
+        except (OSError, ValueError) as exc:
+            print(f'refusing --harness-path: {exc}', file=sys.stderr)
+            return 2
+        # A display name is not a directory name. Keep external default IDs fresh
+        # and independent of manifest strings that can contain path separators.
+        if not args.run_id:
+            args.run_id = f"external-{harness_source['sha256'][:12]}-{secrets.token_hex(4)}"
+        # Existing workspace cleanup must never remove or write into the input.
+        for output_root in (args.work_root, args.runs_root):
+            output = (Path(output_root) / args.run_id).resolve()
+            if output.is_relative_to(harness_src) or harness_src.is_relative_to(output):
+                print('refusing --harness-path: input and run/work output directories overlap',
+                      file=sys.stderr)
+                return 2
+    elif args.side == "eval":
+        # Checkpoint eval retains its original source and provenance helpers.
         try:
             harness_src, _round = _eval_source(args, runs_root)
         except SystemExit as exc:
@@ -768,6 +949,21 @@ def _main(attempt: dict) -> int:
 
     env_file = Path(__file__).parent / ".env"
     load_env(env_file)
+    try:
+        pool_env = _scenario_pool_env(args.dataset, args.pool)
+        if args.pool is not None and not pool_env and args.pool != args.side:
+            raise ValueError('pool does not match the selected side')
+        for key, value in pool_env.items():
+            if os.environ.get(key) and os.environ[key] != value:
+                raise ValueError(f'pool conflicts with existing {key}')
+            if datasets.module_name(args.dataset) in sys.modules:
+                raise ValueError('pool adapter was already imported; use a fresh driver process')
+            os.environ[key] = value
+        if scenario_spec is not None:
+            _check_scenario_dataset(scenario_spec)
+    except (OSError, ValueError) as exc:
+        print(f'refusing scenario/pool: {exc}', file=sys.stderr)
+        return 2
     model = describe_model()
     if staged and (not model["live"] or policy_evidence["context"]["endpoint"]
                    != platform_config.current().agent.base_url):
@@ -791,8 +987,15 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
-    tasks_all, scorable, split = datasets.load_split(args.dataset)
-    oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
+    try:
+        tasks_all, scorable, split = datasets.load_split(args.dataset)
+        oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
+    except (OSError, ValueError, ImportError) as exc:
+        if scenario_spec is None:
+            raise  # Keep legacy callers' error handling unchanged.
+        print(f'refusing --scenario: dataset {args.dataset!r} could not be loaded: {exc}',
+              file=sys.stderr)
+        return 2
     # **Whose division this run uses.** The train/eval division is a property of the
     # experiment protocol, not of the benchmark: the same dataset supports "study the
     # official train split and report on the official test split" and "study a third of the
@@ -888,9 +1091,22 @@ def _main(attempt: dict) -> int:
     # Resolve only the selected task declarations. Lazy adapters may require private
     # inputs, runtimes or model configuration when a value is read; an unselected
     # task must not block this run before the subsequent runtime preflight.
-    _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=side_ids)
-    envs = datasets.load_envs(args.dataset, task_ids=side_ids)
+    try:
+        _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=side_ids)
+        envs = datasets.load_envs(args.dataset, task_ids=side_ids)
+    except (OSError, ValueError, ImportError) as exc:
+        if scenario_spec is None:
+            raise
+        print(f'refusing --scenario: dataset {args.dataset!r} declarations could not be loaded: {exc}',
+              file=sys.stderr)
+        return 2
     setups, verifiers, envs = _narrow_to_run(setups, verifiers, envs, side_ids)
+    if scenario_spec is not None:
+        try:
+            _check_scenario_runtime(scenario_spec, model, manifest(harness_src), envs)
+        except ValueError as exc:
+            print(f'refusing --scenario: {exc}', file=sys.stderr)
+            return 2
     verifier_kinds = sorted({v.get("kind", "answer") for v in verifiers.values()})
     # The record says **unified**, not the flag. `--mode` is accepted so existing scripts
     # keep working, but it selects nothing any more, and a point that said `run_mode: B`
@@ -1330,6 +1546,8 @@ def _main(attempt: dict) -> int:
 
     _write_run_meta(
         run_dir, run_id=run_id, mode=mode, harness=args.harness,
+        harness_source=harness_source,
+        scenario=scenario_receipt,
         dataset=args.dataset, sampling_policy=args.sampling,
         enforcement=enforcement,
         diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
@@ -1415,7 +1633,25 @@ def _main(attempt: dict) -> int:
         fresh=not getattr(args, "resume", False),
     )
 
-    stage_workspace(harness_src, work)
+    if harness_source is not None:
+        try:
+            with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
+                snapshot = Path(staging) / 'source'
+                _external_source_snapshot(harness_src, snapshot)
+                snapshot_identity = source_identity(snapshot)
+                stage_workspace(snapshot, work)
+                if source_identity(snapshot) != snapshot_identity:
+                    raise ValueError('harness source snapshot changed during staging')
+            if source_identity(harness_src) != harness_source:
+                raise ValueError('harness source changed during staging; use a stable input directory')
+            problems = check_harness(work)
+            if problems:
+                raise ValueError('; '.join(p['detail'] for p in problems))
+        except (OSError, ValueError) as exc:
+            print(f'refusing --harness-path: {exc}', file=sys.stderr)
+            return 2
+    else:
+        stage_workspace(harness_src, work)
     man = manifest(work)
     # `_check_env_kinds` already ran, against this same manifest read from the source --
     # see the note beside `envs, env_problem = _resolve_envs(envs)` for why it has to be
