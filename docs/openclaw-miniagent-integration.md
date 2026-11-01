@@ -44,7 +44,10 @@ OpenClaw/Node 是只读运行依赖。此版本不能表述为“OpenClaw 整个
 ## 依赖钉住
 
 `miniagent` 的 manifest 声明了 `requirements.txt`（`openai==2.21.0`、`PyYAML==6.0.3`、
-`requests==2.32.2`）。`files` 运行在没有 overlay 时会退回宿主解释器的 site-packages，并在运行
+`requests==2.33.0` —— 从 2.32.2 升上来，因为 2.32.2 命中两条 Dependabot 告警：
+CVE-2024-47081（`.netrc` 凭据经恶意 URL 泄漏，修补于 2.32.4）和 CVE-2026-25645
+（`extract_zipped_paths()` 复用临时文件，修补于 2.33.0）。2.33.0 要求 Python >= 3.10，
+本平台是 3.12）。`files` 运行在没有 overlay 时会退回宿主解释器的 site-packages，并在运行
 开始时打印警告；建一次 overlay 就把它钉住，曲线点上的 `env.harness_runtime` 会从
 `source: platform` 变成 `source: overlay` 并带上 `install_sha256`：
 
