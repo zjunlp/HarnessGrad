@@ -122,3 +122,59 @@ def test_the_manifest_still_conforms(codex):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.validate(HARNESS, smoke=False) == []
+
+
+# --------------------------------------------------- who owns `answer.txt` ---
+#
+# The adapter used to hand Codex `-o <workdir>/answer.txt`, after deleting that file, so
+# Codex's final message *became* the answer whether or not the task asked for a file. A
+# dataset's goal is what asks for an answer (gsm8k's own goal names `answer.txt`), and the
+# model narrates before answering, so the two cases have to be told apart rather than
+# merged. These two tests pin the precedence with a stand-in CLI, because the real binary
+# cannot be a unit test's dependency.
+
+FAKE_CODEX = '''\
+import json, os, sys
+argv = sys.argv[1:]
+target = argv[argv.index("-o") + 1] if "-o" in argv else None
+sys.stdin.read()
+if os.environ.get("FAKE_WRITES_ANSWER"):
+    open("answer.txt", "w").write("42")
+if target:
+    open(target, "w").write("The user wants 17*23.\\n\\n\\n391")
+print(json.dumps({"type": "item.completed",
+                  "item": {"id": "i0", "type": "agent_message", "text": "done"}}))
+print(json.dumps({"type": "turn.completed",
+                  "usage": {"input_tokens": 10, "output_tokens": 2}}))
+'''
+
+
+def _run_with_fake(codex, tmp_path, monkeypatch, *, writes_answer: bool):
+    fake = tmp_path / "fake-codex.py"
+    fake.write_text(FAKE_CODEX)
+    monkeypatch.setenv("HG_AGENT_CODEX_COMMAND", f"{sys.executable} {fake}")
+    monkeypatch.setenv("HG_AGENT_MODEL", "fake-model")
+    monkeypatch.delenv("HG_AGENT_BASE_URL", raising=False)
+    if writes_answer:
+        monkeypatch.setenv("FAKE_WRITES_ANSWER", "1")
+    work = tmp_path / "work"
+    work.mkdir()
+    assert codex.run({"goal": "write the answer"}, work) == 0
+    rows = [json.loads(line) for line in (work / "trace.jsonl").read_text().splitlines()]
+    submitted = next(row for row in rows if row.get("submitted"))
+    return submitted, (work / "answer.txt").read_text()
+
+
+def test_a_task_written_answer_txt_is_kept_and_wins(codex, tmp_path, monkeypatch):
+    submitted, on_disk = _run_with_fake(codex, tmp_path, monkeypatch, writes_answer=True)
+    assert submitted["answer_source"] == "artifact"
+    assert submitted["answer"] == "42"
+    assert on_disk == "42", "the task's own deliverable is not overwritten by the CLI"
+
+
+def test_the_final_message_is_the_fallback_when_the_task_wrote_nothing(
+        codex, tmp_path, monkeypatch):
+    submitted, on_disk = _run_with_fake(codex, tmp_path, monkeypatch, writes_answer=False)
+    assert submitted["answer_source"] == "final_message"
+    assert submitted["answer"].endswith("391")
+    assert on_disk == submitted["answer"]

@@ -6109,3 +6109,25 @@ Both are now on the launchable list, which restores what the manifest already cl
 Neither is a measured point: no dataset, no verifier, no receipt, so no number is
 claimed here. The next step is the ordinary one -- a one-task diagnostic per harness
 through the driver, with the receipt the staged pilot policy requires.
+
+### Fixed the same day: the codex adapter was overwriting the task's own answer
+
+The narration above was not a model quirk the platform had to live with -- it was a
+defect in this adapter. `-o <workdir>/answer.txt`, preceded by `answer.txt.unlink()`,
+meant Codex's final message **replaced** whatever the task's goal had asked the agent to
+write. `opencode` never did that: it prefers a `answer.txt` the agent changed
+(`answer_source: artifact`) and only falls back to the final message.
+
+So `answer.txt` now belongs to the task first: `-o` writes to a scratch file inside the
+adapter's private Codex home, a file the agent wrote is kept and recorded as `artifact`,
+and the final message is copied in only when the agent left no answer
+(`final_message`). The prompt also stopped implying that the final message is only a
+description when the task asked for a file.
+
+Measured live the same day, one task whose goal says *write the final answer to
+`answer.txt`*: the model ran `echo 391 > answer.txt`, the adapter recorded
+`answer_source: artifact` with `391`, the trace still passes
+`tools/check_trace_contract.py`, and the fallback path is covered by two new tests with a
+stand-in CLI. Neither path invents an answer format: the dataset's goal states what to
+deliver (gsm8k's `_goal` names `answer.txt` or `python3 qa submit`), the verifier decides
+how to read it, and the harness's only job is not to lose it.

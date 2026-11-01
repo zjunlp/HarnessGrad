@@ -138,17 +138,36 @@ class CodexTrace:
                 })
 
 
+def _answer_stamp(path: Path):
+    """What `answer.txt` held before the CLI ran, so a change can be attributed."""
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
 def run(task: dict, workdir: Path) -> int:
     workdir = workdir.resolve()
     workdir.mkdir(parents=True, exist_ok=True)
     answer = workdir / "answer.txt"
-    answer.unlink(missing_ok=True)
+    # **`answer.txt` belongs to the task first.** The adapter used to delete it before the
+    # CLI started and let Codex write it at exit (`-o`), which meant the task's own
+    # deliverable -- the file a dataset's goal tells the agent to write -- was replaced by
+    # Codex's final message. Measured 2026-11-01: the message Codex hands over is whatever
+    # the model said last, and this model narrates before answering
+    # ("The user wants me to calculate 17*23...\n\n\n17*23 = 391"), so an exact-content
+    # task would have been scored against the narration. The dataset is what asks for an
+    # answer (gsm8k's own goal names `answer.txt`), so a file the agent wrote is kept and
+    # only the absence of one falls back to the CLI's channel.
+    before = _answer_stamp(answer)
     goal = task.get("goal") or task.get("instruction")
     if not isinstance(goal, str) or not goal.strip():
         raise ValueError("task requires a non-empty goal")
     prompt = ("Complete the following task in the current working directory. "
               "Use your tools to inspect and modify the actual task files. "
-              "Your final message should briefly describe the result.\n\n" + goal)
+              "If the task asks you to write an answer file or any other output, write it "
+              "exactly as asked. Your final message should briefly describe the result.\n\n"
+              + goal)
     if task.get("inputs"):
         prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
     env = {k: v for k, v in os.environ.items() if not k.startswith("HG_METHOD_")}
@@ -189,7 +208,11 @@ def run(task: dict, workdir: Path) -> int:
             record({"harness_identity": {"harness": "codex-agent",
                     "agent_backend": "codex", "agent_model": model}, "task_id": task.get("task_id")})
             trace_events = CodexTrace(record)
-            proc = subprocess.Popen(command(workdir, answer), cwd=workdir, env=env,
+            # `-o` writes Codex's final message, and it must not write it over the task's
+            # own file: a scratch path inside the private home, copied in only if the agent
+            # left no answer of its own.
+            last_message = Path(home, "last-message.txt")
+            proc = subprocess.Popen(command(workdir, last_message), cwd=workdir, env=env,
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                     # NB: `errors` above is the caller's stream object, not this
                                     # kwarg; decoding must still not raise on agent output.
@@ -204,11 +227,22 @@ def run(task: dict, workdir: Path) -> int:
                         "deadline_s": float(deadline) if deadline else None})
                 return 1
             trace_events.feed(stdout)
-            if proc.returncode or not answer.is_file():
-                record({"error": "codex failed or produced no final message",
-                        "exit_code": proc.returncode})
-                return proc.returncode or 1
-            record({"submitted": True, "answer": answer.read_text()})
+            if proc.returncode:
+                record({"error": "codex failed", "exit_code": proc.returncode})
+                return proc.returncode
+            current = _answer_stamp(answer)
+            if current is not None and current != before and current.strip():
+                record({"submitted": True, "answer": current.decode("utf-8", "replace"),
+                        "answer_source": "artifact"})
+            else:
+                text = (last_message.read_text(encoding="utf-8", errors="replace")
+                        if last_message.is_file() else "")
+                if not text.strip():
+                    record({"error": "codex produced no final message and the task wrote "
+                                     "no answer.txt", "exit_code": proc.returncode})
+                    return 1
+                answer.write_text(text, encoding="utf-8")
+                record({"submitted": True, "answer": text, "answer_source": "final_message"})
     return 0
 
 
