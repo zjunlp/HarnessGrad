@@ -17,7 +17,7 @@ Three ways to import, all ending in the same output:
     python tools/import_env.py --dockerfile tasks/foo/Dockerfile
 
     # a harness's dependencies, baked into the environment (§2.5.6 rule 2)
-    python tools/import_env.py --image python:3.11-slim --harness base_harness/cli_agent
+    python tools/import_env.py --image python:3.11-slim --harness base_harness/miniswe
 
 The output is the pinned reference and a `DEFAULT_ENV` block to paste into a dataset.
 What it does **not** do is edit a dataset for you: rewriting a source file from a tool

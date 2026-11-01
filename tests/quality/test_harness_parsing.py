@@ -38,9 +38,13 @@ ROOT = Path(__file__).resolve().parents[2]
 #: 的产物,git 里有(`git show 10ad781:base_harness/loop_rrsi_parse/agent.py`)。
 HARNESSES = ("loop", "loop_plain")
 
+#: 两个根:发布的 harness 与测试夹具。`loop_plain` 是夹具(见 driver.py:_harness_roots)。
+ROOTS = (ROOT / "base_harness", ROOT / "tests" / "fixtures" / "base_harness")
+
 
 def _load(name: str):
-    path = ROOT / "base_harness" / name / "agent.py"
+    path = next(root / name / "agent.py" for root in ROOTS
+                if (root / name / "agent.py").is_file())
     spec = importlib.util.spec_from_file_location(f"hg_harness_{name}", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

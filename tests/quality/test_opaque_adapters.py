@@ -59,7 +59,7 @@ def test_a_successful_dsh_run_is_not_reported_as_a_crash():
 def test_the_wrapper_records_one_action_with_its_exit_code():
     """`cli_agent` executes exactly one program and can see its exit code; that is the whole
     of what it knows, and the record says exactly that."""
-    source = (ROOT / "base_harness" / "cli_agent" / "agent.py").read_text()
+    source = (ROOT / "tests" / "fixtures" / "base_harness" / "cli_agent" / "agent.py").read_text()
     assert '"command": " ".join(argv)' in source
     assert '"observation"' in source
     assert '"kind": "other"' in source

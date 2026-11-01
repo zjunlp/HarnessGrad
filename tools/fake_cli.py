@@ -3,7 +3,7 @@
 
 Why this exists
 ---------------
-`base_harness/cli_agent/` is a wrapper around agent CLIs, and testing it against the
+`tests/fixtures/base_harness/cli_agent/` is a wrapper around agent CLIs, and testing it against the
 real thing means installing a CLI, configuring credentials for it, and paying for its
 model calls. None of that tests the *wrapper*: what has to be exercised is the
 translation -- prompt in, work in the working directory, session state under `$HOME`,

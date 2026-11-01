@@ -66,8 +66,11 @@ def test_the_report_says_what_is_missing_without_touching_anything():
 
 
 def test_a_harness_that_declares_nothing_is_not_reported_as_broken():
-    """`cli_agent` 不声明 install:正确的读法是"不需要配置",不是一个待修的缺项。"""
-    report = serve_ui.prepare_report("terminal_bench", "cli_agent")
+    """`codex` 不声明 install:正确的读法是"不需要配置",不是一个待修的缺项。
+
+    这条以前用 `cli_agent`,它 2026-11-01 移到了 `tests/fixtures/base_harness/`(那是个
+    测试夹具,不是发布的 harness),而这条断言要的是一个**发布的** harness。"""
+    report = serve_ui.prepare_report("terminal_bench", "codex")
     assert report["dependencies"]["declared"] is None
     overlay = next(a for a in report["actions"] if a["id"] == "overlay")
     assert overlay["runnable"] is False and overlay["reason"], \

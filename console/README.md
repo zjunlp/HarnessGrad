@@ -262,13 +262,15 @@ python3 server.py --port 4460
 
 `base_harness/*/` 的清单（原来是技能 A 第 1 步的候选起点，那个卡已删；现在版本屏的
 基线起点只读 `base_harness/loop`）。**这里不再列名字**：目录数是会变的（2026-11-01 是
-10 个：`loop`、`loop_plain`、`codex`、`deepseek-harness`、`opencode`、`miniswe`、
-`miniagent`、`openclaw`、`cli_agent`、`oracle`），而"哪些是研究可以拿来当起点的"
-只有 [launchable.json](../base_harness/launchable.json) 说了算。
+8 个：`loop`、`codex`、`deepseek-harness`、`opencode`、`miniswe`、`miniagent`、
+`openclaw`、`oracle`），而"哪些是研究可以拿来当起点的"
+只有 [launchable.json](../base_harness/launchable.json) 说了算。两个测试仪器
+（`loop_plain` 地板、`cli_agent` 通用 CLI 转接层）同日移到
+`tests/fixtures/base_harness/`，所以不在这份清单里 —— 它们不是起点。
 只读目录和 `harness.json`，不复制、不执行。
 
 ```json
-{"root": "base_harness", "count": 10,
+{"root": "base_harness", "count": 8,
  "rows": [{"name": "loop", "path": "base_harness/loop",
            "manifest": {"name": "loop", "version": "...", "entrypoint": "agent.py"},
            "files": [{"path": "agent.py", "size": 39409}],

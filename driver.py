@@ -627,6 +627,41 @@ def _external_source_snapshot(source: Path, target: Path) -> None:
                             target_is_directory=owned.is_dir())
 
 
+def _harness_roots() -> list[Path]:
+    """The directories a `--harness <name>` is looked up in, in order.
+
+    Two roots, and the order is the point. `base_harness/` is the shipped set: the
+    starting point a method improves and the adapters for external harnesses. The second
+    root holds the platform's *test instruments* -- harnesses that exist to make one
+    behaviour checkable and that nobody should measure:
+
+      * `loop_plain` is the floor. Under the mock backend its model never answers, so
+        every trial ends at the step cap with an empty answer and every task scores 0,
+        deterministically and with no server. Fifteen test files use it as the harness
+        whose behaviour the platform's own plumbing is asserted against.
+      * `cli_agent` is the generic CLI wrapper: it executes one program and sees one exit
+        code, so its trace cannot satisfy the adapter contract by construction. It is the
+        subject of the tests that check the sandbox can drive a foreign CLI at all.
+
+    They were in `base_harness/` until 2026-11-01, which made the shipped set contain two
+    things that are not harnesses a study may start from -- and the manifest of one of them
+    said `role: control` while the other looked exactly like a baseline. Moving the files
+    is what removes that claim; keeping the *names* resolvable is what lets the tests go on
+    asserting the platform rather than the fixtures.
+    """
+    root = Path(__file__).parent
+    return [root / "base_harness", root / "tests" / "fixtures" / "base_harness"]
+
+
+def _harness_by_name(name: str) -> Path | None:
+    """The first root that has a directory called `name`, or None."""
+    for base in _harness_roots():
+        candidate = base / name
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def _config_help() -> str:
     """The configuration surface, rendered for `--help`.
 
@@ -951,9 +986,11 @@ def _main(attempt: dict) -> int:
             return 2
         eval_from = _eval_from_record(runs_root, args.from_run, _round)
     else:
-        harness_src = Path(__file__).parent / "base_harness" / args.harness
-        if not harness_src.is_dir():
-            print(f"no such harness: {harness_src}", file=sys.stderr)
+        harness_src = _harness_by_name(args.harness)
+        if harness_src is None:
+            print("no such harness: " + args.harness
+                  + " (searched " + ", ".join(str(path) for path in _harness_roots()) + ")",
+                  file=sys.stderr)
             return 2
 
     env_file = Path(__file__).parent / ".env"

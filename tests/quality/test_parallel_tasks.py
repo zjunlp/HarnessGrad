@@ -257,7 +257,7 @@ def test_jobs_reaches_the_run_through_the_driver(tmp_path, isolated_platform):
     # under `eval/` pulled in `data.scaffolds.runtime_extensions`).
     shutil.copytree(ROOT / "data" / "scaffolds", platform / "data" / "scaffolds",
                     symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copytree(ROOT / "base_harness" / "loop_plain",
+    shutil.copytree(ROOT / "tests" / "fixtures" / "base_harness" / "loop_plain",
                     platform / "base_harness" / "loop_plain", symlinks=True,
                     ignore=shutil.ignore_patterns("__pycache__"))
 

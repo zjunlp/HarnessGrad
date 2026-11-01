@@ -104,16 +104,23 @@ inside it. A test suite writes thousands of small files, so apply the rule above
 
 ## GPU execution
 
-- **One local endpoint: `http://127.0.0.1:8002/v1`** (model `qwen3.5-9b-local`). GPU0 and the
-  `8001` server were released on 2026-10-14 to give a card back; do not start a second one.
+- **Two local endpoints, one per card, same model:** `http://127.0.0.1:8001/v1` on GPU0 and
+  `http://127.0.0.1:8002/v1` on GPU1, both serving `qwen3.5-9b-local`. This replaces the
+  one-endpoint rule: GPU0 and `8001` were released on 2026-10-14 to give a card back, and on
+  2026-11-01 the operator took it back because the next few days of work are local-only. Both
+  are started and supervised by `tools/keep_local_models.sh` with
+  `HARNESSGRAD_LOCAL_MODELS=0:8001,1:8002` (its default plan), which never starts a second
+  copy of a healthy endpoint.
 - `eval/unix_model_relay.py` hard-codes the agent model route to `127.0.0.1:8002`, so `8002` is
-  the endpoint a containerised harness actually reaches. That, not preference, is why this is
-  the one that was kept -- the other would have needed a production change.
-- Keep the endpoint productively occupied with necessary no-model controls, diagnostics or valid
+  the endpoint a containerised harness actually reaches; `8001` serves host-side runs
+  (`HG_AGENT_BASE_URL=http://127.0.0.1:8001/v1`). A containerised run pointed at `8001` needs a
+  production change, not an env var.
+- Keep each endpoint productively occupied with necessary no-model controls, diagnostics or valid
   pilots; never create duplicate, fake or scientifically unjustified work for utilization. If
   there is no approved diagnostic or pilot, an idle loaded server is the correct state: record
   that rather than inventing work.
-- Bind each run to one endpoint and one fresh run ID. Keep total H0 concurrency `<=3`, `jobs=1`.
+- Bind each run to one endpoint and one fresh run ID. Keep total H0 concurrency `<=3`, `jobs=1`
+  -- two endpoints make two concurrent runs possible, not three per endpoint.
 
 ## Staged pilot policy
 

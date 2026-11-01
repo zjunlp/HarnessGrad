@@ -176,7 +176,7 @@ def test_the_curve_point_prefers_the_declaration_and_records_the_conflict(
     # Declare this test's CLI rather than relying on the example manifest's
     # machine-specific installation path. Leave the reference harness untouched.
     repo = tmp_path / "cli-agent"
-    shutil.copytree(ROOT / "base_harness" / "cli_agent", repo)
+    shutil.copytree(ROOT / "tests" / "fixtures" / "base_harness" / "cli_agent", repo)
     manifest = repo / "harness.json"
     spec = json.loads(manifest.read_text())
     spec["runtime_paths"] = [str(cli_dir)]
@@ -241,7 +241,8 @@ def test_a_harness_that_cannot_operate_on_this_environment_is_refused(
     """
     monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(work_root))
     repo = _harness(work_root, "pass\n", env_kinds=["exec"])
-    shutil.copytree(ROOT / "base_harness" / "loop_plain", repo / "loop_home",
+    shutil.copytree(ROOT / "tests" / "fixtures" / "base_harness" / "loop_plain",
+                    repo / "loop_home",
                     dirs_exist_ok=True)
     # 用 driver 直跑,harness 指向上面的 repo:用 --harness 的绝对路径形式
     proc = subprocess.run(

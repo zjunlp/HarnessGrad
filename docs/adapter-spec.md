@@ -168,7 +168,11 @@ was taken is on the record (`session_log.translated`).
 action with an `observation` (exit code, output size) because that is what it executed, and
 it records no `calls` because one CLI invocation is not one model call. **A method that
 needs per-step feedback should use the CLI's own adapter** (`codex`, `opencode`, `miniswe`);
-the wrapper is for CLIs nobody has written one for, and it is honest about that.
+the wrapper is for CLIs nobody has written one for, and it is honest about that -- which is
+also why it is not shipped in `base_harness/`: since 2026-11-01 it lives in
+`tests/fixtures/base_harness/cli_agent/`, because a wrapper that cannot meet clauses 2-4 is
+a test instrument, not an example to copy. Its row is kept here so the table still shows
+what "cannot see the CLI's turns" costs.
 
 ### Two dialects, and why the reader learned the old one
 
