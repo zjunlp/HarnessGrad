@@ -173,3 +173,13 @@ def test_redaction_removes_credentials_from_nested_native_events():
     result = _agent().redact(data, {"HG_AGENT_API_KEY": "a-task-secret-value"})
     assert "a-task-secret-value" not in json.dumps(result)
     assert result["items"][0]["output"] == "<redacted>"
+
+
+@pytest.mark.parametrize("tool,kind", [
+    ("exec", "shell"), ("write", "filesystem"), ("read", "filesystem"),
+    ("web_fetch", "api"), ("something_new", "other"),
+])
+def test_observation_kind_is_the_contracts_vocabulary(tool, kind):
+    """`docs/adapter-spec.md` section 4: the same four words every adapter writes. The tool's
+    own name still travels beside it in `tool`, so nothing is lost by mapping."""
+    assert _agent().observation_kind(tool) == kind

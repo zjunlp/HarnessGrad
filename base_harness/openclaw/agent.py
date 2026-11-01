@@ -186,6 +186,22 @@ def stop_process(proc: subprocess.Popen) -> None:
         pass
 
 
+#: The contract's `observation.kind` (`docs/adapter-spec.md` section 4): the same four
+#: words the codex, opencode, deepseek-harness and miniswe adapters write, so a method can
+#: read one field across harnesses instead of learning each tool's name. The tool's own
+#: name still travels beside it (`tool`), which is what a reader needs for the detail.
+_OBSERVATION_KINDS = {
+    "exec": "shell", "shell": "shell", "bash": "shell", "terminal": "shell",
+    "read": "filesystem", "write": "filesystem", "edit": "filesystem",
+    "apply_patch": "filesystem", "glob": "filesystem", "grep": "filesystem",
+    "web_fetch": "api", "web_search": "api", "fetch": "api", "search": "api",
+}
+
+
+def observation_kind(tool: str) -> str:
+    return _OBSERVATION_KINDS.get((tool or "").lower(), "other")
+
+
 def _session_rows(state: Path, session_id: str) -> list[dict]:
     paths = sorted(state.glob(f"agents/*/sessions/{session_id}.jsonl"))
     if not paths:
@@ -255,7 +271,7 @@ def translate_trace(rows: list[dict], record, *, backend: str) -> dict:
                 continue
             details = message.get("details") or {}
             text = _text(message.get("content"))
-            obs = {"kind": "shell" if call["name"] == "exec" else "openclaw",
+            obs = {"kind": observation_kind(call["name"]),
                    "returncode": details.get("exitCode"), "output_chars": len(text),
                    "output": text[-4000:], "truncated": len(text) > 4000,
                    "is_error": bool(message.get("isError"))}

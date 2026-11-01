@@ -14,6 +14,20 @@ import signal
 import sys
 
 
+#: The contract's `observation.kind`, the same four words every other adapter writes
+#: (`docs/adapter-spec.md` section 4). The native tool name goes beside it as `tool`.
+_OBSERVATION_KINDS = {
+    "shell": "shell", "bash": "shell", "terminal": "shell",
+    "read": "filesystem", "read_file": "filesystem", "read_skill": "filesystem",
+    "write": "filesystem", "edit": "filesystem", "glob": "filesystem", "grep": "filesystem",
+    "web_fetch": "api", "web_search": "api", "read_url": "api",
+}
+
+
+def observation_kind(tool: str) -> str:
+    return _OBSERVATION_KINDS.get((tool or "").lower(), "other")
+
+
 def mock_response(request):
     import httpx
     body = json.loads(request.content)
@@ -146,7 +160,7 @@ async def main():
                 args = payload.get('args') or {}
                 name = payload.get('tool') or ''
                 result = payload.get('result') or ''
-                observation = {'kind': name, 'returncode': None,
+                observation = {'kind': observation_kind(name), 'returncode': None,
                                'output_chars': len(result), 'truncated': False,
                                'output': result}
                 if name == 'shell':

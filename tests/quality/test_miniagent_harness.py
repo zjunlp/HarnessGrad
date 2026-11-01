@@ -259,3 +259,16 @@ pathlib.Path('answer.txt').write_text('SERVICE_STARTED')
             import signal
             try: os.kill(service, signal.SIGKILL)
             except ProcessLookupError: pass
+
+
+@pytest.mark.parametrize("tool,kind", [
+    ("shell", "shell"), ("read_skill", "filesystem"), ("web_search", "api"),
+    ("something_new", "other"),
+])
+def test_observation_kind_is_the_contracts_vocabulary(tool, kind):
+    """Same vocabulary as the other five adapters; the native tool name stays in `tool`."""
+    spec = importlib.util.spec_from_file_location('miniagent_hg_bridge',
+                                                  HARNESS / 'bridge.py')
+    bridge = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bridge)
+    assert bridge.observation_kind(tool) == kind

@@ -41,6 +41,20 @@ OpenClaw 接入的是 CLI wrapper。候选内的适配器、prompt 与配置构�
 OpenClaw/Node 是只读运行依赖。此版本不能表述为“OpenClaw 整个原生源码可被 Method 改写”。
 若要研究原生内核修改，需要另做源码随候选保存和依赖构建方案。
 
+## 依赖钉住
+
+`miniagent` 的 manifest 声明了 `requirements.txt`（`openai==2.21.0`、`PyYAML==6.0.3`、
+`requests==2.32.2`）。`files` 运行在没有 overlay 时会退回宿主解释器的 site-packages，并在运行
+开始时打印警告；建一次 overlay 就把它钉住，曲线点上的 `env.harness_runtime` 会从
+`source: platform` 变成 `source: overlay` 并带上 `install_sha256`：
+
+```bash
+python3 tools/configure_harness.py --harness base_harness/miniagent
+```
+
+overlay 按「`requirements.txt` 内容 + 解释器版本」做键，放在仓库之外（`~/.cache/harnessgrad/overlays`），
+所以它不随分支合入；换机器重建一次即可。
+
 ## 运行范围
 
 初版两个 manifest 都只声明 `env_kinds: ["files"]`。这包括沙箱中的本机文件任务，
