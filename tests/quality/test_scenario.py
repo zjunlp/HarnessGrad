@@ -284,7 +284,13 @@ def test_scenario_run_records_raw_file_identity(tmp_path, extra):
     raw = (ROOT/"scenarios/demo-smoke.json").read_bytes()
     assert meta["scenario"] == {"name": "demo-smoke", "path": str((ROOT/"scenarios/demo-smoke.json").resolve()),
                                 "sha256": hashlib.sha256(raw).hexdigest()}
-    assert meta["harness_source"]["entries"] == 3
+    # Compare the receipt with the identity of the tree it copied, not with a file count:
+    # `base_harness/loop` legitimately grows a `__pycache__` the first time any test imports
+    # its `agent.py`, and a count then fails for a reason that has nothing to do with the
+    # scenario. Measured on 2026-11-01: `entries` 3 -> 4 after the adapter tests ran, with
+    # the source itself unchanged.
+    from tools.validate_harness import source_identity
+    assert meta["harness_source"] == source_identity(_external(tmp_path))
     points = [json.loads(line) for line in (tmp_path/"runs/metadata/curve.jsonl").read_text().splitlines()]
     assert len(points) == 1 and sorted(points[0]["per_task"]) == ["t01", "t02", "t03", "t04"]
     assert points[0]["measured_by_platform"] is True
