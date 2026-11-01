@@ -1,0 +1,180 @@
+# The adapter contract: bringing a harness onto this platform
+
+This is what somebody implementing a harness adapter has to satisfy, and why each clause
+exists. It is not a description of the platform (`INTERFACE.md` is that); it is the **five
+things an adapter must do**, and the one record it must write.
+
+**One sentence:** an agent is environment + harness + model; this platform fixes the model
+and the environment for a run and measures a harness, so an adapter is the translation
+between the platform's fixed side and whatever the harness expects.
+
+```
+        the platform owns                 the adapter translates                 the harness
+  ┌──────────────────────────┐        ┌─────────────────────────┐        ┌───────────────────┐
+  │ model: base URL, id, key │ ─────► │ native config / argv    │ ─────► │ own agent loop    │
+  │ environment: task.json   │ ─────► │ prompt / goal text      │        │ own tools         │
+  │ verifier: NOT given       │        │ (never the score)       │        │ own trace format  │
+  └──────────────────────────┘        │ trace: canonical records│ ◄───── │ own trajectory    │
+                                      └─────────────────────────┘        └───────────────────┘
+```
+
+## 1. The model contract — one contract, every adapter adapts to it
+
+The platform names one endpoint and one model; the harness uses them for **every** call.
+There is no second route to a model, and an adapter that lets its CLI reach one is out of
+contract.
+
+| variable | meaning | who fills it |
+| --- | --- | --- |
+| `HG_AGENT_BASE_URL` | an OpenAI-compatible base URL (`…/v1`) | the platform, per task |
+| `HG_AGENT_MODEL` | the model id, bare (`qwen3.5-9b-local`) | the platform, per run |
+| `HG_AGENT_API_KEY` | the key for that endpoint | the platform |
+| `HG_AGENT_BACKEND` | `mock` (no network, no cost) or the provider (`openai`) | the platform |
+| `HG_AGENT_DEADLINE_S` | when the task must be over; stop before this | the platform |
+| `HG_AGENT_CONTEXT_WINDOW`, `HG_AGENT_MAX_TOKENS` | budgets the harness must not exceed | the run's config |
+
+Three rules, each with a measured reason:
+
+1. **Every model call goes to `HG_AGENT_BASE_URL`.** The platform counts calls at that
+   endpoint; a call that goes elsewhere is invisible to the record and unpriced by it.
+2. **`HG_AGENT_BACKEND=mock` must work** with no network and no cost. It is how
+   `tools/validate_harness.py --smoke` and every model-free smoke run work. A harness that
+   cannot answer a trivial task on the mock cannot be tested before it is paid for.
+   `base_harness/miniswe/mock_model.py` is the worked example for a CLI that speaks HTTP
+   rather than these variables.
+3. **Report the model that actually ran.** If the CLI's model did not come from
+   `HG_AGENT_MODEL`, write a `harness_identity` record that says so (section 4). A curve
+   point whose `agent_model` is wrong is a number about a different experiment.
+
+How the four current adapters translate it — the point is that they all do the *same* job,
+not that they look alike:
+
+| harness | the contract arrives as |
+| --- | --- |
+| `loop` | `HG_AGENT_*` read directly (python, `openai` client) |
+| `miniswe` | `-m openai/<model>`, `-c model.model_kwargs.api_base=…`, `-c …api_key=…` |
+| `codex` | a generated `config.toml`: `model`, `model_provider.base_url` |
+| `opencode` | `OPENCODE_CONFIG_CONTENT` (JSON): `provider.harnessgrad.options.baseURL` |
+| `deepseek-harness` | its own profile / `DSH_*` variables |
+
+## 2. The environment contract — in and out, and never the score
+
+**In:** `task.json` (`task_id`, `goal`, `inputs`, `submission`). The harness acts on `goal`;
+`inputs` is a convenience and may be ignored; `submission` (when present) says which files
+are the result.
+
+**Out:** everything in `--workdir`, plus `answer.txt` when the task's answer is text, plus
+`trace.jsonl`. The platform scores the result; the harness does not score, and it does not
+receive a score — in either half:
+
+* at **test time** a harness that can see its own score can optimise against the referee,
+  and the measurement stops measuring the task;
+* at **train time** the *method* gets the traces and the scores; the harness still does not,
+  because the harness is the artifact being edited, not the thing reading the feedback.
+
+**Declared capability:** `env_kinds` (`["files"]`, `["exec"]`, or both) says which
+environments the harness can run in, and the platform **refuses** a run whose dataset needs
+a kind the manifest does not declare — rather than scoring zero on every task for a reason
+that has nothing to do with the harness. `runtime_paths` names host trees (a CLI, a
+runtime, a package directory) the sandbox must bind read-only; a tree you need and do not
+declare is a `ModuleNotFoundError` that reads like a broken harness.
+
+## 3. The editable surface — declared, not yet enforced
+
+`harness.json`'s `name` and `version` are identity: a method may not change them. Everything
+else in the directory is the method's to edit. A *declaration* of which files are the
+harness's character and which are its optimisable surface is the next increment (it is not
+required today, and no manifest carries it yet). Until then the rule is the coarse one: the
+whole tree except the two identity fields.
+
+## 4. The trace contract — the record every adapter writes
+
+`trace.jsonl`, one JSON object per line. The platform reads it with **one** extractor
+(`eval/observe/tracing.py:loop_facts`) for every harness, so these five clauses are what
+makes a method work across adapters:
+
+| # | clause | what the platform does with it |
+| --- | --- | --- |
+| 1 | one `harness_identity` record: `{"harness": …, "agent_model": …, "agent_backend": …}` | the curve point's identity (last one wins) |
+| 2 | a final `usage` record: `{"calls": N, "input_tokens": …, "output_tokens": …}` | cost accounting, and `ended` (absent `usage` reads as a crash) |
+| 3 | one record per model turn, carrying `reply` (the model's text, possibly `""`) | `model_calls` |
+| 4 | one record per executed action, carrying `command` **and** `observation` | `commands`, and the environment's answer |
+| 5 | a terminal record: `{"submitted": true, "answer": …}` or `{"error": …}` | how the run ended, and why |
+
+Clause 4's `observation` is the training-time feedback interface — the thing the method
+learns from, made the same shape for every environment:
+
+```json
+{"step": 3, "reply": "list the directory", "command": "ls",
+ "observation": {"kind": "shell", "returncode": 0, "output_chars": 42, "truncated": false}}
+```
+
+`returncode` is the field that reads the same for a shell, an HTTP call and a file system
+(`0`, an HTTP status, `null` where the environment reports nothing). `kind` says which
+environment spoke. The platform counts `observations`, `nonzero_returns` and a
+`return_codes` histogram, so "twelve commands, all zero" and "twelve commands, all 127"
+stop looking identical to a method.
+
+**Check a trace against this with `python3 tools/check_trace_contract.py <trace.jsonl>`.**
+
+### Measured: what the contract is for
+
+The failure it prevents is silent. On the two shapes, `loop_facts` reports:
+
+| trace shape | steps | commands |
+| --- | --- | --- |
+| `harness_identity` + `codex_event` + `usage` (a working CLI harness) | **0** | **0** |
+| `harness_identity` + `step/reply/command` + `usage` (the same work) | 2 | 2 |
+
+An adapter that works, is measured, and tells the method it did nothing. That is why
+clause 3 and clause 4 exist and why they are checked rather than suggested.
+
+### Where the six base harnesses stand
+
+Checked with `tools/check_trace_contract.py` where a trace could be produced without a
+model; the rest are read from their source.
+
+| harness | 1 identity | 2 usage | 3 turns | 4 feedback | 5 terminal |
+| --- | --- | --- | --- | --- | --- |
+| `miniswe` | yes | yes | yes | **yes** | yes |
+| `loop` | yes | yes | yes | no (`exit`/`output`, not `observation`) | no |
+| `codex` | yes | yes | no (`codex_event`) | no | no |
+| `opencode`, `deepseek-harness`, `cli_agent` | not yet checked | | | | |
+
+`loop` is the platform's own reference harness and it fails two clauses: its environment
+answer is written as `{"command": …, "exit": 0, "output": …}`, which is not portable, and it
+writes no terminal record. Fixing it is the next increment, before any adapter is asked to
+conform to a rule the reference does not.
+
+## 5. The answer contract — three sources, one named
+
+The harness writes `answer.txt`, or leaves the task's declared files, or says nothing and
+lets its final message be the answer. Whichever it is, the adapter records which:
+
+* `artifact` — the run wrote `answer.txt` itself (compared by content, not by mtime);
+* `files` — the task declared `{"submission": {"kind": "files", "paths": [...]}}` and those
+  files exist (a missing one is a **harness failure with a named cause**, not a score of
+  zero: an empty directory otherwise reads as "the harness did the task badly");
+* `final_message` — neither, so the last non-empty model message is written to `answer.txt`.
+
+## 6. Onboarding checklist
+
+1. `harness.json`: `name`, `version`, `entrypoint`, `env_kinds`, `runtime_paths`.
+2. `agent.py --task <task.json> --workdir <dir>`: read `task.json`, work in `--workdir`,
+   exit non-zero on failure.
+3. Model: read the six variables in section 1 and translate them into the CLI's own
+   config; add a `mock` path so the harness runs with no network.
+4. Environment: write to the workdir, never read a verifier, and produce `answer.txt` per
+   section 5.
+5. Trace: the five clauses of section 4 — run `tools/check_trace_contract.py` until it says
+   `OK`.
+6. `python3 tools/validate_harness.py <dir> --smoke` must pass.
+7. Record what the translation did in `harness_identity.config` when it is not obvious
+   (`miniswe` records the `api_base`, the `step_limit`, and whether the dependency came from
+   a declared tree).
+
+## What this contract deliberately does not decide
+
+Language, tools, prompts, control flow, memory, how many model calls, whether the harness
+calls a model at all. Those are what a method exists to change, and specifying them would
+make every harness the same harness.

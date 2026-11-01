@@ -289,6 +289,7 @@ harnessgrad_work/
 /docs/*
 !/docs/resume-design.md
 !/docs/writing_a_harness.md
+!/docs/adapter-spec.md
 !/docs/dataset-onboarding.md
 !/docs/local-model-endpoints.md
 !/docs/dataset-first-day.md

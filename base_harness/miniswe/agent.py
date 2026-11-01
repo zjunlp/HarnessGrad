@@ -224,11 +224,18 @@ def write_trace(trajectory: Path, record) -> dict:
                 if isinstance(usage.get(source), int):
                     tokens[target] += usage[source]
         elif role == "tool":
+            output = extra.get("raw_output") or ""
             for command in commands or [None]:
                 steps += 1
                 record({"step": steps, "reply": reply, "command": command or "",
-                        "returncode": extra.get("returncode"),
-                        "output_chars": len(extra.get("raw_output") or ""),
+                        # The environment's answer, in the one shape every adapter writes
+                        # (`docs/adapter-spec.md`): `returncode` is the field that reads the
+                        # same for a shell, an API and a file system, and the platform counts
+                        # it in `loop_facts` as `observations` / `nonzero_returns`.
+                        "observation": {"kind": "shell",
+                                        "returncode": extra.get("returncode"),
+                                        "output_chars": len(output),
+                                        "truncated": False},
                         **({"error": extra["exception_info"]}
                            if extra.get("exception_info") else {})})
             commands = []
