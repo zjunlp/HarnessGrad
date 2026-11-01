@@ -333,13 +333,19 @@ fi
 # `wait` at the end of this script -- the launcher's pid is what the supervisor keys on.
 WAIT_S="${HARNESSGRAD_READY_WAIT_S:-1200}"
 
+# `>>` and not `>`, because this log is shared: `keep_local_models.sh` appends this
+# script's own output (its "started" / "ready after" lines) to the same file. Truncating
+# here erases those lines when the child's open wins the race, which is exactly what
+# happened on 2026-11-01 -- the server was healthy and its launcher's verdict was nowhere
+# in the log. Appending keeps the previous crash's tail too, which is the half of the
+# history that tells a reader *why* the supervisor is restarting.
 nohup "$VLLM" serve "$MODEL" \
     --served-model-name "$SERVED" \
     --tensor-parallel-size "$TP" \
     --host 127.0.0.1 --port "$PORT" \
     --gpu-memory-utilization "$GPUMEM" \
     --max-model-len "$MAXLEN" \
-    "${EXTRA_ARGS[@]}" > "$LOG" 2>&1 &
+    "${EXTRA_ARGS[@]}" >> "$LOG" 2>&1 &
 PID=$!
 echo "started (pid $PID); waiting up to ${WAIT_S}s for the server to answer..."
 
