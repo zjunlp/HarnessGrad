@@ -139,7 +139,7 @@ model; the rest are read from their source.
 | `miniswe` | yes | yes | yes | **yes (v1)** | yes |
 | `loop` | yes | yes | yes | yes, **v0**: `exit`/`output` inline | v0: no record, `ended` inferred |
 | `codex` | yes | yes | no (`codex_event`) | no | no |
-| `opencode` | yes | **no** (`usage.calls` absent) | no (`opencode_event`) | not reached | yes |
+| `opencode` | yes | yes | yes | yes, `returncode: null` (the CLI reports none) | yes |
 | `deepseek-harness`, `cli_agent` | not yet checked | | | | |
 
 ### Two dialects, and why the reader learned the old one

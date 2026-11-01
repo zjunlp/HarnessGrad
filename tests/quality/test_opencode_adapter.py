@@ -189,5 +189,74 @@ class AdapterTests(unittest.TestCase):
             self.assertIn("http://127.0.0.1:9999/v1", config)
 
 
+class ContractTests(unittest.TestCase):
+    """The adapter contract (`docs/adapter-spec.md` section 4), not only the CLI's stream.
+
+    `opencode_event` records are the CLI's JSON verbatim and a method cannot read them: the
+    platform's one extractor counts `reply` and `command`. These pin the translation.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location("opencode_adapter_contract", ENTRY)
+        cls.adapter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.adapter)
+        import sys
+        sys.path.insert(0, str(ROOT))
+        from eval.observe.tracing import loop_facts
+        cls.loop_facts = staticmethod(loop_facts)
+
+    def collect(self, events):
+        records = []
+        stream = self.adapter.EventCollector(records.append)
+        for value in events:
+            stream.feed(json.dumps(value))
+        return stream, records
+
+    def test_a_completed_tool_call_becomes_a_command_and_an_observation(self):
+        stream, records = self.collect([
+            event("tool_use", tool="bash",
+                  state={"status": "completed", "input": {"command": "ls -a"},
+                         "output": "a b"}),
+        ])
+        tool = next(r for r in records if r.get("tool") == "bash")
+        self.assertEqual(tool["command"], "ls -a")
+        self.assertEqual(tool["observation"],
+                         {"kind": "shell", "returncode": None,
+                          "output_chars": 3, "truncated": False})
+        facts = self.loop_facts("\n".join(json.dumps(r) for r in records))
+        self.assertEqual((facts["commands"], facts["observations"]), (1, 1))
+        # No exit code is available from the CLI, and `None` must not become `0`: every
+        # failed command would then look successful to a method reading return codes.
+        self.assertEqual(facts["return_codes"], {"None": 1})
+
+    def test_the_observation_names_which_environment_spoke(self):
+        for tool, kind in (("bash", "shell"), ("read", "filesystem"), ("edit", "filesystem"),
+                           ("webfetch", "api"), ("task", "other")):
+            with self.subTest(tool=tool):
+                self.assertEqual(self.adapter.observation_kind(tool), kind)
+
+    def test_usage_calls_agrees_with_the_number_of_turns(self):
+        """`usage.calls` and the platform's `reply` count are one fact; this keeps them
+        from drifting apart."""
+        stream, records = self.collect([
+            event("step_finish", "m1", reason="stop", tokens={"input": 5, "output": 1}),
+            event("step_finish", "m2", reason="stop", tokens={"input": 5, "output": 1}),
+        ])
+        self.assertEqual(stream.usage()["calls"], 2)
+        self.assertEqual(len([r for r in records if "reply" in r]), 2)
+
+    def test_a_failed_tool_call_still_carries_the_observation(self):
+        """A tool that errored is the feedback a method learns most from."""
+        _, records = self.collect([
+            event("tool_use", tool="bash",
+                  state={"status": "error", "input": {"command": "exit 7"},
+                         "error": "Command exited 7"}),
+        ])
+        tool = next(r for r in records if r.get("tool") == "bash")
+        self.assertEqual(tool["observation"]["output_chars"], len("Command exited 7"))
+        self.assertEqual(tool["observation"]["kind"], "shell")
+
+
 if __name__ == "__main__":
     unittest.main()

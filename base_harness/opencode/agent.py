@@ -338,6 +338,19 @@ def save_answer(work: Path, before, final: str, *, task: dict | None = None) -> 
     return final, "final_message"
 
 
+#: Which environment spoke, for the contract's `observation.kind`. A tool name is what the
+#: CLI gives us; the three that matter are a shell, the file system, and an HTTP fetch.
+def observation_kind(tool: str) -> str:
+    name = (tool or "").lower()
+    if name in ("bash", "shell"):
+        return "shell"
+    if name in ("read", "write", "edit", "patch", "glob", "grep", "list", "ls"):
+        return "filesystem"
+    if name in ("webfetch", "fetch", "search", "websearch"):
+        return "api"
+    return "other"
+
+
 class EventCollector:
     def __init__(self, record):
         self.record = record
@@ -384,9 +397,21 @@ class EventCollector:
             else:
                 state = part.get("state") or {}
                 arguments = state.get("input") or {}
+                output = state.get("output") or state.get("error") or ""
                 record = {"tool": part.get("tool"), "tool_call_id": part.get("id"),
                           "tool_input": arguments, "tool_status": state.get("status"),
-                          "output": state.get("output") or state.get("error") or ""}
+                          "output": output,
+                          # The adapter contract's feedback record
+                          # (`docs/adapter-spec.md` section 4). `returncode` is `null`
+                          # because opencode's completed tool state carries none -- the bash
+                          # tool merges stdout and stderr into `output` and does not report
+                          # an exit code (`packages/opencode/src/tool/bash.ts`). Recording
+                          # `null` is the honest value; inventing `0` would make every
+                          # failed command look successful to a method reading return codes.
+                          "observation": {"kind": observation_kind(part.get("tool")),
+                                          "returncode": None,
+                                          "output_chars": len(str(output)),
+                                          "truncated": bool(state.get("truncated"))}}
                 if part.get("tool") in ("bash", "shell"):
                     record["command"] = arguments.get("command", "")
                 self.record(record)
@@ -448,6 +473,11 @@ class EventCollector:
         steps = self.token_totals(tokens)
         usage = self.token_totals([self.session_tokens]) if isinstance(self.session_tokens, dict) else dict(steps)
         return {**usage, "task_steps": steps,
+                # The contract's `usage.calls`: completed model turns. The platform's
+                # `loop_facts` counts `reply` records, and one is written per `step_finish`,
+                # so these two numbers are the same fact written twice -- which is what
+                # makes a disagreement worth catching (`tools/check_trace_contract.py`).
+                "calls": len(self.finishes),
                 "scope": "session_including_auxiliary" if self.session_tokens is not None else "task_steps_partial",
                 "reported_steps": len(tokens), "completed_steps": len(self.finishes)}
 
