@@ -815,6 +815,20 @@ class SubmissionService:
         self._active = None
         self._orphans = {}
         self._queue = deque()
+        #: Incoming directories whose cleanup a thread already owns. `sweep()` can be called
+        #: by the maintenance thread and by a test or an operator at the same time, and two
+        #: interleaved `_clear_incoming` calls on one directory can leave the audit saying
+        #: `cleanup_done=False` for files that are already gone -- a later sweep completes it,
+        #: but the record is briefly wrong. Serialised per directory rather than under the
+        #: service lock, because the body does blocking I/O.
+        self._clearing: set[str] = set()
+        #: One sweep at a time. The maintenance thread and a caller (a test, an operator, a
+        #: DELETE) can otherwise sweep concurrently, and two passes interleaving on one
+        #: incoming directory can skip each other's work: `_referencing_processes` refuses to
+        #: delete a directory another thread is reading, so a pass can leave the file in place
+        #: while the other pass reports the audit complete. Sweeps are cheap and never need
+        #: to overlap.
+        self._sweep_lock = threading.Lock()
         self._envs = {}
         self._tokens = {}
         self._quota_epoch = 0
@@ -1023,6 +1037,10 @@ class SubmissionService:
             return 202,{'api_version':'1','submission_id':submission_id,'status':status}
 
     def sweep(self, *, now=None):
+        with self._sweep_lock:
+            return self._sweep(now=now)
+
+    def _sweep(self, *, now=None):
         incoming_cleaned=self._retry_incoming()
         cleaned=[]
         for data in self._receipts():
@@ -1246,6 +1264,20 @@ class SubmissionService:
             self._quota_epoch += 1
 
     def _clear_incoming(self, directory, audit):
+        key = str(directory)
+        with self._lock:
+            if key in self._clearing:
+                return False                       # another thread owns this cleanup
+            if audit.get('cleanup_done'):
+                return False                       # already complete; never regress the audit
+            self._clearing.add(key)
+        try:
+            return self._clear_incoming_owned(directory, audit)
+        finally:
+            with self._lock:
+                self._clearing.discard(key)
+
+    def _clear_incoming_owned(self, directory, audit):
         audit.update(cleanup_pending=True,cleanup_done=False)
         _atomic_json(directory/'request.json',audit)
         with self._lock:
@@ -1265,6 +1297,7 @@ class SubmissionService:
         else:
             audit.update(cleanup_pending=False,cleanup_done=True,cleanup_error=None,cleaned_at=_utc())
             _atomic_json(directory/'request.json',audit)
+            return True
         finally:
             with self._lock:
                 self._quota_epoch += 1

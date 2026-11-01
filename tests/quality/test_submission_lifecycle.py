@@ -265,3 +265,31 @@ def test_incomplete_live_owner_identity_is_quarantined(service_factory):
     start(instance)
     assert (directory/'archive.bin').exists()
     assert not json.loads((directory/'request.json').read_text()).get('interrupted_at')
+
+
+def test_two_concurrent_sweeps_do_not_interleave_one_cleanup(service_factory):
+    """The maintenance thread and a caller can sweep at the same time, and two passes on one
+    incoming directory could disagree: one deletes the files while the other refuses to
+    (`_referencing_processes`) and still reports the audit complete. Serialised, the second
+    pass runs after the first and sees nothing to do.
+
+    Measured 2026-11-01 on the merged code: `test_incoming_cleanup_retries_one_failure_and_
+    preserves_audit` failed 3 times in 8 runs, with two different wrong outcomes -- the audit
+    marked done while the file remained, and the file removed while the audit said pending.
+    """
+    import threading
+    instance = service_factory(sweep_seconds=3600)
+    token = instance.reserve_upload(4096)
+    (token['directory'] / 'archive.bin').write_bytes(b'x' * 4096)
+    instance.release_upload(token)
+    outcomes = []
+    threads = [threading.Thread(target=lambda: outcomes.append(instance.sweep()))
+               for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert len(outcomes) == 4
+    assert not (token['directory'] / 'archive.bin').exists()
+    audit = json.loads((token['directory'] / 'request.json').read_text())
+    assert audit['cleanup_done'] is True and audit['cleanup_pending'] is False
