@@ -51,7 +51,7 @@ def task_prompt(task: dict) -> str:
     if paths:
         delivery = "Leave these files in the working directory for scoring: " + json.dumps(paths) + "."
     else:
-        delivery = "If the task asks for answer.txt, write it exactly. Otherwise return only the final answer text."
+        delivery = "If the task asks for answer.txt, write it exactly. Otherwise write your final answer, and nothing else, to `answer.txt` in the working directory."
     text = (ROOT / "prompt.md").read_text(encoding="utf-8")
     result = text + "\n\nTask delivery:\n" + delivery + "\n\nTask:\n" + goal
     if task.get("inputs") is not None:
@@ -119,7 +119,18 @@ def configuration(env: dict, base_url: str, model: str, work: Path, timeout: flo
         "baseUrl": base_url, "apiKey": env.get("HG_AGENT_API_KEY") or "local",
         "api": "openai-completions", "models": [{"id": model, "name": model,
         "reasoning": False, "input": ["text"], "contextWindow": context, "maxTokens": output,
-        "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}}]}}
+        "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+        # **Usage must be asked for on a non-OpenAI endpoint.** The installed CLI's
+        # `normalizeModelCompat` forces `supportsUsageInStreaming: false` for every
+        # OpenAI-completions model whose `baseUrl` is not api.openai.com, and
+        # `@mariozechner/pi-ai` only sends `stream_options: {include_usage: true}` when that
+        # flag is not false. Measured 2026-11-01: vLLM returns a usage block when asked
+        # (checked with curl), while the session this adapter read carried
+        # `{"input": 0, "output": 0, ...}` -- so a real call was reported as
+        # `input_tokens: null` and the harness looked like one that cannot count. Declaring
+        # it is configuration, not an override of a measurement. `supportsDeveloperRole` is
+        # left unset on purpose: this chat template has no `developer` role.
+        "compat": {"supportsUsageInStreaming": True}}]}}
     config["models"]["mode"] = "replace"
     defaults = config.setdefault("agents", {}).setdefault("defaults", {})
     defaults.update({"model": {"primary": "harnessgrad/" + model, "fallbacks": []},

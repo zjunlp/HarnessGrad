@@ -157,8 +157,13 @@ def task_text(task: dict) -> str:
         "write answer.txt instead. "
         if paths is not None else
         "If the task names answer.txt, write exactly the contents it asks for. Otherwise "
-        "your final message is the answer: give the requested answer only, without a "
-        "progress summary. ")
+        "write your final answer, and nothing else, to `answer.txt` in the working "
+        "directory. ")
+    # The delivery rule goes last on purpose. Measured 2026-11-01 on `demo/t01`: the rule
+    # was already here, and the run still submitted `Wait, I need to re-read the
+    # instructions more carefully...` because the model's last message was the musing it
+    # ended on. Nothing is extracted or guessed -- the sentence is the only lever, so it is
+    # the closing one.
     text = goal.strip() + "\n\n" + delivery
     if task.get("inputs") is not None:
         text += "\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)

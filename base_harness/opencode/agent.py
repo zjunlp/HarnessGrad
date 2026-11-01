@@ -97,7 +97,7 @@ def task_prompt(task: dict) -> str:
         "A final chat message or answer.txt is not required in addition to those files. "
         if paths is not None else
         "If the task specifies answer.txt, write its exact required contents; it will be preserved. "
-        "Otherwise your final message is the answer: return the requested answer format, "
+        "Otherwise write your final answer, and nothing else, to `answer.txt` in the working directory, "
         "without a progress summary or extra explanation. "
     )
     prompt = (

@@ -45,7 +45,7 @@ def task_text(task: dict) -> str:
                 + json.dumps(paths) + '. A final message cannot replace those files.'
                 if paths is not None else
                 "Follow the task's answer format. Preserve answer.txt if requested; "
-                'otherwise return only the requested answer in your final message.')
+                'otherwise write your final answer, and nothing else, to `answer.txt` in the working directory')
     prompt = goal.strip() + '\n\n' + delivery
     if task.get('inputs') is not None:
         prompt += '\n\nTask inputs:\n' + json.dumps(task['inputs'], ensure_ascii=False)

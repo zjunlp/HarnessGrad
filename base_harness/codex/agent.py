@@ -163,10 +163,18 @@ def run(task: dict, workdir: Path) -> int:
     goal = task.get("goal") or task.get("instruction")
     if not isinstance(goal, str) or not goal.strip():
         raise ValueError("task requires a non-empty goal")
+    # **The final message is the hand-over, so do not ask for a description of it.**
+    # Measured 2026-11-01 on `demo/t01` ("Answer with the word alpha"): this prompt said
+    # "your final message should briefly describe the result", the model obliged with
+    # `Done. I can see the command successfully returned "alpha" as the output.`, and the
+    # exact-match verifier scored 0 -- for a reason the harness had created. The four
+    # harnesses that scored 1.000 on the same task all say "answer only" instead
+    # (`opencode`, `miniagent`, `openclaw`, and DSH's knobs.json preamble).
     prompt = ("Complete the following task in the current working directory. "
               "Use your tools to inspect and modify the actual task files. "
               "If the task asks you to write an answer file or any other output, write it "
-              "exactly as asked. Your final message should briefly describe the result.\n\n"
+              "exactly as asked. Otherwise write your final answer, and nothing else, to "
+              "`answer.txt` in the working directory.\n\n"
               + goal)
     if task.get("inputs"):
         prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)

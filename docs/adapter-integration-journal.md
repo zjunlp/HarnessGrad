@@ -6219,3 +6219,47 @@ Three things the row exposes that a single harness would not:
   harnesses on one model are therefore not necessarily two samples of the same
   distribution -- a comparability note that belongs next to every cross-harness number,
   not only in this journal.
+
+### The two zeros were the harness, not the model — and one was a missing token count
+
+Both zeros in the row above were traced to the adapter and fixed the same day.
+
+**`openclaw` reported no tokens because nobody asked for them.** The CLI's
+`normalizeModelCompat` forces `supportsUsageInStreaming: false` for every
+OpenAI-completions model whose `baseUrl` is not `api.openai.com`, and
+`@mariozechner/pi-ai` only sends `stream_options: {include_usage: true}` when that flag is
+not false. vLLM returns a usage block when asked -- verified with a raw `curl -N` before
+touching anything -- so the zeros in the session file were openclaw's, not the endpoint's.
+The adapter now declares `compat: {"supportsUsageInStreaming": true}` on the generated
+provider model (`supportsDeveloperRole` deliberately unset: this chat template has no
+`developer` role). Same task, before → after: `0` → **9 548** tokens and `3` calls.
+
+**`codex` and `miniswe` handed over prose because that is what they asked for.** `codex`'s
+prompt said *"your final message should briefly describe the result"* -- the model obeyed,
+and the exact-match verifier read the description. `miniswe` did say "answer only", but
+buried mid-sentence and with nothing else to fall back on, so the run submitted the musing
+it ended on. Strengthening the sentence was not enough (measured: codex answered *"The user
+wants me to complete a task by writing the answer "alpha" as specified."*, miniswe *"The
+task.json says ... and there's no answer.txt file"*). What fixed it was naming the channel
+the platform actually collects: **"otherwise write your final answer, and nothing else, to
+`answer.txt` in the working directory"**. Then the artifact rule does the rest, and the
+final message stays only as a fallback.
+
+That rule is now the same sentence in all six adapters (`codex`, `miniswe`, `opencode`,
+`miniagent`, `openclaw`, and DSH's `knobs.json` preamble, which is a declared knob rather
+than code). The same one-task diagnostic, all six, one endpoint:
+
+| harness | score | calls | tokens | answer came from |
+| --- | --- | --- | --- | --- |
+| codex | 1.000 | 1 | 17 770 | `answer.txt` (artifact) |
+| deepseek-harness | 1.000 | 5 | 38 949 | `answer.txt` (artifact) |
+| miniswe | 1.000 | 5 | 7 686 | `answer.txt` (artifact) |
+| openclaw | 1.000 | 3 | 9 548 | `answer.txt` (artifact) |
+| miniagent | 1.000 | 1 | 961 | final message |
+| opencode | 1.000 | 1 | 10 834 | final message |
+
+Two rows still deliver by final message: those models answered cleanly and wrote nothing,
+which the rule allows. What changed is that no harness now *depends* on the model doing
+that. 83 adapter tests pass. The cost spread (961 → 38 949 for one word) remains a
+comparability fact, not a defect: five calls to answer "alpha" is how DSH works, and the
+number is now reported by every harness instead of one of them being silent.
