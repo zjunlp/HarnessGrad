@@ -4,5 +4,7 @@
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
-  "install": null
+  "install": null,
+  "role": "control",
+  "notes": "The platform's floor, not a baseline to measure. Under `HG_AGENT_BACKEND=mock` its model never emits an answer, so every trial ends at the step cap with an empty answer and every task scores 0 -- deterministically, with no server and no network. That is what makes it usable as the fixture for the platform's own tests (progress, isolation, parallel tasks, resume, split, scoring policies, DGM's rule, GPU slots, the console): a verdict of 0 has to propagate correctly through all of them before a real score means anything. `role: control` says so, so a curve that quotes it is quoting an instrument check. It has no `env_kinds`: it drives `subprocess.run` directly and has only ever been exercised under the `files` sandbox, so declaring `exec` support would be a claim nothing has tested."
 }

@@ -319,6 +319,20 @@ if [ "$TOOL_PARSER" != "none" ]; then
     EXTRA_ARGS+=(--enable-auto-tool-choice --tool-call-parser "$TOOL_PARSER")
 fi
 
+# How long to wait for an answer before saying so. **Measured, not guessed, and a warning
+# rather than a gate.**
+#
+# The window used to be a fixed 5 minutes (`seq 1 60`) and on 2026-11-01 it expired while
+# the load was still going: this checkpoint ships as four safetensors shards at ~64 s each
+# off the mechanical disk, which is four minutes *before* the compile and the CUDA-graph
+# capture. `ready` never printed, the script fell through to the block below, and it
+# exited **with vLLM still loading**. `keep_local_models.sh` then read a dead launcher pid
+# plus an unhealthy port as "nothing is starting", and launched a second copy on the same
+# card: two engine cores, one 40 GB GPU, and a truncated log that made the first server's
+# real state unreadable. Hence the long default, the warning instead of a failure, and the
+# `wait` at the end of this script -- the launcher's pid is what the supervisor keys on.
+WAIT_S="${HARNESSGRAD_READY_WAIT_S:-1200}"
+
 nohup "$VLLM" serve "$MODEL" \
     --served-model-name "$SERVED" \
     --tensor-parallel-size "$TP" \
@@ -327,11 +341,13 @@ nohup "$VLLM" serve "$MODEL" \
     --max-model-len "$MAXLEN" \
     "${EXTRA_ARGS[@]}" > "$LOG" 2>&1 &
 PID=$!
-echo "started (pid $PID); waiting for the server to answer..."
+echo "started (pid $PID); waiting up to ${WAIT_S}s for the server to answer..."
 
-for i in $(seq 1 60); do
+ready=0
+for ((i = 1; i <= WAIT_S / 5; i++)); do
     if curl -s -m 2 "http://127.0.0.1:$PORT/v1/models" >/dev/null 2>&1; then
         echo "ready after ~$((i*5))s"
+        ready=1
         break
     fi
     if ! kill -0 "$PID" 2>/dev/null; then
@@ -341,6 +357,10 @@ for i in $(seq 1 60); do
     fi
     sleep 5
 done
+if [ "$ready" != 1 ]; then
+    echo "not answering after ${WAIT_S}s, but pid $PID is alive and still working." >&2
+    echo "watch it with: tail -f $LOG" >&2
+fi
 
 cat <<EOF
 
@@ -366,3 +386,18 @@ For RRSI's search roles, which read their own variables:
 
 Stop it with: $0 --stop
 EOF
+
+# Stay alive for as long as the server does.
+#
+# Not cosmetic: the pid of *this* script is what `keep_local_models.sh` checks before it
+# starts anything ("a start is already in progress"), so a launcher that exits once it has
+# finished *launching* turns every load longer than its wait window into a duplicate
+# server on the same GPU. `wait` keeps that pid meaningful, and it also makes a crashed
+# engine core end this process -- which is the signal the supervisor wants, instead of it
+# having to poll the port to tell "still loading" from "died".
+#
+# HARNESSGRAD_SERVE_FOLLOW=0 restores the old behaviour (print, exit, leave the server
+# running) for anyone who wants the prompt back.
+if [ "${HARNESSGRAD_SERVE_FOLLOW:-1}" = 1 ]; then
+    wait "$PID"
+fi

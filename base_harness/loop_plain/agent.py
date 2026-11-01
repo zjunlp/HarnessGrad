@@ -187,8 +187,8 @@ def _parse(reply: str) -> dict:
 
     `raw_decode` from the first `{` is the whole fix: it returns the first complete
     object and says where it stopped, so trailing objects, stray braces and prose around
-    the JSON all stop mattering. `base_harness/loop_rrsi_parse/` already shipped exactly
-    this ; it is the same code, because a parser that differs between two base harnesses
+    the JSON all stop mattering. `base_harness/loop/` shipped exactly this first, and this
+    file carries the same code on purpose: a parser that differs between two base harnesses
     is a difference between two candidates that the platform made rather than the method.
     """
     reply = reply.strip()

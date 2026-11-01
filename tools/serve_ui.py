@@ -1540,7 +1540,8 @@ def experiments() -> list[dict]:
         "title": "harness 的解析能力值五个任务(六题里)",
         "question": "同一个模型、同一批任务、同样的采样,只换 harness 的 JSON 解析实现。",
         "rows": [{"label": "原版 loop(严格 json.loads)", "run": "cmp-base"},
-                 {"label": "loop-rrsi-parse(容错,RRSI 第 0 轮候选 A)", "run": "cmp-rrsi"}],
+                 {"label": "loop-rrsi-parse(容错,RRSI 第 0 轮候选 A;该目录 2026-11-01 并入 loop)",
+                  "run": "cmp-rrsi"}],
         "finding": "0.167 → 0.833。原版产生 5 次解析错误、只执行了 3 条命令;"
                    "容错版 0 次解析错误、执行了 15 条。不是模型不会做题,是 harness 把"
                    "它做出来的东西丢掉了。",

@@ -1,5 +1,5 @@
 {
- "_why": "Which base_harness/ directories the console may launch as a *task* harness. The directory also holds the platform's probes (loop_plain, loop_rrsi_parse) and the improver agents (cli_agent, codex, deepseek-harness) plus `oracle`; all of them are harnesses, but none of them is a task agent a study should start from. Declaring the set here keeps the console from hard-coding it while still refusing to offer the rest.",
+ "_why": "Which base_harness/ directories the console may launch as a *task* harness. The directory holds more than that: `loop_plain` is the platform's floor (a control: its mock model never answers, so every trial scores 0), `oracle` runs the dataset's own reference solution, `cli_agent` is a scaffold for driving an arbitrary agent CLI, and `codex`/`opencode` are also registered as improver-side harnesses. All of them are harnesses in the manifest sense, but none of them is a task agent a study should start from. Declaring the set here keeps the console from hard-coding it while still refusing to offer the rest; making another directory launchable is one line in this file, not a code change.",
  "harnesses": [
   "loop",
   "deepseek-harness",

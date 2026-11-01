@@ -1832,10 +1832,14 @@ which is what the measured model emits (`{"tool": ...}}
 brace) -- produced `{...}}{...}`, which is not JSON. The harness treats an unparseable
 reply as a harness failure and **breaks the loop**, so four of five tasks in round 0 ended
 after a single model call with an empty answer, and every later round inherited a harness
-that could not act. The fix is the parser `base_harness/loop_rrsi_parse/` already shipped:
+that could not act. The fix is the parser `base_harness/loop` carries:
 `JSONDecoder.raw_decode` from the first `{`, which returns the first complete object and
-ignores whatever follows. All three base harnesses now share it, byte for byte, so this is
-a platform fix rather than a built-in head start for one candidate.
+ignores whatever follows. Both base harnesses (`loop` and its floor, `loop_plain`) now share
+it byte for byte, so this is a platform fix rather than a built-in head start for one
+candidate. The third copy that existed here (`loop_rrsi_parse`, the snapshot of RRSI round
+0A's candidate A) was removed on 2026-11-01 for exactly that reason: it held no rule of its
+own, only a third copy of this one, and copies drift. `git show 10ad781:base_harness/loop_rrsi_parse/agent.py`
+recovers it.
 
 What made the third one hard to see is worth recording too: the platform recorded
 `calls: 1` and `parse_error: Extra data ...` in the trace the whole time, and the round
