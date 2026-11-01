@@ -174,7 +174,54 @@ also why it is not shipped in `base_harness/`: since 2026-11-01 it lives in
 a test instrument, not an example to copy. Its row is kept here so the table still shows
 what "cannot see the CLI's turns" costs.
 
-### Two dialects, and why the reader learned the old one
+### What a harness hands over, and why `answer.txt` is not the only answer
+
+Every adapter here ends its prompt the same way: *"if the task asks for a file or any other
+output, write it exactly as asked; otherwise write your final answer, and nothing else, to
+`answer.txt` in your working directory."* That sentence is a **default text channel**, not a
+claim that every benchmark is graded on a text answer, and reading it as the latter is the
+mistake this section exists to prevent.
+
+The platform has exactly two verifier kinds (`data/scaffolds/registry.py:VERIFIER_KINDS`):
+
+| kind | how the score is produced | what the harness must leave behind |
+| --- | --- | --- |
+| `answer` | the platform compares the collected answer with the task's `expected` | `answer.txt` |
+| `command` | the dataset's own command runs; it decides what to read | whatever that command reads |
+
+Measured spread across the adapters, 2026-11-01:
+
+* **18 datasets declare `VERIFY` explicitly**, and their commands are the score: AppWorld,
+  ALFWorld, Jericho, ScienceWorld, Terminal-Bench, τ-bench, CostBench, DS-1000, GAIA,
+  LiveCodeBench, LoCoMo, MemoryAgentBench, PersonaMem-v2, StrongREJECT, Bird mini-dev,
+  Kumo, CooperBench, τ³-bench. Most of them read the environment or the recorded
+  interaction, not the answer text -- CostBench's own goal says *"answer.txt cannot replace
+  the tool costs and invalid calls"*, and AppWorld's verifier asserts on world state.
+* **17 datasets route through the QA scaffold** (`aime`, `api_bank`, `bfcl_v3`,
+  `bird_minidev`, `chessbench_puzzles`, `fever`, `gsm8k`, `hotpotqa`, `musique`,
+  `physicsquestions`, `reasoning_gym`, `sotuqa`, `sportsunderstanding`, `strategyqa`,
+  `tau2_bench`, `triviaqa`, `twowikimultihopqa`). Their verifier is `kind: command`, but the
+  command is `data/scaffolds/qa/verify/check.py --answer answer.txt --gold …` -- it
+  **re-derives the dataset's official metric from `answer.txt`**. For these, `answer.txt` is
+  the answer channel, and the dataset's own goal usually says so.
+* **Fixtures** (`demo` and the other platform fixtures) use `kind: answer` directly.
+* A task that declares file submissions is different again: `task["submission"] =
+  {"kind": "files", "paths": [...]}` is public metadata, all six adapters branch on it, and
+  the prompt then says "leave these files; a final message cannot replace them".
+
+So the rule the adapters encode is ordered, not universal: **the task's own requirements
+first** (files it names, the state it asks for), then the platform's text channel for
+whatever answer remains. Writing `answer.txt` cannot rescue a state-graded task, and telling
+the model to write it is not what makes those tasks measurable -- their verifier simply
+never looks.
+
+**What a harness cannot see.** `task.json` carries `goal`, `task_id`, `inputs` and
+`submission`; it does not carry the verifier kind. A harness therefore cannot know whether
+its answer text is scored, and must not infer it. This is a deliberate boundary -- the gold
+and the grading logic stay platform-owned -- and it is why the prompt names *both* channels
+instead of choosing one.
+
+## Two dialects, and why the reader learned the old one
 
 `v1` is the shape above. `v0` is what `base_harness/loop` writes and what **every trace
 stored so far** contains: the same answer inline on the action record, as `exit`/`output`.
