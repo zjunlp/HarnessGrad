@@ -461,3 +461,6 @@ console/.local/
 
 # the console's endpoint settings live here and carry API keys
 .local/
+
+# Harness integration decision and acceptance record.
+!/docs/openclaw-miniagent-integration.md

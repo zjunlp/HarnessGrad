@@ -1,0 +1,41 @@
+{
+  "project": "https://github.com/RUC-NLPIR/FlashRSI",
+  "commit": "dea1b1d0285e3328234a1e344562bb9e54ce14f7",
+  "archive": "https://github.com/RUC-NLPIR/FlashRSI/archive/dea1b1d0285e3328234a1e344562bb9e54ce14f7.tar.gz",
+  "archive_sha256": "e6489219af38b34e9dfc2754a56a37e8c590e99fccfd8cbb7d1f06d4e8f8e711",
+  "source_path": "flashrsi/agents/miniagent",
+  "license": "Apache-2.0",
+  "source_files_sha256": {
+    "agent.yaml": "f7c153258e3ac3b6a63801259fcbcca23e14f30267315d2a938df00767e6e2a1",
+    "components.yaml": "ae9e95591df77573ba6e5c1bf5667d9f9cdbab1194a85539282236adce316ee1",
+    "prompts/extract.md": "0b785f2012b92d73b7b36f9032a512ade3be6528e47f2766a529d92798954e68",
+    "prompts/system.md": "acc58b559ab805760ff0b6fec1514841aeba9c61508bad715f9e0d730e0fa3ec",
+    "runtime/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runtime/agent.py": "0babe1000bf289a45f483013a7b62445dabda74c591b93741eed87d01826c056",
+    "runtime/editor.py": "1f40ce3ba53ee49865ec0f2a3c04ed2261d7a5b911312df4a90accd74304c6d4",
+    "runtime/llm.py": "69fb0273508e19947a4910db31a40a264a97e0a3a8ec9a412b454c994de703f8",
+    "runtime/reader.py": "ca4875004987511ab9c11e6e97d0a1eb2ec108dace931345e8bb484a38d20c07",
+    "runtime/tool_result.py": "c50485576451f59ed057822ec62d0b3d87d562173eb4ab0fa6cab74d9ce0f0ac",
+    "runtime/tools.py": "da566aa2731a829e167a3fe04889dab9245010214ed943326e098d45fb98c6c8",
+    "runtime/trace.py": "69e2a348ebdebb74ea47da05ca5417a750902f097b8bad5cddc8fab60f7d26d1",
+    "runtime/web_config.py": "701f18082f423a1992566b29e5640a93706f7c6d88c5471a039b01dad805b6bf",
+    "runtime/workspace.py": "4d9f20eb9059509b06b4e618b4e23ec96e013586a5fc6830ce7d8ada8caba443",
+    "skills/main.md": "19dad2d7cc8acc6b72169f7aef32c2d1760195fc1bc271344ec9484be9eded6f",
+    "tool_descriptions/read_skill.json": "12ec52ba0374feb8608b4813e5ba5fb430e54216eab9569d5e8d912b5e3ac824",
+    "tool_descriptions/shell.json": "d41d0c1dcbed90353b53dc2e6fc417ef3ca5726ec9414f3543cd2764a4b3cb7b",
+    "tools/read_skill.py": "50b3db5e3448a341373684121122da70c183bc99e7475b3c34a1890f975b5080",
+    "tools/shell.py": "141ada8eaecc0e53a057daeb1af9faacd70518311ff36a7313cc944820b361db"
+  },
+  "native_modifications": [],
+  "excluded_upstream_files": [
+    "__init__.py",
+    "_entry.py"
+  ],
+  "adapter_files": [
+    "agent.py",
+    "bridge.py",
+    "requirements.txt",
+    "harness.json",
+    "README.md"
+  ]
+}

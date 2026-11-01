@@ -1,0 +1,12 @@
+{
+  "name": "read_skill",
+  "description": "Read the complete procedure of a relevant directory skill listed in the system instructions. Skills are discovered from this workspace. Choose relevant skills by their description; loading irrelevant procedures wastes context.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "skill": {"type": "string", "description": "Exact discovered skill directory name from the system instructions."}
+    },
+    "required": ["skill"],
+    "additionalProperties": false
+  }
+}

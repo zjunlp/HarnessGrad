@@ -3,6 +3,8 @@
  "harnesses": [
   "loop",
   "deepseek-harness",
-  "miniswe"
+  "miniswe",
+  "miniagent",
+  "openclaw"
  ]
 }

@@ -1,0 +1,13 @@
+code:
+  - runtime/**
+  - middleware/**
+  - sub_agents/**
+skill:
+  - skills/**
+prompt:
+  - prompts/**
+tool:
+  - tools/**
+  - tool_descriptions/**
+config:
+  - agent.yaml
