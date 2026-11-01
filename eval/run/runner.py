@@ -552,7 +552,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             task_file = workdir / "task.json"
             actor_task = ({**task, "goal": chess_stepwise.GOAL}
                           if stepwise_session is not None else task)
-            task_file.write_text(json.dumps(runtime_task(actor_task, setup)))
+            task_file.write_text(json.dumps(
+                runtime_task(actor_task, setup, verdict_kind=(verifier or {}).get("kind"))))
 
         # Services come up before the harness and are health-checked before it starts
         # (INTERFACE.md §2.5.7, steps 1-3). A harness that starts against a service

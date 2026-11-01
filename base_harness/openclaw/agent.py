@@ -51,7 +51,7 @@ def task_prompt(task: dict) -> str:
     if paths:
         delivery = "Leave these files in the working directory for scoring: " + json.dumps(paths) + "."
     else:
-        delivery = "If the task asks for answer.txt, write it exactly. Otherwise write your final answer, and nothing else, to `answer.txt` in the working directory."
+        delivery = "Write every file the task asks for exactly as asked."
     text = (ROOT / "prompt.md").read_text(encoding="utf-8")
     result = text + "\n\nTask delivery:\n" + delivery + "\n\nTask:\n" + goal
     if task.get("inputs") is not None:

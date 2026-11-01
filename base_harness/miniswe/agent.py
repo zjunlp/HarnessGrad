@@ -156,9 +156,7 @@ def task_text(task: dict) -> str:
         + json.dumps(paths) + ". Leave them in place for the platform's scorer; do not "
         "write answer.txt instead. "
         if paths is not None else
-        "If the task names answer.txt, write exactly the contents it asks for. Otherwise "
-        "write your final answer, and nothing else, to `answer.txt` in the working "
-        "directory. ")
+        "Write every file the task asks for exactly as asked. ")
     # The delivery rule goes last on purpose. Measured 2026-11-01 on `demo/t01`: the rule
     # was already here, and the run still submitted `Wait, I need to re-read the
     # instructions more carefully...` because the model's last message was the musing it

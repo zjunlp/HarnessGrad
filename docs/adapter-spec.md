@@ -174,52 +174,45 @@ also why it is not shipped in `base_harness/`: since 2026-11-01 it lives in
 a test instrument, not an example to copy. Its row is kept here so the table still shows
 what "cannot see the CLI's turns" costs.
 
-### What a harness hands over, and why `answer.txt` is not the only answer
+### What a harness hands over, and who decides where
 
-Every adapter here ends its prompt the same way: *"if the task asks for a file or any other
-output, write it exactly as asked; otherwise write your final answer, and nothing else, to
-`answer.txt` in your working directory."* That sentence is a **default text channel**, not a
-claim that every benchmark is graded on a text answer, and reading it as the latter is the
-mistake this section exists to prevent.
+**The task says what to deliver; the harness only keeps it.** That is the whole rule, and
+the reason there is no "write to `answer.txt`" sentence in any adapter's prompt (it was
+there until 2026-11-01, in six slightly different forms -- six places to drift, and two of
+them scored 0 for the harness's own wording).
 
-The platform has exactly two verifier kinds (`data/scaffolds/registry.py:VERIFIER_KINDS`):
+The platform knows the grading, so the platform writes the delivery requirement into the
+task's `goal` (`eval/run/task_contract.py:runtime_task`):
 
-| kind | how the score is produced | what the harness must leave behind |
-| --- | --- | --- |
-| `answer` | the platform compares the collected answer with the task's `expected` | `answer.txt` |
-| `command` | the dataset's own command runs; it decides what to read | whatever that command reads |
+* an **`answer`-kind** task whose goal does not already name the file gets
+  `## How to answer -- Write the answer, and nothing else, to answer.txt in your working
+  directory.` injected, because the platform compares that file with `expected`;
+* a dataset that already ships its own *How to answer* section keeps its wording -- the QA
+  scaffold (17 adapters: `gsm8k`, `aime`, `triviaqa`, `hotpotqa`, …) builds exactly such a
+  section, naming `answer.txt` or the `qa submit` CLI;
+* a **`command`-kind** task gets nothing added. AppWorld, ALFWorld, Jericho,
+  ScienceWorld, Terminal-Bench, τ-bench, CostBench, DS-1000, GAIA, LiveCodeBench, LoCoMo,
+  MemoryAgentBench, PersonaMem-v2, StrongREJECT, Bird mini-dev, Kumo, CooperBench and
+  τ³-bench are graded by their own command against the environment or the recorded
+  interaction; telling the agent to write an answer file would invite it to stop early.
+  CostBench's goal says so itself: *"answer.txt cannot replace the tool costs and invalid
+  calls"*.
+* a task that declares file submissions carries `task["submission"] = {"kind": "files",
+  "paths": [...]}`, and every adapter branches on it: leave those files, a final message
+  cannot replace them.
 
-Measured spread across the adapters, 2026-11-01:
+What remains the adapter's job is only the *collection*: a file the agent wrote during the
+run wins (`answer_source: artifact`), otherwise the final message is written to
+`answer.txt` (`final_message`), and the source is on the trace either way.
 
-* **18 datasets declare `VERIFY` explicitly**, and their commands are the score: AppWorld,
-  ALFWorld, Jericho, ScienceWorld, Terminal-Bench, τ-bench, CostBench, DS-1000, GAIA,
-  LiveCodeBench, LoCoMo, MemoryAgentBench, PersonaMem-v2, StrongREJECT, Bird mini-dev,
-  Kumo, CooperBench, τ³-bench. Most of them read the environment or the recorded
-  interaction, not the answer text -- CostBench's own goal says *"answer.txt cannot replace
-  the tool costs and invalid calls"*, and AppWorld's verifier asserts on world state.
-* **17 datasets route through the QA scaffold** (`aime`, `api_bank`, `bfcl_v3`,
-  `bird_minidev`, `chessbench_puzzles`, `fever`, `gsm8k`, `hotpotqa`, `musique`,
-  `physicsquestions`, `reasoning_gym`, `sotuqa`, `sportsunderstanding`, `strategyqa`,
-  `tau2_bench`, `triviaqa`, `twowikimultihopqa`). Their verifier is `kind: command`, but the
-  command is `data/scaffolds/qa/verify/check.py --answer answer.txt --gold …` -- it
-  **re-derives the dataset's official metric from `answer.txt`**. For these, `answer.txt` is
-  the answer channel, and the dataset's own goal usually says so.
-* **Fixtures** (`demo` and the other platform fixtures) use `kind: answer` directly.
-* A task that declares file submissions is different again: `task["submission"] =
-  {"kind": "files", "paths": [...]}` is public metadata, all six adapters branch on it, and
-  the prompt then says "leave these files; a final message cannot replace them".
-
-So the rule the adapters encode is ordered, not universal: **the task's own requirements
-first** (files it names, the state it asks for), then the platform's text channel for
-whatever answer remains. Writing `answer.txt` cannot rescue a state-graded task, and telling
-the model to write it is not what makes those tasks measurable -- their verifier simply
-never looks.
+Verified on `demo/t01` ("Answer with the word alpha", an `answer`-kind fixture) after the
+move: all six adapters score 1.000 with a conformant trace, and no adapter prompt mentions
+`answer.txt` at all.
 
 **What a harness cannot see.** `task.json` carries `goal`, `task_id`, `inputs` and
-`submission`; it does not carry the verifier kind. A harness therefore cannot know whether
-its answer text is scored, and must not infer it. This is a deliberate boundary -- the gold
-and the grading logic stay platform-owned -- and it is why the prompt names *both* channels
-instead of choosing one.
+`submission`; it does not carry the verifier kind. The injection happens *before* the task
+is written, so a harness reads the requirement as part of the task -- which is the only
+channel it needs.
 
 ## Two dialects, and why the reader learned the old one
 

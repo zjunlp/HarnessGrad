@@ -44,8 +44,7 @@ def task_text(task: dict) -> str:
     delivery = ('Leave these files relative to the current working directory for scoring: '
                 + json.dumps(paths) + '. A final message cannot replace those files.'
                 if paths is not None else
-                "Follow the task's answer format. Preserve answer.txt if requested; "
-                'otherwise write your final answer, and nothing else, to `answer.txt` in the working directory')
+                "Write every file the task asks for exactly as asked.")
     prompt = goal.strip() + '\n\n' + delivery
     if task.get('inputs') is not None:
         prompt += '\n\nTask inputs:\n' + json.dumps(task['inputs'], ensure_ascii=False)

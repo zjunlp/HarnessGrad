@@ -172,9 +172,7 @@ def run(task: dict, workdir: Path) -> int:
     # (`opencode`, `miniagent`, `openclaw`, and DSH's knobs.json preamble).
     prompt = ("Complete the following task in the current working directory. "
               "Use your tools to inspect and modify the actual task files. "
-              "If the task asks you to write an answer file or any other output, write it "
-              "exactly as asked. Otherwise write your final answer, and nothing else, to "
-              "`answer.txt` in the working directory.\n\n"
+              "Write every file the task asks for exactly as asked.\n\n"
               + goal)
     if task.get("inputs"):
         prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)

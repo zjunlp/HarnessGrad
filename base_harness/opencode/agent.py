@@ -96,9 +96,7 @@ def task_prompt(task: dict) -> str:
         + json.dumps(paths) + ". Leave them in place for the platform's scorer. "
         "A final chat message or answer.txt is not required in addition to those files. "
         if paths is not None else
-        "If the task specifies answer.txt, write its exact required contents; it will be preserved. "
-        "Otherwise write your final answer, and nothing else, to `answer.txt` in the working directory, "
-        "without a progress summary or extra explanation. "
+        "Write every file the task asks for exactly as asked. Anything it names as its answer file is preserved as written. "
     )
     prompt = (
         "Complete this task in the current working directory using real tools. "
