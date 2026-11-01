@@ -38,6 +38,31 @@ def bun_binary(parent: dict) -> str:
     return "bun"
 
 
+def cli_version(source: Path) -> str:
+    """The version the source tree declares, used to pin the channel it thinks it runs in.
+
+    Running from source leaves `OPENCODE_CHANNEL` undefined, and the CLI then takes its
+    `local` branch: `@opencode-ai/plugin@latest` plus an "is it outdated" registry call. Both
+    are network calls and the task sandbox has none. Measured 2026-10-30: the CLI started,
+    forked `bun add @opencode-ai/plugin@latest`, and blocked for 300 s with 6 s of CPU.
+    """
+    try:
+        return json.loads((Path(source) / "packages/opencode/package.json").read_text(
+            encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError):
+        return "0.0.0"
+
+
+def write_preload(state: Path, version: str) -> Path:
+    """Pin the version globals so the CLI takes its released channel, not its local one."""
+    state.mkdir(parents=True, exist_ok=True)
+    path = state / "channel-preload.ts"
+    path.write_text(
+        f"globalThis.OPENCODE_CHANNEL = {json.dumps(version)}\n"
+        f"globalThis.OPENCODE_VERSION = {json.dumps(version)}\n", encoding="utf-8")
+    return path
+
+
 def source_hash(source: Path) -> str:
     digest = hashlib.sha256()
     for directory, dirs, files in os.walk(source):
@@ -87,6 +112,14 @@ def task_prompt(task: dict) -> str:
 
 
 def configuration(env: dict) -> dict:
+    """The harness's config, in the schema the CLI on disk actually reads.
+
+    The 2.0 preview used `providers` (plural) with `policies`, and `model` as an object
+    `{providerID, model}`. The v1 line uses `provider` (singular) with `npm`/`options`/`models`
+    and `model` as the string `"provider/model"`. Measured 2026-10-29: the preview's schema
+    against a v1 CLI is accepted as JSON and then ignored, so the CLI starts with no provider,
+    prints nothing, and the harness times out.
+    """
     model = env.get("HG_AGENT_MODEL", "")
     base = env.get("HG_AGENT_BASE_URL", "")
     if not model or not base or not env.get("HG_AGENT_API_KEY"):
@@ -94,34 +127,39 @@ def configuration(env: dict) -> dict:
     wire = env.get("HG_AGENT_OPENCODE_WIRE", "chat")
     if wire not in ("chat", "responses"):
         raise ValueError("HG_AGENT_OPENCODE_WIRE must be chat or responses")
-    package = "@opencode/ai/providers/openai-compatible" + ("/responses" if wire == "responses" else "")
+    # `@ai-sdk/openai-compatible` is the package v1 loads for an OpenAI-compatible provider,
+    # and it is already inside the prepared source tree's node_modules -- the sandbox has no
+    # network, so a provider package that had to be fetched would be a harness that never
+    # starts.
     return {
-        "model": {"providerID": "harnessgrad", "model": model},
-        "default_agent": "build", "update": "disable", "share": "disabled",
-        "snapshots": False, "warming": False, "lsp": False, "formatter": False,
-        "agents": {"build": {"steps": int(env.get("HG_AGENT_MAX_STEPS", "12"))}},
-        "permissions": [{"action": "*", "resource": "*", "effect": "allow"}],
-        "policies": [
-            {"action": "provider.use", "resource": "*", "effect": "deny"},
-            {"action": "provider.use", "resource": "harnessgrad", "effect": "allow"},
-            {"action": "tool.use", "resource": "*", "effect": "deny"},
-            *({"action": "tool.use", "resource": name + ":*", "effect": "allow"}
-              for name in ("read", "write", "edit", "apply_patch", "bash", "shell", "glob", "grep", "list")),
-        ],
-        "providers": {"harnessgrad": {
-            "name": "HarnessGrad task endpoint", "env": ["HG_AGENT_API_KEY"], "package": package,
-            "settings": {"baseURL": base, "apiKey": "{env:HG_AGENT_API_KEY}",
-                         "timeout": int(float(env.get("HG_AGENT_TIMEOUT_S", "60")) * 1000)},
-            "models": {model: {
-                "name": model, "capabilities": {"tools": True, "input": ["text"], "output": ["text"]},
-                "limit": {"context": int(env.get("HG_AGENT_CONTEXT_WINDOW", "32768")),
-                          "output": int(env.get("HG_AGENT_MAX_OUTPUT_TOKENS", "2048"))},
-            }},
-        }},
+        "model": f"harnessgrad/{model}",
+        "provider": {
+            "harnessgrad": {
+                "npm": "@ai-sdk/openai-compatible",
+                "name": "HarnessGrad task endpoint",
+                "options": {
+                    "baseURL": base,
+                    "apiKey": "{env:HG_AGENT_API_KEY}",
+                    "timeout": int(float(env.get("HG_AGENT_TIMEOUT_S", "60")) * 1000),
+                },
+                "models": {
+                    model: {
+                        "name": model,
+                        "limit": {
+                            "context": int(env.get("HG_AGENT_CONTEXT_WINDOW", "32768")),
+                            "output": int(env.get("HG_AGENT_MAX_OUTPUT_TOKENS", "2048")),
+                        },
+                    },
+                },
+            },
+        },
+        "agent": {"build": {"steps": int(env.get("HG_AGENT_MAX_STEPS", "12"))}},
+        "share": "disabled",
+        "autoupdate": False,
     }
 
 
-def child_environment(parent: dict, state: Path) -> dict:
+def child_environment(parent: dict, state: Path, version: str = "0.0.0") -> dict:
     # Retain task service endpoints/PATH; the platform has already selected task credentials.
     excluded = {"OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY",
                 "CODEX_HOME", "OPENCODE_SERVER", "OPENCODE_CONFIG", "BUN_OPTIONS", "NODE_OPTIONS"}
@@ -136,10 +174,33 @@ def child_environment(parent: dict, state: Path) -> dict:
         path = state / folder
         path.mkdir(parents=True, exist_ok=True)
         env[key] = str(path)
+    # `needsInstall` decides whether to `bun add @opencode-ai/plugin` by looking for
+    # `node_modules` and a `package.json` that already names the plugin at the CLI's version.
+    # Neither exists in a fresh state directory, so without this every task tries to install a
+    # package it already has -- over a network the sandbox does not have.
+    config_dir = state / "config" / "opencode"
+    (config_dir / "node_modules").mkdir(parents=True, exist_ok=True)
+    (config_dir / "package.json").write_text(
+        json.dumps({"dependencies": {"@opencode-ai/plugin": version}}), encoding="utf-8")
     env.update({
         "OPENCODE_DISABLE_AUTOUPDATE": "1", "OPENCODE_DISABLE_MODELS_FETCH": "1",
         "OPENCODE_DISABLE_PROJECT_CONFIG": "1", "OPENCODE_DISABLE_CLAUDE_CODE": "1",
         "OPENCODE_DISABLE_FILEWATCHER": "1", "OPENCODE_DISABLE_FFF": "1",
+        # The two default plugins are **auth** plugins for providers this harness never
+        # uses (`opencode-anthropic-auth@0.0.13`, `@gitlab/opencode-gitlab-auth@1.3.2`),
+        # and v1 loads them by `bun add`-ing them from npm on every start. With no network
+        # that is not a failure the CLI reports -- it is a silent hang: measured
+        # 2026-11-01, `service=bun ... add --force --exact opencode-anthropic-auth@0.0.13`
+        # sat for the whole task budget, the model endpoint received zero requests, and the
+        # task was recorded as an OpenCode timeout with 0 steps.
+        #
+        # Disabling them is also the right thing on its own terms: every model call goes to
+        # the endpoint the platform names, so a plugin whose purpose is to obtain
+        # third-party credentials has nothing to do here and one more route to the network
+        # that the measurement does not need. The package name in that flag's absence is
+        # what the comment is for: if a future v1 needs a *behavioural* default plugin, it
+        # will not arrive through this switch.
+        "OPENCODE_DISABLE_DEFAULT_PLUGINS": "1",
         "OPENCODE_CONFIG_CONTENT": json.dumps(configuration(parent)),
     })
     if parent.get("HG_AGENT_GIT_BASH_PATH"):
@@ -350,8 +411,28 @@ def run(task: dict, work: Path) -> int:
             declaration = json.loads((ROOT / "harness.json").read_text(encoding="utf-8")).get("runtime")
             if not isinstance(declaration, dict) or declaration.get("kind") != "bun":
                 raise ValueError("Declare the Bun runtime in harness.json before execution")
-            source = Path(parent.get("HG_HARNESS_SOURCE") or parent.get("HG_AGENT_OPENCODE_SOURCE")
-                          or ROOT / declaration["source"]).resolve()
+            # The source is inside the candidate, or under a declared `runtime_paths` entry --
+            # the same rule the platform's `bun_runtime.owned_source` applies, so the harness
+            # and the platform cannot disagree about which tree is being run.
+            declared_roots = [Path(str(entry)).expanduser().resolve()
+                              for entry in (json.loads((ROOT / "harness.json").read_text(
+                                  encoding="utf-8")).get("runtime_paths") or [])]
+            candidates = ([Path(parent["HG_HARNESS_SOURCE"]).expanduser()]
+                          if parent.get("HG_HARNESS_SOURCE") else
+                          [Path(parent["HG_AGENT_OPENCODE_SOURCE"]).expanduser()]
+                          if parent.get("HG_AGENT_OPENCODE_SOURCE") else
+                          [ROOT] + declared_roots)
+            source = None
+            for base in candidates:
+                base = base.resolve()
+                for guess in ([base] if base.name == declaration["source"] else
+                              [base / declaration["source"]]):
+                    if (guess / declaration["entrypoint"]).is_file():
+                        source = guess
+                        break
+                if source is not None:
+                    break
+            source = (source or (ROOT / declaration["source"])).resolve()
             # **Inside the candidate, or declared in `runtime_paths`.** The platform binds
             # those trees read-only, so a declared tree is readable here and nothing else is.
             # `opencode` is a 224 MB monorepo with 4,689 packages: copying it into every
@@ -371,7 +452,8 @@ def run(task: dict, work: Path) -> int:
                 raise ValueError("Runtime entry disagrees with platform declaration")
             if not entry.is_file():
                 raise ValueError("OpenCode source missing; prepare this candidate before running")
-            env = child_environment(parent, work / ".opencode-state")
+            version = cli_version(source)
+            env = child_environment(parent, work / ".opencode-state", version)
             env["PWD"] = str(work)
             identity = {"harness": "opencode-agent", "agent_backend": "opencode",
                         "agent_model": parent.get("HG_AGENT_MODEL"),
@@ -380,12 +462,22 @@ def run(task: dict, work: Path) -> int:
                         "source": str(source), "source_sha256": source_hash(source),
                         "source_in_candidate": owned}
             record({"harness_identity": identity, "task_id": task.get("task_id")})
+            # The CLI's own working directory is the *package* the entrypoint lives in:
+            # `packages/cli` in the 2.0 preview, `packages/opencode` in the v1 line. Derived
+            # from the entrypoint rather than hard-coded, because the layout moved between
+            # those two releases and a hard-coded path is what made the first run print help
+            # and exit 1.
+            package_dir = entry.parent.parent
+            # `--standalone` existed in the preview CLI and not in v1: v1's `run` accepts
+            # `--format json` and rejects an unknown flag outright.
+            preload = write_preload(work / ".opencode-state", version)
             argv = [bun_binary(parent), "--no-env-file", "--no-install",
-                    str(entry), "run", "--standalone", "--format", "json",
+                    "--preload", str(preload),
+                    str(entry), "run", "--format", "json",
                     "--model", "harnessgrad/" + parent["HG_AGENT_MODEL"], "--agent", "build"]
             before = answer_stamp(work)
             process = subprocess.Popen(
-                argv, cwd=source / "packages/cli", env=env, stdin=subprocess.PIPE,
+                argv, cwd=package_dir, env=env, stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, encoding="utf-8", errors="replace", start_new_session=os.name != "nt")
             timed_out = False
@@ -415,7 +507,7 @@ def run(task: dict, work: Path) -> int:
                 raise ValueError("Expected exactly one OpenCode session in the JSON stream")
             # Export is a local state read, not another model request. It supplies finish
             # and usage even when noninteractive.ts reconstructed only text/tool events.
-            export_argv = argv[:4] + ["session", "export", "--standalone", next(iter(stream.sessions))]
+            export_argv = argv[:4] + ["session", "export", next(iter(stream.sessions))]
             export = subprocess.Popen(export_argv, cwd=source / "packages/cli", env=env,
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                       text=True, encoding="utf-8", errors="replace",
