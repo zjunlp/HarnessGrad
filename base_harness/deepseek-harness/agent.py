@@ -381,11 +381,24 @@ def facts(env: dict, home: Path, prompt: str, patch: "Path | None") -> dict:
     return out
 
 
+def _answer_stamp(path: Path):
+    """`answer.txt` as it was before the CLI ran, so a task-written file is attributable."""
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
 def run(task: dict, workdir: Path) -> int:
     workdir = workdir.resolve()
     workdir.mkdir(parents=True, exist_ok=True)
     answer = workdir / "answer.txt"
-    answer.unlink(missing_ok=True)
+    # **`answer.txt` belongs to the task first.** This adapter used to delete it here and
+    # write the CLI's final message at the end, which is the same defect `codex` had: a
+    # dataset whose goal asks the agent to write `answer.txt` (gsm8k's does) would have had
+    # that file replaced by whatever the model said last -- and this model narrates before
+    # it answers. A file the agent wrote wins; the final message is the fallback.
+    before = _answer_stamp(answer)
 
     goal = task.get("goal") or task.get("instruction")
     if not isinstance(goal, str) or not goal.strip():
@@ -527,15 +540,36 @@ def run(task: dict, workdir: Path) -> int:
             return 1
         translate(out, err)
         final = (out or "").strip()
-        if proc.returncode or not final:
-            record({"error": "dsh failed or printed no final message",
-                    "exit_code": proc.returncode})
-            return proc.returncode or 1
-        # The contract's answer file. For a task graded by its own tests this is a record of
-        # what the agent said it did; for an answer-graded task it is the answer.
-        answer.write_text(final + "\n", encoding="utf-8")
-        record({"submitted": True, "answer": final[:4000]})
+        if proc.returncode:
+            record({"error": "dsh failed", "exit_code": proc.returncode})
+            return proc.returncode
+        try:
+            record(submitted(answer, before, final))
+        except ValueError as exc:
+            record({"error": str(exc), "exit_code": 0})
+            return 1
     return 0
+
+
+def submitted(answer: Path, before, final: str) -> dict:
+    """The `submitted` record: the task's file if the agent wrote one, else the message.
+
+    Separated from `run` so the precedence is testable without the CLI: the rule is the
+    whole content, and getting it wrong is invisible in a score (a task graded on an exact
+    file would be graded on the model's prose instead).
+    """
+    current = _answer_stamp(answer)
+    if current is not None and current != before and current.strip():
+        # The agent wrote the file the task asked for -- keep it, do not overwrite it with
+        # the final message.
+        return {"submitted": True, "answer": current.decode("utf-8", "replace")[:4000],
+                "answer_source": "artifact"}
+    if not final:
+        raise ValueError("dsh printed no final message and the task wrote no answer.txt")
+    # The contract's answer file. For a task graded by its own tests this is a record of
+    # what the agent said it did; for an answer-graded task it is the answer.
+    answer.write_text(final + "\n", encoding="utf-8")
+    return {"submitted": True, "answer": final[:4000], "answer_source": "final_message"}
 
 
 #: The session events DSH flushes, translated. `sessions.flush` (headless runner, before it

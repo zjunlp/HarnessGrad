@@ -6131,3 +6131,40 @@ Measured live the same day, one task whose goal says *write the final answer to
 stand-in CLI. Neither path invents an answer format: the dataset's goal states what to
 deliver (gsm8k's `_goal` names `answer.txt` or `python3 qa submit`), the verifier decides
 how to read it, and the harness's only job is not to lose it.
+
+## Every harness keeps a task-written `answer.txt` — 2026-11-01
+
+Checked all seven runnable harnesses against the same question after the codex fix: *if
+the task's goal tells the agent to write `answer.txt` (gsm8k's does), does the harness
+keep that file, and does it say so on the trace?* Live, one prompt each, host side, the
+local `8001`, no dataset and no verifier. `answer_source: artifact` in every row means the
+file the agent wrote is what the platform collected; `commands` counts executed actions.
+
+| harness | before the fix | now | live evidence |
+| --- | --- | --- | --- |
+| `opencode` | files → artifact → final message | unchanged | already correct in code |
+| `miniswe` | files → artifact → final message | unchanged | 4 commands, `artifact`, contract OK |
+| `miniagent` | files → artifact → final message | unchanged | 1 command, `artifact`, contract OK |
+| `openclaw` | files → artifact → final message | unchanged | 1 command, `artifact`, contract OK |
+| `codex` | deleted `answer.txt`, wrote `-o` into it | artifact → final message | `echo 391 > answer.txt`, `artifact` |
+| `deepseek-harness` | deleted `answer.txt`, wrote the final message into it | artifact → final message | 6 commands / 6 observations, `artifact` |
+| `loop` (baseline) | always overwrote `answer.txt` with the `{"answer": …}` value | keeps a changed file | `echo $((17*23)) > answer.txt`, `artifact` |
+| `oracle` | control: runs the dataset's own reference solution, writes no `answer.txt` | out of scope | — |
+
+The `loop` change cannot move the archive: all 924 archived runs are AppWorld or ALFWorld,
+both graded by a `command` verifier against the environment's state, and neither dataset's
+adapter mentions `answer.txt` at all. What the change does affect is a task whose goal asks
+for the file — which is exactly the case the old code got wrong.
+
+One defect the `deepseek-harness` smoke exposed is about the host, not the adapter: with
+`HOME` pointing at this machine's real `~/.dsh`, DSH loads the operator's own
+`settings.yaml` and answered through a **real DeepSeek endpoint** with the local key, which
+failed authentication and produced a trace with 1 call and 0 commands. With an isolated
+`HOME` (what a container gives it) the same run answered through `qwen3.5-9b-local`. So a
+host-side diagnostic of this harness must set `HOME` to a scratch directory, or it is not
+measuring the model it names. The adapter's own docstring says the container case is the
+one that matters; this is what that costs when it is skipped.
+
+Covered by `tests/quality/test_answer_delivery.py` (the precedence, both branches, a
+pre-seeded placeholder, and `loop` end to end with scripted replies) plus the two new
+codex tests. 83 passed / 1 skipped across the affected files.

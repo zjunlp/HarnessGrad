@@ -230,20 +230,31 @@ def run(task: dict, workdir: Path) -> int:
             if proc.returncode:
                 record({"error": "codex failed", "exit_code": proc.returncode})
                 return proc.returncode
-            current = _answer_stamp(answer)
-            if current is not None and current != before and current.strip():
-                record({"submitted": True, "answer": current.decode("utf-8", "replace"),
-                        "answer_source": "artifact"})
-            else:
-                text = (last_message.read_text(encoding="utf-8", errors="replace")
-                        if last_message.is_file() else "")
-                if not text.strip():
-                    record({"error": "codex produced no final message and the task wrote "
-                                     "no answer.txt", "exit_code": proc.returncode})
-                    return 1
-                answer.write_text(text, encoding="utf-8")
-                record({"submitted": True, "answer": text, "answer_source": "final_message"})
+            try:
+                record(submitted(answer, before, last_message))
+            except ValueError as exc:
+                record({"error": str(exc), "exit_code": proc.returncode})
+                return 1
     return 0
+
+
+def submitted(answer: Path, before, last_message: Path) -> dict:
+    """The `submitted` record: the task's file if the agent wrote one, else the message.
+
+    Separated from `run` so the precedence is testable without the CLI binary: the rule is
+    the whole content, and getting it wrong is invisible in a score (a task graded on an
+    exact file is graded on the model's prose instead).
+    """
+    current = _answer_stamp(answer)
+    if current is not None and current != before and current.strip():
+        return {"submitted": True, "answer": current.decode("utf-8", "replace"),
+                "answer_source": "artifact"}
+    text = (last_message.read_text(encoding="utf-8", errors="replace")
+            if last_message.is_file() else "")
+    if not text.strip():
+        raise ValueError("codex produced no final message and the task wrote no answer.txt")
+    answer.write_text(text, encoding="utf-8")
+    return {"submitted": True, "answer": text, "answer_source": "final_message"}
 
 
 def main() -> int:
