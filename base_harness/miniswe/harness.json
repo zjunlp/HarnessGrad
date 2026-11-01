@@ -1,0 +1,16 @@
+{
+  "name": "miniswe",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null,
+  "env_kinds": [
+    "files"
+  ],
+  "runtime_paths": [
+    "/home/xubuqiang/.local/lib/python3.12/site-packages"
+  ],
+  "role": "harness",
+  "notes": "mini-SWE-agent 2.4.6, the published shell agent (SWE-agent lineage), pinned by version and reported in harness_identity. The package is a `pip install --user` install, so it lives under the operator's home: `runtime_paths` binds that tree read-only and agent.py puts it on the child's PYTHONPATH, because the sandbox replaces HOME and Python's user-site lookup therefore finds nothing. **env_kinds is `files` only, deliberately**: the package's compiled dependencies (pydantic-core, jiter) are built for the host's 3.12, and a task image is free to ship another interpreter -- declaring `exec` would turn that into a `harness_failed` per task instead of a refusal at the door. Lifting it needs `install: requirements.txt` plus an image whose interpreter matches."
+}
