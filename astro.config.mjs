@@ -99,7 +99,10 @@ export default defineConfig({
 				},
 				{
 					label: 'Contribute',
-					items: [{ label: 'Contributing results', slug: 'contributing' }],
+					items: [
+						{ label: 'Submit a harness', slug: 'contributing' },
+						{ label: '5-minute upload', slug: 'submit-harness' },
+					],
 				},
 			],
 		}),

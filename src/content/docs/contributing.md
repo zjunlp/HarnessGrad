@@ -1,213 +1,67 @@
 ---
-title: Contributing results
-description: How to submit a measured harness-improvement result, what we verify before publishing it, how trajectories are mirrored, and how credit works.
+title: Submit a harness
+sidebar:
+  order: 1
+description: Upload a complete harness to a reviewed HarnessGrad scenario and inspect its measured result.
 ---
 
-This site publishes **measured** results: a score that can be traced to per-task verdicts and to
-the exact harness that earned it. If you have a method that improves a harness on one of the
-benchmarks here, we want it on that benchmark's page with your name on it.
+HarnessGrad measures a harness with the platform's own task runner, sandbox, verifier and record. The submission service is a thin HTTP layer over the same `driver.py` path used by local runs. It does not accept a reported score.
 
-## Two things you can contribute, and where each one lives
+For the shortest local walkthrough, see [5-minute harness upload](../submit-harness/).
 
-| what you have | where it goes | how to send it |
-| --- | --- | --- |
-| **artifacts** for a run — the harness, the edit that produced it, the per-task trajectories | the dataset on the Hub, under `Experiments/<benchmark>/` | [open a pull request on the Hub](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/main/Experiments?new_pr=true) |
-| **a one-file record** of your numbers, to appear as a row on a benchmark page | this repository, `contrib/results/<benchmark>/<method>/<variant>.json` | the JSON below, as a pull request or an issue |
+## Current access
 
-One is not a substitute for the other: a dataset pull request is data somebody can re-run, and the
-JSON is a row that appears in a table. Send both and the row links to your data.
+The v1 endpoint is **internal and invite-only**. It listens on a loopback address, has no public authentication layer, and must not be exposed while the platform's egress and service admission prerequisites remain open. Ask the project maintainer for the current endpoint and an invitation before uploading anything.
 
-### What a dataset pull request contains
+The browser page is available from the console at `/submit.html`. Set `?api=http://127.0.0.1:<port>` only when using a separate reviewed mock or service during local testing. The page sends `POST` only for an explicit upload action; scenario discovery and status reads use `GET`.
 
-One directory per **experiment family** — the task agent being improved, then the meta agent doing
-the improving, then your method:
+## What to upload
 
-```
-Experiments/<benchmark>/
-  <task-agent>/                     e.g. qwen3.5-9b_loop   (agent model + base harness)
-    <family>/                       e.g. dsh-your-model    (improver harness + improver model)
-      family.json                   what the meta agent was, and the baseline round 0 hit
-      <method>/
-        curve.jsonl                 one record per round: score, per-task verdicts, identity
-        harness/round-N/            the harness deployed in round N — the tree, not a diff
-        patches/round-N.patch       the edit that produced round N
-        tasks/round-N.tar.gz        one JSONL per task per trial
+Upload one `tar.gz`, `tar`, or `zip` archive. The archive must contain one harness tree, either at its root or under one top-level directory. The tree needs a valid `harness.json` with a non-empty `name`, `version`, and `entrypoint`.
+
+The runner invokes the entrypoint as:
+
+```text
+<entrypoint> --task <task.json> --workdir <dir>
 ```
 
-Copy the shape of an existing family rather than inventing one: the manifest fields and the
-round-0 baseline are what make a result comparable to the ones already published.
+The harness reads the public task, works in the supplied directory, and leaves the requested artifact there. The platform performs all scoring after the harness exits. A harness does not receive a verifier definition or a trusted score.
 
-What we check before merging, mechanically rather than by reading:
+The archive limits are 20 MiB compressed, 2,000 entries, and 200 MiB after extraction. Absolute paths, `..` paths, links, devices, pipes and setuid entries are rejected. `backend` is currently `cli`; `env_kinds` must cover the selected scenario. If `install` is declared, its file must be inside the archive.
 
-- every `curve.jsonl` record names the same task agent and meta agent as the manifests above it;
-- round 0 is the **same baseline** as every other family (`harness_sha` and config), because that
-  is what makes a comparison across families a comparison at all;
-- every `harness/round-N/` recomputes to the `harness_sha` that round reports;
-- every `patches/round-N.patch` joins the two states it claims to join;
-- the coverage file matches the files actually present.
+## Choose a scenario
 
-A pull request that fails this is not merged as data. If your numbers still have per-task records
-behind them, they can be published as a row marked **unverified** (see below) — we will not
-publish a score whose artifacts we could not check.
+Scenarios are reviewed files, not arbitrary request parameters. The page shows the dataset, side, pool, task count and measured expected time when the service has one. An unavailable scenario stays visible with its reason. The submit button remains disabled until an available scenario is selected.
 
-## What a submission contains
+Results keep pools separate. A result can contain `train`, `dev`, `exam`, or another named pool. The service never publishes a cross-pool average. Missing values appear as `—`; `invalid` and `harness_failed` remain separate counts and do not become zero scores.
 
-A submission is one JSON file plus, optionally, a link to the trajectories. It is **not** a
-patch to our code, and it carries no large files.
+A scored response links to the run directory, curve, per-task verdict directory, log and permanent receipt. These paths are evidence references owned by the service. The current v1 contract does not provide a browser download route for every filesystem path, so the UI does not pretend that a local path is a clickable public file.
 
-```json
-{
-  "schema": "harnessgrad.submission.v1",
-  "dataset": "alfworld",
-  "task_agent": {
-    "base_harness": "loop@0.2.0",
-    "model": "qwen3.5-9b-local",
-    "decoding": "greedy (temperature=0)"
-  },
-  "improver": {
-    "method": "your-method@0.1.0",
-    "model": "deepseek-flash",
-    "harness": "dsh (headless profile)",
-    "rounds": 10
-  },
-  "method": { "name": "your-method", "paper": "https://…", "code": "https://…" },
-  "variant": "greedy-local-9b",
-  "platform": { "commit": "<sha of this repository>", "content_sha": "<platform content sha>" },
-  "runs": [
-    {
-      "run_id": "<your run id>",
-      "harness_sha": "<content hash of the measured harness>",
-      "round": 3,
-      "score": 0.9321,
-      "n_tasks": 134,
-      "n_invalid": 0,
-      "per_task": "results/<dataset>/<method>/<variant>/per_task.json"
-    }
-  ],
-  "config": {
-    "study_ids": "train100.csv",
-    "rounds": 10,
-    "jobs": 12,
-    "slots": 48,
-    "sampling": "all",
-    "trials": 1,
-    "endpoint": "http://127.0.0.1:8002/v1",
-    "model": "qwen3.5-9b-local",
-    "temperature": 0,
-    "seed": null
-  },
-  "trajectories": {
-    "location": "https://huggingface.co/datasets/<you>/…",
-    "format": "one JSONL per task, one record per step",
-    "bytes": 12345678,
-    "sha256": "<sha256 of the archive you want mirrored>"
-  },
-  "credit": {
-    "name": "Your Name",
-    "affiliation": "Your Institution",
-    "link": "https://your.site",
-    "submitted": [{ "dataset": "alfworld", "method": "your-method" }],
-    "acknowledge_in_report": true,
-    "contact": "optional: email, or your WeChat id"
-  }
-}
+The console may enrich a scored response with the existing read-only run endpoints (`GET /api/runs/<run_id>` and its round/trace routes). This only displays recorded tokens, calls, wall time and task evidence; it never recomputes a score or fills a missing field.
+
+## Lifecycle
+
+```text
+received → validating → rejected
+                     ↘ queued → running → scored
+                                        ↘ failed
 ```
 
-The authoritative schema is [`contrib/submission.schema.json`](https://github.com/zjunlp/HarnessGrad/blob/main/contrib/submission.schema.json)
-and a filled-in example is [`contrib/example-submission.json`](https://github.com/zjunlp/HarnessGrad/blob/main/contrib/example-submission.json).
+Validation failures explain the error code and the change needed. A successful queued submission receives a `submission_id` and `run_id`; polling continues until the service returns `scored` or `failed`.
 
-## How to submit
+## Local mock
 
-0. **Run the validator first**: `python3 contrib/validate.py <your-file>.json`. It checks the
-   schema, not the numbers — a file that fails it cannot be reviewed at all.
-1. **Open a pull request to this repository** that adds
-   `contrib/results/<dataset>/<method>/<variant>.json` (the file above) and the small
-   `per_task.json` it points at. Keep the trajectories **out of this repository's git**: either
-   send them as a dataset pull request ([above](#two-things-you-can-contribute-and-where-each-one-lives)),
-   or put them somewhere you control (your own HuggingFace dataset, Zenodo, an institutional
-   archive) and link them here.
-2. If a pull request is not convenient, **open an issue** using the submission template and
-   attach the same JSON. We will open the pull request for you, with you as the author of the
-   data.
-3. A maintainer reviews the numbers with the platform's own validity gate (below), asks at most
-   one round of questions, and merges. The page is regenerated from the merged JSON, so the site
-   and the record cannot disagree.
+The repository includes a standard-library mock for page and API work:
 
-## Your stack does not have to be ours
+```bash
+python3 console/uat/mock_submissions.py --port 4471
+# open the console's submit page with ?api=http://127.0.0.1:4471
+```
 
-The three things that define a measurement are the benchmark, the **task-agent** (the base
-harness being improved, plus the model that drives it), and the **improver** (the method, the
-model the improver itself used, and the harness the improver ran under). A result on a different
-base harness, a different model, or a different improver is welcome — that is the point of an
-open table.
+The mock runs deterministic states, exposes one unavailable scenario, provides an invalid-result scenario, and maps rejection cases from filenames such as `reject-unsafe-path.tar.gz`. It never executes an uploaded archive and its scores are interface fixtures.
 
-What it must not do is pretend to be comparable across those lines. So:
+## What a result means
 
-- every row declares its stack, and the page groups rows by stack;
-- the frozen reference (H0) is required **per stack**, because H0 on `loop` with a 9B local model
-  says nothing about H0 with another agent;
-- rows from different stacks are shown side by side and **never merged into one ranking**;
-- if you cannot measure H0 on your stack, the row is published as an absolute score marked
-  *no reference*, not as an improvement over ours.
+A result is a measured platform record for one reviewed scenario and one uploaded harness tree. It includes the harness identity, model/backend identity when available, platform content identity, pool counts, costs when the service has them, and task evidence. It does not mean the harness is universally better, and a mock result is not benchmark evidence.
 
-## What we verify
-
-Each of these is checked against the files, not asserted:
-
-- **Task set**: the ids you scored are exactly the benchmark's declared set for that pool
-  (`valid_unseen` is 134 ids; `valid_seen` 140; `valid_train` 200). A point that measured 139 of
-  140 is excluded, not averaged.
-- **Validity**: `n_invalid == 0` and `n_harness_failed == 0` for every published point.
-- **Score**: recomputed from your `per_task.json`, and it must equal the reported `score`.
-- **State**: `harness_sha` resolves to the same harness content the run was measured with, and
-  the run's `run_meta.json` records the platform content sha you declared.
-- **Config**: what you declare matches what the run recorded (study ids, rounds, trials,
-  sampling, model, decoding).
-
-A submission that does not pass is **published as `unverified` if you want it published at
-all** — clearly marked, with the reason — never silently dropped and never silently accepted.
-Verified and unverified rows are never mixed in one table.
-
-## Trajectories, and why they are mirrored later
-
-Trajectories are large, so they never enter git. The flow is:
-
-1. you either add them to our dataset with a pull request, or upload them wherever you prefer
-   and link that location in `trajectories`;
-2. we download, check the archive hash and the file format, and verify that replaying the
-   per-task records reproduces the same verdicts;
-3. **after verification we mirror the archive into our own HuggingFace dataset**, and the
-   merged JSON is updated to point at the mirrored copy with `verified: true` and
-   `mirrored: true`. Both the original link and ours stay in the file, so the provenance is
-   readable.
-
-Mirroring is what makes a published row durable: a personal drive link that later disappears
-would leave a number nobody can check. Until the mirror exists, the row says
-`mirrored: false` and the page links to your copy.
-
-## Credit
-
-Each published row lists:
-
-- **name (affiliation) + link** — as you write them in `credit`;
-- **what you submitted**, as `dataset × method`, because a contributor who measured three
-  benchmarks deserves three mentions;
-- whether the row is **verified by the platform** or **unverified**.
-
-Verified contributions **may be acknowledged in the technical report** of this project, with
-the same name and affiliation. Set `credit.acknowledge_in_report` to `true` if you want that;
-setting it to `false` keeps your row on the site and leaves you out of the report.
-
-`credit.contact` is optional and never published. The maintainer's WeChat is
-**Blue18067792208** — add it if you would rather discuss the submission directly than in the
-pull request; say which dataset the message is about.
-
-## What we will not publish
-
-- a total score with no per-task record behind it;
-- a number measured on a different task set, presented as if it were this pool's;
-- a re-run of somebody else's method reported under your name without their agreement;
-- a row whose trajectories cannot be produced on request.
-
-These are not formalities. A benchmark page is only worth reading if every row on it can be
-re-run by someone who does not trust us.
+Before using a result in research, check that the response is `scored`, the required pools are measured, `invalid` and `harness_failed` are understood, and the permanent receipt and per-task evidence are retained. The service's retention window applies to public detail and logs; permanent receipts remain for deduplication and audit.
