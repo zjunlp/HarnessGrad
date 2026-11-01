@@ -165,3 +165,25 @@ def test_an_unknown_event_shape_yields_nothing_rather_than_a_wrong_something(dsh
                                         {"type": "brand/new", "data": {}}])
     assert rows == []
     assert summary["turns"] == 0 and summary["actions"] == 0
+
+
+def test_an_operator_home_is_refused_rather_than_silently_used(dsh, tmp_path, monkeypatch):
+    """The record must not name a model that did not run.
+
+    `DSH_HOME` is named from `HOME`, so a host-side run where `HOME` is a real account reads
+    that account's `~/.dsh/settings.yaml`, whose saved model selection beats the `--patch`
+    the adapter generates. Measured 2026-11-01: `HOME=/home/xubuqiang` answered through a
+    real DeepSeek endpoint while the trace said `qwen3.5-9b-local` at `127.0.0.1:8001`. A
+    task container's `HOME` starts empty, so the refusal is host-only by construction.
+    """
+    home = tmp_path / "account"
+    (home / ".dsh").mkdir(parents=True)
+    (home / ".dsh" / "settings.yaml").write_text("agent-default-model: other\n")
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("HG_AGENT_MODEL", "qwen3.5-9b-local")
+    monkeypatch.setenv("HG_AGENT_BASE_URL", "http://127.0.0.1:8001/v1")
+    monkeypatch.delenv("HG_AGENT_DSH_KEEP_HOME", raising=False)
+    with pytest.raises(ValueError, match="refusing to run DSH against an operator home"):
+        dsh.run({"goal": "anything"}, work)

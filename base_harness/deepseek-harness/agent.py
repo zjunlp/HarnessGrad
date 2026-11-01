@@ -436,6 +436,24 @@ def run(task: dict, workdir: Path) -> int:
     env["NARB_DISABLE_NATIVE_CACHE"] = "1"
     env.setdefault("HOME", DEFAULT_HOME)
     home = Path(env["HOME"])
+    # **An operator's own home is refused, not used.** `DSH_HOME` below is named from
+    # `HOME`, so on this host (where `HOME` is a real account) DSH reads
+    # `~/.dsh/settings.yaml`, whose *saved* `agent-default-model` selection beats the
+    # `agent-default-model` row in the `--patch` generated two hundred lines down. Measured
+    # 2026-11-01: a host-side smoke with `HOME=/home/xubuqiang` loaded that document and
+    # answered through a **real DeepSeek endpoint** with the local key -- authentication
+    # failed, and the trace still said `agent_model: qwen3.5-9b-local`, `agent_base_url:
+    # http://127.0.0.1:8001/v1`. A record that names a model which did not run is worse than
+    # a failed run, so this is a refusal with the fix in the message. A task container's
+    # `HOME` starts empty and never reaches this branch.
+    inherited_settings = home / ".dsh" / "settings.yaml"
+    if inherited_settings.is_file() and env.get("HG_AGENT_DSH_KEEP_HOME") != "1":
+        raise ValueError(
+            f"refusing to run DSH against an operator home: {inherited_settings} holds a "
+            "saved model selection that overrides the model this adapter declares; point "
+            "HOME at a scratch directory (a container's HOME is empty, which is the case "
+            "this adapter is built for), or set HG_AGENT_DSH_KEEP_HOME=1 to run with that "
+            "configuration and accept that the recorded model may not be the model that ran")
     # **DSH's home, named rather than inferred.** `resolveDshHome` walks `$DSH_HOME` and
     # otherwise falls back to `os.homedir()` (`packages/util/home-paths/src/index.ts`), and
     # `$HOME` is not the only thing that answers that: an operator's own

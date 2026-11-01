@@ -6168,3 +6168,10 @@ one that matters; this is what that costs when it is skipped.
 Covered by `tests/quality/test_answer_delivery.py` (the precedence, both branches, a
 pre-seeded placeholder, and `loop` end to end with scripted replies) plus the two new
 codex tests. 83 passed / 1 skipped across the affected files.
+
+**Follow-up, same day:** the host-side case is now a refusal rather than a trap. If the
+selected `HOME` already holds `.dsh/settings.yaml`, `deepseek-harness` stops with the path
+and the fix in the message, instead of running and recording a model it did not use
+(`HG_AGENT_DSH_KEEP_HOME=1` opts back in, for reproducing an operator configuration on
+purpose). A task container's `HOME` starts empty, so the container path is untouched. Test:
+`test_an_operator_home_is_refused_rather_than_silently_used`.
