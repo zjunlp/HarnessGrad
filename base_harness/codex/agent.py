@@ -58,28 +58,84 @@ def command(workdir: Path, answer: Path) -> list[str]:
                    "-o", str(answer), "-"]
 
 
-def _events(stdout: str, record) -> None:
-    """Record Codex's JSONL as **parsed** events, falling back to the raw line.
+#: `file_change` items are Codex's own patch tool, not a shell command. The contract's
+#: `command` field is "the action that was executed", so the action is named for what it
+#: was rather than smuggled in as a shell line that never ran.
+PATCH_ACTION = "apply_patch"
 
-    **Both exits go through here, and that is the point.** The timeout path used to write
-    every line as `codex_event_raw` without trying to parse it, so the three tasks that hit
-    the wall in the first Codex-agent run -- `cobol-modernization` (831 lines),
-    `git-multibranch` (952), `large-scale-text-editing` (762) -- contributed thousands of
-    opaque strings instead of the commands and messages the agent produced. The content was
-    there; the shape was not, and the shape is what the platform's index files and facts
-    blocks count. A timeout is when a reader most wants to know what the agent was doing.
+
+class CodexTrace:
+    """Translate `codex exec --json` into the adapter contract's records.
+
+    Codex's stream is the CLI's own: `item.completed` carries an `item` whose `type` is
+    `command_execution` (`command`, `aggregated_output`, `exit_code`) or `agent_message`
+    (`text`), plus `file_change`; `turn.completed` closes a model turn and carries `usage`.
+    The platform's one extractor counts `reply` and `command`
+    (`eval/observe/tracing.py:loop_facts`), so without this translation a Codex run that
+    issued forty commands is reported to the method as `0 steps, 0 commands` -- the initial
+    record for this defect is the two shapes in `tests/quality/test_trace_contract.py`.
+
+    The raw event is still recorded under `codex_event`: nothing is lost, and a reader who
+    needs a field the contract does not name can still reach it. **Both exits go through
+    here** -- the timeout path used to write every line raw, so the three tasks that hit the
+    wall in the first Codex run (`cobol-modernization`, `git-multibranch`,
+    `large-scale-text-editing`) contributed thousands of opaque strings instead of the
+    commands and messages they produced, and a timeout is when a reader most needs them.
     """
-    for line in stdout.splitlines():
-        if not line.strip():
-            continue
-        try:
-            event = json.loads(line)
-        except ValueError:
-            record({"codex_event_raw": line})
-            continue
-        record({"codex_event": event})
-        if event.get("type") == "turn.completed" and isinstance(event.get("usage"), dict):
-            record({"usage": event["usage"]})
+
+    def __init__(self, record):
+        self.record = record
+        self.turns = 0
+        self.reply = ""
+
+    def feed(self, stdout: str) -> None:
+        for line in (stdout or "").splitlines():
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except ValueError:
+                self.record({"codex_event_raw": line})
+                continue
+            self.record({"codex_event": event})
+            if not isinstance(event, dict):
+                continue
+            kind, item = event.get("type"), event.get("item") or {}
+            if kind != "item.completed" or not isinstance(item, dict):
+                if kind == "turn.completed" and isinstance(event.get("usage"), dict):
+                    self.turns += 1
+                    # One `reply` per model turn, which is what `loop_facts` counts as a
+                    # step; `calls` says the same thing in the usage record so a reader
+                    # comparing the two can see them disagree.
+                    self.record({"reply": self.reply})
+                    self.record({"usage": {**event["usage"], "calls": self.turns}})
+                continue
+            if item.get("type") == "agent_message":
+                self.reply = str(item.get("text") or "")
+            elif item.get("type") == "command_execution":
+                self.record({
+                    "command": str(item.get("command") or ""),
+                    "observation": {
+                        "kind": "shell",
+                        "returncode": item.get("exit_code"),
+                        "output_chars": len(str(item.get("aggregated_output") or "")),
+                        "truncated": False,
+                    },
+                })
+            elif item.get("type") == "file_change":
+                changes = item.get("changes") or []
+                self.record({
+                    "command": PATCH_ACTION,
+                    "observation": {
+                        "kind": "filesystem",
+                        # Codex reports what changed, not a status: a patch that applied
+                        # cleanly and one that failed are both `null` here, and the item's
+                        # own `status` is in the raw event beside this record.
+                        "returncode": None,
+                        "output_chars": len(json.dumps(changes, ensure_ascii=False)),
+                        "truncated": False,
+                    },
+                })
 
 
 def run(task: dict, workdir: Path) -> int:
@@ -132,6 +188,7 @@ def run(task: dict, workdir: Path) -> int:
                 trace.write(json.dumps(value, ensure_ascii=False) + "\n")
             record({"harness_identity": {"harness": "codex-agent",
                     "agent_backend": "codex", "agent_model": model}, "task_id": task.get("task_id")})
+            trace_events = CodexTrace(record)
             proc = subprocess.Popen(command(workdir, answer), cwd=workdir, env=env,
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                     # NB: `errors` above is the caller's stream object, not this
@@ -142,11 +199,11 @@ def run(task: dict, workdir: Path) -> int:
             except subprocess.TimeoutExpired:
                 proc.kill()
                 stdout, _ = proc.communicate()
-                _events(stdout, record)
+                trace_events.feed(stdout)
                 record({"error": "codex timed out", "timeout_s": timeout,
                         "deadline_s": float(deadline) if deadline else None})
                 return 1
-            _events(stdout, record)
+            trace_events.feed(stdout)
             if proc.returncode or not answer.is_file():
                 record({"error": "codex failed or produced no final message",
                         "exit_code": proc.returncode})

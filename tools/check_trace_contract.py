@@ -146,6 +146,16 @@ def inspect(text: str) -> dict:
             notes.append("v0 dialect: the environment's answer is inline (`exit`/`output`), "
                          "which the platform reads but a non-shell environment cannot use")
 
+    # 4b. One record, one fact. `loop_facts` counts every record carrying `reply` as a model
+    #     turn, so a record that carries both `reply` and `command` is counted twice: once as
+    #     a turn and once as an action. Measured on the first shape of this platform's own
+    #     miniswe adapter: three commands in one turn reported `model_calls: 4`.
+    combined = [r for r in rows if "reply" in r and "command" in r]
+    if combined:
+        problems.append(f"{len(combined)} record(s) carry both `reply` and `command`: the "
+                        f"platform counts each as a model turn *and* as an action, so "
+                        f"`model_calls` is inflated")
+
     # 5. A terminal record. Without one, `loop_facts` has to infer how the run ended, and
     #    a harness that answered and one that was killed look the same.
     terminal = any(r.get("submitted") or r.get("error") for r in rows)

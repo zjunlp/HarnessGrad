@@ -192,7 +192,8 @@ def test_the_trace_keeps_the_commands_and_the_tokens(agent, tmp_path):
     steps = [row for row in rows if "command" in row]
     assert [row["command"] for row in steps] == ["ls", "echo done"]
     assert steps[1]["error"] == "action was not executed"
-    assert summary["steps"] == 2
+    assert summary["steps"] == 2, "two model turns"
+    assert summary["actions"] == 2, "two executed actions"
     usage = [row["usage"] for row in rows if "usage" in row][-1]
     assert usage == {"input_tokens": 22, "output_tokens": 5, "calls": 2}
 

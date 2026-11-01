@@ -209,7 +209,7 @@ def write_trace(trajectory: Path, record) -> dict:
         data = json.loads(trajectory.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {"steps": 0, "reply": "", "tokens": {}}
-    steps, reply, commands = 0, "", []
+    steps, actions, reply, commands = 0, 0, "", []
     tokens = {"input_tokens": 0, "output_tokens": 0}
     for message in data.get("messages") or []:
         role = message.get("role")
@@ -223,15 +223,22 @@ def write_trace(trajectory: Path, record) -> dict:
                                    ("completion_tokens", "output_tokens")):
                 if isinstance(usage.get(source), int):
                     tokens[target] += usage[source]
+            # **One record per model turn**, carrying only `reply`. A record that carried
+            # both `reply` and `command` would be counted twice by the platform: once as a
+            # turn (`model_calls`) and once as an action (`commands`) -- measured on this
+            # harness's first shape, where three commands in one turn reported
+            # `model_calls: 4`.
+            steps += 1
+            record({"step": steps, "reply": reply})
         elif role == "tool":
             output = extra.get("raw_output") or ""
             for command in commands or [None]:
-                steps += 1
-                record({"step": steps, "reply": reply, "command": command or "",
-                        # The environment's answer, in the one shape every adapter writes
-                        # (`docs/adapter-spec.md`): `returncode` is the field that reads the
-                        # same for a shell, an API and a file system, and the platform counts
-                        # it in `loop_facts` as `observations` / `nonzero_returns`.
+                actions += 1
+                # The environment's answer, in the one shape every adapter writes
+                # (`docs/adapter-spec.md`): `returncode` reads the same for a shell, an API
+                # and a file system, and the platform counts it in `loop_facts` as
+                # `observations` / `nonzero_returns`.
+                record({"step": steps, "command": command or "",
                         "observation": {"kind": "shell",
                                         "returncode": extra.get("returncode"),
                                         "output_chars": len(output),
@@ -243,7 +250,7 @@ def write_trace(trajectory: Path, record) -> dict:
     calls = int(stats.get("api_calls") or 0)
     if calls or tokens["input_tokens"] or tokens["output_tokens"]:
         record({"usage": {**tokens, "calls": calls}})
-    return {"steps": steps, "reply": reply, "tokens": tokens,
+    return {"steps": steps, "actions": actions, "reply": reply, "tokens": tokens,
             "info": data.get("info") or {}}
 
 

@@ -138,7 +138,7 @@ model; the rest are read from their source.
 | --- | --- | --- | --- | --- | --- |
 | `miniswe` | yes | yes | yes | **yes (v1)** | yes |
 | `loop` | yes | yes | yes | yes, **v0**: `exit`/`output` inline | v0: no record, `ended` inferred |
-| `codex` | yes | yes | no (`codex_event`) | no | no |
+| `codex` | yes | yes | yes | yes (`exit_code`; a patch is `apply_patch`) | yes (when it submits) |
 | `opencode` | yes | yes | yes | yes, `returncode: null` (the CLI reports none) | yes |
 | `deepseek-harness`, `cli_agent` | not yet checked | | | | |
 

@@ -44,11 +44,16 @@ IDENTITY = {"harness_identity": {"harness": "h", "agent_model": "m"}, "task_id":
 
 
 def _good() -> list[dict]:
+    """One record per fact: a turn carries `reply`, an action carries `command`.
+
+    They are separate on purpose -- a record carrying both is counted twice by
+    `loop_facts` (once as a turn, once as an action), which is clause 4b.
+    """
     return [IDENTITY,
-            {"step": 1, "reply": "ls", "command": "ls",
-             "observation": {"kind": "shell", "returncode": 0}},
-            {"step": 2, "reply": "cat f", "command": "cat f",
-             "observation": {"kind": "shell", "returncode": 1}},
+            {"step": 1, "reply": "list it"},
+            {"step": 1, "command": "ls", "observation": {"kind": "shell", "returncode": 0}},
+            {"step": 2, "reply": "read it"},
+            {"step": 2, "command": "cat f", "observation": {"kind": "shell", "returncode": 1}},
             {"usage": {"calls": 2, "input_tokens": 10, "output_tokens": 2},
              "submitted": True, "answer": "x"}]
 
@@ -94,14 +99,14 @@ def test_each_clause_has_a_failure_that_names_it(checker, mutate, needle):
 
 def test_an_action_without_the_environments_answer_is_caught(checker):
     rows = _good()
-    rows[1] = {"step": 1, "reply": "ls", "command": "ls"}          # observation dropped
+    rows[2] = {"step": 1, "command": "ls"}          # observation dropped
     problems = checker.check(_trace(rows))
     assert any("observation" in p for p in problems), problems
 
 
 def test_an_observation_without_a_returncode_is_caught(checker):
     rows = _good()
-    rows[1] = {**rows[1], "observation": {"kind": "shell", "output_chars": 3}}
+    rows[2] = {**rows[2], "observation": {"kind": "shell", "output_chars": 3}}
     problems = checker.check(_trace(rows))
     assert any("returncode" in p for p in problems), problems
 
@@ -189,3 +194,15 @@ def test_a_v0_trace_with_no_terminal_record_is_a_note_not_a_failure(checker):
     assert result["problems"] == []
     assert any("terminal" in note for note in result["notes"])
 
+
+
+def test_a_record_carrying_two_facts_is_caught(checker):
+    """`loop_facts` counts `reply` records as turns and `command` records as actions, so one
+    record holding both is counted twice. Measured on the first shape of this platform's own
+    miniswe adapter: three commands in one turn reported `model_calls: 4`."""
+    rows = [IDENTITY,
+            {"step": 1, "reply": "list it", "command": "ls",
+             "observation": {"kind": "shell", "returncode": 0}},
+            {"usage": {"calls": 1}, "submitted": True}]
+    problems = checker.check(_trace(rows))
+    assert any("both `reply` and `command`" in p for p in problems), problems
