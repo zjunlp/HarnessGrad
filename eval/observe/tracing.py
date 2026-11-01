@@ -140,6 +140,21 @@ def loop_facts(trace_text: str) -> dict:
                 nonzero_returns += 1
             key = str(code)
             return_codes[key] = return_codes.get(key, 0) + 1
+        elif "command" in record and ("exit" in record or "returncode" in record):
+            # **The v0 dialect**, which is `base_harness/loop`'s: the environment's answer
+            # travels inline on the action record as `exit`/`output` rather than under
+            # `observation`. It is read here rather than rewritten in the harness, because
+            # (a) every trace already stored was written this way and a reader that could
+            # not read them would make the whole history unreadable, and (b) changing
+            # `loop` changes its content address, which under this platform's own rules
+            # makes it a different harness -- a price to pay deliberately, not as a side
+            # effect of making a report uniform.
+            observed += 1
+            code = record.get("exit", record.get("returncode"))
+            if code not in (0, None):
+                nonzero_returns += 1
+            key = str(code)
+            return_codes[key] = return_codes.get(key, 0) + 1
         if "command" in record:
             commands += 1
             cmd = str(record.get("command") or "").strip()

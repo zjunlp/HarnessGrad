@@ -136,15 +136,35 @@ model; the rest are read from their source.
 
 | harness | 1 identity | 2 usage | 3 turns | 4 feedback | 5 terminal |
 | --- | --- | --- | --- | --- | --- |
-| `miniswe` | yes | yes | yes | **yes** | yes |
-| `loop` | yes | yes | yes | no (`exit`/`output`, not `observation`) | no |
+| `miniswe` | yes | yes | yes | **yes (v1)** | yes |
+| `loop` | yes | yes | yes | yes, **v0**: `exit`/`output` inline | v0: no record, `ended` inferred |
 | `codex` | yes | yes | no (`codex_event`) | no | no |
-| `opencode`, `deepseek-harness`, `cli_agent` | not yet checked | | | | |
+| `opencode` | yes | **no** (`usage.calls` absent) | no (`opencode_event`) | not reached | yes |
+| `deepseek-harness`, `cli_agent` | not yet checked | | | | |
 
-`loop` is the platform's own reference harness and it fails two clauses: its environment
-answer is written as `{"command": …, "exit": 0, "output": …}`, which is not portable, and it
-writes no terminal record. Fixing it is the next increment, before any adapter is asked to
-conform to a rule the reference does not.
+### Two dialects, and why the reader learned the old one
+
+`v1` is the shape above. `v0` is what `base_harness/loop` writes and what **every trace
+stored so far** contains: the same answer inline on the action record, as `exit`/`output`.
+
+The reader (`loop_facts`) reads both, and `tools/check_trace_contract.py` says which one it
+saw. Measured on a real `loop` trace, before and after:
+
+    before: commands 32, observations 0
+    after:  commands 32, observations 32, return_codes {"0": 32}, dialect v0
+
+Two reasons for doing it in the reader rather than by editing `loop`:
+
+* **history.** A contract that made every stored trace unreadable would be a report about
+  the future, and this platform's own audit is the archive it would fail to read.
+* **identity.** Changing `loop` changes its content address, and under this platform's rules
+  that makes it a *different harness* (`harness_sha` is on every curve point). Making a
+  report uniform is not a good reason to move it; if it moves, it should be deliberate, with
+  a version bump and the cost stated.
+
+What v0 cannot do is carry a non-shell environment's status: `exit` is a shell field, so a
+document-retrieval environment has nowhere to put its answer. That is why `v1` exists and
+why new adapters write it.
 
 ## 5. The answer contract — three sources, one named
 

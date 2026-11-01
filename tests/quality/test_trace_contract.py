@@ -143,3 +143,49 @@ def test_miniswe_writes_the_canonical_feedback(capsys):
         "kind": "shell", "returncode": 0, "output_chars": 3, "truncated": False}
     facts = loop_facts(_trace(rows))
     assert facts["observations"] == 1 and facts["commands"] == 1
+
+
+# ------------------------------------------------------- the v0 dialect (`loop`) ---
+
+def _loop_shaped(exit_code: int = 0, terminal: bool = False) -> list[dict]:
+    """What `base_harness/loop` actually writes: the answer inline as `exit`/`output`."""
+    rows = [{"harness_identity": {"harness": "loop", "agent_backend": "mock"}},
+            {"step": 0, "reply": '{"tool": "bash", "command": "ls -a"}', "model_ms": 0},
+            {"step": 0, "command": "ls -a", "exit": exit_code,
+             "shell": "/usr/bin/bash", "output": "a b"}]
+    if terminal:
+        rows.append({"step": 1, "submitted": True, "answer": "x"})
+    rows.append({"usage": {"calls": 2, "input_tokens": 10, "output_tokens": 2}})
+    return rows
+
+
+def test_the_v0_dialect_is_read_not_rejected(checker):
+    """Every stored trace is v0. A reader that could not read them would make the whole
+    history unreadable, so the platform reads both and the checker says which one it saw."""
+    rows = _loop_shaped(exit_code=1, terminal=True)
+    result = checker.inspect(_trace(rows))
+    assert result["dialect"] == "v0"
+    assert result["problems"] == [], result["problems"]
+    assert any("inline" in note for note in result["notes"]), result["notes"]
+
+    facts = loop_facts(_trace(rows))
+    assert (facts["commands"], facts["observations"], facts["nonzero_returns"]) == (1, 1, 1)
+    assert facts["return_codes"] == {"1": 1}
+
+
+def test_a_v0_trace_without_any_status_is_still_a_problem(checker):
+    rows = _loop_shaped()
+    rows[2] = {"step": 0, "command": "ls -a", "output": "a b"}     # no `exit`
+    problems = checker.check(_trace(rows))
+    assert problems, "a run that executed commands with no status at all is not a pass"
+    assert any("observation" in p or "exit" in p or "returncode" in p for p in problems)
+
+
+def test_a_v0_trace_with_no_terminal_record_is_a_note_not_a_failure(checker):
+    """`loop` writes `submitted` only when it submits; running out of steps is a normal end
+    and `_ended` infers it. Holding the reference harness to a record it does not need would
+    report every budget-exhausted run as a violation."""
+    result = checker.inspect(_trace(_loop_shaped(terminal=False)))
+    assert result["problems"] == []
+    assert any("terminal" in note for note in result["notes"])
+

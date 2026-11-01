@@ -62,12 +62,34 @@ def records(text: str) -> list[dict]:
     return out
 
 
-def check(text: str) -> list[str]:
-    """`[]` means the trace says what the platform reads. Each string names a violation."""
+def dialect_of(rows: list[dict]) -> str:
+    """Which of the two trace dialects this is.
+
+    `v1` is `docs/adapter-spec.md`: one record per action, the environment's answer under
+    `observation`. `v0` is what this platform's own `base_harness/loop` writes and what
+    every trace stored so far contains: the same answer inline, as `exit`/`output`.
+
+    The reader learned v0 first (`loop_facts`), because a contract that made the whole
+    history unreadable would be a report about the future. What v0 does not give is
+    portability: `exit` is a shell field, so a document-retrieval environment has nowhere
+    to put its status.
+    """
+    if any(isinstance(row.get("observation"), dict) for row in rows):
+        return "v1"
+    if any("command" in row and ("exit" in row or "returncode" in row) for row in rows):
+        return "v0"
+    return "v1"        # nothing to tell them apart: hold it to the newer contract
+
+
+def inspect(text: str) -> dict:
+    """`{"dialect", "problems", "notes"}` -- what the platform will and will not see."""
     rows = records(text)
     problems: list[str] = []
+    notes: list[str] = []
+    dialect = dialect_of(rows)
     if not rows:
-        return ["the trace has no parsable JSON records at all"]
+        return {"dialect": dialect, "problems": ["the trace has no parsable JSON records at "
+                                                 "all"], "notes": notes}
 
     # 1. Identity. Without it a curve point records a model that did not run.
     identity = [r[IDENTITY] for r in rows if isinstance(r.get(IDENTITY), dict)]
@@ -98,29 +120,48 @@ def check(text: str) -> list[str]:
                         f"{'/'.join(TURN_KEYS)}: the method is told the harness took 0 "
                         f"steps")
 
-    # 4. Feedback. Every executed action must carry the environment's answer, in the same
-    #    shape for every environment kind, or a method cannot read observations across
-    #    harnesses -- which is the whole point of a shared trace.
+    # 4. Feedback. Every executed action must carry the environment's answer in a shape
+    #    that reads the same for every environment kind -- or a method cannot read
+    #    observations across harnesses, which is the point of a shared trace.
     actions = [r for r in rows if any(key in r for key in ACTION_KEYS)]
-    if actions and not any(isinstance(r.get(OBSERVATION), dict) for r in rows):
-        problems.append(f"{len(actions)} action record(s) and no `{OBSERVATION}`: the "
-                        f"environment's answer is not in the trace in a readable form")
-    else:
-        for row in actions:
-            observation = row.get(OBSERVATION)
-            if not isinstance(observation, dict):
-                problems.append("an action record carries no `observation` object")
-                break
-            if "returncode" not in observation:
-                problems.append("an `observation` has no `returncode` key")
-                break
+    if actions and dialect == "v1":
+        if not any(isinstance(r.get("observation"), dict) for r in rows):
+            problems.append(f"{len(actions)} action record(s) and no `{OBSERVATION}`: the "
+                            f"environment's answer is not in the trace in a readable form")
+        else:
+            for row in actions:
+                observation = row.get(OBSERVATION)
+                if not isinstance(observation, dict):
+                    problems.append("an action record carries no `observation` object")
+                    break
+                if "returncode" not in observation:
+                    problems.append("an `observation` has no `returncode` key")
+                    break
+    elif actions:
+        inline = [r for r in actions if "exit" in r or "returncode" in r]
+        if not inline:
+            problems.append(f"{len(actions)} action record(s) and no `exit`/`returncode`: "
+                            f"the environment's answer is not in the trace at all")
+        else:
+            notes.append("v0 dialect: the environment's answer is inline (`exit`/`output`), "
+                         "which the platform reads but a non-shell environment cannot use")
 
-    # 5. A terminal record. Without one, `loop_facts` has to guess how the run ended, and
+    # 5. A terminal record. Without one, `loop_facts` has to infer how the run ended, and
     #    a harness that answered and one that was killed look the same.
-    if not any(r.get("submitted") or r.get("error") for r in rows):
-        problems.append("no terminal record (`submitted` or `error`): how the run ended "
-                        "cannot be read")
-    return problems
+    terminal = any(r.get("submitted") or r.get("error") for r in rows)
+    if not terminal:
+        if dialect == "v1":
+            problems.append("no terminal record (`submitted` or `error`): how the run ended "
+                            "cannot be read")
+        else:
+            notes.append("v0 dialect: no terminal record; `ended` is inferred from `usage` "
+                         "and the step records")
+    return {"dialect": dialect, "problems": problems, "notes": notes}
+
+
+def check(text: str) -> list[str]:
+    """The problems only; `[]` means the trace says what the platform reads."""
+    return inspect(text)["problems"]
 
 
 def _traces(target: Path) -> list[Path]:
@@ -138,19 +179,19 @@ def main() -> int:
     if not found:
         print(f"no trace.jsonl under {args.target}", file=sys.stderr)
         return 2
-    report = {str(path): check(path.read_text(encoding="utf-8", errors="replace"))
+    report = {str(path): inspect(path.read_text(encoding="utf-8", errors="replace"))
               for path in found}
     if args.json:
         print(json.dumps(report, indent=1))
     else:
-        for path, problems in report.items():
-            if problems:
-                print(f"FAIL  {path}")
-                for problem in problems:
-                    print(f"      - {problem}")
-            else:
-                print(f"OK    {path}")
-    return 1 if any(report.values()) else 0
+        for path, result in report.items():
+            problems, notes = result["problems"], result["notes"]
+            print(f"{'FAIL ' if problems else 'OK   '} {path}  [{result['dialect']}]")
+            for problem in problems:
+                print(f"      - {problem}")
+            for note in notes:
+                print(f"      . {note}")
+    return 1 if any(r["problems"] for r in report.values()) else 0
 
 
 if __name__ == "__main__":
