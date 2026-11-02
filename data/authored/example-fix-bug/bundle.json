@@ -1,0 +1,18 @@
+{
+ "schema_version": 1,
+ "slug": "example-fix-bug",
+ "title": "修好一个加法函数，让材料自带的测试通过",
+ "source": {"kind": "task-text+materials", "from": "HarnessGrad 内置示例", "license": "CC-BY-4.0"},
+ "env": {"kind": "files"},
+ "split": {"by": "sha256(task_id)", "eval_fraction": 0.2},
+ "eval_visible_to_authors": true,
+ "tasks": [
+  {
+   "task_id": "t01",
+   "goal": "当前目录下有 broken.py 和 test_broken.py。运行 `python3 test_broken.py` 会失败。修好 broken.py，让这个测试通过；不要改 test_broken.py。",
+   "materials": "materials/t01",
+   "oracle": "oracle/t01.sh",
+   "verifier": {"template": "command_exit0", "params": {"cmd": "python3 test_broken.py"}}
+  }
+ ]
+}
