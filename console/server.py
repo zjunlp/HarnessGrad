@@ -2816,6 +2816,116 @@ def _explain_cache_put(key: str, payload: dict) -> None:
         pass
 
 
+#: 区间解释的系统提示。和单轮那条的区别只有一件事：单轮问"这一改动了什么"，
+#: 区间问"这段时间的改动在往哪个方向走"，并允许它说"证据不足"。
+EXPLAIN_RANGE_SYSTEM = """你是 HarnessGrad 实验台的只读解释器。用户会给你一次实验里连续几轮\
+分数、每轮的改动摘要（文件名与增删行数），以及首尾两轮的 patch 片段。
+
+你的任务：判断这段时间的改动方向——在收敛（每轮更小、更具体）、在震荡（来回改同一处）、
+还是在退化（越改越散、或分数下降）。
+规则：
+1. 只使用用户提供的内容。没有给出的分数或日志不要猜；证据不足就直接说证据不足。
+2. 只输出一个 JSON 对象。不要 markdown 代码块，不要前后说明。
+3. JSON 必须且只能有这四个键：
+   - "claim": 一句中文，说明这段时间的走向（收敛 / 震荡 / 退化 / 证据不足）。
+   - "evidence": 2 到 4 条中文短句，每条引用具体的轮次、分数或改动。
+   - "risk": 一句中文，说明这个走向继续下去最可能坏在哪。
+   - "next": 一句中文，建议一次值得跑的对照或一次该停下来的检查。
+4. 所有字符串用中文。不要编造数字。
+"""
+
+
+def build_explain_range_inputs(path: pathlib.Path, run_id: str, first: int, last: int) -> dict:
+    """首尾轮之间的事实：每轮的分数与改动规模，以及首尾两轮的 patch 片段。"""
+    points, _state, _bad = read_curve(path)
+    by_round = {as_int(p.get("round")): p for p in points}
+    missing = [n for n in (first, last) if n not in by_round]
+    if missing:
+        raise ValueError(f"round {missing} 不在这个 run 的曲线里")
+    if first >= last:
+        raise ValueError("from 必须小于 to")
+    rows = []
+    for n in range(first, last + 1):
+        point = by_round.get(n)
+        if point is None:
+            continue
+        stat = read_json(path / "diffs" / f"round-{n}.json")
+        files = [str(item.get("path") or "") for item in (stat.get("files") or [])
+                 if isinstance(item, dict)]
+        added = sum(as_int(item.get("added")) or 0 for item in (stat.get("files") or [])
+                    if isinstance(item, dict))
+        removed = sum(as_int(item.get("removed")) or 0 for item in (stat.get("files") or [])
+                      if isinstance(item, dict))
+        rows.append({"round": n, "score": as_num(point.get("score")),
+                     "files": files, "added": added, "removed": removed})
+    if len(rows) < 2:
+        raise ValueError("这个区间里少于两轮有记录，无法判断走向")
+    patches = {}
+    for n in (first, last):
+        patch = path / "diffs" / f"round-{n}.patch"
+        if patch.is_file():
+            patches[n] = patch.read_text(encoding="utf-8", errors="replace")[:EXPLAIN_PATCH_BYTES // 2]
+    return {"run_id": run_id, "from": first, "to": last, "rows": rows, "patches": patches}
+
+
+def explain_range_prompt(inputs: dict) -> tuple[str, str]:
+    lines = [f"- r{row['round']}: score={row['score']} · +{row['added']}/-{row['removed']} · "
+             f"{', '.join(row['files'][:6]) or '（没有文件改动）'}" for row in inputs["rows"]]
+    parts = ["## 这段时间的事实（来自 run 目录）",
+             f"run: {inputs['run_id']}", f"区间: r{inputs['from']} → r{inputs['to']}",
+             "每轮：", *lines, ""]
+    for n, text in inputs["patches"].items():
+        parts += [f"## r{n} 的 patch 片段（前 {len(text)} 字符）", text, ""]
+    return EXPLAIN_RANGE_SYSTEM, "\n".join(parts)
+
+
+def api_explain_range(run_id: str, first: int, last: int, force: bool = False) -> tuple[int, dict]:
+    """一次区间解释：`/api/explain?run=..&from=..&to=..`。缓存键含区间两端。"""
+    started = time.perf_counter()
+    run_path = find_run(run_id)
+    if not run_path:
+        return 404, {"error": "run not found", "detail": f"没有这个 run：{run_id}"}
+    base_url, model, api_key, missing = explain_config()
+    if missing:
+        return 503, {"error": "explain-not-configured",
+                     "detail": "解释功能没有配置：" + "、".join(missing)}
+    try:
+        inputs = build_explain_range_inputs(run_path, run_id, first, last)
+    except ValueError as exc:
+        return 400, {"error": "explain-range", "detail": str(exc)}
+    system, user = explain_range_prompt(inputs)
+    prompt_sha = _sha(system + "\n\n" + user)
+    key = _explain_cache_key(f"{run_id}#range{first}-{last}", 0, "", model, prompt_sha)
+    if not force:
+        cached = _explain_cache_get(key)
+        if cached is not None:
+            cached["cache_hit"] = True
+            cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
+            return 200, cached
+    raw, parsed, why = "", None, ""
+    for attempt in range(2):
+        asked = system if attempt == 0 else (
+            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
+        try:
+            raw = _chat_completion(base_url, model, api_key, asked, user)
+        except ExplainUpstream as exc:
+            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
+        parsed, why = _parse_explain_reply(raw)
+        if parsed is not None:
+            break
+    elapsed = int(round((time.perf_counter() - started) * 1000))
+    if parsed is None:
+        return 200, {"claim": "", "evidence": [], "risk": "", "next": "", "model": model,
+                     "prompt_sha": prompt_sha, "cache_hit": False, "elapsed_ms": elapsed,
+                     "degraded": True, "parse_error": why, "raw": _clip(raw, 8000),
+                     "range": {"from": first, "to": last}}
+    payload = {**parsed, "model": model, "prompt_sha": prompt_sha, "cache_hit": False,
+               "elapsed_ms": elapsed, "range": {"from": first, "to": last}}
+    _explain_cache_put(key, {k: v for k, v in payload.items()
+                             if k not in ("cache_hit", "elapsed_ms")})
+    return 200, payload
+
+
 def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
     """(HTTP status, payload)。GET 是幂等的；缓存命中时 elapsed_ms 必须远小于一次调用。"""
     started = time.perf_counter()
@@ -3303,13 +3413,24 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1:] == ["explain"]:
                 run_id = (query.get("run") or [""])[0].strip()
                 raw_round = (query.get("round") or [""])[0].strip()
+                raw_from = (query.get("from") or [""])[0].strip()
+                raw_to = (query.get("to") or [""])[0].strip()
                 if not run_id:
                     return self._error("run query parameter is required", 400)
-                if not re.fullmatch(r"\d{1,9}", raw_round):
-                    return self._error("round must be a non-negative integer", 400)
                 force = (query.get("force") or ["0"])[0].strip().lower()
-                status, payload = api_explain(run_id, int(raw_round),
-                                              force not in ("", "0", "false", "no"))
+                force = force not in ("", "0", "false", "no")
+                # 一次请求要么问"这一轮改了什么"，要么问"这一段在往哪走"；两个都问就是
+                # 两个问题混在一个响应里，读的人分不清哪句对应哪个。
+                if raw_from or raw_to:
+                    if not (re.fullmatch(r"\d{1,9}", raw_from)
+                            and re.fullmatch(r"\d{1,9}", raw_to)):
+                        return self._error("from and to must be non-negative integers", 400)
+                    status, payload = api_explain_range(run_id, int(raw_from), int(raw_to),
+                                                        force=force)
+                else:
+                    if not re.fullmatch(r"\d{1,9}", raw_round):
+                        return self._error("round must be a non-negative integer", 400)
+                    status, payload = api_explain(run_id, int(raw_round), force)
                 # 只有配置好的解释才可缓存；503 的配置状态要立刻能被看见。
                 return self._send(payload, status,
                                   cache_control="private, max-age=300" if status == 200 else None)

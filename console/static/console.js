@@ -721,6 +721,23 @@
     }
   }
 
+  async function explainRange() {
+    const panel = $("#h-explain");
+    if (!panel || !state.hRun || state.hRound == null) return;
+    panel.innerHTML = '<div class="stack" style="padding:4px 0"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:90%"></div></div>';
+    try {
+      const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&from=0&to=${state.hRound}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        panel.innerHTML = `<div class="empty"><span class="empty__title">没有拿到趋势解释</span>${esc(payload.detail || payload.error || response.status)}</div>`;
+        return;
+      }
+      renderExplain(panel, payload);
+    } catch (error) {
+      panel.innerHTML = `<div class="empty"><span class="empty__title">请求失败</span>${esc(error.message)}</div>`;
+    }
+  }
+
   function renderExplain(panel, data) {
     if (data.degraded) {
       panel.innerHTML =
@@ -731,11 +748,13 @@
     }
     const evidence = (data.evidence || []).map((item) => `<li>${esc(item)}</li>`).join("");
     panel.innerHTML =
+      (data.range ? `<div class="explain__label">r${esc(data.range.from)} → r${esc(data.range.to)} 的走向</div>` : "") +
       `<div class="explain__claim">${esc(data.claim)}</div>` +
       `<div class="explain__block"><div class="explain__label">依据</div><ul class="explain__list">${evidence}</ul></div>` +
       `<div class="explain__block"><div class="explain__label">风险</div><div>${esc(data.risk)}</div></div>` +
       `<div class="explain__block"><div class="explain__label">下一步</div><div>${esc(data.next)}</div></div>` +
-      `<div class="explain__meta">${esc(data.model)} · ${data.elapsed_ms}ms${data.cache_hit ? " · 缓存" : ""}</div>`;
+      `<div class="explain__meta">${esc(data.model)} · ${data.elapsed_ms}ms${data.cache_hit ? " · 缓存" : ""}</div>` +
+      (data.range ? "" : '<div class="explain__block"><button class="btn btn--sm" type="button" id="h-range-btn">看这一段（基线 → 这一轮）的趋势</button></div>');
   }
 
   function renderHarnessRoundOptions(rounds) {
@@ -1623,6 +1642,10 @@
   window.addEventListener("hashchange", route);
   const explainButton = $("#h-explain-btn");
   if (explainButton) explainButton.addEventListener("click", explainRound);
+  const explainPanel = $("#h-explain");
+  if (explainPanel) explainPanel.addEventListener("click", (event) => {
+    if (event.target && event.target.id === "h-range-btn") explainRange();
+  });
 
   loadHealth();
   route().finally(() => {
