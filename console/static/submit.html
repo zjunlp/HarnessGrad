@@ -6,6 +6,7 @@
 <title>提交 Harness · HarnessGrad</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
 <style>
   .submit-page { overflow: auto; }
   .submit-wrap { width: min(1120px, 100%); margin: 0 auto; padding: 20px 22px 48px; display: grid; gap: 14px; }
@@ -75,11 +76,7 @@
   <aside class="side" aria-label="主导航">
     <div class="brand"><div class="brand-mark">HG</div><div><div class="brand-name">HarnessGrad</div><div class="brand-sub">实验台 · 提交</div></div></div>
     <nav class="nav">
-      <a class="nav-item" href="/chat.html">对话</a>
-      <a class="nav-item" href="/submit.html" aria-current="page">提交</a>
-      <a class="nav-item" href="/#/runs">实验</a>
-      <a class="nav-item" href="/#/trace">轨迹</a>
-      <a class="nav-item" href="/#/version">版本</a>
+      <!-- 侧栏由 /shell.js 按模式注入 -->
     </nav>
     <div class="side-foot"><div class="status-line">平台 <b>提交服务 v1</b></div><a class="side-link" href="https://zjunlp.github.io/HarnessGrad-Hub/contributing/" target="_blank" rel="noreferrer">提交说明 ↗</a></div>
   </aside>
@@ -112,5 +109,6 @@
 </div>
 <script src="/submit.js"></script>
 <script src="/sidebar.js"></script>
+<script src="/shell.js" defer></script>
 </body>
 </html>

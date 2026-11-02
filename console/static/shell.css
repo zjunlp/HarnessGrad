@@ -1,0 +1,194 @@
+/* 控制台外壳：两个模式、每个模式一套左侧导航。
+ *
+ * 为什么是一个新文件而不是改 app.css：app.css 里的表格、趋势图墙、文件树都还要用，
+ * 这些是"数据密度"的资产，不该被一次换肤带走。这里只覆盖**外壳**——字体、留白、分隔线、
+ * 模式条、导航——并且刻意保持单调：一种强调色、发丝边框、无阴影，好让数字和曲线是页面上
+ * 唯一有颜色的东西。
+ *
+ * 参考的两处：penguin-harness 的 monorepo 站点把"产品/文档/演示"分区，每个区有自己的导航；
+ * 以及 shadcn/Linear 一类的仪表盘用"顶部模式 + 左侧分区"而不是把十几个入口平铺。
+ */
+
+:root {
+  --sh-font: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+             "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --sh-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --sh-ink: #16181d;
+  --sh-ink-2: #5b616e;
+  --sh-ink-3: #8b919d;
+  --sh-line: #e6e8ec;
+  --sh-line-2: #d6d9df;
+  --sh-bg: #fbfbfc;
+  --sh-card: #ffffff;
+  --sh-accent: #2f5bd3;      /* 一种强调色，只用于"当前"和主按钮 */
+  --sh-accent-soft: #eef2fd;
+  --sh-warn: #b45309;
+  --sh-bad: #b42318;
+  --sh-ok: #0f7b52;
+  --sh-radius: 10px;
+  --sh-bar: 46px;
+}
+
+body {
+  font-family: var(--sh-font);
+  background: var(--sh-bg);
+  color: var(--sh-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 顶部模式条 ───────────────────────────────────────────────────────── */
+.sh-bar {
+  position: sticky; top: 0; z-index: 40;
+  height: var(--sh-bar);
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 16px 0 14px;
+  background: var(--sh-card);
+  border-bottom: 1px solid var(--sh-line);
+}
+.sh-bar .sh-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 650; font-size: 13.5px; letter-spacing: .01em;
+}
+.sh-bar .sh-logo b {
+  width: 22px; height: 22px; border-radius: 6px; background: var(--sh-ink);
+  color: #fff; font-size: 10.5px; font-weight: 700;
+  display: grid; place-items: center; letter-spacing: 0;
+}
+.sh-modes {
+  display: flex; gap: 2px; padding: 3px;
+  background: #f1f2f5; border-radius: 8px;
+}
+.sh-mode {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 550; color: var(--sh-ink-2);
+  padding: 5px 12px; border-radius: 6px; white-space: nowrap;
+}
+.sh-mode[aria-pressed="true"] {
+  background: var(--sh-card); color: var(--sh-ink);
+  box-shadow: 0 0 0 1px var(--sh-line-2), 0 1px 1px rgba(16, 24, 40, .04);
+}
+.sh-bar .sh-spacer { flex: 1; }
+.sh-bar .sh-env {
+  font-size: 11.5px; color: var(--sh-ink-3); font-family: var(--sh-mono);
+  display: flex; align-items: center; gap: 6px;
+}
+.sh-bar .sh-env i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--sh-ok); display: inline-block;
+}
+.sh-bar .sh-env[data-state="bad"] i { background: var(--sh-bad); }
+
+/* ── 左侧分区导航 ─────────────────────────────────────────────────────── */
+.app { padding-top: 0; }
+.side {
+  background: var(--sh-card);
+  border-right: 1px solid var(--sh-line);
+  gap: 2px;
+}
+/* 顶部模式条已经有产品名了，侧栏再写一遍就是两次自我介绍。这里只留模式名。 */
+.side .brand { display: none; }
+.side .brand-mark { border-radius: 6px; background: var(--sh-ink); }
+.side .brand-name { font-size: 13px; font-weight: 650; }
+.side .brand-sub { font-size: 11px; color: var(--sh-ink-3); }
+
+.side .nav { padding: 8px 8px 4px; display: flex; flex-direction: column; gap: 1px; }
+.sh-section {
+  padding: 14px 14px 6px; font-size: 10.5px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--sh-ink-3);
+}
+.side .nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 7px;
+  font-size: 13px; color: var(--sh-ink-2); text-decoration: none;
+  border: 0; line-height: 1.3;
+}
+.side .nav-item:hover { background: #f4f5f7; color: var(--sh-ink); }
+.side .nav-item[aria-current="page"] {
+  background: var(--sh-accent-soft); color: var(--sh-accent); font-weight: 600;
+}
+.side .nav-item .sh-tag {
+  margin-left: auto; font-size: 10px; font-weight: 600; color: var(--sh-ink-3);
+  border: 1px solid var(--sh-line-2); border-radius: 999px; padding: 1px 6px;
+}
+.side-foot { border-top: 1px solid var(--sh-line); padding: 10px 14px 14px; }
+.side-foot .status-line, .side-foot .side-link { font-size: 11.5px; }
+
+/* 折叠态：只留一个字，和原来的 sidebar.js 兼容 */
+body[data-sidebar="collapsed"] .side .nav-item { justify-content: center; padding: 8px 0; }
+body[data-sidebar="collapsed"] .side .brand { padding: 14px 8px 10px; }
+
+/* ── 主内容：卡片化，去掉满屏的灰底块 ──────────────────────────────── */
+.main { background: var(--sh-bg); }
+.main .topbar {
+  border-bottom: 1px solid var(--sh-line); background: var(--sh-card);
+  padding: 14px 20px; gap: 12px;
+}
+.main .topbar h1 { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+.main .topbar .sub { font-size: 12px; color: var(--sh-ink-3); }
+.main .filters {
+  background: var(--sh-card); border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius); padding: 10px 12px; margin: 14px 18px;
+}
+.main .filters button.chip {
+  border-radius: 999px; font-size: 12px; border-color: var(--sh-line-2);
+}
+.main .chip[aria-pressed="true"] { background: var(--sh-accent-soft); border-color: #c9d5f7; color: var(--sh-accent); }
+.main table { font-variant-numeric: tabular-nums; }
+.main table thead th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--sh-ink-3); }
+.main .col, .main .pad { background: var(--sh-card); border: 1px solid var(--sh-line); border-radius: var(--sh-radius); }
+.main .err {
+  border-radius: var(--sh-radius);
+  border: 1px solid #f2c7c2; background: #fdf3f2; color: var(--sh-bad);
+}
+
+/* ── 构造环境：一屏三步的向导 ──────────────────────────────────────── */
+.workshop { padding: 18px 20px 40px; max-width: 1080px; }
+.workshop h2 { font-size: 15px; font-weight: 650; margin: 0 0 4px; }
+.workshop p.lead { font-size: 12.5px; color: var(--sh-ink-2); margin: 0 0 18px; max-width: 62ch; }
+.wcard {
+  background: var(--sh-card); border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius); padding: 16px 18px; margin-bottom: 14px;
+}
+.wcard h3 { font-size: 13px; font-weight: 640; margin: 0 0 3px; display: flex; align-items: center; gap: 8px; }
+.wcard .hint { font-size: 12px; color: var(--sh-ink-3); margin: 0 0 12px; }
+.wcard .step {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--sh-ink); color: #fff;
+  font-size: 10.5px; font-weight: 700; display: grid; place-items: center;
+}
+.wdrop {
+  border: 1px dashed var(--sh-line-2); border-radius: 8px; padding: 18px;
+  text-align: center; font-size: 12.5px; color: var(--sh-ink-2); background: #fcfcfd;
+}
+.wdrop[data-over="true"] { border-color: var(--sh-accent); background: var(--sh-accent-soft); }
+.wrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.wrow button, .wbtn {
+  appearance: none; font: inherit; font-size: 12.5px; font-weight: 560; cursor: pointer;
+  border: 1px solid var(--sh-line-2); background: var(--sh-card); color: var(--sh-ink);
+  padding: 7px 12px; border-radius: 7px;
+}
+.wrow button.primary, .wbtn.primary {
+  background: var(--sh-ink); border-color: var(--sh-ink); color: #fff;
+}
+.wrow button:disabled { opacity: .45; cursor: not-allowed; }
+.wtable { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+.wtable th {
+  text-align: left; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--sh-ink-3); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--sh-line);
+}
+.wtable td { padding: 8px; border-bottom: 1px solid var(--sh-line); vertical-align: top; }
+.wtable tr:last-child td { border-bottom: 0; }
+.wtable code { font-family: var(--sh-mono); font-size: 11.5px; color: var(--sh-ink-2); }
+.pill { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--sh-line-2); color: var(--sh-ink-2); }
+.pill[data-tone="ok"] { border-color: #bfe3d3; background: #effaf5; color: var(--sh-ok); }
+.pill[data-tone="bad"] { border-color: #f2c7c2; background: #fdf3f2; color: var(--sh-bad); }
+.pill[data-tone="wait"] { border-color: #eed9b4; background: #fdf8ee; color: var(--sh-warn); }
+.wlog {
+  font-family: var(--sh-mono); font-size: 11.5px; line-height: 1.55;
+  background: #fafbfc; border: 1px solid var(--sh-line); border-radius: 8px;
+  padding: 10px 12px; white-space: pre-wrap; max-height: 220px; overflow: auto;
+  color: var(--sh-ink-2);
+}
+.wcmd {
+  font-family: var(--sh-mono); font-size: 11.5px; background: #f6f7f9;
+  border: 1px solid var(--sh-line); border-radius: 7px; padding: 8px 10px; color: var(--sh-ink-2);
+  white-space: pre-wrap;
+}

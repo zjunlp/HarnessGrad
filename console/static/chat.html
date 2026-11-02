@@ -6,6 +6,7 @@
 <title>对话 · HarnessGrad 实验台</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/shell.css">
 <style>
   .chat-shell { display: flex; flex-direction: column; min-height: 0; flex: 1; }
   .stream3 { flex: 1; overflow: auto; padding: 24px 0 8px; }
@@ -88,11 +89,7 @@
       <div><div class="brand-name">HarnessGrad</div><div class="brand-sub">实验台</div></div>
     </div>
     <nav class="nav">
-      <a class="nav-item" href="/chat.html" aria-current="page">对话</a>
-      <a class="nav-item" href="/submit.html">提交</a>
-      <a class="nav-item" href="/#/runs">实验</a>
-      <a class="nav-item" href="/#/trace">轨迹</a>
-      <a class="nav-item" href="/#/version">版本</a>
+      <!-- 侧栏由 /shell.js 按模式注入 -->
     </nav>
     <div class="nav-group">
       <div class="nav-group-label">会话</div>
@@ -182,5 +179,6 @@
 
 <script src="/chat.js?v=20261022f"></script>
 <script src="/sidebar.js"></script>
+<script src="/shell.js" defer></script>
 </body>
 </html>
