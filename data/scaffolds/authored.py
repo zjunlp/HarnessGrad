@@ -131,6 +131,11 @@ def module_source(slug: str) -> str:
         'ORACLE_SOURCE = "authored"\n'
         'ORACLE_VALIDATED_BY = "tools/scenario_builder.py --gates (oracle / empty / deterministic)"\n'
         'ORACLE_COVERAGE = "all tasks"\n'
+        # 一个 authored 场景没有"benchmark 官方的评测集"：它自己定义的题就是全部要评的题，
+        # 所以 OFFICIAL_EVAL = None（"池里没有训练材料，每一题都在评测集里"）。
+        # 不声明这个属性不是沉默的自由 —— registry.official_split 会拒绝猜。
+        'OFFICIAL_EVAL = None\n'
+        'SPLIT_SOURCE = "authored bundle: every task in the bundle is scored"\n'
         f'TASKS, SETUP, VERIFY = _load_authored("{slug}")\n'
         "ENV = {\"kind\": \"files\"}\n"
         'def load():\n'
