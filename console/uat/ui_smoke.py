@@ -169,6 +169,44 @@ def main() -> int:
         check("读取失败" not in page.inner_text("#files"), "文件树读得出来")
         check(page.eval_on_selector_all("#thread", "e => e.length") == 1, "右侧是对话区")
 
+        # ── 编辑这一版：点两次不该多出一份候选副本 ────────────────────────
+        # `data/candidates/` 里曾经有 `…-r20` 到 `…-r20-6` 六份同样内容的副本，因为每打开
+        # 一次就复制一份。这一条按 HTTP 层判定：第二次必须 `reused`，且目录集合不变。
+        page.goto(base + "/", wait_until="networkidle")
+        page.wait_for_timeout(800)
+
+        def candidate_dirs() -> list[str]:
+            return page.evaluate("""async () => {
+                const r = await fetch('/api/harness/candidates');
+                const d = await r.json();
+                return (d.rows || []).map(x => x.dir).sort();
+            }""")
+
+        def from_round() -> dict:
+            return page.evaluate("""async (run) => {
+                const r = await fetch('/api/harness/from-round', {method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({run, round: 20})});
+                return {status: r.status, ...(await r.json())};
+            }""", RUN)
+
+        before = candidate_dirs()
+        first = from_round()
+        second = from_round()
+        after = candidate_dirs()
+        check(first.get("candidate") and second.get("candidate") == first.get("candidate"),
+              f"两次「编辑这一版」是同一份候选（{second.get('candidate')}）")
+        check(second.get("reused") is True, f"第二次是复用而不是再复制（{second.get('reused')}）")
+        check(after == before or (len(after) == len(before) + 1 and second.get("reused") is True),
+              f"候选目录没有越点越多（{len(before)} → {len(after)}）")
+
+        # ── 删掉的那一页：地址是 404，导航里也不再提它 ─────────────────────
+        gone = page.evaluate("""async () => (await fetch('/chat.html')).status""")
+        check(gone == 404, f"/chat.html 已经不存在（{gone}）")
+        linked = page.evaluate("""() => [...document.querySelectorAll('a[href]')]
+            .map(a => a.getAttribute('href')).filter(h => h.includes('chat.html'))""")
+        check(not linked, f"导航里没有指向已删页面的链接（{linked}）")
+
         # ── 启动：方法下拉存在且能进命令 ────────────────────────────────────
         page.goto(base + "/launch.html", wait_until="networkidle")
         page.wait_for_timeout(1500)
