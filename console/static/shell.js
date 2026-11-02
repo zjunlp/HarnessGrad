@@ -136,6 +136,10 @@
     });
 
     render(currentMode());
+    // 实验/轨迹/版本 是同一张页面的不同 hash，`pathname` 不变；只听 install 那一次，
+    // 高亮就会停在进来时那一项。实测(2026-11-02)：点"版本"后画面换了，左边仍亮"实验"。
+    window.addEventListener("hashchange", () => render(currentMode()));
+    window.addEventListener("popstate", () => render(currentMode()));
 
     const env = document.getElementById("sh-env");
     fetch("/api/health").then((response) => response.json()).then((health) => {
