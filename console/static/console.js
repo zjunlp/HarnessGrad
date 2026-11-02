@@ -237,7 +237,11 @@
   }
 
   function updateNavCount() {
-    $("#nav-runs").textContent = state.rowsLoaded ? String(state.rows.length) : "—";
+    // The nav no longer carries a count: it said "rows currently loaded" here and "total
+    // runs" on the chat page (81 vs 784 for the same console), and two pages never filled
+    // it. A section list should not show a number that depends on which page you are on.
+    const badge = $("#nav-runs");
+    if (badge) badge.textContent = state.rowsLoaded ? String(state.rows.length) : "—";
   }
 
   function fillFilters() {

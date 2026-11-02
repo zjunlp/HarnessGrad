@@ -104,7 +104,8 @@
         ? `<span class="status-dot" data-tone="warn"></span>${h.running.length} 个 driver 在跑`
         : `<span class="status-dot" data-tone="ok"></span>没有 driver 在跑`;
       const rows = await (await fetch("/api/runs")).json();
-      $("#n3").textContent = String(rows.count ?? "—");
+      const badge = $("#nav-runs");
+      if (badge) badge.textContent = String(rows.count ?? "—");
     } catch { /* 状态行不是关键路径 */ }
   }
 
