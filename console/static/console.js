@@ -668,13 +668,31 @@
       const list = rows.filter((r) => r.kind === kind);
       if (!list.length) continue;
       html += `<optgroup label="${label}">`;
-      html += list.map((r) => {
-        const bits = [r.pretty || r.id];
-        if (r.mtime) bits.push(r.mtime);
-        if (kind === "unknown") bits.push("无曲线");
-        return `<option value="${esc(r.id)}"${r.id === state.hRun ? " selected" : ""}>${esc(bits.join(" · "))}</option>`;
-      }).join("");
-      html += "</optgroup>";
+      // **同一棵树的轮次收进同一个 optgroup。** 一个族的 run id 只差时间戳与版本后缀
+      // （`appworld-study-sica_ci-…`、`…-r20-1`），平铺时十几条看起来一模一样，扫读等于
+      // 逐个读时间戳。族名 = 去掉时间戳/后缀之后的前缀，族内按时间倒序，最新在前。
+      const family = (id) => String(id)
+        .replace(/[-_]\d{8}(T\d{4,6})?Z?$/i, "")
+        .replace(/[-_]r\d+(-\d+)?$/i, "");
+      const byFamily = new Map();
+      for (const r of list) {
+        const key = family(r.id);
+        if (!byFamily.has(key)) byFamily.set(key, []);
+        byFamily.get(key).push(r);
+      }
+      for (const [key, members] of byFamily) {
+        const many = members.length > 1;
+        html += `<optgroup label="${esc(many ? `${key} · ${members.length}` : key)}">`;
+        html += members
+          .sort((a, b) => String(b.mtime || "").localeCompare(String(a.mtime || "")))
+          .map((r) => {
+            const bits = [r.pretty || r.id];
+            if (r.mtime) bits.push(r.mtime);
+            if (kind === "unknown") bits.push("无曲线");
+            return `<option value="${esc(r.id)}"${r.id === state.hRun ? " selected" : ""}>${esc(bits.join(" · "))}</option>`;
+          }).join("");
+        html += "</optgroup>";
+      }
     }
     const el = $("#h-run");
     el.innerHTML = html;
