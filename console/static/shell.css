@@ -601,3 +601,6 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
 :root[data-theme="dark"] .submit-page .pill,
 :root[data-theme="dark"] .submit-card .pill { background: var(--n-50); border-color: var(--n-200); color: var(--n-600); }
 :root[data-theme="dark"] .side .brand-mark { background: var(--n-200); color: var(--n-900); }
+
+/* 版本条里展开的轮次：一小排圆点，不再弹窗问"第几轮"。 */
+.hg-srcbar__rounds { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; flex: 0 0 100%; }

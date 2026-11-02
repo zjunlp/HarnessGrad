@@ -329,24 +329,50 @@
     $("editor").addEventListener("select", paintChips);
     $("editor").addEventListener("keyup", paintChips);
     $("editor").addEventListener("mouseup", paintChips);
-    $("source-list").addEventListener("click", (event) => {
+    // 这个 handler 现在有 `await fetch(...)`：必须 async，否则 `await (…)` 会被当成函数调用，
+    // 报 "missing ) after argument list"。
+    $("source-list").addEventListener("click", async (event) => {
       const row = event.target.closest("[data-source]");
       if (!row) return;
       // 平台自带的 harness 是只读的：先复制成候选再编辑，和基线同一条规则。
       if (row.dataset.kind === "base") { alert("平台自带的 harness 是只读的：先「另存为」再改。"); return; }
       if (row.dataset.kind === "run") {
-        // run 的某一轮：复制成候选再打开（不就地改证据）。
+        // run 的某一轮：先把轮次就地展开成小圆点（以前是弹窗问"第几轮"），点哪一轮就复制哪一轮。
         const runId = row.dataset.source.slice(4);
-        const round = Number(prompt(`把 ${runId} 的哪一轮复制成候选？`, "1"));
-        if (!Number.isFinite(round) || round < 0) return;
-        fetch("/api/harness/from-round", { method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ run: runId, round }) })
-          .then((r) => r.json())
-          .then((payload) => {
-            if (payload.error) { alert(`${payload.error}：${payload.detail || ""}`); return; }
-            location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
-          });
+        if (row.dataset.open === "true") { row.dataset.open = "false"; row.nextElementSibling?.remove(); return; }
+        row.dataset.open = "true";
+        const holder = document.createElement("div");
+        holder.className = "hg-srcbar__rounds";
+        holder.textContent = "读取轮次…";
+        row.after(holder);
+        try {
+          const data = await (await fetch(`/api/runs/${encodeURIComponent(runId)}`)).json();
+          const rounds = (data.curve || data.rounds || []).map((p) => p.round);
+          holder.innerHTML = rounds.length
+            ? rounds.map((n) => `<button type="button" class="hg-picker__round"
+                data-copy="${runId}" data-round="${n}">r${n}</button>`).join("")
+            : '<span class="field__hint">这个 run 没有记录轮次</span>';
+        } catch (error) {
+          holder.textContent = `读取失败：${error.message}`;
+        }
+        return;
+      }
+      const copy = event.target.closest("[data-copy]");
+      if (copy) {
+        const runId = copy.dataset.copy;
+        const round = Number(copy.dataset.round);
+        copy.disabled = true;
+        copy.textContent = "复制中";
+        try {
+          const response = await fetch("/api/harness/from-round", { method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ run: runId, round }) });
+          const payload = await response.json();
+          if (!response.ok) { alert(`${payload.error || "复制失败"}\n${payload.detail || ""}`); return; }
+          location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
+        } finally {
+          copy.disabled = false;
+        }
         return;
       }
       openSource(row.dataset.source);
