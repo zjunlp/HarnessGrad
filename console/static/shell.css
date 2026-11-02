@@ -317,3 +317,13 @@ body[data-sidebar="collapsed"] .side .sh-section { display: none; }
 .hg-src__row[aria-selected="true"] .hg-src__name { color: var(--accent-ink); font-weight: 600; }
 .hg-src__meta { font-size: var(--t-1); color: var(--n-500); }
 .hg-src__flags { display: flex; gap: 4px; margin-top: 2px; }
+
+/* ── 折叠按钮必须钉在分界线上 ─────────────────────────────────────────────
+ * app.css 用的是 `left: calc(var(--side-w) - 13px)`，而 `--side-w` 从来没被我们的拖拽
+ * 改过，所以拖完侧栏、或收起之后，按钮就留在原来的位置，飘到正文里去（截图里它在
+ * 表格中间，还带着"收起侧栏"的提示）。这里改成跟 `--sh-side` 走。
+ */
+.sidebar-toggle {
+  left: calc(var(--sh-side, 248px) - 13px);
+}
+body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
