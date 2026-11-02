@@ -2508,34 +2508,91 @@ def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
     return 200, buffer.getvalue()
 
 
-def harness_candidate_from_round(run_id: str, round_no: int) -> tuple[int, dict]:
-    """把某一轮的 harness 状态复制成一个候选，供「编辑这一版」使用。
+def harness_candidate_from_round(run_id: str, round_no: int,
+                                 replay: bool = False) -> tuple[int, dict]:
+    """把某一轮的 harness 变成一个候选。没有现成快照时**按 diff 重放**出来。
 
-    为什么不直接编辑 run 目录里的 `state_after_roundN`：那是**证据**，改它等于改历史测量。
-    复制出来以后，编辑、试跑、评测都作用在副本上，原 run 仍然可以逐字节复核。
+    为什么需要重放：只有一部分 run 留了 `state_after_roundN`（这台机器上 406 个），另外
+    617 个 run 只有曲线和 `diffs/round-N.patch`。没有重放，编辑页就只能编辑"留了快照的
+    那几轮"，等于大多数进化版本不可编辑 —— 而这些 diff 本来就是为了能重放而存的。
+
+    重放是**可验证**的：实测 `round-1.patch` 打在 `state_after_round0` 上，得到的 agent.py
+    与 `state_after_round1/agent.py` 逐字节相同。所以这里先试快照，再试重放，并把用了
+    哪条路径写进返回值（`reconstructed` / `applied`），读的人才知道手里这份是怎么来的。
     """
+    import subprocess
     run_path = find_run(run_id)
     if not run_path:
         return 404, {"error": "run-not-found", "detail": run_id}
-    source = run_path / f"state_after_round{int(round_no)}"
-    if not (source / "harness.json").is_file():
-        return 404, {"error": "no-state", "detail": f"{source.name} 里没有 harness.json"}
-    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{int(round_no)}")[:48]
+    round_no = int(round_no)
+    if round_no < 0:
+        return 400, {"error": "bad-round", "detail": round_no}
+    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{round_no}")[:48]
     target = CANDIDATES / base
     suffix = 0
     while target.exists():
         suffix += 1
         target = CANDIDATES / f"{base}-{suffix}"[:64]
     CANDIDATES.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source, target, ignore=shutil.ignore_patterns(
-        "__pycache__", "*.pyc", ".git", ".state"))
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".git", ".state")
+
+    snap = run_path / f"state_after_round{round_no}"
+    reconstructed = False
+    applied: list[int] = []
+    if (snap / "harness.json").is_file() and not replay:
+        shutil.copytree(snap, target, ignore=ignore)
+    else:
+        # 起点：同一个 run 的第 0 轮快照（同一条血脉），否则平台自带的起点。
+        origin = run_path / "state_after_round0"
+        if (origin / "harness.json").is_file():
+            shutil.copytree(origin, target, ignore=ignore)
+            first = 1
+            from_round0 = True
+        elif BASE_HARNESS.is_dir():
+            shutil.copytree(BASE_HARNESS, target, ignore=ignore)
+            first = 1
+            from_round0 = False
+        else:
+            return 409, {"error": "no-origin",
+                         "detail": "既没有第 0 轮快照，也找不到 base_harness/loop"}
+        for n in range(first, round_no + 1):
+            patch = run_path / "diffs" / f"round-{n}.patch"
+            if not patch.is_file():
+                shutil.rmtree(target, ignore_errors=True)
+                kept = sorted(p.name for p in (run_path / "diffs").glob("round-*.patch")) \
+                    if (run_path / "diffs").is_dir() else []
+                return 409, {
+                    "error": "round-not-stored",
+                    "detail": (f"这个 run 没有存下第 {n} 轮的 diff，也没有第 {round_no} 轮的快照，"
+                               "因此无法重建这一版。"
+                               + (f" 它存了 {len(kept)} 个补丁：{', '.join(kept[:6])}"
+                                  if kept else " 它没有 diffs/ 目录。")),
+                    "at_round": n}
+
+            done = subprocess.run(["patch", "-p1", "--batch", "--forward", "--silent"],
+                                  cwd=str(target), stdin=patch.open("rb"),
+                                  capture_output=True)
+            if done.returncode != 0:
+                detail = (done.stdout + done.stderr).decode("utf-8", "replace")[-400:]
+                shutil.rmtree(target, ignore_errors=True)
+                return 422, {"error": "patch-failed", "detail": detail,
+                             "at_round": n,
+                             "from_round0": from_round0}
+            applied.append(n)
+        reconstructed = True
     manifest = read_json(target / "harness.json")
     if isinstance(manifest, dict):
         manifest["name"] = target.name
         (target / "harness.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    return 201, {"candidate": target.name, "from": str(source), "files":
-                 sorted(p.name for p in target.iterdir() if p.is_file())}
+    elif not (target / "harness.json").is_file():
+        shutil.rmtree(target, ignore_errors=True)
+        return 409, {"error": "no-manifest",
+                     "detail": f"r{round_no} 重放后仍然没有 harness.json"}
+    return 201, {"candidate": target.name, "from": str(snap), "round": round_no,
+                 "reconstructed": reconstructed, "applied": applied,
+                 "files": sorted(p.name for p in target.iterdir() if p.is_file())}
+
 
 def harness_candidate_file(name: str, rel: str) -> dict:
     """一个候选里的文件正文。只读、只在本目录内、带上行数方便算选区。"""
@@ -3821,7 +3878,8 @@ class Handler(BaseHTTPRequestHandler):
                 round_no = int(body.get("round"))
             except (TypeError, ValueError):
                 return self._send({"error": "bad-round"}, 400)
-            code, payload = harness_candidate_from_round(str(body.get("run") or ""), round_no)
+            code, payload = harness_candidate_from_round(
+                str(body.get("run") or ""), round_no, replay=bool(body.get("replay")))
             return self._send(payload, code)
         if route == "api/workbench/edit":
             body = self._json_body()
