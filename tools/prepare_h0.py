@@ -24,6 +24,7 @@ record can defend.
 The identity of "the same configuration" is (dataset, side, study-id set, agent model, endpoint):
 those are the things that make two baselines comparable. A different model or a different study
 set is a *different* H0, and the tool measures one instead of reusing.
+An opted-in adapter also includes its frozen scoring identity in this configuration.
 """
 from __future__ import annotations
 
@@ -35,6 +36,9 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from harnessgrad import scoring_identity
+
 DEFAULT_RUNS = pathlib.Path("/tmp/hg-h0-runs")
 
 
@@ -66,6 +70,7 @@ def configuration(args) -> dict:
         "agent_model": args.model,
         "endpoint": args.endpoint,
         "trials": args.trials,
+        **scoring_identity.fields(scoring_identity.resolve(args.dataset)),
     }
 
 
@@ -89,10 +94,19 @@ def find_existing(config: dict, runs_root: pathlib.Path) -> tuple[pathlib.Path, 
         meta = run / "run_meta.json"
         if not (h0.is_file() and meta.is_file()):
             continue
-        recorded = json.loads(meta.read_text(encoding="utf-8")).get("h0_configuration")
+        metadata = json.loads(meta.read_text(encoding="utf-8"))
+        recorded = metadata.get("h0_configuration")
         if recorded != config:
             continue
-        base = (json.loads(h0.read_text(encoding="utf-8")).get("base") or {})
+        payload = json.loads(h0.read_text(encoding="utf-8"))
+        identity = config.get("scoring_identity")
+        if identity is not None or payload.get("scoring_identity") is not None:
+            curve = points(run / "curve.jsonl")
+            if (scoring_identity.problems(payload.get("scoring_identity"), identity)
+                    or scoring_identity.problems(metadata.get("scoring_identity"), identity)
+                    or not curve or scoring_identity.problems(curve[0].get("scoring_identity"), identity)):
+                continue
+        base = payload.get("base") or {}
         per_task = base.get("per_task") or {}
         invalid = base.get("invalid") or {}
         if not per_task or invalid:
@@ -101,7 +115,7 @@ def find_existing(config: dict, runs_root: pathlib.Path) -> tuple[pathlib.Path, 
     return None
 
 
-def verify(run: pathlib.Path, args, expected_ids: int) -> dict:
+def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None) -> dict:
     """Refuse to call something an H0 unless it is a complete, valid measurement."""
     h0 = run / "h0.json"
     if not h0.is_file():
@@ -111,6 +125,12 @@ def verify(run: pathlib.Path, args, expected_ids: int) -> dict:
     per_task = base.get("per_task") or {}
     invalid = base.get("invalid") or {}
     problems = []
+    if scoring is not None or payload.get("scoring_identity") is not None:
+        problems.extend(scoring_identity.problems(payload.get("scoring_identity"), scoring))
+        meta = json.loads((run / "run_meta.json").read_text())
+        problems.extend(scoring_identity.problems(meta.get("scoring_identity"), scoring))
+        curve = points(run / "curve.jsonl")
+        problems.extend(scoring_identity.problems(curve[0].get("scoring_identity") if curve else None, scoring))
     if not per_task:
         problems.append("no per-task verdicts")
     if expected_ids and len(per_task) != expected_ids:
@@ -142,6 +162,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
+    if scoring_identity.provider_path(args.dataset).is_file():
+        # Use the same effective configuration as the child driver. Do not import
+        # data-heavy adapters merely to prepare an unopted dataset's dry run.
+        from driver import load_env
+        load_env(ROOT / ".env")
     config = configuration(args)
     args.runs_root.mkdir(parents=True, exist_ok=True)
     existing = find_existing(config, args.runs_root)
@@ -177,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     run = args.runs_root / run_id
     if code != 0:
         raise SystemExit(f"the H0 run failed (rc={code}); see {log}")
-    summary = verify(run, args, config["n_study_ids"])
+    summary = verify(run, args, config["n_study_ids"], scoring=config.get("scoring_identity"))
     # Stamp what the baseline *is* on the run's own meta, so the next invocation can recognise it
     # without re-deriving the configuration from paths.
     meta_path = run / "run_meta.json"

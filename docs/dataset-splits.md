@@ -42,6 +42,24 @@ division where it does not. `--split default` still gives a run exactly that has
 the run record says `split_source: default` when it does — it is now an explicit choice
 rather than the silent default of a third of the datasets.
 
+## Optional groups for related tasks
+
+An adapter may declare private `SPLIT_GROUPS = {task_id: sha256_group_id}`. The
+mapping covers every task, and each group id is a lowercase SHA-256 hex digest
+of the adapter's stable grouping key. This declaration creates no division and
+adds nothing to actor tasks. `--split default` applies the first-byte modulo-3
+rule directly to the digest (zero selects eval); it does not hash the digest a
+second time. Declared, default, official and supplied JSON divisions must keep
+every group on one side. Invalid mappings or groups crossing sides are refused
+before task selection or execution. Adapters without `SPLIT_GROUPS` keep the
+existing task-id hash rule and validation.
+
+StrongREJECT uses each original request as its grouping key, so its three
+attack variants stay together. It declares no native split. On its frozen
+150-task Harbor pool, an explicit `--split default` yields 99 train tasks
+(33 originals) and 51 eval tasks (17 originals); `--side eval --split official`
+uses all 150 tasks.
+
 ## The table
 
 <!-- split-inventory:begin -->

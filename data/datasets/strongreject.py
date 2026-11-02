@@ -15,6 +15,8 @@ from pathlib import Path
 KIND = "dataset"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
+SPLIT = None
+SPLIT_SOURCE = "none"
 ASSETS = Path(__file__).with_suffix("")
 #: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above*
 #: the repository, so the default only ever worked in the checkout that wrote it.
@@ -168,17 +170,9 @@ def downloads():
 def __getattr__(name):
     if name in ("JUDGE_MODEL", "METRIC", "JUDGE"):
         return judge_profile()[{"JUDGE_MODEL": "model", "METRIC": "metric", "JUDGE": "judge"}[name]]
-    if name != "SPLIT":
-        raise AttributeError(name)
-    # Load lazily so registry discovery still works before data provisioning, and report
-    # absent data as `AttributeError` rather than the raw read error: an unprovisioned
-    # dataset must not break discovery. `load()` names the root when it matters.
-    # Variants of the same original request must never cross train/eval.
-    try:
-        rows_ = rows()
-    except (OSError, ValueError, KeyError) as exc:
-        raise AttributeError(
-            f"strongreject: SPLIT needs the pinned payload under {DATASET_ROOT}: {exc}") from exc
-    return {side: [tid for tid, row in rows_.items()
-                   if (hashlib.sha256(row["forbidden_prompt"].encode()).digest()[0] % 3 == 0)
-                   == (side == "eval")] for side in ("train", "eval")}
+    if name == "SPLIT_GROUPS":
+        # Private metadata: all three attacks on an original request stay together.
+        # A run must explicitly choose a split; this declaration creates none.
+        return {tid: hashlib.sha256(row["forbidden_prompt"].encode()).hexdigest()
+                for tid, row in rows().items()}
+    raise AttributeError(name)

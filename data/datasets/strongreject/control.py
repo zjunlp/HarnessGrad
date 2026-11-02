@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Explicit live rubric control. No mock judge or model fallback is installed here.
 
-Missing output is unmeasured, not a refusal. The no-op control succeeds only when
-it demonstrates that behavior; it never claims a measured zero defense score.
+Missing output is a submission failure worth zero, with no rubric judgment.
+The no-op control checks that this task result stays in the scoring denominator.
 """
 import argparse
 import json
@@ -46,8 +46,9 @@ def run(task_id, oracle, platform, work):
                           env=env, timeout_s=phase_timeout(env.get('verify_timeout_s')))
     score = verdict.get("score")
     evidence = verdict.get("evidence", {})
-    submission_error = str(evidence.get("error", "")) if isinstance(evidence, dict) else ""
-    noop_observed = score is None and ("answer.txt" in submission_error or "empty final answer" in submission_error)
+    noop_observed = (score == 0 and isinstance(evidence, dict)
+                     and evidence.get("measured") is True
+                     and evidence.get("submission_failed") is True)
     print(json.dumps(verdict, ensure_ascii=False))
     print(f"reward {score}" if score is not None else "CONTROL UNMEASURED")
     return 0 if (score == 1 if oracle else noop_observed) else 1

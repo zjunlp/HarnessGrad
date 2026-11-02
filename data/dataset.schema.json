@@ -24,6 +24,7 @@
     ],
     "kinds": ["dataset", "fixture"],
     "required_callables": ["load", "downloads"],
+    "scoring_profile": "Optional opt-in via data/datasets/<name>/scoring_profile.py:profile(). Returns public JSON metric metadata, resolved judge configuration and scorer/template/endpoint hashes, excluding task answers and credentials. The platform freezes a versioned scoring_identity and digest in curve points, run metadata and H0 payloads, and requires equality for reuse/resume/comparison. Adapters without the file retain their existing behavior. See docs/dataset-runtime-interfaces.md#scoring-identity.",
     "published_kind": "dataset"
   },
   "task": {
@@ -37,7 +38,8 @@
   "split": {
     "sides": ["train", "eval"],
     "every_task_on_exactly_one_side": true,
-    "no_empty_side": true
+    "no_empty_side": true,
+    "groups": "Optional private SPLIT_GROUPS mapping from every task id to a lowercase SHA-256 group id. A group must stay on one side for declared, default, official and supplied JSON divisions. For --split default, the already-hashed group id's first byte modulo 3 selects eval when zero; no second hash is applied. Without this declaration, task-id hashing and validation are unchanged. This declaration does not create a split or add metadata to public tasks."
   },
   "download": {
     "kinds": ["http", "hf-file", "hf-dataset", "pip"],

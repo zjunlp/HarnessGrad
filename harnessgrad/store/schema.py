@@ -93,6 +93,8 @@ CURVE_POINT: tuple[Field, ...] = (
           required=False, kinds=(dict,)),
     Field("invalid", "per task, why the task could not be measured", required=False,
           kinds=(dict,)),
+    Field("scoring_identity", "optional adapter scoring profile and its digest; absence "
+                             "preserves legacy records", required=False, kinds=(dict,)),
 )
 
 #: Fields added at a known time. Absence is a note, not a problem: the point predates the
@@ -196,6 +198,12 @@ def check_point(point: dict, *, index: int = 0) -> tuple[list[str], list[str]]:
         problems.append(
             f"{where}: `measured_by_platform` is not true -- this number is a claim by "
             f"the method, not a measurement by the platform")
+    if "scoring_identity" in point:
+        from harnessgrad.scoring_identity import validate
+        try:
+            validate(point["scoring_identity"])
+        except (TypeError, ValueError) as exc:
+            problems.append(f"{where}: {exc}")
     return problems, notes
 
 
@@ -214,6 +222,12 @@ def check_run_meta(meta: dict) -> tuple[list[str], list[str]]:
     for name, when in RUN_META_ADDED_LATER.items():
         if name not in meta:
             notes.append(f"run_meta: no `{name}` (added {when})")
+    if "scoring_identity" in meta:
+        from harnessgrad.scoring_identity import validate
+        try:
+            validate(meta["scoring_identity"])
+        except (TypeError, ValueError) as exc:
+            problems.append(f"run_meta: {exc}")
     return problems, notes
 
 

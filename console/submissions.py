@@ -489,15 +489,25 @@ def _metadata(spec: dict) -> dict:
     """Trusted offline metadata only: never materialize tasks or invoke a scorer."""
     from data.scaffolds import registry
     tasks, _, split = registry.load_split(spec['dataset'])
+    # Match the driver's explicit divisions. Declared splits are already checked
+    # by load_split; an absent declaration must not create a study division.
+    split_groups = (registry.load_split_groups(spec['dataset'], tasks)
+                    if spec['split'] != 'declared' else None)
     if spec['split'] == 'default':
-        split = registry.validate_split(spec['dataset'], tasks, registry.default_split(tasks), require_nonempty=(spec['side'],))
+        split = registry.validate_split(
+            spec['dataset'], tasks, registry.default_split(tasks, split_groups=split_groups),
+            require_nonempty=(spec['side'],), split_groups=split_groups)
     elif spec['split'] == 'official':
-        split = registry.validate_split(spec['dataset'], tasks, registry.official_split(spec['dataset'], tasks), require_nonempty=(spec['side'],))
+        split = registry.validate_split(
+            spec['dataset'], tasks, registry.official_split(spec['dataset'], tasks),
+            require_nonempty=(spec['side'],), split_groups=split_groups)
     elif spec['split'] != 'declared':
         path = (PLATFORM_ROOT/spec['split']).resolve(strict=True)
         if not path.is_relative_to(PLATFORM_ROOT):
             raise ValueError('split file leaves platform')
-        split = registry.validate_split(spec['dataset'], tasks, json.loads(path.read_text()), require_nonempty=(spec['side'],))
+        split = registry.validate_split(
+            spec['dataset'], tasks, json.loads(path.read_text()),
+            require_nonempty=(spec['side'],), split_groups=split_groups)
     ids = split[spec['side']] if split else [t['task_id'] for t in tasks]
     envs = registry.load_envs(spec['dataset'], task_ids=ids)
     kinds = {env.get('kind', 'files') for env in envs.values()}

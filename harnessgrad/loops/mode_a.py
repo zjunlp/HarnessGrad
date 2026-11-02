@@ -32,6 +32,7 @@ from harnessgrad import code_metrics
 from harnessgrad import components
 from harnessgrad import config as platform_config
 from harnessgrad import policies
+from harnessgrad import scoring_identity
 from harnessgrad.channel import _stage_for_method
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
@@ -750,6 +751,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                                jobs=args.jobs, trials=args.trials,
                                gpu_budget=getattr(args, "gpu_budget", None)),
             sampling=sampling,
+            scoring_identity=getattr(args, "scoring_identity", None),
             scores=[res["per_task"][t] for t in _scored(res, task_ids)],
             task_ids=_scored(res, task_ids),
             train_scores=[res["per_task"][t] for t in _scored(res, train_ids)],
@@ -935,13 +937,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                     reference_tasks=baseline_studied, current_tasks=studied),
             }
             point["score_geomean"] = round(policies.geomean(list(studied.values())), 6)
-            point["capability_floor"] = {
-                "baseline": f"round-{baseline_point.get('round', 0)}",
-                **policies.floor_violations(
-                    studied, baseline_studied,
-                    candidate_std=(res.get("per_task_std") or {}),
-                    baseline_std=(baseline_point.get("per_task_std") or {})),
-            }
+            scoring_problems = scoring_identity.problems(
+                baseline_point.get("scoring_identity"), point.get("scoring_identity"))
+            if baseline_point.get("scoring_identity") is not None or point.get("scoring_identity") is not None:
+                point["baseline"]["comparable"] = not bool(point["baseline"]["problems"])
             # **The other direction.** `capability_floor` records only where a candidate is
             # *below* the baseline, because Anthropic's criterion is a disqualification.
             # Nothing asked where it is above, and `score_ci95` cannot answer it: that interval
@@ -951,10 +950,18 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             # points, so the comparison is paired and the discordant pairs are the signal.
             # Recorded beside the floor, not instead of it: one says "this candidate is
             # safely no worse", the other says "this candidate is better than chance allows".
-            point["improvement"] = {
-                "baseline": f"round-{baseline_point.get('round', 0)}",
-                **policies.improvement(studied, baseline_studied),
-            }
+            if not scoring_problems:
+                point["capability_floor"] = {
+                    "baseline": f"round-{baseline_point.get('round', 0)}",
+                    **policies.floor_violations(
+                        studied, baseline_studied,
+                        candidate_std=(res.get("per_task_std") or {}),
+                        baseline_std=(baseline_point.get("per_task_std") or {})),
+                }
+                point["improvement"] = {
+                    "baseline": f"round-{baseline_point.get('round', 0)}",
+                    **policies.improvement(studied, baseline_studied),
+                }
         # **What the candidate is, as code.** HarnessDev measured this on the harnesses
         # their creators wrote: "of 169 new functions or classes, 113 are reachable from
         # the entry point, 31 are reachable only through dead code, and 25 have no caller"

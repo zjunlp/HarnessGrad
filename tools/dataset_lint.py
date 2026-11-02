@@ -390,6 +390,12 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
 
     task_ids = lint_tasks(tasks, scorable, schema, result)
     lint_split(getattr(module, "SPLIT", None), task_ids, schema, result)
+    try:
+        split_groups = registry.load_split_groups(name, tasks)
+        if split_groups is not None and getattr(module, "SPLIT", None) is not None:
+            registry.validate_split(name, tasks, module.SPLIT, split_groups=split_groups)
+    except ValueError as exc:
+        result.error(str(exc))
 
     # The contract checks the platform already owns are delegated, not re-implemented:
     # two answers to "is this ENV/VERIFY valid" is exactly the fork this repository is

@@ -64,6 +64,7 @@ import tools.web_gateway as web_gateway_mod
 from harnessgrad import FRAMEWORK_VERSION
 from harnessgrad import config as platform_config
 from harnessgrad import slots
+from harnessgrad import scoring_identity
 from harnessgrad.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
@@ -330,6 +331,12 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
 
     meta_path = run_dir / "run_meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+    try:
+        scoring_identity.require_same(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
+        for point in existing:
+            scoring_identity.require_same(point.get("scoring_identity"), getattr(args, "scoring_identity", None))
+    except ValueError as exc:
+        raise ResumeRefused(str(exc)) from exc
     recorded_split = meta.get("split_sha")
     now_split = datasets.split_sha(split) if split else None
     if recorded_split and now_split and recorded_split != now_split:
@@ -789,7 +796,8 @@ def _main(attempt: dict) -> int:
                          "does not want the one the dataset declares. `declared` (the "
                          "default) uses the adapter's own SPLIT; `default` uses the "
                          "platform's documented rule (a deterministic third, by hash of "
-                         "the task id); `official` uses the benchmark's own evaluation set "
+                         "the task id or the adapter's declared group); `official` uses "
+                         "the benchmark's own evaluation set "
                          "as the adapter declares it, which is the comparable run -- the "
                          "whole official set, with no study material in this pool. Anything "
                          "else is a path to a JSON file {\"train\": [...], \"eval\": [...]}. "
@@ -1056,14 +1064,20 @@ def _main(attempt: dict) -> int:
     # generalisation claim.
     split_source = "declared" if split is not None else None
     if args.split and args.split != "declared":
+        try:
+            split_groups = datasets.load_split_groups(args.dataset, tasks_all)
+        except (OSError, ValueError, ImportError) as exc:
+            console.note(str(exc), level="error")
+            return 2
         if args.split == "default":
             # Both derived divisions go through the same guard as a supplied file: the
             # platform's hash rule can put every task on one side of a small pool, and that
             # is a message about the dataset, not a traceback out of the driver.
             try:
                 split = datasets.validate_split(
-                    args.dataset, tasks_all, datasets.default_split(tasks_all),
-                    require_nonempty=(args.side,))
+                    args.dataset, tasks_all,
+                    datasets.default_split(tasks_all, split_groups=split_groups),
+                    require_nonempty=(args.side,), split_groups=split_groups)
             except ValueError as exc:
                 console.note(str(exc), level="error")
                 return 2
@@ -1072,7 +1086,7 @@ def _main(attempt: dict) -> int:
             try:
                 split = datasets.validate_split(
                     args.dataset, tasks_all, datasets.official_split(args.dataset, tasks_all),
-                    require_nonempty=(args.side,))
+                    require_nonempty=(args.side,), split_groups=split_groups)
             except ValueError as exc:
                 console.note(str(exc), level="error")
                 return 2
@@ -1087,7 +1101,8 @@ def _main(attempt: dict) -> int:
             try:
                 supplied = json.loads(path.read_text())
                 split = datasets.validate_split(args.dataset, tasks_all, supplied,
-                                                require_nonempty=(args.side,))
+                                                require_nonempty=(args.side,),
+                                                split_groups=split_groups)
             except (json.JSONDecodeError, ValueError) as exc:
                 console.note(f"--split {path}: {exc}", level="error")
                 return 2
@@ -1153,6 +1168,11 @@ def _main(attempt: dict) -> int:
         except ValueError as exc:
             print(f'refusing --scenario: {exc}', file=sys.stderr)
             return 2
+    try:
+        args.scoring_identity = scoring_identity.resolve(args.dataset)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f"invalid scoring profile: {exc}", level="error")
+        return 2
     verifier_kinds = sorted({v.get("kind", "answer") for v in verifiers.values()})
     # The record says **unified**, not the flag. `--mode` is accepted so existing scripts
     # keep working, but it selects nothing any more, and a point that said `run_mode: B`
@@ -1177,6 +1197,14 @@ def _main(attempt: dict) -> int:
     # Resolve the saved seed before any metadata write or workspace restaging.
     # A rejected explicit override must not rewrite the interrupted run's config.
     resumed_seed = None
+    if args.resume:
+        meta_path = run_dir / "run_meta.json"
+        saved_meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+        try:
+            scoring_identity.require_same(saved_meta.get("scoring_identity"), args.scoring_identity)
+        except ValueError as exc:
+            console.note(f"refusing --resume: {exc}", level="error")
+            return 2
     if args.side == 'eval' and args.resume:
         try:
             resumed_seed = _eval_resume_seed(run_dir, tasks_all, verifiers, args.trials, args.seed)
@@ -1211,7 +1239,8 @@ def _main(attempt: dict) -> int:
         # Persist intent before any runtime preflight; interruption/refusal remains
         # evidence of an incomplete diagnostic, never an inferred successful run.
         _write_run_meta(run_dir, run_id=run_id, dataset=args.dataset,
-                        sampling_policy="diagnostic", enforcement=enforcement)
+                        sampling_policy="diagnostic", enforcement=enforcement,
+                        **scoring_identity.fields(args.scoring_identity))
         def finalize_incomplete(detail):
             if not (run_dir / "diagnostic_receipt.json").exists():
                 save_policy_receipt({"trials": 1, "invalid": {
@@ -1594,6 +1623,7 @@ def _main(attempt: dict) -> int:
         run_dir, run_id=run_id, mode=mode, harness=args.harness,
         harness_source=harness_source,
         scenario=scenario_receipt,
+        **scoring_identity.fields(args.scoring_identity),
         dataset=args.dataset, sampling_policy=args.sampling,
         enforcement=enforcement,
         diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
@@ -1811,6 +1841,13 @@ def _main(attempt: dict) -> int:
             if donor_point is None:
                 print(f"refusing --h0-from {args.h0_from!r}: it has no curve point", file=sys.stderr)
                 return 2
+            try:
+                scoring_identity.require_same(donor_point.get("scoring_identity"), args.scoring_identity)
+                if payload is not None:
+                    scoring_identity.require_same(payload.get("scoring_identity"), args.scoring_identity)
+            except ValueError as exc:
+                console.note(f"refusing --h0-from {args.h0_from!r}: {exc}", level="error")
+                return 2
             if payload is not None:
                 base = payload["base"]
             else:
@@ -1873,7 +1910,8 @@ def _main(attempt: dict) -> int:
             # Kept so a later run can share *this* measurement instead of repeating it.
             try:
                 (run_dir / "h0.json").write_text(
-                    json.dumps({"base": base, "h0_sha": h0_sha, "run_id": run_id}, default=str))
+                    json.dumps({"base": base, "h0_sha": h0_sha, "run_id": run_id,
+                                **scoring_identity.fields(args.scoring_identity)}, default=str))
             except (TypeError, OSError) as exc:
                 console.note(f"could not write h0.json ({exc}); this run cannot be a --h0-from "
                              f"donor", level="warn")
@@ -1999,6 +2037,7 @@ def _main(attempt: dict) -> int:
                                 jobs=args.jobs, trials=args.trials,
                                 gpu_budget=args.gpu_budget),
             sampling=sampling,
+            scoring_identity=args.scoring_identity,
             scores=[base["per_task"][t] for t in _scored(base, task_ids)],
             task_ids=_scored(base, task_ids),
             train_scores=[base["per_task"][t] for t in _scored(base, train_ids)],

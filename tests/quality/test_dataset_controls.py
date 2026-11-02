@@ -67,7 +67,6 @@ ROWS: dict[str, dict] = {
                     "strongreject/disinformation_and_deception_0004_pap_logical_appeal"],
         "metric_tests": ["test_strongreject_official_scorer.py", "test_strongreject_dataset.py"],
         "requires_judge": True,
-        "noop_score": None,
     },
     "cooperbench": {
         "control": ["data/datasets/cooperbench/control.py", "--task-id", "cooperbench/pallets_click_task/task2956/f1-2"],

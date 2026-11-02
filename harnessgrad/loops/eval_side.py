@@ -20,6 +20,7 @@ from eval.ckpt.git_state import commit_state
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from harnessgrad import policies
+from harnessgrad import scoring_identity
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
 from harnessgrad.environments import _report_invalid
@@ -42,6 +43,8 @@ def _baseline_block(path: str, point: dict) -> dict:
     would throw away a real score because a side file moved.
     """
     block: dict = {"kind": "frozen", "path": path}
+    if point.get("scoring_identity") is not None:
+        block["comparable"] = False
     try:
         reference = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -56,6 +59,8 @@ def _baseline_block(path: str, point: dict) -> dict:
         reference, point,
         reference_tasks=reference.get("per_task") or {},
         current_tasks=point.get("per_task") or {})
+    if reference.get("scoring_identity") is not None or point.get("scoring_identity") is not None:
+        block["comparable"] = not bool(block["problems"])
     return block
 
 
@@ -217,6 +222,9 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
         meta = json.loads(meta_path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         return f"{run_dir.name}/run_meta.json is unreadable: {exc}"
+    errors = scoring_identity.problems(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
+    if errors:
+        return "; ".join(errors)
     recorded_from = meta.get("from_run") or meta.get("evaluated_from") or {}
     if isinstance(recorded_from, dict):
         was_run, was_round = recorded_from.get("run_id"), recorded_from.get("round")
@@ -510,6 +518,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         sampling={"dataset": args.dataset, "policy": "all", "task_ids": list(scored),
                   "selection_basis_round": 0, "selected_within": "eval"},
         scores=[res["per_task"][t] for t in scored], task_ids=scored,
+        scoring_identity=getattr(args, "scoring_identity", None),
         train_scores=None, train_ids=None, split=split,
         env_record=_env_record(envs, scored),
         invalid=res.get("invalid"),
