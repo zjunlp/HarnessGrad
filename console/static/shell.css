@@ -560,3 +560,44 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
 .trace-root .vhead { padding: 16px 18px 0; }
 .trace-root .empty-title { color: var(--n-800); }
 .trace-root .empty-sub { color: var(--n-500); }
+
+/* ── 深色：外壳自己的那几个色也必须换 ──────────────────────────────────────
+ * 之前只换了 `--n-*`（设计系统的色阶），而外壳还有一套 `--sh-*` 和几处直接写的浅色：
+ *   · `.brand-mark` 用 `--sh-ink`，深色下变成一块浅色方块；
+ *   · `.sh-modes` 的分段控件写死 #f1f2f5；
+ *   · 侧栏底部的 `.status-line` 继承 app.css 的浅色底。
+ * 实测深色下这几处仍然是 rgb(232,235,240)/rgb(241,242,245)/rgb(255,255,255)。
+ */
+:root[data-theme="dark"] {
+  --sh-accent: #8aa4ff;
+  --sh-accent-soft: #202844;
+  --sh-accent-line: #35406a;
+}
+:root[data-theme="dark"] .side .brand-mark { background: var(--n-800); color: var(--n-900); }
+:root[data-theme="dark"] .sh-modes { background: var(--n-100); }
+:root[data-theme="dark"] .sh-mode[aria-pressed="true"] {
+  background: var(--n-0); color: var(--n-900);
+  box-shadow: 0 0 0 1px var(--n-300), 0 1px 1px rgba(0,0,0,.4);
+}
+:root[data-theme="dark"] .side-foot .status-line,
+:root[data-theme="dark"] .status-line { background: transparent; color: var(--n-500); }
+:root[data-theme="dark"] .side-foot .status-line b { color: var(--n-800); }
+:root[data-theme="dark"] .side .nav-item[aria-current="page"] {
+  background: var(--sh-accent-soft); color: var(--sh-accent);
+}
+:root[data-theme="dark"] .pill { border-color: var(--n-300); color: var(--n-600); }
+:root[data-theme="dark"] .pill[data-tone="ok"] { background: var(--ok-soft); border-color: var(--ok-line); color: var(--ok); }
+:root[data-theme="dark"] .pill[data-tone="bad"] { background: var(--bad-soft); border-color: var(--bad-line); color: var(--bad); }
+
+/* 两处上一次没写进去的深色规则（`.chip` 与 submit 页的卡片）。 */
+:root[data-theme="dark"] .chip {
+  background: var(--n-25); border-color: var(--n-200); color: var(--n-700);
+}
+:root[data-theme="dark"] .chip[aria-pressed="true"],
+:root[data-theme="dark"] .filters .chip[aria-pressed="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink);
+}
+:root[data-theme="dark"] .submit-page .submit-card { background: var(--n-0); }
+:root[data-theme="dark"] .submit-page .pill,
+:root[data-theme="dark"] .submit-card .pill { background: var(--n-50); border-color: var(--n-200); color: var(--n-600); }
+:root[data-theme="dark"] .side .brand-mark { background: var(--n-200); color: var(--n-900); }
