@@ -288,7 +288,7 @@
       key.placeholder = row.api_key_set ? "已配置（留空 = 不修改）" : "未配置";
       $(`#s-${side}-state`).textContent = "";
     };
-    fill("task"); fill("chat");
+    fill("task"); fill("meta"); fill("assistant");
     $("#state4").textContent = "";
     $("#mask4").dataset.open = "true";
   }
@@ -314,7 +314,7 @@
 
   async function saveSettings() {
     const payload = {};
-    for (const side of ["task", "chat"]) {
+    for (const side of ["task", "meta", "assistant"]) {
       payload[side] = {
         base_url: $(`#s-${side}-url`).value.trim(),
         model: $(`#s-${side}-model`).value.trim(),

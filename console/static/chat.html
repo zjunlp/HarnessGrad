@@ -138,7 +138,7 @@
 
 <div class="mask3" id="mask4">
   <div class="card3">
-    <h3>⚙️ 设置 <span style="font-weight:400;font-size:11.5px;color:var(--hg-alias-label-secondary)">跑实验用的 API，和这个对话用的 API</span></h3>
+    <h3>⚙️ 设置 <span style="font-weight:400;font-size:11.5px;color:var(--hg-alias-label-secondary)">三类端点：task / meta-agent / assistant，各管一件事</span></h3>
     <div class="body3">
       <div class="settings-side">
         <h4>task endpoint <span>实验里 harness 调用的模型</span></h4>
@@ -154,16 +154,29 @@
         </div>
       </div>
       <div class="settings-side">
-        <h4>chat endpoint <span>这个对话框调用的模型</span></h4>
-        <label for="s-chat-url">base_url</label>
-        <input id="s-chat-url" placeholder="https://api.example.com/v1">
-        <label for="s-chat-model">model</label>
-        <input id="s-chat-model" placeholder="deepseek-chat">
-        <label for="s-chat-key">api_key</label>
-        <input id="s-chat-key" type="password" placeholder="留空 = 不修改">
+        <h4>meta-agent endpoint <span>方法（改进 harness 的那一方）调用的模型</span></h4>
+        <label for="s-meta-url">base_url</label>
+        <input id="s-meta-url" placeholder="https://api.example.com/v1">
+        <label for="s-meta-model">model</label>
+        <input id="s-meta-model" placeholder="deepseek-chat">
+        <label for="s-meta-key">api_key</label>
+        <input id="s-meta-key" type="password" placeholder="留空 = 不修改">
         <div class="settings-actions">
-          <button class="btn" data-probe="chat">测试连接</button>
-          <span class="state3" id="s-chat-state"></span>
+          <button class="btn" data-probe="meta">测试连接</button>
+          <span class="state3" id="s-meta-state"></span>
+        </div>
+      </div>
+      <div class="settings-side">
+        <h4>assistant endpoint <span>造环境 / 改 harness 时帮你干活的那个模型</span></h4>
+        <label for="s-assistant-url">base_url</label>
+        <input id="s-assistant-url" placeholder="http://127.0.0.1:8001/v1">
+        <label for="s-assistant-model">model</label>
+        <input id="s-assistant-model" placeholder="qwen3.5-9b-local">
+        <label for="s-assistant-key">api_key</label>
+        <input id="s-assistant-key" type="password" placeholder="留空 = 不修改">
+        <div class="settings-actions">
+          <button class="btn" data-probe="assistant">测试连接</button>
+          <span class="state3" id="s-assistant-state"></span>
         </div>
       </div>
       <p class="settings-note">密钥只写在 <code>.local/settings.json</code>（0600，已被 .gitignore 忽略），

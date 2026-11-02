@@ -625,7 +625,11 @@ SETTINGS = ROOT / ".local" / "settings.json"
 #: study's harness calls (a local VLLM server here), the chat panel is whatever model answers the
 #: operator (a hosted API). Merging them was how a launch could measure a different model than the
 #: form showed.
-SETTINGS_SIDES = ("task", "chat")
+SETTINGS_SIDES = ("task", "meta", "assistant")
+
+#: `chat` 是 2026-11-02 之前的名字：那一类其实是"Meta-Agent / 对话用的端点"。
+#: 读的时候仍然接受它，写的时候只写新名字，这样旧文件不用手改。
+SETTINGS_ALIASES = {"chat": "meta"}
 
 
 def load_settings() -> dict:
@@ -639,7 +643,10 @@ def load_settings() -> dict:
     out = {}
     for side in SETTINGS_SIDES:
         block = dict(data.get(side) or {})
-        if side == "chat" and not block.get("base_url"):
+        for alias, canonical in SETTINGS_ALIASES.items():
+            if canonical == side and not block.get("base_url"):
+                block = {**block, **(data.get(alias) or {})}
+        if side == "meta" and not block.get("base_url"):
             block = {**chat_fallback, **{k: v for k, v in block.items() if v}}
         out[side] = {
             "base_url": str(block.get("base_url") or "").strip(),

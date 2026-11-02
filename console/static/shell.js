@@ -20,7 +20,7 @@
         ]],
         ["动手", [
           { label: "自己改", href: "/harness.html" },
-          { label: "对话 · 启动", href: "/chat.html" },
+          { label: "启动", href: "/chat.html" },
           { label: "提交 harness", href: "/submit.html" },
         ]],
         ["输入", [
