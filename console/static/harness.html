@@ -86,11 +86,8 @@
         <summary class="field__label" style="cursor:pointer">改动（diff）</summary>
         <pre class="wlog hg-mono" id="diff" style="max-height:320px;margin-top:8px">（还没有改动）</pre>
       </details>
-      <details open>
-        <summary class="field__label" style="cursor:pointer">怎么测（命令给你，自己跑）</summary>
-        <pre class="wcmd hg-mono" id="trial-cmd" style="margin-top:8px">（选一个候选后生成）</pre>
-        <p class="field__hint">平台不替你跑测量：它只把命令拼好、把参数解释清楚。</p>
-      </details>
+      <a class="btn btn--primary" id="to-eval" href="/submit.html" style="justify-content:center">去评测</a>
+      <p class="field__hint">会把当前候选打包、带着配置跳到评测页；是否真的提交仍然由你决定。</p>
       </aside>
     </div>
   </main>

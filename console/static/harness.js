@@ -141,6 +141,15 @@
     $("editor").addEventListener("mouseup", paintChips);
     $("source").addEventListener("change", () => openSource($("source").value));
     $("name").addEventListener("input", updateTrialCommand);
+    $("to-eval").addEventListener("click", (event) => {
+      const name = state.source === "base" ? ($("name").value.trim() || "") : state.source;
+      if (!name || state.source === "base") {
+        event.preventDefault();
+        alert("先把当前文件另存为候选，再去评测：基线是只读的，评测一个没保存的版本没有意义。");
+        return;
+      }
+      event.currentTarget.href = `/submit.html?candidate=${encodeURIComponent(name)}`;
+    });
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
     loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });

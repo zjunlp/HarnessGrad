@@ -44,6 +44,28 @@
   const clearError = () => { $("submit-global-error").dataset.visible = "false"; };
   const errorText = (code, detail = "", field = "") => { const base = String(code || ""); const key = base.startsWith("run-refused:") ? "run-refused" : base; const item = ERROR_MESSAGES[key] || ["请求失败", "请查看错误详情并重试。"]; return `${item[0]}：${item[1]}${detail ? ` ${detail}` : ""}${field ? `（字段：${field}）` : ""}`; };
   const statusText = (status) => STATUS[status] || [status || "未知状态", "服务返回了未识别的状态。"];
+  // ── 从工作区"去评测"过来：把候选归档预填进文件框 ──────────────────────
+  // 只预填，不提交：`?candidate=` 的文件由服务端打包，用户仍然要自己选场景、自己点提交。
+  async function prefillFromCandidate() {
+    const name = new URLSearchParams(location.search).get("candidate");
+    if (!name) return;
+    try {
+      const response = await fetch(`/api/harness/archive?candidate=${encodeURIComponent(name)}`);
+      if (!response.ok) { showError("打不开这个候选的归档", name); return; }
+      const blob = await response.blob();
+      const file = new File([blob], `${name}.tar.gz`, { type: "application/gzip" });
+      const input = document.getElementById("archive");
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      const label = document.getElementById("file-row");
+      if (label) label.dataset.prefilled = "true";
+    } catch (error) {
+      showError("预填失败", String(error.message || error));
+    }
+  }
+
   function setState(status, payload = {}) {
     const card = $("state-card"); card.dataset.visible = "true"; card.dataset.status = status;
     const [title, sub] = statusText(status); $("state-title").textContent = title; $("state-sub").textContent = sub;
@@ -80,4 +102,11 @@
   function demo(status) { stopPoll(); const id = `demo-${status}`; if (status === "rejected") setState(status, { submission_id: id, scenario: "demo-valid", error: { code: "unsafe-path", detail: "entry ../agent.py 越界" } }); else if (status === "queued") setState(status, { submission_id: id, scenario: "demo-valid" }); else if (status === "failed") setState(status, { submission_id: id, scenario: "demo-failed", error: { code: "sandbox-unavailable", detail: "mock 服务演示" }, log: "sandbox unavailable\n" }); else { setState("scored", { submission_id: id, scenario: "demo-invalid", result: { pools: { train: { n: 4, measured: 4, invalid: 1, harness_failed: 0, score: 0.5 }, dev: { n: 3, measured: 2, invalid: 1, harness_failed: 0, score: null }, exam: { n: null, measured: null, invalid: null, harness_failed: null, score: null } }, warnings: ["dev: 1 task invalid，未计入分母。"], cost: {}, identity: {} }, evidence: {} }); renderResult({ result: { pools: { train: { n: 4, measured: 4, invalid: 1, harness_failed: 0, score: 0.5 }, dev: { n: 3, measured: 2, invalid: 1, harness_failed: 0, score: null }, exam: { n: null, measured: null, invalid: null, harness_failed: null, score: null } }, warnings: ["dev: 1 task invalid，未计入分母。"], cost: {}, identity: {} }, evidence: {} }); } }
   function bind() { const drop = $("dropzone"); drop.addEventListener("click", () => $("archive").click()); drop.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); $("archive").click(); } }); ["dragenter", "dragover"].forEach((name) => drop.addEventListener(name, (event) => { event.preventDefault(); drop.dataset.drag = "true"; })); ["dragleave", "drop"].forEach((name) => drop.addEventListener(name, (event) => { event.preventDefault(); drop.dataset.drag = "false"; })); drop.addEventListener("drop", (event) => chooseFile(event.dataTransfer.files[0])); $("archive").addEventListener("change", (event) => chooseFile(event.target.files[0])); $("clear-file").addEventListener("click", () => { state.file = null; $("archive").value = ""; $("file-row").hidden = true; updateSubmit(); }); $("scenario").addEventListener("change", (event) => renderScenario(state.scenarios.find((item) => item.name === event.target.value))); ["label", "contact"].forEach((id) => $(id).addEventListener("input", updateSubmit)); $("submit").addEventListener("click", submit); document.querySelectorAll("[data-demo]").forEach((button) => button.addEventListener("click", () => demo(button.dataset.demo))); }
   bind(); loadScenarios(); const resumeId = new URLSearchParams(location.search).get("submission"); if (resumeId) { state.submissionId = resumeId; poll(resumeId).then(() => { if (state.submissionId && !state.poll && !document.querySelector("#state-card[data-status=\"scored\"], #state-card[data-status=\"failed\"], #state-card[data-status=\"rejected\"]")) state.poll = setInterval(() => poll(resumeId), 1000); }); }
+  // 脚本可能在 DOM 就绪前执行：等元素齐了再预填，否则 `#archive` 是 null，
+  // 报错会落在和预填无关的一行上（实测：Cannot set properties of null）。
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", prefillFromCandidate);
+  } else {
+    prefillFromCandidate();
+  }
 })();

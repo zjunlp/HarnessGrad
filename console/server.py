@@ -2452,6 +2452,21 @@ def read_selection(root: pathlib.Path, path: str, first: int, last: int) -> str:
     return f"{rel}:{first}-{last}\n{body}"
 
 
+
+def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
+    """把候选打成 tar.gz，供评测页一键带上。**只打包，不评测** —— 跑不跑仍是人的事。"""
+    import io
+    import tarfile
+    root = CANDIDATES / str(name)
+    if not CANDIDATE_NAME.fullmatch(str(name)) or not (root / "harness.json").is_file():
+        return 404, None
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
+                tar.add(path, arcname=str(path.relative_to(root)))
+    return 200, buffer.getvalue()
+
 def harness_candidate_file(name: str, rel: str) -> dict:
     """一个候选里的文件正文。只读、只在本目录内、带上行数方便算选区。"""
     root = CANDIDATES / name
@@ -3536,6 +3551,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(author_bundles())
             if parts[1:] == ["harness", "candidates"]:
                 return self._send(harness_candidates())
+            if parts[1:] == ["harness", "archive"]:
+                code, blob = harness_candidate_archive((query.get("candidate") or [""])[0])
+                if blob is None:
+                    return self._error("candidate not found", code)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/gzip")
+                self.send_header("Content-Length", str(len(blob)))
+                self.send_header("Content-Disposition",
+                                 f'attachment; filename="{query["candidate"][0]}.tar.gz"')
+                self.end_headers()
+                return self.wfile.write(blob)
             if parts[1:] == ["harness", "file"]:
                 name = (query.get("candidate") or [""])[0]
                 rel = (query.get("path") or [""])[0]
