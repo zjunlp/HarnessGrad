@@ -331,3 +331,20 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
 /* 左下角状态行："平台" 两个字被挤成竖排。标签不换行，值换行。 */
 .side-foot .status-line { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
 .side-foot .status-line > *:first-child { white-space: nowrap; }
+
+/* ── 版本选择条：一行高度，可搜索。编辑页的重点是文件树与代码，不是版本列表。 ── */
+.hg-srcbar {
+  display: flex; gap: 6px; overflow-x: auto; padding: 8px 14px;
+  border-bottom: var(--line); background: var(--n-25);
+}
+.hg-srcbar__row {
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 1px; text-align: left;
+  padding: 5px 9px; border-radius: var(--r-1); border: 1px solid var(--n-200);
+  background: var(--n-0); cursor: pointer; max-width: 260px;
+}
+.hg-srcbar__row:hover { border-color: var(--n-300); }
+.hg-srcbar__row[aria-selected="true"] { border-color: var(--accent-line); background: var(--accent-soft); }
+.hg-srcbar__name { font-family: var(--mono); font-size: var(--t-1); color: var(--n-800);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.hg-srcbar__meta { font-size: 10.5px; color: var(--n-500); }
+.hg-srcbar__empty { font-size: var(--t-2); color: var(--n-500); padding: 2px; }

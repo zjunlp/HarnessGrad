@@ -33,26 +33,33 @@
     <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:start">
       <div class="workshop" style="max-width:100%;padding:14px 16px 24px">
         <div class="card">
-          <div class="card__head">
-            <span class="card__title">Harness 版本</span>
-            <span class="card__sub" id="source-hint">按更新时间排列，默认最新</span>
+          <div class="card__head" style="gap:10px">
+            <span class="card__title">版本</span>
+            <input class="input" id="source-search" placeholder="搜版本：候选名 / run id / 基线"
+                   style="max-width:340px;padding:6px 9px;font-size:12px">
+            <span class="card__sub" id="source-hint">按更新时间排列</span>
             <span class="spacer hg-grow"></span>
+            <span class="hg-mono hg-muted" id="source-current">—</span>
           </div>
-          <div class="card__body" style="display:grid;grid-template-columns:268px minmax(0,1fr);gap:14px">
+          <div class="hg-srcbar" id="source-list" role="listbox" aria-label="Harness 版本"></div>
+          <div class="card__body" style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;padding-top:10px">
             <div>
-              <div class="hg-src" id="source-list" role="listbox" aria-label="Harness 版本"></div>
+              <div class="hg-row" style="justify-content:space-between;margin-bottom:6px">
+                <span class="field__label">文件</span>
+                <span class="hg-mono hg-muted" id="files-count"></span>
+              </div>
+              <ul class="hg-stack" id="files" style="list-style:none;margin:0;padding:0;gap:1px"></ul>
               <div class="field" style="margin-top:12px">
                 <label class="field__label" for="name">另存为</label>
                 <input class="input" id="name" placeholder="my-refactor" spellcheck="false">
               </div>
             </div>
             <div>
-              <ul class="hg-stack" id="files" style="list-style:none;margin:0 0 8px;padding:0;gap:6px;flex-direction:row;flex-wrap:wrap"></ul>
               <div class="hg-row" style="justify-content:space-between;margin-bottom:6px">
                 <span class="hg-mono hg-muted" id="editing">选一个文件</span>
                 <span class="hg-mono hg-muted" id="lines"></span>
               </div>
-              <textarea class="textarea" id="editor" spellcheck="false" rows="24"
+              <textarea class="textarea" id="editor" spellcheck="false" rows="26"
                         style="font-family:var(--mono);font-size:12px;line-height:1.55"></textarea>
             </div>
           </div>

@@ -14,44 +14,66 @@
   function markDirty(on) { state.dirty = on; $("dirty").hidden = !on; }
 
   async function loadSources() {
-    const [cands, base] = await Promise.all([
+    const [cands, base, bases] = await Promise.all([
       fetch("/api/harness/candidates").then((r) => r.json()),
       fetch("/api/base").then((r) => r.json()),
+      fetch("/api/base-harnesses").then((r) => r.json()).catch(() => ({ rows: [] })),
     ]);
+    state.baseRows = (bases.rows || []).filter((row) => row.manifest && row.manifest.entrypoint);
+    try {
+      const runs = await fetch("/api/runs").then((r) => r.json());
+      state.runRows = (runs.rows || []).slice(0, 200);
+    } catch { state.runRows = []; }
     state.candidates = cands.rows || [];
     state.base = base;
     $("cand-root").textContent = (cands.root || "").replace(/^.*\/data\//, "data/");
     const stamp = (seconds) => (seconds ? new Date(seconds * 1000).toLocaleString("zh-CN",
       { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+    state.bases = (state.baseRows || []).map((row) => ({
+      value: `base:${row.name}`, name: row.path, meta: "平台自带", kind: "base",
+    }));
     const newest = state.candidates.slice().sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
-    const row = (value, name, meta, flags) => `
-      <button type="button" class="hg-src__row" role="option" data-source="${esc(value)}"
-              aria-selected="false">
-        <span class="hg-src__name">${esc(name)}</span>
-        <span class="hg-src__meta">${esc(meta)}</span>
-        ${flags ? `<span class="hg-src__flags">${flags}</span>` : ""}
-      </button>`;
-    $("source-list").innerHTML =
-      '<div class="hg-src__group">基线</div>' +
-      row("base", "base_harness/loop", "只读起点", '<span class="badge">基线</span>') +
-      `<div class="hg-src__group">候选 · ${newest.length}</div>` +
-      (newest.length
-        ? newest.map((c, i) => row(c.dir, c.dir, `${c.files.length} 文件 · ${stamp(c.mtime)}`,
-            (i === 0 ? '<span class="badge badge--accent">最新</span>' : ""))).join("")
-        : '<div class="field__hint" style="padding:4px 9px">还没有候选：先另存一份再改。</div>');
-    // 默认打开最新版本：工作区要回答的是"我现在最关心哪一版"，而不是"从零开始"。
+    // run 的每一轮也是 harness 版本（state_after_roundN），它们是这个平台里数量最多的一类。
+    // 这里只列"每个 run 的最新一轮"，够用来定位；点中时由 from-round 现取那一版。
+    const rounds = (state.runRows || []).map((row) => {
+      const round = Number(row.rounds || row.round || 0);
+      return round > 0 ? { value: `run:${row.id}`, name: row.id, kind: "run",
+                           meta: `run · 最新 r${round} · ${row.kind || ""}` } : null;
+    }).filter(Boolean);
+    state.entries = [
+      ...state.bases,
+      ...rounds,
+      ...newest.map((c) => ({ value: c.dir, name: c.dir, meta: `${c.files.length} 文件 · ${stamp(c.mtime)}`,
+                              kind: "candidate", mtime: c.mtime })),
+    ];
+    paintSourceBar();
+
     // `?candidate=` 是从版本页「编辑这一版」过来的：那一版就是当前要改的东西。
     const wanted = new URLSearchParams(location.search).get("candidate");
     const start = (wanted && (wanted === "base" || newest.some((c) => c.dir === wanted)))
       ? wanted : (newest.length ? newest[0].dir : "base");
-    await openSource(start);
+    await openSource(start);    await openSource(start);
+  }
+
+  function paintSourceBar() {
+    const term = ($("source-search").value || "").trim().toLowerCase();
+    const rows = state.entries.filter((row) =>
+      !term || row.name.toLowerCase().includes(term) || (row.meta || "").toLowerCase().includes(term));
+    $("source-list").innerHTML = rows.length ? rows.map((row) => `
+      <button type="button" class="hg-srcbar__row" role="option" data-source="${esc(row.value)}"
+              data-kind="${esc(row.kind)}" aria-selected="${String(row.value === state.source)}">
+        <span class="hg-srcbar__name">${esc(row.name)}</span>
+        <span class="hg-srcbar__meta">${esc(row.meta)}</span>
+      </button>`).join("")
+      : `<span class="hg-srcbar__empty">没有匹配的版本${term ? `："${esc(term)}"` : "（先另存一个候选）"}</span>`;
+    $("source-current").textContent = state.source === "base" ? "base_harness/loop" : state.source;
+    $("source-hint").textContent = `${state.entries.length} 个版本 · 按更新时间排列`;
   }
 
   async function openSource(source) {
     state.source = source;
-    document.querySelectorAll("#source-list .hg-src__row").forEach((node) =>
-      node.setAttribute("aria-selected", String(node.dataset.source === source)));
-    if (source === "base") {
+    paintSourceBar();
+    if (source.startsWith("base")) {
       state.files = (state.base.files || []).map((f) => f.path);
       $("files").innerHTML = state.files.map((p) => fileRow(p)).join("");
     } else {
@@ -186,8 +208,27 @@
     $("editor").addEventListener("mouseup", paintChips);
     $("source-list").addEventListener("click", (event) => {
       const row = event.target.closest("[data-source]");
-      if (row) openSource(row.dataset.source);
+      if (!row) return;
+      // 平台自带的 harness 是只读的：先复制成候选再编辑，和基线同一条规则。
+      if (row.dataset.kind === "base") { alert("平台自带的 harness 是只读的：先「另存为」再改。"); return; }
+      if (row.dataset.kind === "run") {
+        // run 的某一轮：复制成候选再打开（不就地改证据）。
+        const runId = row.dataset.source.slice(4);
+        const round = Number(prompt(`把 ${runId} 的哪一轮复制成候选？`, "1"));
+        if (!Number.isFinite(round) || round < 0) return;
+        fetch("/api/harness/from-round", { method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ run: runId, round }) })
+          .then((r) => r.json())
+          .then((payload) => {
+            if (payload.error) { alert(`${payload.error}：${payload.detail || ""}`); return; }
+            location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
+          });
+        return;
+      }
+      openSource(row.dataset.source);
     });
+    $("source-search").addEventListener("input", paintSourceBar);
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
     loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });
