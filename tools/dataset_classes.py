@@ -150,6 +150,8 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     # Official optimal-path agreement makes tool-price planning score-relevant.
     "costbench": ("context", "tools", "control", "cost"),
     "costbench_dynamic": ("context", "tools", "control", "cost", "recovery"),
+    # 一题一循环：跑测试、看失败、改文件。和 ds1000 一样是 tools + verification。
+    "authored_example_fix_bug": ("tools", "verification"),
     "cooperbench": ("context", "tools", "control", "verification"),
     "kumo": ("context", "tools", "control", "verification"),
     "alfworld": ("context", "tools", "control", "recovery"),
@@ -240,6 +242,9 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "costbench": ("tool_use", "tool_dialogue"),
     "costbench_dynamic": ("tool_use", "tool_dialogue"),
     "kumo": ("reasoning", "planning_and_search"),
+    # 控制台"起草"产出的示例场景：材料里有一个坏掉的函数和自带测试，改到测试通过为止。
+    # 交上去的是改过的文件，所以和 ds1000 / livecodebench 同一格。
+    "authored_example_fix_bug": ("artifact", "code_generation"),
     "cooperbench": ("artifact", "code_generation"),
     "alfworld": ("environment", "embodied_text"),
     "agentdojo": ("tool_use", "tool_dialogue"),
@@ -326,6 +331,9 @@ EXPECTED_INTERACTION = {
     # Derived, not declared: the QA scaffold's shipped CLI exposes only answer submission, so
     # `classify()` reads `single_shot` off the program and this entry has to agree with it.
     "aime": "single_shot",
+    # 「起草」的示例场景没有 CLI（材料里只有一个坏函数和它自带的测试）：agent 改文件、
+    # 提交，检查器跑一次测试。程序侧读出来是 single_shot，这里声明同一个值。
+    "authored_example_fix_bug": "single_shot",
     "jericho": "closed_loop",
     "musique": "single_shot",
     "reasoning_gym": "single_shot",

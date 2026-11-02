@@ -280,7 +280,12 @@ class ImportDirectionTests(unittest.TestCase):
         # imports, shared by adapters exactly like `data.scaffolds`. It was added by the sealed
         # native-runtime work and never classified here, which made every adapter that imports
         # `data.runtimes.NATIVE_PINS` an unclassified data directory / a forbidden edge.
-        infrastructure = {"scaffolds", "datasets", "__pycache__", "runtimes"}
+        # `authored` 是控制台「起草」的产物根：每个 bundle 一个目录（bundle.json + 材料 +
+        # oracle），由 `tools/scenario_builder.py` 读写，和 `runtimes` 一样是纯数据、没有 import。
+        # `candidates` 是控制台"编辑这一版"复制出来的候选 harness 根（每个目录一个
+        # harness.json + 代码），也是纯数据：它不参与 import，平台只复制和读取它。
+        infrastructure = {"scaffolds", "datasets", "__pycache__", "runtimes", "authored",
+                          "candidates"}
         for directory in (ROOT / "data").iterdir():
             if directory.is_dir():
                 self.assertIn(directory.name, infrastructure, f"unclassified data directory: {directory}")
@@ -311,6 +316,8 @@ class ImportDirectionTests(unittest.TestCase):
             'alfworld',
             'api_bank',
             'appworld',
+            # 「起草」发布的示例场景：一个公开适配器，所以在这份"评审过的清单"里也要有。
+            'authored_example_fix_bug',
             'bfcl_v3',
             'bird_minidev',
             'chessbench_puzzles',

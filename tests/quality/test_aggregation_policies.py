@@ -145,6 +145,9 @@ def test_before_after_all_numbers_and_verdicts_are_identical(adapters):
     # pre-migration result, but still participate in the same declared run mean.
     added_since_baseline = {"aime", "cooperbench", "costbench", "costbench_dynamic",
                             "kumo", "locomo", "tau3_bench",
+                            # 控制台「起草」产出的示例场景：和 gsm8k 一样是逐题算术平均，
+                            # 没有 corpus 级指标，所以走同一个声明的 run mean。
+                            "authored_example_fix_bug",
                             # Registered after this receipt was taken, and each had been
                             # missing its policy entry (the inventory guard above was red
                             # on main for exactly these three).

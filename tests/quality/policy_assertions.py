@@ -50,9 +50,12 @@ def assert_driver_policy_refusal(proc, tmp_path, task_ids, fields=EXEC_POLICY_FI
         record = json.loads((progress / (task_id + ".json")).read_text())
         assert record["task_id"] == task_id and record["round"] == 0
         assert_invalid_policy(record["invalid"], fields)
+        # `runtime_services` 是 2026-11 加入诊断记录的第五个字段：拒绝发生在启动服务
+        # 之前，所以它是 null，和 `exit_code`/`harness_runtime`/`model_gateway` 一样
+        # "什么都没发生"—— 但字段本身必须在，读者才知道这是"没起服务"而不是"没记录"。
         assert record["harness_output"] == {
             "exit_code": None, "stderr": "", "harness_runtime": None,
-            "model_gateway": None,
+            "runtime_services": None, "model_gateway": None,
         }
     assert not list((progress / "traces").glob("*"))
     curve = run / "curve.jsonl"

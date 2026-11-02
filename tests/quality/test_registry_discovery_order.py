@@ -31,6 +31,10 @@ EXPECTED_DATASETS = (
     "alfworld",
     "api_bank",
     "appworld",
+    # `authored_example_fix_bug` (2026-11-02) 是控制台"起草"流程产出的示例场景：它是一份
+    # 真的适配器（KIND = dataset），所以它出现在目录里是对的。成员变化照这个元组的规矩
+    # 做一次评审再加入，而不是回头去过滤。
+    "authored_example_fix_bug",
     "bfcl_v3",
     "bird_minidev",
     "chessbench_puzzles",

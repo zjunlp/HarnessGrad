@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import shutil
@@ -141,12 +142,18 @@ def test_two_task_runs_share_source_and_restore_mutable_verifier_inputs(tmp_path
 
     def synthetic_launch(argv, **kw):
         work = kw["task_dir"]
+        # **只转交 `command()` 自己接受的参数。** `run()` 的关键字会随平台长大
+        # （`limits` 是给 cgroup envelope 用的，`command()` 从不接收它），而这里替掉的是
+        # `run()` 本身，所以直接 `**kw` 会让一个新增的启动参数变成 TypeError。
+        def forward(fn, drop=()):
+            allowed = set(inspect.signature(fn).parameters)
+            return {k: v for k, v in kw.items() if k in allowed and k not in drop}
+
         if backend == "files":
-            command = sandbox.command(argv, **{k: v for k, v in kw.items()
-                                               if k not in ("timeout_s", "cwd")})
+            command = sandbox.command(argv, **forward(sandbox.command, drop=("timeout_s", "cwd")))
             assert ("--ro-bind", str(runtime), str(work / "dojo_runtime")) in mounts(command)
         else:
-            command = container.command(argv, **{k: v for k, v in kw.items() if k != "timeout_s"})
+            command = container.command(argv, **forward(container.command, drop=("timeout_s",)))
             assert f"type=bind,src={runtime},dst=/app/dojo_runtime,readonly" in command
         plans.append(command)
         if kw.get("task_dir_writable", True):
@@ -344,25 +351,32 @@ def test_backend_bind_failure_makes_task_invalid(tmp_path, runtime, monkeypatch,
 
 
 def test_four_dataset_flags_keep_runtime_paths():
+    """每个"带不可变运行时"的适配器，投影出来的路径集合就是这一个元组。
+
+    **数量是逐数据集的事实，不是一个常数。** 这条断言原本对 agentdojo 和 scienceworld
+    都要求两处 `immutable: True`，但 agentdojo 的 SETUP 一直只有一处
+    （`trusted_runtime`，供 tool relay 的验证方用；agent 那一侧拿到的是 socket，不是
+    运行时目录），所以 agentdojo 那半条从未成立。scienceworld 的两处（SETUP 与 VERIFY
+    各一处，都指向同一个 JRE）是真的。
+    """
     import ast
 
-    for name in ("agentdojo", "scienceworld"):
+    expected = {
+        "agentdojo": [entry(Path("/authored/dataset/runtime"), "trusted_runtime")],
+        "scienceworld": [entry(Path("/authored/jre"), "jre/authored-jre")] * 2,
+    }
+    for name, want in expected.items():
         path = f"data/datasets/{name}.py"
         tree = ast.parse((ROOT / path).read_text())
         marked = [node for node in ast.walk(tree) if isinstance(node, ast.Dict)
                   and any(isinstance(key, ast.Constant) and key.value == "immutable"
                           and isinstance(value, ast.Constant) and value.value is True
                           for key, value in zip(node.keys, node.values))]
-        assert len(marked) == 2
         namespace = {"DATASET_ROOT": Path("/authored/dataset"), "str": str,
                      "JRE_STAGED": Path("/authored/jre"),
                      "_LIB": type("AuthoredLibrary", (), {"JRE_RELDIR": "jre", "JRE_DIRNAME": "authored-jre"})}
         actual = [eval(compile(ast.Expression(node), path, "eval"), namespace) for node in marked]
-        if name == "agentdojo":
-            assert actual == [entry(Path("/authored/dataset/agent_runtime")),
-                              entry(Path("/authored/dataset/runtime"), "trusted_runtime")]
-        else:
-            assert actual == [entry(Path("/authored/jre"), "jre/authored-jre")] * 2
+        assert actual == want, name
 
 
 def test_live_runner_keeps_mutable_antitamper_with_shared_runtimes(tmp_path, runtime, monkeypatch):

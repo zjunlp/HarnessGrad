@@ -4,6 +4,7 @@
   "alfworld": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "api_bank": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "appworld": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
+  "authored_example_fix_bug": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "bfcl_v3": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "bird_minidev": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},
   "broken_service": {"run_reward": {"aggregation": "arithmetic_mean", "denominator": "measured_tasks"}},

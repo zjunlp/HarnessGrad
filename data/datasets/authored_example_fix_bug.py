@@ -5,8 +5,9 @@ KIND = "dataset"
 ORACLE_SOURCE = "authored"
 ORACLE_VALIDATED_BY = "tools/scenario_builder.py --gates (oracle / empty / deterministic)"
 ORACLE_COVERAGE = "all tasks"
+OFFICIAL_EVAL = None
+SPLIT_SOURCE = "authored bundle: every task in the bundle is scored"
 TASKS, SETUP, VERIFY = _load_authored("example-fix-bug")
-ENV = {"kind": "files"}
 def load():
     """The registry protocol: (tasks, scorable). Baked-in answers would be a
     second source of truth; an authored bundle grades by its verifier.

@@ -71,6 +71,7 @@ uses all 150 tasks.
 | `alfworld` | none | none | 134 | - | - | None (the pool is the scored split) |
 | `api_bank` | refused | - | - | - | - | - |
 | `appworld` | declared | declared | 675 | 90 | 585 | 585 |
+| `authored_example_fix_bug` | none | authored bundle: every task in the bundle is scored | 1 | - | - | None (the pool is the scored split) |
 | `bfcl_v3` | none | none | 640 | - | - | None (the pool is the scored split) |
 | `bird_minidev` | none | none | 500 | - | - | None (the pool is the scored split) |
 | `chessbench_puzzles` | none | none | 10000 | - | - | None (the pool is the scored split) |
