@@ -32,11 +32,8 @@
     "not-started": ["提交尚未开始", "进入 queued 后再读取日志。"],
     "service-not-ready": ["服务未就绪", "检查 bwrap、预算目录、/proc 和服务配置。"],
     "sandbox-unavailable": ["沙箱不可用", "服务端无法启动或确认任务沙箱；查看日志中的具体原因。"],
-    "scenario-not-available": ["场景当前不可用", "查看场景 reason，准备好数据、模型和沙箱后重试。"],
     "internal-error": ["服务内部错误", "保留 submission_id 和日志，联系维护者。"],
     "run-refused": ["评分被平台拒绝", "根据 driver 的拒绝原因修正场景或 harness。"]
-    ,"sandbox-unavailable": ["沙箱不可用", "服务端没有可用的 HarnessGrad 沙箱。"]
-    ,"internal-error": ["服务内部错误", "保留 submission_id 和日志，交给服务维护者排查。"]
   };
   const STATUS = { validating: ["校验中", "正在检查归档、manifest 和 smoke。"], queued: ["已排队", "提交已持久化，等待执行。"], running: ["运行中", "Harness 正在场景中执行。"], scored: ["已出分", "结果和逐任务证据已准备好。"], rejected: ["已拒绝", "提交没有进入评分队列。"], failed: ["运行失败", "评分没有完成，请查看错误和日志。"] };
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));

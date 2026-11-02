@@ -52,7 +52,9 @@ class MockContractTests(unittest.TestCase):
         source = (ROOT / "console/static/submit.js").read_text(encoding="utf-8")
         mapping = source.split("const ERROR_MESSAGES = {", 1)[1].split("\n  };", 1)[0]
         mapped = set(re.findall(r'^\s*"([^"]+)": \[', mapping, re.MULTILINE))
-        self.assertEqual(len(codes), 26)
+        # 26 request-time codes plus the three failure-time ones §1 lists for a
+        # `failed` submission (`internal-error`, `sandbox-unavailable`, `run-refused`).
+        self.assertEqual(len(codes), 29)
         self.assertEqual(mapped, codes)
 
     def test_state_is_monotonic_and_result_counts_are_honest(self):
