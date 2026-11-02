@@ -20,10 +20,10 @@ import pytest
 
 STATIC = Path(__file__).resolve().parents[2] / "console" / "static"
 PAGES = ("index.html", "chat.html", "trace.html", "submit.html", "author.html",
-         "harness.html")
+         "harness.html", "launch.html")
 
 HARNESS = [("实验", "/#/runs"), ("轨迹", "/#/trace"), ("版本", "/#/version"),
-           ("自己改", "/harness.html"), ("启动", "/chat.html"),
+           ("自己改", "/harness.html"), ("启动", "/launch.html"), ("助手", "/chat.html"),
            ("提交 harness", "/submit.html"), ("导入环境", "/author.html#/import")]
 BUILD = [("场景", "/author.html#/scenarios"), ("起草", "/author.html#/draft"),
          ("导入", "/author.html#/import"), ("去优化 Harness", "/")]
