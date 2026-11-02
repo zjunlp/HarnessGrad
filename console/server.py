@@ -2478,6 +2478,36 @@ def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
                 tar.add(path, arcname=str(path.relative_to(root)))
     return 200, buffer.getvalue()
 
+
+def harness_candidate_from_round(run_id: str, round_no: int) -> tuple[int, dict]:
+    """把某一轮的 harness 状态复制成一个候选，供「编辑这一版」使用。
+
+    为什么不直接编辑 run 目录里的 `state_after_roundN`：那是**证据**，改它等于改历史测量。
+    复制出来以后，编辑、试跑、评测都作用在副本上，原 run 仍然可以逐字节复核。
+    """
+    run_path = find_run(run_id)
+    if not run_path:
+        return 404, {"error": "run-not-found", "detail": run_id}
+    source = run_path / f"state_after_round{int(round_no)}"
+    if not (source / "harness.json").is_file():
+        return 404, {"error": "no-state", "detail": f"{source.name} 里没有 harness.json"}
+    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{int(round_no)}")[:48]
+    target = CANDIDATES / base
+    suffix = 0
+    while target.exists():
+        suffix += 1
+        target = CANDIDATES / f"{base}-{suffix}"[:64]
+    CANDIDATES.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns(
+        "__pycache__", "*.pyc", ".git", ".state"))
+    manifest = read_json(target / "harness.json")
+    if isinstance(manifest, dict):
+        manifest["name"] = target.name
+        (target / "harness.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return 201, {"candidate": target.name, "from": str(source), "files":
+                 sorted(p.name for p in target.iterdir() if p.is_file())}
+
 def harness_candidate_file(name: str, rel: str) -> dict:
     """一个候选里的文件正文。只读、只在本目录内、带上行数方便算选区。"""
     root = CANDIDATES / name
@@ -3749,6 +3779,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"error": "bad-json"}, 400)
             code, payload = harness_candidate_save(str(body.get("name") or ""),
                                                    body.get("files") or {})
+            return self._send(payload, code)
+        if route == "api/harness/from-round":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            try:
+                round_no = int(body.get("round"))
+            except (TypeError, ValueError):
+                return self._send({"error": "bad-round"}, 400)
+            code, payload = harness_candidate_from_round(str(body.get("run") or ""), round_no)
             return self._send(payload, code)
         if route == "api/workbench/edit":
             body = self._json_body()

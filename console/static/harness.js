@@ -40,7 +40,10 @@
             (i === 0 ? '<span class="badge badge--accent">最新</span>' : ""))).join("")
         : '<div class="field__hint" style="padding:4px 9px">还没有候选：先另存一份再改。</div>');
     // 默认打开最新版本：工作区要回答的是"我现在最关心哪一版"，而不是"从零开始"。
-    const start = newest.length ? newest[0].dir : "base";
+    // `?candidate=` 是从版本页「编辑这一版」过来的：那一版就是当前要改的东西。
+    const wanted = new URLSearchParams(location.search).get("candidate");
+    const start = (wanted && (wanted === "base" || newest.some((c) => c.dir === wanted)))
+      ? wanted : (newest.length ? newest[0].dir : "base");
     await openSource(start);
   }
 

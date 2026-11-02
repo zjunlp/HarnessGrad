@@ -1640,6 +1640,28 @@
     };
   });
   window.addEventListener("hashchange", route);
+  /* 版本 → 编辑：把这一版复制成候选再跳过去。
+   * 直接编辑 run 里的 `state_after_roundN` 会改掉历史测量的证据，所以先复制。 */
+  const editButton = $("#h-edit-btn");
+  if (editButton) editButton.addEventListener("click", async () => {
+    if (!state.hRun || state.hRun === BASE || state.hRound == null) {
+      alert("先选一个实验和一轮：基线没有对应的 harness 版本。");
+      return;
+    }
+    editButton.disabled = true;
+    editButton.textContent = "复制中…";
+    try {
+      const response = await fetch("/api/harness/from-round", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ run: state.hRun, round: state.hRound }) });
+      const payload = await response.json();
+      if (!response.ok) { alert(`${payload.error || "复制失败"}\n${payload.detail || ""}`); return; }
+      location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
+    } finally {
+      editButton.disabled = false;
+      editButton.textContent = "编辑这一版";
+    }
+  });
   const explainButton = $("#h-explain-btn");
   if (explainButton) explainButton.addEventListener("click", explainRound);
   const explainPanel = $("#h-explain");
