@@ -257,3 +257,10 @@
 /* 字号：一个变量，正文与表格跟随 */
 body { font-size: var(--sh-font-size, 13px); }
 .main table, .tbl { font-size: calc(var(--sh-font-size, 13px) - 1px); }
+
+/* **`[hidden]` 必须真的隐藏。** 浏览器的默认规则是 `[hidden] { display: none }`，但它的
+ * 优先级低于任何带 class 的 `display` 声明 —— 于是 `.scrim { display: grid }` 把
+ * `hidden` 完全盖掉了：JS 里 `el.hidden = true` 生效（属性确实变成 true），画面却一点
+ * 没变。设置弹窗"关不掉"就是这个原因，而只检查 `el.hidden` 的测试看不出这一点。
+ */
+[hidden] { display: none !important; }
