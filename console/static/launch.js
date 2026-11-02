@@ -7,9 +7,6 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const SIDES = [["task", "task endpoint", "被测量的 harness 调用的模型"],
-                 ["meta", "meta-agent endpoint", "改进 harness 的方法调用的模型"],
-                 ["assistant", "assistant endpoint", "造环境 / 改 harness 时帮忙的模型"]];
   let FORM = null, seq = 0;
   const card = { dataset: "", harness: "", task_model: "", improver: "", improver_model: "",
                  rounds: 3, jobs: 1, trials: 1, sampling: "default" };
@@ -105,37 +102,8 @@
     }
   }
 
-  async function openSettings() {
-    const d = await (await fetch("/api/settings")).json();
-    $("settings-body").innerHTML = SIDES.map(([side, title, hint]) => `
-      <div class="card" style="padding:12px 14px">
-        <div class="card__title">${esc(title)}</div>
-        <div class="field__hint" style="margin-bottom:8px">${esc(hint)}</div>
-        ${field("base_url", `<input class="input" id="st-${side}-url" value="${esc((d[side] || {}).base_url || "")}" placeholder="http://127.0.0.1:8001/v1">`)}
-        ${field("model", `<input class="input" id="st-${side}-model" value="${esc((d[side] || {}).model || "")}">`)}
-        ${field("api_key", `<input class="input" id="st-${side}-key" type="password" placeholder="${(d[side] || {}).api_key_set ? "已配置（留空 = 不修改）" : "未配置"}">`)}
-      </div>`).join("");
-    $("settings").hidden = false;
-  }
-
-  async function saveSettings() {
-    const payload = {};
-    for (const [side] of SIDES) {
-      payload[side] = { base_url: $(`st-${side}-url`).value.trim(),
-                        model: $(`st-${side}-model`).value.trim(),
-                        api_key: $(`st-${side}-key`).value.trim() };
-    }
-    const response = await fetch("/api/settings", { method: "POST",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    $("settings-state").textContent = response.ok ? "已保存" : "保存失败";
-    if (response.ok) { $("settings").hidden = true; load().catch(() => {}); }
-  }
-
   function bind() {
     $("go").addEventListener("click", go);
-    $("open-settings").addEventListener("click", (event) => { event.preventDefault(); openSettings(); });
-    $("close-settings").addEventListener("click", () => { $("settings").hidden = true; });
-    $("save-settings").addEventListener("click", saveSettings);
     load().catch((error) => { $("fields").innerHTML = `<div class="empty">读不到启动表单：${esc(error.message)}</div>`; });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);

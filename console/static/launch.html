@@ -17,7 +17,6 @@
     <nav class="nav"></nav>
     <div class="side-foot">
       <div class="status-line" id="st-model">…</div>
-      <a class="side-link" href="#" id="open-settings">设置：三类端点 ⚙</a>
     </div>
   </aside>
 
@@ -53,18 +52,6 @@
   </main>
 </div>
 
-<div class="scrim" id="settings" hidden>
-  <div class="dialog">
-    <div class="dialog__head"><span class="card__title">三类端点</span>
-      <span class="spacer hg-grow"></span><button class="btn btn--ghost btn--sm" id="close-settings">关闭</button></div>
-    <div class="dialog__body">
-      <div id="settings-body" class="hg-stack"></div>
-      <p class="field__hint">密钥只落在 <code>.local/settings.json</code>（0600，已 gitignore）；页面只显示"已配置"。</p>
-    </div>
-    <div class="dialog__foot"><span class="field__hint" id="settings-state"></span>
-      <button class="btn btn--primary" type="button" id="save-settings">保存</button></div>
-  </div>
-</div>
 <script src="/shell.js" defer></script>
 <script src="/launch.js" defer></script>
 </body>
