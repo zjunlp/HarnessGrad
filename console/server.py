@@ -56,6 +56,7 @@ import pathlib
 import subprocess
 import sys
 import re
+import shlex
 import shutil
 import threading
 import time
@@ -2328,6 +2329,128 @@ CANDIDATES = pathlib.Path(os.environ.get("HG_CONSOLE_CANDIDATES",
 CANDIDATE_NAME = re.compile(r"[A-Za-z0-9._-]{1,48}")
 
 
+
+# ── 右侧助手：不自己造 agent，借一个现成的 harness ─────────────────────────
+#
+# 结论先说：**不写新的 coding agent**。平台已经有六个 CLI adapter，它们已经会在这个沙箱里
+# 读写文件、调工具、产出 trace；"帮人改 harness"和"做题"在机械上是同一件事 —— 给一个目录、
+# 一段指示、让它动手。所以这里把 codex（可换）当助手用：`codex exec` 在候选目录里跑，
+# 平台只负责把"选中的行"原样塞进提示、把改动收集回来、把结果落成一个新候选。
+#
+# 这和 methods/ 里的 improver 是同一个角色，只是触发方式不同：那边由方法规则每轮调用一次，
+# 这边由人点一下按钮。所以它用**第三类端点**（assistant），不占 task/meta 的配置。
+ASSISTANT_KINDS = ("codex", "dsh", "opencode", "miniswe", "miniagent", "openclaw")
+
+
+def _assistant_argv(env: dict) -> list[str]:
+    """助手进程的命令行。默认 codex，可用 HG_CONSOLE_ASSISTANT_CMD 换任意一个 CLI。"""
+    configured = shlex.split(env.get("HG_CONSOLE_ASSISTANT_CMD", ""))
+    if configured:
+        return configured
+    codex = env.get("HG_ASSISTANT_CODEX") or shutil.which("codex")
+    if not codex:
+        raise ValueError("没有可用的助手 CLI：设置 HG_CONSOLE_ASSISTANT_CMD，或把 codex 装上")
+    return [codex, "exec", "--json", "--ephemeral", "--skip-git-repo-check",
+            "--dangerously-bypass-approvals-and-sandbox"]
+
+
+def _snapshot(root: pathlib.Path) -> dict[str, str]:
+    """每个文件的当前内容，用来算"这一句到底改了什么"。"""
+    out = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.suffix in (".py", ".json", ".md", ".txt", ".sh", ".yaml", ".yml"):
+            try:
+                out[str(path.relative_to(root))] = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+    return out
+
+
+def workbench_edit(name: str, instruction: str, selection: str = "", kind: str = "codex") -> tuple[int, dict]:
+    """在候选的**副本**上让助手改代码，返回新候选名与逐文件 diff。"""
+    import difflib
+    if kind not in ASSISTANT_KINDS:
+        return 400, {"error": "unknown-assistant", "detail": f"可用的助手：{list(ASSISTANT_KINDS)}"}
+    if not isinstance(instruction, str) or not instruction.strip():
+        return 400, {"error": "no-instruction"}
+    source = CANDIDATES / str(name)
+    if not CANDIDATE_NAME.fullmatch(str(name)) or not (source / "harness.json").is_file():
+        return 404, {"error": "candidate-not-found", "detail": str(name)}
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    target = CANDIDATES / f"{name}-edit-{stamp}"
+    if target.exists():
+        return 409, {"error": "duplicate-candidate", "detail": str(target)}
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+    before = _snapshot(target)
+    env = dict(os.environ)
+    settings = load_settings()["assistant"]
+    if settings.get("base_url"):
+        env["HG_AGENT_BASE_URL"] = settings["base_url"]
+    if settings.get("model"):
+        env["HG_AGENT_MODEL"] = settings["model"]
+    if settings.get("api_key"):
+        env["HG_AGENT_API_KEY"] = settings["api_key"]
+    try:
+        argv = _assistant_argv(env)
+    except ValueError as exc:
+        shutil.rmtree(target, ignore_errors=True)
+        return 503, {"error": "assistant-not-configured", "detail": str(exc)}
+    prompt = instruction.strip()
+    if selection.strip():
+        prompt += ("\n\n下面是这次要看的范围（行号是文件里的真实行号，不要改动范围之外的内容）：\n"
+                   + selection.strip())
+    try:
+        done = subprocess.run(argv + ["-C", str(target), "-"], input=prompt, cwd=str(target),
+                              capture_output=True, text=True, timeout=1800, env=env)
+    except subprocess.TimeoutExpired:
+        return 504, {"error": "assistant-timeout", "candidate": target.name}
+    after = _snapshot(target)
+    diff, changed = [], []
+    for path in sorted(set(before) | set(after)):
+        if before.get(path) == after.get(path):
+            continue
+        changed.append(path)
+        diff.extend(difflib.unified_diff((before.get(path) or "").splitlines(True),
+                                         (after.get(path) or "").splitlines(True),
+                                         fromfile=f"a/{path}", tofile=f"b/{path}", n=2))
+    if not changed:
+        shutil.rmtree(target, ignore_errors=True)
+        return 200, {"candidate": None, "changed": [], "diff": "",
+                     "message": "助手没有改动任何文件",
+                     "stderr_tail": (done.stderr or "")[-600:]}
+    # **只报，不拦。** 助手第一版把注释插到了 shebang 上面 —— 文件仍然是合法 Python，
+    # 但 `#!/usr/bin/env python3` 不再生效。这类事人一眼能看出来，平台不该替他决定要不要，
+    # 但必须说出来：所以对每个改过的 .py 做一次编译检查，把结果放进响应。
+    syntax = {}
+    for path in changed:
+        if path.endswith(".py"):
+            try:
+                compile((target / path).read_text(encoding="utf-8", errors="replace"), path, "exec")
+                syntax[path] = "ok"
+            except SyntaxError as exc:
+                syntax[path] = f"{exc.msg} (line {exc.lineno})"
+    return 200, {"candidate": target.name, "changed": changed,
+                 "diff": "".join(diff)[:20000], "exit": done.returncode,
+                 "syntax": syntax,
+                 "stderr_tail": (done.stderr or "")[-600:]}
+
+
+def read_selection(root: pathlib.Path, path: str, first: int, last: int) -> str:
+    """把选中的行连行号一起取出来：模型看到的是"文件里第几行"，不是一段脱离上下文的片段。"""
+    rel = pathlib.PurePosixPath(str(path))
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError("unsafe path")
+    target = root / rel
+    if not target.is_file():
+        raise ValueError(f"{path} 不存在")
+    lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+    first = max(1, int(first))
+    last = min(len(lines), int(last))
+    if first > last:
+        raise ValueError("选中的范围为空")
+    body = "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(first, last + 1))
+    return f"{rel}:{first}-{last}\n{body}"
+
 def harness_candidates() -> dict:
     rows = []
     if CANDIDATES.is_dir():
@@ -3569,6 +3692,24 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"error": "bad-json"}, 400)
             code, payload = harness_candidate_save(str(body.get("name") or ""),
                                                    body.get("files") or {})
+            return self._send(payload, code)
+        if route == "api/workbench/edit":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            selection = ""
+            sel = body.get("selection") or {}
+            if sel:
+                try:
+                    selection = read_selection(CANDIDATES / str(body.get("name") or ""),
+                                               str(sel.get("path") or ""),
+                                               int(sel.get("from") or 1),
+                                               int(sel.get("to") or 1))
+                except (ValueError, OSError) as exc:
+                    return self._send({"error": "bad-selection", "detail": str(exc)}, 400)
+            code, payload = workbench_edit(str(body.get("name") or ""),
+                                           str(body.get("instruction") or ""), selection,
+                                           str(body.get("kind") or "codex"))
             return self._send(payload, code)
         if route == "api/harness/trial":
             body = self._json_body()
