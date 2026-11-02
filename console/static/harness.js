@@ -127,16 +127,15 @@
    */
   async function loadHistory(candidate) {
     const m = /^(.*)-r(\d+)(?:-\d+)?$/.exec(candidate || "");
-    const wrap = $("history-wrap");
-    if (!m) { wrap.hidden = true; return; }
+    const wrap = $("history-tab");
+    if (!m) { wrap.disabled = true; wrap.title = "这一版不是来自某个 run 的轮次，没有历史"; return; }
+    wrap.disabled = false;
     const [, run, round] = m;
     try {
       const payload = await (await fetch(
         `/api/runs/${encodeURIComponent(run)}/history?to=${round}`)).json();
       const rows = payload.rounds || [];
-      if (!rows.length) { wrap.hidden = true; return; }
-      wrap.hidden = false;
-      wrap.open = true;      // 选中一版就是为了看它的历史，没有理由先让读者再点一次。
+      if (!rows.length) { wrap.disabled = true; return; }
       $("history-hint").textContent = `${run} 的 r1–r${rows.length}`;
       // 时间线（像 git log --graph 的单条泳道）：节点 + 这一轮的改动摘要。
       $("history-list").innerHTML = rows.map((r) => `
@@ -155,6 +154,8 @@
         const button = event.target.closest("[data-round]");
         if (!button) return;
         const row = rows.find((r) => String(r.round) === button.dataset.round);
+        $("patch-wrap").hidden = false;
+        $("patch-title").textContent = `r${row.round} 的改动 · ${row.files.join(", ")}`;
         $("history-patch").textContent = row.patch || "（这一轮没有补丁）";
       };
       $("range-go").onclick = async () => {
@@ -164,6 +165,8 @@
         try {
           const res = await fetch(`/api/runs/${encodeURIComponent(run)}/range-diff?from=${from}&to=${to}`);
           const payload = await res.json();
+          $("patch-wrap").hidden = false;
+          $("patch-title").textContent = `r${payload.from ?? from} → r${payload.to ?? to} 的净改动`;
           $("history-patch").textContent = payload.error
             ? `${payload.error}：${payload.detail || ""}`
             : `r${payload.from} → r${payload.to}：${(payload.files || []).join(", ")} +${payload.added}/-${payload.removed}\n\n`
@@ -174,7 +177,7 @@
       };
       state.history = rows;
     } catch {
-      wrap.hidden = true;
+      wrap.disabled = true;
     }
   }
 
@@ -299,6 +302,15 @@
       openSource(row.dataset.source);
     });
     $("source-search").addEventListener("input", paintSourceBar);
+    $("left-tabs").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-tab]");
+      if (!button) return;
+      document.querySelectorAll("#left-tabs button").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === button)));
+      document.querySelectorAll("[data-panel]").forEach((node) =>
+        (node.hidden = node.dataset.panel !== button.dataset.tab));
+    });
+    $("patch-close").addEventListener("click", () => { $("patch-wrap").hidden = true; });
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
     loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });

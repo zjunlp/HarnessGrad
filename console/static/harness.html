@@ -42,32 +42,32 @@
             <span class="hg-mono hg-muted" id="source-current">—</span>
           </div>
           <div class="hg-srcbar" id="source-list" role="listbox" aria-label="Harness 版本"></div>
-          <details class="hg-history" id="history-wrap" hidden>
-            <summary>历史 <span class="hg-muted" id="history-hint"></span></summary>
-            <div class="hg-rail" id="history-list"></div>
-            <div class="hg-row" style="gap:6px;padding:6px 0">
-              <span class="field__hint">两点之间的净改动：</span>
-              <select class="select" id="range-from" style="width:auto"></select>
-              <span class="hg-muted">→</span>
-              <select class="select" id="range-to" style="width:auto"></select>
-              <button class="btn btn--sm" type="button" id="range-go">对比</button>
-            </div>
-            <pre class="wlog hg-mono" id="history-patch" style="max-height:220px">选一轮看它的改动，或选两点看净改动</pre>
-            <label class="hg-row" style="gap:6px;font-size:12px;padding:6px 0">
-              <input type="checkbox" id="history-attach">
-              <span>把这段历史一起发给助手（它能看到每一轮加了什么）</span>
-            </label>
-          </details>
           <div class="card__body" style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;padding-top:10px">
             <div>
-              <div class="hg-row" style="justify-content:space-between;margin-bottom:6px">
-                <span class="field__label">文件</span>
-                <span class="hg-mono hg-muted" id="files-count"></span>
+              <div class="seg" id="left-tabs" style="margin-bottom:8px">
+                <button type="button" data-tab="files" aria-pressed="true">文件</button>
+                <button type="button" data-tab="history" aria-pressed="false" id="history-tab">历史</button>
               </div>
-              <ul class="hg-stack" id="files" style="list-style:none;margin:0;padding:0;gap:1px"></ul>
-              <div class="field" style="margin-top:12px">
-                <label class="field__label" for="name">另存为</label>
-                <input class="input" id="name" placeholder="my-refactor" spellcheck="false">
+              <div data-panel="files">
+                <ul class="hg-stack" id="files" style="list-style:none;margin:0;padding:0;gap:1px"></ul>
+                <div class="field" style="margin-top:12px">
+                  <label class="field__label" for="name">另存为</label>
+                  <input class="input" id="name" placeholder="my-refactor" spellcheck="false">
+                </div>
+              </div>
+              <div data-panel="history" hidden id="history-panel">
+                <div class="field__hint" id="history-hint" style="margin-bottom:6px"></div>
+                <div class="hg-rail" id="history-list"></div>
+                <div class="hg-row" style="gap:4px;padding:6px 0;flex-wrap:wrap">
+                  <select class="select" id="range-from" style="width:74px;padding:4px"></select>
+                  <span class="hg-muted">→</span>
+                  <select class="select" id="range-to" style="width:74px;padding:4px"></select>
+                  <button class="btn btn--sm" type="button" id="range-go">对比</button>
+                </div>
+                <label class="hg-row" style="gap:6px;font-size:11.5px;align-items:flex-start">
+                  <input type="checkbox" id="history-attach">
+                  <span>把历史一起发给助手</span>
+                </label>
               </div>
             </div>
             <div>
@@ -77,6 +77,13 @@
               </div>
               <textarea class="textarea" id="editor" spellcheck="false" rows="26"
                         style="font-family:var(--mono);font-size:12px;line-height:1.55"></textarea>
+              <div id="patch-wrap" hidden style="margin-top:10px">
+                <div class="hg-row" style="justify-content:space-between;margin-bottom:4px">
+                  <span class="field__label" id="patch-title">改动</span>
+                  <button class="btn btn--ghost btn--sm" type="button" id="patch-close">收起</button>
+                </div>
+                <pre class="wlog hg-mono" id="history-patch" style="max-height:240px"></pre>
+              </div>
             </div>
           </div>
         </div>
