@@ -2451,6 +2451,20 @@ def read_selection(root: pathlib.Path, path: str, first: int, last: int) -> str:
     body = "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(first, last + 1))
     return f"{rel}:{first}-{last}\n{body}"
 
+
+def harness_candidate_file(name: str, rel: str) -> dict:
+    """一个候选里的文件正文。只读、只在本目录内、带上行数方便算选区。"""
+    root = CANDIDATES / name
+    path = pathlib.PurePosixPath(rel)
+    if path.is_absolute() or ".." in path.parts:
+        return {"error": "unsafe-path", "detail": rel}
+    target = root / path
+    if not target.is_file():
+        return {"error": "file-not-found", "detail": rel}
+    text = target.read_text(encoding="utf-8", errors="replace")
+    return {"candidate": name, "path": str(path), "text": text,
+            "lines": len(text.splitlines()), "size": target.stat().st_size}
+
 def harness_candidates() -> dict:
     rows = []
     if CANDIDATES.is_dir():
@@ -3522,6 +3536,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(author_bundles())
             if parts[1:] == ["harness", "candidates"]:
                 return self._send(harness_candidates())
+            if parts[1:] == ["harness", "file"]:
+                name = (query.get("candidate") or [""])[0]
+                rel = (query.get("path") or [""])[0]
+                if not CANDIDATE_NAME.fullmatch(name) or not rel:
+                    return self._error("candidate and path are required", 400)
+                return self._send(harness_candidate_file(name, rel))
             if parts[1:] == ["runs"]:
                 kind = (query.get("kind") or [""])[0]
                 if kind not in ("", "study", "eval", "unknown"):
