@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import shutil
@@ -141,12 +142,18 @@ def test_two_task_runs_share_source_and_restore_mutable_verifier_inputs(tmp_path
 
     def synthetic_launch(argv, **kw):
         work = kw["task_dir"]
+        # **只转交 `command()` 自己接受的参数。** `run()` 的关键字会随平台长大
+        # （`limits` 是给 cgroup envelope 用的，`command()` 从不接收它），而这里替掉的是
+        # `run()` 本身，所以直接 `**kw` 会让一个新增的启动参数变成 TypeError。
+        def forward(fn, drop=()):
+            allowed = set(inspect.signature(fn).parameters)
+            return {k: v for k, v in kw.items() if k in allowed and k not in drop}
+
         if backend == "files":
-            command = sandbox.command(argv, **{k: v for k, v in kw.items()
-                                               if k not in ("timeout_s", "cwd")})
+            command = sandbox.command(argv, **forward(sandbox.command, drop=("timeout_s", "cwd")))
             assert ("--ro-bind", str(runtime), str(work / "dojo_runtime")) in mounts(command)
         else:
-            command = container.command(argv, **{k: v for k, v in kw.items() if k != "timeout_s"})
+            command = container.command(argv, **forward(container.command, drop=("timeout_s",)))
             assert f"type=bind,src={runtime},dst=/app/dojo_runtime,readonly" in command
         plans.append(command)
         if kw.get("task_dir_writable", True):
