@@ -459,3 +459,50 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
 }
 .hg-picker__round:hover { border-color: var(--n-300); }
 .hg-picker__round[aria-selected="true"] { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+
+/* ── 评测页接到设计系统上 ────────────────────────────────────────────────
+ * 这一页有自己的 .submit-* 类名（写于设计系统之前）。与其重写标记，先把它的类映射到
+ * ui.css 的 token 与组件尺寸上：字号、圆角、边框、内边距、控件高度都对齐。
+ * 迁移完成后这段可以整块删掉。 */
+.submit-hero h1 { font-size: var(--t-5); font-weight: 660; letter-spacing: -.015em; margin: 0 0 4px; }
+.submit-hero p { font-size: var(--t-2); color: var(--n-500); margin: 0; max-width: 62ch; }
+.submit-wrap { padding: 18px 20px 40px; }
+.submit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.submit-card {
+  background: var(--n-0); border: var(--line); border-radius: var(--r-3); overflow: hidden;
+}
+.submit-card-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: var(--line);
+}
+.submit-card-head h2 { font-size: var(--t-3); font-weight: 640; margin: 0; }
+.submit-card-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.submit-drop {
+  border: 1px dashed var(--n-300); border-radius: var(--r-2); background: var(--n-25);
+  padding: 22px 16px; text-align: center; font-size: var(--t-2); color: var(--n-600);
+  cursor: pointer;
+}
+.submit-drop:hover { border-color: var(--n-400); background: var(--n-50); }
+.submit-field { display: flex; flex-direction: column; gap: 6px; }
+.submit-field label { font-size: var(--t-2); font-weight: 560; color: var(--n-700); }
+.submit-field input, .submit-field select {
+  font: inherit; font-size: var(--t-2); padding: 8px 10px; border-radius: var(--r-1);
+  border: 1px solid var(--n-300); background: var(--n-0); color: var(--n-900);
+}
+.submit-field input:focus, .submit-field select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.submit-btn {
+  font: inherit; font-size: var(--t-2); font-weight: 560; cursor: pointer;
+  padding: 9px 14px; border-radius: var(--r-1);
+  border: 1px solid var(--n-900); background: var(--n-900); color: var(--n-0);
+}
+.submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+.submit-muted { font-size: var(--t-1); color: var(--n-500); line-height: 1.6; }
+.submit-scenario-meta, .submit-actions, .submit-demo { font-size: var(--t-1); }
+.submit-error {
+  margin: 0 0 14px; padding: 10px 12px; border-radius: var(--r-2);
+  border: 1px solid var(--bad-line); background: var(--bad-soft); color: var(--bad);
+  font-size: var(--t-2);
+}
+.submit-error:not([data-visible="true"]) { display: none; }
