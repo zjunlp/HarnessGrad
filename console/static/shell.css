@@ -192,3 +192,54 @@ body[data-sidebar="collapsed"] .side .brand { padding: 14px 8px 10px; }
   border: 1px solid var(--sh-line); border-radius: 7px; padding: 8px 10px; color: var(--sh-ink-2);
   white-space: pre-wrap;
 }
+
+/* ── 设置：左侧分节、右侧逐行（参考 deepseek-harness 的设置面板层次） ───────── */
+.settings {
+  width: min(860px, 100%); max-height: 84vh; display: flex; flex-direction: column;
+  background: var(--n-0); border-radius: var(--r-4); box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.settings__head {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-4) var(--s-5); border-bottom: var(--line);
+  font-size: var(--t-4);
+}
+.settings__body { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-height: 0; }
+.settings__nav {
+  display: flex; flex-direction: column; gap: 2px; padding: var(--s-3);
+  background: var(--n-25); border-right: var(--line);
+}
+.settings__nav button {
+  appearance: none; border: 0; background: transparent; cursor: pointer; text-align: left;
+  font: inherit; font-size: var(--t-3); color: var(--n-600);
+  padding: 9px 12px; border-radius: var(--r-1);
+}
+.settings__nav button:hover { background: var(--n-100); color: var(--n-900); }
+.settings__nav button[aria-current="page"] {
+  background: var(--n-0); color: var(--n-900); font-weight: 600;
+  box-shadow: 0 0 0 1px var(--n-200);
+}
+.settings__pane { overflow: auto; padding: var(--s-2) var(--s-5) var(--s-5); }
+.settings__row {
+  display: grid; grid-template-columns: minmax(140px, 240px) minmax(0, 1fr);
+  gap: var(--s-4) var(--s-5); align-items: start;
+  padding: var(--s-4) 0; border-bottom: var(--line);
+}
+.settings__row:last-of-type { border-bottom: 0; }
+.settings__label b { display: block; font-size: var(--t-3); font-weight: 620; }
+.settings__label span { display: block; margin-top: 3px; font-size: var(--t-2); color: var(--n-500); }
+.settings__control { display: flex; justify-content: flex-end; }
+.settings__control > .input, .settings__control > .seg { max-width: 320px; }
+.settings__stack { display: flex; flex-direction: column; gap: var(--s-2); width: min(360px, 100%); }
+.settings__foot { display: flex; justify-content: flex-end; padding-top: var(--s-4); }
+
+/* ── 侧栏宽度可拖：一直固定 248px，想往左挪一点都不行 ───────────────────── */
+.side { width: var(--sh-side, 248px); flex: 0 0 var(--sh-side, 248px); }
+.sh-resize {
+  position: absolute; top: 0; bottom: 0; width: 8px; z-index: 30;
+  cursor: col-resize; background: transparent; border: 0; padding: 0;
+  left: calc(var(--sh-side, 248px) - 4px);
+}
+.sh-resize:hover, .sh-resize[data-dragging="true"] { background: var(--accent-soft); }
+body[data-sidebar="collapsed"] .sh-resize { display: none; }
+.app { position: relative; }

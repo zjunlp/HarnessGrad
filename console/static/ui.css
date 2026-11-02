@@ -132,7 +132,7 @@
 
 /* ── 徽标 / 状态 ──────────────────────────────────────────────────── */
 .badge {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   font-size: var(--t-1); font-weight: 600; line-height: 1;
   padding: 3px 7px; border-radius: 999px;
   border: 1px solid var(--n-200); background: var(--n-50); color: var(--n-600);
@@ -222,3 +222,38 @@
 }
 .explain__list { margin: 0; padding-left: 18px; color: var(--n-700); font-size: var(--t-2); line-height: 1.6; }
 .explain__meta { margin-top: var(--s-3); font-size: var(--t-1); color: var(--n-400); font-family: var(--mono); }
+
+/* 深色：只换色阶。组件、页面、表格都不需要知道有这回事。 */
+:root[data-theme="dark"] {
+  --n-0: #17191e;
+  --n-25: #1c1f25;
+  --n-50: #22262d;
+  --n-100: #2a2f38;
+  --n-200: #343a45;
+  --n-300: #434a57;
+  --n-400: #6b7382;
+  --n-500: #98a0ae;
+  --n-600: #b7bec9;
+  --n-700: #d3d8e0;
+  --n-800: #e8ebf0;
+  --n-900: #f7f8fa;
+  --accent: #8aa4ff;
+  --accent-ink: #a9bcff;
+  --accent-soft: #202844;
+  --accent-line: #35406a;
+  --ok: #6ee7b7;  --ok-soft: #12271f;  --ok-line: #1f4a39;
+  --warn: #f5c26b; --warn-soft: #2a2113; --warn-line: #4a3a1c;
+  --bad: #fca5a5;  --bad-soft: #2b1616;  --bad-line: #4d2425;
+  --line: 1px solid var(--n-200);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .35);
+}
+:root[data-theme="dark"] body { background: #111318; color: var(--n-800); }
+:root[data-theme="dark"] .side, :root[data-theme="dark"] .main .topbar,
+:root[data-theme="dark"] .sh-bar { background: var(--n-25); }
+:root[data-theme="dark"] .card, :root[data-theme="dark"] .dialog,
+:root[data-theme="dark"] .settings { background: var(--n-0); }
+:root[data-theme="dark"] .main .col, :root[data-theme="dark"] .main .pad { background: var(--n-25); }
+/* 字号：一个变量，正文与表格跟随 */
+body { font-size: var(--sh-font-size, 13px); }
+.main table, .tbl { font-size: calc(var(--sh-font-size, 13px) - 1px); }

@@ -22,17 +22,16 @@
     </div>
   </aside>
 
-  <main class="main" style="display:grid;grid-template-columns:minmax(0,1fr) 360px;align-items:start">
-    <div style="min-width:0">
-      <div class="topbar">
-        <h1>重构工作区</h1>
-        <span class="sub">选版本 → 选中行 → 让助手按你的意见改；改动落成候选，跑不跑由你决定</span>
-        <span class="spacer"></span>
-        <span class="badge" id="dirty" hidden>未保存</span>
-        <button class="btn btn--sm" type="button" id="save">另存为候选</button>
-      </div>
-
-      <div class="workshop" style="max-width:100%;padding-top:14px">
+  <main class="main">
+    <div class="topbar">
+      <h1>重构工作区</h1>
+      <span class="sub">选版本 → 选中行 → 让助手按你的意见改；改动落成候选，跑不跑由你决定</span>
+      <span class="spacer"></span>
+      <span class="badge" id="dirty" hidden>未保存</span>
+      <button class="btn btn--sm" type="button" id="save">另存为候选</button>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:start">
+      <div class="workshop" style="max-width:100%;padding:14px 16px 24px">
         <div class="card">
           <div class="card__head">
             <span class="card__title">起点 / 候选</span>
@@ -59,9 +58,8 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <aside style="border-left:1px solid var(--n-200);background:var(--n-0);min-height:calc(100vh - 46px);padding:14px;display:flex;flex-direction:column;gap:12px">
+      <aside style="border-left:1px solid var(--n-200);background:var(--n-0);min-height:calc(100vh - 100px);padding:14px;display:flex;flex-direction:column;gap:12px;position:sticky;top:46px">
       <div class="hg-row" style="justify-content:space-between">
         <b style="font-size:var(--t-3)">助手</b>
         <select class="select" id="kind" style="width:auto">
@@ -93,7 +91,8 @@
         <pre class="wcmd hg-mono" id="trial-cmd" style="margin-top:8px">（选一个候选后生成）</pre>
         <p class="field__hint">平台不替你跑测量：它只把命令拼好、把参数解释清楚。</p>
       </details>
-    </aside>
+      </aside>
+    </div>
   </main>
 </div>
 <script src="/shell.js" defer></script>
