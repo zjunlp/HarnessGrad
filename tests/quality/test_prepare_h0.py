@@ -62,6 +62,12 @@ def test_a_complete_baseline_is_accepted(tmp_path):
     assert summary == {"score": 0.5, "n_tasks": 2, "h0_sha": "abc"}
 
 
+def test_matching_task_count_with_different_ids_is_refused(tmp_path):
+    run = _write_run(tmp_path, "h0-appworld-wrong-ids", per_task={"t1": 0.0, "t3": 1.0})
+    with pytest.raises(SystemExit, match="1 missing, 1 unexpected"):
+        prepare_h0.verify(run, None, 2, study_ids=["t1", "t2"])
+
+
 @pytest.mark.parametrize("kwargs, needle", [
     ({"per_task": {"t1": 0.0}, "invalid": {"t2": {"stage": "admission"}}, "n": 2}, "invalid"),
     ({"per_task": {"t1": 0.0}, "n": 2}, "1 tasks measured, the study set has 2"),
@@ -77,11 +83,19 @@ def test_a_holey_baseline_is_refused_not_published(tmp_path, kwargs, needle):
 
 
 def test_an_existing_baseline_is_reused_for_the_same_configuration(tmp_path):
-    config = {"dataset": "appworld", "study_ids_sha": "x", "n_study_ids": 2}
+    config = prepare_h0.configuration(_args(tmp_path, ["t1", "t2"]))
     run = _write_run(tmp_path, "h0-appworld-3", per_task={"t1": 0.0, "t2": 1.0},
                      config=config)
     found = prepare_h0.find_existing(config, tmp_path)
     assert found is not None and found[0] == run
+
+
+@pytest.mark.parametrize("measured", [["t1", "t3"], ["t1", "t2", "t3"]])
+def test_existing_baseline_must_measure_the_actual_study_set(tmp_path, measured):
+    config = prepare_h0.configuration(_args(tmp_path, ["t1", "t2"]))
+    _write_run(tmp_path, "h0-appworld-wrong-set", per_task=dict.fromkeys(measured, 0.5),
+               config=config)
+    assert prepare_h0.find_existing(config, tmp_path) is None
 
 
 def test_a_different_configuration_is_not_reused(tmp_path):
@@ -105,4 +119,74 @@ def test_dry_run_measures_the_baseline_and_nothing_else(tmp_path, capsys):
     printed = capsys.readouterr().out
     assert code == 0
     assert "--rounds 0" in printed and "--improver none" in printed
+    assert "--tasks t1,t2" in printed
     assert not (tmp_path / "runs").exists() or not list((tmp_path / "runs").glob("h0-*"))
+
+
+@pytest.mark.parametrize("contents, message", [
+    ("\n# no tasks\n", "no task ids"),
+    ("t1,t2\nt1\n", "duplicate task ids"),
+])
+def test_invalid_study_file_is_refused_before_launch(tmp_path, monkeypatch, contents, message):
+    ids = tmp_path / "ids.txt"
+    ids.write_text(contents)
+    def launch(*args, **kwargs):
+        pytest.fail("an invalid study file must not launch the driver")
+    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    with pytest.raises(SystemExit, match=message):
+        prepare_h0.main(["--dataset", "demo", "--study-ids", str(ids),
+                         "--runs-root", str(tmp_path / "runs")])
+    assert not (tmp_path / "runs").exists()
+
+
+@pytest.mark.parametrize("dataset", ["demo", "appworld", "alfworld"])
+def test_study_ids_are_forwarded_for_every_adapter(tmp_path, monkeypatch, dataset):
+    ids = tmp_path / "ids.txt"
+    ids.write_text("t1,t2\nt3\tt4\n")
+    captured = {}
+    def launch(command, **kwargs):
+        captured.update(command=command, env=kwargs["env"])
+        return prepare_h0.subprocess.CompletedProcess(command, 2)
+    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    with pytest.raises(SystemExit, match="H0 run failed"):
+        prepare_h0.main(["--dataset", dataset, "--study-ids", str(ids),
+                         "--runs-root", str(tmp_path / "runs")])
+    command = captured["command"]
+    assert command[command.index("--tasks") + 1] == "t1,t2,t3,t4"
+    assert captured["env"]["HG_APPWORLD_STUDY_IDS"] == str(ids.resolve())
+    assert captured["env"]["HG_ALFWORLD_STUDY_IDS"] == str(ids.resolve())
+
+
+def test_without_study_ids_the_driver_keeps_its_side(tmp_path, capsys):
+    assert prepare_h0.main(["--dataset", "demo", "--runs-root", str(tmp_path), "--dry-run"]) == 0
+    assert "--tasks" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("split", ["default", "official"])
+def test_explicit_split_is_forwarded_and_part_of_h0_identity(tmp_path, capsys, split):
+    declared = prepare_h0.configuration(_args(tmp_path))
+    selected = prepare_h0.configuration(_args(tmp_path, split=split))
+    assert selected == {**declared, "split": split}
+    assert prepare_h0.main(["--dataset", "demo", "--split", split,
+                            "--runs-root", str(tmp_path), "--dry-run"]) == 0
+    assert f"--split {split}" in capsys.readouterr().out
+
+
+def test_split_file_identity_uses_contents_instead_of_path(tmp_path):
+    split = tmp_path / "split.json"
+    copied = tmp_path / "copied.json"
+    split.write_text('{"train": ["t1"], "eval": ["t2"]}')
+    copied.write_bytes(split.read_bytes())
+    original = prepare_h0.configuration(_args(tmp_path, split=str(split)))
+    assert prepare_h0.configuration(_args(tmp_path, split=str(copied))) == original
+    split.write_text('{"train": ["t2"], "eval": ["t1"]}')
+    assert prepare_h0.configuration(_args(tmp_path, split=str(split))) != original
+
+
+def test_missing_split_file_is_refused_before_launch(tmp_path, monkeypatch):
+    def launch(*args, **kwargs):
+        pytest.fail("a missing split file must not launch the driver")
+    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    with pytest.raises(SystemExit, match="no such split file"):
+        prepare_h0.main(["--dataset", "demo", "--split", str(tmp_path / "missing.json"),
+                         "--runs-root", str(tmp_path / "runs")])

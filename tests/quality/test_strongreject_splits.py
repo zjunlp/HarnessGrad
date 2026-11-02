@@ -2,13 +2,18 @@
 from collections import Counter
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
 from console import submissions
+import driver
 from data.datasets import strongreject as dataset
 from data.scaffolds import registry
+from tools import prepare_h0
 from test_strongreject_dataset import endpoint, prepared
 from test_strongreject_scoring_identity import run_driver
 
@@ -49,6 +54,58 @@ def test_frozen_research_split_preserves_99_51_and_each_attack_family(prepared):
     assert registry.split_sha(split) == "a051b796242fb841353f968209c03016a8e7423d011dd9bd7db7d3460e3e6dbd"
     assert registry.validate_split("strongreject", tasks, split, split_groups=groups) == split
     assert all(set(task) == {"task_id", "goal", "inputs"} for task in tasks)
+
+
+@pytest.fixture
+def h0_selection(monkeypatch):
+    """Run the generated H0 command through the real driver, stopping before setup."""
+    class SelectedBeforeSetup(Exception):
+        pass
+    selected = []
+    def load_tasks(name, *, task_ids=None):
+        assert name == "strongreject"
+        selected.extend(task_ids)
+        raise SelectedBeforeSetup()
+    def launch(command, **kwargs):
+        with monkeypatch.context() as child:
+            child.setattr(sys, "argv", command[1:])
+            child.setattr(os, "environ", kwargs["env"])
+            return subprocess.CompletedProcess(command, driver._main({}))
+    monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    monkeypatch.setattr(driver, "load_env", lambda path: {})
+    monkeypatch.setattr(registry, "load_tasks", load_tasks)
+    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    return selected, SelectedBeforeSetup
+
+
+@pytest.mark.parametrize("split_mode", ["declared", "default", "file"])
+def test_h0_study_ids_select_99_tasks_before_setup(prepared, tmp_path, h0_selection, split_mode):
+    _, _, split = research_split(prepared)
+    ids = tmp_path / "study.txt"
+    ids.write_text("\n".join(split["train"]) + "\n")
+    if split_mode == "file":
+        path = tmp_path / "split.json"
+        path.write_text(json.dumps(split))
+        split_mode = str(path)
+    selected, stop = h0_selection
+    with pytest.raises(stop):
+        prepare_h0.main(["--dataset", "strongreject", "--split", split_mode,
+                         "--study-ids", str(ids), "--runs-root", str(tmp_path / "runs")])
+    assert len(selected) == 99
+    assert set(selected) == set(split["train"])
+    assert not set(selected) & set(split["eval"])
+    assert not list((tmp_path / "runs").glob("*/h0.json"))
+
+
+def test_h0_rejects_other_side_ids_before_setup(prepared, tmp_path, h0_selection, capsys):
+    _, _, split = research_split(prepared)
+    ids = tmp_path / "wrong-side.txt"
+    ids.write_text(split["eval"][0] + "\n")
+    with pytest.raises(SystemExit, match="H0 run failed"):
+        prepare_h0.main(["--dataset", "strongreject", "--split", "default",
+                         "--study-ids", str(ids), "--runs-root", str(tmp_path / "runs")])
+    assert h0_selection[0] == []
+    assert "not on the train side" in capsys.readouterr().err
 
 
 def test_old_task_id_default_is_rejected_for_crossing_36_original_requests(prepared):

@@ -22,9 +22,16 @@ on disk (two measurements of one state are two numbers, and picking either is a 
 can defend), and it refuses to *publish* a baseline with holes: fewer tasks than the study set, any
 invalid task, or no `h0_sha` is not a baseline.
 
+`--study-ids` is forwarded to the driver's `--tasks` selector for every dataset,
+before setup and H0 evaluation. Empty or duplicate-ID files are refused before
+launch; completed and reused baselines must match the actual study IDs.
+Use `--split default`, `--split official` or `--split <file.json>` to choose an
+explicit division; the default remains `declared`. Explicit split selections
+are included in H0 configuration identity, with JSON files identified by content.
+
 **What counts as the same configuration** is the dataset, the side, the study-id set (by content,
-not by path), the agent model and the endpoint. A different model or a different study set is a
-different H0, and the tool measures one rather than reusing.
+not by path), an explicitly selected split, the agent model and the endpoint. A different model
+or a different study set is a different H0, and the tool measures one rather than reusing.
 
 `--h0-from` copies the donor's point **and its `round0_traces`**, so every method's first input
 traces are the same traces too -- which matters for methods that read the traces rather than the

@@ -15,6 +15,8 @@ Usage:
         --study-ids ids.txt --jobs 32            # measure it
     python3 tools/prepare_h0.py --dataset appworld --side train \
         --study-ids ids.txt --dry-run            # print the command, run nothing
+    python3 tools/prepare_h0.py --dataset strongreject --split default \
+        --study-ids train-ids.txt --jobs 1       # use the explicit research split
 
 Output: the run id, the score, the task count, and the exact `--h0-from <id>` to pass to every
 study run. It refuses (rather than measuring again) when a valid H0 for the same configuration is
@@ -24,6 +26,7 @@ record can defend.
 The identity of "the same configuration" is (dataset, side, study-id set, agent model, endpoint):
 those are the things that make two baselines comparable. A different model or a different study
 set is a *different* H0, and the tool measures one instead of reusing.
+An explicit split selection is part of this identity too; split files are hashed by content.
 An opted-in adapter also includes its frozen scoring identity in this configuration.
 """
 from __future__ import annotations
@@ -55,21 +58,39 @@ def study_ids_from(path: pathlib.Path | None) -> list[str]:
             token = token.strip()
             if token and not token.startswith("#"):
                 ids.append(token)
+    if not ids:
+        raise SystemExit(f"study-ids file names no task ids: {path}")
+    if len(ids) != len(set(ids)):
+        raise SystemExit(f"study-ids file names duplicate task ids: {path}")
     return ids
 
 
-def configuration(args) -> dict:
+def study_ids_sha(ids) -> str | None:
+    return hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest() if ids else None
+
+
+def configuration(args, *, study_ids: list[str] | None = None) -> dict:
     """What makes two H0 measurements the same measurement."""
-    ids = study_ids_from(args.study_ids)
+    ids = study_ids_from(args.study_ids) if study_ids is None else study_ids
+    split = getattr(args, "split", "declared")
+    split_fields = {}
+    if split in ("default", "official"):
+        split_fields = {"split": split}
+    elif split != "declared":
+        path = pathlib.Path(split)
+        if not path.is_file():
+            raise SystemExit(f"no such split file: {path}")
+        split_fields = {"split": {"sha256": hashlib.sha256(path.read_bytes()).hexdigest()}}
     return {
         "dataset": args.dataset,
         "side": args.side,
         "n_study_ids": len(ids),
         # The *file contents*, not the path: two files with the same ids are the same study set.
-        "study_ids_sha": hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest() if ids else None,
+        "study_ids_sha": study_ids_sha(ids),
         "agent_model": args.model,
         "endpoint": args.endpoint,
         "trials": args.trials,
+        **split_fields,
         **scoring_identity.fields(scoring_identity.resolve(args.dataset)),
     }
 
@@ -111,11 +132,13 @@ def find_existing(config: dict, runs_root: pathlib.Path) -> tuple[pathlib.Path, 
         invalid = base.get("invalid") or {}
         if not per_task or invalid:
             continue
+        if config.get("study_ids_sha") is not None and study_ids_sha(per_task) != config["study_ids_sha"]:
+            continue
         return run, {"score": base.get("score"), "n_tasks": len(per_task)}
     return None
 
 
-def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None) -> dict:
+def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_ids=None) -> dict:
     """Refuse to call something an H0 unless it is a complete, valid measurement."""
     h0 = run / "h0.json"
     if not h0.is_file():
@@ -135,6 +158,10 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None) -> dict:
         problems.append("no per-task verdicts")
     if expected_ids and len(per_task) != expected_ids:
         problems.append(f"{len(per_task)} tasks measured, the study set has {expected_ids}")
+    if study_ids is not None and set(per_task) != set(study_ids):
+        problems.append("measured task ids differ from the study set "
+                        f"({len(set(study_ids) - set(per_task))} missing, "
+                        f"{len(set(per_task) - set(study_ids))} unexpected)")
     if invalid:
         problems.append(f"{len(invalid)} task(s) invalid -- an H0 with holes is not a baseline")
     if base.get("harness_failed"):
@@ -150,7 +177,9 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None) -> dict:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dataset", required=True)
-    ap.add_argument("--side", default="train")
+    ap.add_argument("--side", choices=("train", "eval"), default="train")
+    ap.add_argument("--split", default="declared",
+                    help="driver split: declared (default), default, official, or a JSON file")
     ap.add_argument("--study-ids", type=pathlib.Path, default=None,
                     help="file of task ids that defines the study set (optional)")
     ap.add_argument("--jobs", type=int, default=32)
@@ -162,12 +191,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
+    ids = study_ids_from(args.study_ids)
+    if args.split not in ("declared", "default", "official"):
+        args.split = str(pathlib.Path(args.split).resolve())
     if scoring_identity.provider_path(args.dataset).is_file():
         # Use the same effective configuration as the child driver. Do not import
         # data-heavy adapters merely to prepare an unopted dataset's dry run.
         from driver import load_env
         load_env(ROOT / ".env")
-    config = configuration(args)
+    config = configuration(args, study_ids=ids)
     args.runs_root.mkdir(parents=True, exist_ok=True)
     existing = find_existing(config, args.runs_root)
     if existing is not None:
@@ -180,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
     stamp = __import__("time").strftime("%Y%m%dT%H%M%SZ", __import__("time").gmtime())
     run_id = f"h0-{args.dataset}-{stamp}"
     command = [sys.executable, str(ROOT / "driver.py"),
-               "--harness", "loop", "--dataset", args.dataset, "--split", "declared",
+               "--harness", "loop", "--dataset", args.dataset, "--split", args.split,
                "--side", args.side, "--sampling", args.sampling,
                "--trials", str(args.trials), "--jobs", str(args.jobs),
                "--rounds", "0", "--improver", "none",
@@ -188,8 +220,11 @@ def main(argv: list[str] | None = None) -> int:
                "--work-root", f"/tmp/hg-h0-work/{run_id}"]
     env = dict(**__import__("os").environ)
     if args.study_ids:
-        env["HG_APPWORLD_STUDY_IDS"] = str(args.study_ids)
-        env["HG_ALFWORLD_STUDY_IDS"] = str(args.study_ids)
+        # Generic selection happens before setup and H0 evaluation in the driver.
+        # Keep the legacy knobs too: those adapters use them to construct their pool.
+        command.extend(["--tasks", ",".join(ids)])
+        env["HG_APPWORLD_STUDY_IDS"] = str(args.study_ids.resolve())
+        env["HG_ALFWORLD_STUDY_IDS"] = str(args.study_ids.resolve())
     if args.endpoint:
         env["HG_AGENT_BASE_URL"] = args.endpoint
     print(" ".join(command))
@@ -202,7 +237,8 @@ def main(argv: list[str] | None = None) -> int:
     run = args.runs_root / run_id
     if code != 0:
         raise SystemExit(f"the H0 run failed (rc={code}); see {log}")
-    summary = verify(run, args, config["n_study_ids"], scoring=config.get("scoring_identity"))
+    summary = verify(run, args, config["n_study_ids"], scoring=config.get("scoring_identity"),
+                     study_ids=ids if args.study_ids else None)
     # Stamp what the baseline *is* on the run's own meta, so the next invocation can recognise it
     # without re-deriving the configuration from paths.
     meta_path = run / "run_meta.json"

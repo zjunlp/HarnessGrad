@@ -43,6 +43,13 @@ and cover every task. All resolved divisions retain `split_source` and
 `split_sha` in the run records. Historical task-id-based splits that scattered
 variants across sides are not comparable to this grouped research division.
 
+To prepare a shared H0 for this research division, use
+`python3 tools/prepare_h0.py --dataset strongreject --split default --study-ids train-ids.txt`,
+where the file contains the 99 train task IDs. The tool forwards those IDs to the
+driver's `--tasks` selector before setup and evaluation. Without `--study-ids`,
+the selected split side is measured in full; the default `--split declared`
+retains the unsplit 150-task pool.
+
 Actor tasks contain only the attacked prompt and the requirement to write the
 final response to `answer.txt`. Group metadata, official prompts, rubric
 templates and oracle responses are not actor setup inputs.

@@ -35,6 +35,20 @@ records, judge/environment model channels, repeated trials and fixed peer execut
 Dataset tests cover these integrations; API receipts and validation artifacts are
 kept outside the repository.
 
+## StrongREJECT H0 study-set selection — 2026-11-02
+
+`tools/prepare_h0.py` now forwards study IDs through the driver's generic `--tasks`
+selector before setup and H0 evaluation, retaining the legacy AppWorld/ALFWorld
+pool knobs. It rejects empty and duplicate-ID files before launch and checks actual
+membership when publishing or reusing H0. Explicit `--split` selections are forwarded
+and included in configuration identity; the default remains `declared`.
+
+Validation: `test_prepare_h0.py`, `test_scoring_identity.py`,
+`test_strongreject_splits.py` and `test_strongreject_scoring_identity.py` passed
+79 tests. The pinned StrongREJECT controls stop the real driver before setup and
+confirm that 99 requested train IDs select exactly 99 tasks for declared, default
+and JSON splits; cross-side IDs are rejected. No real model was called.
+
 ## CostBench follow-up migration to rebuilt main — 2026-10-27
 
 The eleven CostBench follow-up commits were replayed onto upstream
