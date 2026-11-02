@@ -129,7 +129,11 @@ def test_worker_tokens_survive_unknown_call_counts(group, tmp_path, monkeypatch,
         assert "input_tokens" not in totals
     else:
         assert totals["input_tokens"] == 32
-    assert "calls" not in totals
+    # `calls` 现在**必须在**：适配器契约的最终 usage 记录是
+    # `{"calls": N, "input_tokens": ..., "output_tokens": ...}`，缺了它 cost accounting
+    # 只能数 token、数不了"几次模型调用"。这条测试原先断言它不存在，是契约长出这个字段
+    # 之前的写法；未知调用数的 worker 交 0，和 `input_tokens: null` 是两种不同的"不知道"。
+    assert totals["calls"] == 0
     assert result["worker_group"]["workers"]["bob"]["usage"] == usage["bob"]
 
 

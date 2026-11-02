@@ -41,8 +41,31 @@ from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import protocol                                             # noqa: E402
-from protocol import emit, read_request, require_api        # noqa: E402,F401
+def _sibling(name: str, *, private: str | None = None):
+    """Load `methods/<name>.py` under a private module name.
+
+    `import protocol` 在这里不安全：`sys.modules` 是**先于** `sys.path` 命中的，一旦同
+    一个进程里有人（CooperBench 的 `lib/protocol.py`）先把顶层名字 `protocol` 注册上，
+    `import protocol` 拿到的就是**它** —— `from protocol import emit` 于是 ImportError。
+    套件里实测到过；同样的名字碰撞在一个 method 进程里也可能发生（任何依赖带一个
+    `protocol.py` 就够）。
+    """
+    key = private or f"hg_method_{name}"
+    existing = sys.modules.get(key)
+    if existing is not None:
+        return existing
+    import importlib.util
+    path = Path(__file__).resolve().parent / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(key, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[key] = module
+    spec.loader.exec_module(module)
+    return module
+
+protocol = _sibling("protocol")                             # noqa: E402
+emit = protocol.emit                                        # noqa: E402
+read_request = protocol.read_request                        # noqa: E402
+require_api = protocol.require_api                          # noqa: E402
 # `methods/apply.py`, not `eval/candidate.py`: a method's sandbox hides the platform, so
 # an `import eval.*` here fails inside a run (`ModuleNotFoundError: No module named
 # 'eval'`) while passing every test that calls the editor directly. Measured, in a real
