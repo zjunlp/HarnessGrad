@@ -1,14 +1,14 @@
 # HarnessGrad 实验台 · hg-console
 
 一个以**只读观察**为主的 Web 控制台，用来在共享 Linux 机器上看真实的 run、真实的逐轮
-diff 和轨迹。独立的 `/chat.html` 提供对话与一个受服务端守卫保护的实验启动器；观察页仍然
-不修改实验，也不碰 `Study/HarnessGrad/`。
+diff 和轨迹。改 harness 走**编辑**屏（左：文件树与代码；右：与助手的对话），跑实验走
+**启动**屏（受服务端守卫保护）；观察页仍然不修改实验，也不碰 `Study/HarnessGrad/`。
 
-主界面三屏：**实验 / 轨迹 / 版本**；另有独立的**对话 / 跑实验**页。构造 Harness 和构造
-RSI 方法没有对应的写入后端，因此不在当前界面中冒充可用能力。
+主界面三屏：**实验 / 轨迹 / 版本**；另有**编辑 / 启动 / 评测**三屏，以及构造环境一侧的
+**场景 / 起草 / 导入**。
 
 > **边界规则：观察面只读，启动面必须先过守卫。**
-> 实验、轨迹、版本没有写操作；`POST /api/runs` 只从 `/chat.html` 的确认弹窗调用，并在预览
+> 实验、轨迹、版本没有写操作；`POST /api/runs` 只从 `/launch.html` 的确认弹窗调用，并在预览
 > 和真正起跑时共用同一套 driver、预算目录与参数守卫。界面里拿不到的数据一律显示 `—`
 > 或错误；不显示 0 冒充未知，不编造分数、行号或文件内容。
 
@@ -44,7 +44,8 @@ python3 server.py --port 4460
 
 | 地址 | 内容 |
 | --- | --- |
-| `/chat.html` | 对话；模型配置可用时回答问题，并提供带预检查和二次确认的实验启动器 |
+| `/launch.html` | 跑实验：填配置、看等效命令与服务端预检查，二次确认后 `POST /api/runs` |
+| `/harness.html` | 编辑：版本条 + 文件树 + 代码 + patch 面板，右侧是与助手的对话（可续接会话） |
 | `/#/runs` | 实验列表：研究（多轮）/ 单点测量 / 无曲线 / 全部；benchmark、harness、状态、搜索筛选 |
 | `/#/runs/<id>` | 深链接到某个 run；刷新、新标签页都保持同一 run |
 | `/#/trace[?run=<id>&round=<n>]` | 轨迹视图（主界面；挂载 `trace-view.js`，与 `/trace.html` 同一条轨迹） |
@@ -52,7 +53,7 @@ python3 server.py --port 4460
 | `/#/version?start=base` | 版本的基线起点（`base_harness/loop` 的只读文件） |
 | `/#/harness[/<run>/<round>]` | `#/version` 的别名（旧深链接，验收套件按它读） |
 | `/trace.html?run=<id>&round=<n>` | 轨迹的独立页（`#/trace` 的别名）；数据只来自 `roundN_traces/` 与 `verdicts/round-N/` |
-| `/#/chat`、`/#/lab*`、`/#/methods`、`/#/compare` | 旧 hash 路由 → 一律 `replaceState` 到 `#/runs`；对话入口是 `/chat.html` |
+| `/#/chat`、`/#/lab*`、`/#/methods`、`/#/compare` | 旧 hash 路由 → 一律 `replaceState` 到 `#/runs`；与助手的对话在编辑屏右侧 |
 
 侧栏的手动展开/收起偏好会跨页面保存；如果用户还没有选择过，宽度不超过 `640px` 的
 窄屏会默认收起侧栏，避免主内容被固定侧栏挤成不可用的窄列。
@@ -70,7 +71,9 @@ python3 server.py --port 4460
 | 删掉的东西 | 为什么 |
 | --- | --- |
 | 两张构造技能卡（`造 harness`、`提方法`）及其文件面板 | 没有创建/保存后端；只保留真正接通的对话与跑实验能力 |
-| 各观察屏里的 `送到实验` 面板和禁用启动按钮 | 启动入口统一放在 `/chat.html`，避免多个入口的参数和守卫漂移 |
+| 各观察屏里的 `送到实验` 面板和禁用启动按钮 | 启动入口统一放在 `/launch.html`，避免多个入口的参数和守卫漂移 |
+| 独立的对话页 `/chat.html` 与 `/api/chat`（含 `CHAT_SYSTEM` 提示词） | 助手已经并进编辑屏右侧（`/api/workbench/edit`，带候选上下文、可续接），再留一个没有入口的自由聊天页只是第二套实现 |
+| `console/CHAT.md` | 它描述的是那一页；起跑的守卫、预检查与启动账本已经在 README 的 API 一节 |
 | `M1…M4` 徽章、所有「M4 之后 / 等 M4 / 预览，不会执行」的句子 | 界面不该承诺路线图 |
 | `这次改动想做什么` 解释卡（`/api/explain` 的 UI） | 未配置时只显示「未配置」；端点留在 `server.py`，但**不在任何屏上使用** |
 | 文件面板的行选择 / 锚点 chip（`agent.py:120-133 · 14 行`） | 它只为一件事存在：标注一个将来才会用的 patch。带行号的只读代码视图保留 |
@@ -95,8 +98,8 @@ python3 server.py --port 4460
 
 ## API
 
-观察接口使用 `GET`，返回 JSON；读不到就是 `null`，不是 `0`。只有对话与经确认的实验启动
-使用 `POST`。
+观察接口使用 `GET`，返回 JSON；读不到就是 `null`，不是 `0`。只有经确认的实验启动、设置、
+编辑对话与场景起草使用 `POST`。
 
 ### `GET /api/launch/form`、`GET /api/launch/preview`
 
@@ -486,8 +489,8 @@ python3 server.py --port 4460
 ## 刻意没有的东西
 
 - **Harness / RSI 方法写入接口**：没有编辑器，也没有创建、保存或应用这些对象的 POST。
-- **观察屏里的模型调用**：实验、轨迹和版本页都不调用模型。`/api/explain` 仍未接界面；
-  只有 `/chat.html` 会在 `.local/llm.json` 已配置时调用模型。
+- **观察屏里的模型调用**：实验、轨迹和版本页都不调用模型。`/api/explain` 只在版本屏上
+  由人点「解释这一轮」时调用，编辑屏的助手走 `/api/workbench/edit`（同一个 CLI 适配器）。
 - **方法编辑 / 规则测试运行 / run 删除**：全部是写操作，不做。
 - **轨迹自动判定 / 分数重算**：只显示 `verdicts/` 里已有的判定，不在浏览器里重算。
 
@@ -495,7 +498,8 @@ python3 server.py --port 4460
 
 ## 边界与安全
 
-- 服务只监听 `127.0.0.1`。观察接口是 `GET`；写接口只有 `/api/chat` 和 `/api/runs`。
+- 服务只监听 `127.0.0.1`。观察接口是 `GET`；写接口只有 `/api/runs`、`/api/settings`、
+  `/api/workbench/edit`、`/api/harness/save` 与 `/api/author/*`，每一个都有自己的守卫。
 - `find_run` 拒绝 `.`、`..` 和含 `/` 的 id；`file`/`trace` 接口用 `resolve()` + 相对路径
   检查，路径穿越和符号链接逃逸返回 `404`。
 - 观察页不启动、不停止 driver。`POST /api/runs` 只有在 `guard_launch()` 通过后才启动；

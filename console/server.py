@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""实验台 · 观察 API、对话与受守卫保护的实验启动器。
+"""实验台 · 观察 API 与受守卫保护的实验启动器。
 
 三个刻意的限制，都是为了**不干扰正在跑的实验**：
 
-1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/chat.html`
+1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/launch.html`
    只有在服务端预检查通过且用户二次确认后才允许启动一次 run。
 2. **只绑 127.0.0.1**。它是这台机器上的工具，不是服务。
 3. **不缓存到磁盘**。列表只在内存里缓存 2 秒，避免边跑边看时反复读 299 个目录。
@@ -34,7 +34,6 @@
     /api/explain?run=<id>&round=<n>[&force=1]  [not surfaced] LLM 解释这一轮改动（只读；缓存）
 
 显式写接口（POST）：
-    /api/chat                       调用配置好的模型；不启动实验
     /api/runs                       经启动守卫检查后启动一次实验
 
 数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
@@ -627,14 +626,13 @@ def live_drivers_by_run() -> dict[str, dict]:
 #: key 只在服务端：浏览器拿到的是回复，不是凭证。缺这个文件时接口返回 503，
 #: 界面显示"未配置"，而不是假装能聊。
 LLM_CONFIG = ROOT / ".local" / "llm.json"
-#: The launcher's own configuration: the endpoint the *task agent* calls, and the endpoint the
-#: *chat* panel calls. Kept out of the repository (`.local/` is ignored) because both carry a key.
+#: 启动器自己的配置：*task agent* 调的那个端点，以及 *meta*（解释/助手）调的那个端点。
+#: 放在仓库外（`.local/` 已 gitignore），因为两个都带 key。
 SETTINGS = ROOT / ".local" / "settings.json"
 
 #: Two sides, two endpoints, and they are not the same thing: the task agent is the model the
-#: study's harness calls (a local VLLM server here), the chat panel is whatever model answers the
-#: operator (a hosted API). Merging them was how a launch could measure a different model than the
-#: form showed.
+#: study's harness 调的那个模型（这台机器上是本地 VLLM），meta 侧是回答操作者的那个模型
+#: （托管 API）。把两者合成一个，正是"启动测量到的模型和表单上写的不是同一个"的来源。
 SETTINGS_SIDES = ("task", "meta", "assistant")
 
 #: `chat` 是 2026-11-02 之前的名字：那一类其实是"Meta-Agent / 对话用的端点"。
@@ -718,101 +716,6 @@ def probe_endpoint(base_url: str, api_key: str) -> dict:
         return {"ok": False, "detail": f"{type(exc).__name__}: {str(exc)[:200]}"}
     names = [row.get("id") for row in (body.get("data") or []) if isinstance(row, dict)]
     return {"ok": True, "models": names[:40], "count": len(names)}
-
-CHAT_SYSTEM = """你是 HarnessGrad 实验台的助手。这个平台在一个共享机器上跑"改 harness"的实验:
-给定数据集与基线 harness,一个改进器(improver)多轮地改这个 harness,每轮用平台自己的
-评测在给定题集上打分。你只做两件事:
-
-1. 回答关于这些数据的问题(数据集有哪些、某个 run 是什么、曲线怎么读、H0 是什么)。
-2. 当用户想**跑一次实验**时,给出配置。不要描述步骤,直接输出一个 fenced 代码块:
-
-```skill
-{"dataset": "<名字>", "harness": "<名字>", "improver": "<名字>", "improver_model": "<模型>",
- "rounds": <1-20>, "jobs": <1-64>, "trials": <1-3>, "reason": "<一句话说明为什么这样配>"}
-```
-
-可用的值:
-  datasets: <<DATASETS>>
-  base harnesses: <<HARNESSES>>
-  improvers: <<IMPROVERS>>
-
-规则:
-- 用中文回答,简短。不要编造数字;不知道就说不知道。
-- 基线 harness 默认用 `loop`(平台的研究基线);只有用户明确要别的才换。
-- 改进器默认 `dsh`;轮数默认 10、并发默认 12、trials 默认 1,除非用户说了别的。
-- **你不需要执行权限**:起跑由平台上的人点两次确认完成。你的输出就是那份配置。
-- 只要用户表达了"想跑 / 训练 / 在某个数据集上试",就必须在回复里带上那个 ```skill 代码块
-  (可以先写一句解释),不要用自然语言描述步骤、也不要说"我无法直接跑"。
-- 起跑由人点两次确认,你只提供配置;不要声称已经启动。
-- 如果用户没说要跑,就不要输出 skill 块。
-"""
-
-
-def llm_config() -> dict | None:
-    """The chat side's endpoint: the settings file first, the old `.local/llm.json` as fallback."""
-    chat = load_settings()["chat"]
-    if chat.get("base_url") and chat.get("api_key"):
-        return chat
-    data = read_json(LLM_CONFIG)
-    if not data.get("api_key") or not data.get("base_url"):
-        return None
-    return data
-
-
-def api_chat(messages: list[dict]) -> tuple[int, dict]:
-    cfg = llm_config()
-    if not cfg:
-        return 503, {"error": "chat-not-configured",
-                     "detail": f"缺少 {LLM_CONFIG.relative_to(ROOT)}（base_url / model / api_key）"}
-    form = launch_form()
-    system = (CHAT_SYSTEM
-              .replace("<<DATASETS>>", ", ".join(a["name"] for a in form["datasets"]))
-              .replace("<<HARNESSES>>", ", ".join(form["harnesses"]))
-              .replace("<<IMPROVERS>>",
-                       ", ".join(f"{x['name']}({x['model'] or '模型自选'})" for x in form["improvers"])))
-    payload = {"model": cfg.get("model") or "gpt-6.1-sol",
-               "messages": [{"role": "system", "content": system}] + [
-                   {"role": str(m.get("role") or "user")[:12],
-                    "content": str(m.get("content") or "")[:8000]} for m in messages[-12:]],
-               "max_tokens": 700, "temperature": 0.2}
-    def call() -> dict:
-        request = urllib.request.Request(
-            cfg["base_url"].rstrip("/") + "/chat/completions",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Authorization": f"Bearer {cfg['api_key']}",
-                     "Content-Type": "application/json",
-                     # 这个网关按客户端特征筛请求；显式声明 UA 比让它猜稳。
-                     "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
-        with urllib.request.urlopen(request, timeout=90) as response:
-            return json.loads(response.read().decode("utf-8", "replace"))
-
-    body = None
-    last_error = ""
-    for _attempt in range(3):
-        if _attempt:
-            # 网关在连发时会用 403 挡一下（不是鉴权问题：同样的请求隔开几秒就 200）。
-            time.sleep(1.2 * _attempt)
-        try:
-            body = call()
-            break
-        except urllib.error.HTTPError as exc:
-            last_error = f"{exc.code}: {exc.read()[:300].decode('utf-8', 'replace')}"
-            if exc.code not in (403, 429, 502, 503):
-                break
-        except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
-            last_error = str(exc)[:300]
-            break
-    if body is None:
-        return 502, {"error": "model-unreachable", "detail": last_error}
-    try:
-        text = body["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
-        return 502, {"error": "model-shape", "detail": json.dumps(body)[:300]}
-    usage = body.get("usage") or {}
-    return 200, {"text": text or "", "model": body.get("model"),
-                 "usage": {k: usage.get(k) for k in ("prompt_tokens", "completion_tokens")}}
-
-
 
 def method_catalogue() -> list[dict]:
     """`methods/*/method.json` 的清单。没有 method.json 的目录不算一个可选方法。"""
@@ -971,7 +874,7 @@ def api_launch(form: dict) -> tuple[int, dict]:
                          env={**os.environ, **launch_env(form)})
     with LAUNCH_LOG.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                                 "run_id": run_id, "argv": argv, "by": "console chat"},
+                                 "run_id": run_id, "argv": argv, "by": "console /launch.html"},
                                 ensure_ascii=False) + "\n")
     return 202, {"run_id": run_id, "argv": argv, "log": str(log_path.relative_to(ROOT))}
 
@@ -4043,11 +3946,6 @@ class Handler(BaseHTTPRequestHandler):
                     return self._error("name query parameter is required", 400)
                 data = api_trace(parts[2], int(parts[4]), name)
                 return self._send(data) if data else self._send({"error": "not found"}, 404)
-            if parts[1:] == ["chat", "status"]:
-                cfg = llm_config()
-                return self._send({"configured": bool(cfg),
-                                   "model": (cfg or {}).get("model"),
-                                   "base_url": (cfg or {}).get("base_url")})
             if parts[1:] == ["launch", "form"]:
                 return self._send(launch_form())
             if parts[1:] == ["settings"]:
@@ -4236,17 +4134,6 @@ class Handler(BaseHTTPRequestHandler):
                 code, payload = author_import(archive, slug)
             finally:
                 archive.unlink(missing_ok=True)
-            return self._send(payload, code)
-        if route == "api/chat":
-            try:
-                length = int(self.headers.get("Content-Length") or 0)
-                body = json.loads((self.rfile.read(length) if length else b"{}").decode("utf-8") or "{}")
-                messages = body.get("messages")
-                if not isinstance(messages, list) or not messages:
-                    raise ValueError("messages must be a non-empty list")
-            except (ValueError, UnicodeDecodeError) as exc:
-                return self._send({"error": "bad-json", "detail": str(exc)}, 400)
-            code, payload = api_chat(messages)
             return self._send(payload, code)
         if route == "api/settings":
             body = self._json_body()

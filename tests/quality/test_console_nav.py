@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 STATIC = Path(__file__).resolve().parents[2] / "console" / "static"
-PAGES = ("index.html", "chat.html", "trace.html", "submit.html", "author.html",
+PAGES = ("index.html", "trace.html", "submit.html", "author.html",
          "harness.html", "launch.html")
 
 # 导入环境只在「构造环境」里有：它是造环境的一步，放在优化 Harness 里就是同一件事的
