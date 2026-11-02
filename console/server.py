@@ -2697,115 +2697,6 @@ def run_history(run_id: str, upto: int, since: int = 1) -> dict:
 
 
 
-# ── S1 结构图：模型只归类，行号由平台算 ────────────────────────────────────
-#
-# RSI 方法把改动都堆进一个文件（实测 20 轮 59.7 KB → 374 KB），要合并先得知道"哪些符号
-# 属于同一个概念"。**符号清单与行号由平台用 ast 算**，模型只回答"这些符号怎么分组、
-# 每组负责什么"——于是它的输出可以被机器校验：每个符号必须恰好被分到一组，不许发明。
-STRUCTURE_SYSTEM = """你在为一个 harness（一个 Python 程序）出结构图。用户给你符号清单\
-（每个符号的名字、类型、起止行、首行说明），以及文件行数。
-
-任务：把这些符号按**职责**分成 2 到 8 个概念块（例如"主循环"、"输出解析"、"上下文预算"、
-"提交协议"、"环境调用"），并给每个块一句中文职责。
-规则：
-1. 只输出 JSON：{"blocks": [{"name": "...", "role": "...", "symbols": ["名字", ...]}]}
-2. symbols 里的名字必须**原样**来自清单；每个名字只能出现一次；不许漏、不许造。
-3. 不要评价代码好坏，不要提改动建议 —— 这一步只描述现状。
-4. name 用中文短语（≤12 字），role 一句中文（≤40 字）。
-"""
-
-
-def harness_symbols(root: pathlib.Path) -> tuple[list[dict], int]:
-    """用 ast 数出符号与行号：`[(id, kind, start, end, doc)]` 与文件总行数。"""
-    import ast as pyast
-    symbols: list[dict] = []
-    total = 0
-    for path in sorted(root.glob("*.py")):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        lines = text.splitlines()
-        total += len(lines)
-        try:
-            tree = pyast.parse(text)
-        except SyntaxError:
-            continue
-        defs = (pyast.FunctionDef, pyast.AsyncFunctionDef, pyast.ClassDef)
-        for node in tree.body:
-            if not isinstance(node, defs):
-                continue                     # 顶层赋值/import 不是"符号"，也不许取 docstring
-            members = [(node, None)] + [
-                (child, node.name) for child in node.body if isinstance(child, defs)]
-            for item, parent in members:
-                # `get_docstring` 只对模块/类/函数成立；对 Expr 调用会抛 TypeError
-                # （实测：'Expr' can't have docstrings，整个请求 500）。
-                doc = (pyast.get_docstring(item) or "").strip().splitlines()
-                symbols.append({
-                    "id": f"{path.name}:{parent + '.' if parent else ''}{item.name}",
-                    "kind": "class" if isinstance(item, pyast.ClassDef) else "function",
-                    "start": item.lineno, "end": getattr(item, "end_lineno", item.lineno),
-                    "doc": (doc[0][:80] if doc else ""),
-                })
-    return symbols, total
-
-
-def workbench_structure(candidate: str, force: bool = False) -> tuple[int, dict]:
-    """出结构图。模型只归类；校验在平台这边做，不通过就把原因回传重问一次。"""
-    root = CANDIDATES / str(candidate)
-    if not CANDIDATE_NAME.fullmatch(str(candidate)) or not (root / "harness.json").is_file():
-        return 404, {"error": "candidate-not-found", "detail": str(candidate)}
-    symbols, total = harness_symbols(root)
-    if not symbols:
-        return 422, {"error": "no-symbols", "detail": "候选里没有可解析的 .py 符号"}
-    base_url, model, api_key, missing = explain_config()
-    if missing:
-        return 503, {"error": "explain-not-configured", "detail": "需要 agent 端点：" + "、".join(missing)}
-    listing = "\n".join(f"- {s['id']} [{s['kind']} {s['start']}-{s['end']}] {s['doc']}"
-                        for s in symbols)
-    user = (f"文件共 {total} 行，符号清单（共 {len(symbols)} 个）：\n{listing}")
-    known = {s["id"] for s in symbols}
-    reason = ""
-    for attempt in range(2):
-        system = STRUCTURE_SYSTEM if not reason else (
-            STRUCTURE_SYSTEM + "\n\n上一次的输出被拒绝：" + reason + "\n请修正后重新输出 JSON。")
-        try:
-            raw = _chat_completion(base_url, model, api_key, system, user)
-        except ExplainUpstream as exc:
-            return 502, {"error": "assistant-upstream", "detail": _clip(exc, 600)}
-        try:
-            data = json.loads(raw[raw.index("{"):raw.rindex("}") + 1])
-        except ValueError as exc:
-            reason = f"不是合法 JSON（{exc}）"
-            continue
-        blocks = data.get("blocks")
-        if not isinstance(blocks, list) or not blocks:
-            reason = "blocks 必须是非空数组"
-            continue
-        seen: list[str] = []
-        bad = []
-        for block in blocks:
-            if not isinstance(block, dict) or not block.get("name"):
-                bad.append("块缺少 name")
-                continue
-            for name in block.get("symbols") or []:
-                if name not in known:
-                    bad.append(f"清单里没有 {name!r}")
-                seen.append(name)
-        missing_syms = known - set(seen)
-        dupes = {n for n in seen if seen.count(n) > 1}
-        if bad or missing_syms or dupes:
-            reason = "；".join(bad + ([f"漏了 {sorted(missing_syms)[:4]}"] if missing_syms else [])
-                              + ([f"重复 {sorted(dupes)[:4]}"] if dupes else []))
-            continue
-        by_id = {s["id"]: s for s in symbols}
-        out = []
-        for block in blocks:
-            spans = sorted((by_id[n]["start"], by_id[n]["end"]) for n in block["symbols"])
-            out.append({"name": str(block["name"])[:24], "role": str(block.get("role") or "")[:80],
-                        "symbols": block["symbols"],
-                        "lines": [spans[0][0], max(e for _s, e in spans)] if spans else []})
-        return 200, {"candidate": candidate, "model": model, "file_lines": total,
-                     "symbol_count": len(symbols), "blocks": out, "attempts": attempt + 1}
-    return 422, {"error": "structure-refused", "detail": reason, "symbol_count": len(symbols)}
-
 def harness_candidate_from_round(run_id: str, round_no: int,
                                  replay: bool = False) -> tuple[int, dict]:
     """把某一轮的 harness 变成一个候选。没有现成快照时**按 diff 重放**出来。
@@ -4219,12 +4110,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"error": "bad-round"}, 400)
             code, payload = harness_candidate_from_round(
                 str(body.get("run") or ""), round_no, replay=bool(body.get("replay")))
-            return self._send(payload, code)
-        if route == "api/workbench/structure":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            code, payload = workbench_structure(str(body.get("candidate") or ""))
             return self._send(payload, code)
         if route == "api/workbench/edit":
             body = self._json_body()

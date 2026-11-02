@@ -182,53 +182,6 @@
   }
 
 
-  /* ── S1 结构图：模型归类，平台算行号并校验 ───────────────────────────────
-   * 输出是机器可校验的：每个符号恰好分到一组。点一个块，编辑器跳到它的行区间。
-   */
-  async function buildStructure() {
-    const list = $("structure-list");
-    const hint = $("structure-hint");
-    if (state.source === "base") { hint.textContent = "先把当前文件另存为候选"; return; }
-    hint.textContent = "模型在看符号与行号…";
-    $("structure-go").disabled = true;
-    try {
-      const response = await fetch("/api/workbench/structure", { method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidate: state.source }) });
-      const payload = await response.json();
-      if (!response.ok) {
-        hint.textContent = `${payload.error || "拒绝"}：${payload.detail || ""}`.slice(0, 160);
-        return;
-      }
-      hint.textContent = `${payload.blocks.length} 个概念块 · ${payload.symbol_count} 个符号 · ${payload.model}`;
-      list.innerHTML = payload.blocks.map((b) => `
-        <button type="button" class="hg-srcbar__row" data-lines="${b.lines.join(',')}">
-          <span class="hg-srcbar__name">${esc(b.name)}</span>
-          <span class="hg-srcbar__meta">${esc(b.role)}</span>
-          <span class="hg-srcbar__meta">行 ${b.lines[0]}–${b.lines[1]} · ${b.symbols.length} 符号</span>
-        </button>`).join("");
-      list.onclick = (event) => {
-        const button = event.target.closest("[data-lines]");
-        if (!button) return;
-        const [first, last] = button.dataset.lines.split(",").map(Number);
-        const area = $("editor");
-        const offsets = [0];
-        const lines = area.value.split(String.fromCharCode(10));
-        for (let i = 0; i < lines.length; i += 1) {
-          offsets.push(offsets[i] + lines[i].length + 1);
-        }
-        area.focus();
-        area.setSelectionRange(offsets[first - 1], offsets[Math.min(last, lines.length)]);
-        area.scrollTop = Math.max(0, (first - 12) * 18);
-        paintChips();
-      };
-    } catch (error) {
-      hint.textContent = `请求失败：${error.message}`;
-    } finally {
-      $("structure-go").disabled = false;
-    }
-  }
-
   /* S3 行为对照：只报数字。同一 run 的 r0 → 当前轮，逐题看 0→1 / 1→0。
    * 平台不评价"这次合并值不值"，那是作者的决定（docs/scenario-workspace.md）。 */
   async function compareRounds() {
@@ -408,7 +361,6 @@
         (node.hidden = node.dataset.panel !== button.dataset.tab));
     });
     $("patch-close").addEventListener("click", () => { $("patch-wrap").hidden = true; });
-    $("structure-go").addEventListener("click", buildStructure);
     $("compare-go").addEventListener("click", compareRounds);
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
