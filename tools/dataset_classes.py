@@ -331,6 +331,9 @@ EXPECTED_INTERACTION = {
     # Derived, not declared: the QA scaffold's shipped CLI exposes only answer submission, so
     # `classify()` reads `single_shot` off the program and this entry has to agree with it.
     "aime": "single_shot",
+    # 「起草」的示例场景没有 CLI（材料里只有一个坏函数和它自带的测试）：agent 改文件、
+    # 提交，检查器跑一次测试。程序侧读出来是 single_shot，这里声明同一个值。
+    "authored_example_fix_bug": "single_shot",
     "jericho": "closed_loop",
     "musique": "single_shot",
     "reasoning_gym": "single_shot",

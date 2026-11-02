@@ -22,12 +22,24 @@ import pathlib
 __all__ = ["load", "BundleError"]
 
 #: 检查器脚本：由模板生成，进 `VERIFY.inputs`，agent 结束后重新物化。
+#: 判决写到这个文件，而不是用退出码当分数。数据集契约里 `command` 检查器的判据是
+#: `reward_file`（INTERFACE.md「exit code is not the score」）：退出码还带着"脚本自己崩了"
+#: 这类信息，混进分数就分不清"题没做对"和"检查器没跑起来"。
+REWARD_REL = "verifier/reward.txt"
+
+#: 检查器脚本：由模板生成，进 `VERIFY.inputs`，agent 结束后重新物化。
 _CHECKER = '''\
 import json, pathlib, sys
+
+def report(score):
+    out = pathlib.Path("verifier")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "reward.txt").write_text(f"{score:g}\\n", encoding="utf-8")
+
 spec = json.loads(pathlib.Path(__file__).with_name("_hg_check.json").read_text(encoding="utf-8"))
 target = pathlib.Path(spec["path"])
 if not target.is_file():
-    print("missing:", spec["path"]); sys.exit(1)
+    print("missing:", spec["path"]); report(0.0); sys.exit(0)
 text = target.read_text(encoding="utf-8", errors="replace")
 mode = spec["mode"]
 if mode == "equals":
@@ -41,7 +53,30 @@ elif mode == "number_close":
         ok = False
 else:
     ok = False
-print("ok" if ok else f"{mode} failed for {spec['path']}"); sys.exit(0 if ok else 1)
+print("ok" if ok else f"{mode} failed for {spec['path']}")
+report(1.0 if ok else 0.0)
+'''
+
+#: `command_exit0` 的包装：跑作者给的那条命令，把它自己的退出码折成 1/0 写进 reward。
+#: 命令仍然是作者写的、仍然只用材料里的脚本，但分数走契约里的文件通道。
+_EXIT0 = '''\
+import json, pathlib, subprocess, sys
+
+def report(score):
+    out = pathlib.Path("verifier")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "reward.txt").write_text(f"{score:g}\\n", encoding="utf-8")
+
+spec = json.loads(pathlib.Path(__file__).with_name("_hg_exit0.json").read_text(encoding="utf-8"))
+try:
+    proc = subprocess.run(spec["argv"], capture_output=True, text=True, errors="replace",
+                          timeout=spec.get("timeout_s", 900))
+except (OSError, subprocess.TimeoutExpired) as exc:
+    print(f"check could not run: {exc}"); report(0.0); sys.exit(0)
+sys.stdout.write(proc.stdout or "")
+sys.stderr.write(proc.stderr or "")
+report(1.0 if proc.returncode == 0 else 0.0)
+sys.exit(0)
 '''
 
 TEXT_SUFFIXES = {".py", ".sh", ".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".toml",
@@ -104,6 +139,7 @@ def load(slug: str, authored_root: pathlib.Path | None = None) -> tuple[list[dic
             if template == "answer_number_close":
                 spec_json["tolerance"] = str(params["tolerance"])
             verify[task_id] = {"kind": "command", "argv": ["python3", "_hg_check.py"],
+                               "reward_file": "/" + REWARD_REL,
                                "inputs": [{"path": "_hg_check.py", "content": _CHECKER},
                                           {"path": "_hg_check.json",
                                            "content": json.dumps(spec_json, ensure_ascii=False)}]}
@@ -114,7 +150,13 @@ def load(slug: str, authored_root: pathlib.Path | None = None) -> tuple[list[dic
             referenced = [word for word in cmd if word.endswith((".py", ".sh"))]
             inputs = [{"path": name, "content": (materials / name).read_text(encoding="utf-8")}
                       for name in referenced if (materials / name).is_file()]
-            verify[task_id] = {"kind": "command", "argv": cmd, "inputs": inputs}
+            spec_exit0 = {"argv": cmd, "timeout_s": int(params.get("timeout_s") or 900)}
+            verify[task_id] = {"kind": "command", "argv": ["python3", "_hg_exit0.py"],
+                               "reward_file": "/" + REWARD_REL,
+                               "inputs": [{"path": "_hg_exit0.py", "content": _EXIT0},
+                                          {"path": "_hg_exit0.json",
+                                           "content": json.dumps(spec_exit0, ensure_ascii=False)}]
+                                         + inputs}
             continue
         raise BundleError(f"{slug}/{task_id}: 检查器模板 {template!r} 还不能编译"
                           "（tests_pass_ratio 未实现；宁可拒绝，也不要发布一个永远 0 分的检查器）")
@@ -137,12 +179,14 @@ def module_source(slug: str) -> str:
         'OFFICIAL_EVAL = None\n'
         'SPLIT_SOURCE = "authored bundle: every task in the bundle is scored"\n'
         f'TASKS, SETUP, VERIFY = _load_authored("{slug}")\n'
-        "ENV = {\"kind\": \"files\"}\n"
         'def load():\n'
         '    """The registry protocol: (tasks, scorable). Baked-in answers would be a\n'
         '    second source of truth; an authored bundle grades by its verifier.\n'
         '    """\n'
         '    return TASKS, {}\n'
+        # `ENV` 是**逐题**的映射（`{task_id: {...}}`），不是环境声明；写成
+        # `{"kind": "files"}` 会让 `registry.load_envs` 把它读成"有一个叫 kind 的题"并报错。
+        # 所有题共用同一个环境时由 `DEFAULT_ENV` 说，`ENV` 留空。
         'DEFAULT_ENV = {"kind": "files"}\n'
         f'DEFAULT_SPLIT = {{"by": "sha256(task_id)", "eval_fraction": 0.2}}\n'
     )

@@ -27,13 +27,25 @@ def test_the_built_in_example_compiles_to_tasks_setup_and_verify():
     assert "test_broken.py" in tasks[0]["goal"]
     assert {f["path"] for f in setup["t01"]["files"]} == {"broken.py", "test_broken.py"}
     assert verify["t01"]["kind"] == "command"
-    assert verify["t01"]["argv"] == ["python3", "test_broken.py"]
+    # 作者写的命令不再直接当 argv：它被一个包装脚本调用，判决写进 `reward_file`。
+    # 数据集契约里 `command` 检查器的分数来源是文件而不是退出码（退出码还要带着"检查
+    # 器自己崩了"这类信息，混进分数就分不清"题没做对"和"检查器没跑起来"）。
+    assert verify["t01"]["argv"] == ["python3", "_hg_exit0.py"]
+    assert verify["t01"]["reward_file"] == "/verifier/reward.txt"
+    spec = json.loads(next(i["content"] for i in verify["t01"]["inputs"]
+                           if i["path"] == "_hg_exit0.json"))
+    assert spec["argv"] == ["python3", "test_broken.py"]
 
 
 def test_the_checker_file_travels_with_verify_so_the_agent_cannot_edit_it():
-    """`VERIFY.inputs` 在 agent 停下之后重新物化；只把测试放材料里，agent 改掉就没人管了。"""
+    """`VERIFY.inputs` 在 agent 停下之后重新物化；只把测试放材料里，agent 改掉就没人管了。
+
+    包装脚本自带 `reward_file` 的写法，所以它必须进 `inputs`：agent 能改到材料里的
+    `test_broken.py` 也没用，检查器用的永远是平台重新物化的那一份。
+    """
     _tasks, _setup, verify = authored.load("example-fix-bug")
-    assert [i["path"] for i in verify["t01"]["inputs"]] == ["test_broken.py"]
+    assert [i["path"] for i in verify["t01"]["inputs"]] == [
+        "_hg_exit0.py", "_hg_exit0.json", "test_broken.py"]
 
 
 def test_a_published_dataset_is_loadable_through_the_registry():
@@ -45,6 +57,70 @@ def test_a_published_dataset_is_loadable_through_the_registry():
     tasks = loaded[0]
     assert [t["task_id"] for t in tasks] == ["t01"]
     assert loaded[1]["t01"]["files"]
+
+
+def _materialize(workdir: Path, files):
+    for entry in files:
+        target = workdir / entry["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(entry["content"], encoding="utf-8")
+
+
+def test_the_compiled_checker_scores_through_the_reward_file(tmp_path):
+    """把 SETUP/VERIFY 物化出来跑一遍：空手 0、参考解 1，分数从 `reward_file` 读。
+
+    这是"翻译对不对"之外唯一能证明编译结果真的可判定的测试：`--gates` 跑的是 bundle 里
+    作者那条命令，不是编译出来的 VERIFY，两者走的是不同的路。
+    """
+    import subprocess
+    from eval.verification import verifier
+
+    tasks, setup, verify = authored.load("example-fix-bug")
+    spec = verify["t01"]
+    _materialize(tmp_path, setup["t01"]["files"])
+    _materialize(tmp_path, spec["inputs"])
+
+    empty = verifier._verify(tmp_path, spec, "", sandbox=False, timeout_s=60)
+    assert (empty["score"], empty["passed"]) == (0.0, False), empty
+    assert (tmp_path / "verifier" / "reward.txt").read_text().strip() == "0"
+
+    oracle = (EXAMPLE / "oracle" / "t01.sh").read_text(encoding="utf-8")
+    ran = subprocess.run(["bash", "-c", oracle], cwd=tmp_path, capture_output=True, text=True)
+    assert ran.returncode == 0, ran.stdout + ran.stderr
+    solved = verifier._verify(tmp_path, spec, "", sandbox=False, timeout_s=60)
+    assert (solved["score"], solved["passed"]) == (1.0, True), solved
+    assert (tmp_path / "verifier" / "reward.txt").read_text().strip() == "1"
+
+
+def test_the_generated_file_checker_also_writes_a_numeric_reward(tmp_path):
+    """模板生成的检查器（`file_equals` 等）走同一条文件通道，分数不是退出码。"""
+    from eval.verification import verifier
+
+    bundle = tmp_path / "bundle"
+    (bundle / "materials" / "t01").mkdir(parents=True)
+    (bundle / "materials" / "t01" / "out.txt").write_text("wrong\n", encoding="utf-8")
+    (bundle / "oracle").mkdir()
+    (bundle / "oracle" / "t01.sh").write_text("printf 'right\\n' > out.txt\n", encoding="utf-8")
+    (bundle / "bundle.json").write_text(json.dumps({
+        "schema_version": 1, "slug": "bundle", "title": "t", "env": {"kind": "files"},
+        "split": {"by": "sha256(task_id)", "eval_fraction": 0.2}, "eval_visible_to_authors": True,
+        "tasks": [{"task_id": "t01", "goal": "写出 right", "materials": "materials/t01",
+                   "oracle": "oracle/t01.sh",
+                   "verifier": {"template": "file_equals",
+                                "params": {"path": "out.txt", "expected": "right"}}}]},
+        ensure_ascii=False), encoding="utf-8")
+
+    tasks, setup, verify = authored.load("bundle", authored_root=tmp_path)
+    spec = verify["t01"]
+    _materialize(tmp_path, setup["t01"]["files"])
+    _materialize(tmp_path, spec["inputs"])
+    assert spec["reward_file"] == "/verifier/reward.txt"
+    failed = verifier._verify(tmp_path, spec, "", sandbox=False, timeout_s=60)
+    assert (failed["score"], failed["passed"]) == (0.0, False), failed
+
+    (tmp_path / "out.txt").write_text("right\n", encoding="utf-8")
+    solved = verifier._verify(tmp_path, spec, "", sandbox=False, timeout_s=60)
+    assert (solved["score"], solved["passed"]) == (1.0, True), solved
 
 
 @pytest.fixture
