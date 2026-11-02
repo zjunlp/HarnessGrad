@@ -19,7 +19,9 @@ SCAFFOLDS = DATA / "scaffolds"
 
 # Independent, reviewed inventory: do not derive this expectation from discovery.
 EXPECTED_DATASETS = (
-    "agentdojo", "aime", "alfworld", "api_bank", "appworld", "bfcl_v3",
+    # `authored_example_fix_bug` 是控制台「起草」发布的示例场景：它是一个公开的适配器，
+    # 所以这份独立评审过的清单里也要有它（成员变化照样要评审，不从发现里派生）。
+    "agentdojo", "aime", "alfworld", "api_bank", "appworld", "authored_example_fix_bug", "bfcl_v3",
     "bird_minidev", "chessbench_puzzles", "cooperbench", "costbench", "costbench_dynamic", "ds1000", "fever", "gaia",
     "gsm8k", "hotpotqa", "jericho", "kumo", "livecodebench", "locomo",
     "memoryagentbench", "musique", "nestful", "personamem_v2",

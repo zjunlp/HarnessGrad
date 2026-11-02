@@ -677,7 +677,13 @@ def save_settings(payload: dict) -> dict:
     current = load_settings()
     merged = {}
     for side in SETTINGS_SIDES:
-        incoming = payload.get(side) or {}
+        # 旧名字也要落到新分节上。`SETTINGS_ALIASES` 的注释说"写的时候只写新名字"，但
+        # 直接忽略 `chat` 块不是改名，是**丢掉**它：一个还在用旧名字的调用方保存成功、
+        # 页面却还是空的。`load_settings` 读文件时接受旧名字，写也应当接受。
+        incoming = {key: value for alias, canonical in SETTINGS_ALIASES.items()
+                    if canonical == side
+                    for key, value in (payload.get(alias) or {}).items()}
+        incoming.update(payload.get(side) or {})
         block = dict(current[side])
         for key in ("base_url", "api_key", "model"):
             value = str(incoming.get(key) or "").strip()

@@ -163,11 +163,15 @@ def test_the_ui_view_never_carries_the_key(tmp_path, monkeypatch):
     """页面只该知道「有没有配」，不该知道值。"""
     module = _console()
     monkeypatch.setattr(module, "SETTINGS", tmp_path / "settings.json")
+    # 这一侧在 2026-11-02 从 `chat` 改名成 `meta`（那一类其实是"Meta-Agent / 对话用的
+    # 端点"）：写入仍然接受旧名字（`SETTINGS_ALIASES`），UI 只看新名字。先按旧名字写一份，
+    # 证明别名落到了新分节上，再按新名字断言"页面只该知道有没有配，不该知道值"。
     module.save_settings({"chat": {"base_url": "https://example.invalid/v1",
                                    "model": "x", "api_key": "sk-secret-value"}})
     view = module.settings_for_ui()
-    assert "api_key" not in view["chat"]
-    assert view["chat"]["api_key_set"] is True
+    assert "chat" not in view
+    assert "api_key" not in view["meta"]
+    assert view["meta"]["api_key_set"] is True
     assert "sk-secret-value" not in repr(view)
 
 
