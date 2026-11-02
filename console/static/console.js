@@ -1777,6 +1777,15 @@
       alert("先选一个实验和一轮：基线没有对应的 harness 版本。");
       return;
     }
+    // 服务器给每一行带了 rounds_stored / diffs_stored：两者都为 0 的 run，曲线上的轮次
+    // 在磁盘上并不存在（既没有快照也没有补丁），点下去必然失败 —— 提前说出来。
+    if (!(state.rows || []).length) { try { await loadRuns({ render: false }); } catch { /* 照旧 */ } }
+    const row = (state.rows || []).find((r) => r.id === state.hRun);
+    if (row && !row.rounds_stored && !row.diffs_stored) {
+      const hint = document.getElementById("h-start-hint");
+      if (hint) hint.textContent = "这个 run 没有留任何一轮的快照或补丁：曲线上的轮次在磁盘上不存在，无法重建。";
+      return;
+    }
     editButton.disabled = true;
     editButton.textContent = "复制中…";
     try {
