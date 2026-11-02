@@ -73,8 +73,8 @@ def main() -> int:
         # ── 编辑：版本列表、默认选中、文件树可读 ────────────────────────────
         page.goto(base + f"/harness.html?candidate={RUN}-r20", wait_until="networkidle")
         page.wait_for_timeout(1600)
-        check(page.eval_on_selector_all(".hg-src__row", "e => e.length") >= 1, "版本列表有行")
-        selected = page.eval_on_selector_all(".hg-src__row[aria-selected='true']",
+        check(page.eval_on_selector_all(".hg-srcbar__row", "e => e.length") >= 1, "版本列表有行")
+        selected = page.eval_on_selector_all(".hg-srcbar__row[aria-selected='true']",
                                              "els => els.map(e => e.dataset.source)")
         check(bool(selected), f"有一个版本被选中（{selected}）")
         check("读取失败" not in page.inner_text("#files"), "文件树读得出来")
