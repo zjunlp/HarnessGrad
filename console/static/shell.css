@@ -506,3 +506,57 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
   font-size: var(--t-2);
 }
 .submit-error:not([data-visible="true"]) { display: none; }
+
+/* ── 轨迹屏：接到设计系统上 ──────────────────────────────────────────────
+ * 这一屏的标记由 trace-view.js 生成，样式写在 app.css 的 `.trace-root` 下。它在浅色下
+ * 可用，但深色下 `.bar` 与 `.task` 还是纯白（实测 rgb(255,255,255)）—— 因为那几条规则
+ * 用的是 `--hg-alias-*`，而深色只换了我这套 `--n-*`。
+ * 这里把它按 token 重画：字号跟 `--t-*`、圆角跟 `--r-*`、边界跟 `--line`，两套主题都成立。
+ */
+.trace-root { background: var(--n-25); }
+.trace-root .bar {
+  background: var(--n-0); border-bottom: var(--line); padding: 10px 16px; gap: 8px;
+}
+.trace-root .bar-title { font-size: var(--t-3); color: var(--n-900); }
+.trace-root .bar select, .trace-root .bar input {
+  font-size: var(--t-2); padding: 6px 9px; border-radius: var(--r-1);
+  border: 1px solid var(--n-300); background: var(--n-0); color: var(--n-900);
+}
+.trace-root .bar .chip {
+  font-size: var(--t-1); padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--n-200); background: var(--n-0); color: var(--n-600);
+}
+.trace-root .bar .chip[aria-pressed="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink);
+  font-weight: 600;
+}
+.trace-root .trace-list { border-right: var(--line); background: var(--n-0); }
+.trace-root .task {
+  border-radius: var(--r-1); font-size: var(--t-2); color: var(--n-800);
+  border-color: transparent;
+}
+.trace-root .task:hover { background: var(--n-50); }
+.trace-root .task[aria-current="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink);
+}
+.trace-root .task .tid { font-size: var(--t-1); color: var(--n-500); }
+.trace-root .task .sc { background: var(--n-100); color: var(--n-600); }
+.trace-root .step-card {
+  border: var(--line); border-radius: var(--r-2); background: var(--n-0);
+}
+.trace-root .step-head {
+  border-bottom: var(--line); padding: 8px 12px; font-size: var(--t-1); color: var(--n-500);
+}
+.trace-root .step-no { font-size: var(--t-2); color: var(--n-800); }
+.trace-root .reply { padding: 10px 12px; font-size: var(--t-2); color: var(--n-800); line-height: 1.6; }
+.trace-root .reply.cmd { background: var(--n-25); }
+.trace-root .cmd { border-top: 1px dashed var(--n-200); padding: 10px 12px; }
+.trace-root .cmd-line { font-size: var(--t-1); color: var(--n-700); }
+.trace-root .out {
+  background: var(--n-25); border: var(--line); border-radius: var(--r-1);
+  font-size: 11px; padding: 10px 12px; color: var(--n-700);
+}
+.trace-root .env { color: var(--n-500); }
+.trace-root .vhead { padding: 16px 18px 0; }
+.trace-root .empty-title { color: var(--n-800); }
+.trace-root .empty-sub { color: var(--n-500); }
