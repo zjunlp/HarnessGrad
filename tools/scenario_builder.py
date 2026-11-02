@@ -496,6 +496,29 @@ def gates(root: pathlib.Path) -> dict:
     return {"ok": all(row["ok"] for row in rows), "tasks": rows}
 
 
+def publish(root: pathlib.Path) -> dict:
+    """把一个通过三道门的 bundle 登记成一个数据集适配器。
+
+    写出的 `data/datasets/authored_<slug>.py` 不含数据，只有一句 `load(slug)`：内容的
+    唯一来源永远是 `data/authored/<slug>/bundle.json`，所以改题不会出现两份真相。
+    """
+    root = pathlib.Path(root)
+    gate = gates(root)
+    if not gate.get("ok"):
+        raise BundleInvalid(["三道门未通过，不能发布："
+                             + "；".join(f"{r['task_id']} oracle={r['oracle_passes']} "
+                                        f"empty_fails={r['empty_fails']}" for r in gate.get("tasks") or [])])
+    slug = root.name
+    module = f"authored_{re.sub(r'[^A-Za-z0-9_]', '_', slug)}"
+    target = pathlib.Path(__file__).resolve().parents[1] / "data" / "datasets" / f"{module}.py"
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+    from data.scaffolds.authored import load, module_source          # noqa: PLC0415
+    tasks, setup, verify = load(slug)                                 # 先证明它编译得动
+    target.write_text(module_source(slug), encoding="utf-8")
+    return {"module": target.stem, "dataset": module, "path": str(target),
+            "tasks": len(tasks), "verifiers": sorted({v["kind"] for v in verify.values()})}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -505,6 +528,8 @@ def main() -> int:
     ap.add_argument("--draft", type=pathlib.Path, help="自然语言说明文件")
     ap.add_argument("--materials", type=pathlib.Path)
     ap.add_argument("--gates", type=pathlib.Path, help="跑三道门：oracle 必须 1.0、空手必须 0、两次一致")
+    ap.add_argument("--publish", type=pathlib.Path,
+                    help="登记成数据集：写 data/datasets/authored_<slug>.py")
     ap.add_argument("--json", action="store_true", help="机器可读输出")
     args = ap.parse_args()
 
@@ -542,6 +567,12 @@ def main() -> int:
                 for problem in result.get("problems") or []:
                     print(f"  - {problem}")
             return 0 if result["ok"] else 1
+        if args.publish:
+            result = publish(args.publish)
+            print(json.dumps(result, ensure_ascii=False, indent=1) if args.json else
+                  f"published {result['dataset']} -> {result['path']} "
+                  f"({result['tasks']} tasks, {result['verifiers']})")
+            return 0
         if args.draft:
             result = draft(args.draft.read_text(encoding="utf-8"), args.materials, args.out)
             print(json.dumps(result, ensure_ascii=False, indent=1) if args.json

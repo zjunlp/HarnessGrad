@@ -1,0 +1,16 @@
+"""由 `tools/scenario_builder.py --publish` 生成；改内容请改 `data/authored/example-fix-bug/bundle.json`，不要改这里。"""
+from data.scaffolds.authored import load as _load_authored
+
+KIND = "authored"
+ORACLE_SOURCE = "authored"
+ORACLE_VALIDATED_BY = "tools/scenario_builder.py --gates (oracle / empty / deterministic)"
+ORACLE_COVERAGE = "all tasks"
+TASKS, SETUP, VERIFY = _load_authored("example-fix-bug")
+ENV = {"kind": "files"}
+def load():
+    """The registry protocol: (tasks, scorable). Baked-in answers would be a
+    second source of truth; an authored bundle grades by its verifier.
+    """
+    return TASKS, {}
+DEFAULT_ENV = {"kind": "files"}
+DEFAULT_SPLIT = {"by": "sha256(task_id)", "eval_fraction": 0.2}
