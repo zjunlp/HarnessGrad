@@ -2380,16 +2380,50 @@ CANDIDATE_NAME = re.compile(r"[A-Za-z0-9._-]{1,48}")
 ASSISTANT_KINDS = ("codex", "dsh", "opencode", "miniswe", "miniagent", "openclaw")
 
 
-def _assistant_argv(env: dict) -> list[str]:
-    """助手进程的命令行。默认 codex，可用 HG_CONSOLE_ASSISTANT_CMD 换任意一个 CLI。"""
+ASSISTANT_THREADS = pathlib.Path(os.environ.get(
+    "HG_CONSOLE_ASSISTANT_THREADS", PLATFORM_ROOT / ".local" / "assistant-threads.json"))
+
+
+
+def force_new_thread() -> bool:
+    """本次请求要不要开新会话。用模块级变量而不是全局配置：它是一次调用的性质。"""
+    return bool(_FORCE_NEW_THREAD.get("value"))
+
+
+_FORCE_NEW_THREAD = {"value": False}
+
+def _threads() -> dict:
+    data = read_json(ASSISTANT_THREADS)
+    return data if isinstance(data, dict) else {}
+
+
+def _remember_thread(candidate: str, thread: str) -> None:
+    data = _threads()
+    data[candidate] = thread
+    ASSISTANT_THREADS.parent.mkdir(parents=True, exist_ok=True)
+    ASSISTANT_THREADS.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n",
+                                 encoding="utf-8")
+
+
+def _assistant_argv(env: dict, thread: str | None = None) -> list[str]:
+    """助手进程的命令行。**有会话就 resume**，否则新开一个并记住 thread id。
+
+    为什么必须这样：每条消息都新开一个 `codex exec` 时，模型看到的是一句孤立的话，
+    于是它回"我会先对照当前代码和各轮补丁…"——一段计划——然后进程结束，面板看起来像
+    停住了。成熟的做法（Copilot/Cursor 的 agent 模式）是一条**持续的会话**：模型→工具→
+    模型直到它自己停下。codex 的 `exec resume <thread>` 就是那个会话。
+    """
     configured = shlex.split(env.get("HG_CONSOLE_ASSISTANT_CMD", ""))
     if configured:
         return configured
     codex = env.get("HG_ASSISTANT_CODEX") or shutil.which("codex")
     if not codex:
         raise ValueError("没有可用的助手 CLI：设置 HG_CONSOLE_ASSISTANT_CMD，或把 codex 装上")
-    return [codex, "exec", "--json", "--ephemeral", "--skip-git-repo-check",
-            "--dangerously-bypass-approvals-and-sandbox"]
+    common = ["--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"]
+    if thread:
+        return [codex, "exec", "resume", thread, *common]
+    # 不再用 `--ephemeral`：它意味着"不落会话"，于是下一条消息又回到孤立提问。
+    return [codex, "exec", *common]
 
 
 def _snapshot(root: pathlib.Path) -> dict[str, str]:
@@ -2428,8 +2462,9 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
         env["HG_AGENT_MODEL"] = settings["model"]
     if settings.get("api_key"):
         env["HG_AGENT_API_KEY"] = settings["api_key"]
+    thread = _threads().get(str(name)) if not force_new_thread() else None
     try:
-        argv = _assistant_argv(env)
+        argv = _assistant_argv(env, thread)
     except ValueError as exc:
         shutil.rmtree(target, ignore_errors=True)
         return 503, {"error": "assistant-not-configured", "detail": str(exc)}
@@ -2437,11 +2472,47 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
     if selection.strip():
         prompt += ("\n\n下面是这次要看的范围（行号是文件里的真实行号，不要改动范围之外的内容）：\n"
                    + selection.strip())
-    try:
-        done = subprocess.run(argv + ["-C", str(target), "-"], input=prompt, cwd=str(target),
-                              capture_output=True, text=True, timeout=1800, env=env)
-    except subprocess.TimeoutExpired:
+
+    def run_turn(text: str):
+        """一轮 = 一次 CLI 调用；返回 (完成对象, 助手说的话, thread id)。"""
+        try:
+            done = subprocess.run(argv + ["-C", str(target), "-"], input=text, cwd=str(target),
+                                  capture_output=True, text=True, timeout=1800, env=env)
+        except subprocess.TimeoutExpired:
+            return None, "", ""
+        said, tid = "", ""
+        for line in (done.stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "thread.started":
+                tid = str(event.get("thread_id") or tid)
+            item = event.get("item")
+            if isinstance(item, dict) and item.get("type") == "agent_message" and item.get("text"):
+                said = str(item["text"])
+        return done, said, tid
+
+    done, said, tid = run_turn(prompt)
+    if done is None:
         return 504, {"error": "assistant-timeout", "candidate": target.name}
+    if tid:
+        _remember_thread(str(name), tid)
+    continued = False
+    # **只说计划、没动文件**：同一个会话里催一次，而不是把"停住"当成回答。
+    touched_before_continue = _snapshot(target) != before
+    if not touched_before_continue and done.returncode == 0:
+        argv = _assistant_argv(env, _threads().get(str(name)))
+        done2, said2, tid2 = run_turn(
+            "继续执行：不要再复述计划，直接在仓库里改文件，改完用一句话说明改了什么。")
+        if done2 is not None and done2.returncode == 0:
+            continued = True
+            if said2:
+                said = said2
+            if tid2:
+                _remember_thread(str(name), tid2)
     after = _snapshot(target)
     diff, changed = [], []
     for path in sorted(set(before) | set(after)):
@@ -2451,17 +2522,6 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
         diff.extend(difflib.unified_diff((before.get(path) or "").splitlines(True),
                                          (after.get(path) or "").splitlines(True),
                                          fromfile=f"a/{path}", tofile=f"b/{path}", n=2))
-    # 助手这一轮说了什么。`codex exec --json` 把回复放在 `item.completed` 的
-    # `agent_message.text` 里；没有改文件时，这一段就是"讨论"本身，不能丢。
-    said = ""
-    for line in (done.stdout or "").splitlines():
-        try:
-            event = json.loads(line)
-        except ValueError:
-            continue
-        item = event.get("item") if isinstance(event, dict) else None
-        if isinstance(item, dict) and item.get("type") == "agent_message" and item.get("text"):
-            said = str(item["text"])
     if not changed:
         shutil.rmtree(target, ignore_errors=True)
         return 200, {"candidate": None, "changed": [], "diff": "",
@@ -2481,6 +2541,7 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
     return 200, {"candidate": target.name, "changed": changed,
                  "diff": "".join(diff)[:20000], "exit": done.returncode,
                  "message": said, "syntax": syntax,
+                 "session": _threads().get(str(name)), "continued": continued,
                  "stderr_tail": (done.stderr or "")[-600:]}
 
 
@@ -2588,6 +2649,114 @@ def run_history(run_id: str, upto: int, since: int = 1) -> dict:
                      "patch": patch, "stored": patch_path.is_file()})
     return {"run": run_id, "from": since, "to": upto, "rounds": rows}
 
+
+
+# ── S1 结构图：模型只归类，行号由平台算 ────────────────────────────────────
+#
+# RSI 方法把改动都堆进一个文件（实测 20 轮 59.7 KB → 374 KB），要合并先得知道"哪些符号
+# 属于同一个概念"。**符号清单与行号由平台用 ast 算**，模型只回答"这些符号怎么分组、
+# 每组负责什么"——于是它的输出可以被机器校验：每个符号必须恰好被分到一组，不许发明。
+STRUCTURE_SYSTEM = """你在为一个 harness（一个 Python 程序）出结构图。用户给你符号清单\
+（每个符号的名字、类型、起止行、首行说明），以及文件行数。
+
+任务：把这些符号按**职责**分成 2 到 8 个概念块（例如"主循环"、"输出解析"、"上下文预算"、
+"提交协议"、"环境调用"），并给每个块一句中文职责。
+规则：
+1. 只输出 JSON：{"blocks": [{"name": "...", "role": "...", "symbols": ["名字", ...]}]}
+2. symbols 里的名字必须**原样**来自清单；每个名字只能出现一次；不许漏、不许造。
+3. 不要评价代码好坏，不要提改动建议 —— 这一步只描述现状。
+4. name 用中文短语（≤12 字），role 一句中文（≤40 字）。
+"""
+
+
+def harness_symbols(root: pathlib.Path) -> tuple[list[dict], int]:
+    """用 ast 数出符号与行号：`[(id, kind, start, end, doc)]` 与文件总行数。"""
+    import ast as pyast
+    symbols: list[dict] = []
+    total = 0
+    for path in sorted(root.glob("*.py")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        lines = text.splitlines()
+        total += len(lines)
+        try:
+            tree = pyast.parse(text)
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            members = [(node, None)]
+            if isinstance(node, (pyast.FunctionDef, pyast.AsyncFunctionDef, pyast.ClassDef)):
+                members = [(node, None)] + [
+                    (child, node.name) for child in node.body
+                    if isinstance(child, (pyast.FunctionDef, pyast.AsyncFunctionDef))]
+            for item, parent in members:
+                doc = (pyast.get_docstring(item) or "").strip().splitlines()
+                symbols.append({
+                    "id": f"{path.name}:{parent + '.' if parent else ''}{item.name}",
+                    "kind": "class" if isinstance(item, pyast.ClassDef) else "function",
+                    "start": item.lineno, "end": getattr(item, "end_lineno", item.lineno),
+                    "doc": (doc[0][:80] if doc else ""),
+                })
+    return symbols, total
+
+
+def workbench_structure(candidate: str, force: bool = False) -> tuple[int, dict]:
+    """出结构图。模型只归类；校验在平台这边做，不通过就把原因回传重问一次。"""
+    root = CANDIDATES / str(candidate)
+    if not CANDIDATE_NAME.fullmatch(str(candidate)) or not (root / "harness.json").is_file():
+        return 404, {"error": "candidate-not-found", "detail": str(candidate)}
+    symbols, total = harness_symbols(root)
+    if not symbols:
+        return 422, {"error": "no-symbols", "detail": "候选里没有可解析的 .py 符号"}
+    base_url, model, api_key, missing = explain_config()
+    if missing:
+        return 503, {"error": "explain-not-configured", "detail": "需要 agent 端点：" + "、".join(missing)}
+    listing = "\n".join(f"- {s['id']} [{s['kind']} {s['start']}-{s['end']}] {s['doc']}"
+                        for s in symbols)
+    user = (f"文件共 {total} 行，符号清单（共 {len(symbols)} 个）：\n{listing}")
+    known = {s["id"] for s in symbols}
+    reason = ""
+    for attempt in range(2):
+        system = STRUCTURE_SYSTEM if not reason else (
+            STRUCTURE_SYSTEM + "\n\n上一次的输出被拒绝：" + reason + "\n请修正后重新输出 JSON。")
+        try:
+            raw = _chat_completion(base_url, model, api_key, system, user)
+        except ExplainUpstream as exc:
+            return 502, {"error": "assistant-upstream", "detail": _clip(exc, 600)}
+        try:
+            data = json.loads(raw[raw.index("{"):raw.rindex("}") + 1])
+        except ValueError as exc:
+            reason = f"不是合法 JSON（{exc}）"
+            continue
+        blocks = data.get("blocks")
+        if not isinstance(blocks, list) or not blocks:
+            reason = "blocks 必须是非空数组"
+            continue
+        seen: list[str] = []
+        bad = []
+        for block in blocks:
+            if not isinstance(block, dict) or not block.get("name"):
+                bad.append("块缺少 name")
+                continue
+            for name in block.get("symbols") or []:
+                if name not in known:
+                    bad.append(f"清单里没有 {name!r}")
+                seen.append(name)
+        missing_syms = known - set(seen)
+        dupes = {n for n in seen if seen.count(n) > 1}
+        if bad or missing_syms or dupes:
+            reason = "；".join(bad + ([f"漏了 {sorted(missing_syms)[:4]}"] if missing_syms else [])
+                              + ([f"重复 {sorted(dupes)[:4]}"] if dupes else []))
+            continue
+        by_id = {s["id"]: s for s in symbols}
+        out = []
+        for block in blocks:
+            spans = sorted((by_id[n]["start"], by_id[n]["end"]) for n in block["symbols"])
+            out.append({"name": str(block["name"])[:24], "role": str(block.get("role") or "")[:80],
+                        "symbols": block["symbols"],
+                        "lines": [spans[0][0], max(e for _s, e in spans)] if spans else []})
+        return 200, {"candidate": candidate, "model": model, "file_lines": total,
+                     "symbol_count": len(symbols), "blocks": out, "attempts": attempt + 1}
+    return 422, {"error": "structure-refused", "detail": reason, "symbol_count": len(symbols)}
 
 def harness_candidate_from_round(run_id: str, round_no: int,
                                  replay: bool = False) -> tuple[int, dict]:
@@ -3988,6 +4157,12 @@ class Handler(BaseHTTPRequestHandler):
             code, payload = harness_candidate_from_round(
                 str(body.get("run") or ""), round_no, replay=bool(body.get("replay")))
             return self._send(payload, code)
+        if route == "api/workbench/structure":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = workbench_structure(str(body.get("candidate") or ""))
+            return self._send(payload, code)
         if route == "api/workbench/edit":
             body = self._json_body()
             if body is None:
@@ -4002,9 +4177,11 @@ class Handler(BaseHTTPRequestHandler):
                                                int(sel.get("to") or 1))
                 except (ValueError, OSError) as exc:
                     return self._send({"error": "bad-selection", "detail": str(exc)}, 400)
+            _FORCE_NEW_THREAD["value"] = bool(body.get("new_thread"))
             code, payload = workbench_edit(str(body.get("name") or ""),
                                            str(body.get("instruction") or ""), selection,
                                            str(body.get("kind") or "codex"))
+            _FORCE_NEW_THREAD["value"] = False
             return self._send(payload, code)
         if route == "api/harness/trial":
             body = self._json_body()

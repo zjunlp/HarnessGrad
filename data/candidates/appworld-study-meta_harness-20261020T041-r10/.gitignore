@@ -1,0 +1,9 @@
+
+_harnessgrad/
+__pycache__/
+*.pyc
+.state/
+*.bak
+*.orig
+*.rej
+*~

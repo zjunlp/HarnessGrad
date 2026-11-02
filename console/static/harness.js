@@ -225,7 +225,13 @@
     $("instruction").value = "";
     $("send").disabled = true;
     $("send-state").textContent = "助手在回…";
-    const pending = pushMessage("assistant", "…");
+    // **等待要有秒表。** 一次 codex 调用可能几分钟；只显示"…"看起来就是停住了。
+    const started = Date.now();
+    const pending = pushMessage("assistant", "助手在改 · 0s");
+    const ticker = setInterval(() => {
+      const body = pending.querySelector(".hg-msg__body");
+      if (body) body.textContent = `助手在改 · ${Math.round((Date.now() - started) / 1000)}s`;
+    }, 1000);
     try {
       const response = await fetch("/api/workbench/edit", {
         method: "POST",
@@ -234,6 +240,7 @@
                                instruction: withHistory(instruction), selection: sel }),
       });
       const payload = await response.json();
+      clearInterval(ticker);
       pending.remove();
       if (!response.ok) {
         pushMessage("assistant", `${payload.error || "拒绝"}：${payload.detail || ""}`);
@@ -242,13 +249,29 @@
       const said = payload.message || (payload.changed || []).length
         ? (payload.message || `改了 ${(payload.changed || []).length} 个文件。`)
         : "这一轮没有改动。";
-      pushMessage("assistant", said, { diff: payload.diff, changed: payload.changed, candidate: payload.candidate });
+      const seconds = Math.round((Date.now() - started) / 1000);
+      pushMessage("assistant", `${said}\n· ${seconds}s${payload.continued ? " · 已自动续跑一轮" : ""}`,
+                  { diff: payload.diff, changed: payload.changed, candidate: payload.candidate });
+      if (!(payload.changed || []).length) {
+        const hint = pushMessage("assistant", "它这一轮没有动文件。需要的话我让它继续。");
+        const again = document.createElement("button");
+        again.className = "btn btn--sm";
+        again.textContent = "继续";
+        again.addEventListener("click", () => {
+          $("instruction").value = "继续执行：不要再复述计划，直接改文件，改完说明改了什么。";
+          send();
+        });
+        hint.appendChild(again);
+      }
       if (payload.candidate) {
         await loadSources();
         await openSource(payload.candidate);
         $("name").value = payload.candidate;
       }
     } catch (error) {
+      clearInterval(ticker);
+      pending.remove();
+      clearInterval(ticker);
       pending.remove();
       pushMessage("assistant", `请求失败：${error.message}`);
     } finally {
