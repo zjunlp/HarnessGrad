@@ -2310,6 +2310,102 @@ SCENARIO_BUILDER = pathlib.Path(os.environ.get(
 IMPORT_MAX_BYTES = 32 * 1024 * 1024        # 比场景归档小得多：这里只有文本和脚本
 
 
+
+# ── 自己改 harness：没有 RSI，人就是方法 ──────────────────────────────────
+#
+# 优化 Harness 不只是"交上来打分"，还有最常见的一种工作方式：拿一个起点，自己改几行，
+# 跑一题看看。所以这里提供的是**复制一份再改**，而不是就地编辑 `base_harness/` ——
+# 基线是所有曲线共同的起点，改它等于把历史测量的起点换掉。
+CANDIDATES = pathlib.Path(os.environ.get("HG_CONSOLE_CANDIDATES",
+                                         PLATFORM_ROOT / "data" / "candidates"))
+CANDIDATE_NAME = re.compile(r"[A-Za-z0-9._-]{1,48}")
+
+
+def harness_candidates() -> dict:
+    rows = []
+    if CANDIDATES.is_dir():
+        for path in sorted(CANDIDATES.iterdir()):
+            manifest = read_json(path / "harness.json")
+            if not isinstance(manifest, dict) or not manifest.get("name"):
+                continue
+            files = sorted(p.name for p in path.iterdir() if p.is_file())
+            rows.append({"dir": path.name, "name": manifest.get("name"),
+                         "files": files,
+                         "mtime": int(path.stat().st_mtime)})
+    return {"root": str(CANDIDATES), "rows": rows}
+
+
+def harness_candidate_save(name: str, files: dict, from_base: bool = True) -> tuple[int, dict]:
+    """把编辑器里的内容写成一个新候选：`data/candidates/<name>/`。"""
+    if not isinstance(name, str) or not CANDIDATE_NAME.fullmatch(name):
+        return 400, {"error": "bad-name", "detail": "候选名只允许字母数字与 . _ -（≤48）"}
+    if not isinstance(files, dict) or not files:
+        return 400, {"error": "no-files"}
+    target = CANDIDATES / name
+    if target.exists():
+        return 409, {"error": "duplicate-candidate", "detail": f"{target} 已存在"}
+    if from_base and BASE_HARNESS.is_dir():
+        shutil.copytree(BASE_HARNESS, target, ignore=shutil.ignore_patterns(
+            "__pycache__", "*.pyc", ".state", ".git"))
+    else:
+        target.mkdir(parents=True)
+    written = []
+    for rel, body in files.items():
+        if not isinstance(rel, str) or not isinstance(body, str):
+            return 400, {"error": "bad-file", "detail": "文件名与内容都必须是字符串"}
+        rel_path = pathlib.PurePosixPath(rel)
+        if rel_path.is_absolute() or ".." in rel_path.parts:
+            return 400, {"error": "unsafe-path", "detail": rel}
+        out = target / rel_path
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(body, encoding="utf-8")
+        written.append(str(rel_path))
+    manifest = read_json(target / "harness.json")
+    if not isinstance(manifest, dict) or not manifest.get("entrypoint"):
+        return 400, {"error": "manifest-missing", "detail": "候选里没有可用的 harness.json"}
+    manifest["name"] = name
+    (target / "harness.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n",
+                                         encoding="utf-8")
+    return 201, {"candidate": name, "path": str(target), "written": written,
+                 "trial": (f"python3 driver.py --harness-path {target} --dataset "
+                           "authored_example_fix_bug --sampling all --rounds 0 "
+                           f"--run-id manual-{name}-01")}
+
+
+def harness_candidate_trial(name: str, dataset: str, run_id: str = "") -> tuple[int, dict]:
+    """直接用 `--harness-path` 跑一次单点：这就是"人改了、看一题"的闭环。"""
+    target = CANDIDATES / str(name)
+    if not CANDIDATE_NAME.fullmatch(str(name)) or not (target / "harness.json").is_file():
+        return 404, {"error": "candidate-not-found", "detail": str(name)}
+    runs = pathlib.Path(os.environ.get("HG_CONSOLE_TRIAL_RUNS",
+                                       "/tmp/hg-console-trials"))
+    run_id = run_id or f"manual-{name}-{time.strftime('%Y%m%d-%H%M%S')}"
+    argv = [sys.executable, str(PLATFORM_ROOT / "driver.py"), "--harness-path", str(target),
+            "--dataset", str(dataset), "--sampling", "all", "--rounds", "0",
+            "--run-id", run_id, "--runs-root", str(runs), "--work-root", str(runs / "work")]
+    try:
+        done = subprocess.run(argv, cwd=str(PLATFORM_ROOT), capture_output=True, text=True,
+                              timeout=1800, env=dict(os.environ))
+    except subprocess.TimeoutExpired:
+        return 504, {"error": "trial-timeout", "run_id": run_id}
+    curve = runs / run_id / "curve.jsonl"
+    score = None
+    if curve.is_file():
+        first = curve.read_text(encoding="utf-8").splitlines()
+        if first:
+            score = read_json_str(first[0]).get("score")
+    return (200 if done.returncode == 0 else 422), {
+        "run_id": run_id, "exit": done.returncode, "score": score,
+        "stdout_tail": (done.stdout or "")[-1200:], "stderr_tail": (done.stderr or "")[-1200:]}
+
+
+def read_json_str(text: str) -> dict:
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
 def author_bundles() -> dict:
     """每个 authored bundle 的结构校验 + 三道门，都从磁盘现算，没有缓存。"""
     rows = []
@@ -3294,6 +3390,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(api_health())
             if parts[1:] == ["author", "bundles"]:
                 return self._send(author_bundles())
+            if parts[1:] == ["harness", "candidates"]:
+                return self._send(harness_candidates())
             if parts[1:] == ["runs"]:
                 kind = (query.get("kind") or [""])[0]
                 if kind not in ("", "study", "eval", "unknown"):
@@ -3458,6 +3556,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self._submission_error(_submission_backend().SubmissionRejected([
                     {'code':'bad-query','detail':'upload does not accept query fields'}]))
             return self._submission_post()
+        if route == "api/harness/save":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = harness_candidate_save(str(body.get("name") or ""),
+                                                   body.get("files") or {})
+            return self._send(payload, code)
+        if route == "api/harness/trial":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = harness_candidate_trial(str(body.get("name") or ""),
+                                                    str(body.get("dataset") or
+                                                        "authored_example_fix_bug"))
+            return self._send(payload, code)
         if route == "api/author/draft":
             body = self._json_body()
             if body is None:

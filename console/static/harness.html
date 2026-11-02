@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HarnessGrad · 自己改</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/ui.css">
+<link rel="stylesheet" href="/shell.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="brand-mark">HG</div>
+      <div><div class="brand-name">HarnessGrad</div><div class="brand-sub">优化 Harness</div></div></div>
+    <nav class="nav"></nav>
+    <div class="side-foot">
+      <div class="status-line">候选目录</div>
+      <div class="status-line hg-mono" id="cand-root">…</div>
+      <a class="side-link" href="/author.html#/scenarios">导入环境 ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1>自己改</h1>
+      <span class="sub">不用 RSI 方法：从基线复制一份，自己改，跑一题看结果</span>
+      <span class="spacer"></span>
+      <span class="badge" id="dirty" hidden>未保存</span>
+      <button class="btn btn--sm" type="button" id="trial">用这道题试跑</button>
+      <button class="btn btn--primary btn--sm" type="button" id="save">另存为候选</button>
+    </div>
+
+    <div class="workshop" style="max-width:1180px">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card__head"><span class="card__title">起点</span>
+          <span class="card__sub" id="base-path">base_harness/loop</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="badge" id="base-sha">—</span></div>
+        <div class="card__body" style="display:grid;grid-template-columns:240px 1fr;gap:16px">
+          <div>
+            <ul class="hg-stack" id="files" style="list-style:none;margin:0;padding:0;gap:2px"></ul>
+            <div class="field" style="margin-top:14px">
+              <label class="field__label" for="name">候选名</label>
+              <input class="input" id="name" placeholder="my-first-edit" spellcheck="false">
+              <span class="field__hint">只允许字母数字与 . _ -，≤48</span>
+            </div>
+          </div>
+          <div>
+            <div class="hg-row" style="justify-content:space-between;margin-bottom:8px">
+              <span class="hg-mono hg-muted" id="editing">选一个文件</span>
+              <span class="hg-mono hg-muted" id="lines"></span>
+            </div>
+            <textarea class="textarea" id="editor" spellcheck="false" rows="22"
+                      style="font-family:var(--mono);font-size:12px;line-height:1.55"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__head"><span class="card__title">试跑</span>
+          <span class="card__sub">直接 eval：一题、一 trial、无方法</span></div>
+        <div class="card__body">
+          <div class="hg-row" style="flex-wrap:wrap">
+            <label class="field" style="min-width:240px;flex:1">
+              <span class="field__label">数据集</span>
+              <select class="select" id="dataset">
+                <option value="authored_example_fix_bug">authored_example_fix_bug（自己造的那道）</option>
+                <option value="demo">demo（fixture，8 题）</option>
+              </select>
+            </label>
+            <button class="btn btn--accent" type="button" id="trial2">保存并试跑</button>
+          </div>
+          <pre class="wlog" id="trial-log" hidden></pre>
+          <p class="field__hint" style="margin-top:8px">试跑用的是平台自己的 `--harness-path` 单点测量：跑完你会得到一个 run id 和这一点的分数，曲线在「实验」里。</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/shell.js" defer></script>
+<script src="/harness.js" defer></script>
+</body>
+</html>
