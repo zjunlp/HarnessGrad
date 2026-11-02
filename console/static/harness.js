@@ -21,8 +21,11 @@
     state.candidates = cands.rows || [];
     state.base = base;
     $("cand-root").textContent = (cands.root || "").replace(/^.*\/data\//, "data/");
+    const stamp = (seconds) => (seconds ? new Date(seconds * 1000).toLocaleString("zh-CN",
+      { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
     $("source").innerHTML = [`<option value="base">base_harness/loop（基线）</option>`,
-      ...state.candidates.map((c) => `<option value="${esc(c.dir)}">${esc(c.dir)}</option>`)].join("");
+      ...state.candidates.map((c) =>
+        `<option value="${esc(c.dir)}">${esc(c.dir)} · ${c.files.length} 文件 · ${stamp(c.mtime)}</option>`)].join("");
     await openSource("base");
   }
 
@@ -55,6 +58,9 @@
     $("editor").value = payload.text ?? payload.content ?? `（读取失败：${payload.detail || payload.error || "未知"}）`;
     $("editing").textContent = path;
     $("lines").textContent = `${$("editor").value.split("\n").length} 行`;
+    // 打开文件停在末尾会让人以为文件只有最后几行；选区回零、滚动回顶。
+    $("editor").setSelectionRange(0, 0);
+    $("editor").scrollTop = 0;
     markDirty(false);
     $("chips").innerHTML = '<span class="field__hint">在编辑器里选中若干行</span>';
   }

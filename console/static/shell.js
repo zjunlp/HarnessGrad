@@ -21,7 +21,7 @@
         ["动手", [
           { label: "自己改", href: "/harness.html" },
           { label: "启动", href: "/launch.html" },
-          { label: "提交 harness", href: "/submit.html" },
+          { label: "评测", href: "/submit.html" },
         ]],
         ["对话", [
           { label: "助手", href: "/chat.html" },
