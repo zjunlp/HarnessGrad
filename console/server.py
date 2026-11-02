@@ -2509,6 +2509,42 @@ def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
 
 
 
+
+def run_range_diff(run_id: str, first: int, last: int) -> dict:
+    """两轮之间的**净改动**：`diff -ruN state_after_roundA state_after_roundB`。
+
+    git 里最常用的一屏不是"每个提交"，而是"这两点之间到底变了什么"。而分散的每轮补丁
+    回答不了"r1 到 r16 一共加了哪些功能" —— 中间有几轮互相覆盖，逐个读补丁要自己在
+    脑子里合并。这里直接给出净结果，和 `git diff A B` 一个意思。
+    """
+    import subprocess
+    run_path = find_run(run_id)
+    if not run_path:
+        return {"error": "run-not-found", "detail": run_id}
+    first, last = int(first), int(last)
+    if first >= last:
+        return {"error": "bad-range", "detail": "from 必须小于 to"}
+    a = run_path / f"state_after_round{first}"
+    b = run_path / f"state_after_round{last}"
+    if not (a.is_dir() and b.is_dir()):
+        missing = [f"r{n}" for n, path in ((first, a), (last, b)) if not path.is_dir()]
+        return {"error": "missing-state", "detail": f"缺 {', '.join(missing)} 的快照",
+                "hint": "先用 /api/harness/from-round 把这轮重放成候选，再比两个候选"}
+    done = subprocess.run(["diff", "-ruN", "-x", "__pycache__", "-x", "*.pyc",
+                           a.name, b.name], cwd=str(run_path),
+                          capture_output=True, text=True, errors="replace")
+    text = (done.stdout or "")
+    stat = subprocess.run(["diff", "-ruN", "--brief", "-x", "__pycache__", "-x", "*.pyc",
+                           a.name, b.name], cwd=str(run_path),
+                          capture_output=True, text=True, errors="replace")
+    changed = [line.split(" and ")[0].split("/", 1)[-1]
+               for line in (stat.stdout or "").splitlines() if line.strip()]
+    added = sum(1 for line in text.splitlines() if line.startswith("+") and not line.startswith("+++"))
+    removed = sum(1 for line in text.splitlines() if line.startswith("-") and not line.startswith("---"))
+    return {"run": run_id, "from": first, "to": last, "files": changed,
+            "added": added, "removed": removed, "diff": text[:60000]}
+
+
 def run_history(run_id: str, upto: int, since: int = 1) -> dict:
     """一个 run 到第 `upto` 轮为止的**历史**：每轮的改动与补丁。
 
@@ -3753,6 +3789,12 @@ class Handler(BaseHTTPRequestHandler):
                 if kind:
                     rows = [r for r in rows if r["kind"] == kind]
                 return self._send({"rows": rows, "count": len(rows)})
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "range-diff":
+                first = (query.get("from") or [""])[0]
+                last = (query.get("to") or [""])[0]
+                if not (re.fullmatch(r"\d{1,9}", first) and re.fullmatch(r"\d{1,9}", last)):
+                    return self._error("from/to must be non-negative integers", 400)
+                return self._send(run_range_diff(parts[2], int(first), int(last)))
             if len(parts) == 4 and parts[1] == "runs" and parts[3] == "history":
                 to = (query.get("to") or ["0"])[0]
                 since = (query.get("from") or ["1"])[0]

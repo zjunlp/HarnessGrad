@@ -348,3 +348,28 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
 .hg-srcbar__meta { font-size: 10.5px; color: var(--n-500); }
 .hg-srcbar__empty { font-size: var(--t-2); color: var(--n-500); padding: 2px; }
+
+/* ── git log 式的历史泳道 ────────────────────────────────────────────────
+ * 一条竖线 + 每轮一个节点，右侧是这一轮改了什么、+多少/-多少。
+ * 这一屏要回答的是"功能是哪几轮加的"，所以强调**顺序**而不是表格对齐。 */
+.hg-rail { position: relative; padding: 6px 0 6px 18px; max-height: 260px; overflow: auto; }
+.hg-rail::before {
+  content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px;
+  width: 2px; background: var(--n-200); border-radius: 2px;
+}
+.hg-rail__row {
+  position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 8px; align-items: baseline; width: 100%; text-align: left;
+  padding: 5px 8px; border-radius: var(--r-1); background: transparent; border: 0; cursor: pointer;
+}
+.hg-rail__row:hover { background: var(--n-50); }
+.hg-rail__node {
+  position: absolute; left: -14px; top: 10px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--n-0); border: 2px solid var(--n-400);
+}
+.hg-rail__row:hover .hg-rail__node { border-color: var(--accent); }
+.hg-rail__label { font-family: var(--mono); font-size: var(--t-2); color: var(--n-800); }
+.hg-rail__meta { font-size: var(--t-1); color: var(--n-500); overflow-wrap: anywhere; }
+.hg-rail__stat { font-family: var(--mono); font-size: var(--t-1); white-space: nowrap; }
+.hg-rail__stat .ok { color: var(--ok); font-weight: 600; margin-right: 6px; }
+.hg-rail__stat .bad { color: var(--bad); font-weight: 600; }

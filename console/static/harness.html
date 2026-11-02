@@ -44,8 +44,15 @@
           <div class="hg-srcbar" id="source-list" role="listbox" aria-label="Harness 版本"></div>
           <details class="hg-history" id="history-wrap" hidden>
             <summary>历史 <span class="hg-muted" id="history-hint"></span></summary>
-            <div class="hg-history__list" id="history-list"></div>
-            <pre class="wlog hg-mono" id="history-patch" style="max-height:220px">选一轮看它的改动</pre>
+            <div class="hg-rail" id="history-list"></div>
+            <div class="hg-row" style="gap:6px;padding:6px 0">
+              <span class="field__hint">两点之间的净改动：</span>
+              <select class="select" id="range-from" style="width:auto"></select>
+              <span class="hg-muted">→</span>
+              <select class="select" id="range-to" style="width:auto"></select>
+              <button class="btn btn--sm" type="button" id="range-go">对比</button>
+            </div>
+            <pre class="wlog hg-mono" id="history-patch" style="max-height:220px">选一轮看它的改动，或选两点看净改动</pre>
             <label class="hg-row" style="gap:6px;font-size:12px;padding:6px 0">
               <input type="checkbox" id="history-attach">
               <span>把这段历史一起发给助手（它能看到每一轮加了什么）</span>

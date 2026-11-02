@@ -136,17 +136,41 @@
       const rows = payload.rounds || [];
       if (!rows.length) { wrap.hidden = true; return; }
       wrap.hidden = false;
+      wrap.open = true;      // 选中一版就是为了看它的历史，没有理由先让读者再点一次。
       $("history-hint").textContent = `${run} 的 r1–r${rows.length}`;
+      // 时间线（像 git log --graph 的单条泳道）：节点 + 这一轮的改动摘要。
       $("history-list").innerHTML = rows.map((r) => `
-        <button type="button" class="hg-srcbar__row" data-round="${r.round}">
-          <span class="hg-srcbar__name">r${r.round}</span>
-          <span class="hg-srcbar__meta">${esc(r.files.join(", "))} +${r.added}/-${r.removed}</span>
+        <button type="button" class="hg-rail__row" data-round="${r.round}">
+          <span class="hg-rail__node"></span>
+          <span class="hg-rail__label">r${r.round}</span>
+          <span class="hg-rail__meta">${esc(r.files.join(", "))}</span>
+          <span class="hg-rail__stat"><b class="ok">+${r.added}</b><b class="bad">-${r.removed}</b></span>
         </button>`).join("");
+      const options = rows.map((r) => `<option value="${r.round}">r${r.round}</option>`).join("");
+      $("range-from").innerHTML = options;
+      $("range-to").innerHTML = options;
+      $("range-from").value = String(rows[0].round);
+      $("range-to").value = String(rows[rows.length - 1].round);
       $("history-list").onclick = (event) => {
         const button = event.target.closest("[data-round]");
         if (!button) return;
         const row = rows.find((r) => String(r.round) === button.dataset.round);
         $("history-patch").textContent = row.patch || "（这一轮没有补丁）";
+      };
+      $("range-go").onclick = async () => {
+        const from = $("range-from").value;
+        const to = $("range-to").value;
+        $("history-patch").textContent = "对比中…";
+        try {
+          const res = await fetch(`/api/runs/${encodeURIComponent(run)}/range-diff?from=${from}&to=${to}`);
+          const payload = await res.json();
+          $("history-patch").textContent = payload.error
+            ? `${payload.error}：${payload.detail || ""}`
+            : `r${payload.from} → r${payload.to}：${(payload.files || []).join(", ")} +${payload.added}/-${payload.removed}\n\n`
+              + (payload.diff || "");
+        } catch (error) {
+          $("history-patch").textContent = `请求失败：${error.message}`;
+        }
       };
       state.history = rows;
     } catch {
