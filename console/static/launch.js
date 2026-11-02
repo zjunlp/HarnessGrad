@@ -8,8 +8,8 @@
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let FORM = null, seq = 0;
-  const card = { dataset: "", harness: "", task_model: "", improver: "", improver_model: "",
-                 rounds: 3, jobs: 1, trials: 1, sampling: "default" };
+  const card = { dataset: "", harness: "", task_model: "", method: "none", improver: "",
+                 improver_model: "", rounds: 3, jobs: 1, trials: 1, sampling: "default" };
 
   function field(label, control, hint) {
     return `<label class="field"><span class="field__label">${esc(label)}</span>${control}` +
@@ -26,6 +26,7 @@
     card.task_model = card.task_model || d.task_model || (FORM.task_models || [])[0] || "";
     card.improver = card.improver || d.improver || ((FORM.improvers || [])[0] || {}).name || "";
     card.improver_model = card.improver_model || d.improver_model || (FORM.meta_models || [])[0] || "";
+    card.method = card.method || d.method || ((FORM.methods || [])[0] || {}).name || "none";
     if (d.rounds) card.rounds = d.rounds;
     $("preset-hint").textContent = `默认 ${FORM.datasets.length} 个数据集 · ${FORM.harnesses.length} 个 harness · ${(FORM.improvers || []).length} 个方法`;
     const authored = FORM.datasets.filter((x) => x.name.startsWith("authored_"));
@@ -36,6 +37,10 @@
            .map((x) => ({ value: x.name, label: x.name }))], card.dataset)),
       field("task-harness", select("f-harness", FORM.harnesses.map((h) => ({ value: h, label: h })), card.harness)),
       field("task-model", select("f-task-model", (FORM.task_models || []).map((m) => ({ value: m, label: m })), card.task_model)),
+      field("方法", select("f-method",
+        [{ value: "none", label: "不使用方法（只测一个点）" },
+         ...(FORM.methods || []).map((m) => ({ value: m.name, label: `${m.name} · ${m.title}` }))],
+        card.method), "怎么改；0 轮或不选方法时就是一次单点测量"),
       field("meta-harness", select("f-improver", (FORM.improvers || []).map((x) => ({ value: x.name, label: x.label || x.name })), card.improver)),
       field("meta-model", select("f-improver-model", (FORM.meta_models || []).map((m) => ({ value: m, label: m })), card.improver_model)),
       field("轮数", `<input class="input" id="f-rounds" type="number" min="0" max="20" value="${card.rounds}">`, "0 = 直接测一个点，不做方法迭代"),
@@ -47,6 +52,7 @@
       el[`on${event}`] = () => { card[key] = cast ? cast(el.value) : el.value; preview(); };
     };
     bind("f-dataset", "dataset"); bind("f-harness", "harness"); bind("f-task-model", "task_model");
+    bind("f-method", "method");
     bind("f-improver", "improver"); bind("f-improver-model", "improver_model");
     bind("f-rounds", "rounds", Number, "input"); bind("f-jobs", "jobs", Number, "input");
     bind("f-trials", "trials", Number, "input");
@@ -63,7 +69,8 @@
     }
     const q = new URLSearchParams({ dataset: card.dataset, harness: card.harness,
       task_model: card.task_model, rounds: card.rounds, jobs: card.jobs, trials: card.trials,
-      improver: card.improver, improver_model: card.improver_model, sampling: card.sampling });
+      improver: card.improver, improver_model: card.improver_model,
+      method: card.method, sampling: card.sampling });
     try {
       const d = await (await fetch(`/api/launch/preview?${q}`)).json();
       if (mine !== seq) return;

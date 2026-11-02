@@ -804,6 +804,22 @@ def api_chat(messages: list[dict]) -> tuple[int, dict]:
                  "usage": {k: usage.get(k) for k in ("prompt_tokens", "completion_tokens")}}
 
 
+
+def method_catalogue() -> list[dict]:
+    """`methods/*/method.json` 的清单。没有 method.json 的目录不算一个可选方法。"""
+    rows = []
+    for path in sorted((PLATFORM_ROOT / "methods").glob("*/method.json")):
+        entry = read_json(path)
+        if not isinstance(entry, dict):
+            continue
+        name = path.parent.name
+        if name.startswith(("_", ".")):
+            continue
+        rows.append({"name": name, "title": str(entry.get("title") or name),
+                     "kind": str(entry.get("kind") or "method")})
+    return rows
+
+
 def launch_form() -> dict:
     """选择器的取值全部来自平台自己，不写死。"""
     names = adapters()
@@ -816,6 +832,9 @@ def launch_form() -> dict:
             # driver's `--improver` / `--improver-model`.
             "improvers": improver_rows,
             "meta_models": sorted({row["model"] for row in improver_rows if row["model"]}),
+            # `methods/` 是**怎么改**（决策规则），`improvers` 是**谁去改**（外部 CLI）。
+            # 之前表单只暴露后者，于是"有很多 RSI 方法"这件事在界面上完全看不见。
+            "methods": method_catalogue(),
             "pools": list(POOLS),
             "defaults": {"dataset": "alfworld", "harness": "loop",
                          "task_model": (task_models()[-1] if task_models() else "mock"),
@@ -834,6 +853,9 @@ def launch_argv(form: dict, run_id: str) -> list[str]:
             "--rounds", str(int(form["rounds"])),
             "--trials", str(int(form["trials"])),
             "--jobs", str(jobs),
+            *(["--method-entrypoint",
+               str(PLATFORM_ROOT / "methods" / str(form["method"]) / "run.py")]
+              if str(form.get("method") or "").strip() not in ("", "none") else []),
             "--improver", str(form["improver"]),
             "--improver-model", str(form["improver_model"]),
             "--run-id", run_id,
@@ -884,6 +906,13 @@ def guard_launch(form: dict) -> tuple[int, dict]:
                                 "HarnessGrad 需要 Python 3.10+")}
     if not DRIVER.is_file():
         return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{DRIVER}"}
+    method = str(form.get("method") or "").strip()
+    if method not in ("", "none"):
+        entry = PLATFORM_ROOT / "methods" / method / "run.py"
+        if not entry.is_file():
+            return 400, {"error": "unknown-method",
+                         "detail": f"methods/{method}/run.py 不存在；可选："
+                                   + ", ".join(row["name"] for row in method_catalogue())}
     if not RUNS.is_dir() or not os.access(RUNS, os.W_OK):
         return 400, {"error": "runs-root-not-writable",
                      "detail": f"runs 根目录不存在或不可写：{RUNS}"}
@@ -3678,6 +3707,10 @@ class Handler(BaseHTTPRequestHandler):
                         ("dataset", "harness", "rounds", "jobs", "trials", "sampling")}
                 form["improver"] = (query.get("improver") or ["dsh"])[0]
                 form["improver_model"] = (query.get("improver_model") or ["deepseek-flash"])[0]
+                # 方法（怎么改）与改进器（谁去改）是两个字段；漏了前者，预览里就永远
+                # 没有 `--method-entrypoint`，而界面上的下拉却已经选好了 —— 两处不一致。
+                form["method"] = (query.get("method") or ["none"])[0]
+                form["task_model"] = (query.get("task_model") or [""])[0]
                 return self._send(launch_preview(form))
             if parts[1:] == ["methods"]:
                 return self._send({"rows": api_methods()})
