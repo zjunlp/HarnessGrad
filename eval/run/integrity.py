@@ -110,6 +110,15 @@ NOT_PLATFORM = {
                      "(it is `zjunlp/HarnessGrad-Hub`), so the `website` entry this replaces "
                      "is gone with it -- and `website/` was never in `PLATFORM` either, for "
                      "the same reason",
+    "examples": "two reference harnesses (`examples/bash-harness`, "
+                "`examples/python-react-harness`) that show the contract in the two "
+                "languages people submit in. Like `base_harness`, they are **candidates**: "
+                "a run copies one into its workspace, and no measurement reads the "
+                "original. Hashing them would certify a template as if it were the referee",
+    ".local": "the console's own runtime state (`console/.local/settings.json` holds the "
+              "endpoint keys, `assistant-threads.json` the resumable assistant sessions). "
+              "It is machine state written by the operator's tool, and the file that "
+              "matters for a measurement -- `.env` -- is hashed instead",
     "console": "the read-only audit console (`console/`): it **reads** `runs/` and the "
                "platform's own exports and writes nothing; no run executes it, so editing it "
                "cannot change what a measurement does. Listed here rather than in PLATFORM "

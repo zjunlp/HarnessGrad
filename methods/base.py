@@ -51,8 +51,29 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import editor                                                  # noqa: E402
-import protocol                                                # noqa: E402
+def _sibling(name: str, *, private: str | None = None):
+    """Load `methods/<name>.py` under a private module name.
+
+    `import protocol` 在这里不安全：`sys.modules` 是**先于** `sys.path` 命中的，一旦同
+    一个进程里有人（CooperBench 的 `lib/protocol.py`）先把顶层名字 `protocol` 注册上，
+    `import protocol` 拿到的就是**它** —— `from protocol import emit` 于是 ImportError。
+    套件里实测到过；同样的名字碰撞在一个 method 进程里也可能发生（任何依赖带一个
+    `protocol.py` 就够）。
+    """
+    key = private or f"hg_method_{name}"
+    existing = sys.modules.get(key)
+    if existing is not None:
+        return existing
+    import importlib.util
+    path = Path(__file__).resolve().parent / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(key, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[key] = module
+    spec.loader.exec_module(module)
+    return module
+
+editor = _sibling("editor")                                  # noqa: E402
+protocol = _sibling("protocol")                                # noqa: E402
 
 #: How many times one proposal is asked for before the round reports nothing.
 #: Two is the first ask plus **one repair**: a sequence that does not apply is
