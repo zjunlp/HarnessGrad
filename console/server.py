@@ -2580,6 +2580,52 @@ def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
 
 
 
+
+def run_verdicts(run_id: str, round_no: int) -> dict:
+    """一轮里每道题的判定。**只读**：这里不跑任何东西，只把已存在的证据摆出来。"""
+    run_path = find_run(run_id)
+    if not run_path:
+        return {"error": "run-not-found", "detail": run_id}
+    folder = run_path / "verdicts" / f"round-{int(round_no)}"
+    if not folder.is_dir():
+        return {"error": "no-verdicts", "detail": f"verdicts/round-{round_no} 不存在"}
+    tasks = {}
+    for path in sorted(folder.glob("*.json")):
+        data = read_json(path)
+        if isinstance(data, dict):
+            tasks[str(data.get("task_id") or path.stem)] = as_num(data.get("score"))
+    return {"run": run_id, "round": int(round_no), "tasks": tasks, "n": len(tasks)}
+
+
+def run_compare(run_a: str, run_b: str, round_a: int = 0, round_b: int = 0) -> dict:
+    """两个 run 的逐题对照：`1→0` 与 `0→1` 各是哪些题。
+
+    这是 S3：它**只报数字**。要不要接受一次合并、掉几分换多少结构，不由平台决定
+    （作者的决定，写在 docs/scenario-workspace.md）。
+    """
+    a = run_verdicts(run_a, round_a)
+    b = run_verdicts(run_b, round_b)
+    if "error" in a:
+        return a
+    if "error" in b:
+        return b
+    ids = sorted(set(a["tasks"]) | set(b["tasks"]))
+    rows = []
+    for task_id in ids:
+        left, right = a["tasks"].get(task_id), b["tasks"].get(task_id)
+        if left == right:
+            continue
+        rows.append({"task": task_id, "a": left, "b": right,
+                     "direction": f"{int(left or 0)}→{int(right or 0)}"})
+    lost = [r for r in rows if (r["b"] or 0) < (r["a"] or 0)]
+    gained = [r for r in rows if (r["b"] or 0) > (r["a"] or 0)]
+    return {"a": {"run": run_a, "round": round_a, "n": a["n"]},
+            "b": {"run": run_b, "round": round_b, "n": b["n"]},
+            "lost": lost, "gained": gained, "changed": len(rows),
+            "only_in_a": sorted(set(a["tasks"]) - set(b["tasks"])),
+            "only_in_b": sorted(set(b["tasks"]) - set(a["tasks"]))}
+
+
 def run_range_diff(run_id: str, first: int, last: int) -> dict:
     """两轮之间的**净改动**：`diff -ruN state_after_roundA state_after_roundB`。
 
@@ -2682,13 +2728,15 @@ def harness_symbols(root: pathlib.Path) -> tuple[list[dict], int]:
             tree = pyast.parse(text)
         except SyntaxError:
             continue
+        defs = (pyast.FunctionDef, pyast.AsyncFunctionDef, pyast.ClassDef)
         for node in tree.body:
-            members = [(node, None)]
-            if isinstance(node, (pyast.FunctionDef, pyast.AsyncFunctionDef, pyast.ClassDef)):
-                members = [(node, None)] + [
-                    (child, node.name) for child in node.body
-                    if isinstance(child, (pyast.FunctionDef, pyast.AsyncFunctionDef))]
+            if not isinstance(node, defs):
+                continue                     # 顶层赋值/import 不是"符号"，也不许取 docstring
+            members = [(node, None)] + [
+                (child, node.name) for child in node.body if isinstance(child, defs)]
             for item, parent in members:
+                # `get_docstring` 只对模块/类/函数成立；对 Expr 调用会抛 TypeError
+                # （实测：'Expr' can't have docstrings，整个请求 500）。
                 doc = (pyast.get_docstring(item) or "").strip().splitlines()
                 symbols.append({
                     "id": f"{path.name}:{parent + '.' if parent else ''}{item.name}",
@@ -3967,6 +4015,21 @@ class Handler(BaseHTTPRequestHandler):
                 if kind:
                     rows = [r for r in rows if r["kind"] == kind]
                 return self._send({"rows": rows, "count": len(rows)})
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "verdicts":
+                raw = (query.get("round") or ["0"])[0]
+                if not re.fullmatch(r"\d{1,9}", raw):
+                    return self._error("round must be a non-negative integer", 400)
+                return self._send(run_verdicts(parts[2], int(raw)))
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "compare":
+                other = (query.get("with") or [""])[0]
+                if not other:
+                    return self._error("with parameter is required", 400)
+                try:
+                    ra = int((query.get("round") or ["0"])[0])
+                    rb = int((query.get("round_b") or ["0"])[0])
+                except ValueError:
+                    return self._error("round must be integers", 400)
+                return self._send(run_compare(parts[2], other, ra, rb))
             if len(parts) == 4 and parts[1] == "runs" and parts[3] == "range-diff":
                 first = (query.get("from") or [""])[0]
                 last = (query.get("to") or [""])[0]

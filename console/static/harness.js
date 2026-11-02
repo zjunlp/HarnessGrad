@@ -181,6 +181,80 @@
     }
   }
 
+
+  /* ── S1 结构图：模型归类，平台算行号并校验 ───────────────────────────────
+   * 输出是机器可校验的：每个符号恰好分到一组。点一个块，编辑器跳到它的行区间。
+   */
+  async function buildStructure() {
+    const list = $("structure-list");
+    const hint = $("structure-hint");
+    if (state.source === "base") { hint.textContent = "先把当前文件另存为候选"; return; }
+    hint.textContent = "模型在看符号与行号…";
+    $("structure-go").disabled = true;
+    try {
+      const response = await fetch("/api/workbench/structure", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidate: state.source }) });
+      const payload = await response.json();
+      if (!response.ok) {
+        hint.textContent = `${payload.error || "拒绝"}：${payload.detail || ""}`.slice(0, 160);
+        return;
+      }
+      hint.textContent = `${payload.blocks.length} 个概念块 · ${payload.symbol_count} 个符号 · ${payload.model}`;
+      list.innerHTML = payload.blocks.map((b) => `
+        <button type="button" class="hg-srcbar__row" data-lines="${b.lines.join(',')}">
+          <span class="hg-srcbar__name">${esc(b.name)}</span>
+          <span class="hg-srcbar__meta">${esc(b.role)}</span>
+          <span class="hg-srcbar__meta">行 ${b.lines[0]}–${b.lines[1]} · ${b.symbols.length} 符号</span>
+        </button>`).join("");
+      list.onclick = (event) => {
+        const button = event.target.closest("[data-lines]");
+        if (!button) return;
+        const [first, last] = button.dataset.lines.split(",").map(Number);
+        const area = $("editor");
+        const offsets = [0];
+        const lines = area.value.split(String.fromCharCode(10));
+        for (let i = 0; i < lines.length; i += 1) {
+          offsets.push(offsets[i] + lines[i].length + 1);
+        }
+        area.focus();
+        area.setSelectionRange(offsets[first - 1], offsets[Math.min(last, lines.length)]);
+        area.scrollTop = Math.max(0, (first - 12) * 18);
+        paintChips();
+      };
+    } catch (error) {
+      hint.textContent = `请求失败：${error.message}`;
+    } finally {
+      $("structure-go").disabled = false;
+    }
+  }
+
+  /* S3 行为对照：只报数字。同一 run 的 r0 → 当前轮，逐题看 0→1 / 1→0。
+   * 平台不评价"这次合并值不值"，那是作者的决定（docs/scenario-workspace.md）。 */
+  async function compareRounds() {
+    const m = /^(.*)-r(\d+)(?:-\d+)?$/.exec(state.source || "");
+    if (!m) return;
+    const [, run, round] = m;
+    $("patch-wrap").hidden = false;
+    $("patch-title").textContent = `r0 → r${round} 的逐题对照`;
+    $("history-patch").textContent = "对照中…";
+    try {
+      const payload = await (await fetch(`/api/runs/${encodeURIComponent(run)}/compare`
+        + `?with=${encodeURIComponent(run)}&round=0&round_b=${round}`)).json();
+      if (payload.error) { $("history-patch").textContent = `${payload.error}：${payload.detail || ""}`; return; }
+      const fmt = (rows, sign) => rows.slice(0, 40)
+        .map((r) => `  ${sign} ${r.task}  ${r.direction}`).join("\n") || "  （没有）";
+      $("history-patch").textContent = [
+        `r0（n=${payload.a.n}） → r${round}（n=${payload.b.n}）`,
+        `掉分 ${payload.lost.length} 题，涨分 ${payload.gained.length} 题，变了 ${payload.changed} 题`,
+        "", "涨分：", fmt(payload.gained, "+"), "", "掉分：", fmt(payload.lost, "-"),
+        payload.only_in_a.length ? `\n只在 r0 里：${payload.only_in_a.slice(0, 10).join(", ")}` : "",
+      ].join("\n").trim();
+    } catch (error) {
+      $("history-patch").textContent = `请求失败：${error.message}`;
+    }
+  }
+
   const thread = () => $("thread");
 
   // 一条消息 = 谁说的 + 它带了哪个选区 + 助手改了什么。历史留在 DOM 里，不刷新就一直在。
@@ -334,6 +408,8 @@
         (node.hidden = node.dataset.panel !== button.dataset.tab));
     });
     $("patch-close").addEventListener("click", () => { $("patch-wrap").hidden = true; });
+    $("structure-go").addEventListener("click", buildStructure);
+    $("compare-go").addEventListener("click", compareRounds);
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
     loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });

@@ -47,6 +47,7 @@
               <div class="seg" id="left-tabs" style="margin-bottom:8px">
                 <button type="button" data-tab="files" aria-pressed="true">文件</button>
                 <button type="button" data-tab="history" aria-pressed="false" id="history-tab">历史</button>
+                <button type="button" data-tab="structure" aria-pressed="false" id="structure-tab">结构</button>
               </div>
               <div data-panel="files">
                 <ul class="hg-stack" id="files" style="list-style:none;margin:0;padding:0;gap:1px"></ul>
@@ -54,6 +55,13 @@
                   <label class="field__label" for="name">另存为</label>
                   <input class="input" id="name" placeholder="my-refactor" spellcheck="false">
                 </div>
+              </div>
+              <div data-panel="structure" hidden id="structure-panel">
+                <div class="hg-row" style="justify-content:space-between;margin-bottom:6px">
+                  <span class="field__hint" id="structure-hint">模型只归类，行号由平台算</span>
+                  <button class="btn btn--sm" type="button" id="structure-go">出结构图</button>
+                </div>
+                <div id="structure-list" class="hg-stack" style="gap:6px"></div>
               </div>
               <div data-panel="history" hidden id="history-panel">
                 <div class="field__hint" id="history-hint" style="margin-bottom:6px"></div>
@@ -68,6 +76,9 @@
                   <input type="checkbox" id="history-attach">
                   <span>把历史一起发给助手</span>
                 </label>
+                <button class="btn btn--sm" type="button" id="compare-go" style="margin-top:6px">
+                  对照：r0 → 这一轮
+                </button>
               </div>
             </div>
             <div>
