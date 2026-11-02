@@ -42,7 +42,6 @@
       $("files").innerHTML = state.files.map((p) => fileRow(p)).join("");
     }
     if (state.files.length) openFile(state.files[0]);
-    updateTrialCommand();
   }
 
   const fileRow = (path) =>
@@ -121,15 +120,6 @@
     await loadSources(); $("source").value = name; await openSource(name);
   }
 
-  function updateTrialCommand() {
-    const name = state.source === "base" ? (($("name").value || "").trim() || "<候选名>") : state.source;
-    const base = "python3 driver.py";
-    $("trial-cmd").textContent =
-      `${base} --harness-path data/candidates/${name} \\\n` +
-      `  --dataset authored_example_fix_bug --sampling all --rounds 0 \\\n` +
-      `  --run-id manual-${name}-$(date +%m%d-%H%M)`;
-  }
-
   function bind() {
     $("files").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-path]");
@@ -140,7 +130,6 @@
     $("editor").addEventListener("keyup", paintChips);
     $("editor").addEventListener("mouseup", paintChips);
     $("source").addEventListener("change", () => openSource($("source").value));
-    $("name").addEventListener("input", updateTrialCommand);
     $("to-eval").addEventListener("click", (event) => {
       const name = state.source === "base" ? ($("name").value.trim() || "") : state.source;
       if (!name || state.source === "base") {

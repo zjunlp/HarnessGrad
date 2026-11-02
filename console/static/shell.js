@@ -255,8 +255,18 @@
       event.preventDefault();
       handle.dataset.dragging = "true";
       handle.setPointerCapture(event.pointerId);
+      const COLLAPSE_AT = 180;
       const move = (moveEvent) => {
-        const width = Math.min(460, Math.max(168, Math.round(moveEvent.clientX)));
+        const raw = Math.round(moveEvent.clientX);
+        // 拖到 180px 以下就收起来：再窄一点已经读不出"实验 / 轨迹"这些两个字的名字了。
+        if (raw < COLLAPSE_AT && document.body.dataset.sidebar !== "collapsed") {
+          document.body.dataset.sidebar = "collapsed";
+          localStorage.setItem("hg.sidebar", "collapsed");
+        } else if (raw >= COLLAPSE_AT + 12 && document.body.dataset.sidebar === "collapsed") {
+          document.body.dataset.sidebar = "expanded";
+          localStorage.setItem("hg.sidebar", "expanded");
+        }
+        const width = Math.min(460, Math.max(COLLAPSE_AT, raw));
         document.documentElement.style.setProperty("--sh-side", `${width}px`);
       };
       const up = () => {

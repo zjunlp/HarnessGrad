@@ -233,13 +233,35 @@ body[data-sidebar="collapsed"] .side .brand { padding: 14px 8px 10px; }
 .settings__stack { display: flex; flex-direction: column; gap: var(--s-2); width: min(360px, 100%); }
 .settings__foot { display: flex; justify-content: flex-end; padding-top: var(--s-4); }
 
-/* ── 侧栏宽度可拖：一直固定 248px，想往左挪一点都不行 ───────────────────── */
-.side { width: var(--sh-side, 248px); flex: 0 0 var(--sh-side, 248px); }
+/* ── 侧栏宽度可拖 ──────────────────────────────────────────────────────────
+ *
+ * **宽度必须写在 grid 轨道上，不能只写 .side 的 width。** app.css 里 `.app` 是
+ * `grid-template-columns: 248px minmax(0,1fr)`，轨道不跟着变，于是内容变宽、主区不动，
+ * 侧栏就压到了工作区上（实测：拖到 380px 后重叠，正文仍是 248px 的槽位）。
+ * 所以这里改的是轨道本身：
+ */
+.app { position: relative; grid-template-columns: var(--sh-side, 248px) minmax(0, 1fr); }
+body[data-sidebar="collapsed"] .app { grid-template-columns: 72px minmax(0, 1fr); }
+.side { width: auto; min-width: 0; }
 .sh-resize {
   position: absolute; top: 0; bottom: 0; width: 8px; z-index: 30;
   cursor: col-resize; background: transparent; border: 0; padding: 0;
   left: calc(var(--sh-side, 248px) - 4px);
 }
 .sh-resize:hover, .sh-resize[data-dragging="true"] { background: var(--accent-soft); }
-body[data-sidebar="collapsed"] .sh-resize { display: none; }
-.app { position: relative; }
+.sh-resize::after {
+  content: ""; position: absolute; top: 50%; left: 3px; width: 2px; height: 28px;
+  margin-top: -14px; border-radius: 2px; background: var(--n-300);
+}
+.sh-resize:hover::after, .sh-resize[data-dragging="true"]::after { background: var(--accent); }
+/* 收起以后分界线仍然要在：不然下一次想展开就找不到它了。 */
+body[data-sidebar="collapsed"] .sh-resize { left: calc(72px - 4px); }
+
+/* 收起态：整条标签居中、截断即可。app.css 原来的做法是 font-size:0 + ::before 首字，
+   而外壳会在 hashchange 时重画导航，两者叠在一起就变成了竖排的单字。 */
+body[data-sidebar="collapsed"] .side .nav-item {
+  font-size: var(--t-2); padding: 8px 4px; justify-content: center;
+  white-space: nowrap; overflow: hidden; gap: 0; text-align: center;
+}
+body[data-sidebar="collapsed"] .side .nav-item::before { content: none; }
+body[data-sidebar="collapsed"] .side .sh-section { display: none; }
