@@ -248,8 +248,12 @@
     handle.type = "button";
     handle.setAttribute("aria-label", "拖动调整侧栏宽度");
     handle.addEventListener("dblclick", () => {
+      // 双击 = 回到默认宽度，并且**一定展开**：收起状态下双击只改宽度是没效果的
+      // （轨道还是 72px），看起来就像双击失灵。
       document.documentElement.style.setProperty("--sh-side", "248px");
+      document.body.dataset.sidebar = "expanded";
       localStorage.setItem("hg.side", "248");
+      localStorage.setItem("hg.sidebar", "expanded");
     });
     handle.addEventListener("pointerdown", (event) => {
       event.preventDefault();
