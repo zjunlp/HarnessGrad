@@ -60,6 +60,7 @@ recorded gap, not an oversight -- see INTERFACE.md §4.8.
 """
 from __future__ import annotations
 
+import errno
 import json
 import os
 import shutil
@@ -727,6 +728,15 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
         if immutable_runtimes:
             raise ImmutableRuntimeUnavailable(str(exc)) from exc
         raise
+    # **要 exec 的那个二进制必须在套上 scope 之前就确认存在。** `a6e5843` 之后命令是先交给
+    # `systemd-run --user`、再由它 exec `bwrap`：`bwrap` 路径不存在时，失败变成"scope 退出码
+    # 1"，读的人看到的是 systemd-run 的报错，而不是"这个路径不存在"—— 一次启动失败会被记成
+    # 一个普通的非零退出，理由也没了。检查放在包装之前，普通路径与受限路径都能拿到同一条
+    # `FileNotFoundError`。
+    launcher = wrapped[0]
+    if not os.access(launcher, os.X_OK):
+        raise FileNotFoundError(errno.ENOENT,
+                                f"sandbox launcher is not executable: {launcher}", launcher)
     if applied:
         # Outside the namespace and around it: the scope has to contain the bwrap process,
         # or a subject that escapes the namespace is also outside the cap. The **applied**
