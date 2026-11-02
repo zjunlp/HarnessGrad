@@ -2559,15 +2559,29 @@ def harness_candidate_from_round(run_id: str, round_no: int,
             patch = run_path / "diffs" / f"round-{n}.patch"
             if not patch.is_file():
                 shutil.rmtree(target, ignore_errors=True)
-                kept = sorted(p.name for p in (run_path / "diffs").glob("round-*.patch")) \
+                # **说"存了 15 个补丁"就要能对上号。** 之前只列前 6 个、且按字典序排
+                # （round-1, round-10, round-11…），读者没法判断缺的是哪一轮。
+                # 这里把存在的轮次压成区间（r1–r15），并点名缺的那一轮。
+                rounds = sorted({int(p.stem.split("-")[1])
+                                 for p in (run_path / "diffs").glob("round-*.patch")
+                                 if p.stem.split("-")[1].isdigit()}) \
                     if (run_path / "diffs").is_dir() else []
+                def spans(nums: list[int]) -> str:
+                    out, start = [], None
+                    for i, num in enumerate(nums):
+                        if start is None:
+                            start = num
+                        if i + 1 == len(nums) or nums[i + 1] != num + 1:
+                            out.append(f"r{start}" if start == num else f"r{start}–r{num}")
+                            start = None
+                    return "、".join(out)
                 return 409, {
                     "error": "round-not-stored",
                     "detail": (f"这个 run 没有存下第 {n} 轮的 diff，也没有第 {round_no} 轮的快照，"
                                "因此无法重建这一版。"
-                               + (f" 它存了 {len(kept)} 个补丁：{', '.join(kept[:6])}"
-                                  if kept else " 它没有 diffs/ 目录。")),
-                    "at_round": n}
+                               + (f" 它存了 {len(rounds)} 个补丁：{spans(rounds)}。"
+                                  if rounds else " 它没有 diffs/ 目录。")),
+                    "at_round": n, "stored_rounds": rounds}
 
             done = subprocess.run(["patch", "-p1", "--batch", "--forward", "--silent"],
                                   cwd=str(target), stdin=patch.open("rb"),
