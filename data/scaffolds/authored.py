@@ -127,7 +127,7 @@ def module_source(slug: str) -> str:
         '"""由 `tools/scenario_builder.py --publish` 生成；改内容请改 '
         f'`data/authored/{slug}/bundle.json`，不要改这里。"""\n'
         "from data.scaffolds.authored import load as _load_authored\n\n"
-        'KIND = "authored"\n'
+        'KIND = "dataset"\n'
         'ORACLE_SOURCE = "authored"\n'
         'ORACLE_VALIDATED_BY = "tools/scenario_builder.py --gates (oracle / empty / deterministic)"\n'
         'ORACLE_COVERAGE = "all tasks"\n'

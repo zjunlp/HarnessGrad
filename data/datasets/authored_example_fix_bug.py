@@ -1,7 +1,7 @@
 """由 `tools/scenario_builder.py --publish` 生成；改内容请改 `data/authored/example-fix-bug/bundle.json`，不要改这里。"""
 from data.scaffolds.authored import load as _load_authored
 
-KIND = "authored"
+KIND = "dataset"
 ORACLE_SOURCE = "authored"
 ORACLE_VALIDATED_BY = "tools/scenario_builder.py --gates (oracle / empty / deterministic)"
 ORACLE_COVERAGE = "all tasks"
