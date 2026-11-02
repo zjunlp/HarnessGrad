@@ -323,10 +323,11 @@ body[data-sidebar="collapsed"] .side .sh-section { display: none; }
  * 改过，所以拖完侧栏、或收起之后，按钮就留在原来的位置，飘到正文里去（截图里它在
  * 表格中间，还带着"收起侧栏"的提示）。这里改成跟 `--sh-side` 走。
  */
+/* 把手整个落在侧栏内（宽 22px）：`-- 13px` 那样外挂一半会压住正文第一列。 */
 .sidebar-toggle {
-  left: calc(var(--sh-side, 248px) - 13px);
+  left: calc(var(--sh-side, 248px) - 22px);
 }
-body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
+body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 22px); }
 
 /* 左下角状态行："平台" 两个字被挤成竖排。标签不换行，值换行。 */
 .side-foot .status-line { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }

@@ -397,7 +397,8 @@
 
     box.className = "";
     box.innerHTML = `<table class="tbl runs"><thead><tr>
-        <th>run</th><th class="nowrap">benchmark · 池</th><th class="nowrap">task-agent</th>
+        <th>run</th><th class="nowrap" title="benchmark · 题池（train / eval 池）">数据 · 池</th>
+        <th class="nowrap" title="task-agent：harness · 模型 · 每轮步数">harness</th>
         <th class="nowrap">meta</th>
         <th class="num">轮</th><th class="num">最好</th>
         <th class="num nowrap" title="最新一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>

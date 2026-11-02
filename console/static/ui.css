@@ -136,7 +136,11 @@
    换一页、换一个筛选条件列宽也不跳。 */
 .nowrap { white-space: nowrap; }
 .tbl.runs { table-layout: fixed; }
-.tbl.runs th { padding: var(--s-2) var(--s-2); }
+.tbl.runs th {
+  padding: var(--s-2) var(--s-2);
+  /* 列宽钉死后，表头也不能把邻居顶开：超了就省略，完整名字在 title 里。 */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .tbl.runs td { padding: 7px var(--s-2); }
 .tbl.runs th:nth-child(1) { width: 22%; }
 .tbl.runs th:nth-child(2) { width: 11.5%; }
@@ -153,6 +157,8 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tbl.runs tbody td:nth-child(6), .tbl.runs tbody td:nth-child(8) { white-space: nowrap; }
+/* 单元格自己不折行也不许把表撑宽：固定布局下列宽是钉死的，超出的部分裁掉（有 title）。 */
+.tbl.runs tbody td:nth-child(n+5) { overflow: hidden; }
 .tbl.runs tbody tr[data-clickable="true"] { cursor: pointer; }
 /* 选中行走强调色左边线 —— 用 `box-shadow: inset` 而不是 `border-left`，否则列会错位一像素。 */
 .tbl.runs tbody tr[data-active="true"] {
@@ -160,7 +166,7 @@
   box-shadow: inset 2px 0 0 var(--accent);
 }
 .tbl.runs tbody tr[data-active="true"]:hover { background: var(--accent-soft); }
-.run-status { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.run-status { display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
 .run-status .row-id { font-size: var(--t-1); }
 /* 只看一行的筛选条：搜索框按控件尺寸，不靠行内样式 */
 .input.runs-q { width: 200px; }
