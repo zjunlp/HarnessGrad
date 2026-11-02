@@ -296,3 +296,24 @@ body[data-sidebar="collapsed"] .side .sh-section { display: none; }
   flex: 0 0 auto; border-top: var(--line); padding: var(--s-3) var(--s-4);
   display: flex; flex-direction: column; gap: var(--s-2); background: var(--n-0);
 }
+
+/* ── Harness 版本列表：一个可扫的树，不是一条下划线的下拉 ─────────────────
+   版本名很长（hand-edit-demo-edit-20261102-131044），原生 select 展开后一条下划线
+   横贯整行，扫读时很难停在某一项上。这里用分行 + 元信息 + "最新/当前" 标记。 */
+.hg-src { display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow: auto; }
+.hg-src__group { font-size: var(--t-1); font-weight: 650; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--n-500); padding: 2px 2px 4px; }
+.hg-src__row {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
+  padding: 7px 9px; border-radius: var(--r-1); border: 1px solid transparent;
+  background: transparent; cursor: pointer;
+}
+.hg-src__row:hover { background: var(--n-50); border-color: var(--n-200); }
+.hg-src__row[aria-selected="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line);
+}
+.hg-src__name { font-family: var(--mono); font-size: var(--t-2); color: var(--n-800);
+  overflow-wrap: anywhere; }
+.hg-src__row[aria-selected="true"] .hg-src__name { color: var(--accent-ink); font-weight: 600; }
+.hg-src__meta { font-size: var(--t-1); color: var(--n-500); }
+.hg-src__flags { display: flex; gap: 4px; margin-top: 2px; }

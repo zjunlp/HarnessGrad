@@ -23,16 +23,31 @@
     $("cand-root").textContent = (cands.root || "").replace(/^.*\/data\//, "data/");
     const stamp = (seconds) => (seconds ? new Date(seconds * 1000).toLocaleString("zh-CN",
       { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
-    $("source").innerHTML = [`<option value="base">base_harness/loop（基线）</option>`,
-      ...state.candidates.map((c) =>
-        `<option value="${esc(c.dir)}">${esc(c.dir)} · ${c.files.length} 文件 · ${stamp(c.mtime)}</option>`)].join("");
-    await openSource("base");
+    const newest = state.candidates.slice().sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+    const row = (value, name, meta, flags) => `
+      <button type="button" class="hg-src__row" role="option" data-source="${esc(value)}"
+              aria-selected="false">
+        <span class="hg-src__name">${esc(name)}</span>
+        <span class="hg-src__meta">${esc(meta)}</span>
+        ${flags ? `<span class="hg-src__flags">${flags}</span>` : ""}
+      </button>`;
+    $("source-list").innerHTML =
+      '<div class="hg-src__group">基线</div>' +
+      row("base", "base_harness/loop", "只读起点", '<span class="badge">基线</span>') +
+      `<div class="hg-src__group">候选 · ${newest.length}</div>` +
+      (newest.length
+        ? newest.map((c, i) => row(c.dir, c.dir, `${c.files.length} 文件 · ${stamp(c.mtime)}`,
+            (i === 0 ? '<span class="badge badge--accent">最新</span>' : ""))).join("")
+        : '<div class="field__hint" style="padding:4px 9px">还没有候选：先另存一份再改。</div>');
+    // 默认打开最新版本：工作区要回答的是"我现在最关心哪一版"，而不是"从零开始"。
+    const start = newest.length ? newest[0].dir : "base";
+    await openSource(start);
   }
 
   async function openSource(source) {
     state.source = source;
-    $("source-kind").textContent = source === "base" ? "基线（只读）" : "候选";
-    $("source-kind").className = "badge" + (source === "base" ? "" : " badge--accent");
+    document.querySelectorAll("#source-list .hg-src__row").forEach((node) =>
+      node.setAttribute("aria-selected", String(node.dataset.source === source)));
     if (source === "base") {
       state.files = (state.base.files || []).map((f) => f.path);
       $("files").innerHTML = state.files.map((p) => fileRow(p)).join("");
@@ -132,7 +147,6 @@
       pushMessage("assistant", said, { diff: payload.diff, changed: payload.changed, candidate: payload.candidate });
       if (payload.candidate) {
         await loadSources();
-        $("source").value = payload.candidate;
         await openSource(payload.candidate);
         $("name").value = payload.candidate;
       }
@@ -154,7 +168,8 @@
     const payload = await response.json();
     if (!response.ok) { alert(`${payload.error || "保存失败"}\n${payload.detail || ""}`); return; }
     markDirty(false);
-    await loadSources(); $("source").value = name; await openSource(name);
+    await loadSources();
+    await openSource(name);
   }
 
   function bind() {
@@ -166,7 +181,10 @@
     $("editor").addEventListener("select", paintChips);
     $("editor").addEventListener("keyup", paintChips);
     $("editor").addEventListener("mouseup", paintChips);
-    $("source").addEventListener("change", () => openSource($("source").value));
+    $("source-list").addEventListener("click", (event) => {
+      const row = event.target.closest("[data-source]");
+      if (row) openSource(row.dataset.source);
+    });
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
     loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });
