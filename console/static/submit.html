@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>提交 Harness · HarnessGrad</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/ui.css">
+<link rel="stylesheet" href="/shell.css">
+<style>
+  .submit-page { overflow: auto; }
+  .submit-wrap { width: min(1120px, 100%); margin: 0 auto; padding: 20px 22px 48px; display: grid; gap: 14px; }
+  .submit-hero { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; }
+  .submit-hero h1 { margin:0; font-size:20px; letter-spacing:-.02em; }
+  .submit-hero p { margin:0; color:var(--hg-alias-label-secondary); font-size:12px; }
+  .submit-grid { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:14px; align-items:start; }
+  .submit-card { border:1px solid var(--hg-alias-border-l2); border-radius:12px; background:var(--hg-alias-bg-layer-1); overflow:hidden; }
+  .submit-card-head { padding:11px 14px; border-bottom:1px solid var(--hg-alias-border-l2); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .submit-card-head h2 { margin:0; font-size:13px; }
+  .submit-card-body { padding:14px; display:grid; gap:12px; }
+  .submit-drop { border:1px dashed var(--hg-alias-border-l3); border-radius:10px; padding:26px 18px; text-align:center; background:var(--hg-alias-bg-layer-2); cursor:pointer; outline:0; }
+  .submit-drop:hover, .submit-drop:focus-visible, .submit-drop[data-drag="true"] { border-color:var(--hg-alias-brand-primary); background:color-mix(in oklab,var(--hg-alias-brand-primary) 7%,var(--hg-alias-bg-layer-2)); }
+  .submit-drop strong { display:block; color:var(--hg-alias-label-primary); font-size:13px; }
+  .submit-drop span { display:block; margin-top:5px; color:var(--hg-alias-label-secondary); font-size:11px; }
+  .submit-file { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--hg-alias-border-l2); border-radius:8px; font-size:11px; min-width:0; }
+  .submit-file code { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .submit-file .spacer { margin-left:auto; }
+  .submit-field { display:grid; gap:5px; }
+  .submit-field label { color:var(--hg-alias-label-secondary); font-size:11px; }
+  .submit-field input, .submit-field select { width:100%; font:inherit; font-size:12px; padding:7px 9px; border:1px solid var(--hg-alias-border-l2); border-radius:8px; background:var(--hg-alias-bg-base); color:inherit; }
+  .submit-field input:focus-visible, .submit-field select:focus-visible, .submit-btn:focus-visible, .submit-demo button:focus-visible { outline:2px solid var(--hg-alias-brand-primary); outline-offset:2px; }
+  .submit-scenario-list { display:grid; gap:6px; margin-top:2px; }
+  .submit-scenario-meta { display:flex; flex-wrap:wrap; gap:5px; margin-top:5px; }
+  .submit-scenario-note { color:var(--hg-alias-label-secondary); font-size:10.5px; line-height:1.5; }
+  .submit-actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .submit-btn { display:inline-flex; align-items:center; justify-content:center; padding:7px 13px; border:1px solid transparent; border-radius:8px; background:var(--hg-alias-brand-primary); color:var(--hg-alias-bg-base); font:inherit; font-size:12px; font-weight:650; cursor:pointer; }
+  .submit-btn:disabled { opacity:.45; cursor:not-allowed; }
+  .submit-hint { color:var(--hg-alias-label-secondary); font-size:10.5px; }
+  .submit-error { display:none; padding:10px 11px; border:1px solid color-mix(in oklab,#d04b3a 45%,var(--hg-alias-border-l2)); border-radius:8px; background:color-mix(in oklab,#d04b3a 8%,var(--hg-alias-bg-layer-1)); color:var(--hg-alias-label-primary); font-size:11.5px; overflow-wrap:anywhere; }
+  .submit-error[data-visible="true"] { display:block; }
+  .submit-error code { color:#b4402f; }
+  .submit-status { display:none; }
+  .submit-status[data-visible="true"] { display:block; }
+  .submit-status .state-title { font-size:16px; font-weight:650; }
+  .submit-status .state-sub { margin-top:4px; color:var(--hg-alias-label-secondary); font-size:11.5px; overflow-wrap:anywhere; }
+  .submit-progress { height:7px; margin:14px 0 9px; border-radius:999px; overflow:hidden; background:var(--hg-alias-bg-layer-3); }
+  .submit-progress i { display:block; height:100%; width:25%; background:var(--hg-alias-brand-primary); transition:width .2s ease; }
+  .submit-status-line { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:11px; }
+  .submit-pools { display:grid; gap:8px; }
+  .submit-pool { border:1px solid var(--hg-alias-border-l2); border-radius:9px; overflow:hidden; }
+  .submit-pool h3 { margin:0; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--hg-alias-border-l2); background:var(--hg-alias-bg-layer-2); }
+  .submit-pool table { width:100%; border-collapse:collapse; font-size:11px; }
+  .submit-pool th, .submit-pool td { padding:7px 9px; border-bottom:1px solid var(--hg-alias-border-l2); text-align:left; }
+  .submit-pool tr:last-child td { border-bottom:0; }
+  .submit-pool th { color:var(--hg-alias-label-secondary); font-weight:500; }
+  .submit-pool .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .submit-warning { padding:9px 10px; border:1px solid color-mix(in oklab,#d08a2e 45%,var(--hg-alias-border-l2)); border-radius:8px; background:color-mix(in oklab,#d08a2e 9%,var(--hg-alias-bg-layer-1)); color:var(--hg-alias-label-primary); font-size:11px; }
+  .submit-tasks { width:100%; border-collapse:collapse; font-size:11px; }
+  .submit-tasks th, .submit-tasks td { padding:6px 8px; border-bottom:1px solid var(--hg-alias-border-l2); text-align:left; }
+  .submit-tasks th { color:var(--hg-alias-label-secondary); font-weight:500; }
+  .submit-tasks .num { text-align:right; }
+  .submit-evidence { display:grid; gap:5px; font-size:11px; }
+  .submit-evidence a { overflow-wrap:anywhere; }
+  .submit-demo { display:flex; gap:6px; flex-wrap:wrap; padding-top:5px; border-top:1px solid var(--hg-alias-border-l2); }
+  .submit-demo button { padding:4px 7px; border:1px solid var(--hg-alias-border-l2); border-radius:6px; background:var(--hg-alias-bg-layer-2); font-size:10.5px; cursor:pointer; }
+  .submit-code { font-family:ui-monospace,Menlo,monospace; font-size:10.5px; color:var(--hg-alias-label-secondary); overflow-wrap:anywhere; }
+  .submit-muted { color:var(--hg-alias-label-secondary); font-size:11px; }
+  [hidden] { display:none !important; }
+  .submit-page .sidebar-toggle { display:none !important; }
+  @media (max-width: 880px) { .submit-grid { grid-template-columns:1fr; } }
+  @media (max-width: 640px) { .app.submit-page { display:block; height:auto; min-height:100%; } .app.submit-page > .side { display:none; } .app.submit-page > .main { width:100%; min-width:0; } .submit-wrap { padding:15px 12px 34px; } .submit-hero h1 { font-size:18px; } }
+</style>
+</head>
+<body>
+<div class="app submit-page">
+  <aside class="side" aria-label="主导航">
+    <div class="brand"><div class="brand-mark">HG</div><div><div class="brand-name">HarnessGrad</div><div class="brand-sub">实验台 · 提交</div></div></div>
+    <nav class="nav">
+      <!-- 侧栏由 /shell.js 按模式注入 -->
+    </nav>
+    <div class="side-foot"><div class="status-line">平台 <b>提交服务 v1</b></div><a class="side-link" href="https://zjunlp.github.io/HarnessGrad-Hub/contributing/" target="_blank" rel="noreferrer">提交说明 ↗</a></div>
+  </aside>
+  <main class="main">
+    <div class="submit-wrap">
+      <div class="submit-hero"><h1>提交 harness 并评分</h1><p>上传一个完整、可运行的 harness，在受 review 的场景中得到可追溯结果。</p></div>
+      <div id="submit-global-error" class="submit-error" role="alert"></div>
+      <div class="submit-grid">
+        <section class="submit-card" aria-labelledby="submit-form-title">
+          <div class="submit-card-head"><h2 id="submit-form-title">新提交</h2><span class="spacer"></span><span class="chip">接口 v1</span></div>
+          <div class="submit-card-body">
+            <div id="dropzone" class="submit-drop" role="button" tabindex="0" aria-describedby="upload-help"><strong>拖拽 tar.gz / tar / zip 到这里</strong><span id="upload-help">或按 Enter 选择文件 · 压缩包不超过 20 MiB</span><input id="archive" type="file" accept=".tar,.gz,.tgz,.zip,application/gzip,application/x-tar,application/zip" hidden></div>
+            <div id="file-row" class="submit-file" hidden><span aria-hidden="true">▣</span><code id="file-name"></code><span class="spacer"></span><span id="file-size" class="submit-muted"></span><button id="clear-file" class="btn" type="button">移除</button></div>
+            <div class="submit-field"><label for="scenario">评分场景</label><select id="scenario"><option value="">读取场景…</option></select><div id="scenario-note" class="submit-scenario-note">场景来自服务端清单，上传请求只提交场景名称。</div></div>
+            <div id="scenario-meta" class="submit-scenario-meta" aria-live="polite"></div>
+            <div class="submit-field"><label for="label">展示标签（可选）</label><input id="label" maxlength="64" pattern="[A-Za-z0-9._-]+" placeholder="例如 local-loop-baseline"></div>
+            <div class="submit-field"><label for="contact">联系信息（可选）</label><input id="contact" maxlength="200" placeholder="只用于人工联系，不会参与评分"></div>
+            <div class="submit-actions"><button id="submit" class="submit-btn" type="button" disabled>上传并进入队列</button><span id="submit-hint" class="submit-hint">选择一个可用场景和归档文件后继续。</span></div>
+            <div class="submit-demo" aria-label="页面状态演示"><span class="submit-muted">本地演示：</span><button type="button" data-demo="rejected">被拒</button><button type="button" data-demo="queued">排队</button><button type="button" data-demo="scored">出分</button><button type="button" data-demo="failed">失败</button></div>
+          </div>
+        </section>
+        <aside class="submit-card" aria-labelledby="submit-boundary-title">
+          <div class="submit-card-head"><h2 id="submit-boundary-title">边界</h2></div>
+          <div class="submit-card-body"><div class="submit-muted">平台只接受归档，不执行服务进程里的用户代码。校验、沙箱、评分和逐任务证据由 HarnessGrad 负责。</div><dl class="kv"><dt>格式</dt><dd>tar.gz / tar / zip</dd><dt>压缩上限</dt><dd>20 MiB</dd><dt>解包上限</dt><dd>200 MiB</dd><dt>入口</dt><dd><code>entrypoint --task task.json --workdir dir</code></dd><dt>评分</dt><dd>按池展示，不跨池平均</dd></dl><div class="submit-muted">服务当前仅限回环地址和内网可信来源。页面不知道的值显示为 —。</div></div>
+        </aside>
+      </div>
+      <section id="state-card" class="submit-card submit-status" data-visible="false" aria-live="polite"><div class="submit-card-head"><h2>提交状态</h2><span class="spacer"></span><span id="state-pill" class="pill">—</span></div><div class="submit-card-body"><div id="state-title" class="state-title">—</div><div id="state-sub" class="state-sub">—</div><div id="state-progress" class="submit-progress"><i></i></div><div id="state-line" class="submit-status-line"></div><div id="state-error" class="submit-error"></div><div id="result-root"></div></div></section>
+    </div>
+  </main>
+</div>
+<script src="/submit.js"></script>
+<script src="/sidebar.js"></script>
+<script src="/shell.js" defer></script>
+</body>
+</html>

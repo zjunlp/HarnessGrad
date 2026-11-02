@@ -6,6 +6,8 @@
 <title>HarnessGrad · 实验台</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/ui.css">
+<link rel="stylesheet" href="/shell.css">
 <style>
   .filters button.chip[aria-pressed="true"] {
     background: var(--hg-alias-bg-layer-3);
@@ -31,10 +33,7 @@
     </div>
 
     <nav class="nav">
-      <a class="nav-item" href="/chat.html">对话</a>
-      <a class="nav-item" href="#/runs" data-view-link="runs">实验 <span class="nav-badge" id="nav-runs">—</span></a>
-      <a class="nav-item" href="#/trace" data-view-link="trace">轨迹</a>
-      <a class="nav-item" href="#/version" data-view-link="harness">版本</a>
+      <!-- 侧栏由 /shell.js 按模式注入 -->
     </nav>
 
     <div class="nav-group">
@@ -104,6 +103,7 @@
           <button aria-pressed="false" data-mode="file">文件</button>
         </div>
         <span class="spacer"></span>
+        <button class="btn btn--sm" type="button" id="h-explain-btn" title="让模型解释这一轮改了什么">解释这一轮</button>
         <span class="lab-hint">选中的状态就是这一轮的起点</span>
       </div>
       <div class="cols" data-cols="3">
@@ -118,5 +118,6 @@
 <script src="/trace-view.js"></script>
 <script src="/console.js"></script>
 <script src="/sidebar.js"></script>
+<script src="/shell.js" defer></script>
 </body>
 </html>

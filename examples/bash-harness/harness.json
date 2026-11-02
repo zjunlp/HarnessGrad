@@ -1,0 +1,8 @@
+{
+  "name": "bash-example",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "run.sh",
+  "backend": "cli",
+  "env_kinds": ["files"]
+}

@@ -461,7 +461,7 @@ def app_version(url: str, local_server: bool) -> str:
             parts.append(f"server.py:{hashlib.sha256(sp.read_bytes()).hexdigest()[:10]}")
     else:
         parts.append("server.py:?(--url 模式读不到)")
-    for rel in ("/index.html", "/console.js", "/app.css", "/tokens.css"):
+    for rel in ("/index.html", "/console.js", "/app.css", "/tokens.css", "/submit.html", "/submit.js"):
         try:
             body = urllib.request.urlopen(url + rel, timeout=10).read()
             parts.append(f"{rel.lstrip('/')}:{hashlib.sha256(body).hexdigest()[:10]}")
@@ -634,6 +634,27 @@ def c1_5(t: UAT):
         if hits:
             raise Fail(f"页面出现 {hits} | {t.where(p)}")
     return "四屏正文无 NaN / undefined / Infinity / null"
+
+
+@check("1-6", "1 冷启动", "提交页静态入口可打开且无写请求", "S1")
+def c1_6(t: UAT):
+    def scenarios(route):
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({
+            "api_version": "1", "items": [{"name": "uat-smoke", "dataset": "demo",
+                "split": "declared", "side": "train", "pool": "train", "sampling": "all",
+                "rounds": 0, "trials": 1, "tasks": None, "available": True,
+                "reason": "ok", "expected_minutes": None, "note": "GET-only fixture."}]}))
+
+    p = t.open("/submit.html", routes=[("**/api/scenarios", scenarios)])
+    t.wait(p, "() => !!document.querySelector('#dropzone')", "提交页上传区")
+    if not p.title().strip():
+        raise Fail("提交页没有 title")
+    if p.locator("#scenario option").count() != 2:
+        raise Fail("提交页没有显示只读场景清单")
+    recent = [(method, url) for method, url in t.reqs if "/submit.html" in url or "/api/scenarios" in url]
+    if any(method != "GET" for method, _url in recent):
+        raise Fail(f"提交页无操作时发出了非 GET 请求：{recent}")
+    return "submit.html 与 GET-only 场景清单可渲染；无操作阶段无写请求"
 
 
 # ═══════════════════════════════════════════════════════ 场景 5：实验列表

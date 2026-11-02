@@ -48,6 +48,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -2294,6 +2295,162 @@ def _redact(text: str, secret: str) -> str:
     return text.replace(secret, "***") if secret else text
 
 
+
+# ── 场景工坊：构造环境的那一半 ─────────────────────────────────────────────
+#
+# 两个模式是独立的（见 docs/scenario-workspace.md）：构造环境产出 bundle，优化 Harness
+# 消费它。这里只做"落盘 + 读回"，因为工作区是单人本地工具：没有账号、没有队列。
+# 持久化的就是 `data/authored/<slug>/` 目录，服务重启后照样列出来，不需要重新 import。
+
+PLATFORM_ROOT = ROOT.parent
+AUTHORED_ROOT = pathlib.Path(os.environ.get("HG_CONSOLE_AUTHORED",
+                                            PLATFORM_ROOT / "data" / "authored"))
+SCENARIO_BUILDER = pathlib.Path(os.environ.get(
+    "HG_CONSOLE_SCENARIO_BUILDER", PLATFORM_ROOT / "tools" / "scenario_builder.py"))
+IMPORT_MAX_BYTES = 32 * 1024 * 1024        # 比场景归档小得多：这里只有文本和脚本
+
+
+def author_bundles() -> dict:
+    """每个 authored bundle 的结构校验 + 三道门，都从磁盘现算，没有缓存。"""
+    rows = []
+    if not AUTHORED_ROOT.is_dir():
+        return {"root": str(AUTHORED_ROOT), "rows": rows}
+    spec = importlib.util.spec_from_file_location("_scenario_builder", SCENARIO_BUILDER)
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    for path in sorted(AUTHORED_ROOT.iterdir()):
+        if not path.is_dir() or not (path / "bundle.json").is_file():
+            continue
+        row = {"slug": path.name, "path": str(path)}
+        try:
+            data = json.loads((path / "bundle.json").read_text(encoding="utf-8"))
+            row.update(title=data.get("title"), env_kind=(data.get("env") or {}).get("kind"),
+                       tasks=len(data.get("tasks") or []),
+                       eval_visible_to_authors=data.get("eval_visible_to_authors"))
+            problems = builder.check_bundle(path)
+            row["valid"] = not problems
+            row["problems"] = problems
+            if row["valid"]:
+                gates = builder.gates(path)
+                row["gates_ok"] = bool(gates.get("ok"))
+                row["gates"] = [{"task_id": t["task_id"],
+                                 "oracle": t["oracle_passes"],
+                                 "empty": t["empty_fails"],
+                                 "deterministic": t["deterministic"],
+                                 "detail": t.get("detail", {})} for t in gates.get("tasks") or []]
+            else:
+                row["gates_ok"] = False
+        except (OSError, ValueError) as exc:
+            row["valid"] = False
+            row["problems"] = [str(exc)]
+            row["gates_ok"] = False
+        rows.append(row)
+    return {"root": str(AUTHORED_ROOT), "rows": rows}
+
+
+def _safe_extract(archive: pathlib.Path, target: pathlib.Path) -> None:
+    """tar/zip -> target, but only regular files and directories, and only inside target."""
+    import tarfile
+    import zipfile
+    target.mkdir(parents=True, exist_ok=True)
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as zf:
+            for member in zf.infolist():
+                name = member.filename
+                if member.is_dir():
+                    continue
+                if name.startswith("/") or ".." in pathlib.PurePosixPath(name).parts:
+                    raise ValueError(f"归档里有越界路径：{name}")
+                if (member.external_attr >> 16) & 0o170000 not in (0, 0o100000):
+                    raise ValueError(f"归档里有不允许的条目类型：{name}")
+                out = target / name
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_bytes(zf.read(member))
+        return
+    with tarfile.open(archive) as tf:
+        for member in tf.getmembers():
+            if member.isdir():
+                continue
+            if not member.isfile():
+                raise ValueError(f"归档里有不允许的条目类型：{member.name}")
+            if member.name.startswith("/") or ".." in pathlib.PurePosixPath(member.name).parts:
+                raise ValueError(f"归档里有越界路径：{member.name}")
+            out = target / member.name
+            out.parent.mkdir(parents=True, exist_ok=True)
+            with tf.extractfile(member) as src, out.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+
+
+def author_import(archive_path: pathlib.Path, wanted_slug: str = "") -> tuple[int, dict]:
+    """Import one bundle archive into `data/authored/<slug>/`, then validate and gate it."""
+    import tempfile
+    if not archive_path.is_file():
+        return 400, {"error": "no-archive"}
+    if archive_path.stat().st_size > IMPORT_MAX_BYTES:
+        return 413, {"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}
+    with tempfile.TemporaryDirectory(prefix="hg-import-") as tmp:
+        staging = pathlib.Path(tmp) / "x"
+        try:
+            _safe_extract(archive_path, staging)
+        except (tarfile.TarError, zipfile.BadZipFile, OSError, ValueError) as exc:
+            return 400, {"error": "bad-archive", "detail": str(exc)}
+        roots = [p for p in staging.iterdir()]
+        root = staging
+        if len(roots) == 1 and roots[0].is_dir():
+            root = roots[0]          # 允许"多套一层目录"的打包习惯
+        bundle = root / "bundle.json"
+        if not bundle.is_file():
+            return 400, {"error": "manifest-missing",
+                         "detail": "归档根（或唯一顶层目录）里没有 bundle.json"}
+        try:
+            data = json.loads(bundle.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            return 400, {"error": "manifest-invalid", "detail": str(exc)}
+        slug = wanted_slug or str(data.get("slug") or "").strip() or root.name
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", slug):
+            return 400, {"error": "bad-slug", "detail": f"不接受的 slug: {slug!r}"}
+        data["slug"] = slug
+        bundle.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        target = AUTHORED_ROOT / slug
+        if target.exists():
+            return 409, {"error": "duplicate-bundle", "detail": f"{target} 已存在；先删掉或换个 slug"}
+        AUTHORED_ROOT.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(root, target)
+    listed = author_bundles()
+    row = next((r for r in listed["rows"] if r["slug"] == slug), None)
+    if row is None or not row.get("valid"):
+        return 400, {"error": "bundle-invalid", "detail": row.get("problems") if row else "未找到",
+                     "row": row}
+    return 201, {"row": row, "imported": str(target)}
+
+
+def author_draft(note: str, materials: str = "") -> tuple[int, dict]:
+    """起草：把这段自然语言交给 scenario_builder，它自己会校验、跑门、重试。"""
+    if not isinstance(note, str) or not note.strip():
+        return 400, {"error": "bad-note"}
+    import subprocess
+    import tempfile
+    slug = "draft-" + time.strftime("%Y%m%d-%H%M%S")
+    out = AUTHORED_ROOT / slug
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [sys.executable, str(SCENARIO_BUILDER), "--draft", "-", "--out", str(out), "--json"]
+    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as fh:
+        fh.write(note)
+        note_path = fh.name
+    cmd[cmd.index("-")] = note_path
+    if materials:
+        cmd += ["--materials", materials]
+    try:
+        done = subprocess.run(cmd, cwd=str(PLATFORM_ROOT), capture_output=True, text=True,
+                              timeout=900, env=dict(os.environ))
+    finally:
+        os.unlink(note_path)
+    if done.returncode != 0:
+        return 422, {"error": "draft-refused", "detail": (done.stderr or done.stdout)[-1500:]}
+    listed = author_bundles()
+    row = next((r for r in listed["rows"] if r["slug"] == slug), None)
+    return 200, {"row": row, "output": (done.stdout or "")[-1500:]}
+
 def explain_config() -> tuple[str, str, str, list[str]]:
     """(base_url, model, api_key, missing_names)。只读 env，绝不把值写进日志或响应。"""
     values = [os.environ.get(name, "").strip() for name in EXPLAIN_ENV]
@@ -2519,12 +2676,17 @@ def _chat_completion(base_url: str, model: str, api_key: str,
                      system: str, user: str) -> str:
     """一次 OpenAI 兼容的 /chat/completions 调用。key 只在 header 里，不写日志。"""
     url = base_url.rstrip("/") + "/chat/completions"
+    # **JSON 模式,而不是希望模型自己吐 JSON。** 实测(2026-11-02,本地 qwen3.5-9b):
+    # 不加这个字段时,整段解释被解析成空四块并标 degraded;vLLM 的 json_object 模式在
+    # `tools/check_local_model.py` 里是验过的,所以这里显式要。端点若拒绝这个字段,
+    # `_explain_request` 会去掉它再试一次 —— 拒绝的端点不该让解释功能整个不可用。
     body = json.dumps({
         "model": model,
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
         "temperature": 0,
         "stream": False,
+        "response_format": {"type": "json_object"},
     }, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json; charset=utf-8",
@@ -2693,12 +2855,23 @@ def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
             cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
             return 200, cached
 
-    try:
-        raw = _chat_completion(base_url, model, api_key, system, user)
-    except ExplainUpstream as exc:
-        return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
-
-    parsed, why = _parse_explain_reply(raw)
+    # **被拒绝的回复再问一次,而不是把它标成"解释为空"。** 实测(2026-11-02,本地
+    # qwen3.5-9b):JSON 模式打开后模型确实回了 JSON,但 evidence 只有 1 条,而契约要
+    # 2-4 条;前端于是显示一个空解释,读的人会以为这一轮没有改动。这里把拒绝原因回传
+    # 给模型重问一次 —— 同一条提示词不会让 9B 改变输出,但"上一次错在哪"会。
+    raw = ""
+    parsed = None
+    why = ""
+    for attempt in range(2):
+        prompt_system = system if attempt == 0 else (
+            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
+        try:
+            raw = _chat_completion(base_url, model, api_key, prompt_system, user)
+        except ExplainUpstream as exc:
+            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
+        parsed, why = _parse_explain_reply(raw)
+        if parsed is not None:
+            break
     elapsed = int(round((time.perf_counter() - started) * 1000))
     if parsed is None:
         # 不猜、不把半截 JSON 塞进四个块；原样交给前端，前端明确标成 degraded。
@@ -3009,6 +3182,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parts[1:] == ["health"]:
                 return self._send(api_health())
+            if parts[1:] == ["author", "bundles"]:
+                return self._send(author_bundles())
             if parts[1:] == ["runs"]:
                 kind = (query.get("kind") or [""])[0]
                 if kind not in ("", "study", "eval", "unknown"):
@@ -3162,6 +3337,30 @@ class Handler(BaseHTTPRequestHandler):
                 return self._submission_error(_submission_backend().SubmissionRejected([
                     {'code':'bad-query','detail':'upload does not accept query fields'}]))
             return self._submission_post()
+        if route == "api/author/draft":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = author_draft(str(body.get("note") or ""),
+                                         str(body.get("materials") or ""))
+            return self._send(payload, code)
+        if route == "api/author/import":
+            slug = (parse_qs(url.query).get("slug") or [""])[0]
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                return self._send({"error": "bad-length"}, 400)
+            if length <= 0 or length > IMPORT_MAX_BYTES:
+                return self._send({"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}, 413)
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as fh:
+                fh.write(self.rfile.read(length))
+                archive = pathlib.Path(fh.name)
+            try:
+                code, payload = author_import(archive, slug)
+            finally:
+                archive.unlink(missing_ok=True)
+            return self._send(payload, code)
         if route == "api/chat":
             try:
                 length = int(self.headers.get("Content-Length") or 0)

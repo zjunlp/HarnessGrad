@@ -237,7 +237,11 @@
   }
 
   function updateNavCount() {
-    $("#nav-runs").textContent = state.rowsLoaded ? String(state.rows.length) : "—";
+    // The nav no longer carries a count: it said "rows currently loaded" here and "total
+    // runs" on the chat page (81 vs 784 for the same console), and two pages never filled
+    // it. A section list should not show a number that depends on which page you are on.
+    const badge = $("#nav-runs");
+    if (badge) badge.textContent = state.rowsLoaded ? String(state.rows.length) : "—";
   }
 
   function fillFilters() {
@@ -686,6 +690,52 @@
     }
     const want = `#/harness/${encodeURIComponent(state.hRun)}${state.hRound == null ? "" : "/" + state.hRound}`;
     if (location.hash !== want) history.replaceState(null, "", want);
+  }
+
+  /* ─────────────────────── 版本 · 解释这一轮
+     这一块只做呈现：是否解释、用哪个模型、缓存命中、被拒绝的原因，全部由服务端给
+     (`/api/explain`)。页面不补全、不猜、不把半截 JSON 修成四段 —— 服务端把它标成
+     degraded 时，这里照原样显示原文和拒绝原因。 */
+  async function explainRound() {
+    const panel = $("#h-explain");
+    const button = $("#h-explain-btn");
+    if (!panel) return;
+    if (!state.hRun || state.hRun === BASE || state.hRound == null) {
+      panel.innerHTML = '<div class="empty"><span class="empty__title">先选一个实验和一轮</span>解释针对"这一轮的改动"，基线没有改动可解释。</div>';
+      return;
+    }
+    if (button) button.disabled = true;
+    panel.innerHTML = '<div class="stack" style="padding:4px 0"><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:95%"></div><div class="skeleton" style="width:55%"></div></div>';
+    try {
+      const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&round=${state.hRound}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        panel.innerHTML = `<div class="empty"><span class="empty__title">没有拿到解释</span>${esc(payload.detail || payload.error || response.status)}</div>`;
+        return;
+      }
+      renderExplain(panel, payload);
+    } catch (error) {
+      panel.innerHTML = `<div class="empty"><span class="empty__title">请求失败</span>${esc(error.message)}</div>`;
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  function renderExplain(panel, data) {
+    if (data.degraded) {
+      panel.innerHTML =
+        '<div class="explain__block"><div class="explain__label">模型回复没有通过契约</div>' +
+        `<div class="hint">${esc(data.parse_error || "未知原因")}</div></div>` +
+        `<pre class="wlog" style="max-height:220px">${esc(data.raw || "")}</pre>`;
+      return;
+    }
+    const evidence = (data.evidence || []).map((item) => `<li>${esc(item)}</li>`).join("");
+    panel.innerHTML =
+      `<div class="explain__claim">${esc(data.claim)}</div>` +
+      `<div class="explain__block"><div class="explain__label">依据</div><ul class="explain__list">${evidence}</ul></div>` +
+      `<div class="explain__block"><div class="explain__label">风险</div><div>${esc(data.risk)}</div></div>` +
+      `<div class="explain__block"><div class="explain__label">下一步</div><div>${esc(data.next)}</div></div>` +
+      `<div class="explain__meta">${esc(data.model)} · ${data.elapsed_ms}ms${data.cache_hit ? " · 缓存" : ""}</div>`;
   }
 
   function renderHarnessRoundOptions(rounds) {
@@ -1571,6 +1621,8 @@
     };
   });
   window.addEventListener("hashchange", route);
+  const explainButton = $("#h-explain-btn");
+  if (explainButton) explainButton.addEventListener("click", explainRound);
 
   loadHealth();
   route().finally(() => {

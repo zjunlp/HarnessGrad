@@ -284,6 +284,11 @@ received → validating → rejected
 | `running` | 409 | 对运行中的提交做非法操作 | 说明在跑 |
 | `not-started` | 409 | `validating` 阶段读 log | 请稍后 |
 | `service-not-ready` | 503 | 无预算目录/无 bwrap/读不到 `/proc` | 服务未就绪，附原因 |
+| `internal-error` | 500 | 服务内部错误（回执不可读、口径对不上、调度状态迁移失败） | 服务内部错误：保留 submission_id 与日志 |
+| `sandbox-unavailable` | 503 | `failed` 时表示服务端没有可用的沙箱，因此没有产出分数 | 沙箱不可用：说明没有分数，不是 0 分 |
+| `run-refused` | 200 | `failed` 时表示平台拒绝了这次评分；线上形如 `run-refused:<driver 的原因>` | 评分被平台拒绝：按 driver 的原因修正场景或 harness |
+
+上表是三张表里最严的一张：**上传与查询阶段**的错误码。最后三行（`internal-error`、`sandbox-unavailable`、`run-refused`）出现在一次提交的 **`failed` 终态**里（§4 的 `result.error.code`，与 §1 的清单一致），不是上传被拒的响应码；`run-refused` 线上带 `:<driver 的原因>` 后缀，前端按前缀匹配。
 
 `bad-multipart` 同时用于重复/未知部件、嵌套 multipart、非法 label/contact，带具体 field。HTTP 上传 envelope 上限为 20 MiB+64 KiB，归档原字节仍独立限制为 20 MiB；仅接受单一 Content-Length，不接受 Transfer-Encoding。非法 submission ID 不进行文件路径查找，统一 submission-not-found。
 
