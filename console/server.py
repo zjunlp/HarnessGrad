@@ -2413,10 +2413,21 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
         diff.extend(difflib.unified_diff((before.get(path) or "").splitlines(True),
                                          (after.get(path) or "").splitlines(True),
                                          fromfile=f"a/{path}", tofile=f"b/{path}", n=2))
+    # 助手这一轮说了什么。`codex exec --json` 把回复放在 `item.completed` 的
+    # `agent_message.text` 里；没有改文件时，这一段就是"讨论"本身，不能丢。
+    said = ""
+    for line in (done.stdout or "").splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        item = event.get("item") if isinstance(event, dict) else None
+        if isinstance(item, dict) and item.get("type") == "agent_message" and item.get("text"):
+            said = str(item["text"])
     if not changed:
         shutil.rmtree(target, ignore_errors=True)
         return 200, {"candidate": None, "changed": [], "diff": "",
-                     "message": "助手没有改动任何文件",
+                     "message": said or "助手没有改动任何文件",
                      "stderr_tail": (done.stderr or "")[-600:]}
     # **只报，不拦。** 助手第一版把注释插到了 shebang 上面 —— 文件仍然是合法 Python，
     # 但 `#!/usr/bin/env python3` 不再生效。这类事人一眼能看出来，平台不该替他决定要不要，
@@ -2431,7 +2442,7 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
                 syntax[path] = f"{exc.msg} (line {exc.lineno})"
     return 200, {"candidate": target.name, "changed": changed,
                  "diff": "".join(diff)[:20000], "exit": done.returncode,
-                 "syntax": syntax,
+                 "message": said, "syntax": syntax,
                  "stderr_tail": (done.stderr or "")[-600:]}
 
 

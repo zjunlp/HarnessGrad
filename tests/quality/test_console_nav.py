@@ -22,9 +22,10 @@ STATIC = Path(__file__).resolve().parents[2] / "console" / "static"
 PAGES = ("index.html", "chat.html", "trace.html", "submit.html", "author.html",
          "harness.html", "launch.html")
 
+# 导入环境只在「构造环境」里有：它是造环境的一步，放在优化 Harness 里就是同一件事的
+# 第二个入口。助手页也去掉了 —— 工作区右侧已经能直接和助手对话。
 HARNESS = [("实验", "/#/runs"), ("轨迹", "/#/trace"), ("版本", "/#/version"),
-           ("自己改", "/harness.html"), ("启动", "/launch.html"), ("助手", "/chat.html"),
-           ("评测", "/submit.html"), ("导入环境", "/author.html#/import")]
+           ("编辑", "/harness.html"), ("启动", "/launch.html"), ("评测", "/submit.html")]
 BUILD = [("场景", "/author.html#/scenarios"), ("起草", "/author.html#/draft"),
          ("导入", "/author.html#/import"), ("去优化 Harness", "/")]
 

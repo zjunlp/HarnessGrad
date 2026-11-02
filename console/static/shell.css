@@ -265,3 +265,34 @@ body[data-sidebar="collapsed"] .side .nav-item {
 }
 body[data-sidebar="collapsed"] .side .nav-item::before { content: none; }
 body[data-sidebar="collapsed"] .side .sh-section { display: none; }
+
+/* ── 右侧对话：有历史、能带上选中行。不是一次性输入框。 ─────────────────── */
+.hg-chat {
+  border-left: 1px solid var(--n-200); background: var(--n-0);
+  min-height: calc(100vh - 100px); position: sticky; top: 46px;
+  display: flex; flex-direction: column; max-height: calc(100vh - 46px);
+}
+.hg-chat__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-2); padding: var(--s-3) var(--s-4); border-bottom: var(--line);
+  font-size: var(--t-3); flex: 0 0 auto;
+}
+.hg-chat__thread {
+  flex: 1 1 auto; overflow: auto; padding: var(--s-3) var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+.hg-chat__empty { color: var(--n-500); font-size: var(--t-2); line-height: 1.7; }
+.hg-msg { display: flex; flex-direction: column; gap: 4px; }
+.hg-msg__who { font-size: var(--t-1); font-weight: 650; color: var(--n-500); letter-spacing: .04em; }
+.hg-msg__body {
+  font-size: var(--t-2); line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: 9px 11px; border-radius: var(--r-2); border: var(--line); background: var(--n-25);
+}
+.hg-msg--user .hg-msg__body { background: var(--accent-soft); border-color: var(--accent-line); }
+.hg-msg__sel { font-family: var(--mono); font-size: var(--t-1); color: var(--accent-ink); }
+.hg-msg details summary { cursor: pointer; font-size: var(--t-1); color: var(--n-500); }
+.hg-msg pre { margin: 6px 0 0; max-height: 240px; }
+.hg-chat__compose {
+  flex: 0 0 auto; border-top: var(--line); padding: var(--s-3) var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-2); background: var(--n-0);
+}

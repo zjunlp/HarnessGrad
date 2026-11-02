@@ -24,8 +24,8 @@
 
   <main class="main">
     <div class="topbar">
-      <h1>重构工作区</h1>
-      <span class="sub">选版本 → 选中行 → 让助手按你的意见改；改动落成候选，跑不跑由你决定</span>
+      <h1>编辑</h1>
+      <span class="sub">选版本 → 选文件 → 在右侧和助手讨论，它按讨论改；改动落成候选，跑不跑由你决定</span>
       <span class="spacer"></span>
       <span class="badge" id="dirty" hidden>未保存</span>
       <button class="btn btn--sm" type="button" id="save">另存为候选</button>
@@ -59,35 +59,32 @@
         </div>
       </div>
 
-      <aside style="border-left:1px solid var(--n-200);background:var(--n-0);min-height:calc(100vh - 100px);padding:14px;display:flex;flex-direction:column;gap:12px;position:sticky;top:46px">
-      <div class="hg-row" style="justify-content:space-between">
-        <b style="font-size:var(--t-3)">助手</b>
-        <select class="select" id="kind" style="width:auto">
-          <option value="codex">codex</option>
-          <option value="dsh">dsh</option>
-          <option value="opencode">opencode</option>
-          <option value="miniswe">miniswe</option>
-          <option value="miniagent">miniagent</option>
-          <option value="openclaw">openclaw</option>
-        </select>
-      </div>
-      <div class="field">
-        <span class="field__label">选中的行</span>
-        <div id="chips" class="hg-row" style="flex-wrap:wrap;gap:6px"><span class="field__hint">在编辑器里选中若干行</span></div>
-      </div>
-      <div class="field">
-        <label class="field__label" for="instruction">你的意见</label>
-        <textarea class="textarea" id="instruction" rows="5"
-                  placeholder="例如：这段上下文预算和答案提取互相影响，请拆成两个函数，行为不要变。"></textarea>
-      </div>
-      <button class="btn btn--accent" type="button" id="send">让助手改</button>
-      <pre class="wlog" id="say" hidden style="max-height:180px"></pre>
-      <details>
-        <summary class="field__label" style="cursor:pointer">改动（diff）</summary>
-        <pre class="wlog hg-mono" id="diff" style="max-height:320px;margin-top:8px">（还没有改动）</pre>
-      </details>
-      <a class="btn btn--primary" id="to-eval" href="/submit.html" style="justify-content:center">去评测</a>
-      <p class="field__hint">会把当前候选打包、带着配置跳到评测页；是否真的提交仍然由你决定。</p>
+      <aside class="hg-chat">
+        <div class="hg-chat__head">
+          <b>助手</b>
+          <select class="select" id="kind" style="width:auto">
+            <option value="codex">codex</option>
+            <option value="dsh">dsh</option>
+            <option value="opencode">opencode</option>
+            <option value="miniswe">miniswe</option>
+            <option value="miniagent">miniagent</option>
+            <option value="openclaw">openclaw</option>
+          </select>
+        </div>
+        <div class="hg-chat__thread" id="thread">
+          <div class="hg-chat__empty">说点什么：可以让它改代码，也可以只讨论。<br>
+            选中行会跟着这一条消息一起发出去。</div>
+        </div>
+        <div class="hg-chat__compose">
+          <div class="hg-row" id="chips" style="flex-wrap:wrap;gap:6px"></div>
+          <textarea class="textarea" id="instruction" rows="3"
+                    placeholder="例如：这段上下文预算和答案提取互相影响，请拆成两个函数；或者：先说说这段在做什么。"></textarea>
+          <div class="hg-row">
+            <span class="field__hint" id="send-state"></span>
+            <span class="spacer hg-grow"></span>
+            <button class="btn btn--accent btn--sm" type="button" id="send">发送</button>
+          </div>
+        </div>
       </aside>
     </div>
   </main>

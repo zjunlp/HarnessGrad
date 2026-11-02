@@ -74,37 +74,74 @@
   function paintChips() {
     const sel = selection();
     $("chips").innerHTML = sel
-      ? `<span class="badge badge--accent">${esc(sel.path)}:${sel.from}-${sel.to}</span><span class="field__hint">这段会随意见一起发给助手</span>`
-      : '<span class="field__hint">在编辑器里选中若干行</span>';
+      ? `<span class="badge badge--accent">${esc(sel.path)}:${sel.from}-${sel.to}</span>` +
+        '<span class="field__hint">会随这一条消息一起发出</span>'
+      : '<span class="field__hint">选中若干行，可以带着上下文说</span>';
+  }
+
+  const thread = () => $("thread");
+
+  // 一条消息 = 谁说的 + 它带了哪个选区 + 助手改了什么。历史留在 DOM 里，不刷新就一直在。
+  function pushMessage(role, text, extra = {}) {
+    const wrap = document.createElement("div");
+    wrap.className = `hg-msg hg-msg--${role}`;
+    const who = role === "user" ? "你" : "助手";
+    const sel = extra.selection
+      ? `<div class="hg-msg__sel">${esc(extra.selection.path)}:${esc(extra.selection.from)}-${esc(extra.selection.to)}</div>`
+      : "";
+    const diff = extra.diff
+      ? `<details><summary>改动 ${esc((extra.changed || []).join(", "))}</summary>` +
+        `<pre class="wlog hg-mono">${esc(extra.diff)}</pre></details>`
+      : "";
+    const cand = extra.candidate ? `<div class="hg-msg__sel">新候选：${esc(extra.candidate)}</div>` : "";
+    wrap.innerHTML = `<div class="hg-msg__who">${who}</div>${sel}` +
+      `<div class="hg-msg__body">${esc(text)}</div>${cand}${diff}`;
+    thread().appendChild(wrap);
+    thread().scrollTop = thread().scrollHeight;
+    return wrap;
   }
 
   async function send() {
     const instruction = $("instruction").value.trim();
-    const log = $("say");
-    if (!instruction) { log.hidden = false; log.textContent = "先写一句你的意见。"; return; }
-    if (state.source === "base") { log.hidden = false; log.textContent = "先「另存为候选」再让助手改：基线是只读的。"; return; }
-    log.hidden = false; log.textContent = "助手在改（可能要几十秒）…";
+    if (!instruction) return;
+    if (state.source === "base") {
+      pushMessage("assistant", "先把当前文件「另存为候选」：基线是只读的，改它等于换掉所有曲线的起点。");
+      return;
+    }
+    const sel = selection();
+    pushMessage("user", instruction, { selection: sel });
+    $("instruction").value = "";
     $("send").disabled = true;
+    $("send-state").textContent = "助手在回…";
+    const pending = pushMessage("assistant", "…");
     try {
-      const sel = selection();
-      const response = await fetch("/api/workbench/edit", { method: "POST",
+      const response = await fetch("/api/workbench/edit", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: state.source, kind: $("kind").value, instruction, selection: sel }) });
+        body: JSON.stringify({ name: state.source, kind: $("kind").value, instruction, selection: sel }),
+      });
       const payload = await response.json();
-      if (!response.ok) { log.textContent = `${payload.error || "拒绝"}\n${payload.detail || ""}`; return; }
-      $("diff").textContent = payload.diff || "（没有改动）";
-      const syntax = Object.entries(payload.syntax || {});
-      log.textContent = [
-        payload.candidate ? `新候选：${payload.candidate}` : "助手没有改动任何文件",
-        `改了：${(payload.changed || []).join(", ") || "—"}`,
-        ...syntax.map(([p, v]) => `语法 ${p}: ${v}`),
-        `退出码 ${payload.exit}`,
-      ].join("\n");
-      if (payload.candidate) { await loadSources(); $("source").value = payload.candidate; await openSource(payload.candidate); $("name").value = payload.candidate; }
+      pending.remove();
+      if (!response.ok) {
+        pushMessage("assistant", `${payload.error || "拒绝"}：${payload.detail || ""}`);
+        return;
+      }
+      const said = payload.message || (payload.changed || []).length
+        ? (payload.message || `改了 ${(payload.changed || []).length} 个文件。`)
+        : "这一轮没有改动。";
+      pushMessage("assistant", said, { diff: payload.diff, changed: payload.changed, candidate: payload.candidate });
+      if (payload.candidate) {
+        await loadSources();
+        $("source").value = payload.candidate;
+        await openSource(payload.candidate);
+        $("name").value = payload.candidate;
+      }
     } catch (error) {
-      log.textContent = `请求失败：${error.message}`;
+      pending.remove();
+      pushMessage("assistant", `请求失败：${error.message}`);
     } finally {
       $("send").disabled = false;
+      $("send-state").textContent = "";
     }
   }
 
@@ -130,15 +167,6 @@
     $("editor").addEventListener("keyup", paintChips);
     $("editor").addEventListener("mouseup", paintChips);
     $("source").addEventListener("change", () => openSource($("source").value));
-    $("to-eval").addEventListener("click", (event) => {
-      const name = state.source === "base" ? ($("name").value.trim() || "") : state.source;
-      if (!name || state.source === "base") {
-        event.preventDefault();
-        alert("先把当前文件另存为候选，再去评测：基线是只读的，评测一个没保存的版本没有意义。");
-        return;
-      }
-      event.currentTarget.href = `/submit.html?candidate=${encodeURIComponent(name)}`;
-    });
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
     loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });

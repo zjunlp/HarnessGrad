@@ -19,12 +19,9 @@
           { label: "版本", href: "/#/version" },
         ]],
         ["动手", [
-          { label: "自己改", href: "/harness.html" },
+          { label: "编辑", href: "/harness.html" },
           { label: "启动", href: "/launch.html" },
           { label: "评测", href: "/submit.html" },
-        ]],
-        ["输入", [
-          { label: "导入环境", href: "/author.html#/import" },
         ]],
       ],
     },
