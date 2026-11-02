@@ -248,6 +248,17 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
   --shadow-2: 0 12px 32px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .35);
 }
+/* 外壳那套 `--sh-*` 变量是**独立的一份**，深色时必须一起换，否则 body 暗了 `.main`
+   还是 #fbfbfc（实测：深色下 .main 仍是 rgb(251,251,252)，整块发白）。 */
+:root[data-theme="dark"] {
+  --sh-bg: #111318;
+  --sh-card: #17191e;
+  --sh-line: #2a2f38;
+  --sh-line-2: #343a45;
+  --sh-ink: #e8ebf0;
+  --sh-ink-2: #b7bec9;
+  --sh-ink-3: #8b919d;
+}
 :root[data-theme="dark"] body { background: #111318; color: var(--n-800); }
 :root[data-theme="dark"] .side, :root[data-theme="dark"] .main .topbar,
 :root[data-theme="dark"] .sh-bar { background: var(--n-25); }
@@ -264,3 +275,28 @@ body { font-size: var(--sh-font-size, 13px); }
  * 没变。设置弹窗"关不掉"就是这个原因，而只检查 `el.hidden` 的测试看不出这一点。
  */
 [hidden] { display: none !important; }
+
+/* 老样式（app.css）里的表单控件、表格行、代码块自带浅色底。深色下逐个换掉：
+   它们是迁移前的东西，迁移完成后这一段就可以删。 */
+:root[data-theme="dark"] table tbody tr,
+:root[data-theme="dark"] table thead,
+:root[data-theme="dark"] .tbl tbody tr { background: transparent; }
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] pre,
+:root[data-theme="dark"] .wlog,
+:root[data-theme="dark"] .wcmd {
+  background: var(--n-25);
+  color: var(--n-800);
+  border-color: var(--n-300);
+}
+:root[data-theme="dark"] .main { background: var(--sh-bg); }
+:root[data-theme="dark"] .filters,
+:root[data-theme="dark"] .lab-toolbar { background: var(--n-25); border-color: var(--n-200); }
+/* 两个漏网的：首页的搜索输入框与作者页的说明框用的是行内/更高优先级的浅色底。 */
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="file"]),
+:root[data-theme="dark"] textarea:not([style*="background"]) {
+  background: var(--n-25) !important;
+  color: var(--n-800) !important;
+}
