@@ -667,32 +667,25 @@
     for (const [kind, label] of groups) {
       const list = rows.filter((r) => r.kind === kind);
       if (!list.length) continue;
+      // **不能嵌套 optgroup。** 上一版把族放进外层 optgroup 里，而 HTML 不允许
+      // optgroup 里再放 optgroup —— 浏览器把内层丢掉，于是"研究（多轮）"下面是空的，
+      // 看上去像所有版本都不见了（实测 2026-11-02）。这里只留一层，族名并进选项文本：
+      // 一行仍然只有"族 · 时间"，但它是合法结构。
       html += `<optgroup label="${label}">`;
-      // **同一棵树的轮次收进同一个 optgroup。** 一个族的 run id 只差时间戳与版本后缀
-      // （`appworld-study-sica_ci-…`、`…-r20-1`），平铺时十几条看起来一模一样，扫读等于
-      // 逐个读时间戳。族名 = 去掉时间戳/后缀之后的前缀，族内按时间倒序，最新在前。
       const family = (id) => String(id)
         .replace(/[-_]\d{8}(T\d{4,6})?Z?$/i, "")
         .replace(/[-_]r\d+(-\d+)?$/i, "");
-      const byFamily = new Map();
-      for (const r of list) {
-        const key = family(r.id);
-        if (!byFamily.has(key)) byFamily.set(key, []);
-        byFamily.get(key).push(r);
-      }
-      for (const [key, members] of byFamily) {
-        const many = members.length > 1;
-        html += `<optgroup label="${esc(many ? `${key} · ${members.length}` : key)}">`;
-        html += members
-          .sort((a, b) => String(b.mtime || "").localeCompare(String(a.mtime || "")))
-          .map((r) => {
-            const bits = [r.pretty || r.id];
-            if (r.mtime) bits.push(r.mtime);
-            if (kind === "unknown") bits.push("无曲线");
-            return `<option value="${esc(r.id)}"${r.id === state.hRun ? " selected" : ""}>${esc(bits.join(" · "))}</option>`;
-          }).join("");
-        html += "</optgroup>";
-      }
+      const sorted = list.slice().sort((a, b) =>
+        String(b.mtime || "").localeCompare(String(a.mtime || "")));
+      html += sorted.map((r) => {
+        const id = String(r.id);
+        const tail = id.slice(family(id).length).replace(/^[-_]/, "");
+        const bits = [family(id), tail || id];
+        if (r.mtime) bits.push(r.mtime);
+        if (kind === "unknown") bits.push("无曲线");
+        return `<option value="${esc(r.id)}"${r.id === state.hRun ? " selected" : ""}>${esc(bits.join(" · "))}</option>`;
+      }).join("");
+      html += "</optgroup>";
     }
     const el = $("#h-run");
     el.innerHTML = html;
