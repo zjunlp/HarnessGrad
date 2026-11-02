@@ -285,15 +285,33 @@
     };
   }
 
+  //: 列表里第一列只有 ~200px，长 id 从右边截会把 `-r16` / `-r20` 这个真正区分的尾巴
+  //: 一起截掉。所以掐头留尾，并补一个前导省略号；完整值在整行 title 与右侧栏里。
+  const tailText = (s, n = 30) => {
+    const t = String(s || "");
+    return t.length <= n ? t : "…" + t.slice(-(n - 1));
+  };
+
+  //: `pretty` 里的 dataset 前缀在"benchmark · 池"那一列已经有了；去掉它，第一列才有
+  //: 位置显示真正区分的 `sica_ci · 20261019T1816Z`。这一行放不下就从尾部省略（标签的
+  //: 开头是有信息量的部分），下一行的 id 掐头留尾 —— 两行各留一头，合起来才完整。
+  const shortLabel = (r) => {
+    const p = String(r.pretty || r.id || "");
+    const d = String(r.dataset || "");
+    return d && p.startsWith(d + " · ") ? p.slice(d.length + 3) : p;
+  };
+
+  //: 状态徽标。running 带一个会走的小圆点，其余用语义色（--ok/--warn），
+  //: 不写字面色值 —— 深色主题只换 token 就能跟着变。
   function statusPill(r) {
     if (r.status === "running") {
-      return `<span class="pill" data-tone="run">running${r.progress ? ` ${fmtInt(r.progress.done)}` : ""}</span>`;
+      return `<span class="badge badge--accent"><span class="dot live"></span>running${r.progress ? ` ${fmtInt(r.progress.done)}` : ""}</span>`;
     }
-    if (r.status === "empty") return `<span class="pill" data-tone="warn">无曲线</span>`;
+    if (r.status === "empty") return `<span class="badge badge--warn">无曲线</span>`;
     if (isNum(r.invalid) && Number(r.invalid) > 0) {
-      return `<span class="pill" data-tone="warn">invalid ${fmtInt(r.invalid)}</span>`;
+      return `<span class="badge badge--warn">invalid ${fmtInt(r.invalid)}</span>`;
     }
-    return `<span class="pill" data-tone="done">done</span>`;
+    return `<span class="badge badge--ok">done</span>`;
   }
 
   function runsSub() {
@@ -378,11 +396,12 @@
     }
 
     box.className = "";
-    box.innerHTML = `<table class="grid"><thead><tr>
-        <th>run</th><th>benchmark · 池</th><th>task-agent</th><th>meta</th>
+    box.innerHTML = `<table class="tbl runs"><thead><tr>
+        <th>run</th><th class="nowrap">benchmark · 池</th><th class="nowrap">task-agent</th>
+        <th class="nowrap">meta</th>
         <th class="num">轮</th><th class="num">最好</th>
-        <th class="num calls-col" title="最新一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>
-        <th>状态</th><th>更新</th></tr></thead><tbody>
+        <th class="num nowrap" title="最新一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>
+        <th class="nowrap">状态</th><th class="nowrap">更新</th></tr></thead><tbody>
       ${rows.map((r) => {
         const best = (r.status === "running" || r.best == null)
           ? "—"
@@ -398,15 +417,15 @@
           : (r.stamp === "h0" ? "无（基线）" : "—");
         const tasks = r.n_tasks == null ? "" : ` · ${r.n_tasks}题`;
         return `<tr data-clickable="true" data-run="${esc(r.id)}" data-active="${r.id === state.runId}" title="${esc(r.id)}">
-          <td><div>${esc(r.pretty)}</div><div class="row-id">${esc(r.id)}</div></td>
+          <td><div title="${esc(r.pretty)}">${esc(shortLabel(r))}</div><div class="row-id">${esc(tailText(r.id))}</div></td>
           <td>${esc(r.dataset || "—")} · ${esc(r.pool || "—")}</td>
-          <td>${agent}</td>
+          <td title="${esc(agentBits.join(' · '))}">${agent}</td>
           <td class="meta-cell" title="${esc(metaInfo.full)}">${metaCell}</td>
           <td class="num">${r.has_curve === false ? "—" : (r.rounds ?? "—")}</td>
           <td class="num">${best}</td>
-          <td class="num calls-col">${callsCell(r, r.n_tasks)}</td>
-          <td>${statusPill(r)}<span class="row-id">${tasks}</span></td>
-          <td class="row-id">${esc(r.mtime || "—")}</td></tr>`;
+          <td class="num">${callsCell(r, r.n_tasks)}</td>
+          <td><div class="run-status">${statusPill(r)}<span class="row-id">${tasks}</span></div></td>
+          <td class="row-id nowrap">${esc(r.mtime || "—")}</td></tr>`;
       }).join("")}</tbody></table>`;
 
     box.querySelectorAll("[data-run]").forEach((tr) => {

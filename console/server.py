@@ -2365,6 +2365,67 @@ IMPORT_MAX_BYTES = 32 * 1024 * 1024        # 比场景归档小得多：这里�
 CANDIDATES = pathlib.Path(os.environ.get("HG_CONSOLE_CANDIDATES",
                                          PLATFORM_ROOT / "data" / "candidates"))
 CANDIDATE_NAME = re.compile(r"[A-Za-z0-9._-]{1,48}")
+# 候选的来源账本：`data/candidates/.sources.json`。打开同一轮**不应该**每点一次就多出一份
+# 副本（383 KB 的 agent.py × N），但也不能覆盖用户已经改过的副本。所以记下创建时的指纹：
+# 打开时指纹没变就复用，变了（人改过）就再造一份带序号的新副本。
+CANDIDATE_INDEX = CANDIDATES / ".sources.json"
+
+
+def _candidate_tree_sha(root: pathlib.Path) -> dict[str, str]:
+    """目录里每个文件的 sha256。跳过缓存与 VCS，迁移不算改动。"""
+    out: dict[str, str] = {}
+    if not root.is_dir():
+        return out
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        if "__pycache__" in path.parts or path.suffix in (".pyc", ".pyo"):
+            continue
+        try:
+            out[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            continue
+    return out
+
+
+def _candidate_sources() -> dict:
+    data = read_json(CANDIDATE_INDEX) if CANDIDATE_INDEX.is_file() else None
+    return data if isinstance(data, dict) else {}
+
+
+def _remember_candidate(name: str, run_id: str, round_no: int, via: str,
+                        target: pathlib.Path) -> None:
+    index = _candidate_sources()
+    index[name] = {"run": run_id, "round": int(round_no), "via": via,
+                   "created": int(time.time()), "files": _candidate_tree_sha(target)}
+    try:
+        CANDIDATES.mkdir(parents=True, exist_ok=True)
+        CANDIDATE_INDEX.write_text(
+            json.dumps(index, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
+            encoding="utf-8")
+    except OSError:
+        # 账本写不下去不影响这次复制，只影响下次能不能复用。
+        pass
+
+
+def _candidate_reusable(name: str, run_id: str, round_no: int) -> bool:
+    """这份同名候选是不是**上一次从同一轮原样复制出来的、之后没人动过**。
+
+    账本里没有记录的同名目录（这个特性上线前复制出来的）也接管：它本来就是那一轮的副本
+    （实测五个 `…-r20*` 与 `state_after_round20` 除 `harness.json` 的名字外逐字节相同），
+    接管后记下当前指纹，下次就能正常判定了。接管不会覆盖任何东西 —— 拿到手的就是那个
+    目录本身；人一旦改它，指纹变，下次就会新开一份。
+    """
+    target = CANDIDATES / name
+    if not target.is_dir() or not (target / "harness.json").is_file():
+        return False
+    record = _candidate_sources().get(name)
+    if isinstance(record, dict):
+        if record.get("run") != run_id or int(record.get("round", -1)) != int(round_no):
+            return False
+        return record.get("files") == _candidate_tree_sha(target)
+    _remember_candidate(name, run_id, round_no, "adopted", target)
+    return True
 
 
 
@@ -2718,6 +2779,17 @@ def harness_candidate_from_round(run_id: str, round_no: int,
         return 400, {"error": "bad-round", "detail": round_no}
     base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{round_no}")[:48]
     target = CANDIDATES / base
+    # 同一个版本点第二次：复用上次原样复制的那一份，而不是再攒一个 `-1`、`-2`。
+    # 人改过（指纹变了）就还是新开一份，绝不覆盖别人的改动。
+    if not replay and _candidate_reusable(base, str(run_id), round_no):
+        manifest = read_json(target / "harness.json")
+        if isinstance(manifest, dict):
+            via = (_candidate_sources().get(base) or {}).get("via") or "snapshot"
+            return 200, {"candidate": target.name,
+                         "from": str(run_path / f"state_after_round{round_no}"),
+                         "round": round_no, "reconstructed": via == "replay",
+                         "applied": [], "reused": True,
+                         "files": sorted(p.name for p in target.iterdir() if p.is_file())}
     suffix = 0
     while target.exists():
         suffix += 1
@@ -2792,8 +2864,10 @@ def harness_candidate_from_round(run_id: str, round_no: int,
         shutil.rmtree(target, ignore_errors=True)
         return 409, {"error": "no-manifest",
                      "detail": f"r{round_no} 重放后仍然没有 harness.json"}
+    _remember_candidate(target.name, str(run_id), round_no,
+                        "replay" if reconstructed else "snapshot", target)
     return 201, {"candidate": target.name, "from": str(snap), "round": round_no,
-                 "reconstructed": reconstructed, "applied": applied,
+                 "reconstructed": reconstructed, "reused": False, "applied": applied,
                  "files": sorted(p.name for p in target.iterdir() if p.is_file())}
 
 

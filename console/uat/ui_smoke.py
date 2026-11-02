@@ -58,6 +58,67 @@ def main() -> int:
             page.wait_for_timeout(400)
             check(visible(page, "#sh-set") == "none", f"{path} 设置关得掉（显示状态）")
 
+        # ── 主题：深色下不能留浅底控件 ────────────────────────────────────
+        # 侧栏折叠把手曾经在深色主题里是个白块：tokens.css 的 `--hg-alias-*` 只在
+        # `body[data-jl-dark]` 下翻色，而主题开关只翻了 `:root[data-theme]`。
+        # 这一条按**计算出来的亮度**判定，跟上面设置弹窗那条同一个道理。
+        page.goto(base + "/", wait_until="networkidle")
+        page.wait_for_timeout(700)
+        page.click("#shell-open-settings")
+        page.wait_for_timeout(400)
+        page.click("#sh-theme button[data-theme='dark']")
+        page.wait_for_timeout(400)
+        check(page.evaluate("() => document.documentElement.dataset.theme") == "dark", "深色主题切得动")
+        tone = page.eval_on_selector("#sidebar-toggle", """e => {
+            const m = getComputedStyle(e).backgroundColor.match(/\d+(\.\d+)?/g).map(Number);
+            return (m[0] + m[1] + m[2]) / 3;
+        }""")
+        check(tone < 110, f"深色下侧栏把手不是浅底（亮度 {tone:.0f}）")
+        page.click("#sh-theme button[data-theme='light']")
+        page.wait_for_timeout(300)
+        page.click("#sh-set-close")
+        page.wait_for_timeout(300)
+        check(page.evaluate("() => document.documentElement.dataset.theme") == "light", "切回浅色")
+
+        # ── 实验列表：九列一张表，密度、徽标、对齐、不溢出 ──────────────────
+        # 这一节是"设计系统迁移"的回归口：表格混用两套样式、某一行把表撑宽 90px 导致最右
+        # 的"更新"列被切到可视区外、行被折行撑到 79px —— 静态检查全都看不出来。
+        page.goto(base + "/#/runs", wait_until="networkidle")
+        page.wait_for_timeout(1500)
+        check(page.eval_on_selector_all("#runs-table tbody tr[data-run]", "e => e.length") > 5,
+              "实验列表渲染出行")
+        check(page.eval_on_selector("#runs-table table", "e => e.className") == "tbl runs",
+              "实验列表用设计系统的表（.tbl.runs）")
+        overflow = page.evaluate("""() => {
+            const b = document.querySelector('#runs-table');
+            return b.scrollWidth - b.clientWidth;
+        }""")
+        check(overflow <= 1, f"实验列表不横向溢出（{overflow}px）")
+        heights = page.eval_on_selector_all("#runs-table tbody tr[data-run]",
+                                           "els => els.map(e => e.getBoundingClientRect().height)")
+        check(max(heights) < 64, f"行高密（{max(heights):.0f}px，不折行）")
+        badges = page.eval_on_selector_all("#runs-table .run-status .badge", """els => els.map(e => {
+            const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+            return {h: Math.round(r.height), clip: e.scrollWidth > Math.ceil(r.width) + 1, color: c.color};
+        })""")
+        check(len(badges) > 5, f"状态用徽标（{len(badges)} 个）")
+        check(len({b["h"] for b in badges}) == 1, "徽标高度一致")
+        check(not any(b["clip"] for b in badges), "徽标文字不被裁掉")
+        nums = page.eval_on_selector_all("#runs-table tbody td.num", """els => els.slice(0, 5).map(e =>
+            [getComputedStyle(e).textAlign, getComputedStyle(e).fontVariantNumeric])""")
+        check(all(t == "right" for t, _ in nums), "数字列右对齐")
+        check(all("tabular-nums" in v for _, v in nums), "数字列等宽数字")
+        active = page.eval_on_selector("#runs-table tbody tr[data-active='true']", """e => {
+            const c = getComputedStyle(e);
+            return {shadow: c.boxShadow, border: c.borderLeftWidth};
+        }""")
+        check("inset" in active["shadow"] and active["border"] == "0px",
+              "选中行的左强调线不吃列宽（inset 阴影，不加 border）")
+        search = page.eval_on_selector("#f-q", """e => ({cls: e.className, inline: e.getAttribute("style"),
+            w: Math.round(e.getBoundingClientRect().width)})""")
+        check("input" in search["cls"] and not search["inline"], "筛选输入框走设计系统控件（无行内样式）")
+        check(search["w"] == 200, f"筛选输入框宽度按控件（{search['w']}px）")
+
         # ── 版本：run 有选项、轮次跟着 run 变 ──────────────────────────────
         page.goto(base + "/?mode=harness#/version", wait_until="networkidle")
         page.wait_for_timeout(1600)

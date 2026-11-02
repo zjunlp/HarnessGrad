@@ -130,6 +130,41 @@
 .tbl tbody tr:hover { background: var(--n-25); }
 .tbl code { font-family: var(--mono); font-size: var(--t-1); color: var(--n-600); }
 
+/* 实验列表（#/runs）：784 行、9 列，一屏要能扫完。
+   `table-layout: fixed` 是这里的关键 —— 自动布局下，某一行的长 harness 名会把整张表
+   撑宽 90px，最右的"更新"列被切到可视区外；固定布局把列宽钉死，长文案用省略号，
+   换一页、换一个筛选条件列宽也不跳。 */
+.nowrap { white-space: nowrap; }
+.tbl.runs { table-layout: fixed; }
+.tbl.runs th { padding: var(--s-2) var(--s-2); }
+.tbl.runs td { padding: 7px var(--s-2); }
+.tbl.runs th:nth-child(1) { width: 22%; }
+.tbl.runs th:nth-child(2) { width: 11.5%; }
+.tbl.runs th:nth-child(3) { width: 14.5%; }
+.tbl.runs th:nth-child(4) { width: 11%; }
+.tbl.runs th:nth-child(5) { width: 4.5%; }
+.tbl.runs th:nth-child(6) { width: 7%; }
+.tbl.runs th:nth-child(7) { width: 6%; }
+.tbl.runs th:nth-child(8) { width: 13%; }
+.tbl.runs th:nth-child(9) { width: 10.5%; }
+.tbl.runs td.num, .tbl.runs th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* 前四列是长文案，一律单行省略；完整值在整行的 title 与右侧栏里。 */
+.tbl.runs td:nth-child(-n+4) {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tbl.runs tbody td:nth-child(6), .tbl.runs tbody td:nth-child(8) { white-space: nowrap; }
+.tbl.runs tbody tr[data-clickable="true"] { cursor: pointer; }
+/* 选中行走强调色左边线 —— 用 `box-shadow: inset` 而不是 `border-left`，否则列会错位一像素。 */
+.tbl.runs tbody tr[data-active="true"] {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.tbl.runs tbody tr[data-active="true"]:hover { background: var(--accent-soft); }
+.run-status { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.run-status .row-id { font-size: var(--t-1); }
+/* 只看一行的筛选条：搜索框按控件尺寸，不靠行内样式 */
+.input.runs-q { width: 200px; }
+
 /* ── 徽标 / 状态 ──────────────────────────────────────────────────── */
 .badge {
   display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
@@ -142,6 +177,21 @@
 .badge--bad { border-color: var(--bad-line); background: var(--bad-soft); color: var(--bad); }
 .badge--accent { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+.dot.live { animation: hg-live 1.6s ease-in-out infinite; }
+@keyframes hg-live { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } }
+
+/* `.pill` / `data-tone` 是迁移前的名字，submit 与 author 两屏还在用。
+   只把配色接到语义 token 上，深色主题就跟着走；等这两屏也换到 `.badge` 时整段删除。 */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid transparent;
+  font-size: var(--t-1); font-weight: 600; line-height: 1;
+}
+.pill[data-tone="done"] { border-color: var(--ok-line); background: var(--ok-soft); color: var(--ok); }
+.pill[data-tone="run"] { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+.pill[data-tone="warn"] { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn); }
+.pill[data-tone="bad"] { border-color: var(--bad-line); background: var(--bad-soft); color: var(--bad); }
 
 /* ── 表单 ─────────────────────────────────────────────────────────── */
 .field { display: flex; flex-direction: column; gap: 6px; }

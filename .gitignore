@@ -462,5 +462,9 @@ console/.local/
 # the console's endpoint settings live here and carry API keys
 .local/
 
+# 候选副本的来源账本：记录每个副本创建时的文件指纹，用来判断"打开同一轮要不要复用"。
+# 它是这台机器上的状态（时间戳 + 本地路径决策），不是源文件。
+data/candidates/.sources.json
+
 # Harness integration decision and acceptance record.
 !/docs/openclaw-miniagent-integration.md

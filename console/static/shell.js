@@ -208,6 +208,11 @@
     const dark = choice === "dark" || (choice === "system" &&
       window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
+    // tokens.css 是从 DSH 1:1 搬过来的，它的语义别名（--hg-alias-*）只在
+    // `body[data-jl-dark]` 下翻深色；只翻 `--n-*` 的话，app.css 里还在用别名的组件
+    // （侧栏折叠把手就是）会在深色主题里保持浅底 —— 一个白块贴在深色侧栏边上。
+    if (dark) document.body.dataset.jlDark = "";
+    else delete document.body.dataset.jlDark;
     document.documentElement.style.setProperty("--sh-font-size",
       (localStorage.getItem("hg.font") || "13") + "px");
   }

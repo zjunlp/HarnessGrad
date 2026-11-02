@@ -269,7 +269,7 @@ table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: 
 
 /* ───────────────────────────────────────────────────────── 视图布局 */
 .cols { display: grid; min-height: 0; flex: 1; }
-.cols[data-cols="2"] { grid-template-columns: minmax(0,1fr) 340px; }
+.cols[data-cols="2"] { grid-template-columns: minmax(0,1fr) 320px; }
 .cols[data-cols="3"] { grid-template-columns: 232px minmax(0,1fr) 360px; }
 .col { min-width: 0; min-height: 0; overflow: auto; }
 .col + .col { border-left: 1px solid var(--hg-alias-border-l2); }
