@@ -659,6 +659,81 @@
     return state.hRows;
   }
 
+  /* ── 起点选择器：族 → run → 轮次 ──────────────────────────────────────
+   * 折叠的是"族"，展开的是你点的那一支；轮次直接作为圆点列出来，不再先选 run 再等一个
+   * 第二个下拉刷新。选中仍然写回 state.hRun / state.hRound —— 后面所有渲染一行不改。
+   */
+  const pickerOpenRuns = new Set();
+  const pickerOpenFamilies = new Set();
+
+  function familyOf(id) {
+    return String(id).replace(/[-_]\d{8}(T\d{4,6})?Z?$/i, "").replace(/[-_]r\d+(-\d+)?$/i, "");
+  }
+
+  function renderPicker(rows) {
+    const panel = $("#h-picker");
+    if (!panel) return;
+    const families = new Map();
+    for (const row of rows) {
+      const key = familyOf(row.id);
+      if (!families.has(key)) families.set(key, []);
+      families.get(key).push(row);
+    }
+    const parts = ['<div class="hg-picker__group">起点</div>',
+      `<button type="button" class="hg-picker__run" data-run="${BASE}"
+        aria-selected="${state.hRun === BASE}"><span>Base_Harness/loop</span>
+        <span class="hg-picker__meta">只读</span></button>`];
+    for (const [family, members] of [...families.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      const openFamily = pickerOpenFamilies.has(family) ||
+        members.some((m) => m.id === state.hRun);
+      parts.push(`<div class="hg-picker__group" data-family="${esc(family)}"
+        aria-expanded="${openFamily}">${esc(family)}
+        <span class="hg-picker__count">${members.length}</span></div>`);
+      if (!openFamily) continue;
+      for (const row of members) {
+        const openRun = pickerOpenRuns.has(row.id) || row.id === state.hRun;
+        parts.push(`<button type="button" class="hg-picker__run" data-run="${esc(row.id)}"
+          aria-selected="${row.id === state.hRun}"><span>${esc(row.pretty || row.id)}</span>
+          <span class="hg-picker__meta">${esc(row.mtime || "")}</span></button>`);
+        if (!openRun) continue;
+        parts.push(`<div class="hg-picker__rounds">${roundChips(row)}</div>`);
+      }
+    }
+    panel.innerHTML = parts.join("");
+    $("#h-current").textContent = state.hRun
+      ? `${state.hRun}${state.hRound == null ? "" : ` · r${state.hRound}`}` : "—";
+  }
+
+  function roundChips(row) {
+    const rounds = row.rounds_list || [];
+    if (!rounds.length) return '<span class="field__hint">这个 run 没有可选的轮次</span>';
+    return rounds.map((r) => `<button type="button" class="hg-picker__round"
+      data-round="${r.round}" aria-selected="${row.id === state.hRun && r.round === state.hRound}">r${r.round}</button>`).join("");
+  }
+
+  async function openPicker() {
+    pickerOpenFamilies.add(familyOf(state.hRun || ""));
+    pickerOpenRuns.add(state.hRun);
+    renderPicker(state.rows || []);
+    const panel = $("#h-picker");
+    panel.hidden = false;
+    $("#h-tree-btn").setAttribute("aria-expanded", "true");
+    // 轮次是按需取的：一个 run 展开时才去读它的曲线。
+    if (state.hRun && !(state.rows || []).find((r) => r.id === state.hRun)?.rounds_list) {
+      await fillRounds(state.hRun);
+    }
+  }
+
+  async function fillRounds(runId) {
+    try {
+      const data = await (await fetch(`/api/runs/${encodeURIComponent(runId)}`)).json();
+      const rounds = (data.curve || data.rounds || []).map((p) => ({ round: p.round, score: p.score }));
+      const row = (state.rows || []).find((r) => r.id === runId);
+      if (row) row.rounds_list = rounds;
+    } catch { /* 取不到就只显示 run */ }
+    renderPicker(state.rows || []);
+  }
+
   function renderHarnessRunOptions(rows) {
     const groups = [["study", "研究（多轮）"], ["eval", "单点测量"], ["unknown", "无曲线"]];
     let html = `<optgroup label="起点">
@@ -825,6 +900,7 @@
       state.hMode = "diff";
     }
     renderHarnessRunOptions(rows);
+    renderPicker(rows);
     if (state.hRun === BASE) {
       await renderBase(seq);
       return;
@@ -1650,6 +1726,48 @@
       renderHarness();
     };
   });
+  const pickerButton = $("#h-tree-btn");
+  if (pickerButton) {
+    pickerButton.addEventListener("click", () => {
+      const panel = $("#h-picker");
+      if (panel.hidden) openPicker();
+      else { panel.hidden = true; pickerButton.setAttribute("aria-expanded", "false"); }
+    });
+    $("#h-picker").addEventListener("click", async (event) => {
+      const family = event.target.closest("[data-family]");
+      if (family) {
+        const key = family.dataset.family;
+        if (pickerOpenFamilies.has(key)) pickerOpenFamilies.delete(key);
+        else pickerOpenFamilies.add(key);
+        renderPicker(state.rows || []);
+        return;
+      }
+      const round = event.target.closest("[data-round]");
+      if (round) {
+        if (state.hRun === BASE) return;
+        state.hRound = Number(round.dataset.round);
+        syncHarnessHash();
+        renderHarness();
+        renderPicker(state.rows || []);
+        // 选完一轮就收起：选择器是"去哪里"，不是常驻控件。
+        $("#h-picker").hidden = true;
+        $("#h-tree-btn").setAttribute("aria-expanded", "false");
+        return;
+      }
+      const run = event.target.closest("[data-run]");
+      if (!run) return;
+      state.hRun = run.dataset.run;
+      state.hRound = null;
+      state.hFile = null;
+      state.hBaseFile = null;
+      state.hPatchFile = 0;
+      state.hMode = state.hRun === BASE ? "file" : "diff";
+      pickerOpenRuns.add(state.hRun);
+      syncHarnessHash();          // 和 select 走同一条路径：URL 要跟着变
+      renderHarness();
+      await fillRounds(state.hRun);
+    });
+  }
   window.addEventListener("hashchange", route);
   /* 版本 → 编辑：把这一版复制成候选再跳过去。
    * 直接编辑 run 里的 `state_after_roundN` 会改掉历史测量的证据，所以先复制。 */
@@ -1666,7 +1784,15 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ run: state.hRun, round: state.hRound }) });
       const payload = await response.json();
-      if (!response.ok) { alert(`${payload.error || "复制失败"}\n${payload.detail || ""}`); return; }
+      if (!response.ok) {
+        // 服务端的理由已经是给读者看的（哪一轮、缺什么、存了哪些），放进工具栏比弹窗好：
+        // 弹窗关掉就没了，而这条信息正是"接下来该做什么"。
+        const hint = document.getElementById("h-start-hint");
+        const text = `${payload.error || "复制失败"}：${payload.detail || ""}`;
+        if (hint) hint.textContent = text;
+        else alert(text);
+        return;
+      }
       location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
     } finally {
       editButton.disabled = false;

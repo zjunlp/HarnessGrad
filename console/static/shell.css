@@ -427,3 +427,35 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 13px); }
 #source-current { white-space: nowrap; flex: 0 0 auto; }
 #source-current { font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .card__head #source-search { flex: 1 1 180px; max-width: 320px; }
+
+/* ── 起点选择器：族 → run → 轮次 ──────────────────────────────────────────
+ * 收起时只占一行；展开也只展开你点的那一支。原生 select 装不下这个层次，也折叠不了。 */
+.hg-picker {
+  position: absolute; z-index: 35; top: 46px; left: 12px; width: min(560px, 70vw);
+  max-height: min(70vh, 560px); overflow: auto;
+  background: var(--n-0); border: var(--line); border-radius: var(--r-3);
+  box-shadow: var(--shadow-2); padding: 8px;
+}
+.lab-toolbar { position: relative; }
+.hg-picker__group {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--n-500); cursor: pointer; border-radius: var(--r-1);
+}
+.hg-picker__group:hover { background: var(--n-50); }
+.hg-picker__count { font-weight: 600; color: var(--n-400); }
+.hg-picker__run {
+  display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left;
+  padding: 6px 8px 6px 20px; border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--r-1); font-family: var(--mono); font-size: 11.5px; color: var(--n-800);
+}
+.hg-picker__run:hover { background: var(--n-50); }
+.hg-picker__run[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.hg-picker__meta { margin-left: auto; font-size: 10.5px; color: var(--n-500); }
+.hg-picker__rounds { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px 8px 20px; }
+.hg-picker__round {
+  border: 1px solid var(--n-200); background: var(--n-0); border-radius: 999px;
+  font-family: var(--mono); font-size: 11px; padding: 3px 9px; cursor: pointer;
+}
+.hg-picker__round:hover { border-color: var(--n-300); }
+.hg-picker__round[aria-selected="true"] { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }

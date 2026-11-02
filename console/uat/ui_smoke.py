@@ -63,12 +63,40 @@ def main() -> int:
         page.wait_for_timeout(1600)
         options = page.eval_on_selector_all("#h-run option", "els => els.map(e => e.value)")
         check(len(options) > 1, f"版本页 run 列表非空（{len(options)} 条）")
-        page.select_option("#h-run", RUN)
-        page.wait_for_timeout(1500)
-        rounds = page.eval_on_selector_all("#h-round option", "e => e.length")
+        # 两个原生 select 现在是隐藏的数据持有者：轮次和 run 都从选择器里点。
+        run_rows = page.eval_on_selector_all("#h-picker [data-run]", "els => els.map(e => e.dataset.run)")
+        check(RUN in run_rows, "选择器里能找到那个 study run")
+        page.click("#h-tree-btn")
+        page.wait_for_timeout(400)
+        page.click(f"#h-picker [data-run='{RUN}']")
+        page.wait_for_timeout(1800)
+        rounds = page.eval_on_selector_all("#h-picker [data-round]", "e => e.length")
         check(rounds > 1, f"选 run 后轮次出现（{rounds} 条）")
         check(page.eval_on_selector_all("#h-edit-btn", "e => e.length") == 1,
               "版本页有「编辑这一版」")
+
+        # 起点选择器：族 → run → 轮次，选完 URL 要跟着走。
+        # 选择器是开关：已经开着就别再点一下（点了会关，测试就自相矛盾）。
+        if visible(page, "#h-picker") == "none":
+            page.click("#h-tree-btn")
+            page.wait_for_timeout(600)
+        check(visible(page, "#h-picker") != "none", "起点选择器打得开")
+        families = page.eval_on_selector_all("#h-picker [data-family]",
+                                             "els => els.map(e => e.dataset.family)")
+        check(len(families) > 1, f"族有 {len(families)} 个")
+        page.click(f"#h-picker [data-family='{families[1]}']")
+        page.wait_for_timeout(500)
+        runs = page.eval_on_selector_all("#h-picker [data-run]", "els => els.map(e => e.dataset.run)")
+        check(len(runs) > 1, f"族展开后有 run（{len(runs)} 个）")
+        page.click(f"#h-picker [data-run='{runs[1]}']")
+        page.wait_for_timeout(1600)
+        rounds = page.eval_on_selector_all("#h-picker [data-round]", "els => els.map(e => e.dataset.round)")
+        check(len(rounds) > 0, f"选 run 后出现轮次（{len(rounds)} 个）")
+        page.click(f"#h-picker [data-round='{rounds[-1]}']")
+        page.wait_for_timeout(1500)
+        check("/" in page.evaluate("location.hash")[10:] and page.evaluate("location.hash").endswith(rounds[-1]),
+              f"选轮次后 URL 指到那一轮（{page.evaluate('location.hash')}）")
+        check(visible(page, "#h-picker") == "none", "选完轮次选择器收起")
 
         # ── 编辑：版本列表、默认选中、文件树可读 ────────────────────────────
         page.goto(base + f"/harness.html?candidate={RUN}-r20", wait_until="networkidle")

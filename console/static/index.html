@@ -96,8 +96,12 @@
       </div>
       <div class="lab-toolbar">
         <span class="lab-lbl">起点</span>
-        <select id="h-run"></select>
-        <select id="h-round"></select>
+        <!-- 两个原生 select 换成树：run 的轮次只属于它自己，平铺 785 条等于读时间戳。 -->
+        <select id="h-run" hidden></select>
+        <select id="h-round" hidden></select>
+        <button class="btn btn--sm" type="button" id="h-tree-btn" aria-expanded="false">选实验与轮次</button>
+        <span class="hg-mono hg-muted" id="h-current" style="font-size:11px">—</span>
+        <div class="hg-picker" id="h-picker" hidden role="tree" aria-label="实验与轮次"></div>
         <div class="seg" id="h-mode">
           <button aria-pressed="true" data-mode="diff">改动</button>
           <button aria-pressed="false" data-mode="file">文件</button>
