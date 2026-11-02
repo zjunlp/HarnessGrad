@@ -409,6 +409,15 @@ def all_rows(force: bool = False) -> list[dict]:
                 except OSError:
                     continue
                 if row:
+                    # **能不能重建某一版，是这一行的事实，不是点开才知道的意外。**
+                    # 快照与补丁都是"这一轮的 harness 被存下来了"的证据；两者都没有的 run，
+                    # 曲线上的轮次在磁盘上并不存在，编辑页只能拒绝它。
+                    try:
+                        row["rounds_stored"] = sum(1 for _ in d.glob("state_after_round*"))
+                        row["diffs_stored"] = sum(1 for _ in (d / "diffs").glob("round-*.patch")) \
+                            if (d / "diffs").is_dir() else 0
+                    except OSError:
+                        row["rounds_stored"] = row["diffs_stored"] = 0
                     rows.append(row)
         rows.sort(key=lambda r: r["mtime_s"] or 0, reverse=True)
         _list_cache.update({"at": now, "rows": rows})
