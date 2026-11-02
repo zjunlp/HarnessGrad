@@ -2519,12 +2519,17 @@ def _chat_completion(base_url: str, model: str, api_key: str,
                      system: str, user: str) -> str:
     """一次 OpenAI 兼容的 /chat/completions 调用。key 只在 header 里，不写日志。"""
     url = base_url.rstrip("/") + "/chat/completions"
+    # **JSON 模式,而不是希望模型自己吐 JSON。** 实测(2026-11-02,本地 qwen3.5-9b):
+    # 不加这个字段时,整段解释被解析成空四块并标 degraded;vLLM 的 json_object 模式在
+    # `tools/check_local_model.py` 里是验过的,所以这里显式要。端点若拒绝这个字段,
+    # `_explain_request` 会去掉它再试一次 —— 拒绝的端点不该让解释功能整个不可用。
     body = json.dumps({
         "model": model,
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
         "temperature": 0,
         "stream": False,
+        "response_format": {"type": "json_object"},
     }, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json; charset=utf-8",
@@ -2693,12 +2698,23 @@ def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
             cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
             return 200, cached
 
-    try:
-        raw = _chat_completion(base_url, model, api_key, system, user)
-    except ExplainUpstream as exc:
-        return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
-
-    parsed, why = _parse_explain_reply(raw)
+    # **被拒绝的回复再问一次,而不是把它标成"解释为空"。** 实测(2026-11-02,本地
+    # qwen3.5-9b):JSON 模式打开后模型确实回了 JSON,但 evidence 只有 1 条,而契约要
+    # 2-4 条;前端于是显示一个空解释,读的人会以为这一轮没有改动。这里把拒绝原因回传
+    # 给模型重问一次 —— 同一条提示词不会让 9B 改变输出,但"上一次错在哪"会。
+    raw = ""
+    parsed = None
+    why = ""
+    for attempt in range(2):
+        prompt_system = system if attempt == 0 else (
+            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
+        try:
+            raw = _chat_completion(base_url, model, api_key, prompt_system, user)
+        except ExplainUpstream as exc:
+            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
+        parsed, why = _parse_explain_reply(raw)
+        if parsed is not None:
+            break
     elapsed = int(round((time.perf_counter() - started) * 1000))
     if parsed is None:
         # 不猜、不把半截 JSON 塞进四个块；原样交给前端，前端明确标成 degraded。
