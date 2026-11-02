@@ -2508,6 +2508,42 @@ def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
     return 200, buffer.getvalue()
 
 
+
+def run_history(run_id: str, upto: int, since: int = 1) -> dict:
+    """一个 run 到第 `upto` 轮为止的**历史**：每轮的改动与补丁。
+
+    这些补丁就是 git 的历史。`harnessgrad/loops/mode_a.py` 每轮 `commit_state(work, ...)`
+    提交一次，`_save_round_diff` 写下的 `diffs/round-N.patch` 就是相邻两个提交之间的
+    `git diff`，而曲线点上的 `harness_sha` 是那个提交的 tree hash。run 目录里没有留下
+    `.git`（提交用的是 staging 工作树），所以历史以"每轮状态 + 补丁"的形式在这里，
+    可读、可重放（见 `harness_candidate_from_round`）。
+
+    给助手做合并时要的正是这一串：只看最新版，看不出哪些功能是同一轮加的、哪些是补丁
+    摞出来的。
+    """
+    run_path = find_run(run_id)
+    if not run_path:
+        return {"error": "run-not-found", "detail": run_id}
+    since = max(1, int(since))
+    upto = max(since, int(upto))
+    rows = []
+    for n in range(since, upto + 1):
+        patch_path = run_path / "diffs" / f"round-{n}.patch"
+        stat = read_json(run_path / "diffs" / f"round-{n}.json")
+        files = [str(item.get("path") or "") for item in (stat.get("files") or [])
+                 if isinstance(item, dict)]
+        added = sum(as_int(item.get("added")) or 0 for item in (stat.get("files") or [])
+                    if isinstance(item, dict))
+        removed = sum(as_int(item.get("removed")) or 0 for item in (stat.get("files") or [])
+                      if isinstance(item, dict))
+        patch = ""
+        if patch_path.is_file():
+            patch = patch_path.read_text(encoding="utf-8", errors="replace")[:12000]
+        rows.append({"round": n, "files": files, "added": added, "removed": removed,
+                     "patch": patch, "stored": patch_path.is_file()})
+    return {"run": run_id, "from": since, "to": upto, "rounds": rows}
+
+
 def harness_candidate_from_round(run_id: str, round_no: int,
                                  replay: bool = False) -> tuple[int, dict]:
     """把某一轮的 harness 变成一个候选。没有现成快照时**按 diff 重放**出来。
@@ -3717,6 +3753,12 @@ class Handler(BaseHTTPRequestHandler):
                 if kind:
                     rows = [r for r in rows if r["kind"] == kind]
                 return self._send({"rows": rows, "count": len(rows)})
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "history":
+                to = (query.get("to") or ["0"])[0]
+                since = (query.get("from") or ["1"])[0]
+                if not (re.fullmatch(r"\d{1,9}", to) and re.fullmatch(r"\d{1,9}", since)):
+                    return self._error("from/to must be non-negative integers", 400)
+                return self._send(run_history(parts[2], int(to), int(since)))
             if len(parts) == 3 and parts[1] == "runs":
                 data = api_run(parts[2])
                 return self._send(data) if data else self._error("run not found", 404)

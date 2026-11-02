@@ -42,6 +42,15 @@
             <span class="hg-mono hg-muted" id="source-current">—</span>
           </div>
           <div class="hg-srcbar" id="source-list" role="listbox" aria-label="Harness 版本"></div>
+          <details class="hg-history" id="history-wrap" hidden>
+            <summary>历史 <span class="hg-muted" id="history-hint"></span></summary>
+            <div class="hg-history__list" id="history-list"></div>
+            <pre class="wlog hg-mono" id="history-patch" style="max-height:220px">选一轮看它的改动</pre>
+            <label class="hg-row" style="gap:6px;font-size:12px;padding:6px 0">
+              <input type="checkbox" id="history-attach">
+              <span>把这段历史一起发给助手（它能看到每一轮加了什么）</span>
+            </label>
+          </details>
           <div class="card__body" style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;padding-top:10px">
             <div>
               <div class="hg-row" style="justify-content:space-between;margin-bottom:6px">

@@ -1,0 +1,12 @@
+{
+ "name": "appworld-study-dgm-20261020T0414Z-r15",
+ "version": "0.2.0",
+ "path": ".",
+ "entrypoint": "agent.py",
+ "backend": "cli",
+ "install": "requirements.txt",
+ "env_kinds": [
+  "files",
+  "exec"
+ ]
+}

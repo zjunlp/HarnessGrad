@@ -82,6 +82,7 @@
       $("files").innerHTML = state.files.map((p) => fileRow(p)).join("");
     }
     if (state.files.length) openFile(state.files[0]);
+    loadHistory(source);
   }
 
   const fileRow = (path) =>
@@ -119,6 +120,40 @@
       : '<span class="field__hint">选中若干行，可以带着上下文说</span>';
   }
 
+
+  /* ── 历史：r1..rN 的改动 ────────────────────────────────────────────────
+   * 这些补丁就是 git 的历史（每轮一次提交，`harness_sha` 是那次提交的 tree hash），
+   * run 目录里没留 `.git` 而已。给助手做合并时，一串补丁比最新版代码有用得多。
+   */
+  async function loadHistory(candidate) {
+    const m = /^(.*)-r(\d+)(?:-\d+)?$/.exec(candidate || "");
+    const wrap = $("history-wrap");
+    if (!m) { wrap.hidden = true; return; }
+    const [, run, round] = m;
+    try {
+      const payload = await (await fetch(
+        `/api/runs/${encodeURIComponent(run)}/history?to=${round}`)).json();
+      const rows = payload.rounds || [];
+      if (!rows.length) { wrap.hidden = true; return; }
+      wrap.hidden = false;
+      $("history-hint").textContent = `${run} 的 r1–r${rows.length}`;
+      $("history-list").innerHTML = rows.map((r) => `
+        <button type="button" class="hg-srcbar__row" data-round="${r.round}">
+          <span class="hg-srcbar__name">r${r.round}</span>
+          <span class="hg-srcbar__meta">${esc(r.files.join(", "))} +${r.added}/-${r.removed}</span>
+        </button>`).join("");
+      $("history-list").onclick = (event) => {
+        const button = event.target.closest("[data-round]");
+        if (!button) return;
+        const row = rows.find((r) => String(r.round) === button.dataset.round);
+        $("history-patch").textContent = row.patch || "（这一轮没有补丁）";
+      };
+      state.history = rows;
+    } catch {
+      wrap.hidden = true;
+    }
+  }
+
   const thread = () => $("thread");
 
   // 一条消息 = 谁说的 + 它带了哪个选区 + 助手改了什么。历史留在 DOM 里，不刷新就一直在。
@@ -141,6 +176,16 @@
     return wrap;
   }
 
+  function withHistory(instruction) {
+    if (!($("history-attach") && $("history-attach").checked) || !(state.history || []).length) {
+      return instruction;
+    }
+    const lines = state.history.map((r) =>
+      `### r${r.round}: ${r.files.join(", ")} (+${r.added}/-${r.removed})\n`
+      + (r.patch || "").split("\n").slice(0, 40).join("\n"));
+    return instruction + "\n\n## 这个 harness 的历史（每轮一个补丁）\n" + lines.join("\n\n");
+  }
+
   async function send() {
     const instruction = $("instruction").value.trim();
     if (!instruction) return;
@@ -158,7 +203,8 @@
       const response = await fetch("/api/workbench/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: state.source, kind: $("kind").value, instruction, selection: sel }),
+        body: JSON.stringify({ name: state.source, kind: $("kind").value,
+                               instruction: withHistory(instruction), selection: sel }),
       });
       const payload = await response.json();
       pending.remove();
