@@ -6336,3 +6336,12 @@ forms and task-created same-name modules; Chess selected controls use the actual
 isolated scorer and retain reference redaction checks for invalid input and
 missing dependencies. BFCL source/sink reviews are refreshed without dropping
 whole-source hash assertions or changing fabricated observations.
+
+
+### GSM8K regression runner uses production startup (2026-11-03)
+
+The synthetic GSM8K tests execute the verifier's declared flags and script directly,
+replacing the obsolete bootstrap that imported the staged scaffold before isolation.
+All original test assertions are preserved, including decimal-aware scoring, wrong
+and absent answers, gold re-materialization after tampering, and unmeasured evidence
+when gold is absent. The dataset contract's 17 tests and 47 scorer tests pass.
