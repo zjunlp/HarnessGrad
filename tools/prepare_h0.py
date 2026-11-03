@@ -23,8 +23,8 @@ study run. It refuses (rather than measuring again) when a valid H0 for the same
 already on disk: two measurements of one state are two numbers, and picking either is a choice no
 record can defend.
 
-The identity of "the same configuration" is (dataset, side, study-id set, agent model, endpoint):
-those are the things that make two baselines comparable. A different model or a different study
+The identity of "the same configuration" includes dataset, side, study-id set, sampling,
+trials, and the effective agent model, backend and endpoint. A different model or study
 set is a *different* H0, and the tool measures one instead of reusing.
 An explicit split selection is part of this identity too; split files are hashed by content.
 An opted-in adapter also includes its frozen scoring identity in this configuration.
@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -41,6 +42,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from harnessgrad import scoring_identity
+from harnessgrad import h0_identity
+from harnessgrad import config as platform_config
 
 DEFAULT_RUNS = pathlib.Path("/tmp/hg-h0-runs")
 
@@ -69,9 +72,22 @@ def study_ids_sha(ids) -> str | None:
     return hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest() if ids else None
 
 
-def configuration(args, *, study_ids: list[str] | None = None) -> dict:
+def child_environment(args) -> dict[str, str]:
+    """Resolve the driver's .env precedence without changing this process's environment."""
+    env = dict(os.environ)
+    for key, value in platform_config.read_env_file(ROOT / ".env").items():
+        env.setdefault(key, value)
+    if args.model is not None:
+        env["HG_AGENT_MODEL"] = args.model
+    if args.endpoint is not None:
+        env["HG_AGENT_BASE_URL"] = args.endpoint
+    return env
+
+
+def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict:
     """What makes two H0 measurements the same measurement."""
     ids = study_ids_from(args.study_ids) if study_ids is None else study_ids
+    agent = platform_config.load(child_environment(args) if env is None else env).agent
     split = getattr(args, "split", "declared")
     split_fields = {}
     if split in ("default", "official"):
@@ -87,9 +103,11 @@ def configuration(args, *, study_ids: list[str] | None = None) -> dict:
         "n_study_ids": len(ids),
         # The *file contents*, not the path: two files with the same ids are the same study set.
         "study_ids_sha": study_ids_sha(ids),
-        "agent_model": args.model,
-        "endpoint": args.endpoint,
+        "agent_model": agent.model,
+        "agent_backend": agent.backend,
+        "endpoint": agent.base_url,
         "trials": args.trials,
+        "sampling": getattr(args, "sampling", "all"),
         **split_fields,
         **scoring_identity.fields(scoring_identity.resolve(args.dataset)),
     }
@@ -134,11 +152,17 @@ def find_existing(config: dict, runs_root: pathlib.Path) -> tuple[pathlib.Path, 
             continue
         if config.get("study_ids_sha") is not None and study_ids_sha(per_task) != config["study_ids_sha"]:
             continue
-        return run, {"score": base.get("score"), "n_tasks": len(per_task)}
+        try:
+            summary = verify(run, None, config.get("n_study_ids", 0),
+                             scoring=identity, configuration=config)
+        except SystemExit:
+            continue
+        return run, {"score": summary["score"], "n_tasks": summary["n_tasks"]}
     return None
 
 
-def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_ids=None) -> dict:
+def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_ids=None,
+           configuration=None) -> dict:
     """Refuse to call something an H0 unless it is a complete, valid measurement."""
     h0 = run / "h0.json"
     if not h0.is_file():
@@ -148,6 +172,21 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
     per_task = base.get("per_task") or {}
     invalid = base.get("invalid") or {}
     problems = []
+    if configuration is not None:
+        meta_path = run / "run_meta.json"
+        meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+        curve = points(run / "curve.jsonl")
+        point = curve[0] if curve else {}
+        problems.extend(h0_identity.agent_problems(
+            run, point, model=configuration.get("agent_model"),
+            backend=configuration.get("agent_backend"), endpoint=configuration.get("endpoint")))
+        sampling = configuration.get("sampling")
+        for source, recorded in (
+                ("curve", (point.get("sampling") or {}).get("policy")),
+                ("run metadata", meta.get("sampling_policy")),
+                ("run configuration", ((meta.get("config") or {}).get("run") or {}).get("sampling"))):
+            if sampling is None or recorded != sampling:
+                problems.append(f"{source} sampling differs from requested configuration or is missing")
     if scoring is not None or payload.get("scoring_identity") is not None:
         problems.extend(scoring_identity.problems(payload.get("scoring_identity"), scoring))
         meta = json.loads((run / "run_meta.json").read_text())
@@ -190,23 +229,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--runs-root", type=pathlib.Path, default=DEFAULT_RUNS)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
+    args.runs_root = args.runs_root.resolve()
 
     ids = study_ids_from(args.study_ids)
     if args.split not in ("declared", "default", "official"):
         args.split = str(pathlib.Path(args.split).resolve())
     if scoring_identity.provider_path(args.dataset).is_file():
-        # Use the same effective configuration as the child driver. Do not import
-        # data-heavy adapters merely to prepare an unopted dataset's dry run.
-        from driver import load_env
-        load_env(ROOT / ".env")
-    config = configuration(args, study_ids=ids)
+        # Scoring providers read the judge's effective process environment.
+        # Preserve driver precedence while keeping preparation independent of driver imports.
+        for key, value in platform_config.read_env_file(ROOT / ".env").items():
+            os.environ.setdefault(key, value)
+        platform_config.reset()
+    env = child_environment(args)
+    config = configuration(args, study_ids=ids, env=env)
     args.runs_root.mkdir(parents=True, exist_ok=True)
     existing = find_existing(config, args.runs_root)
     if existing is not None:
         run, summary = existing
         print(f"reusing {run.name}: score {summary['score']:.4f} on {summary['n_tasks']} tasks "
               f"(same dataset, study set, model and endpoint)")
-        print(f"\n  --h0-from {run.name}\n")
+        print(f'\n  --runs-root "{args.runs_root}" --h0-from {run.name}\n')
         return 0
 
     stamp = __import__("time").strftime("%Y%m%dT%H%M%SZ", __import__("time").gmtime())
@@ -218,15 +260,12 @@ def main(argv: list[str] | None = None) -> int:
                "--rounds", "0", "--improver", "none",
                "--run-id", run_id, "--runs-root", str(args.runs_root),
                "--work-root", f"/tmp/hg-h0-work/{run_id}"]
-    env = dict(**__import__("os").environ)
     if args.study_ids:
         # Generic selection happens before setup and H0 evaluation in the driver.
         # Keep the legacy knobs too: those adapters use them to construct their pool.
         command.extend(["--tasks", ",".join(ids)])
         env["HG_APPWORLD_STUDY_IDS"] = str(args.study_ids.resolve())
         env["HG_ALFWORLD_STUDY_IDS"] = str(args.study_ids.resolve())
-    if args.endpoint:
-        env["HG_AGENT_BASE_URL"] = args.endpoint
     print(" ".join(command))
     if args.dry_run:
         return 0
@@ -238,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     if code != 0:
         raise SystemExit(f"the H0 run failed (rc={code}); see {log}")
     summary = verify(run, args, config["n_study_ids"], scoring=config.get("scoring_identity"),
-                     study_ids=ids if args.study_ids else None)
+                     study_ids=ids if args.study_ids else None, configuration=config)
     # Stamp what the baseline *is* on the run's own meta, so the next invocation can recognise it
     # without re-deriving the configuration from paths.
     meta_path = run / "run_meta.json"
@@ -247,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
     meta_path.write_text(json.dumps(meta, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\nH0 measured: {run_id}")
     print(f"  score {summary['score']:.4f} on {summary['n_tasks']} tasks, h0_sha {summary['h0_sha'][:12]}")
-    print(f"\n  --h0-from {run_id}\n")
+    print(f'\n  --runs-root "{args.runs_root}" --h0-from {run_id}\n')
     print("pass that to every study run for this dataset; without it each run measures its own H0")
     return 0
 

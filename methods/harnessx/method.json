@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "HarnessX:历史最佳验收门(移植)",
  "note": "历史最佳验收门：默认 HG_HARNESSX_REGRESSION_TOLERANCE=0.03、通过数噪声阈值=3，与本机上游一致；只有成本调整后分数退步超过容忍度、且通过数变化达到阈值时才回滚。回滚复制最佳轮完整树，并用 incumbent_round 声明选择；不调用编辑模型，保留被验收候选的原预注册，历史缺失时明确记录 unavailable。门在下一次方法调用时验收刚测完的候选；状态未暂存时记录选择并停止。上游 shipping validator 的运行时和 journal 检查仍未移植。",
  "deviations": [

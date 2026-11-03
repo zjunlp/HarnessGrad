@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "AHE:预注册预测与组件级回退",
  "note": "移植的是 AHE 的每轮决策规则:动手之前先写 change_manifest,声明 predicted_fixes 和 risk_tasks;下一轮用 per-task 的 fail→pass / pass→fail 把每条改动判成 HARMFUL / MIXED / EFFECTIVE / PARTIALLY_EFFECTIVE / INEFFECTIVE,判决再渲染成「保留 / 改进 / 回滚并换一层重来」。HARMFUL 时把候选建在被归因改动的基底上。每次调用恢复 Best-of-2:以不同策略指令并发生成两个独立候选,两者有效且不同则一批提交测量;声明相同、实际内容相同或只有一个有效候选时确定性退回单候选并记录原因。winner 仍由平台按 train 分数选择,AHE 自己的 winner 规则无法在 mode A 表达。这里的两候选不等于每任务 k 次 rollout 全过聚合;全工具编辑器也未恢复。constraint_level 在 AHE 里没有任何 Python 读它,这里也只当声明记录。",
  "deviations": [

@@ -110,8 +110,18 @@ def interpreter_prefixes() -> tuple[Path, ...]:
     dependencies inside the namespace. These are trusted launcher facts, not
     paths chosen by an actor or guessed from PATH.
     """
+    # The active virtualenv/conda prefix comes from the executable, because a normal venv's
+    # `bin/python` is a symlink into the base interpreter while `pyvenv.cfg` and the packages
+    # stay in `sys.prefix`: resolving the executable first would lose the environment. The
+    # venv path itself is then checked like any other prefix, so a symlinked *prefix* is still
+    # refused -- only the executable inside it may be a link.
+    candidates = []
+    discovered = _venv_prefix()
+    if discovered is not None:
+        candidates.append(discovered)
+    candidates.extend((sys.prefix, sys.base_prefix))
     prefixes = []
-    for value in (sys.prefix, sys.base_prefix):
+    for value in candidates:
         path = Path(value)
         if (not path.is_absolute() or path == Path('/') or '..' in path.parts
                 or not path.is_dir()):
@@ -123,6 +133,17 @@ def interpreter_prefixes() -> tuple[Path, ...]:
             if path not in prefixes:
                 prefixes.append(path)
     return tuple(prefixes)
+
+
+def _venv_prefix() -> Path | None:
+    """The virtualenv or conda prefix that owns the running interpreter, if any."""
+    for exe in (Path(sys.executable).absolute(), Path(sys.executable).resolve()):
+        for parent in exe.parents:
+            if (parent / "pyvenv.cfg").exists() or (parent / "conda-meta").is_dir():
+                return parent
+            if parent == Path("/"):
+                break
+    return None
 
 
 def interpreter_prefix() -> Path | None:

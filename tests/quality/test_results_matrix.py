@@ -79,6 +79,134 @@ def write_header(run: Path, n_tasks: int) -> None:
         encoding="utf-8")
 
 
+def test_matrix_keeps_comparison_identity_and_labels_partial_custom_rows(tmp_path):
+    run = make_run(tmp_path, "custom-eval", side="eval", scores=(.5,))
+    meta = json.loads((run / "run_meta.json").read_text())
+    protocol = {"kind": "custom-heldout", "official_score_comparable": False}
+    source = {"run_id": "source-train", "round": 4, "harness_sha": "source-sha"}
+    meta.update(split_protocol=protocol, split_sha="split-sha", trials=3,
+                evaluated_from=source, config={"run": {"seed": "seed-7"}})
+    (run / "run_meta.json").write_text(json.dumps(meta))
+    point = json.loads((run / "curve.jsonl").read_text())
+    scorer = {"metric": "official", "sha256": "scorer-sha"}
+    baseline = {"problems": ["jobs differ"], "comparable": False}
+    point.update(baseline=baseline, scoring_identity=scorer, scorer_isolation_class="host",
+                 scorer_isolation_comparable=False)
+    point["sampling"]["task_ids"].append("unscored")
+    point["n_invalid"] = 1
+    (run / "curve.jsonl").write_text(json.dumps(point) + "\n")
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    row = payload["rows"][0]
+    assert row["split_protocol"] == protocol and row["split_sha"] == "split-sha"
+    assert row["trials"] == 3 and row["seed"] == "seed-7"
+    assert row["evaluated_from"] == source and row["baseline"] == baseline
+    assert row["scoring_identity"] == scorer
+    assert row["scorer_isolation_class"] == "host"
+    assert row["scorer_isolation_comparable"] is False
+    assert row["planned_tasks"] == 5 and row["n_tasks"] == 4 and row["unmeasured"] == 1
+    markdown = results_matrix.render_markdown(payload)
+    assert "custom-heldout" in markdown and "partial" in markdown and "noncomparable" in markdown
+    assert "jobs differ" in markdown
+
+
+def test_unknown_matrix_identity_stays_unknown(tmp_path):
+    make_run(tmp_path, "legacy")
+    row = results_matrix.build_matrix([str(tmp_path)])[0]["rows"][0]
+    for key in ("split_protocol", "split_sha", "trials", "seed", "evaluated_from",
+                "baseline", "scoring_identity", "scorer_isolation_class", "scorer_isolation_comparable"):
+        assert row[key] is None
+
+
+def test_matrix_retains_earlier_partial_and_noncomparable_evidence(tmp_path):
+    run = make_run(tmp_path, "earlier-warning", scores=(.5, .4))
+    points = [json.loads(line) for line in (run / "curve.jsonl").read_text().splitlines()]
+    points[0]["baseline"] = {"problems": ["earlier endpoint mismatch"]}
+    points[0]["sampling"]["task_ids"].append("missing")
+    (run / "curve.jsonl").write_text("\n".join(map(json.dumps, points)) + "\n")
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    row = payload["rows"][0]
+    assert row["last_delta"] == pytest.approx(-.1)
+    assert row["measurement_context"][0]["unmeasured"] == 1
+    assert "earlier endpoint mismatch" in results_matrix.render_markdown(payload)
+    assert "partial" in _cells(results_matrix.render_markdown(payload), "earlier-warning")["comparison"]
+
+
+def test_unmeasured_matrix_entry_keeps_comparison_evidence(tmp_path):
+    run = make_run(tmp_path, "unmeasured-eval", side="eval", scores=(None,))
+    point = json.loads((run / "curve.jsonl").read_text())
+    point.update(split_sha="unmeasured-split", n_invalid=4,
+                 baseline={"problems": ["unmeasured comparison"]})
+    (run / "curve.jsonl").write_text(json.dumps(point) + "\n")
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    skipped = payload["skipped"][0]
+    assert skipped["split_sha"] == "unmeasured-split"
+    assert skipped["baseline"] == point["baseline"]
+    assert skipped["measurement_context"][0]["invalid"] == 4
+    assert "score" not in skipped
+
+
+@pytest.mark.parametrize("marker", [
+    {"measured_by_platform": False}, {"n_scored": 0},
+    {"unmeasured": {"reason": "candidate rejected", "problems": ["missing agent.py"]}},
+])
+def test_rejected_numeric_zero_is_not_a_matrix_score(tmp_path, marker):
+    run = make_run(tmp_path, "rejected-round", scores=(.8, 0.0))
+    points = [json.loads(line) for line in (run / "curve.jsonl").read_text().splitlines()]
+    points[-1].update(per_task={}, n_scored=0, measured_by_platform=False,
+                      unmeasured={"reason": "candidate rejected", "problems": ["missing agent.py"]})
+    # Each explicit marker independently excludes a numeric placeholder.
+    for key in ("n_scored", "measured_by_platform", "unmeasured"):
+        points[-1].pop(key)
+    points[-1].update(marker)
+    (run / "curve.jsonl").write_text("\n".join(map(json.dumps, points)) + "\n")
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    row = payload["rows"][0]
+    assert row["last"] == .8 and row["rounds"] == 1
+    assert row["last_delta_pp"] is None and row["delta_pp"] is None
+    assert len(row["measurement_context"]) == 2
+    if "unmeasured" in marker:
+        assert row["measurement_context"][-1]["unmeasured_reason"] == marker["unmeasured"]
+        assert "candidate rejected" in results_matrix.render_markdown(payload)
+
+
+def test_matrix_keeps_rejected_round_coverage_and_reason(tmp_path):
+    run = make_run(tmp_path, "rejected-only", scores=(0.0,))
+    point = json.loads((run / "curve.jsonl").read_text())
+    point.update(per_task={}, n_scored=0, measured_by_platform=False,
+                 unmeasured={"reason": "candidate rejected", "problems": ["missing agent.py"]})
+    (run / "curve.jsonl").write_text(json.dumps(point) + "\n")
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    assert payload["rows"] == []
+    skipped = payload["skipped"][0]
+    assert skipped["reason"] == "unmeasured"
+    assert skipped["n_tasks"] == 0 and skipped["unmeasured"] == 4
+    assert skipped["measurement_context"][0]["unmeasured_reason"] == point["unmeasured"]
+    assert "candidate rejected" in results_matrix.render_markdown(payload)
+
+
+def test_matrix_keeps_measured_zero_and_legacy_numeric_scores(tmp_path):
+    run = make_run(tmp_path, "measured-zero", scores=(.8, 0.0))
+    points = [json.loads(line) for line in (run / "curve.jsonl").read_text().splitlines()]
+    points[-1]["measured_by_platform"] = True
+    points[0].pop("n_scored")
+    points[0].pop("per_task")
+    (run / "curve.jsonl").write_text("\n".join(map(json.dumps, points)) + "\n")
+    row = results_matrix.build_matrix([str(tmp_path)])[0]["rows"][0]
+    assert row["last"] == 0.0 and row["last_delta_pp"] == -80.0
+    assert row["rounds"] == 2
+
+
+def test_missing_split_protocol_kind_is_not_invented_as_custom_heldout(tmp_path):
+    run = make_run(tmp_path, "unknown-protocol", scores=(.5,))
+    point = json.loads((run / "curve.jsonl").read_text())
+    point["split_protocol"] = {"official_score_comparable": False}
+    (run / "curve.jsonl").write_text(json.dumps(point) + "\n")
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    cells = _cells(results_matrix.render_markdown(payload), "unknown-protocol")
+    assert "unknown split protocol" in cells["comparison"]
+    assert "custom-heldout" not in cells["comparison"]
+
+
 def write_progress(run: Path, round_no: int, task_ids: list[str]) -> None:
     """`progress/round-N/<task>.json`: written task by task, so a count is a cursor."""
     directory = run / "progress" / f"round-{round_no}"
@@ -217,7 +345,7 @@ def test_unsummarisable_runs_are_listed_and_never_zeroed(tmp_path):
     # ever printed one of these runs as a zero-scored participant.
     below = markdown.index("## Runs that could not be summarised")
     for run_id in reasons:
-        assert run_id not in markdown[:below]
+        assert not any(line.startswith(f"| {run_id} ") for line in markdown[:below].splitlines())
         assert run_id in markdown[below:]
     assert "no_curve" in markdown and "corrupt_curve" in markdown
 

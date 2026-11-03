@@ -3,7 +3,7 @@
 
     python3 tools/validate_method.py methods/llm_improver
     python3 tools/validate_method.py methods/sica_ci --harness base_harness/loop
-    python3 tools/validate_method.py methods/mine --smoke     # 只查结构,不调用
+    python3 tools/validate_method.py /abs/path/to/mine --no-call  # 只查结构,不调用
 
 为什么需要它
 ------------
@@ -90,7 +90,11 @@ def check_structure(method: Path, rep: Report) -> bool:
     if not entry.exists():
         rep.add(FAIL, "缺少 run.py", "入口必须是 run.py —— 平台按这个名字调用")
         return False
-    rep.add(OK, f"找到 {entry.relative_to(ROOT)}({len(entry.read_text().splitlines())} 行)")
+    try:
+        shown = entry.relative_to(ROOT)
+    except ValueError:
+        shown = entry
+    rep.add(OK, f"找到 {shown}({len(entry.read_text(encoding='utf-8').splitlines())} 行)")
 
     # 方法可以用平台的 protocol 助手,也可以自己解析 stdin;两种都合规。这里只提示
     # 用的是哪种,因为自己解析的那条路要自己保证"stdout 只有那一个 JSON"。
@@ -98,7 +102,7 @@ def check_structure(method: Path, rep: Report) -> bool:
     # `import editor` 同样算走过这条路:editor 是平台给方法用的共享层,它自己
     # `from protocol import emit, read_request, require_api`。七个移植方法都这么用,
     # 而这条检查以前只认字面量 `protocol`,于是把**推荐的**用法报成了可疑用法。
-    text = entry.read_text()
+    text = entry.read_text(encoding="utf-8")
     uses_helper = any(tok in text for tok in
                       ("from protocol import", "import protocol",
                        "from editor import", "import editor"))
@@ -149,6 +153,9 @@ def check_invocation(method: Path, harness: Path, rep: Report,
                     f"开头是:{raw[:200]!r}\n"
                     "常见原因:在 stdout 上 print 了日志,或者写了一个 JSON 数组")
             return None
+        if not isinstance(reply, dict):
+            rep.add(FAIL, "stdout 必须是一个 JSON 对象,不能是数组或标量")
+            return None
         rep.add(OK, "stdout 是一个 JSON 对象")
 
         # 控制字段。`changed` 缺失不算错 —— 平台默认 True,但那意味着它会继续花钱,
@@ -164,27 +171,43 @@ def check_invocation(method: Path, harness: Path, rep: Report,
             rep.add(WARN, "响应里没有 `generation_tokens`",
                     "方法自己的开销就记不下来了;曲线只剩 harness 那半本账。")
 
-        # trajectory:mode A 里可选(平台用 stdout 的控制字段),但多数方法会写。
+        # 统一引擎总是读取 trajectory;changed=false 也要提供完整候选。
         if not traj.exists():
-            rep.add(WARN, "没有写 trajectory 文件",
-                    "mode A 可以不写,但写了才有逐步记录,面板的每步 diff 和解释"
-                    "都依赖它。")
+            rep.add(FAIL, "没有写 trajectory 文件",
+                    "必须在 trajectory_out 写入包含非空 steps 数组的 JSON 对象;"
+                    "即使 changed=false,也要提供一个完整 harness 的 step。")
             return reply
 
         try:
-            document = json.loads(traj.read_text())
-        except json.JSONDecodeError as exc:
-            rep.add(FAIL, f"trajectory 不是合法 JSON:{exc}")
+            document = json.loads(traj.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            rep.add(FAIL, f"trajectory 不能读取为合法 JSON:{exc}")
             return reply
 
-        steps = document.get("steps") or []
+        if not isinstance(document, dict):
+            rep.add(FAIL, "trajectory 必须是一个 JSON 对象")
+            return reply
+        steps = document.get("steps")
+        if not isinstance(steps, list) or not steps:
+            rep.add(FAIL, "trajectory.steps 必须是非空数组")
+            return reply
         rep.add(OK, f"trajectory 有 {len(steps)} 个 step")
 
         bad_dirs = []
         for i, step in enumerate(steps, 1):
+            if not isinstance(step, dict):
+                bad_dirs.append(f"step {i}: 必须是 JSON 对象")
+                continue
+            reported = step.get("method_reported") or {}
+            if not isinstance(reported, dict):
+                bad_dirs.append(f"step {i}: method_reported 必须是 JSON 对象")
+                continue
+            if reported.get("error") or step.get("error"):
+                bad_dirs.append(f"step {i}: 方法报告失败,不能作为完成的候选测量")
+                continue
             d = step.get("harness_dir")
-            if not d:
-                bad_dirs.append(f"step {i}: 没有 harness_dir(平台会跳过这一步)")
+            if not isinstance(d, str) or not d:
+                bad_dirs.append(f"step {i}: 缺少有效的 harness_dir 字符串")
                 continue
             p = Path(d)
             if not p.is_dir():

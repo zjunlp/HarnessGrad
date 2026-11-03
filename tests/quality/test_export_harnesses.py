@@ -28,9 +28,61 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "tools" / "export_harnesses.py"
 RUN = "export-fixture-20261102T0000Z"
+
+
+@pytest.mark.parametrize("metadata,label", [({"side": "train"}, "training"),
+    ({"side": "eval"}, "eval"), ({"score_kind": "training"}, "training"),
+    ({"score_kind": "exam"}, "eval"), ({}, "unknown side")])
+def test_provenance_labels_the_recorded_score_side(tmp_path, metadata, label):
+    from tools.export_harnesses import provenance, Recovered
+    text = provenance({"score": .5, **metadata}, tmp_path,
+                      Recovered(tmp_path, "state", "fixture"))
+    assert f"| score ({label}) |" in text
+    if label != "eval":
+        assert "| score (eval) |" not in text
+
+
+def test_official_eval_only_split_does_not_claim_exam_traces_were_shown(tmp_path):
+    from tools.export_harnesses import provenance, Recovered
+    text = provenance({"score": .8, "side": "eval", "score_kind": "exam",
+                       "measured_by_platform": True,
+                       "split": {"train": [], "eval": ["exam-1"]}}, tmp_path,
+                      Recovered(tmp_path, "state", "fixture"))
+    assert "| score (eval) | `0.800`" in text
+    assert "method was shown" not in text
+    assert "dataset declared no train/eval split" not in text
+
+
+def test_training_provenance_retains_diagnostic_performance_limitation(tmp_path):
+    from tools.export_harnesses import provenance, Recovered
+    text = provenance({"score": .8, "side": "train", "score_kind": "training",
+                       "measured_by_platform": True,
+                       "split": {"train": ["study-1"], "eval": ["exam-1"]}}, tmp_path,
+                      Recovered(tmp_path, "state", "fixture"))
+    assert "training-side diagnostic" in text
+    assert "eligible for method feedback" in text
+    assert "does not establish held-out performance" in text
+
+
+@pytest.mark.parametrize("train_score", [None, .8])
+def test_training_h0_provenance_does_not_claim_the_method_was_called(tmp_path, train_score):
+    from tools.export_harnesses import provenance, Recovered
+    text = provenance({"round": 0, "score": .8, "side": "train",
+                       "score_kind": "training", "train_score": train_score,
+                       "measured_by_platform": True,
+                       "split": {"train": ["study-1"], "eval": ["exam-1"]}}, tmp_path,
+                      Recovered(tmp_path, "state", "fixture"))
+    assert "| score (training) | `0.800`" in text
+    assert "training-side diagnostic" in text
+    assert "eligible for method feedback" in text
+    assert "does not establish held-out performance" in text
+    assert "method was shown" not in text
+    assert "shown these traces" not in text
 
 #: The smallest harness the tool will accept. `harness.json` is the manifest every
 #: recovery path requires, and it has to parse, so the fixture uses the real shape of

@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "TTHE:固定分支角色与回滚闸门(移植)",
  "note": "移植的是 TTHE 每轮的决策规则:按 DIVERSITY[round_index % 3] 轮转角色,有效性闸门或编辑失败时保留现任,合法子代交由平台测量。CLI 将四个内容列表写入 workspace/artifacts/proposal_card.json,editor 原样传回;端点仍可直接返回 proposal_card,直接字段优先。控制器补齐身份字段,现有卡片键集和类型校验不变。没有复现 G×R 同批候选池、agentic judge、transductive 评分协议及反译/蜕变一致性代理;没有 judge 的移植版不保证合法子代分数不退步。",
  "deviations": [

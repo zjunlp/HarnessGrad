@@ -67,6 +67,7 @@ import tools.web_gateway as web_gateway_mod
 # visible in the import line rather than flattened through the entrypoint.
 from harnessgrad import FRAMEWORK_VERSION
 from harnessgrad import config as platform_config
+from harnessgrad import h0_identity
 from harnessgrad import experiments
 from harnessgrad import readiness
 from harnessgrad import slots
@@ -687,6 +688,9 @@ def _readiness(args) -> int:
     # endpoint probe and the prepared `config` block must describe the deployment this
     # machine would actually use, not the bare process environment.
     load_env(Path(__file__).parent / ".env")
+    staged = args.sampling in ("diagnostic", "pilot_10pct")
+    if getattr(args, "rounds", None) is None:
+        args.rounds = 0 if staged else 3
 
     # **Which harness the check inspects.** An explicit `--harness-path` wins; an eval run
     # measures a state out of its `--from-run` record; otherwise it is the named directory
@@ -745,9 +749,6 @@ def _readiness(args) -> int:
     # The run directory `--prepare-only` creates is the one a real run would use, from the
     # same argv -- including the resolved mode and the staged-run id suffix -- so the
     # prepared record is a promise about *that* invocation, not about a generic one.
-    staged = args.sampling in ("diagnostic", "pilot_10pct")
-    if getattr(args, "rounds", None) is None:
-        args.rounds = 0 if staged else 3
     mode = "unified" if args.mode in ("A", "B") else args.mode
     run_id = args.run_id or (
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
@@ -1296,6 +1297,23 @@ def _main(attempt: dict) -> int:
 
     env_file = Path(__file__).parent / ".env"
     load_env(env_file)
+
+    # Isolation before configuration, and both before a dataset is loaded. Where a run writes
+    # is a safety property; whether the method can start is a configuration one. Reversed, a
+    # run with its workspace inside the platform reports the method problem and hides the
+    # violation (`test_isolation`); delayed past the load, a missing method is only noticed
+    # after the tasks were read (`test_missing_method_stops_before_dataset_loading`).
+    early_work = (Path(args.work_root) / (args.run_id or "<run-id>") / "workspace").resolve()
+    if not workspace_is_outside_platform(early_work, PLATFORM_ROOT):
+        print(f"refusing to run: the workspace {early_work} is inside the platform "
+              f"({PLATFORM_ROOT}). A harness there can read the driver and .env "
+              f"and write anywhere in the platform. Pass --work-root outside it.",
+              file=sys.stderr)
+        return 2
+    for check in readiness.method_checks(args):
+        if check.required and not check.ok:
+            print(f"refusing {check.name}: {check.detail}", file=sys.stderr)
+            return 2
     try:
         pool_env = _scenario_pool_env(args.dataset, args.pool)
         if args.pool is not None and not pool_env and args.pool != args.side:
@@ -2150,6 +2168,14 @@ def _main(attempt: dict) -> int:
                         break
             if donor_point is None:
                 print(f"refusing --h0-from {args.h0_from!r}: it has no curve point", file=sys.stderr)
+                return 2
+            agent = platform_config.current().agent
+            identity_problems = h0_identity.agent_problems(
+                donor_dir, donor_point, model=agent.model, backend=agent.backend,
+                endpoint=agent.base_url)
+            if identity_problems:
+                console.note(f"refusing --h0-from {args.h0_from!r}: " + "; ".join(identity_problems),
+                             level="error")
                 return 2
             try:
                 scoring_identity.require_same(donor_point.get("scoring_identity"), args.scoring_identity)

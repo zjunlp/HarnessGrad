@@ -34,11 +34,20 @@ The platform sends one JSON request on stdin. Important fields are:
 | `epochs_total`, `epochs_measured` | total and already measured improvement states; budget is their difference |
 | `improver` | optional resolved editor tool; you can also implement your own editor |
 
+<<<<<<< HEAD
 Read the study channel the platform stages beside the candidate (the `base_harness` entry in
 the request names the tree): `_harnessgrad/round.json`, `traces/`, `tasks/`, `history/` and
 `states/` hold the evidence available to the method. The candidate's own task
 execution does not receive that optimizer channel. Custom-split held-out task IDs
 and the private manifest are not included in method feedback.
+=======
+The request supplies absolute `base_harness`, `workspace`, and `trajectory_out`
+paths, task IDs, and `platform_api_version`. Validate the API with `require_api`.
+Read staged round evidence from `<base_harness>/_harnessgrad/`, including
+`round.json`, `tasks/`, `traces/`, `history/`, `states/`, and `SKILL.md`. The base is
+read-only; put edits and candidate directories under `workspace`. The platform
+hides its private tree from the method.
+>>>>>>> 174ba19 (fix: align first-run checks and measurement reuse)
 
 Write a trajectory with one or more `steps`, each naming an absolute
 `harness_dir`, and emit only one JSON response on stdout. Send diagnostics to

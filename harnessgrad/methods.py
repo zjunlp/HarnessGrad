@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import os
+import shutil
 import subprocess
 import sys
 
@@ -41,6 +42,8 @@ def _check_method_entrypoint(argv: list[str]) -> str | None:
         if not part.endswith(".py"):
             continue
         if Path(part).is_absolute():
+            if not Path(part).is_file():
+                return f"method entrypoint script does not exist: {part!r}"
             continue
         resolved = Path(part)
         hint = ""
@@ -51,6 +54,15 @@ def _check_method_entrypoint(argv: list[str]) -> str | None:
                 f"  The method runs with cwd set to the harness working tree, so a\n"
                 f"  relative path resolves there and does not exist. Use an absolute\n"
                 f"  path: python {PLATFORM_ROOT}/methods/<name>/run.py")
+    if not argv:
+        return "method entrypoint is empty"
+    executable = argv[0]
+    if Path(executable).is_absolute():
+        if not Path(executable).is_file() or not os.access(executable, os.X_OK):
+            return (f"method executable is missing or not executable: {executable!r}; "
+                    "launch Python scripts with the Python interpreter")
+    elif shutil.which(executable) is None:
+        return f"method executable is not on PATH: {executable!r}"
     return None
 
 def _method_sandbox_plan(work: Path, argv: list[str], scratch: Path,

@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "HyperAgents:按分数与子代数采样父代",
  "fidelity_profile": "archive-aligned-selector-branches-dual-role",
  "source_commit": "local methods_src/hyperagents checkout; git commit unavailable",
