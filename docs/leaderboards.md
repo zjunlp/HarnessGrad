@@ -28,6 +28,7 @@ Every entry, on any board:
 | `since` | the date the entry was first included |
 | `adoption` | independent reproductions reported in the pull request that added or updated the row; a declared number, not a scraped metric |
 | `note` | one line: what the thing is, not what it scores |
+| `contact` | optional: an address the website can show, so a reader can ask you about the entry. It is stored in the record and **never rendered into the README** — the table on GitHub shows the handle, and a public repository should not be where an email address is harvested from |
 
 `tools/leaderboards.py` refuses a row whose `path`, `preset` or `adapter` does not exist, whose
 handle is not a handle, whose adoption is not an integer ≥ 1, or that appears twice on a board.

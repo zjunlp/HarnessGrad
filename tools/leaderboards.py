@@ -97,6 +97,9 @@ def problems(record: dict) -> list[str]:
                 found.append(f"{board}/{name}: adoption must be an integer >= 1")
             if not entry.get("since"):
                 found.append(f"{board}/{name}: no since date")
+            contact = entry.get("contact")
+            if contact is not None and (not isinstance(contact, str) or not contact.strip()):
+                found.append(f"{board}/{name}: contact must be a nonempty string when present")
 
     group: dict[tuple[str, str], list[str]] = {}
     for entry in (record.get("results") or {}).get("entries") or []:
@@ -113,6 +116,9 @@ def problems(record: dict) -> list[str]:
         handle = entry.get("contributor", "")
         if handle and not HANDLE.match(handle):
             found.append(f"results/{name}: contributor is not a GitHub handle: {handle!r}")
+        contact = entry.get("contact")
+        if contact is not None and (not isinstance(contact, str) or not contact.strip()):
+            found.append(f"results/{name}: contact must be a nonempty string when present")
         if not isinstance(entry.get("score"), (int, float)):
             found.append(f"results/{name}: score must be a number")
         key = (str(entry.get("benchmark")), str(entry.get("metric")))
