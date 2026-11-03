@@ -363,13 +363,12 @@ evaluations. A score produced here is only as comparable as the receipt that acc
 If the platform, the measurement protocol or a curve produced here is useful in your work:
 
 ```bibtex
-@misc{harnessgrad2026,
-  title  = {HarnessGrad: measure a harness that improves},
-  author = {{HarnessGrad contributors}},
+@misc{xu2026harnessgrad,
+  title  = {HarnessGrad: Harness As a Continual Learner},
+  author = {Buqiang Xu and Yenan Wang and Yutong Yu and Rongyao Li and
+            Jintian Zhang and Shuofei Qiao and Xuehai Wang and Zirui Xue and
+            Yijun Chen and Ningyu Zhang},
   year   = {2026},
-  url    = {https://github.com/zjunlp/HarnessGrad},
-  note   = {Platform, measurement protocol and recorded-run receipts.
-            Boards: https://zjunlp.github.io/HarnessGrad-Hub/}
 }
 ```
 
