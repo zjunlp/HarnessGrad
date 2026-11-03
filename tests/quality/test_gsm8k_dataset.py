@@ -8,7 +8,8 @@ proves that by editing `<workdir>/gold.json` to the answer the agent did *not* g
 asserting the grade does not move.
 
 All rows are synthetic, including the rows labelled `test`. Verifier subprocesses
-use an empty table reader so grading cannot read any installed benchmark split.
+execute the isolated production entrypoint, whose scoring context disables host
+storage discovery and dataset-pool reads.
 """
 from __future__ import annotations
 
@@ -72,15 +73,9 @@ def _run_check(module, record: dict, workdir: Path, *,
                 target.write_text(entry["content"])
             else:
                 shutil.copy2(entry["from"], target)
-    # The copied production scorer imports its adapter, whose build normally reads
-    # both tables. Simulate an unprovisioned verifier without accessing either split.
-    bootstrap = (
-        "import runpy, sys; from data.scaffolds.qa import base; "
-        "base.parquet_rows = lambda path: []; "
-        "check_path = sys.argv.pop(1); "
-        "runpy.run_path(check_path, run_name='__main__')"
-    )
-    proc = subprocess.run([sys.executable, "-c", bootstrap, *verifier["argv"][1:]], cwd=workdir,
+    # Run the declared interpreter flags and script together, as production does.
+    # The scorer's own storage context keeps this independent of installed tables.
+    proc = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=workdir,
                           capture_output=True, text=True)
     reward_path = workdir / "verifier" / "reward.txt"
     reward = float(reward_path.read_text().strip()) if reward_path.is_file() else -1.0
