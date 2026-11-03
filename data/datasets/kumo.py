@@ -14,6 +14,8 @@ import json
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 KIND = "dataset"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
@@ -23,8 +25,9 @@ SPLIT_SOURCE = "none"
 ASSETS = Path(__file__).resolve().parent / "kumo"
 #: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above* the
 #: repository, so the default only worked in the checkout that wrote it.
-DATASET_ROOT = Path(os.environ.get("HG_KUMO_DATA",
-                                   Path("/mnt/20t/xubuqiang/datasets/kumo")))
+DATASET_ROOT = roots.dataset_root(
+    "kumo",
+    os.environ.get("HG_KUMO_DATA", "/mnt/20t/xubuqiang/datasets/kumo"))
 PREPARED = DATASET_ROOT / "prepared-v1"
 REVISION = "576748764f7d72634654d0784944a485eca9047c"
 MANIFEST_SHA256 = "05e20d7a9e7e8cff348f77e36cfb0d2842b549c344086e71fe478458b3cd05fe"

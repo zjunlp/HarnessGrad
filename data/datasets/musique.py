@@ -24,6 +24,7 @@ import re
 import string
 from pathlib import Path
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -35,7 +36,7 @@ LEGACY_MODE = "legacy_answer_only"
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/musique")
+DATASET_ROOT = roots.dataset_root("musique", "/mnt/20t/xubuqiang/datasets/musique")
 DATA_FILE = "musique_ans_v1.0_dev.jsonl"
 REVISION = "c8f4f8c9465fb69d31a8eae894c3fd509c4ca321"
 DATA_SHA256 = "15fa63794d18a94ce12411aca6e2327e65b6e83b0b1490efab3f1962e48abf3b"

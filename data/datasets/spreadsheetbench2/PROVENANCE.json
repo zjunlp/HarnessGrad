@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/RUCKBReasoning/SpreadsheetBench-2",
+  "revision": "a7bdc2d358e052d35a94768e1f487c0d9e9c0011",
+  "source": "KAKA22/SpreadsheetBench-v2",
+  "source_revision": "5a2215ed4121945ab09d8723df2995602090b042",
+  "archive": "spreadsheetbench-v2-09-10.zip",
+  "flashrsi_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "files": {
+    "evaluation.py": "04a2a75b29805ab40efe93e202384c365d1d32b9c924c1a4aed56e41249facb0",
+    "open_spreadsheet.py": "9f50ca883067c99dbd254f2b6620dd97157c1f56ae24e0ec692d30813a82dba1"
+  },
+  "scorer_modifications": [],
+  "runtime_adaptations": [
+    "Native open_spreadsheet.py source is executed with isolated ephemeral UNO port and separate per-check LibreOffice profile; numerical computation, iteration count100 and epsilon0.0001 are unchanged.",
+    "Private original/golden and actor output are copied into verifier scratch before recalculation; no actor artifact is mutated.",
+    "External interpreter/UNO/infrastructure failures yield measured:false, no score. Native completed workbook mismatch or missing output keeps native zero.",
+    "Only Debugging, Financial_Model and Template are included. Visualization is not represented."
+  ],
+  "runtime_packages": {
+    "openpyxl": "3.1.2",
+    "tqdm": "4.66.4"
+  },
+  "upstream_license_status": "No root LICENSE in pinned upstream tree; SWE-agent/LICENSE is project-specific and is not asserted to license evaluation/*.py."
+}

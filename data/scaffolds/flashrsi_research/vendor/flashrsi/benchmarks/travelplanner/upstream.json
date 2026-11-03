@@ -1,0 +1,29 @@
+{
+  "source": "https://github.com/OSU-NLP-Group/TravelPlanner",
+  "revision": "e52c87f4ac348a3410c46dc3553c519db5ec5e23",
+  "sha256": {
+    "evaluation/commonsense_constraint.py": "13cfda27b03d3c638a3a597a8a5f9cbb21ab49fe482745f13db435c9b0c88a6d",
+    "evaluation/hard_constraint.py": "18ffc300e9b61b87bcaf27fd54c5aa09c1319a4f403f308b53df3b696e5185b5",
+    "utils/func.py": "7f3f0ff0558fae1a2d1ad714d9d6503048ca1d4bc1c9e1dcada18f73b02dbf3c",
+    "tools/flights/apis.py": "33cffd6273c3936dcdc9e872558da50417810ea77d461536bba75ebdaa9e1180",
+    "tools/accommodations/apis.py": "8f3d4c28e569c5cb227acf4a256cf02c0298c125035fcdfc0cd1242386466f86",
+    "tools/restaurants/apis.py": "31e1fc907860512fad9bb6ab41487089da87854390f8a988880d509089d078b3",
+    "tools/attractions/apis.py": "d4b1c0d5341728de28372fdacd89ff3356cf02e427b1d18cb3bd5ba58bf1698a",
+    "tools/googleDistanceMatrix/apis.py": "66db2399128fa4f20c04c5977c6104cd23c8964d10b2a16faf1cc4b60acc7820",
+    "agents/prompts.py": "2fca45d972b41a58f1fbb89511777eafa825fe8084e69830f7a92f8ce80282c1",
+    "postprocess/openai_request.py": "97b1658a4ab2f8a54dd727f954a3f6d75039210d1f028854184e5508d23aba13",
+    "evaluation/eval.py": "89dbb9e51c951e700f0a4a39798315f9c8fb4658b30f5bdb72727498c4676fb2",
+    "postprocess/parsing.py": "9354585d9007cb8ccd0272567b1c05e26fb160e21db130df19ed7cfec297f77f",
+    "postprocess/element_extraction.py": "a2885d4ebd5d671b9389b42fd25a70db0be049750840a0b33ec2b782be9d527e",
+    "postprocess/combination.py": "ee73d615e62a26f9d6fa4c75fb9c77a868ab985d72fb41d302087490d5f40ea4",
+    "LICENSE": "05b8ae666b03e1a86252324c5207b872b37272c3c47cbc3f27b19debd35597cf"
+  },
+  "adaptations": [
+    "Extract native constraint functions without import-time cwd/database setup; inject the same official database API instances in a separate scoring process.",
+    "Relative imports; retain only grading helpers from utils/func.py (no Gradio UI).",
+    "GoogleDistanceMatrix accepts a database path; its evaluation method is unchanged.",
+    "Extract sole-planning prompt and conversion prefix verbatim; use async modern OpenAI transport with explicit credentials, bounded retries, and cancellation.",
+    "Use ast.literal_eval instead of eval for native literals and fenced converter responses; no candidate code execution.",
+    "Expose per-task macro indicators using the official gating; fixed full-set denominators and micro aggregation are not applied to user-selected subsets."
+  ]
+}

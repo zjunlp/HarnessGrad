@@ -110,6 +110,7 @@ had to be stripped out of a file the agent receives.
 """
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import os
@@ -139,8 +140,9 @@ import json
 #: Where the JRE is staged. Outside the platform tree on purpose: it is runtime, not code,
 #: it is 136 MB unpacked, and `tools/datasets.py` provisions it. `HG_SCIENCEWORLD_DATA`
 #: overrides it so a reader can point at another copy.
-DATASET_ROOT = Path(os.environ.get("HG_SCIENCEWORLD_DATA",
-                                   "/mnt/20t/xubuqiang/datasets/scienceworld"))
+DATASET_ROOT = roots.dataset_root(
+    "scienceworld",
+    os.environ.get("HG_SCIENCEWORLD_DATA", "/mnt/20t/xubuqiang/datasets/scienceworld"))
 
 ASSETS = Path(__file__).resolve().parent / "scienceworld"
 CLI_DIR = ASSETS / "cli"

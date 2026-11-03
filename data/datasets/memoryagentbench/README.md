@@ -34,9 +34,10 @@ official upstream division; the ratio applies to episodes, not questions.
 `--split official --side eval` selects the complete pool and includes the training
 episodes, so it is not a held-out evaluation after studying the declared train side.
 
-Install `requirements-prepare.txt` in a separate environment. These dependencies
-are needed for preparation and official differential tests; the relay and primary
-verifier use only Python's standard library. `downloads()` pins the raw parquet,
+Preparation needs `nltk`/`regex`/`tiktoken` at three exact versions plus `pyarrow`, in a
+separate environment. These dependencies are needed for preparation and official
+differential tests; the relay and primary verifier use only Python's standard library.
+`downloads()` pins the raw parquet,
 metadata, movie mapping and tokenizer resources; fetch with the platform download
 command, then use:
 
@@ -48,6 +49,30 @@ python data/datasets/memoryagentbench/prepare.py \
   --raw "$HG_MAB_DATA/raw" --resources "$HG_MAB_DATA/resources" \
   --output "$HG_MAB_DATA/prepared"
 ```
+
+`specs/chunk-policy.json` pins `nltk==3.10.3`, `regex==2026.9.29` and `tiktoken==0.14.0`,
+and those versions decide the sentence tables: preparation refuses any other and the
+refusal names the pins, the versions this interpreter has, and the command below. Install
+them into an isolated environment and point `HG_MAB_PYTHON` at its interpreter —
+`prepare.py` re-executes itself there before reading anything, so nothing is installed
+into the interpreter every other dataset shares:
+
+```sh
+python3 -m venv /tmp/hg-mab-venv
+/tmp/hg-mab-venv/bin/pip install nltk==3.10.3 regex==2026.9.29 tiktoken==0.14.0 pyarrow==23.0.1
+HG_MAB_PYTHON=/tmp/hg-mab-venv/bin/python python data/datasets/memoryagentbench/prepare.py \
+  --raw "$HG_MAB_DATA/raw" --resources "$HG_MAB_DATA/resources" --output "$HG_MAB_DATA/prepared"
+```
+
+The tracked `requirements-prepare.txt` also lists the official differential-test
+dependencies and pins `nltk==3.10.4` (the first release outside GHSA-8mgp-746c-j5xp's
+`<= 3.10.3` range); the gate's `3.10.3` is what reproduces the frozen tables, so install
+the three versions above rather than that file wholesale.
+
+The pinned `punkt_tab.zip` is on `raw.githubusercontent.com`, which is reset-blocked from
+this host; `HG_GH_RAW_MIRROR=<proxy>` on `tools/datasets.py --fetch` is the supported route,
+and `prepare_resources.py --archive` then restores the four English tables offline from the
+verified zip.
 
 Preparation refuses an existing output, verifies all raw and resource hashes,
 and checks every prepared chunk/query sequence against the frozen official

@@ -75,6 +75,8 @@ import json
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 
 KIND = "dataset"
 #: The gold answers are the benchmark's own released answers; the platform authored nothing.
@@ -95,7 +97,7 @@ METADATA_TEST = "2023/test/metadata.parquet"
 METADATA_TEST_SHA256 = "6fab73b48acadd363b4082d283d542702356177c76a0fc8ea84568978d4181d7"
 ROWS = 165
 
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/gaia")
+DATASET_ROOT = roots.dataset_root("gaia", "/mnt/20t/xubuqiang/datasets/gaia")
 POOL = "pool.jsonl"
 POOL_SHA256 = "eab408ebea22fac494a55320acfc250c4425f01b6fd0860921374773e82ab54e"
 ATTACHMENTS = "attachments"
@@ -255,6 +257,8 @@ def __getattr__(name: str):
     on a machine where no dataset has been provisioned (`data/datasets/spreadsheetbench.py` and
     `data/datasets/bird_minidev.py` carry the same guard).
     """
+    if name not in ("ENV", "SPLIT", "SETUP", "VERIFY"):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     if name not in _BUILT:
         rows_ = rows()
         ids = [task_id(row["index"]) for row in rows_]

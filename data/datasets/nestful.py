@@ -22,9 +22,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from data.scaffolds import roots
+
 KIND = "dataset"
 REVISION = "fc2c4123e73500a56185a5fb354f05d1c8b4890c"
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/nestful")
+DATASET_ROOT = roots.dataset_root("nestful", "/mnt/20t/xubuqiang/datasets/nestful")
 ROOT = DATASET_ROOT / "_src" / f"NESTFUL-{REVISION}"
 DATA = ROOT / "data_v2" / "nestful_data.jsonl"
 FUNCS = ROOT / "data_v2" / "executable_functions"

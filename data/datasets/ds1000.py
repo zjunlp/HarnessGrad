@@ -43,6 +43,7 @@ holds the per-row result, and `MEASURED_EXCLUSIONS` is derived from it.
 """
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import json
@@ -66,7 +67,7 @@ ORACLE_SOURCE = "released"
 #: no study material in it. `--split declared` keeps this adapter's own division.
 OFFICIAL_EVAL = None
 
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/ds1000")
+DATASET_ROOT = roots.dataset_root("ds1000", "/mnt/20t/xubuqiang/datasets/ds1000")
 DATA_FILE = DATASET_ROOT / "_src" / "test.jsonl"
 SOURCE_DIR = DATASET_ROOT / "_src" / "DS-1000-b39aab71"
 SEABORN_DIR = DATASET_ROOT / "seaborn-data"

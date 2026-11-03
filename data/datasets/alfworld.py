@@ -135,6 +135,7 @@ granularity is `1/n`.
 
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 #: See `data/scaffolds/registry.py:KIND_DATASET`. A fixture is platform test material and is
@@ -163,8 +164,9 @@ from pathlib import Path
 #: Where the data lives. Outside the platform tree on purpose: dataset content is not
 #: platform code, is never committed, and is what `tools/datasets.py` provisions.
 #: `HG_ALFWORLD_DATA` overrides it so a reader can point at another copy.
-DATASET_ROOT = Path(os.environ.get("HG_ALFWORLD_DATA",
-                                   "/mnt/20t/xubuqiang/datasets/alfworld"))
+DATASET_ROOT = roots.dataset_root(
+    "alfworld",
+    os.environ.get("HG_ALFWORLD_DATA", "/mnt/20t/xubuqiang/datasets/alfworld"))
 
 #: The split this dataset is. `valid_seen` and `train` are on disk too; only the
 #: out-of-distribution evaluation split is used, which is the one ALFWorld reports.

@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 import sys
 
+from data.scaffolds import roots
+
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
 SPLIT_SOURCE = 'declared'
@@ -20,8 +22,9 @@ ASSETS = Path(__file__).resolve().parent / 'costbench'
 #: every other adapter uses. It used to be `Path(__file__).resolve().parents[3] /
 #: 'datasets/costbench'`, which resolves to `<parent of the repository>/datasets/...` and is
 #: right only on the one checkout that path was written in.
-DATASET_ROOT = Path(os.environ.get('HG_COSTBENCH_DATA',
-                                   Path('/mnt/20t/xubuqiang/datasets/costbench')))
+DATASET_ROOT = roots.dataset_root(
+    "costbench",
+    os.environ.get("HG_COSTBENCH_DATA", "/mnt/20t/xubuqiang/datasets/costbench"))
 PREPARED = DATASET_ROOT / 'prepared-v1'
 RUNTIME = Path(os.environ.get('HG_COSTBENCH_RUNTIME', DATASET_ROOT / 'runtime'))
 REVISION = '6424069f3f773ade076bcedbed302ed47cfb1837'

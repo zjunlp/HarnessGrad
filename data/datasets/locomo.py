@@ -17,6 +17,8 @@ import json
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 KIND = "dataset"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
@@ -27,7 +29,9 @@ ASSETS = Path(__file__).resolve().parent / "locomo"
 #: machines, and `tools/dataset_lint.py --dataset locomo` reported "not provisioned" from
 #: every checkout except one. `HG_LOCOMO_DATA` still overrides it, and names the directory
 #: that CONTAINS `raw/locomo10.json`.
-DATASET_ROOT = Path(os.environ.get("HG_LOCOMO_DATA", "/mnt/20t/xubuqiang/datasets/locomo"))
+DATASET_ROOT = roots.dataset_root(
+    "locomo",
+    os.environ.get("HG_LOCOMO_DATA", "/mnt/20t/xubuqiang/datasets/locomo"))
 DATA_FILE = DATASET_ROOT / "raw" / "locomo10.json"
 SOURCE_COMMIT = "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376"
 DATA_SHA256 = "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"

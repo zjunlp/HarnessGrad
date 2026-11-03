@@ -15,6 +15,8 @@ import json
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
@@ -24,8 +26,9 @@ ASSETS = Path(__file__).with_suffix('')
 TRANSPORT = Path(__file__).resolve().parents[2] / 'eval/service/tool_transport.py'
 #: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above* the
 #: repository, so the default only worked in the checkout that wrote it.
-DATASET_ROOT = Path(os.environ.get('HG_COOPERBENCH_DATA',
-                                   Path('/mnt/20t/xubuqiang/datasets/cooperbench')))
+DATASET_ROOT = roots.dataset_root(
+    "cooperbench",
+    os.environ.get("HG_COOPERBENCH_DATA", "/mnt/20t/xubuqiang/datasets/cooperbench"))
 MANIFEST_SHA256 = '64069b7c5dd126b999070a9e4462d5af82e9752a686e8c59a104d59c7a78d84b'
 REVISION = '63b9d44d9f39a02fccf5bf0052db48a917a011fd'
 HARBOR_REVISION = '3e9f14a7c1033896cc600d27de69d6948bcb3410'

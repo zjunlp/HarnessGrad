@@ -63,7 +63,7 @@ def _local(task: dict, oracle: bool, workdir: Path) -> int:
 
 
 def _platform(task: dict, oracle: bool, workdir: Path, sandbox: bool) -> int:
-    from eval.run.runner import run_one
+    from eval.run.runner import _observations_for, run_one
     repo = workdir / "harness"
     shutil.copytree(ROOT / "data/datasets/appworld/oracle_harness", repo, dirs_exist_ok=True)
     setup = {"files": [{"path": "aw", "from": str(ROOT / "data/datasets/appworld/cli/aw")}]}
@@ -74,9 +74,21 @@ def _platform(task: dict, oracle: bool, workdir: Path, sandbox: bool) -> int:
         os.environ["APPWORLD_NOOP"] = "1"
     else:
         os.environ.pop("APPWORLD_NOOP", None)
+    run_id = f"appworld-control-{workdir.name}"
+    # **Admission receipt 必须自己取。** `run_one` 直接调用时没有 driver 的
+    # `_observations_for`，于是每条 exec 题都在 `backend_observation_unavailable` 被拒 ——
+    # 这不是"控制失败"，而是"没人出示后端观察"。控制臂要走与生产同一条入口：先探一次
+    # 容器形状，再把 receipt 交给 `run_one`。
+    env = dataset.ENV[task["task_id"]]
+    observation = _observations_for({task["task_id"]: env}, [task], run_id=run_id
+                                    ).get(task["task_id"])
+    if observation is None:
+        print("control refused: no backend observation for this container shape "
+              "(the probe could not run; nothing is admitted without it)", file=sys.stderr)
+        return 2
     result = run_one(repo=repo, task=task, setup=setup, verifier=dataset.VERIFY[task["task_id"]],
-                     env=dataset.ENV[task["task_id"]], sandbox=sandbox,
-                     run_id=f"appworld-control-{workdir.name}", run_seed="0",
+                     env=env, sandbox=sandbox, observation=observation,
+                     run_id=run_id, run_seed="0",
                      recordings_root=workdir / "recordings")
     verdict = result.get("verdict") or {}
     score = float(verdict.get("score", 1.0 if verdict.get("passed") else 0.0))

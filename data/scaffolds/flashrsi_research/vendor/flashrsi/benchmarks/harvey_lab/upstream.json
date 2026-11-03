@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/harveyai/harvey-labs",
+  "revision": "f93ae2ac2831e65892fea83094cfb50149bc2e59",
+  "version": "1.2.0",
+  "wheel_sha256": "5bfd70664a99c16a97a35bf61a3845a9890477168d11978d58864f986c9f53ba",
+  "files": {
+    "lab_core/paths.py": "6dce94f40274e4336baf7ae85e752674f2f38587a9a4ce77be831a78af6a3dbb",
+    "lab_core/evaluation/run_eval.py": "a540489df1b3c561926698fe2c24da0bef41fabcfcbc0019a32f2eab23511b59",
+    "lab_core/evaluation/scoring.py": "68aa557e1a536bb44de56310f4b28f53da0196dcf92298e2a84003fe43441eb6",
+    "lab_core/evaluation/judge.py": "d1e346f2555dd1542e68b200b2fcbe323bfc69b2117210766e852c7134e0f35b",
+    "lab_core/evaluation/prompts/rubric_criterion.txt": "425124e70f055ab44ccce06e68008f4939ca7e8aadb98d12c88188d833be5dd6",
+    "lab_core/harness/adapters/anthropic.py": "65052dd1a14cbceb8aa41102a34c40d6248a4d556b3918a1e7f52a3498beb96c",
+    "lab_core/harness/adapters/openai.py": "fae400d8d4390c3f3465d96e78475ecefc99ff649814aa8e7891f53f50d875f1",
+    "lab_core/harness/adapters/mistral.py": "4896308cd4d59a3bb35f3543aaa07fae27a04dfd4093dbba6e3201b17389f7bf",
+    "lab_core/harness/adapters/base.py": "7ef98694563193cde0a043009fc4901b60e887de5a01a2d008bb71468174cc07"
+  }
+}

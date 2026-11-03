@@ -137,6 +137,8 @@ import os
 import sys
 from pathlib import Path
 
+from data.scaffolds import roots
+
 
 #: The committed assets, written by `tools/build_tau_bench_gt.py`. Kept beside this
 #: module: `data/datasets/tau_bench.py` is the adapter, `data/datasets/tau_bench/` is its content.
@@ -503,7 +505,7 @@ def downloads() -> list[dict]:
         "version": commit,
         "url": f"https://github.com/sierra-research/tau-bench/archive/{commit}.tar.gz",
         "size": "~67 MB unpacked",
-        "dst": "/mnt/20t/xubuqiang/datasets/tau-bench",
+        "dst": str(roots.dataset_root("tau-bench", "/mnt/20t/xubuqiang/datasets/tau-bench")),
         "extract_to": ".",
         "note": "Only needed to REGENERATE `data/datasets/tau_bench/`: the adapter reads the "
                 "committed assets, which are already in git. Pinned to the commit in "

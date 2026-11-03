@@ -32,7 +32,11 @@ def main():
     args.receipt.write_text(json.dumps({
         "schema": "personamem-v2-relay-receipt-v1", "task_id": session.payload["task_id"],
         "stopped_cleanly": clean, "protocol_rejections": session.rejected, "transport": relay.receipt}))
-    return 0 if clean and not (relay.receipt["errors"] or relay.receipt["refused"]) else 1
+    # Malformed actor envelopes never reach the session and can be corrected.
+    # Handler/runtime errors and resource refusals still invalidate the service.
+    service_failed = (relay.receipt["errors"] > relay.receipt["request_errors"]
+                      or relay.receipt["refused"])
+    return 0 if clean and not service_failed else 1
 
 
 if __name__ == "__main__":

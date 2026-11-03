@@ -1,0 +1,9 @@
+{
+  "source": "https://github.com/scaleapi/SWE-bench_Pro-os",
+  "revision": "66f92766bba642462d4bbe5479e83f91f9211862",
+  "native_split": "test",
+  "metric": "resolved",
+  "flashrsi_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "flashrsi_adapter": "flashrsi/benchmarks/swe_bench_pro",
+  "runtime_status": "native-source loader ready; execution not admitted until required native verifier/network/replay capabilities are implemented"
+}

@@ -24,6 +24,7 @@ import re
 
 import chess
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -33,7 +34,7 @@ KIND = "dataset"
 ORACLE_SOURCE = "released"
 # The shared verifier otherwise includes the complete private reference in evidence.
 REDACT_EVIDENCE = True
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/chessbench_puzzles")
+DATASET_ROOT = roots.dataset_root("chessbench_puzzles", "/mnt/20t/xubuqiang/datasets/chessbench_puzzles")
 CSV_PATH = DATASET_ROOT / "_src" / "puzzles.csv"
 CSV_MEMBER = "puzzles.csv"
 REVISION = "90ae0e6b121673fc3079aaeffa047580bb600c0a"

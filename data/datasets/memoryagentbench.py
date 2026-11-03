@@ -4,7 +4,9 @@
 One ordered material sequence and its questions form each interactive task.
 
 Provision using ``python -m data.datasets.memoryagentbench.prepare``; set HG_MAB_DATA or
-HG_MAB_PREPARED for another external location. Import reads no data or gold.
+HG_MAB_PREPARED for another external location, and HG_MAB_PYTHON to the isolated interpreter
+its three preparation pins require (they decide the sentence tables; see
+``specs/chunk-policy.json``). Import reads no data or gold.
 Four upstream splits are capability partitions, not train/test divisions, so this adapter
 declares **no** division (`SPLIT is None`, `SPLIT_SOURCE == "none"`): the whole provisioned
 pool is evaluation material and `OFFICIAL_EVAL is None`. It used to declare the platform's
@@ -20,6 +22,8 @@ import json
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -31,8 +35,9 @@ ASSETS = Path(__file__).resolve().parent / "memoryagentbench"
 __path__ = [str(ASSETS)]
 #: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above* the
 #: repository, so the default only worked in the checkout that wrote it.
-DATASET_ROOT = Path(os.environ.get("HG_MAB_DATA",
-                                   Path("/mnt/20t/xubuqiang/datasets/memoryagentbench")))
+DATASET_ROOT = roots.dataset_root(
+    "memoryagentbench",
+    os.environ.get("HG_MAB_DATA", "/mnt/20t/xubuqiang/datasets/memoryagentbench"))
 PREPARED_ROOT = Path(os.environ.get("HG_MAB_PREPARED", DATASET_ROOT / "prepared"))
 REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
 

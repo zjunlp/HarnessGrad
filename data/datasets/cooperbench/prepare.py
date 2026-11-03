@@ -12,13 +12,36 @@ import shutil
 import subprocess
 import sys
 
+def _sibling_module(name: str, relative: str):
+    """Load a module **by path** instead of through the global `sys.modules` name.
+
+    `protocol` 是极普通的顶层名字：方法侧（`methods/protocol.py`，method↔platform 通道）
+    在同一个进程里也会注册它。全套测试按文件名顺序跑时，下面这行 `from protocol import …`
+    曾经拿到**方法侧那个**模块，于是 `ImportError: cannot import name 'SOURCE_REVISION'`。
+    按路径加载就不受谁先进 `sys.modules` 的影响。
+    """
+    path = Path(__file__).resolve().parent / relative
+    spec = importlib.util.spec_from_file_location(f"hg_cooperbench_{name}", path)
+    if spec is None or spec.loader is None:            # pragma: no cover - defensive
+        raise ImportError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
-from protocol import (SOURCE_REVISION, HARBOR_REVISION, HARBOR_ADAPTER_SHA256,
-                      HARBOR_SCORER_SHA256, sha, read_checked, adapt_scorer, prepare_recipe, image_recipe, recipe)
+protocol = _sibling_module("protocol", "lib/protocol.py")
+(SOURCE_REVISION, HARBOR_REVISION, HARBOR_ADAPTER_SHA256,
+ HARBOR_SCORER_SHA256, sha, read_checked, adapt_scorer,
+ prepare_recipe, image_recipe, recipe) = (
+    protocol.SOURCE_REVISION, protocol.HARBOR_REVISION, protocol.HARBOR_ADAPTER_SHA256,
+    protocol.HARBOR_SCORER_SHA256, protocol.sha, protocol.read_checked,
+    protocol.adapt_scorer, protocol.prepare_recipe, protocol.image_recipe, protocol.recipe)
 
 
 def command(*argv):
-    return subprocess.check_output(argv, text=True).strip()
+    return subprocess.check_output(argv, text=True, errors="replace").strip()
 
 
 def write_json(path, data):

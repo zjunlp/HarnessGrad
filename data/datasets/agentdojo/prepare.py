@@ -13,7 +13,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-DATA = Path('/mnt/20t/xubuqiang/datasets/agentdojo')
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from data.scaffolds import roots  # noqa: E402
+
+DATA = roots.dataset_root("agentdojo", "/mnt/20t/xubuqiang/datasets/agentdojo")
 COMMIT = '089ed468cf3ed0322acc66b0211f26d9d90dbf60'
 SOURCE = DATA / '_src' / f'agentdojo-{COMMIT}' / 'src' / 'agentdojo'
 

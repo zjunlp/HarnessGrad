@@ -13,6 +13,8 @@ from pathlib import Path
 import random
 import subprocess
 
+from data.scaffolds import roots
+
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
 # Upstream's full-base reporting protocol, distinct from the held-out split.
@@ -21,10 +23,13 @@ SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'tau3_bench'
 #: Where the prepared payload lives. The default used to be `parents[3]/datasets/tau3_bench`,
 #: which from `data/datasets/` resolves to `<checkout>/../datasets` -- a path that exists on the
-#: author's machine and nowhere else. Every other adapter on this host uses the same absolute
-#: `/mnt/20t/xubuqiang/datasets/<name>` convention, so this one does too; `HG_TAU3_DATA` still
-#: overrides it.
-DATASET_ROOT = Path(os.environ.get('HG_TAU3_DATA', '/mnt/20t/xubuqiang/datasets/tau3_bench'))
+#: author's machine and nowhere else. The operator's absolute
+#: `/mnt/20t/xubuqiang/datasets/tau3_bench` is now `data/scaffolds/roots.py`'s **legacy**
+#: argument: it wins only while it exists, `HG_TAU3_DATA` still overrides that value, and
+#: `HG_DATA_TAU3_BENCH`/`HG_DATA_ROOT` take precedence over both.
+DATASET_ROOT = roots.dataset_root(
+    "tau3_bench",
+    os.environ.get('HG_TAU3_DATA', '/mnt/20t/xubuqiang/datasets/tau3_bench'))
 RUNTIME = Path(os.environ.get('HG_TAU3_RUNTIME', DATASET_ROOT / 'runtime'))
 REVISION = 'fc0055dc4e0a316c3f83133267fbd6faaa770992'
 ARCHIVE_SHA256 = '7a227036d07fdeb088dbd0c99fdb40ee9b9e0ebc06aadbc4dec1217b3383e57e'
@@ -124,7 +129,7 @@ def _python_runtime(runtime):
     try:
         # Startup inspection only, not an episode/model/verification budget.
         proc = subprocess.run([str(python), '-I', '-c', probe], capture_output=True,
-                              text=True, check=True, timeout=10)
+                              text=True, errors="replace", check=True, timeout=10)
         info = json.loads(proc.stdout)
         if info['version'] != [3, 12]:
             raise ValueError('tau3 requires Python 3.12 in its selected runtime')

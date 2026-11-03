@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/ByteDance-Seed/WideSearch",
+  "revision": "9825ba7b140b71d81b364793f86dabe4cfed6749",
+  "sha256": {
+    "data_loader.py": "ecdb909622563268d75b74873c3a6917e71624dbd6d0f0d3f9a29ddc139de137",
+    "evaluation.py": "26c5f0b1ab7c67c4c0b108311e01b9549da0918d57dba97b61fb007a9c6c9a10",
+    "metric_utils.py": "32d73ed5198aa96f1a902d03814d85412a7e6f7dd5c97f281046e9c6de67e8fb",
+    "utils.py": "235bb7100d29d285095e5ad3b4ed835c0e56aa1aaa63373d948870387a4a4de9"
+  },
+  "adaptations": [
+    "relative imports and injected host-only llm_completion",
+    "omit unused pandarallel initialization",
+    "disable private evaluator logging"
+  ]
+}

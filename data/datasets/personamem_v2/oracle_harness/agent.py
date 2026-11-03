@@ -29,7 +29,7 @@ def main():
             path.write_text(content)
     if control['mode'] != 'noop':
         first = subprocess.run([sys.executable, str(work / 'personamem'), 'next'], cwd=work,
-                               capture_output=True, text=True, check=True)
+                               capture_output=True, text=True, errors="replace", check=True)
         metadata = json.loads(first.stdout)
         assert len((work / metadata['path']).read_bytes()) == metadata['bytes']
         while True:

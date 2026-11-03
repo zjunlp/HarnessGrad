@@ -94,7 +94,7 @@ def run(oracle, platform, task_id, work, *, attack=False, recordings_root=None):
                 dest.symlink_to(entry['from'], target_is_directory=True)
             else:
                 shutil.copyfile(entry['from'], dest)
-        proc = subprocess.run(verifier['argv'], cwd=work, capture_output=True, text=True)
+        proc = subprocess.run(verifier['argv'], cwd=work, capture_output=True, text=True, errors="replace")
         reward, evidence = work / 'verifier/reward.txt', work / 'verifier/evidence.json'
         return (float(reward.read_text()) if reward.exists() else None), {
             'returncode': proc.returncode, 'stderr': proc.stderr,

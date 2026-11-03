@@ -7,8 +7,18 @@ import base64
 import importlib.metadata
 import json
 from pathlib import Path
+import sys
 
 from .storage import file_sha256
+
+#: The interpreter variable ``prepare.py`` honours. The three pins below are the reason the
+#: frozen sentence tables reproduce, and installing them into the shared interpreter would
+#: change what every other dataset measures -- so preparation runs under its own.
+INTERPRETER_ENV = "HG_MAB_PYTHON"
+
+#: The isolated environment the error message tells an operator to build; named once so the
+#: message and the documented command cannot drift apart.
+SUGGESTED_ENV = "/tmp/hg-mab-venv"
 
 SPECS = Path(__file__).resolve().parents[1] / "specs"
 SPEC_SHA256 = {
@@ -37,12 +47,48 @@ def render_question(source, question):
     return templates["query_templates"][family].format(question=question)
 
 
+def installed_version(package):
+    """The running interpreter's version of `package`, or a word that says it has none.
+
+    A package that is not installed at all used to raise `PackageNotFoundError` out of the
+    gate, which reads like a bug rather than the instruction below.
+    """
+    try:
+        return importlib.metadata.version(package)
+    except importlib.metadata.PackageNotFoundError:
+        return "not installed"
+
+
+def install_command(pins):
+    """The exact command that builds the prepared interpreter, from the pins themselves."""
+    return (f"python3 -m venv {SUGGESTED_ENV} && {SUGGESTED_ENV}/bin/pip install "
+            + " ".join(f"{package}=={version}" for package, version in pins.items()))
+
+
+def dependency_error(package, pins, installed):
+    """Why preparation refused, with every number needed to fix it and the way out.
+
+    Measured 2026-11-02: the gate raised `dependency_version_mismatch:nltk` and nothing else,
+    which names neither the three pins, nor what this interpreter has, nor that an isolated
+    interpreter is the supported answer.
+    """
+    pinned = ", ".join(f"{name}=={version}" for name, version in pins.items())
+    present = ", ".join(f"{name}=={installed[name]}" for name in pins)
+    return (f"dependency_version_mismatch:{package}: this interpreter ({sys.executable}) has "
+            f"{present}; {pinned} are pinned in specs/chunk-policy.json, and the frozen "
+            f"sentence tables only reproduce under those. Install the pinned versions into an "
+            f"isolated environment and point {INTERPRETER_ENV} at its interpreter: "
+            + install_command(pins))
+
+
 def validate_resources(resources):
     resources = Path(resources).resolve()
     policy = read_spec("chunk-policy.json")
-    for package, expected in policy["dependencies"].items():
-        if importlib.metadata.version(package) != expected:
-            raise ValueError("dependency_version_mismatch:" + package)
+    pins = policy["dependencies"]
+    installed = {package: installed_version(package) for package in pins}
+    for package, expected in pins.items():
+        if installed[package] != expected:
+            raise ValueError(dependency_error(package, pins, installed))
     lock = read_spec("resources.lock.json")
     for entry in lock["files"]:
         relative = Path(entry["path"]).relative_to("resources")

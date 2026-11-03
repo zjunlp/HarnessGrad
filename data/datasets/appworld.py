@@ -56,10 +56,11 @@ import shutil
 import zipfile
 from pathlib import Path
 
+from data.scaffolds import roots
 from eval.policy.appworld_reporting import make_manifest
 
 KIND = "dataset"
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/appworld")
+DATASET_ROOT = roots.dataset_root("appworld", "/mnt/20t/xubuqiang/datasets/appworld")
 SRC_DIR = DATASET_ROOT / "_src"
 BUNDLE = SRC_DIR / "data-0.1.0.bundle"
 UNPACKED = SRC_DIR / "unpacked"

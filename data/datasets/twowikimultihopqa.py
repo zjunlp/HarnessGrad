@@ -85,6 +85,7 @@ from collections import Counter
 from copy import deepcopy
 from pathlib import Path
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -95,7 +96,7 @@ EVIDENCE_AWARE = True
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/twowikimultihopqa")
+DATASET_ROOT = roots.dataset_root("twowikimultihopqa", "/mnt/20t/xubuqiang/datasets/twowikimultihopqa")
 DATA_FILE = "dev.json"
 ALIAS_FILE = "id_aliases.json"
 WITNESS_FILE = "validation.parquet"

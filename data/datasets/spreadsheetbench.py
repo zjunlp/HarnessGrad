@@ -50,6 +50,7 @@ What is deliberately not added, and what is not checked
 """
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import json
@@ -73,8 +74,9 @@ ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
 
 #: Where the extracted release lives. Outside the platform tree on purpose.
-DATASET_ROOT = Path(os.environ.get("HG_SPREADSHEETBENCH_DATA",
-                                   "/mnt/20t/xubuqiang/datasets/spreadsheetbench"))
+DATASET_ROOT = roots.dataset_root(
+    "spreadsheetbench",
+    os.environ.get("HG_SPREADSHEETBENCH_DATA", "/mnt/20t/xubuqiang/datasets/spreadsheetbench"))
 
 #: The Hub release and its digests.
 REVISION = "ab0b742b0fc95b946f212d80ac7771b5531272e4"

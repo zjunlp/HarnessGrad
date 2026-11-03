@@ -84,10 +84,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 KIND = "dataset"
 
-DATASET_ROOT = Path(os.environ.get("HG_TAU2_DATA",
-                                   "/mnt/20t/xubuqiang/datasets/tau2-bench"))
+DATASET_ROOT = roots.dataset_root(
+    "tau2-bench",
+    os.environ.get("HG_TAU2_DATA", "/mnt/20t/xubuqiang/datasets/tau2-bench"))
 
 #: The tag, and the archive digest that pins the bytes.
 REPO_TAG = "v0.1.0"

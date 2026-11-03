@@ -19,13 +19,29 @@ def validate_record(spec) -> None:
 
 def validate_judge(spec, *, allow_trial_seed=False):
     fields = {'model', 'max_calls', 'max_output_tokens', 'timeout_s', 'parameters', 'tools', 'tool_choice',
-              'max_retries', 'max_attempts', 'response_max_bytes', 'max_line_bytes', 'reasoning'}
+              'max_retries', 'max_attempts', 'response_max_bytes', 'max_line_bytes', 'reasoning',
+              'response_format', 'token_parameter'}
     if allow_trial_seed:
         fields.add('seed_source')
     if not isinstance(spec, dict) or set(spec) - fields:
         raise ValueError('judge must be an object containing only supported model-channel fields')
     if not isinstance(spec.get('model'), str) or not spec['model'].strip():
         raise ValueError('judge.model must be nonempty')
+    if spec.get('token_parameter', 'max_tokens') not in ('max_tokens', 'max_completion_tokens'):
+        raise ValueError('judge.token_parameter must be max_tokens or max_completion_tokens')
+    if 'response_format' in spec:
+        response = spec['response_format']
+        if (not isinstance(response, dict) or response.get('type') != 'json_schema'
+                or set(response) != {'type', 'json_schema'}):
+            raise ValueError('judge.response_format requires a json_schema declaration')
+        schema = response['json_schema']
+        if (not isinstance(schema, dict) or set(schema) != {'name', 'strict', 'schema'}
+                or not isinstance(schema['name'], str) or not schema['name']
+                or schema['strict'] is not True or not isinstance(schema['schema'], dict)):
+            raise ValueError('judge.response_format requires a named strict JSON schema')
+        # Reject non-JSON values before the trusted request process starts.
+        import json
+        json.dumps(response, allow_nan=False)
     if 'reasoning' in spec:
         if spec['reasoning'] != 'disabled':
             raise ValueError('judge.reasoning only supports disabled; omit it to preserve provider defaults')
@@ -78,6 +94,37 @@ def validate_result(spec):
             or any(type(x) not in (int, float) or not math.isfinite(x) for x in bounds)
             or bounds[0] >= bounds[1]):
         raise ValueError('result_contract.score_range must contain two increasing finite numbers')
+
+
+def validate_native_benchmark(spec):
+    """Fixed platform dispatch only; never an arbitrary command on the host."""
+    import re
+    declaration = spec.get('native_benchmark')
+    names = {'swe_bench', 'harvey_lab', 'deepswe', 'jobbench', 'swe_bench_pro'}
+    if (not isinstance(declaration, dict) or declaration.get('dataset') not in names
+            or set(declaration) - {'dataset', 'case_sha256', 'case_path', 'record_path', 'parallel'}
+            or not re.fullmatch('[a-f0-9]{64}', str(declaration.get('case_sha256', '')))):
+        raise ValueError('native_benchmark requires a supported dataset and private case SHA256')
+    name = declaration['dataset']
+    if (spec.get('kind') != 'command' or spec.get('argv') != ['harnessgrad-native', name]
+            or any(key in spec for key in ('judge', 'native_runtime', 'container_runtime', 'scorer_bundle', 'runtime_paths'))
+            or spec.get('result_contract') != {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}):
+        raise ValueError('native_benchmark requires its fixed command/result contract and no other runtime')
+    binding = spec.get('scorer_input')
+    if (not isinstance(binding, dict) or not binding.get('task_id')
+            or binding.get('sha256') != declaration['case_sha256']):
+        raise ValueError('native_benchmark requires a selected private scorer input binding')
+    path = binding.get('path')
+    if (not isinstance(path, str) or not path or Path(path).is_absolute()
+            or any(p in ('', '.', '..') for p in path.split('/')) or '\\' in path):
+        raise ValueError('native_benchmark case path must be safe and relative')
+    if 'case_path' in declaration and declaration['case_path'] != path:
+        raise ValueError('native_benchmark case_path differs from scorer_input')
+    expected_record = None if name == 'harvey_lab' else 'swe_episode' if name == 'swe_bench' else 'native_episode'
+    if 'record_path' in declaration and declaration['record_path'] != expected_record:
+        raise ValueError('native_benchmark record path differs from fixed route')
+    if 'parallel' in declaration and (name != 'harvey_lab' or type(declaration['parallel']) is not int or declaration['parallel'] < 1):
+        raise ValueError('native_benchmark.parallel is a positive Harvey-only limit')
 
 
 

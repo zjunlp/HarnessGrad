@@ -93,8 +93,7 @@ def java_home(workdir: Path) -> Path:
         return sealed.resolve()
     candidates = [workdir / JRE_RELDIR / JRE_DIRNAME,
                   Path(os.environ["HG_SCIENCEWORLD_JAVA"]) if
-                  os.environ.get("HG_SCIENCEWORLD_JAVA") else None,
-                  staged_jre()]
+                  os.environ.get("HG_SCIENCEWORLD_JAVA") else None]
     for candidate in candidates:
         if candidate and (candidate / "bin" / "java").is_file():
             # **Resolved, always.** py4j launches Java with `cwd=<the package's BASEPATH>`
@@ -103,6 +102,14 @@ def java_home(workdir: Path) -> Path:
             # whose cwd nobody set -- measured, and it cost a control run. Every path this
             # returns is absolute for that reason.
             return candidate.resolve()
+    # Only after the workdir copy and the explicit override miss: `staged_jre()` asks
+    # `data/scaffolds/roots.py`, and this module is also materialized inside a task
+    # workdir, where that package does not exist. Eagerly listing it as a candidate
+    # made the standalone `scw` CLI need the platform tree just to discard the result.
+    staged = staged_jre()
+    candidates.append(staged)
+    if (staged / "bin" / "java").is_file():
+        return staged.resolve()
     raise RuntimeError(
         "no Java runtime found; tried " +
         ", ".join(str(c) for c in candidates if c) +
@@ -113,8 +120,14 @@ def java_home(workdir: Path) -> Path:
 
 def staged_jre() -> Path:
     """The provisioned JRE under the dataset root (the by-hand path)."""
-    root = Path(os.environ.get("HG_SCIENCEWORLD_DATA",
-                               "/mnt/20t/xubuqiang/datasets/scienceworld"))
+    # Imported here, not at module level: this file is also materialized into a task
+    # workdir (as `scw_env.py` beside the `scw` CLI) and into the sealed `/scorer`
+    # root, where the `data` package does not exist. Only the by-hand path needs a
+    # root, and only the platform tree can answer it.
+    from data.scaffolds import roots
+    root = roots.dataset_root(
+        "scienceworld",
+        os.environ.get("HG_SCIENCEWORLD_DATA", "/mnt/20t/xubuqiang/datasets/scienceworld"))
     return root / "jre" / JRE_DIRNAME
 
 

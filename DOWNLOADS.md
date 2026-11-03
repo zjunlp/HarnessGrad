@@ -10,6 +10,23 @@ loads and scores it stays in git.
 
 `python3 tools/datasets.py --check` reports which of these are present locally.
 
+**Egress on a walled host.** With `HG_GH_RAW_MIRROR` unset, `--fetch` asks for
+the URL above byte for byte. Set it to a proxy prefix (for example
+`https://ghproxy.example/`) and a `raw.githubusercontent.com` URL is fetched as
+`<mirror>/https://raw.githubusercontent.com/<path>` instead; no other host is
+rewritten, because a mirror in front of a checksummed upstream would turn a
+transport choice into a hash mismatch. Measured 2026-11-02: that host is
+reset-blocked from this machine while `github.com` and `hf-mirror.com` work, which
+is why `strongreject` (155 of 155 URLs) and `memoryagentbench`'s pinned
+`punkt_tab.zip` could not be fetched without one. Re-measured 2026-11-03:
+`HG_GH_RAW_MIRROR=https://ghproxy.net` served that `punkt_tab.zip` byte for byte
+(`sha256 ok`), so a mirror is the supported route for that host, not a workaround;
+a dataset that also pins preparation packages needs an interpreter of its own, which
+is documented in `docs/dataset-onboarding.md` under the download contract.
+The `--fetch` line names the mirror it used,
+and a failed transfer removes the directories it had to create, so a half-fetched
+dataset does not read as prepared.
+
 ## `agentdojo`
 
 ### AgentDojo source + suites (http, 089ed468cf3ed0322acc66b0211f26d9d90dbf60)
@@ -142,6 +159,28 @@ loads and scores it stays in git.
 
 > Official encrypted AppWorld 0.1.0 bundle. prepare.py decrypts and extracts it under the external dataset root, then writes pool.jsonl; the trusted service image contains the pinned appworld package and task data.
 
+## `authored_example_fix_bug`
+
+### example-fix-bug (authored, 1161a52be41a71a0)
+
+- **Version (pinned):** `1161a52be41a71a0`
+- **Size:** 1118 bytes
+- **sha256:** `1161a52be41a71a0794b6a0bee9992c13a3e1495e03850d5dab69644b48de869`
+
+> authored scenario bundle: bundle.json + materials + oracle, versioned with this repository
+
+## `bbeh`
+
+### bbeh native test (hf-file, 08e07a803851822c04399782ece3c4a07ce419f9)
+
+- **Version (pinned):** `08e07a803851822c04399782ece3c4a07ce419f9`
+- **Size:** native release file; see HuggingFace manifest
+- **Repo:** `BBEH/bbeh`
+- **File:** `bbeh_data.json`
+- **Destination:** `source/bbeh_data.json`
+
+> Native source only. Run the pinned prepare command to create digest-bound JSONL; no implicit data download on load.
+
 ## `bfcl_v3`
 
 ### gorilla BFCL-v3 data (tag v1.3) (http, v1.3)
@@ -183,6 +222,18 @@ loads and scores it stays in git.
 - **sha256:** `e70bcf57ed7dcc1ab4a55e38a14fa12d8bf7ff0cc2e66db673e4d55b16f5050b`
 
 > Pins evaluation/evaluation_ex.py, whose `calculate_ex` is transcribed verbatim in data/datasets/bird_minidev/verify/check.py, plus evaluation_f1.py (Soft-F1) and evaluation_ves.py (R-VES) -- the benchmark's other two official columns, named in the evidence and not reported. The tests read this archive and compare bytes; no run imports it.
+
+## `browsecomp`
+
+### browsecomp native source (http, 7b24471cd5b3eb2a46830a14802b5c029ea62f488ff75a0f88af7923d1454abf)
+
+- **Version (pinned):** `7b24471cd5b3eb2a46830a14802b5c029ea62f488ff75a0f88af7923d1454abf`
+- **Size:** source-dependent
+- **URL:** https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv
+- **Destination:** `browse_comp_test_set.csv`
+- **sha256:** `7b24471cd5b3eb2a46830a14802b5c029ea62f488ff75a0f88af7923d1454abf`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `chessbench_puzzles`
 
@@ -249,6 +300,29 @@ loads and scores it stays in git.
 - **sha256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
 
 > Prepare static costbench first, then run costbench_dynamic/prepare.py. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
+
+## `deepsearchqa`
+
+### deepsearchqa native source (hf-file, b2623f8653065c2672de6d941fc5434cd652376c)
+
+- **Version (pinned):** `b2623f8653065c2672de6d941fc5434cd652376c`
+- **Size:** source-dependent
+- **Repo:** `google/deepsearchqa`
+- **File:** `DSQA-full.csv`
+- **Destination:** `DSQA-full.csv`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
+## `deepswe`
+
+### deepswe fixed native source (http, 0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea)
+
+- **Version (pinned):** `0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea`
+- **Size:** source-dependent
+- **URL:** https://codeload.github.com/datacurve-ai/deep-swe/tar.gz/0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea
+- **Destination:** `_src/native-source.tar.gz`
+
+> Pinned native source only. Preparation must preserve its images, private verifier and collection semantics; a downloaded archive is not execution readiness.
 
 ## `ds1000`
 
@@ -348,6 +422,28 @@ loads and scores it stays in git.
 
 > Reads the parquet files the pinned revision ships. The check runs inside the verification namespace and must not need the HuggingFace `datasets` package, which pulls `pandas`, `requests` and a cache layout; `pyarrow` is one import and no network.
 
+## `harvey_lab`
+
+### harvey_lab native source (http, f93ae2ac2831e65892fea83094cfb50149bc2e59)
+
+- **Version (pinned):** `f93ae2ac2831e65892fea83094cfb50149bc2e59`
+- **Size:** source-dependent
+- **URL:** https://codeload.github.com/harveyai/harvey-labs/tar.gz/f93ae2ac2831e65892fea83094cfb50149bc2e59
+- **Destination:** `native-source.tar.gz`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
+## `hle`
+
+### hle native source (hf-dataset, 5a81a4c7271a2a2a312b9a690f0c2fde837e4c29)
+
+- **Version (pinned):** `5a81a4c7271a2a2a312b9a690f0c2fde837e4c29`
+- **Size:** source-dependent
+- **Repo:** `cais/hle`
+- **Destination:** `native-source`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
 ## `hotpotqa`
 
 ### hotpot_qa (fullwiki) (hf-dataset, 1908d6afbbead072334abe2965f91bd2709910ab)
@@ -380,6 +476,17 @@ loads and scores it stays in git.
 - **Package:** `jericho==3.3.1`
 
 > The Frotz environment: the Z-machine interpreter (`libfrotz.so`), the object tree, `get_valid_actions()`, and **`game_info.py`** -- the benchmark's own game table with each game's seed and walkthrough, which is where this dataset's task list and oracle come from. Installing it from source needs a C compiler; the wheel needs none.
+
+## `jobbench`
+
+### JobBench official native renderer (http, 660b33a86ed032559df0b2fdc1ad38cf7ceb83f3)
+
+- **Version (pinned):** `660b33a86ed032559df0b2fdc1ad38cf7ceb83f3`
+- **Size:** upstream source archive
+- **URL:** https://codeload.github.com/Job-Bench/job-bench-eval/tar.gz/660b33a86ed032559df0b2fdc1ad38cf7ceb83f3
+- **Destination:** `_src/native-renderer.tar.gz`
+
+> Pinned native renderer. Explicit prepare.py --render fetches JobBench/job-bench at d43a66575635da0d3f6cb9a20976dc1a60f3ffc9 and preserves its generated private rubric verifier.
 
 ## `kumo`
 
@@ -466,6 +573,17 @@ loads and scores it stays in git.
 
 > Pins `lcb_runner/evaluation/testing_util.py` (the executor, including the reliability_guard upstream warns is not a sandbox -- the platform's verification namespace is) and `pass_k_utils.py` (the aggregation). Both are copied into the verification namespace as VERIFY.inputs, so the metric runs upstream's bytes; `data/datasets/livecodebench.py` also transcribes pass_k_utils.py lines 4-53 verbatim. Never enters an agent SETUP.
 
+## `livemathbench`
+
+### livemathbench native source (hf-dataset, ea05b95ab431f3ef3900ce86f864451cf5bcd699)
+
+- **Version (pinned):** `ea05b95ab431f3ef3900ce86f864451cf5bcd699`
+- **Size:** source-dependent
+- **Repo:** `opencompass/LiveMathBench`
+- **Destination:** `native-source`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
 ## `locomo`
 
 ### LoCoMo released conversations and all five QA categories (http, 3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376)
@@ -478,6 +596,44 @@ loads and scores it stays in git.
 
 > Official fixed data; Harbor task delivery and scorer pinned separately. All 1986 questions retained.
 
+## `math`
+
+### math native records (hf-dataset, 21a5633873b6a120296cce3e2df9d5550074f4a3)
+
+- **Version (pinned):** `21a5633873b6a120296cce3e2df9d5550074f4a3`
+- **Size:** native table release
+- **Repo:** `EleutherAI/hendrycks_math`
+- **Destination:** `source`
+
+> The prepare CLI streams the pinned native dataset into JSONL with original source split membership. No data is downloaded on import.
+
+### Math-Verify trusted scorer (pip, 0.9.0)
+
+- **Version (pinned):** `0.9.0`
+- **Size:** Python scorer dependencies
+- **Package:** `math-verify==0.9.0==0.9.0`
+
+> Exact native mathematical equivalence scorer is mandatory; install separately for the verifier interpreter.
+
+## `math500`
+
+### math500 native records (hf-dataset, 6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be)
+
+- **Version (pinned):** `6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be`
+- **Size:** native table release
+- **Repo:** `HuggingFaceH4/MATH-500`
+- **Destination:** `source`
+
+> The prepare CLI streams the pinned native dataset into JSONL with original source split membership. No data is downloaded on import.
+
+### Math-Verify trusted scorer (pip, 0.9.0)
+
+- **Version (pinned):** `0.9.0`
+- **Size:** Python scorer dependencies
+- **Package:** `math-verify==0.9.0==0.9.0`
+
+> Exact native mathematical equivalence scorer is mandatory; install separately for the verifier interpreter.
+
 ## `memoryagentbench`
 
 ### MemoryAgentBench fixed data (hf-dataset, 7ea066982b140a19337e17e60d45d4076e042faf)
@@ -489,7 +645,7 @@ loads and scores it stays in git.
 - **Destination:** `raw`
 - **sha256:** `{'README.md': '5a9fd0dc2fbab5beb081eae40f24964ad1e47da75b9a7a01f0007791845b1580', 'data/Accurate_Retrieval-00000-of-00001.parquet': '56c3cd80fb6731a3e53cd1a6be3148f54df60ff2d290ee50e28f8acebf9655c1', 'data/Conflict_Resolution-00000-of-00001.parquet': '24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45', 'data/Long_Range_Understanding-00000-of-00001.parquet': '5ab175461954db67770d4a4cb69e569b513ebb96aceb9ee79b57f67488bcd539', 'data/Test_Time_Learning-00000-of-00001.parquet': '5338753be48f925d03318eed66117286e3489025fabe050a547bd086cd7d79c0', 'entity2id.json': '63353aca481bc9558b502f91cb98f6fa26438796fdd7e0bc06b5a1532126e8b5'}`
 
-> Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers local and model-judge primary scoring. Study/eval uses the platform's episode-ID hash split.
+> Fixed official data; prepare.py validates all bytes and produces isolated service/gold artifacts. Adapter offers local and model-judge primary scoring. No study/eval division is declared: the whole provisioned pool is evaluation material.
 
 ### MemoryAgentBench English sentence tables archive (http, 550b6625bcef1f2abff2ff770a5a0d272c9c6b2a)
 
@@ -545,6 +701,29 @@ loads and scores it stays in git.
 - **sha256:** `ea8ad67cbd3680b4b85e3b60d219898fda9643240636ef8ac3b020c46fb95d1b`
 
 > Canonical commit verified via GitHub API and codeload. HF rows alone omit the 4349 Python tool files needed for Win Rate. Gold execution itself fails due to host/process-dependent state and basic_functions overrides; see data/datasets/nestful/audit.py. No gold/function tree is offered as agent SETUP.
+
+## `nq`
+
+### nq native records (hf-dataset, e8103d566bef4154c2c12b17c6095ec5275840cc)
+
+- **Version (pinned):** `e8103d566bef4154c2c12b17c6095ec5275840cc`
+- **Size:** native table release
+- **Repo:** `google-research-datasets/natural_questions`
+- **Destination:** `source`
+
+> The prepare CLI streams the pinned native dataset into JSONL with original source split membership. No data is downloaded on import.
+
+## `officeqa_pro`
+
+### officeqa_pro native test (hf-file, 763a8366abf2a3605c381d53586d844dc60fa756)
+
+- **Version (pinned):** `763a8366abf2a3605c381d53586d844dc60fa756`
+- **Size:** native release file; see HuggingFace manifest
+- **Repo:** `databricks/officeqa`
+- **File:** `officeqa_pro.csv`
+- **Destination:** `source/officeqa_pro.csv`
+
+> Native source only. Run the pinned prepare command to create digest-bound JSONL; no implicit data download on load.
 
 ## `personamem_v2`
 
@@ -609,6 +788,17 @@ loads and scores it stays in git.
 
 > Trap: this machine has **no system `java` and no root**, so a runtime is a provisioning step, and the release URL *is* the version. **JDK 17, not the newest**: the JAR is built in 2025 and a newer JDK may refuse an older target in a way that does not name Java. Both sides need it -- the check replays in a fresh environment, so the agent's CLI and the check must resolve the same JVM; a JVM only one of them can find is a check that fails for a reason nothing records.
 
+## `searchqa`
+
+### searchqa native records (hf-dataset, 06907e45883b7cae435453b65d598447039fde79)
+
+- **Version (pinned):** `06907e45883b7cae435453b65d598447039fde79`
+- **Size:** native table release
+- **Repo:** `kyunghyuncho/search_qa`
+- **Destination:** `source`
+
+> The prepare CLI streams the pinned native dataset into JSONL with original source split membership. No data is downloaded on import.
+
 ## `sotuqa`
 
 ### ReWOO tarball (SOTU_QA.csv) (http, 9cd0283043ff4be0c9d614fda2789d143ca6ffd1)
@@ -668,6 +858,34 @@ loads and scores it stays in git.
 - **Package:** `openpyxl==3.1.2`
 
 > The library the official scorer uses to read both workbooks, and the one the agent is expected to edit with. Both sides use the same version so a round-trip difference is not a scoring difference.
+
+## `spreadsheetbench2`
+
+### SpreadsheetBench-2 native workbook collection (hf-dataset, 5a2215ed4121945ab09d8723df2995602090b042)
+
+- **Version (pinned):** `5a2215ed4121945ab09d8723df2995602090b042`
+- **Size:** upstream archive size
+- **Repo:** `KAKA22/SpreadsheetBench-v2`
+- **Files:** `spreadsheetbench-v2-09-10.zip`
+- **Destination:** `_src`
+
+> Pinned v2 workbook bytes. Run prepare.py to extract only supported categories; no Visualization proxy is loaded.
+
+### official workbook evaluator openpyxl (pip, 3.1.2)
+
+- **Version (pinned):** `3.1.2`
+- **Size:** ~250 KB
+- **Package:** `openpyxl==3.1.2`
+
+> Workbook reader used by the unchanged official v2 evaluator; pinned to the control-tested runtime.
+
+### official workbook evaluator tqdm (pip, 4.66.4)
+
+- **Version (pinned):** `4.66.4`
+- **Size:** ~80 KB
+- **Package:** `tqdm==4.66.4`
+
+> Imported by the unchanged official evaluator and native LibreOffice helper; pinned to the control-tested runtime.
 
 ## `strategyqa`
 
@@ -2241,6 +2459,40 @@ loads and scores it stays in git.
 
 > Pinned source bytes; no runtime fetch or regenerated jailbreaks. Judge configuration is separate.
 
+## `supergpqa`
+
+### supergpqa native test (hf-file, 4430d4458112c7d4497fdcf94d7cc223313d6acf)
+
+- **Version (pinned):** `4430d4458112c7d4497fdcf94d7cc223313d6acf`
+- **Size:** native release file; see HuggingFace manifest
+- **Repo:** `m-a-p/SuperGPQA`
+- **File:** `SuperGPQA-all.jsonl`
+- **Destination:** `source/SuperGPQA-all.jsonl`
+
+> Native source only. Run the pinned prepare command to create digest-bound JSONL; no implicit data download on load.
+
+## `swe_bench`
+
+### swe_bench native source (hf-dataset, 78f471bf655a3137b2e8a75af1501690ec009ec3)
+
+- **Version (pinned):** `78f471bf655a3137b2e8a75af1501690ec009ec3`
+- **Size:** source-dependent
+- **Repo:** `SWE-bench/SWE-bench_Verified`
+- **Destination:** `native-source`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
+## `swe_bench_pro`
+
+### swe_bench_pro fixed native source (http, 66f92766bba642462d4bbe5479e83f91f9211862)
+
+- **Version (pinned):** `66f92766bba642462d4bbe5479e83f91f9211862`
+- **Size:** source-dependent
+- **URL:** https://codeload.github.com/scaleapi/SWE-bench_Pro-os/tar.gz/66f92766bba642462d4bbe5479e83f91f9211862
+- **Destination:** `_src/native-source.tar.gz`
+
+> Pinned native source only. Preparation must preserve its images, private verifier and collection semantics; a downloaded archive is not execution readiness.
+
 ## `tau2_bench`
 
 ### tau2-bench v0.1.0 (http, v0.1.0)
@@ -2286,6 +2538,17 @@ loads and scores it stays in git.
 - **Destination:** `/mnt/20t/xubuqiang/datasets/terminal-bench`
 
 > The task instructions, Dockerfiles and checks. Pinned by commit sha. The task IMAGES are separate and much larger -- measured ~104 GB, pulled once by `tools/import_env.py`, three of them unfetchable on this host -- and they are not represented here.
+
+## `travelplanner`
+
+### travelplanner native source (hf-dataset, 8736504ecfc31b7f8b7e40122873c337e83fff7c)
+
+- **Version (pinned):** `8736504ecfc31b7f8b7e40122873c337e83fff7c`
+- **Size:** source-dependent
+- **Repo:** `osunlp/TravelPlanner`
+- **Destination:** `native-source`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `triviaqa`
 
@@ -2341,3 +2604,25 @@ loads and scores it stays in git.
 - **sha256:** `01c0b699569cce142614d5d7a0e1f4864031aeaf035394af3084cc2c1d97dc3c`
 
 > Pins `2wikimultihop_evaluate_v1.1.py`, the file transcribed verbatim in this module, and `2wikimultihop_evaluate.py` v1.0 beside it. The tests read it from `_src` and compare bytes; no run imports it. Upstream prints a 16-key metrics dict and rounds to 2 decimals at the end, so the aggregate is order-sensitive and is asserted against this file rather than against a paraphrase.
+
+## `widesearch`
+
+### widesearch native source (hf-dataset, 6531a7e5b497d44c8912407e0cb3dc95bd98cc09)
+
+- **Version (pinned):** `6531a7e5b497d44c8912407e0cb3dc95bd98cc09`
+- **Size:** source-dependent
+- **Repo:** `ByteDance-Seed/WideSearch`
+- **Destination:** `native-source`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
+## `workbench`
+
+### workbench native source (http, 49c7dfd00c03d384ec59ea57374f50b766aa5613)
+
+- **Version (pinned):** `49c7dfd00c03d384ec59ea57374f50b766aa5613`
+- **Size:** source-dependent
+- **URL:** https://codeload.github.com/olly-styles/WorkBench/tar.gz/49c7dfd00c03d384ec59ea57374f50b766aa5613
+- **Destination:** `native-source.tar.gz`
+
+> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.

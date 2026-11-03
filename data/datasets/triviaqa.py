@@ -64,6 +64,7 @@ from __future__ import annotations
 import re
 import string
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -72,7 +73,7 @@ KIND = "dataset"
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = base.Path("/mnt/20t/xubuqiang/datasets/triviaqa")
+DATASET_ROOT = roots.dataset_root("triviaqa", "/mnt/20t/xubuqiang/datasets/triviaqa")
 
 #: The pinned revision of `mandarjoshi/trivia_qa`. A commit sha: `main` is not a version.
 REVISION = "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f"

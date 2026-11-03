@@ -61,6 +61,7 @@ from __future__ import annotations
 
 import re
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -69,7 +70,7 @@ KIND = "dataset"
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = base.Path("/mnt/20t/xubuqiang/datasets/gsm8k")
+DATASET_ROOT = roots.dataset_root("gsm8k", "/mnt/20t/xubuqiang/datasets/gsm8k")
 
 #: The pinned revision of `openai/gsm8k`. A commit sha, not `main`: `main` is not a
 #: version, and a fetch that cannot be re-played byte-for-byte makes every number

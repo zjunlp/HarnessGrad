@@ -42,6 +42,7 @@ import csv
 import re
 import string
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -53,7 +54,7 @@ ORACLE_SOURCE = "released"
 
 
 
-DATASET_ROOT = base.Path("/mnt/20t/xubuqiang/datasets/strategyqa")
+DATASET_ROOT = roots.dataset_root("strategyqa", "/mnt/20t/xubuqiang/datasets/strategyqa")
 CSV_MEMBER = "data/bigbench/strategy_qa.csv"
 CSV_PATH = "ReWOO-9cd0283043ff4be0c9d614fda2789d143ca6ffd1/data/bigbench/strategy_qa.csv"
 N_TOTAL = 2290

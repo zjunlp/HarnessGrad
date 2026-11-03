@@ -1,0 +1,68 @@
+{
+  "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+  "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "license": "Apache-2.0",
+  "vendored_files": {
+    "metrics.py": {
+      "source": "flashrsi/benchmarks/metrics.py",
+      "sha256": "efcf846a124fddfb4be932c151820394b0d52cec54f5b3bb90dd6979323c9d9f",
+      "modifications": []
+    },
+    "bbeh_official.py": {
+      "source": "flashrsi/benchmarks/bbeh/_official.py",
+      "sha256": "0d04d1409787942a897d9a0502ba6ca2253b5186d5b9419efa8a52d025991cbd",
+      "modifications": []
+    },
+    "math_grade.py": {
+      "source": "flashrsi/benchmarks/math/_grade.py",
+      "sha256": "49b9a3c12a8b74b1bafedafa7a9ae1807abee09448d25f59a24d7b6311bc08e4",
+      "modifications": []
+    },
+    "office_reward.py": {
+      "source": "flashrsi/benchmarks/officeqa_pro/_reward.py",
+      "sha256": "ea2b1eb8936063df2d9a62f751551cc03e66ce54b9ff75e23e1376a966361fc9",
+      "modifications": []
+    }
+  },
+  "notes": [
+    "Scorer files copied byte-for-byte. HG adapter and transport are independently authored.",
+    "BBEH per-answer upstream revision 80d12ca916b7158f22293fcf3144f4d3d854d4be; OfficeQA reward revision 7b9a3c154ef9fb40215bb67934afc43e6799de16."
+  ],
+  "row_contract_references": {
+    "searchqa": {
+      "path": "flashrsi/benchmarks/searchqa/__init__.py",
+      "sha256": "fac6335b2c7e082d67e049dda80c62a10475a575fd4c16d55fd546c0d0188dd1",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    },
+    "nq": {
+      "path": "flashrsi/benchmarks/nq/__init__.py",
+      "sha256": "0e5834e4c228a5a34a4612625ef4d791e233eb7cbe305a743f95068a1ca7d9c7",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    },
+    "bbeh": {
+      "path": "flashrsi/benchmarks/bbeh/__init__.py",
+      "sha256": "8aaf5076bbd0bbef4e56179e0376cdc0ec5d6ae726bbb509c71065796a6ff70b",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    },
+    "supergpqa": {
+      "path": "flashrsi/benchmarks/supergpqa/__init__.py",
+      "sha256": "1be5e6059bc2572fb52c956ebdb4da1de465b83fb024708e3e2dbc2a3b1cc386",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    },
+    "math": {
+      "path": "flashrsi/benchmarks/math/__init__.py",
+      "sha256": "ee6c29554400c962b91324b78ab5021263d7fbf135ad6293bf09126b16bc876a",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    },
+    "math500": {
+      "path": "flashrsi/benchmarks/math/__init__.py",
+      "sha256": "ee6c29554400c962b91324b78ab5021263d7fbf135ad6293bf09126b16bc876a",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    },
+    "officeqa_pro": {
+      "path": "flashrsi/benchmarks/officeqa_pro/__init__.py",
+      "sha256": "367419571f50911cfc30f2004fe1e68ec1293f8b4f98b26f4d8c3cd2f882ddab",
+      "port": "HG parse_row transcription; raw gold never staged to actor"
+    }
+  }
+}

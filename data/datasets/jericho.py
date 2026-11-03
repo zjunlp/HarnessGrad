@@ -68,6 +68,7 @@ What is deliberately not added
 """
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import os
@@ -91,8 +92,9 @@ OFFICIAL_EVAL = None
 
 #: Where the ROMs are extracted. Outside the platform tree on purpose: dataset bytes are not
 #: platform code. `HG_JERICHO_DATA` overrides it.
-DATASET_ROOT = Path(os.environ.get("HG_JERICHO_DATA",
-                                   "/mnt/20t/xubuqiang/datasets/jericho"))
+DATASET_ROOT = roots.dataset_root(
+    "jericho",
+    os.environ.get("HG_JERICHO_DATA", "/mnt/20t/xubuqiang/datasets/jericho"))
 
 #: Where the BYU-PCCL archive extracts the suite, relative to the dataset root.
 GAMES_SUBDIR = "z-machine-games-master/jericho-game-suite"

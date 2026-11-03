@@ -3,6 +3,11 @@
 Example: python data/datasets/memoryagentbench/prepare.py --raw /data/mab/raw \
     --resources /data/mab/resources --output /data/mab/prepared
 Selection uses --task-id repeatedly. No learning/evaluation partition is made.
+
+The pinned ``nltk``/``regex``/``tiktoken`` versions decide the sentence tables, so this
+program runs under its own interpreter: set ``HG_MAB_PYTHON=/absolute/venv/bin/python``
+and the process re-executes itself there before reading anything. Nothing is installed
+into the interpreter every other dataset shares.
 """
 import argparse
 import hashlib
@@ -17,7 +22,8 @@ import tempfile
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from data.datasets.memoryagentbench.lib.inputs import SPEC_SHA256, initialize, read_spec, render_question, split_context
+from data.datasets.memoryagentbench.lib.inputs import (INTERPRETER_ENV, SPEC_SHA256, initialize,
+    read_spec, render_question, split_context)
 from data.datasets.memoryagentbench.lib.storage import (DATASET_REVISION, canonical_sha256, file_sha256,
     load_gold, load_pool, load_service, question_id, task_id, validate_task_id)
 
@@ -159,6 +165,25 @@ def prepare(raw, resources, output, selected_task_ids=None):
         raise
 
 
+def selected_interpreter(value=None):
+    """The absolute interpreter `HG_MAB_PYTHON` names, or `None` when it names none.
+
+    Validation happens here rather than in `initialize()` so a bad value fails before any
+    work starts and names the variable instead of a path that does not exist. The path is
+    normalised but deliberately **not** resolved: a venv's `bin/python` is a symlink to the
+    base interpreter, and resolving both sides would make the venv look like the shared
+    interpreter it is supposed to replace.
+    """
+    value = os.environ.get(INTERPRETER_ENV, "") if value is None else value
+    if not value.strip():
+        return None
+    target = Path(value.strip())
+    if not target.is_absolute() or not target.is_file():
+        raise ValueError(f"{INTERPRETER_ENV} must name an installed absolute interpreter, "
+                         f"not {value!r}; {INTERPRETER_ENV} unset uses {sys.executable}")
+    return Path(os.path.abspath(target))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw", required=True, type=Path)
@@ -166,6 +191,12 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path, help="Fresh directory outside the platform checkout")
     parser.add_argument("--task-id", action="append", dest="task_ids", help="Original stable task ID; repeat to select rows")
     args = parser.parse_args(argv)
+    # The version gate measures the running interpreter, so the selected interpreter has to
+    # be the one that runs -- not merely be checked. One exec, and the child sees the same
+    # variable pointing at itself, so this cannot loop.
+    target = selected_interpreter()
+    if target is not None and target != Path(os.path.abspath(sys.executable)):
+        os.execv(str(target), [str(target), str(Path(__file__).resolve()), *sys.argv[1:]])
     manifest = prepare(args.raw, args.resources, args.output, args.task_ids)
     print(json.dumps({"output": str(args.output.resolve()), **manifest["counts"], "frozen_inputs_verified": True}, sort_keys=True))
     return 0

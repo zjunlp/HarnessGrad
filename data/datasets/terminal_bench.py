@@ -102,10 +102,13 @@ import re
 import tomllib
 from pathlib import Path
 
+from data.scaffolds import roots
+
 #: Where the checkout is. Outside the platform tree on purpose: it is dataset content,
 #: not platform code, and the platform hashes its own tree.
-ROOT = Path(os.environ.get("HG_TERMINAL_BENCH",
-                           "/mnt/20t/xubuqiang/datasets/terminal-bench"))
+ROOT = roots.dataset_root(
+    "terminal-bench",
+    os.environ.get("HG_TERMINAL_BENCH", "/mnt/20t/xubuqiang/datasets/terminal-bench"))
 
 #: Tasks to leave out, by name, with the reason. **Empty**, and deliberately kept empty
 #: rather than deleted: a task that genuinely needs a multi-container environment should

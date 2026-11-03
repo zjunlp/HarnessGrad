@@ -1,0 +1,23 @@
+{
+  "flashrsi_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "harbor_package": "harbor==0.23.0",
+  "pro_source": "https://github.com/scaleapi/SWE-bench_Pro-os",
+  "pro_revision": "66f92766bba642462d4bbe5479e83f91f9211862",
+  "pro_tooling_sha256": {
+    "patch_replay.py": "5c8b344de37164e9723f1724c2573013957fb644c3913a64c12c1718c737d876",
+    "locked_claude_code.py": "f379bc78ec7ef4f2721a0fa61377e9e7895edb4789f94501015376807444b979"
+  },
+  "implementation_notes": [
+    "Actor is the original native filesystem accessed via a private tool relay, with no Docker socket or judge credentials exposed to candidate.",
+    "DeepSWE uses native committed patch collect and a fresh Harbor replayer then native separate verifier.",
+    "SWE-bench Pro uses the exact pinned _CAPTURE command and PatchReplayAgent in a new trial.",
+    "JobBench exports only final /workspace/output files to a fresh native weighted rubric verifier; public actor requires an explicit host gate and local judge configuration.",
+    "Harbor replay environments switch exact no-network/public phase policies with Docker attachments and record actual inspect/cleanup. This transport does not claim observed-v1/pristine-offline or writable quota attestation."
+  ],
+  "jobbench_source": "https://github.com/Job-Bench/job-bench-eval",
+  "jobbench_revision": "660b33a86ed032559df0b2fdc1ad38cf7ceb83f3",
+  "jobbench_verifier_sha256": {
+    "harbor/runtime/verify.py": "82fe3d601e18a63e8b6ed1d457cde92b3f39d157b6b1bc452d84fe935d87fb6b",
+    "eval/judge.py": "956203dfb679276447913c59bfc2b3c28a762a4946e4258e0b41875b500b7215"
+  }
+}

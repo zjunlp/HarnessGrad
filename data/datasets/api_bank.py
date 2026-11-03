@@ -74,11 +74,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from data.scaffolds import roots
+
 KIND = "dataset"
 
 #: Where the vendored tree and the upstream zip live. Outside the platform tree on purpose.
-DATASET_ROOT = Path(os.environ.get("HG_API_BANK_DATA",
-                                   "/mnt/20t/xubuqiang/datasets/api-bank"))
+DATASET_ROOT = roots.dataset_root(
+    "api-bank",
+    os.environ.get("HG_API_BANK_DATA", "/mnt/20t/xubuqiang/datasets/api-bank"))
 
 #: The upstream repository. Pinned by the archive digest; the repository has no usable tag for
 #: this subtree and the API that would resolve a commit is unreachable from this host -- an

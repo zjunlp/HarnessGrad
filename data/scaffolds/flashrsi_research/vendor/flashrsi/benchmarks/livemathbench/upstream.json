@@ -1,0 +1,37 @@
+{
+  "repository": "https://github.com/open-compass/opencompass",
+  "revision": "efb91b2809e91997c5d043d468e4aa986fbb341f",
+  "gpass_repository": "https://github.com/open-compass/GPassK",
+  "gpass_revision": "20a02a1479c2db19d9b8a8676c809c4696f9e889",
+  "files": {
+    "_prompts.py": {
+      "source": "oc/opencompass/datasets/livemathbench/prompts.py",
+      "sha256": "ff82d3dcebd0c4591e9d632a72df67e525f93b1cc69fd596adaf97732a69e72b",
+      "definitions": [
+        "PROMPT_CN",
+        "PROMPT_EN",
+        "JUDGE_PROMPT_CN",
+        "JUDGE_PROMPT_EN"
+      ]
+    },
+    "_extract.py": {
+      "source": "math.py",
+      "sha256": "0a012f495cea4ef7c676b66e5c8194b63c7605ce0cd2ee20a5b4d4e5d7daabd9",
+      "definitions": [
+        "last_boxed_only_string",
+        "remove_boxed",
+        "extract_boxed_answer",
+        "normalize_final_answer",
+        "math_postprocess_v2"
+      ]
+    },
+    "_label.py": {
+      "source": "oc/opencompass/datasets/livemathbench/utils.py",
+      "sha256": "f91614654730c65dedc3f85021dc63d7c4a353bce22f7c3f081979e71887afa4",
+      "definitions": [
+        "extract_judge_label"
+      ]
+    }
+  },
+  "gpass_sha256": "da8f9927f94c0207a70ec0472699e6fb4c4f3ff5a91412b53b5a6be606a11d6f"
+}

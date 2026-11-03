@@ -56,6 +56,7 @@ hash rule, INTERFACE.md §2.3) or `--split <file.json>`, and the record says whi
 """
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 
 KIND = "dataset"
@@ -64,7 +65,7 @@ KIND = "dataset"
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = base.Path("/mnt/20t/xubuqiang/datasets/reasoning_gym")
+DATASET_ROOT = roots.dataset_root("reasoning_gym", "/mnt/20t/xubuqiang/datasets/reasoning_gym")
 
 #: The pin. `prepare.py` writes the pool from exactly these numbers, and the test in
 #: `tests/quality/test_reasoning_gym_dataset.py` regenerates and compares.

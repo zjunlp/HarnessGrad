@@ -23,12 +23,13 @@ retrieval corpus. This scoring repair does not establish evidence retrieval read
 """
 from __future__ import annotations
 
+from data.scaffolds import roots
 from data.scaffolds.qa import base
 from data.scaffolds.qa.evidence_scorers import MissingEvidence, fever_is_strictly_correct
 
 KIND = "dataset"
 
-DATASET_ROOT = base.Path("/mnt/20t/xubuqiang/datasets/fever")
+DATASET_ROOT = roots.dataset_root("fever", "/mnt/20t/xubuqiang/datasets/fever")
 REVISION = "a6b8d891d393e97a4efac791afffb2d7de5e57c6"
 VALID = "valid.jsonl"
 TEST = "test.jsonl"

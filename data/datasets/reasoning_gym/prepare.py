@@ -29,6 +29,8 @@ import json
 import sys
 from pathlib import Path
 
+from data.scaffolds import roots
+
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
@@ -69,7 +71,7 @@ FAMILIES = (
     "word_ladder", "word_sequence_reversal", "word_sorting", "zebra_puzzles",
 )
 
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/reasoning_gym")
+DATASET_ROOT = roots.dataset_root("reasoning_gym", "/mnt/20t/xubuqiang/datasets/reasoning_gym")
 POOL = DATASET_ROOT / "pool.jsonl"
 
 
