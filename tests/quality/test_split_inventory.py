@@ -45,7 +45,7 @@ ROW = re.compile(r"^\| `([a-z0-9_]+)` \|")
 STATE, SOURCE, TRAIN, EVAL, OFFICIAL = 1, 2, 3, 4, 5
 
 #: The datasets whose adapter refuses the benchmark by design (`REFUSED`).
-REFUSED = ("api_bank", "nestful", "sotuqa", "tau2_bench")
+REFUSED = ("tau2_bench",)
 
 def _published_in(state: str) -> tuple[str, ...]:
     """Every published dataset the tool classifies as `state`, derived -- never listed.

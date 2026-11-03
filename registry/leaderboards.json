@@ -246,13 +246,6 @@
         "note": "declared adapter"
       },
       {
-        "name": "api_bank",
-        "adapter": "data/datasets/api_bank.py",
-        "contributor": "Xubqpanda",
-        "since": "2026-11-03",
-        "note": "declared adapter \u2014 refused by contract"
-      },
-      {
         "name": "appworld",
         "adapter": "data/datasets/appworld.py",
         "contributor": "Xubqpanda",
@@ -460,13 +453,6 @@
         "note": "declared adapter"
       },
       {
-        "name": "nestful",
-        "adapter": "data/datasets/nestful.py",
-        "contributor": "Xubqpanda",
-        "since": "2026-11-03",
-        "note": "declared adapter \u2014 refused by contract"
-      },
-      {
         "name": "nq",
         "adapter": "data/datasets/nq.py",
         "contributor": "Xubqpanda",
@@ -514,13 +500,6 @@
         "contributor": "Xubqpanda",
         "since": "2026-11-03",
         "note": "declared adapter"
-      },
-      {
-        "name": "sotuqa",
-        "adapter": "data/datasets/sotuqa.py",
-        "contributor": "Xubqpanda",
-        "since": "2026-11-03",
-        "note": "declared adapter \u2014 refused by contract"
       },
       {
         "name": "sportsunderstanding",

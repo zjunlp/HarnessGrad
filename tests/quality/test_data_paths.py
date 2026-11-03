@@ -183,7 +183,7 @@ def test_all_external_adapter_defaults_use_global_config_and_keep_layout(checkou
 
     shared = tmp_path / "shared-data"
     monkeypatch.setenv("HG_DATA_ROOT", str(shared))
-    aliases = {"api_bank": "api-bank", "bfcl_v3": "bfcl-v3", "costbench_dynamic": "costbench",
+    aliases = {"bfcl_v3": "bfcl-v3", "costbench_dynamic": "costbench",
                "tau2_bench": "tau2-bench", "tau_bench": "tau-bench",
                "terminal_bench": "terminal-bench", "strongreject": "strongreject/native-v1"}
     checked = set()
@@ -208,7 +208,7 @@ def test_all_external_adapter_defaults_use_global_config_and_keep_layout(checkou
                     override.setenv(variable, str(tmp_path / "individual"))
                     assert paths.dataset_root(directory) == tmp_path / "individual"
                 checked.add(source.stem)
-    assert len(checked) == 58
+    assert len(checked) == 55
 
 
 def test_storage_diagnostics_do_not_discover_configuration_during_scoring(checkout, monkeypatch):
@@ -276,9 +276,9 @@ def test_runtime_config_can_record_unconfigured_storage(checkout):
 
 def test_missing_storage_preserves_catalogs_and_refuses_data_access(checkout, capsys, monkeypatch):
     from data.scaffolds import registry
-    assert len(registry.published()) == 59
+    assert len(registry.published()) == 56
     rows = datasets.datasets_with_downloads(source_fallback=True)
-    assert len(rows) == 59
+    assert len(rows) == 56
     with pytest.raises(paths.DataRootNotConfigured, match="Set HG_DATA_ROOT"):
         registry.load("appworld")
     monkeypatch.setattr(datasets, "_download", lambda *args: pytest.fail("unconfigured fetch attempted network"))

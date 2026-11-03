@@ -85,7 +85,7 @@ files in `metric test(s)` pin the metric itself, and `tests/quality/test_dataset
 runs gates 1 and 2 for every declared control. A refused dataset has no control by design:
 its refusal *is* the result.
 
-**At a glance.** 59 published datasets: 4 refused by design; 13 with a recorded metric deviation; 1 whose adapter mentions one that a reading cleared; 0 whose adapter mentions one that nobody has recorded; 22 that declare no machine-readable metric (`— undeclared`). Every row says how to get its bytes; `--host` answers the separate question of what is already here.
+**At a glance.** 56 published datasets: 1 refused by design; 13 with a recorded metric deviation; 1 whose adapter mentions one that a reading cleared; 0 whose adapter mentions one that nobody has recorded; 19 that declare no machine-readable metric (`— undeclared`). Every row says how to get its bytes; `--host` answers the separate question of what is already here.
 
 ## Readiness
 
@@ -94,7 +94,6 @@ its refusal *is* the result.
 | `agentdojo` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset agentdojo` | dataset | test_agentdojo_official_scorer.py, test_agentdojo_bridge.py | — |
 | `aime` | dataset | exact string equality after .strip() | no | released | `python3 tools/datasets.py --fetch --dataset aime` | dataset | test_aime_official_scorer.py, test_qa_dataset_contract.py | — |
 | `alfworld` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset alfworld` | dataset | test_alfworld_official_scorer.py, test_alfworld_dataset.py | — |
-| `api_bank` | dataset | — undeclared | — | — | — no fetch lifts this refusal; its `refused` cell says why | — | test_dataset_refusals.py | api_bank: the official metric executes the requested API and compares its reply with the recorded one (`evaluator.py::evaluate` ->… |
 | `appworld` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset appworld` | dataset | test_appworld_official_scorer.py | — |
 | `authored_example_fix_bug` | dataset | — undeclared | no | authored | — the bytes ship with the repository; nothing to fetch | dataset | test_authored_dataset.py, test_scenario_builder.py | — |
 | `bbeh` | dataset | bbeh-correctness | no | released | `python3 tools/datasets.py --fetch --dataset bbeh` | dataset | test_native_qa_adapters.py | — |
@@ -124,7 +123,6 @@ its refusal *is* the result.
 | `math500` | dataset | math-verify-0.9.0-last-boxed | no | released | `python3 tools/datasets.py --fetch --dataset math500` | dataset | test_native_qa_adapters.py | — |
 | `memoryagentbench` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset memoryagentbench` | dataset | test_memoryagentbench_official_scorer.py, test_memoryagentbench_judge.py | — |
 | `musique` | dataset | MuSiQue-Ans | yes: default reward is the platform policy answer_f1 * support_f1; MuSiQue's own evaluator reports answer and support separately and defines no product, so the adapter marks the policy 'not an official metric' | released | `python3 tools/datasets.py --fetch --dataset musique` | dataset | test_musique_official_scorer.py, test_qa_dataset_contract.py | — |
-| `nestful` | dataset | — undeclared | — | — | — no fetch lifts this refusal; its `refused` cell says why | — | test_nestful_official_scorer.py, test_dataset_refusals.py | nestful: official execution Win Rate is unreproducible as released. The pinned official calculate_win_score applied to all 1861 gold sequences… |
 | `nq` | dataset | short_answer_text | yes: upstream short-answer-text EM/F1 on the any-short-answer-or-yes-no subset; not the full official NQ long/short-answer leaderboard metric | released | `python3 tools/datasets.py --fetch --dataset nq` | dataset | test_native_qa_adapters.py | — |
 | `officeqa_pro` | dataset | officeqa-reward-tolerance-0 | no | released | `python3 tools/datasets.py --fetch --dataset officeqa_pro` | dataset | test_native_qa_adapters.py | — |
 | `personamem_v2` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset personamem_v2` | dataset | test_personamem_v2.py | — |
@@ -132,7 +130,6 @@ its refusal *is* the result.
 | `reasoning_gym` | dataset | — undeclared | no | released | — no bytes to fetch; `pip install` the package pinned in `DOWNLOADS.md` | dataset | test_reasoning_gym_official_scorer.py, test_qa_dataset_contract.py | — |
 | `scienceworld` | dataset | last_environment_score_clipped_at_zero_divided_by_100 | no | released | `python3 tools/datasets.py --fetch --dataset scienceworld` | dataset | test_scienceworld_dataset.py | — |
 | `searchqa` | dataset | text_em_f1 | yes: EM/F1 after upstream NFKC + casefold normalization, not the SearchQA release exact string match; tokenization is the platform scorer, not the paper implementation | released | `python3 tools/datasets.py --fetch --dataset searchqa` | dataset | test_native_qa_adapters.py | — |
-| `sotuqa` | dataset | — undeclared | — | — | — no fetch lifts this refusal; its `refused` cell says why | — | test_dataset_refusals.py | sotuqa: the benchmark's headline metric is ReWOO's `acc`, an LLM judge (`QAEvalChain.from_llm(OpenAI(temperature=0))`) with no pinned model -- its… |
 | `sportsunderstanding` | dataset | multiple_choice_grade (the correct label identified) | no | released | `python3 tools/datasets.py --fetch --dataset sportsunderstanding` | dataset | test_bigbench_official_scorers.py, test_qa_dataset_contract.py | — |
 | `spreadsheetbench` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset spreadsheetbench` | dataset | test_spreadsheetbench_official_scorer.py | — |
 | `spreadsheetbench2` | dataset | spreadsheetbench2.official.accuracy | no | released | `python3 tools/datasets.py --fetch --dataset spreadsheetbench2` | exempt | test_native_harbor.py | — |

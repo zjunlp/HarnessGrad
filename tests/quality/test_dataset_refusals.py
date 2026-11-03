@@ -1,9 +1,15 @@
-"""The datasets that refuse, and why a refusal has to be provable.
+"""The one dataset that still refuses, and why a refusal has to be provable.
 
-`data/datasets/sotuqa.py`, `data/datasets/api_bank.py`, `data/datasets/nestful.py` and `data/datasets/tau2_bench.py` do not load.
-Each refuses because its official metric or interaction contract is not reproducible on the
-current platform. FEVER and HotpotQA now have a structured evidence answer contract and are
-no longer refusal cases.
+`data/datasets/tau2_bench.py` does not load: it is a dual-control benchmark whose second party
+does not exist on this platform, and the official metric is unreachable without it.
+
+`api_bank`, `nestful` and `sotuqa` were removed from the repository on 2026-11-03 rather than
+kept as refusals: each needs an artefact this project cannot produce (the dialogue state those
+recorded replies depend on, a release whose official Win Rate reproduces itself, a judge model
+that has not been retired), so a refusal could only ever restate that. `docs/refusal-policy.md`
+keeps the reasons for anyone reading an older receipt.
+
+FEVER and HotpotQA now have a structured evidence answer contract and are not refusal cases.
 """
 from __future__ import annotations
 
@@ -15,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-REFUSING = ["sotuqa", "api_bank", "tau2_bench", "nestful"]
+REFUSING = ["tau2_bench"]
 
 
 @pytest.fixture(params=REFUSING)

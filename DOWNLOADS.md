@@ -148,42 +148,6 @@ dataset does not read as prepared.
 
 > The TextWorld engine that owns the `won` flag this dataset's reward is. `pip install textworld==1.7.0`. 1.7.0 removed Glulx support; ALFWorld's `.tw-pddl` games do not use it.
 
-## `api_bank`
-
-- **Data root:** `<HG_DATA_ROOT>/api-bank`
-- **Root override:** `HG_DATA_API_BANK`
-
-### DAMO-ConvAI (api-bank subtree)
-
-- **Type:** `http`
-- **Version (pinned):** `38a08acd60fecc3449f4afd9ba4df18bdc086dee4f4517566678dc74c03463f5`
-- **Size:** 92 MB zip; the `api-bank/` subtree inside it is what matters
-- **URL:** https://codeload.github.com/AlibabaResearch/DAMO-ConvAI/zip/refs/heads/main
-- **Destination:** `<HG_DATA_ROOT>/api-bank/_src/DAMO-ConvAI.zip`
-- **SHA256:** `38a08acd60fecc3449f4afd9ba4df18bdc086dee4f4517566678dc74c03463f5`
-
-> Trap 1: the dataset is a **subtree of a multi-project repository**, not its own repo, and the repository has no tagged release for it -- so the pin is the archive digest (an invented commit sha would look like a pin and reproduce nothing). Trap 2: only 340 of the zip's files are needed; the assembled `api-bank-vendor.tar.gz` is the loader's input and the 92 MB zip is kept for provenance.
-
-### assembled API-Bank vendor tree
-
-- **Type:** `http`
-- **Version (pinned):** `79b21e0992707f98cada065aa8212ab62e662c69e6f3376f026f61abf35edb85`
-- **Size:** ~1.1 MB (340 files: 56 apis, 20 init_database JSONs, 264 sample JSONLs)
-- **URL:** local:assembled from the subtree above
-- **Destination:** `<HG_DATA_ROOT>/api-bank/_src/api-bank-vendor.tar.gz`
-- **SHA256:** `79b21e0992707f98cada065aa8212ab62e662c69e6f3376f026f61abf35edb85`
-
-> The minimal tree `lib/ab_env.py` loads. Assembled from the zip above; checked by digest so the assembly cannot drift silently.
-
-### googletrans
-
-- **Type:** `pip`
-- **Version (pinned):** `4.0.0`
-- **Size:** ~50 KB
-- **Package:** `googletrans==4.0.0`
-
-> **Not needed to grade**, and deliberately not installed: it is the only absent package among the APIs the samples use, and it affects 4 samples (`Translate`). Installing it would put a network-touching package into the interpreter the whole suite runs on. Recorded so a reader knows the 4 are a dependency, not a bug.
-
 ## `appworld`
 
 - **Data root:** `<HG_DATA_ROOT>/appworld`
@@ -897,23 +861,6 @@ dataset does not read as prepared.
 
 > Pinned evaluate_v1.0.py and metrics/answer.py. The evaluator uses each row's answer_aliases, not the repository-global .answer_aliases.json. Code archive never enters agent SETUP.
 
-## `nestful`
-
-- **Data root:** `<HG_DATA_ROOT>/nestful`
-- **Root override:** `HG_DATA_NESTFUL`
-
-### NESTFUL v2 official data, functions and scorer
-
-- **Type:** `http`
-- **Version (pinned):** `fc2c4123e73500a56185a5fb354f05d1c8b4890c`
-- **Size:** ~1.3 MB compressed; ~18 MB extracted executable function tree
-- **URL:** https://codeload.github.com/IBM/NESTFUL/tar.gz/fc2c4123e73500a56185a5fb354f05d1c8b4890c
-- **Destination:** `<HG_DATA_ROOT>/nestful/_src/nestful.tar.gz`
-- **Extract to:** `<HG_DATA_ROOT>/nestful/_src`
-- **SHA256:** `ea8ad67cbd3680b4b85e3b60d219898fda9643240636ef8ac3b020c46fb95d1b`
-
-> Canonical commit verified via GitHub API and codeload. HF rows alone omit the 4349 Python tool files needed for Win Rate. Gold execution itself fails due to host/process-dependent state and basic_functions overrides; see data/datasets/nestful/audit.py. No gold/function tree is offered as agent SETUP.
-
 ## `nq`
 
 - **Data root:** `<HG_DATA_ROOT>/nq`
@@ -1043,32 +990,6 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/searchqa/source`
 
 > The prepare CLI streams the pinned native dataset into JSONL with original source split membership. No data is downloaded on import.
-
-## `sotuqa`
-
-- **Data root:** `<HG_DATA_ROOT>/sotuqa`
-- **Root override:** `HG_DATA_SOTUQA`
-
-### ReWOO tarball (SOTU_QA.csv)
-
-- **Type:** `http`
-- **Version (pinned):** `9cd0283043ff4be0c9d614fda2789d143ca6ffd1`
-- **Size:** 22 KB of CSV (the whole tarball is ~6 MB)
-- **URL:** https://codeload.github.com/billxbf/ReWOO/tar.gz/9cd0283043ff4be0c9d614fda2789d143ca6ffd1
-- **Destination:** `<HG_DATA_ROOT>/sotuqa/rewoo.tar.gz`
-- **Extract to:** `<HG_DATA_ROOT>/sotuqa`
-- **SHA256:** `7fe653d18faad40bf10ddcc7d85415782af975d80792bb26401393203b9ce136`
-
-> ReWOO's own curated dataset -- there is no other source, so this is the dataset's home repository and not a mirror. Trap: the gold is a whole sentence and the headline metric is an LLM judge, which is why this adapter refuses to load; see the module docstring.
-
-### pyarrow
-
-- **Type:** `pip`
-- **Version (pinned):** `23.0.0`
-- **Size:** ~40 MB
-- **Package:** `pyarrow==23.0.0`
-
-> Declared for consistency with the other QA datasets; this one is read from CSV and does not need it, but the same adapter shape does.
 
 ## `sportsunderstanding`
 

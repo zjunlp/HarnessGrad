@@ -145,10 +145,6 @@ ROWS: dict[str, dict] = {
         "control": ["data/datasets/ds1000/control.py", "--task-id", "ds1000/333"],
         "metric_tests": ["test_ds1000_official_scorer.py"],
     },
-    "nestful": {
-        "control": [],
-        "metric_tests": ["test_nestful_official_scorer.py", "test_dataset_refusals.py"],
-    },
     "jericho": {
         # `--task-id` is required by this control (unlike the QA scaffold, it has no
         # default), so it has to be part of the declaration: a declared control
@@ -238,16 +234,14 @@ ROWS: dict[str, dict] = {
             "would close the gap. Note the dataset also cannot run here at all without "
             "Docker, which is why no arm has been exercised."),
     },
-    "api_bank": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
     "fever": {"control": [], "metric_tests": ["test_qa_dataset_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
     "hotpotqa": {"control": [], "metric_tests": ["test_qa_dataset_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
-    "sotuqa": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
     "tau2_bench": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
 }
 
 #: Datasets whose control is the refusal itself, so the runnable-control test skips them and
 #: the refusal test below applies instead.
-REFUSED = ("api_bank", "sotuqa", "tau2_bench", "nestful")
+REFUSED = ("tau2_bench",)
 
 #: Datasets whose platform control is *refused* rather than run, because their declared
 #: policy needs a trusted backend observation this checkout cannot supply: an `exec`

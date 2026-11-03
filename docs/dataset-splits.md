@@ -121,7 +121,6 @@ uses all 150 tasks.
 | `agentdojo` | none | none | - | - | None (the pool is the scored split) |
 | `aime` | none | none | - | - | None (the pool is the scored split) |
 | `alfworld` | none | none | - | - | None (the pool is the scored split) |
-| `api_bank` | refused | - | - | - | - |
 | `appworld` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
 | `authored_example_fix_bug` | none | authored bundle: every task in the bundle is scored | - | - | None (the pool is the scored split) |
 | `bbeh` | none | none | - | - | None (the pool is the scored split) |
@@ -151,7 +150,6 @@ uses all 150 tasks.
 | `math500` | none | none | - | - | None (the pool is the scored split) |
 | `memoryagentbench` | none | none | - | - | None (the pool is the scored split) |
 | `musique` | none | none | - | - | None (the pool is the scored split) |
-| `nestful` | refused | - | - | - | - |
 | `nq` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
 | `officeqa_pro` | none | none | - | - | None (the pool is the scored split) |
 | `personamem_v2` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
@@ -159,7 +157,6 @@ uses all 150 tasks.
 | `reasoning_gym` | none | none | - | - | [] (not an evaluation set) |
 | `scienceworld` | none | none | - | - | None (the pool is the scored split) |
 | `searchqa` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
-| `sotuqa` | refused | - | - | - | - |
 | `sportsunderstanding` | none | none | - | - | None (the pool is the scored split) |
 | `spreadsheetbench` | none | none | - | - | None (the pool is the scored split) |
 | `spreadsheetbench2` | none | none | - | - | None (the pool is the scored split) |

@@ -1,6 +1,6 @@
 """What every plain-text QA dataset in this repository shares, in one place.
 
-The batch this exists for -- `gsm8k`, `triviaqa`, `sotuqa`, `strategyqa`,
+The batch this exists for -- `gsm8k`, `triviaqa`, `strategyqa`,
 `sportsunderstanding`, `physicsquestions`, `fever`, `hotpotqa` -- differs only in the
 part a program cannot decide: *which table*, *which field is the question*, and *what
 the official scorer says*. Everything else is identical and is written once here:

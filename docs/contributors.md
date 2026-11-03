@@ -6,7 +6,7 @@ Ordered by number of credited entries. `since` is the month an entry was adopted
 
 <a id="xubqpanda"></a>
 
-## [@Xubqpanda](https://github.com/Xubqpanda) — 69 entries
+## [@Xubqpanda](https://github.com/Xubqpanda) — 66 entries
 
 Buqiang Xu. platform core; every harness, method and benchmark adapter in this catalogue
 
@@ -53,7 +53,6 @@ Buqiang Xu. platform core; every harness, method and benchmark adapter in this c
 - `agentdojo` — 2026-11-03 — declared adapter
 - `aime` — 2026-11-03 — declared adapter
 - `alfworld` — 2026-11-03 — declared adapter
-- `api_bank` — 2026-11-03 — declared adapter — refused by contract
 - `authored_example_fix_bug` — 2026-11-03 — declared adapter
 - `bird_minidev` — 2026-11-03 — declared adapter
 - `browsecomp` — 2026-11-03 — declared adapter
@@ -70,13 +69,11 @@ Buqiang Xu. platform core; every harness, method and benchmark adapter in this c
 - `math` — 2026-11-03 — declared adapter
 - `math500` — 2026-11-03 — declared adapter
 - `musique` — 2026-11-03 — declared adapter
-- `nestful` — 2026-11-03 — declared adapter — refused by contract
 - `nq` — 2026-11-03 — declared adapter
 - `officeqa_pro` — 2026-11-03 — declared adapter
 - `reasoning_gym` — 2026-11-03 — declared adapter
 - `scienceworld` — 2026-11-03 — declared adapter
 - `searchqa` — 2026-11-03 — declared adapter
-- `sotuqa` — 2026-11-03 — declared adapter — refused by contract
 - `spreadsheetbench` — 2026-11-03 — declared adapter
 - `spreadsheetbench2` — 2026-11-03 — declared adapter
 - `supergpqa` — 2026-11-03 — declared adapter

@@ -24,17 +24,16 @@ EXPECTED_DATASETS = (
     # The twenty upstream ports (2026-11-02) join for the same reason: each has a
     # reviewed section in `docs/dataset-reviews/transfer-review.md` and declares
     # `KIND = "dataset"`. Membership is still reviewed, never derived.
-    "agentdojo", "aime", "alfworld", "api_bank",
-    "appworld", "authored_example_fix_bug", "bbeh", "bfcl_v3",
+    "agentdojo", "aime", "alfworld", "appworld", "authored_example_fix_bug", "bbeh", "bfcl_v3",
     "bird_minidev", "browsecomp", "chessbench_puzzles", "cooperbench",
     "costbench", "costbench_dynamic", "deepsearchqa", "deepswe",
     "ds1000", "fever", "gaia", "gsm8k",
     "harvey_lab", "hle", "hotpotqa", "jericho",
     "jobbench", "kumo", "livecodebench", "livemathbench",
     "locomo", "math", "math500", "memoryagentbench",
-    "musique", "nestful", "nq", "officeqa_pro",
+    "musique", "nq", "officeqa_pro",
     "personamem_v2", "physicsquestions", "reasoning_gym", "scienceworld",
-    "searchqa", "sotuqa", "sportsunderstanding", "spreadsheetbench",
+    "searchqa", "sportsunderstanding", "spreadsheetbench",
     "spreadsheetbench2", "strategyqa", "strongreject", "supergpqa",
     "swe_bench", "swe_bench_pro", "tau2_bench", "tau3_bench",
     "tau_bench", "terminal_bench", "travelplanner", "triviaqa",
@@ -47,9 +46,8 @@ FIXTURES = (
 # Reviewed adapter assets stay beside their declarations.
 # unused-inventory is not a published adapter and is deliberately not classified here.
 EXPECTED_ASSET_DIRS = (
-    "agentdojo", "alfworld", "api_bank", "appworld", "bird_minidev", "cooperbench", "costbench", "costbench_dynamic", "ds1000",
-    "gaia", "jericho", "kumo", "livecodebench", "locomo", "memoryagentbench", "nestful",
-    "personamem_v2", "reasoning_gym",
+    "agentdojo", "alfworld", "appworld", "bird_minidev", "cooperbench", "costbench", "costbench_dynamic", "ds1000",
+    "gaia", "jericho", "kumo", "livecodebench", "locomo", "memoryagentbench", "personamem_v2", "reasoning_gym",
     "scienceworld", "spreadsheetbench", "strongreject", "tau3_bench", "tau_bench",
 )
 

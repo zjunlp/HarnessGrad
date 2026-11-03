@@ -138,7 +138,17 @@ Task capability is a cross-table: `demand x surface`. Harness coverage is a sepa
 
 No method tuning, paid endpoints, heldout leakage, score fabrication or fake benchmark utilization.
 
-A dataset this platform cannot **measure** is not a shortcut and is not prohibited: it is refused by its adapter, with the missing piece named in `registry/dataset-blockers.json`. `tau2_bench` (no second party), `api_bank` (the dialogue state its recorded replies depend on), `nestful` (a Win Rate its own release does not reproduce) and `sotuqa` (a headline judge metric that resolved to a retired model) are refused that way. Each lifts only when *that* missing thing exists and is declared in the receipt's `identity`; until then `load()` keeps raising. `tau2_bench`'s two facilities now ship in this repository (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`), so its exclusion is lifted conditionally and what remains is a pin, a split spec and an adapter. Never substitute a proxy under the benchmark's own name — the database half or a `communicate_info` substring for τ², EM/F1 for SOTU-QA's judge metric, slot/sequence for NESTFUL's Win Rate, an execution-success rate for API-Bank — and a paid-endpoint judge makes a number non-publishable. Reasoning, per-dataset exits and the recorded data: `docs/refusal-policy.md`.
+A dataset this platform cannot **measure** is not a shortcut and is not prohibited: it is
+refused by its adapter, with the missing piece named in `registry/dataset-blockers.json`.
+`tau2_bench` is the one that remains refused: it is dual-control, its second party — an LLM
+user simulator — does not exist on this platform, and 55 of its 278 tasks carry gold actions
+with `requestor: "user"` that no agent can perform, so the gold state is unreachable by
+construction. Its exclusion was lifted on 2026-10-22 and both facilities it needs now ship
+in this repository (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`), so
+what remains is a v0.1.0 pin and a split, not a policy. `api_bank`, `nestful` and `sotuqa`
+were removed from the repository on 2026-11-03 — each needed an artefact this project cannot
+produce — and `docs/refusal-policy.md` keeps their reasons for older receipts.
+Never substitute a proxy under the benchmark's own name — the database half or a `communicate_info` substring for τ² — and a paid-endpoint judge makes a number non-publishable. Reasoning, per-dataset exits and the recorded data: `docs/refusal-policy.md`.
 
 ## Evidence requirements
 

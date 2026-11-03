@@ -26,7 +26,7 @@ harness — so an experiment is one command and a curve.
 | --- | --- | --- |
 | **harnesses** | 8: `loop`, `codex`, `opencode`, `deepseek-harness`, `openclaw`, `miniagent`, `miniswe`, `oracle` | `base_harness/<name>/` |
 | **RSI methods** | 19: `dgm`, `rrsi`, `adas`, `ahe`, `ace`, `skillopt`, `evoprompt`, `evo_harness`, `opro`, `tthe`, `dream_rsi`, `sica_ci`, `gepa`, `darwinx`, `arbor`, `hyperagents`, `meta_harness`, `harnessx`, `modular_rsi` | `experiments/method-<name>.json` |
-| **benchmarks** | 59 declared, **55 runnable**, 4 refused (†) — every one listed: `agentdojo`, `aime`, `alfworld`, `api_bank` †, `appworld`, `authored_example_fix_bug`, `bbeh`, `bfcl_v3`, `bird_minidev`, `browsecomp`, `chessbench_puzzles`, `cooperbench`, `costbench`, `costbench_dynamic`, `deepsearchqa`, `deepswe`, `ds1000`, `fever`, `gaia`, `gsm8k`, `harvey_lab`, `hle`, `hotpotqa`, `jericho`, `jobbench`, `kumo`, `livecodebench`, `livemathbench`, `locomo`, `math`, `math500`, `memoryagentbench`, `musique`, `nestful` †, `nq`, `officeqa_pro`, `personamem_v2`, `physicsquestions`, `reasoning_gym`, `scienceworld`, `searchqa`, `sotuqa` †, `sportsunderstanding`, `spreadsheetbench`, `spreadsheetbench2`, `strategyqa`, `strongreject`, `supergpqa`, `swe_bench`, `swe_bench_pro`, `tau2_bench` †, `tau3_bench`, `tau_bench`, `terminal_bench`, `travelplanner`, `triviaqa`, `twowikimultihopqa`, `widesearch`, `workbench` | `data/datasets/`, detail in [`DATASETS.md`](DATASETS.md) |
+| **benchmarks** | 56 declared, **55 runnable**, 1 refused (†) — every one listed: `agentdojo`, `aime`, `alfworld`, `api_bank` †, `appworld`, `authored_example_fix_bug`, `bbeh`, `bfcl_v3`, `bird_minidev`, `browsecomp`, `chessbench_puzzles`, `cooperbench`, `costbench`, `costbench_dynamic`, `deepsearchqa`, `deepswe`, `ds1000`, `fever`, `gaia`, `gsm8k`, `harvey_lab`, `hle`, `hotpotqa`, `jericho`, `jobbench`, `kumo`, `livecodebench`, `livemathbench`, `locomo`, `math`, `math500`, `memoryagentbench`, `musique`, `nestful` †, `nq`, `officeqa_pro`, `personamem_v2`, `physicsquestions`, `reasoning_gym`, `scienceworld`, `searchqa`, `sotuqa` †, `sportsunderstanding`, `spreadsheetbench`, `spreadsheetbench2`, `strategyqa`, `strongreject`, `supergpqa`, `swe_bench`, `swe_bench_pro`, `tau2_bench` †, `tau3_bench`, `tau_bench`, `terminal_bench`, `travelplanner`, `triviaqa`, `twowikimultihopqa`, `widesearch`, `workbench` | `data/datasets/`, detail in [`DATASETS.md`](DATASETS.md) |
 
 Shipped experiments, each with a documented cost and prerequisites:
 
@@ -47,20 +47,22 @@ Shipped experiments, each with a documented cost and prerequisites:
 | a benchmark and its official scorer | an adapter that materialises a task and runs *your* scorer | [dataset onboarding](docs/dataset-onboarding.md) |
 | a paper you want to reproduce | nothing yet: pick the recipe and read its cost | [rsi-experiments.md](docs/rsi-experiments.md) |
 
-**59 benchmarks** are declared, and the registry knows how to obtain each one. These four are
-declared but not yet measurable, and the four † are why. Three need an artefact this
-repository cannot produce, so no amount of code closes them: `api_bank` needs the dialogue
-state its recorded API replies depend on (the gold call reproduces its own recorded reply on
-262 of 508 samples), `nestful` needs a release whose official Win Rate reproduces itself (the
-pinned scorer returned 1857/4 then 1854/7 on the same gold sequences), and `sotuqa` needs a
-judge model that can be named and re-run (its `acc` resolved to `text-davinci-003`).
+**56 benchmarks** are declared, and the registry knows how to obtain each one. One is
+declared but not yet measurable, and the † marks it. `api_bank`, `nestful` and
+`sotuqa` were removed from the repository on 2026-11-03: each needed an artefact this project
+cannot produce — the dialogue state those recorded API replies depend on (the gold call
+reproduces its own recorded reply on 262 of 508 samples), a release whose official Win Rate
+reproduces itself (the pinned scorer returned 1857/4 then 1854/7 on the same gold sequences),
+and a judge model that has not been retired (its `acc` resolved to `text-davinci-003`) — so
+keeping them as refusals could only restate that. Their reasons stay in
+[`docs/refusal-policy.md`](docs/refusal-policy.md) for anyone reading an older receipt.
 
-`tau2_bench` is the fourth and the different one: its exclusion was lifted, its two missing
-facilities ship in this repository (`tau3_bench/lib/runtime.py` runs the official user
-simulator, `eval/service/judge.py` the judge), and what remains is a v0.1.0 pin and a split —
-τ² tasks below 1.0.1 are not comparable with results at or above it, so mixing revisions would
-produce a number neither paper supports. Its `load()` still raises, and the receipt's
-`identity` is where the missing piece has to appear when it stops.
+`tau2_bench` is the one that remains: its exclusion was lifted, its two missing facilities
+ship in this repository (`tau3_bench/lib/runtime.py` runs the official user simulator,
+`eval/service/judge.py` the judge), and what is missing is a v0.1.0 pin and a split — τ² tasks
+below 1.0.1 are not comparable with results at or above it, so mixing revisions would produce a
+number neither paper supports. Its `load()` still raises, and the receipt's `identity` is where
+the missing piece has to appear when it stops.
 
 Every one is recorded with its reason in
 [`registry/dataset-blockers.json`](registry/dataset-blockers.json), and the reasoning for the
@@ -291,7 +293,7 @@ One calendar per board: a column per day over a fixed 92-day window, a row per c
 
 | # | contributor | contributed |
 | --- | --- | --- |
-| 1 | [@Xubqpanda](https://github.com/Xubqpanda) | [69](docs/contributors.md#xubqpanda) |
+| 1 | [@Xubqpanda](https://github.com/Xubqpanda) | [66](docs/contributors.md#xubqpanda) |
 | 2 | [@crepuscular-drizzle](https://github.com/crepuscular-drizzle) | [14](docs/contributors.md#crepuscular-drizzle) |
 | 3 | [@trancefornow](https://github.com/trancefornow) | [11](docs/contributors.md#trancefornow) |
 

@@ -33,15 +33,16 @@ A prohibition is also the wrong shape for a conditional fact: it says "never" wh
 | name | what is actually missing | exit recorded in the adapter | state after 2026-10-22 |
 | --- | --- | --- | --- |
 | `tau2_bench` | a second party — an LLM user simulator — and a judge for `nl_assertions` | both facilities **now ship in this repository** (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`); what remains is a v0.1.0 pin, a split spec and an adapter | **exclusion lifted, conditionally** (`code-solvable`) |
-| `api_bank` | the dialogue state the recorded API replies depend on | an oracle that reaches 1, or a separately named repaired subset; the gold call reproduces its own recorded reply on **262 / 508** samples (51.6 %) | refused (`external`) — not prohibited |
-| `nestful` | reproducibility of the official execution Win Rate | a repaired upstream release, or a deterministically pinned run record; the pinned scorer returned **1857 true / 4 false**, then **1854 / 7** on the same 1861 gold sequences | refused (`external`) — not prohibited |
-| `sotuqa` | the pinned judge behind the headline `acc` | a judge model that can be named and re-run; `llm_accuracy_score` resolved to `text-davinci-003`, which is retired, so the headline cannot be reproduced at all | refused (`external`) — not prohibited |
+| `api_bank` | the dialogue state the recorded API replies depend on | an oracle that reaches 1, or a separately named repaired subset; the gold call reproduces its own recorded reply on **262 / 508** samples (51.6 %) | **removed from the repository 2026-11-03** — the reason cannot change |
+| `nestful` | reproducibility of the official execution Win Rate | a repaired upstream release, or a deterministically pinned run record; the pinned scorer returned **1857 true / 4 false**, then **1854 / 7** on the same 1861 gold sequences | **removed from the repository 2026-11-03** — the reason cannot change |
+| `sotuqa` | the pinned judge behind the headline `acc` | a judge model that can be named and re-run; `llm_accuracy_score` resolved to `text-davinci-003`, which is retired, so the headline cannot be reproduced at all | **removed from the repository 2026-11-03** — the reason cannot change |
 | `Matrix` | nothing: no adapter, no registry row, no blocker, no file | — | the name is dropped, because it was bookkeeping rather than a decision |
 
-The three that stay refused keep their registry id (`retain-contract-refusal`) so that receipts
-citing `api_bank / retain-contract-refusal` and friends remain verifiable, and keep `status:
-external`: what they need is an artefact this repository cannot produce (dialogue state, a repaired
-release, a retired judge model), not code.
+The three that cannot be repaired were **removed on 2026-11-03** rather than kept as refusals: a
+refusal could only restate that the artefact does not exist, and a name in the catalogue that can
+never load is a shorter catalogue with a longer explanation. Their rows and reasons are kept here,
+because receipts from before that date still cite them and a reader has to be able to find out
+why. `api_bank`, `nestful` and `sotuqa` no longer resolve.
 
 `tau2_bench` is the one that moved, because it is the one whose missing facility turned out to be
 platform code rather than upstream data.
