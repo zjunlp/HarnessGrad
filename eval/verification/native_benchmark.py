@@ -9,7 +9,6 @@ This bridge alone does not attest pristine-offline image/ABI closure.
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import os
 from pathlib import Path
@@ -19,13 +18,32 @@ import time
 
 from eval.verification.isolation import record_class
 
+#: `dataset -> (the module that runs its native scorer, the sealed-episode case file)`.
+#: The module is imported lazily inside `_native_module` and named by a literal `from`
+#: statement there: `INTERFACE.md` R1 forbids the platform from reaching a *method* by a
+#: dynamic import, and a rule that has to distinguish "dataset scorer" from "method" by
+#: reading a string cannot, so the dispatch is spelled out instead of built from a name.
 ROUTES = {
-    'swe_bench': ('data.scaffolds.native_research.swe_native', 'swe_episode'),
-    'harvey_lab': ('data.scaffolds.native_research.harvey_native', None),
-    'deepswe': ('data.scaffolds.native_harbor_runtime.verify', 'native_episode'),
-    'jobbench': ('data.scaffolds.native_harbor_runtime.verify', 'native_episode'),
-    'swe_bench_pro': ('data.scaffolds.native_harbor_runtime.verify', 'native_episode'),
+    'swe_bench': ('swe_native', 'swe_episode'),
+    'harvey_lab': ('harvey_native', None),
+    'deepswe': ('harbor_verify', 'native_episode'),
+    'jobbench': ('harbor_verify', 'native_episode'),
+    'swe_bench_pro': ('harbor_verify', 'native_episode'),
 }
+
+
+def _native_module(key: str):
+    """The scorer module for one route, imported on demand and by name.
+
+    Imported here rather than at module load because a native scorer pulls its own
+    dependencies (pandas, a pinned evaluator), and the verification path is only taken by
+    the five datasets above.
+    """
+    if key in ('swe_native', 'harvey_native'):
+        from data.scaffolds.native_research import harvey_native, swe_native
+        return {'swe_native': swe_native, 'harvey_native': harvey_native}[key]
+    from data.scaffolds.native_harbor_runtime import verify as harbor_verify
+    return harbor_verify
 MAX_BYTES, MAX_FILES = 64 << 20, 10000
 MAX_RECORD_BYTES = 128 << 20  # Native artifacts are base64 inside sealed JSON.
 
@@ -183,7 +201,7 @@ def verify(workdir, spec, *, sandbox, task_id, run_id=None, trial_id=None,
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError('native export exhausted verifier deadline')
-            module = importlib.import_module(module_name)
+            module = _native_module(module_name)
             result = module.run(spec, destination, task_id=task_id, run_id=run_id,
                                 trial_id=trial_id, timeout_s=remaining)
             if not isinstance(result, dict):
