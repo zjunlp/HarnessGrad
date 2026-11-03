@@ -47,16 +47,24 @@ def test_a_broken_adapter_is_dropped_from_published_and_named():
     assert "agentdojo" in names, names
 
 
-def test_the_host_this_runs_on_has_no_unimportable_adapter():
-    """On a provisioned checkout every published adapter imports.
+def test_every_declared_adapter_is_published_or_named_as_broken():
+    """The catalogue is complete or it says what it dropped -- on any machine.
 
-    A failure here is information, not necessarily a bug: it names the missing module or
-    asset. It is asserted rather than skipped because a silently short catalogue is exactly
-    the defect the rest of this module is about.
+    This used to assert that nothing was broken and that 59 were published, which is true on
+    a provisioned checkout and false on a fresh one: two adapters read an optional module
+    (`numpy`, `chess`) at import, so a bare interpreter publishes 57 and the assertion failed
+    on exactly the machine a stranger starts from. The property is the one the module is
+    about: nothing disappears *silently*. A declared adapter is either published, or it is
+    named with its reason.
     """
-    published = registry.published()
+    declared = {path.stem for path in (ROOT / "data/datasets").glob("*.py")
+                if path.stem != "__init__"}
+    published = set(registry.published())
     broken = registry.broken_adapters()
-    assert not broken, (
-        "these adapters cannot be imported on this machine, so the catalogue is missing them: "
-        + "; ".join(f"{name} ({reason})" for name, reason in sorted(broken.items())))
-    assert len(published) == 59, f"expected 59 published datasets, got {len(published)}"
+    assert published <= declared, f"published names with no declaration: {published - declared}"
+    assert set(broken) <= declared, f"broken names with no declaration: {set(broken) - declared}"
+    assert published | set(broken) == declared, (
+        "declared adapters that are neither published nor named as broken: "
+        f"{sorted(declared - published - set(broken))}")
+    assert not (published & set(broken)), "an adapter is both published and reported broken"
+    print(f"published {len(published)} of {len(declared)} declared, {len(broken)} broken here")

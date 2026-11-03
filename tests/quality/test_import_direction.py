@@ -394,8 +394,20 @@ class ImportDirectionTests(unittest.TestCase):
             'widesearch',
             'workbench',
         )
-        self.assertEqual(registry.published(), expected)
-        for name in expected:
+        # The reviewed inventory is a property of the *source tree*, so it is compared with
+        # the declared adapter files. Comparing it with `published()` made this guard a
+        # measurement of the machine: a clone without numpy or chess publishes five fewer
+        # names and the inventory failed, which is not what 'reviewed inventory' means.
+        declared = tuple(sorted(path.stem for path in (ROOT / "data/datasets").glob("*.py")
+                                if path.stem != "__init__"))
+        self.assertEqual(declared, expected)
+        # Every published name is declared, and a name that is declared but not published is
+        # named by `broken_adapters()` -- so a short catalogue is reported, never silent.
+        published = registry.published()
+        self.assertLessEqual(set(published), set(expected))
+        self.assertEqual(set(expected) - set(published), set(registry.broken_adapters()),
+                         "a declared adapter disappeared from the catalogue without a reason")
+        for name in published:
             module = registry.importlib.import_module(registry.module_name(name))
             self.assertEqual(module.__name__, f"data.datasets.{name}")
             self.assertEqual(Path(module.__file__).resolve(), ROOT / "data/datasets" / f"{name}.py")
