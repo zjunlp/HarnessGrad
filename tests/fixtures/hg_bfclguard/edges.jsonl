@@ -385,7 +385,7 @@
 {"destinations": [], "kind": "import", "line": 11, "outside_scope": [], "source": 51, "statement": "import shutil", "targets": ["shutil"]}
 {"destinations": [], "kind": "import", "line": 12, "outside_scope": [], "source": 51, "statement": "import subprocess", "targets": ["subprocess"]}
 {"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 51, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [485, 504], "kind": "from", "line": 16, "outside_scope": [], "source": 51, "statement": "from harnessgrad.paths import dataset_root", "targets": ["harnessgrad.paths", "harnessgrad.paths.dataset_root"]}
+{"destinations": [485, 504], "kind": "from", "line": 34, "outside_scope": [], "source": 51, "statement": "from harnessgrad.paths import dataset_root", "targets": ["harnessgrad.paths", "harnessgrad.paths.dataset_root"]}
 {"destinations": [0, 6], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 52, "statement": "<implicit parent package initialization>", "targets": ["data", "data.datasets"]}
 {"destinations": [], "kind": "import", "line": 3, "outside_scope": [], "source": 52, "statement": "import hashlib", "targets": ["hashlib"]}
 {"destinations": [], "kind": "import", "line": 4, "outside_scope": [], "source": 52, "statement": "import json", "targets": ["json"]}

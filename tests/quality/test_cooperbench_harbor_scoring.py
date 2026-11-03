@@ -6,6 +6,8 @@ are exercised separately by the observed-image oracle/noop controls.
 import importlib.util
 from pathlib import Path
 import subprocess
+import sys
+from types import ModuleType
 
 import pytest
 
@@ -13,6 +15,29 @@ ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / 'data/datasets/cooperbench'
 spec = importlib.util.spec_from_file_location('cooperbench_protocol_test', ASSETS / 'lib/protocol.py')
 protocol = importlib.util.module_from_spec(spec); spec.loader.exec_module(protocol)
+
+
+def test_preparer_help_needs_no_storage_configuration(tmp_path, monkeypatch):
+    import os
+    for key in tuple(os.environ):
+        if key.startswith('HG_DATA_'):
+            monkeypatch.delenv(key)
+    result = subprocess.run([sys.executable, str(ASSETS / 'prepare.py'), '--help'],
+                            cwd=tmp_path, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert '--source-root' in result.stdout
+
+
+def test_preparer_loads_its_protocol_by_path(monkeypatch):
+    unrelated = ModuleType('protocol')
+    monkeypatch.setitem(sys.modules, 'protocol', unrelated)
+    spec = importlib.util.spec_from_file_location('cooperbench_prepare_collision_test',
+                                                 ASSETS / 'prepare.py')
+    preparation = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(preparation)
+    assert sys.modules['protocol'] is unrelated
+    assert Path(preparation.protocol.__file__).resolve() == ASSETS / 'lib/protocol.py'
+    assert preparation.SOURCE_REVISION == protocol.SOURCE_REVISION
 
 
 def git(repo, *args):
@@ -48,7 +73,12 @@ def test_patch_repairs_preserve_released_tests_and_scorer(group, pairs):
     from data.datasets import cooperbench as dataset
 
     source = dataset.DATASET_ROOT / 'upstream/dataset' / group
-    if not (source.exists() and (dataset.DATASET_ROOT / 'prepared-v1/manifest.json').exists()):
+    from harnessgrad.paths import DataRootNotConfigured
+    try:
+        present = source.exists() and (dataset.DATASET_ROOT / 'prepared-v1/manifest.json').exists()
+    except DataRootNotConfigured:
+        present = False
+    if not present:
         pytest.skip('prepared CooperBench inputs and pinned source needed for patch regression')
     rows = [row for row in dataset.roster().values() if row['group'] == group]
     assert len(rows) == pairs

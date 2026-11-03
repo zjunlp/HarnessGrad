@@ -49,7 +49,7 @@
 {"bytes": 4219, "id": 48, "module": "data.datasets.cooperbench.https_asset_mirror.prepare", "path": "data/datasets/cooperbench/https_asset_mirror/prepare.py", "sha256": "fee43c2ac99c3953c455343dacfdfd8b3caa730d0a234bc3c6221623099c64c1"}
 {"bytes": 5802, "id": 49, "module": "data.datasets.cooperbench.https_asset_mirror.server", "path": "data/datasets/cooperbench/https_asset_mirror/server.py", "sha256": "80b40eafc53797f73bc1ec75d26d9ecd70c66a04e0c1169cfd1895bd4c5d0714"}
 {"bytes": 9942, "id": 50, "module": "data.datasets.cooperbench.lib.protocol", "path": "data/datasets/cooperbench/lib/protocol.py", "sha256": "5a2bf497cd8e0756ea9e932a02e12806b1fd5f4e9b6e38ab783b53e774f0b533"}
-{"bytes": 21909, "id": 51, "module": "data.datasets.cooperbench.prepare", "path": "data/datasets/cooperbench/prepare.py", "sha256": "309358ba63bc42e99df42909bd020c51e4f47cf970821315a72b65569dd06262"}
+{"bytes": 22864, "id": 51, "module": "data.datasets.cooperbench.prepare", "path": "data/datasets/cooperbench/prepare.py", "sha256": "7cd92d9875e81e08b730b2dafce2e54ac2357e432eb0f02322739f901b3ce8fc"}
 {"bytes": 5369, "id": 52, "module": "data.datasets.cooperbench.verify.check", "path": "data/datasets/cooperbench/verify/check.py", "sha256": "1f6d1e3ed079809b55e6cef691f13cb0df423ca2e8c385e5c092d6560c7b2eaf"}
 {"bytes": 10694, "id": 53, "module": "data.datasets.cooperbench", "path": "data/datasets/cooperbench.py", "sha256": "a08622e1fd9378754fb0933bcfdd6381aade4dbeb2cd22cc3aaebe34445e3515"}
 {"bytes": 1267, "id": 54, "module": "data.datasets.costbench.cli.costbench", "path": "data/datasets/costbench/cli/costbench.py", "sha256": "271da3348917611f6a7247883c28e74de0973d4600de20052123c83f2d5268b8"}

@@ -6308,3 +6308,11 @@ declared scorer package. Synthetic sandbox controls check correct/incorrect answ
 and module/cache interference. BFCL whole-source hash assertions and fabricated
 observations are retained; reachability snapshots are regenerated for the integrated
 source tree. Independent native runtime host/ABI admission fields are preserved.
+
+
+### CooperBench preparation startup repair (2026-11-03)
+
+Restored the mainline path-based sibling-module loader while retaining portable
+storage configuration. CLI help works before storage is configured, and an unrelated
+`protocol` entry in `sys.modules` cannot replace CooperBench's own module. Tests
+retain prepared-data digest checks; locally cached assets are not repinned.
