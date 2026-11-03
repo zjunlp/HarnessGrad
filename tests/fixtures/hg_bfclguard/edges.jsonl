@@ -3538,15 +3538,16 @@
 {"destinations": [475], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 477, "statement": "<implicit parent package initialization>", "targets": ["eval.verification"]}
 {"destinations": [], "kind": "from", "line": 9, "outside_scope": [], "source": 477, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 11, "outside_scope": [], "source": 477, "statement": "import hashlib", "targets": ["hashlib"]}
-{"destinations": [], "kind": "import", "line": 12, "outside_scope": [], "source": 477, "statement": "import importlib", "targets": ["importlib"]}
-{"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 477, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 477, "statement": "import os", "targets": ["os"]}
-{"destinations": [], "kind": "from", "line": 15, "outside_scope": [], "source": 477, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "import", "line": 16, "outside_scope": [], "source": 477, "statement": "import stat", "targets": ["stat"]}
-{"destinations": [], "kind": "import", "line": 17, "outside_scope": [], "source": 477, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [], "kind": "import", "line": 18, "outside_scope": [], "source": 477, "statement": "import time", "targets": ["time"]}
-{"destinations": [475, 476], "kind": "from", "line": 20, "outside_scope": [], "source": 477, "statement": "from eval.verification.isolation import record_class", "targets": ["eval.verification.isolation", "eval.verification.isolation.record_class"]}
-{"destinations": [0, 261, 367], "kind": "from", "line": 123, "outside_scope": [], "source": 477, "statement": "from data.scaffolds.runtime_extensions import validate_native_benchmark", "targets": ["data.scaffolds.runtime_extensions", "data.scaffolds.runtime_extensions.validate_native_benchmark"]}
+{"destinations": [], "kind": "import", "line": 12, "outside_scope": [], "source": 477, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 477, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "from", "line": 14, "outside_scope": [], "source": 477, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "import", "line": 15, "outside_scope": [], "source": 477, "statement": "import stat", "targets": ["stat"]}
+{"destinations": [], "kind": "import", "line": 16, "outside_scope": [], "source": 477, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [], "kind": "import", "line": 17, "outside_scope": [], "source": 477, "statement": "import time", "targets": ["time"]}
+{"destinations": [475, 476], "kind": "from", "line": 19, "outside_scope": [], "source": 477, "statement": "from eval.verification.isolation import record_class", "targets": ["eval.verification.isolation", "eval.verification.isolation.record_class"]}
+{"destinations": [0, 261, 287, 292, 297], "kind": "from", "line": 43, "outside_scope": [], "source": 477, "statement": "from data.scaffolds.native_research import harvey_native, swe_native", "targets": ["data.scaffolds.native_research", "data.scaffolds.native_research.harvey_native", "data.scaffolds.native_research.swe_native"]}
+{"destinations": [0, 261, 268, 277], "kind": "from", "line": 45, "outside_scope": [], "source": 477, "statement": "from data.scaffolds.native_harbor_runtime import verify as harbor_verify", "targets": ["data.scaffolds.native_harbor_runtime", "data.scaffolds.native_harbor_runtime.verify"]}
+{"destinations": [0, 261, 367], "kind": "from", "line": 141, "outside_scope": [], "source": 477, "statement": "from data.scaffolds.runtime_extensions import validate_native_benchmark", "targets": ["data.scaffolds.runtime_extensions", "data.scaffolds.runtime_extensions.validate_native_benchmark"]}
 {"destinations": [475], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 478, "statement": "<implicit parent package initialization>", "targets": ["eval.verification"]}
 {"destinations": [], "kind": "from", "line": 8, "outside_scope": [], "source": 478, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "from", "line": 10, "outside_scope": [], "source": 478, "statement": "from contextlib import contextmanager", "targets": ["contextlib", "contextlib.contextmanager"]}
