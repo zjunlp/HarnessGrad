@@ -2707,7 +2707,7 @@
 {"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 356, "statement": "import sys", "targets": ["sys"]}
 {"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 356, "statement": "import threading", "targets": ["threading"]}
 {"destinations": [457, 469], "kind": "from", "line": 17, "outside_scope": [], "source": 356, "statement": "from eval.service.tool_transport import Relay", "targets": ["eval.service.tool_transport", "eval.service.tool_transport.Relay"]}
-{"destinations": [639], "kind": "from", "line": 18, "outside_scope": [], "source": 356, "statement": "from tools.web_gateway import WebGateway, ProviderError", "targets": ["tools.web_gateway", "tools.web_gateway.WebGateway", "tools.web_gateway.ProviderError"]}
+{"destinations": [640], "kind": "from", "line": 18, "outside_scope": [], "source": 356, "statement": "from tools.web_gateway import WebGateway, ProviderError", "targets": ["tools.web_gateway", "tools.web_gateway.WebGateway", "tools.web_gateway.ProviderError"]}
 {"destinations": [0, 264, 291], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 357, "statement": "<implicit parent package initialization>", "targets": ["data", "data.scaffolds", "data.scaffolds.native_research"]}
 {"destinations": [], "kind": "from", "line": 6, "outside_scope": [], "source": 357, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 7, "outside_scope": [], "source": 357, "statement": "import importlib.util", "targets": ["importlib.util"]}
@@ -2874,8 +2874,8 @@
 {"destinations": [605], "kind": "from", "line": 33, "outside_scope": [], "source": 377, "statement": "from tools.improver import forbidden_reason", "targets": ["tools.improver", "tools.improver.forbidden_reason"]}
 {"destinations": [605], "kind": "from", "line": 34, "outside_scope": [], "source": 377, "statement": "from tools.improver import load_config as load_improvers", "targets": ["tools.improver", "tools.improver.load_config"]}
 {"destinations": [605], "kind": "from", "line": 35, "outside_scope": [], "source": 377, "statement": "from tools.improver import resolve as resolve_improver", "targets": ["tools.improver", "tools.improver.resolve"]}
-{"destinations": [636], "kind": "from", "line": 36, "outside_scope": [], "source": 377, "statement": "from tools.validate_harness import check as check_harness, source_identity", "targets": ["tools.validate_harness", "tools.validate_harness.check", "tools.validate_harness.source_identity"]}
-{"destinations": [625], "kind": "import", "line": 40, "outside_scope": [], "source": 377, "statement": "import tools.run_summary as run_summary", "targets": ["tools.run_summary"]}
+{"destinations": [637], "kind": "from", "line": 36, "outside_scope": [], "source": 377, "statement": "from tools.validate_harness import check as check_harness, source_identity", "targets": ["tools.validate_harness", "tools.validate_harness.check", "tools.validate_harness.source_identity"]}
+{"destinations": [626], "kind": "import", "line": 40, "outside_scope": [], "source": 377, "statement": "import tools.run_summary as run_summary", "targets": ["tools.run_summary"]}
 {"destinations": [390], "kind": "from", "line": 41, "outside_scope": [], "source": 377, "statement": "from eval.ckpt.git_state import (STATE_DIRNAME, commit_state, content_sha, manifest,\n                                stage_workspace)", "targets": ["eval.ckpt.git_state", "eval.ckpt.git_state.STATE_DIRNAME", "eval.ckpt.git_state.commit_state", "eval.ckpt.git_state.content_sha", "eval.ckpt.git_state.manifest", "eval.ckpt.git_state.stage_workspace"]}
 {"destinations": [391], "kind": "from", "line": 43, "outside_scope": [], "source": 377, "statement": "from eval.ckpt.source_tree import copy_harness", "targets": ["eval.ckpt.source_tree", "eval.ckpt.source_tree.copy_harness"]}
 {"destinations": [418, 419], "kind": "from", "line": 44, "outside_scope": [], "source": 377, "statement": "from eval.observe.console import CONSOLE as console", "targets": ["eval.observe.console", "eval.observe.console.CONSOLE"]}
@@ -2889,7 +2889,7 @@
 {"destinations": [457, 462], "kind": "import", "line": 52, "outside_scope": [], "source": 377, "statement": "import eval.service.modelgate as modelgate", "targets": ["eval.service.modelgate"]}
 {"destinations": [395, 407], "kind": "import", "line": 53, "outside_scope": [], "source": 377, "statement": "import eval.containers.sandbox as sandbox", "targets": ["eval.containers.sandbox"]}
 {"destinations": [457, 467], "kind": "import", "line": 54, "outside_scope": [], "source": 377, "statement": "import eval.service.services as services_mod", "targets": ["eval.service.services"]}
-{"destinations": [639], "kind": "import", "line": 55, "outside_scope": [], "source": 377, "statement": "import tools.web_gateway as web_gateway_mod", "targets": ["tools.web_gateway"]}
+{"destinations": [640], "kind": "import", "line": 55, "outside_scope": [], "source": 377, "statement": "import tools.web_gateway as web_gateway_mod", "targets": ["tools.web_gateway"]}
 {"destinations": [488], "kind": "from", "line": 68, "outside_scope": [], "source": 377, "statement": "from harnessgrad import FRAMEWORK_VERSION", "targets": ["harnessgrad", "harnessgrad.FRAMEWORK_VERSION"]}
 {"destinations": [488, 496], "kind": "from", "line": 69, "outside_scope": [], "source": 377, "statement": "from harnessgrad import config as platform_config", "targets": ["harnessgrad", "harnessgrad.config"]}
 {"destinations": [488, 502], "kind": "from", "line": 70, "outside_scope": [], "source": 377, "statement": "from harnessgrad import h0_identity", "targets": ["harnessgrad", "harnessgrad.h0_identity"]}
@@ -3053,7 +3053,7 @@
 {"destinations": [457, 462], "kind": "import", "line": 24, "outside_scope": [], "source": 398, "statement": "import eval.service.modelgate as modelgate_mod", "targets": ["eval.service.modelgate"]}
 {"destinations": [418, 421], "kind": "import", "line": 25, "outside_scope": [], "source": 398, "statement": "import eval.observe.progress as progress_mod", "targets": ["eval.observe.progress"]}
 {"destinations": [457, 467], "kind": "import", "line": 26, "outside_scope": [], "source": 398, "statement": "import eval.service.services as services_mod", "targets": ["eval.service.services"]}
-{"destinations": [639], "kind": "import", "line": 27, "outside_scope": [], "source": 398, "statement": "import tools.web_gateway as web_gateway_mod", "targets": ["tools.web_gateway"]}
+{"destinations": [640], "kind": "import", "line": 27, "outside_scope": [], "source": 398, "statement": "import tools.web_gateway as web_gateway_mod", "targets": ["tools.web_gateway"]}
 {"destinations": [457, 467], "kind": "from", "line": 28, "outside_scope": [], "source": 398, "statement": "from eval.service.services import label", "targets": ["eval.service.services", "eval.service.services.label"]}
 {"destinations": [390], "kind": "from", "line": 29, "outside_scope": [], "source": 398, "statement": "from eval.ckpt.git_state import STATE_DIRNAME", "targets": ["eval.ckpt.git_state", "eval.ckpt.git_state.STATE_DIRNAME"]}
 {"destinations": [434, 440], "kind": "from", "line": 30, "outside_scope": [], "source": 398, "statement": "from eval.run.integrity import PLATFORM_ROOT", "targets": ["eval.run.integrity", "eval.run.integrity.PLATFORM_ROOT"]}
@@ -3259,7 +3259,7 @@
 {"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 436, "statement": "import json", "targets": ["json"]}
 {"destinations": [], "kind": "from", "line": 40, "outside_scope": [], "source": 436, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
 {"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 436, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [636], "kind": "import", "line": 46, "outside_scope": [], "source": 436, "statement": "import tools.validate_harness as harness_validator", "targets": ["tools.validate_harness"]}
+{"destinations": [637], "kind": "import", "line": 46, "outside_scope": [], "source": 436, "statement": "import tools.validate_harness as harness_validator", "targets": ["tools.validate_harness"]}
 {"destinations": [395, 396], "kind": "from", "line": 68, "outside_scope": [], "source": 436, "statement": "from eval.containers.bun_runtime import validate_source", "targets": ["eval.containers.bun_runtime", "eval.containers.bun_runtime.validate_source"]}
 {"destinations": [434], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 437, "statement": "<implicit parent package initialization>", "targets": ["eval.run"]}
 {"destinations": [], "kind": "from", "line": 2, "outside_scope": [], "source": 437, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
@@ -3361,7 +3361,7 @@
 {"destinations": [457, 471], "kind": "from", "line": 24, "outside_scope": [], "source": 445, "statement": "from eval.service.unix_stepwise_relay import StepwiseRelay", "targets": ["eval.service.unix_stepwise_relay", "eval.service.unix_stepwise_relay.StepwiseRelay"]}
 {"destinations": [434, 447], "kind": "from", "line": 25, "outside_scope": [], "source": 445, "statement": "from eval.run import tool_relay as tool_relay_mod", "targets": ["eval.run", "eval.run.tool_relay"]}
 {"destinations": [434, 437, 442, 448], "kind": "from", "line": 26, "outside_scope": [], "source": 445, "statement": "from eval.run import chess_stepwise, trial_evidence, model_failure", "targets": ["eval.run", "eval.run.chess_stepwise", "eval.run.trial_evidence", "eval.run.model_failure"]}
-{"destinations": [639], "kind": "import", "line": 27, "outside_scope": [], "source": 445, "statement": "import tools.web_gateway as web_gateway_mod", "targets": ["tools.web_gateway"]}
+{"destinations": [640], "kind": "import", "line": 27, "outside_scope": [], "source": 445, "statement": "import tools.web_gateway as web_gateway_mod", "targets": ["tools.web_gateway"]}
 {"destinations": [390], "kind": "from", "line": 28, "outside_scope": [], "source": 445, "statement": "from eval.ckpt.git_state import STATE_DIRNAME", "targets": ["eval.ckpt.git_state", "eval.ckpt.git_state.STATE_DIRNAME"]}
 {"destinations": [434, 440], "kind": "from", "line": 29, "outside_scope": [], "source": 445, "statement": "from eval.run.integrity import PLATFORM_ROOT, diff, snapshot", "targets": ["eval.run.integrity", "eval.run.integrity.PLATFORM_ROOT", "eval.run.integrity.diff", "eval.run.integrity.snapshot"]}
 {"destinations": [395, 398], "kind": "from", "line": 34, "outside_scope": [], "source": 445, "statement": "from eval.containers.container_state import _run_one_container_state", "targets": ["eval.containers.container_state", "eval.containers.container_state._run_one_container_state"]}
@@ -3771,7 +3771,7 @@
 {"destinations": [395, 399], "kind": "import", "line": 22, "outside_scope": [], "source": 500, "statement": "import eval.containers.harness_runtime as harness_runtime", "targets": ["eval.containers.harness_runtime"]}
 {"destinations": [395, 407], "kind": "import", "line": 23, "outside_scope": [], "source": 500, "statement": "import eval.containers.sandbox as sandbox", "targets": ["eval.containers.sandbox"]}
 {"destinations": [488, 496], "kind": "from", "line": 24, "outside_scope": [], "source": 500, "statement": "from harnessgrad.config import current as current_config", "targets": ["harnessgrad.config", "harnessgrad.config.current"]}
-{"destinations": [639], "kind": "from", "line": 168, "outside_scope": [], "source": 500, "statement": "from tools.web_gateway import selected_providers", "targets": ["tools.web_gateway", "tools.web_gateway.selected_providers"]}
+{"destinations": [640], "kind": "from", "line": 168, "outside_scope": [], "source": 500, "statement": "from tools.web_gateway import selected_providers", "targets": ["tools.web_gateway", "tools.web_gateway.selected_providers"]}
 {"destinations": [488], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 501, "statement": "<implicit parent package initialization>", "targets": ["harnessgrad"]}
 {"destinations": [], "kind": "from", "line": 30, "outside_scope": [], "source": 501, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 501, "statement": "import copy", "targets": ["copy"]}
@@ -4347,6 +4347,9 @@
 {"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 587, "statement": "import subprocess", "targets": ["subprocess"]}
 {"destinations": [], "kind": "import", "line": 41, "outside_scope": [], "source": 587, "statement": "import sys", "targets": ["sys"]}
 {"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 587, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "import", "line": 166, "outside_scope": [], "source": 587, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 167, "outside_scope": [], "source": 587, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 198, "outside_scope": [], "source": 587, "statement": "import json", "targets": ["json"]}
 {"destinations": [], "kind": "from", "line": 73, "outside_scope": [], "source": 588, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 75, "outside_scope": [], "source": 588, "statement": "import argparse", "targets": ["argparse"]}
 {"destinations": [], "kind": "import", "line": 76, "outside_scope": [], "source": 588, "statement": "import json", "targets": ["json"]}
@@ -4673,178 +4676,184 @@
 {"destinations": [], "kind": "import", "line": 57, "outside_scope": [], "source": 624, "statement": "import sys", "targets": ["sys"]}
 {"destinations": [], "kind": "from", "line": 58, "outside_scope": [], "source": 624, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
 {"destinations": [], "kind": "from", "line": 59, "outside_scope": [], "source": 624, "statement": "from typing import Any", "targets": ["typing", "typing.Any"]}
-{"destinations": [], "kind": "from", "line": 36, "outside_scope": [], "source": 625, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 38, "outside_scope": [], "source": 625, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 625, "statement": "import hashlib", "targets": ["hashlib"]}
-{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 625, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 41, "outside_scope": [], "source": 625, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 625, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "from", "line": 41, "outside_scope": [], "source": 626, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 43, "outside_scope": [], "source": 626, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 626, "statement": "import concurrent.futures", "targets": ["concurrent.futures"]}
-{"destinations": [], "kind": "import", "line": 45, "outside_scope": [], "source": 626, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 46, "outside_scope": [], "source": 626, "statement": "import shutil", "targets": ["shutil"]}
-{"destinations": [], "kind": "import", "line": 47, "outside_scope": [], "source": 626, "statement": "import os", "targets": ["os"]}
-{"destinations": [], "kind": "import", "line": 48, "outside_scope": [], "source": 626, "statement": "import subprocess", "targets": ["subprocess"]}
-{"destinations": [], "kind": "import", "line": 49, "outside_scope": [], "source": 626, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 50, "outside_scope": [], "source": 626, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [], "kind": "import", "line": 51, "outside_scope": [], "source": 626, "statement": "import time", "targets": ["time"]}
-{"destinations": [], "kind": "from", "line": 52, "outside_scope": [], "source": 626, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [635], "kind": "import", "line": 58, "outside_scope": [], "source": 626, "statement": "import test_scope", "targets": ["test_scope"]}
-{"destinations": [], "kind": "from", "line": 28, "outside_scope": [], "source": 627, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 627, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 627, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 627, "statement": "import os", "targets": ["os"]}
-{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 627, "statement": "import pathlib", "targets": ["pathlib"]}
-{"destinations": [], "kind": "import", "line": 34, "outside_scope": [], "source": 627, "statement": "import re", "targets": ["re"]}
-{"destinations": [], "kind": "import", "line": 35, "outside_scope": [], "source": 627, "statement": "import shutil", "targets": ["shutil"]}
-{"destinations": [], "kind": "import", "line": 36, "outside_scope": [], "source": 627, "statement": "import subprocess", "targets": ["subprocess"]}
-{"destinations": [], "kind": "import", "line": 37, "outside_scope": [], "source": 627, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 38, "outside_scope": [], "source": 627, "statement": "import urllib.error", "targets": ["urllib.error"]}
-{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 627, "statement": "import urllib.request", "targets": ["urllib.request"]}
-{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 627, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [0, 264, 266], "kind": "from", "line": 544, "outside_scope": [], "source": 627, "statement": "from data.scaffolds.authored import load, module_source", "targets": ["data.scaffolds.authored", "data.scaffolds.authored.load", "data.scaffolds.authored.module_source"]}
+{"destinations": [], "kind": "from", "line": 20, "outside_scope": [], "source": 625, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 625, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 23, "outside_scope": [], "source": 625, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 24, "outside_scope": [], "source": 625, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 25, "outside_scope": [], "source": 625, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 625, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "from", "line": 36, "outside_scope": [], "source": 626, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 38, "outside_scope": [], "source": 626, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 626, "statement": "import hashlib", "targets": ["hashlib"]}
+{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 626, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 41, "outside_scope": [], "source": 626, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 626, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "from", "line": 41, "outside_scope": [], "source": 627, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 43, "outside_scope": [], "source": 627, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 627, "statement": "import concurrent.futures", "targets": ["concurrent.futures"]}
+{"destinations": [], "kind": "import", "line": 45, "outside_scope": [], "source": 627, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 46, "outside_scope": [], "source": 627, "statement": "import shutil", "targets": ["shutil"]}
+{"destinations": [], "kind": "import", "line": 47, "outside_scope": [], "source": 627, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 48, "outside_scope": [], "source": 627, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 49, "outside_scope": [], "source": 627, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 50, "outside_scope": [], "source": 627, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [], "kind": "import", "line": 51, "outside_scope": [], "source": 627, "statement": "import time", "targets": ["time"]}
+{"destinations": [], "kind": "from", "line": 52, "outside_scope": [], "source": 627, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [636], "kind": "import", "line": 58, "outside_scope": [], "source": 627, "statement": "import test_scope", "targets": ["test_scope"]}
 {"destinations": [], "kind": "from", "line": 28, "outside_scope": [], "source": 628, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 628, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 628, "statement": "import hashlib", "targets": ["hashlib"]}
-{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 628, "statement": "import io", "targets": ["io"]}
-{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 628, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 34, "outside_scope": [], "source": 628, "statement": "import pathlib", "targets": ["pathlib"]}
-{"destinations": [], "kind": "import", "line": 35, "outside_scope": [], "source": 628, "statement": "import zipfile", "targets": ["zipfile"]}
-{"destinations": [], "kind": "from", "line": 36, "outside_scope": [], "source": 628, "statement": "from collections import defaultdict", "targets": ["collections", "collections.defaultdict"]}
-{"destinations": [], "kind": "import", "line": 129, "outside_scope": [], "source": 628, "statement": "import random", "targets": ["random"]}
-{"destinations": [], "kind": "import", "line": 133, "outside_scope": [], "source": 628, "statement": "import random", "targets": ["random"]}
-{"destinations": [], "kind": "from", "line": 37, "outside_scope": [], "source": 629, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 629, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 629, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 41, "outside_scope": [], "source": 629, "statement": "import os", "targets": ["os"]}
-{"destinations": [], "kind": "import", "line": 42, "outside_scope": [], "source": 629, "statement": "import re", "targets": ["re"]}
-{"destinations": [], "kind": "import", "line": 43, "outside_scope": [], "source": 629, "statement": "import shutil", "targets": ["shutil"]}
-{"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 629, "statement": "import signal", "targets": ["signal"]}
-{"destinations": [], "kind": "import", "line": 45, "outside_scope": [], "source": 629, "statement": "import subprocess", "targets": ["subprocess"]}
-{"destinations": [], "kind": "import", "line": 46, "outside_scope": [], "source": 629, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 47, "outside_scope": [], "source": 629, "statement": "import threading", "targets": ["threading"]}
-{"destinations": [], "kind": "import", "line": 48, "outside_scope": [], "source": 629, "statement": "import urllib.request", "targets": ["urllib.request"]}
-{"destinations": [], "kind": "import", "line": 49, "outside_scope": [], "source": 629, "statement": "import time", "targets": ["time"]}
-{"destinations": [], "kind": "from", "line": 50, "outside_scope": [], "source": 629, "statement": "from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer", "targets": ["http.server", "http.server.BaseHTTPRequestHandler", "http.server.ThreadingHTTPServer"]}
-{"destinations": [], "kind": "from", "line": 51, "outside_scope": [], "source": 629, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "from", "line": 52, "outside_scope": [], "source": 629, "statement": "from urllib.parse import urlparse", "targets": ["urllib.parse", "urllib.parse.urlparse"]}
-{"destinations": [0, 264, 369], "kind": "import", "line": 59, "outside_scope": [], "source": 629, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
-{"destinations": [395, 397], "kind": "import", "line": 60, "outside_scope": [], "source": 629, "statement": "import eval.containers.container as container", "targets": ["eval.containers.container"]}
-{"destinations": [395, 399], "kind": "import", "line": 61, "outside_scope": [], "source": 629, "statement": "import eval.containers.harness_runtime as harness_runtime", "targets": ["eval.containers.harness_runtime"]}
-{"destinations": [], "kind": "import", "line": 179, "outside_scope": [], "source": 629, "statement": "import importlib", "targets": ["importlib"]}
-{"destinations": [605], "kind": "literal_dynamic", "line": 180, "outside_scope": [], "source": 629, "statement": "importlib.import_module(\"tools.improver\")", "targets": ["tools.improver"]}
-{"destinations": [], "kind": "import", "line": 250, "outside_scope": [], "source": 629, "statement": "import importlib", "targets": ["importlib"]}
-{"destinations": [418, 423], "kind": "from", "line": 1397, "outside_scope": [], "source": 629, "statement": "from eval.observe.tracing import first_object as _trace_first_object", "targets": ["eval.observe.tracing", "eval.observe.tracing.first_object"]}
-{"destinations": [], "kind": "from", "line": 1614, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1622, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1626, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1633, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1643, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1648, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1658, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1667, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 1684, "outside_scope": [], "source": 629, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
-{"destinations": [], "kind": "from", "line": 69, "outside_scope": [], "source": 630, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 71, "outside_scope": [], "source": 630, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 72, "outside_scope": [], "source": 630, "statement": "import ast", "targets": ["ast"]}
-{"destinations": [], "kind": "import", "line": 73, "outside_scope": [], "source": 630, "statement": "import importlib", "targets": ["importlib"]}
-{"destinations": [], "kind": "import", "line": 74, "outside_scope": [], "source": 630, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 75, "outside_scope": [], "source": 630, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "from", "line": 76, "outside_scope": [], "source": 630, "statement": "from dataclasses import asdict, dataclass", "targets": ["dataclasses", "dataclasses.asdict", "dataclasses.dataclass"]}
-{"destinations": [], "kind": "from", "line": 77, "outside_scope": [], "source": 630, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "from", "line": 78, "outside_scope": [], "source": 630, "statement": "from types import SimpleNamespace", "targets": ["types", "types.SimpleNamespace"]}
-{"destinations": [0, 264, 369], "kind": "import", "line": 83, "outside_scope": [], "source": 630, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
-{"destinations": [488, 508], "kind": "from", "line": 84, "outside_scope": [], "source": 630, "statement": "from harnessgrad.paths import DataRootNotConfigured", "targets": ["harnessgrad.paths", "harnessgrad.paths.DataRootNotConfigured"]}
-{"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 631, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 631, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 45, "outside_scope": [], "source": 631, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 46, "outside_scope": [], "source": 631, "statement": "import statistics", "targets": ["statistics"]}
-{"destinations": [], "kind": "import", "line": 47, "outside_scope": [], "source": 631, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "from", "line": 48, "outside_scope": [], "source": 631, "statement": "from datetime import datetime, timezone", "targets": ["datetime", "datetime.datetime", "datetime.timezone"]}
-{"destinations": [], "kind": "from", "line": 49, "outside_scope": [], "source": 631, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [0, 264, 369], "kind": "import", "line": 56, "outside_scope": [], "source": 631, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
-{"destinations": [], "kind": "from", "line": 46, "outside_scope": [], "source": 632, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 48, "outside_scope": [], "source": 632, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 49, "outside_scope": [], "source": 632, "statement": "import hashlib", "targets": ["hashlib"]}
-{"destinations": [], "kind": "import", "line": 50, "outside_scope": [], "source": 632, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 51, "outside_scope": [], "source": 632, "statement": "import math", "targets": ["math"]}
-{"destinations": [], "kind": "import", "line": 52, "outside_scope": [], "source": 632, "statement": "import os", "targets": ["os"]}
-{"destinations": [], "kind": "import", "line": 53, "outside_scope": [], "source": 632, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 54, "outside_scope": [], "source": 632, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [], "kind": "import", "line": 55, "outside_scope": [], "source": 632, "statement": "import time", "targets": ["time"]}
-{"destinations": [], "kind": "from", "line": 56, "outside_scope": [], "source": 632, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [390], "kind": "from", "line": 61, "outside_scope": [], "source": 632, "statement": "from eval.ckpt.git_state import commit_state, stage_workspace", "targets": ["eval.ckpt.git_state", "eval.ckpt.git_state.commit_state", "eval.ckpt.git_state.stage_workspace"]}
-{"destinations": [0, 264, 369], "kind": "from", "line": 62, "outside_scope": [], "source": 632, "statement": "from data.scaffolds import registry", "targets": ["data.scaffolds", "data.scaffolds.registry"]}
-{"destinations": [377], "kind": "from", "line": 63, "outside_scope": [], "source": 632, "statement": "from driver import load_env", "targets": ["driver", "driver.load_env"]}
-{"destinations": [418, 419], "kind": "from", "line": 64, "outside_scope": [], "source": 632, "statement": "from eval.observe.console import CONSOLE as console", "targets": ["eval.observe.console", "eval.observe.console.CONSOLE"]}
-{"destinations": [434, 445], "kind": "from", "line": 65, "outside_scope": [], "source": 632, "statement": "from eval.run.runner import evaluate", "targets": ["eval.run.runner", "eval.run.runner.evaluate"]}
-{"destinations": [434, 448], "kind": "from", "line": 66, "outside_scope": [], "source": 632, "statement": "from eval.run import trial_evidence", "targets": ["eval.run", "eval.run.trial_evidence"]}
-{"destinations": [434, 444], "kind": "from", "line": 67, "outside_scope": [], "source": 632, "statement": "from eval.run.repeated_trials import immutable_json", "targets": ["eval.run.repeated_trials", "eval.run.repeated_trials.immutable_json"]}
-{"destinations": [488, 512], "kind": "from", "line": 68, "outside_scope": [], "source": 632, "statement": "from harnessgrad.records import _require_untampered", "targets": ["harnessgrad.records", "harnessgrad.records._require_untampered"]}
-{"destinations": [], "kind": "import", "line": 3, "outside_scope": [], "source": 633, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 4, "outside_scope": [], "source": 633, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "from", "line": 5, "outside_scope": [], "source": 633, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "import", "line": 6, "outside_scope": [], "source": 633, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [0, 9, 212], "kind": "from", "line": 9, "outside_scope": [], "source": 633, "statement": "from data.datasets import tau3_bench", "targets": ["data.datasets", "data.datasets.tau3_bench"]}
-{"destinations": [434, 444], "kind": "from", "line": 10, "outside_scope": [], "source": 633, "statement": "from eval.run.repeated_trials import aggregate", "targets": ["eval.run.repeated_trials", "eval.run.repeated_trials.aggregate"]}
-{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 634, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 28, "outside_scope": [], "source": 634, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 634, "statement": "import pathlib", "targets": ["pathlib"]}
-{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 634, "statement": "import re", "targets": ["re"]}
-{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 634, "statement": "import subprocess", "targets": ["subprocess"]}
-{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 634, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 634, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [], "kind": "from", "line": 38, "outside_scope": [], "source": 635, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "from", "line": 40, "outside_scope": [], "source": 635, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "import", "line": 76, "outside_scope": [], "source": 635, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [0, 264, 369], "kind": "from", "line": 78, "outside_scope": [], "source": 635, "statement": "from data.scaffolds import registry", "targets": ["data.scaffolds", "data.scaffolds.registry"]}
-{"destinations": [], "kind": "from", "line": 12, "outside_scope": [], "source": 636, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 636, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "from", "line": 15, "outside_scope": [], "source": 636, "statement": "from contextlib import contextmanager", "targets": ["contextlib", "contextlib.contextmanager"]}
-{"destinations": [], "kind": "import", "line": 16, "outside_scope": [], "source": 636, "statement": "import hashlib", "targets": ["hashlib"]}
-{"destinations": [], "kind": "import", "line": 17, "outside_scope": [], "source": 636, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 18, "outside_scope": [], "source": 636, "statement": "import shutil", "targets": ["shutil"]}
-{"destinations": [], "kind": "import", "line": 19, "outside_scope": [], "source": 636, "statement": "import stat", "targets": ["stat"]}
-{"destinations": [], "kind": "import", "line": 20, "outside_scope": [], "source": 636, "statement": "import subprocess", "targets": ["subprocess"]}
-{"destinations": [], "kind": "import", "line": 21, "outside_scope": [], "source": 636, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 636, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [], "kind": "from", "line": 23, "outside_scope": [], "source": 636, "statement": "from pathlib import Path, PureWindowsPath", "targets": ["pathlib", "pathlib.Path", "pathlib.PureWindowsPath"]}
-{"destinations": [391], "kind": "from", "line": 271, "outside_scope": [], "source": 636, "statement": "from eval.ckpt.source_tree import BUN_GENERATED, runtime_spec", "targets": ["eval.ckpt.source_tree", "eval.ckpt.source_tree.BUN_GENERATED", "eval.ckpt.source_tree.runtime_spec"]}
-{"destinations": [395, 407], "kind": "from", "line": 414, "outside_scope": [], "source": 636, "statement": "from eval.containers import sandbox", "targets": ["eval.containers", "eval.containers.sandbox"]}
-{"destinations": [], "kind": "from", "line": 27, "outside_scope": [], "source": 637, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 637, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 637, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 637, "statement": "import subprocess", "targets": ["subprocess"]}
-{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 637, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 637, "statement": "import tempfile", "targets": ["tempfile"]}
-{"destinations": [], "kind": "from", "line": 34, "outside_scope": [], "source": 637, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [570], "kind": "from", "line": 39, "outside_scope": [], "source": 637, "statement": "from methods.protocol import PLATFORM_API_VERSION", "targets": ["methods.protocol", "methods.protocol.PLATFORM_API_VERSION"]}
-{"destinations": [0, 264, 369], "kind": "import", "line": 68, "outside_scope": [], "source": 637, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
-{"destinations": [], "kind": "import", "line": 242, "outside_scope": [], "source": 637, "statement": "import tempfile as tf", "targets": ["tempfile"]}
-{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 638, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 28, "outside_scope": [], "source": 638, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 638, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 638, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "from", "line": 31, "outside_scope": [], "source": 638, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [418, 419], "kind": "from", "line": 36, "outside_scope": [], "source": 638, "statement": "from eval.observe.console import CONSOLE as console", "targets": ["eval.observe.console", "eval.observe.console.CONSOLE"]}
-{"destinations": [488, 521], "kind": "from", "line": 37, "outside_scope": [], "source": 638, "statement": "from harnessgrad.store import certify", "targets": ["harnessgrad.store", "harnessgrad.store.certify"]}
-{"destinations": [], "kind": "from", "line": 9, "outside_scope": [], "source": 639, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 11, "outside_scope": [], "source": 639, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 12, "outside_scope": [], "source": 639, "statement": "import asyncio", "targets": ["asyncio"]}
-{"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 639, "statement": "import http.client", "targets": ["http.client"]}
-{"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 639, "statement": "import ipaddress", "targets": ["ipaddress"]}
-{"destinations": [], "kind": "import", "line": 15, "outside_scope": [], "source": 639, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 16, "outside_scope": [], "source": 639, "statement": "import os", "targets": ["os"]}
-{"destinations": [], "kind": "import", "line": 17, "outside_scope": [], "source": 639, "statement": "import socket", "targets": ["socket"]}
-{"destinations": [], "kind": "import", "line": 18, "outside_scope": [], "source": 639, "statement": "import ssl", "targets": ["ssl"]}
-{"destinations": [], "kind": "import", "line": 19, "outside_scope": [], "source": 639, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "import", "line": 20, "outside_scope": [], "source": 639, "statement": "import threading", "targets": ["threading"]}
-{"destinations": [], "kind": "import", "line": 21, "outside_scope": [], "source": 639, "statement": "import time", "targets": ["time"]}
-{"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 639, "statement": "import urllib.error", "targets": ["urllib.error"]}
-{"destinations": [], "kind": "import", "line": 23, "outside_scope": [], "source": 639, "statement": "import urllib.parse", "targets": ["urllib.parse"]}
-{"destinations": [], "kind": "import", "line": 24, "outside_scope": [], "source": 639, "statement": "import urllib.request", "targets": ["urllib.request"]}
-{"destinations": [], "kind": "from", "line": 25, "outside_scope": [], "source": 639, "statement": "from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer", "targets": ["http.server", "http.server.BaseHTTPRequestHandler", "http.server.ThreadingHTTPServer"]}
-{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 639, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "import", "line": 236, "outside_scope": [], "source": 639, "statement": "import crawl4ai", "targets": ["crawl4ai"]}
-{"destinations": [], "kind": "from", "line": 389, "outside_scope": [], "source": 639, "statement": "from crawl4ai import AsyncWebCrawler", "targets": ["crawl4ai", "crawl4ai.AsyncWebCrawler"]}
+{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 628, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 628, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 628, "statement": "import pathlib", "targets": ["pathlib"]}
+{"destinations": [], "kind": "import", "line": 34, "outside_scope": [], "source": 628, "statement": "import re", "targets": ["re"]}
+{"destinations": [], "kind": "import", "line": 35, "outside_scope": [], "source": 628, "statement": "import shutil", "targets": ["shutil"]}
+{"destinations": [], "kind": "import", "line": 36, "outside_scope": [], "source": 628, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 37, "outside_scope": [], "source": 628, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 38, "outside_scope": [], "source": 628, "statement": "import urllib.error", "targets": ["urllib.error"]}
+{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 628, "statement": "import urllib.request", "targets": ["urllib.request"]}
+{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 628, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [0, 264, 266], "kind": "from", "line": 544, "outside_scope": [], "source": 628, "statement": "from data.scaffolds.authored import load, module_source", "targets": ["data.scaffolds.authored", "data.scaffolds.authored.load", "data.scaffolds.authored.module_source"]}
+{"destinations": [], "kind": "from", "line": 28, "outside_scope": [], "source": 629, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 629, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 629, "statement": "import hashlib", "targets": ["hashlib"]}
+{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 629, "statement": "import io", "targets": ["io"]}
+{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 629, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 34, "outside_scope": [], "source": 629, "statement": "import pathlib", "targets": ["pathlib"]}
+{"destinations": [], "kind": "import", "line": 35, "outside_scope": [], "source": 629, "statement": "import zipfile", "targets": ["zipfile"]}
+{"destinations": [], "kind": "from", "line": 36, "outside_scope": [], "source": 629, "statement": "from collections import defaultdict", "targets": ["collections", "collections.defaultdict"]}
+{"destinations": [], "kind": "import", "line": 129, "outside_scope": [], "source": 629, "statement": "import random", "targets": ["random"]}
+{"destinations": [], "kind": "import", "line": 133, "outside_scope": [], "source": 629, "statement": "import random", "targets": ["random"]}
+{"destinations": [], "kind": "from", "line": 37, "outside_scope": [], "source": 630, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 630, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 630, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 41, "outside_scope": [], "source": 630, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 42, "outside_scope": [], "source": 630, "statement": "import re", "targets": ["re"]}
+{"destinations": [], "kind": "import", "line": 43, "outside_scope": [], "source": 630, "statement": "import shutil", "targets": ["shutil"]}
+{"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 630, "statement": "import signal", "targets": ["signal"]}
+{"destinations": [], "kind": "import", "line": 45, "outside_scope": [], "source": 630, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 46, "outside_scope": [], "source": 630, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 47, "outside_scope": [], "source": 630, "statement": "import threading", "targets": ["threading"]}
+{"destinations": [], "kind": "import", "line": 48, "outside_scope": [], "source": 630, "statement": "import urllib.request", "targets": ["urllib.request"]}
+{"destinations": [], "kind": "import", "line": 49, "outside_scope": [], "source": 630, "statement": "import time", "targets": ["time"]}
+{"destinations": [], "kind": "from", "line": 50, "outside_scope": [], "source": 630, "statement": "from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer", "targets": ["http.server", "http.server.BaseHTTPRequestHandler", "http.server.ThreadingHTTPServer"]}
+{"destinations": [], "kind": "from", "line": 51, "outside_scope": [], "source": 630, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "from", "line": 52, "outside_scope": [], "source": 630, "statement": "from urllib.parse import urlparse", "targets": ["urllib.parse", "urllib.parse.urlparse"]}
+{"destinations": [0, 264, 369], "kind": "import", "line": 59, "outside_scope": [], "source": 630, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
+{"destinations": [395, 397], "kind": "import", "line": 60, "outside_scope": [], "source": 630, "statement": "import eval.containers.container as container", "targets": ["eval.containers.container"]}
+{"destinations": [395, 399], "kind": "import", "line": 61, "outside_scope": [], "source": 630, "statement": "import eval.containers.harness_runtime as harness_runtime", "targets": ["eval.containers.harness_runtime"]}
+{"destinations": [], "kind": "import", "line": 179, "outside_scope": [], "source": 630, "statement": "import importlib", "targets": ["importlib"]}
+{"destinations": [605], "kind": "literal_dynamic", "line": 180, "outside_scope": [], "source": 630, "statement": "importlib.import_module(\"tools.improver\")", "targets": ["tools.improver"]}
+{"destinations": [], "kind": "import", "line": 250, "outside_scope": [], "source": 630, "statement": "import importlib", "targets": ["importlib"]}
+{"destinations": [418, 423], "kind": "from", "line": 1397, "outside_scope": [], "source": 630, "statement": "from eval.observe.tracing import first_object as _trace_first_object", "targets": ["eval.observe.tracing", "eval.observe.tracing.first_object"]}
+{"destinations": [], "kind": "from", "line": 1614, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1622, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1626, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1633, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1643, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1648, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1658, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1667, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 1684, "outside_scope": [], "source": 630, "statement": "from urllib.parse import parse_qs", "targets": ["urllib.parse", "urllib.parse.parse_qs"]}
+{"destinations": [], "kind": "from", "line": 69, "outside_scope": [], "source": 631, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 71, "outside_scope": [], "source": 631, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 72, "outside_scope": [], "source": 631, "statement": "import ast", "targets": ["ast"]}
+{"destinations": [], "kind": "import", "line": 73, "outside_scope": [], "source": 631, "statement": "import importlib", "targets": ["importlib"]}
+{"destinations": [], "kind": "import", "line": 74, "outside_scope": [], "source": 631, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 75, "outside_scope": [], "source": 631, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "from", "line": 76, "outside_scope": [], "source": 631, "statement": "from dataclasses import asdict, dataclass", "targets": ["dataclasses", "dataclasses.asdict", "dataclasses.dataclass"]}
+{"destinations": [], "kind": "from", "line": 77, "outside_scope": [], "source": 631, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "from", "line": 78, "outside_scope": [], "source": 631, "statement": "from types import SimpleNamespace", "targets": ["types", "types.SimpleNamespace"]}
+{"destinations": [0, 264, 369], "kind": "import", "line": 83, "outside_scope": [], "source": 631, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
+{"destinations": [488, 508], "kind": "from", "line": 84, "outside_scope": [], "source": 631, "statement": "from harnessgrad.paths import DataRootNotConfigured", "targets": ["harnessgrad.paths", "harnessgrad.paths.DataRootNotConfigured"]}
+{"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 632, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 44, "outside_scope": [], "source": 632, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 45, "outside_scope": [], "source": 632, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 46, "outside_scope": [], "source": 632, "statement": "import statistics", "targets": ["statistics"]}
+{"destinations": [], "kind": "import", "line": 47, "outside_scope": [], "source": 632, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "from", "line": 48, "outside_scope": [], "source": 632, "statement": "from datetime import datetime, timezone", "targets": ["datetime", "datetime.datetime", "datetime.timezone"]}
+{"destinations": [], "kind": "from", "line": 49, "outside_scope": [], "source": 632, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [0, 264, 369], "kind": "import", "line": 56, "outside_scope": [], "source": 632, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
+{"destinations": [], "kind": "from", "line": 46, "outside_scope": [], "source": 633, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 48, "outside_scope": [], "source": 633, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 49, "outside_scope": [], "source": 633, "statement": "import hashlib", "targets": ["hashlib"]}
+{"destinations": [], "kind": "import", "line": 50, "outside_scope": [], "source": 633, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 51, "outside_scope": [], "source": 633, "statement": "import math", "targets": ["math"]}
+{"destinations": [], "kind": "import", "line": 52, "outside_scope": [], "source": 633, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 53, "outside_scope": [], "source": 633, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 54, "outside_scope": [], "source": 633, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [], "kind": "import", "line": 55, "outside_scope": [], "source": 633, "statement": "import time", "targets": ["time"]}
+{"destinations": [], "kind": "from", "line": 56, "outside_scope": [], "source": 633, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [390], "kind": "from", "line": 61, "outside_scope": [], "source": 633, "statement": "from eval.ckpt.git_state import commit_state, stage_workspace", "targets": ["eval.ckpt.git_state", "eval.ckpt.git_state.commit_state", "eval.ckpt.git_state.stage_workspace"]}
+{"destinations": [0, 264, 369], "kind": "from", "line": 62, "outside_scope": [], "source": 633, "statement": "from data.scaffolds import registry", "targets": ["data.scaffolds", "data.scaffolds.registry"]}
+{"destinations": [377], "kind": "from", "line": 63, "outside_scope": [], "source": 633, "statement": "from driver import load_env", "targets": ["driver", "driver.load_env"]}
+{"destinations": [418, 419], "kind": "from", "line": 64, "outside_scope": [], "source": 633, "statement": "from eval.observe.console import CONSOLE as console", "targets": ["eval.observe.console", "eval.observe.console.CONSOLE"]}
+{"destinations": [434, 445], "kind": "from", "line": 65, "outside_scope": [], "source": 633, "statement": "from eval.run.runner import evaluate", "targets": ["eval.run.runner", "eval.run.runner.evaluate"]}
+{"destinations": [434, 448], "kind": "from", "line": 66, "outside_scope": [], "source": 633, "statement": "from eval.run import trial_evidence", "targets": ["eval.run", "eval.run.trial_evidence"]}
+{"destinations": [434, 444], "kind": "from", "line": 67, "outside_scope": [], "source": 633, "statement": "from eval.run.repeated_trials import immutable_json", "targets": ["eval.run.repeated_trials", "eval.run.repeated_trials.immutable_json"]}
+{"destinations": [488, 512], "kind": "from", "line": 68, "outside_scope": [], "source": 633, "statement": "from harnessgrad.records import _require_untampered", "targets": ["harnessgrad.records", "harnessgrad.records._require_untampered"]}
+{"destinations": [], "kind": "import", "line": 3, "outside_scope": [], "source": 634, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 4, "outside_scope": [], "source": 634, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "from", "line": 5, "outside_scope": [], "source": 634, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "import", "line": 6, "outside_scope": [], "source": 634, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [0, 9, 212], "kind": "from", "line": 9, "outside_scope": [], "source": 634, "statement": "from data.datasets import tau3_bench", "targets": ["data.datasets", "data.datasets.tau3_bench"]}
+{"destinations": [434, 444], "kind": "from", "line": 10, "outside_scope": [], "source": 634, "statement": "from eval.run.repeated_trials import aggregate", "targets": ["eval.run.repeated_trials", "eval.run.repeated_trials.aggregate"]}
+{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 635, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 28, "outside_scope": [], "source": 635, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 635, "statement": "import pathlib", "targets": ["pathlib"]}
+{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 635, "statement": "import re", "targets": ["re"]}
+{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 635, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 635, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 635, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [], "kind": "from", "line": 38, "outside_scope": [], "source": 636, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "from", "line": 40, "outside_scope": [], "source": 636, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "import", "line": 76, "outside_scope": [], "source": 636, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [0, 264, 369], "kind": "from", "line": 78, "outside_scope": [], "source": 636, "statement": "from data.scaffolds import registry", "targets": ["data.scaffolds", "data.scaffolds.registry"]}
+{"destinations": [], "kind": "from", "line": 12, "outside_scope": [], "source": 637, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 637, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "from", "line": 15, "outside_scope": [], "source": 637, "statement": "from contextlib import contextmanager", "targets": ["contextlib", "contextlib.contextmanager"]}
+{"destinations": [], "kind": "import", "line": 16, "outside_scope": [], "source": 637, "statement": "import hashlib", "targets": ["hashlib"]}
+{"destinations": [], "kind": "import", "line": 17, "outside_scope": [], "source": 637, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 18, "outside_scope": [], "source": 637, "statement": "import shutil", "targets": ["shutil"]}
+{"destinations": [], "kind": "import", "line": 19, "outside_scope": [], "source": 637, "statement": "import stat", "targets": ["stat"]}
+{"destinations": [], "kind": "import", "line": 20, "outside_scope": [], "source": 637, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 21, "outside_scope": [], "source": 637, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 637, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [], "kind": "from", "line": 23, "outside_scope": [], "source": 637, "statement": "from pathlib import Path, PureWindowsPath", "targets": ["pathlib", "pathlib.Path", "pathlib.PureWindowsPath"]}
+{"destinations": [391], "kind": "from", "line": 271, "outside_scope": [], "source": 637, "statement": "from eval.ckpt.source_tree import BUN_GENERATED, runtime_spec", "targets": ["eval.ckpt.source_tree", "eval.ckpt.source_tree.BUN_GENERATED", "eval.ckpt.source_tree.runtime_spec"]}
+{"destinations": [395, 407], "kind": "from", "line": 414, "outside_scope": [], "source": 637, "statement": "from eval.containers import sandbox", "targets": ["eval.containers", "eval.containers.sandbox"]}
+{"destinations": [], "kind": "from", "line": 27, "outside_scope": [], "source": 638, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 638, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 638, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 638, "statement": "import subprocess", "targets": ["subprocess"]}
+{"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 638, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 638, "statement": "import tempfile", "targets": ["tempfile"]}
+{"destinations": [], "kind": "from", "line": 34, "outside_scope": [], "source": 638, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [570], "kind": "from", "line": 39, "outside_scope": [], "source": 638, "statement": "from methods.protocol import PLATFORM_API_VERSION", "targets": ["methods.protocol", "methods.protocol.PLATFORM_API_VERSION"]}
+{"destinations": [0, 264, 369], "kind": "import", "line": 68, "outside_scope": [], "source": 638, "statement": "import data.scaffolds.registry as registry", "targets": ["data.scaffolds.registry"]}
+{"destinations": [], "kind": "import", "line": 242, "outside_scope": [], "source": 638, "statement": "import tempfile as tf", "targets": ["tempfile"]}
+{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 639, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 28, "outside_scope": [], "source": 639, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 639, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 639, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "from", "line": 31, "outside_scope": [], "source": 639, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [418, 419], "kind": "from", "line": 36, "outside_scope": [], "source": 639, "statement": "from eval.observe.console import CONSOLE as console", "targets": ["eval.observe.console", "eval.observe.console.CONSOLE"]}
+{"destinations": [488, 521], "kind": "from", "line": 37, "outside_scope": [], "source": 639, "statement": "from harnessgrad.store import certify", "targets": ["harnessgrad.store", "harnessgrad.store.certify"]}
+{"destinations": [], "kind": "from", "line": 9, "outside_scope": [], "source": 640, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 11, "outside_scope": [], "source": 640, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 12, "outside_scope": [], "source": 640, "statement": "import asyncio", "targets": ["asyncio"]}
+{"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 640, "statement": "import http.client", "targets": ["http.client"]}
+{"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 640, "statement": "import ipaddress", "targets": ["ipaddress"]}
+{"destinations": [], "kind": "import", "line": 15, "outside_scope": [], "source": 640, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 16, "outside_scope": [], "source": 640, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 17, "outside_scope": [], "source": 640, "statement": "import socket", "targets": ["socket"]}
+{"destinations": [], "kind": "import", "line": 18, "outside_scope": [], "source": 640, "statement": "import ssl", "targets": ["ssl"]}
+{"destinations": [], "kind": "import", "line": 19, "outside_scope": [], "source": 640, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "import", "line": 20, "outside_scope": [], "source": 640, "statement": "import threading", "targets": ["threading"]}
+{"destinations": [], "kind": "import", "line": 21, "outside_scope": [], "source": 640, "statement": "import time", "targets": ["time"]}
+{"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 640, "statement": "import urllib.error", "targets": ["urllib.error"]}
+{"destinations": [], "kind": "import", "line": 23, "outside_scope": [], "source": 640, "statement": "import urllib.parse", "targets": ["urllib.parse"]}
+{"destinations": [], "kind": "import", "line": 24, "outside_scope": [], "source": 640, "statement": "import urllib.request", "targets": ["urllib.request"]}
+{"destinations": [], "kind": "from", "line": 25, "outside_scope": [], "source": 640, "statement": "from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer", "targets": ["http.server", "http.server.BaseHTTPRequestHandler", "http.server.ThreadingHTTPServer"]}
+{"destinations": [], "kind": "from", "line": 26, "outside_scope": [], "source": 640, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "import", "line": 236, "outside_scope": [], "source": 640, "statement": "import crawl4ai", "targets": ["crawl4ai"]}
+{"destinations": [], "kind": "from", "line": 389, "outside_scope": [], "source": 640, "statement": "from crawl4ai import AsyncWebCrawler", "targets": ["crawl4ai", "crawl4ai.AsyncWebCrawler"]}
