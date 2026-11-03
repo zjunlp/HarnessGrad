@@ -280,6 +280,9 @@ class RuntimeConfig:
 class StorageConfig:
     """Where a run's own records and a method's runs are found."""
 
+    data_root: str | None = _var(
+        "HG_DATA_ROOT", None,
+        "Shared external dataset directory; configure explicitly before accessing external data.", kind="opt")
     run_root: str | None = _var(
         "HG_RUN_ROOT", None,
         "Where a reader-adapter finds a method's own runs.", kind="opt")

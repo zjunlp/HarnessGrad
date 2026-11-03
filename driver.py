@@ -198,18 +198,9 @@ def load_env(path: Path) -> dict:
     Real environment variables win: an explicit `HG_AGENT_MODEL=... ./driver.py`
     must not be silently overridden by a file on disk.
     """
-    if not path.exists():
-        return {}
-    loaded = {}
-    for raw in path.read_text().splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key, value = key.strip(), value.strip().strip("'\"")
-        if not key:
-            continue
-        loaded[key] = value
+    from harnessgrad.env_file import read_env_file
+    loaded = read_env_file(path)
+    for key, value in loaded.items():
         os.environ.setdefault(key, value)
     # **`.env` is now part of the process environment, so the configuration snapshot
     # has to be taken after this.** `harnessgrad/config` may already have been imported

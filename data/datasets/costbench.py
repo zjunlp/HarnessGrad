@@ -8,25 +8,19 @@ from collections.abc import Mapping
 from functools import lru_cache
 import hashlib
 import json
-import os
 from pathlib import Path
 import sys
 
-from data.scaffolds import roots
+from harnessgrad.paths import configured_path, dataset_root
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
 SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'costbench'
-#: The conventional dataset root on this machine, as an absolute path -- the same shape
-#: every other adapter uses. It used to be `Path(__file__).resolve().parents[3] /
-#: 'datasets/costbench'`, which resolves to `<parent of the repository>/datasets/...` and is
-#: right only on the one checkout that path was written in.
-DATASET_ROOT = roots.dataset_root(
-    "costbench",
-    os.environ.get("HG_COSTBENCH_DATA", "/mnt/20t/xubuqiang/datasets/costbench"))
+
+DATASET_ROOT = dataset_root('costbench')
 PREPARED = DATASET_ROOT / 'prepared-v1'
-RUNTIME = Path(os.environ.get('HG_COSTBENCH_RUNTIME', DATASET_ROOT / 'runtime'))
+RUNTIME = configured_path('HG_DATA_COSTBENCH_RUNTIME', DATASET_ROOT / 'runtime')
 REVISION = '6424069f3f773ade076bcedbed302ed47cfb1837'
 ARCHIVE_SHA256 = 'b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844'
 MANIFEST_SHA256 = '7bcc4ba0bc653229b5536f625d797217b3b48f31764314d9d2a397e2e8332587'

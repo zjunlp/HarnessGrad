@@ -30,7 +30,7 @@ from data.scaffolds import registry
 from policy_assertions import EXEC_POLICY_FIELDS, assert_policy_refusal
 
 ROOT = Path(__file__).resolve().parents[2]
-TB_ROOT = Path(os.environ.get("HG_TERMINAL_BENCH",
+TB_ROOT = Path(os.environ.get("HG_DATA_TERMINAL_BENCH",
                               "/mnt/20t/xubuqiang/datasets/terminal-bench"))
 
 
@@ -191,7 +191,7 @@ def test_the_importer_attempts_a_mirror_and_reports_what_it_tried(tmp_path):
 
 def test_both_checkout_layouts_are_found(tmp_path):
     """Terminal-Bench 2 puts tasks at the repository root; **2.1** puts them under
-    `tasks/`. Both are found, so `HG_TERMINAL_BENCH` can point at either.
+    `tasks/`. Both are found, so `HG_DATA_TERMINAL_BENCH` can point at either.
 
     Built as a synthetic checkout rather than by requiring both clones to be present:
     the property is "the adapter looks in both places", and that is testable with two

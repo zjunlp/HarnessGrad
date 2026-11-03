@@ -128,10 +128,10 @@ def test_official_split_keeps_all_150_tasks_in_eval(prepared):
 
 
 def test_split_inventory_reports_none_for_a_provisioned_strongreject(prepared):
-    from tools.split_inventory import _row
-    row = _row("strongreject")
-    assert (row["state"], row["source"], row["tasks"]) == ("none", "none", 150)
-    assert row["train"] == row["eval"] == "-"
+    from tools.split_inventory import DASH, _host_row
+    row = _host_row("strongreject")
+    assert (row.state, row.source, row.tasks) == ("none", "none", "150")
+    assert row.train == row.eval == DASH
 
 
 @pytest.mark.parametrize("side", ["train", "eval"])

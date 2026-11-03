@@ -1,13 +1,46 @@
 #!/usr/bin/env python3
 """Trusted after-actor check for upstream QA adapters; gold is not actor-visible."""
 from __future__ import annotations
+import sys
+
+if __name__ == '__main__' and not sys.flags.isolated:
+    raise SystemExit('Native QA checks require Python isolated mode (-I)')
+
 import hashlib
+from importlib.machinery import SourceFileLoader
+from importlib.util import spec_from_file_location
 import json
 import math
-import sys
 from pathlib import Path
+from types import ModuleType
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Only declared, restored sources may supply this scorer's package. In
+# particular, a candidate-created __init__.py or .pyc must never be executed.
+class _ScorerSourceLoader(SourceFileLoader):
+    def get_code(self, fullname):
+        return self.source_to_code(self.get_data(self.path), self.path)
+
+
+class _ScorerModules:
+    modules = frozenset({'scoring', 'metrics', 'bbeh_official', 'office_reward', 'math_grade'})
+
+    def find_spec(self, fullname, path=None, target=None):
+        if not fullname.startswith('native_qa.'):
+            return None
+        name = fullname.removeprefix('native_qa.')
+        if name not in self.modules:
+            raise ModuleNotFoundError(f'undeclared native QA scorer module: {fullname}')
+        source = Path(__file__).resolve().with_name(name + '.py')
+        return spec_from_file_location(fullname, source,
+            loader=_ScorerSourceLoader(fullname, str(source)))
+
+
+if __name__ == '__main__':
+    package = ModuleType('native_qa')
+    package.__path__ = []
+    sys.modules['native_qa'] = package
+    sys.meta_path.insert(0, _ScorerModules())
+
 from native_qa.scoring import score
 
 

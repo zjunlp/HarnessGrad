@@ -155,11 +155,54 @@ def test_every_published_dataset_appears_exactly_once():
     expected = len(registry.published())
     assert len(names) == expected, f"the table has {len(names)} rows, not {expected}"
     assert len(names) == len(set(names)), f"duplicate rows: {sorted(names)}"
-    assert set(names) == set(registry.published()), (
-        "DATASETS.md and registry.published() disagree; run "
+    assert set(names) == set(doc._published()), (
+        "DATASETS.md and the published source declarations disagree; run "
         "python3 tools/datasets_doc.py --write")
     # Sorted by dataset, so a reader can find a name without scanning.
     assert names == sorted(names)
+
+
+def test_catalog_discovery_does_not_depend_on_runtime_imports(monkeypatch):
+    expected = doc._published()
+    monkeypatch.setattr(registry, "published", lambda: ())
+    assert len(expected) == 59
+    assert doc._published() == expected
+
+
+def test_readable_source_survives_missing_runtime_without_loading_tasks(tmp_path, monkeypatch):
+    adapters = tmp_path / "data/datasets"
+    adapters.mkdir(parents=True)
+    source = adapters / "metadata_probe.py"
+    source.write_text('''\
+KIND = "dataset"
+ORACLE_SOURCE = "authored"
+METRIC_NAME = "authored metadata probe"
+def downloads():
+    return [{"kind": "http", "url": "https://example.invalid/source.zip",
+             "name": "authored source", "version": "v1", "size": "1 KB", "dst": "source.zip"}]
+raise RuntimeError("eager task pool must not execute")
+''')
+    monkeypatch.setattr(doc, "ROOT", tmp_path)
+    original = doc.importlib.import_module
+
+    def unavailable(name, *args, **kwargs):
+        if name == "data.datasets.metadata_probe":
+            raise ModuleNotFoundError("synthetic missing optional runtime")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(doc.importlib, "import_module", unavailable)
+    row = doc.row_for("metadata_probe", {})
+    assert row.kind == "dataset" and row.oracle == "authored"
+    assert row.metric == "authored metadata probe" and not row.import_error
+    assert "--fetch --dataset metadata_probe" in row.provision
+    assert doc._provisioned(doc._import_adapter("metadata_probe")) == "unknown"
+
+
+def test_catalog_is_independent_of_server_storage_configuration(tmp_path, monkeypatch):
+    before = doc.render_document()
+    monkeypatch.setenv("HG_DATA_ROOT", str(tmp_path / "another-server-data"))
+    monkeypatch.setenv("HG_DATA_KUMO", str(tmp_path / "separate-kumo"))
+    assert doc.render_document() == before
 
 
 def test_the_refused_datasets_carry_their_reason():
@@ -225,7 +268,7 @@ def test_a_cleared_review_flag_says_no_and_keeps_its_reading():
     # Every cleared entry is a live reading, not stale paperwork: the adapter still warns,
     # and the entry is the reading and not an empty `no`.
     for name, reading in doc.CLEARED.items():
-        assert name in registry.published(), f"{name} is not a published dataset"
+        assert name in doc._published(), f"{name} is not a published dataset"
         module = doc._import_adapter(name)
         assert doc._deviation_hint(module) is not None, (
             f"{name} no longer warns, so its `CLEARED` entry records nothing")
@@ -252,10 +295,13 @@ def test_the_document_carries_no_host_local_answer():
     assert FETCH in text
     assert CONTROL in text
     # No path from the machine that generated the file either: the data root is resolved
-    # per host by `data/scaffolds/roots.py`, so the document names the resolver, not a
+    # per host by `harnessgrad.paths`, so the document names the resolver, not a
     # disk that only exists on one deployment.
     assert "/mnt/" not in text
-    assert "data/scaffolds/roots.py" in text
+    assert "harnessgrad.paths.dataset_root()" in text
+    assert "<HG_DATA_ROOT>/<dataset-directory>" in text
+    assert "no implicit storage directory" in text
+    assert ".local/share/harnessgrad" not in text
 
 
 def test_check_is_invariant_to_provision_status(monkeypatch):
@@ -265,6 +311,9 @@ def test_check_is_invariant_to_provision_status(monkeypatch):
     answer; the committed file must still pass, because no cell reads it. The flip is
     real, not a no-op: `--host` -- the one consumer -- reports the other answer.
     """
+    # Supply one explicit host-state control so the flip remains observable even
+    # when every real external dataset is unconfigured on a fresh machine.
+    monkeypatch.setattr(doc._import_adapter("kumo"), "provision_status", lambda: {"present": False})
     rows = doc.build_rows()
     before = doc.host_status(rows)
     real_import = doc._import_adapter
@@ -452,7 +501,8 @@ def test_host_prints_the_local_section_and_write_never_does(tmp_path, capsys):
     printed = capsys.readouterr().out
     assert "## Provisioned on this host" in printed
     assert "| dataset | provisioned here |" in printed
-    assert set(_host_table(printed).values()) <= HOST_ANSWERS | {"unknown (ImportError)"}
+    assert all(value in HOST_ANSWERS or re.fullmatch(r"unknown \([A-Za-z_][A-Za-z0-9_]*\)", value)
+               for value in _host_table(printed).values())
 
     target = tmp_path / "DATASETS.md"
     assert doc.main(["--write", "--path", str(target)]) == 0

@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from eval.run.runner import run_one  # noqa: E402
+from harnessgrad.paths import dataset_root
 
 
 ACTOR = '''import argparse, json, subprocess, sys
@@ -63,8 +64,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--task", default="07b42fd_1")
-    parser.add_argument("--train-file", type=Path, default=Path(
-        "/mnt/20t/xubuqiang/datasets/appworld/_src/unpacked/data/datasets/train.txt"))
+    parser.add_argument("--train-file", type=Path, default=dataset_root("appworld") /
+                        "_src/unpacked/data/datasets/train.txt")
     parser.add_argument("--client", type=Path, default=ROOT / "data/datasets/appworld/cli/aw")
     args = parser.parse_args()
     if args.task not in args.train_file.read_text().splitlines():

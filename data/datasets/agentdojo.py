@@ -47,7 +47,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 
 
 KIND = 'dataset'
@@ -65,7 +65,8 @@ ORACLE_SOURCE = "released"
 #: no study material in it. `--split declared` keeps this adapter's own division.
 OFFICIAL_EVAL = None
 
-DATASET_ROOT = roots.dataset_root("agentdojo", "/mnt/20t/xubuqiang/datasets/agentdojo")
+
+DATASET_ROOT = dataset_root('agentdojo')
 COMMIT = '089ed468cf3ed0322acc66b0211f26d9d90dbf60'
 VERSION = 'v1.2.2'
 ASSETS = Path(__file__).resolve().parent / 'agentdojo'

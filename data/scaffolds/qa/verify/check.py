@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The check every plain-text QA dataset in this repository shares.
 
-    python3 -m data.scaffolds.qa.verify.check --dataset gsm8k --module data.datasets.gsm8k \
+    python3 -I data/scaffolds/qa/verify/check.py --dataset gsm8k \
         --answer answer.txt --gold gold.json \
         --reward-file verifier/reward.txt --evidence-file verifier/evidence.json
 
@@ -36,24 +36,82 @@ not answer. That is a real result and it is reported as one.
 """
 from __future__ import annotations
 
+# Only the built-in sys module is imported before checking the interpreter mode.
+# Production argv supplies -I before Python startup, excluding candidate paths,
+# PYTHONPATH and user-site hooks before any scorer dependency can be imported.
+import sys
+
+if __name__ == "__main__" and not sys.flags.isolated:
+    raise SystemExit("QA checks require Python isolated mode (-I)")
+
 import argparse
 import hashlib
+from importlib.machinery import SourceFileLoader
+from importlib.util import spec_from_file_location
 import json
 import re
-import sys
 import traceback
 from pathlib import Path
 
-#: This file lands in `<workdir>/qa/verify/check.py` when the platform materializes a
-#: `VERIFY.inputs` entry, and it is also runnable in place from the platform checkout.
-#: In both layouts the module it imports -- `read`, the parquet reader -- sits **one
-#: directory up**, so that directory goes on `sys.path` first. Nothing here may import
-#: `data.*`: the verification namespace hides the platform tree, and a check that
-#: reached back into it would either fail or read whatever the subject left there.
 HERE = Path(__file__).resolve().parent
-for candidate in ((HERE,) if HERE == Path('/scorer') else (HERE.parent, Path.cwd())):
-    if str(candidate) not in sys.path:
-        sys.path.insert(0, str(candidate))
+
+
+class _ScorerSourceLoader(SourceFileLoader):
+    def get_code(self, fullname):
+        # Re-materialization restores .py files, not candidate-supplied .pyc
+        # caches. Always compile the declared source bytes directly.
+        return self.source_to_code(self.get_data(self.path), self.path)
+
+
+class _ScorerModules:
+    """Import only explicitly restored repository sources, never directory contents."""
+
+    def __init__(self):
+        if HERE == Path("/scorer"):
+            self.data = HERE / "data"
+            platform = HERE / "harnessgrad"
+        elif HERE.parent.name == "lib":
+            self.data = HERE.parents[2] / "data"
+            platform = HERE.parent / "harnessgrad"
+        else:
+            # Explicit in-checkout invocation, without .git/.env discovery.
+            self.data = HERE.parents[2]
+            platform = HERE.parents[3] / "harnessgrad"
+        self.files = {
+            "data": self.data / "__init__.py",
+            "data.datasets": self.data / "datasets/__init__.py",
+            "data.scaffolds": self.data / "scaffolds/__init__.py",
+            "data.scaffolds.roots": self.data / "scaffolds/roots.py",
+            "harnessgrad": platform / "__init__.py",
+            "harnessgrad.paths": platform / "paths.py",
+            "harnessgrad.env_file": platform / "env_file.py",
+        }
+        for name in ("__init__", "base", "read", "evidence_scorers", "prediction"):
+            module = "data.scaffolds.qa" + ("" if name == "__init__" else "." + name)
+            self.files[module] = self.data / f"scaffolds/qa/{name}.py"
+
+    def find_spec(self, fullname, path=None, target=None):
+        source = self.files.get(fullname)
+        if source is None:
+            if fullname.split(".")[0] in {"data", "harnessgrad"}:
+                raise ModuleNotFoundError(f"undeclared QA scorer module: {fullname}")
+            return None
+        loader = _ScorerSourceLoader(fullname, str(source))
+        spec = spec_from_file_location(fullname, source, loader=loader)
+        if source.name == "__init__.py":
+            # The finder handles declared submodules. Do not let PathFinder
+            # search candidate-created siblings in the package directory.
+            spec.submodule_search_locations = []
+        return spec
+
+
+# Script execution starts with isolated interpreter paths; no task directory is
+# added to sys.path. In-process callers already import from their trusted checkout.
+_SCORER_MODULES = _ScorerModules() if __name__ == "__main__" else None
+if _SCORER_MODULES is not None:
+    sys.meta_path.insert(0, _SCORER_MODULES)
+
+from harnessgrad.paths import scorer_paths  # noqa: E402
 
 DEFAULT_REWARD_FILE = "/verifier/reward.txt"
 DEFAULT_EVIDENCE_FILE = "/verifier/evidence.json"
@@ -137,6 +195,7 @@ def unwrap(answer: str) -> str:
     return match.group("body") if match else answer
 
 
+@scorer_paths()
 def main(argv) -> int:
     args = parse_args(argv)
     # Known private adapters must redact before gold parsing, prediction validation,
@@ -224,6 +283,8 @@ def main(argv) -> int:
                           f"{args.dataset!r} is not a dataset name; this check imports "
                           f"`data.datasets.<name>` and will not be handed an arbitrary module")
     module_name = f"{DATASET_PACKAGE}.{args.dataset}"
+    if _SCORER_MODULES is not None:
+        _SCORER_MODULES.files[module_name] = _SCORER_MODULES.data / f"datasets/{args.dataset}.py"
     evidence["scorer_module"] = module_name
     try:
         # `__import__` rather than an importlib call with a variable argument: the

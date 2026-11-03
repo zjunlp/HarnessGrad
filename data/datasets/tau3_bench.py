@@ -8,12 +8,11 @@ from collections.abc import Mapping
 from functools import lru_cache
 import hashlib
 import json
-import os
 from pathlib import Path
 import random
 import subprocess
 
-from data.scaffolds import roots
+from harnessgrad.paths import configured_path, dataset_root
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
@@ -21,16 +20,9 @@ ORACLE_SOURCE = 'released'
 OFFICIAL_EVAL = None
 SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'tau3_bench'
-#: Where the prepared payload lives. The default used to be `parents[3]/datasets/tau3_bench`,
-#: which from `data/datasets/` resolves to `<checkout>/../datasets` -- a path that exists on the
-#: author's machine and nowhere else. The operator's absolute
-#: `/mnt/20t/xubuqiang/datasets/tau3_bench` is now `data/scaffolds/roots.py`'s **legacy**
-#: argument: it wins only while it exists, `HG_TAU3_DATA` still overrides that value, and
-#: `HG_DATA_TAU3_BENCH`/`HG_DATA_ROOT` take precedence over both.
-DATASET_ROOT = roots.dataset_root(
-    "tau3_bench",
-    os.environ.get('HG_TAU3_DATA', '/mnt/20t/xubuqiang/datasets/tau3_bench'))
-RUNTIME = Path(os.environ.get('HG_TAU3_RUNTIME', DATASET_ROOT / 'runtime'))
+
+DATASET_ROOT = dataset_root('tau3_bench')
+RUNTIME = configured_path('HG_DATA_TAU3_BENCH_RUNTIME', DATASET_ROOT / 'runtime')
 REVISION = 'fc0055dc4e0a316c3f83133267fbd6faaa770992'
 ARCHIVE_SHA256 = '7a227036d07fdeb088dbd0c99fdb40ee9b9e0ebc06aadbc4dec1217b3383e57e'
 METRIC = 'tau3.v1.0.1.ALL.binary'

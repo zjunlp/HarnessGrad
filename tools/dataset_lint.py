@@ -31,12 +31,14 @@ Usage
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib
 import json
 import sys
 from pathlib import Path, PurePosixPath
 
 from harnessgrad.config import ConfigMissing
+from harnessgrad.paths import DataRootNotConfigured
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "data" / "dataset.schema.json"
@@ -101,8 +103,8 @@ def _outside_platform(path: Path, root: Path) -> bool:
 #: rather than the dict.
 _ENTRY_KEYS = {
     "kind", "name", "version", "size", "note", "url", "repo", "file", "files",
-    "sha256", "dst", "extract_to", "package",
-    # `authored` 用 `path` 指向仓库里的 bundle（见 `downloads()` 的规则）。
+    "sha256", "dst", "extract_to", "package", "manifest",
+    # `authored` uses a repository-local bundle path.
     "path",
 }
 
@@ -163,6 +165,13 @@ def lint_downloads(downloads, schema: dict, result: Result) -> None:
             elif not target.is_dir():
                 result.error(f"{where} ({entry.get('name')!r}): authored bundle path does not "
                              f"exist: {path}")
+        if "manifest" in entry:
+            manifest = entry["manifest"]
+            if (not isinstance(manifest, str) or not manifest
+                    or Path(manifest).is_absolute()
+                    or _outside_platform(ROOT / manifest, ROOT)
+                    or not (ROOT / manifest).is_file()):
+                result.error(f"{where} manifest must name an existing repository-relative file")
         dst = entry.get("dst")
         if dst:
             p = Path(str(dst))
@@ -287,12 +296,25 @@ def lint_paths(module, schema: dict, result: Result) -> None:
     spec = schema["paths"]
     if not spec["must_be_outside_platform"]:
         return
+    source = getattr(module, "__file__", None)
+    if source:
+        for node in ast.parse(Path(source).read_text(encoding="utf-8")).body:
+            targets = (node.targets if isinstance(node, ast.Assign) else
+                       [node.target] if isinstance(node, ast.AnnAssign) else [])
+            if any(isinstance(target, ast.Name) and target.id in spec["data_root_attributes"]
+                   for target in targets):
+                if any(isinstance(value, ast.Constant) and isinstance(value.value, str)
+                       and Path(value.value).is_absolute() for value in ast.walk(node.value)):
+                    result.error("data root default must be portable; use harnessgrad.paths.dataset_root()")
     for attribute in spec["data_root_attributes"]:
         value = getattr(module, attribute, None)
         if value is None:
             continue
         try:
             path = Path(value)
+        except DataRootNotConfigured as exc:
+            result.unprovisioned = str(exc)
+            continue
         except TypeError:
             continue
         if not path.is_absolute():
@@ -395,6 +417,9 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
             lint_downloads(downloads(), schema, result)
         except Exception as exc:  # noqa: BLE001
             result.error(f"downloads() raised {type(exc).__name__}: {exc}")
+
+    if result.unprovisioned:
+        return result
 
     # The dynamic half needs the data. `provision_status()` is a dataset's own answer to
     # "are my bytes here"; a module without one is assumed provisioned and `load()`

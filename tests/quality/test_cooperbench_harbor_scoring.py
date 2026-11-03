@@ -127,7 +127,7 @@ if [ "$1" = tests1.patch ]; then grep -q 'A=1' a.py; else grep -q 'B=1' b.py; fi
 
 def test_all_30_pinned_recipes_preserve_shell_and_test_commands(tmp_path):
     import json, os
-    root = Path(os.environ.get('HG_COOPERBENCH_DATA', ROOT.parent / 'datasets/cooperbench')) / 'upstream/dataset'
+    root = Path(os.environ.get('HG_DATA_COOPERBENCH', ROOT.parent / 'datasets/cooperbench')) / 'upstream/dataset'
     if not root.exists():
         pytest.skip('pinned CooperBench source needed for full recipe drift check')
     recipes = json.loads((ASSETS / 'recipes.json').read_text())

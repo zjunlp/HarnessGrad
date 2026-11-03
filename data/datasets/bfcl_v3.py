@@ -66,8 +66,9 @@ import sys
 from contextlib import ExitStack
 from pathlib import Path
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
@@ -92,7 +93,8 @@ def NOOP_EXPECTED(record: dict) -> float:
 #: no study material in it. `--split declared` keeps this adapter's own division.
 OFFICIAL_EVAL = None
 
-DATASET_ROOT = roots.dataset_root("bfcl-v3", "/mnt/20t/xubuqiang/datasets/bfcl-v3")
+
+DATASET_ROOT = dataset_root('bfcl-v3')
 
 #: The official repository tarball at a **tag**, with the digest of the download.
 REPO_TAG = "v1.3"

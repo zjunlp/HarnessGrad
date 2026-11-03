@@ -42,7 +42,7 @@ python3 -m data.scaffolds.native_qa.prepare --dataset math500
 ```
 
 `--root` overrides the destination. Each adapter reads `HG_<NAME>_ROOT`, for
-example `HG_SEARCHQA_ROOT`. The root is always outside the platform checkout.
+example `HG_DATA_SEARCHQA`. The root is always outside the platform checkout.
 Preparation stores derived JSONL, source repo/revision, native split names, row
 counts and SHA-256 per file in `source-manifest.json`. `--local split=/path` is
 an explicit native-source import; the receipt labels it local and does not claim
@@ -69,7 +69,7 @@ storage. Hidden or writable runtime prefixes are refused before launch; do not
 disable sandboxing to bypass that guard. Provision Math-Verify in the environment
 used to launch the driver.
 
-OfficeQA-Pro separately requires `HG_OFFICEQA_PRO_CORPUS` or `<root>/corpus`.
+OfficeQA-Pro separately requires `HG_DATA_OFFICEQA_PRO_CORPUS` or `<root>/corpus`.
 Supply the entire public corpus directory, with only ordinary txt/md/pdf/json
 files. Do **not** put the evaluation CSV, answer-key metadata or source_docs
 answer pointers inside it. The dataset stages only that public corpus, under

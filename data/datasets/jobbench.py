@@ -5,7 +5,7 @@ manifest, fixed Harbor interpreter and independent local judge where required.
 """
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 import os
 from data.scaffolds import native_harbor as native
 
@@ -15,8 +15,7 @@ OFFICIAL_EVAL = None
 SPLIT = None
 SPLIT_SOURCE = 'none'
 DEFAULT_ENV = {'kind': 'files', 'network': 'none'}
-DATASET_ROOT = roots.dataset_root('jobbench',
-                              legacy=os.environ.get('HG_JOBBENCH_DATA', '/mnt/20t/xubuqiang/datasets/jobbench'))
+DATASET_ROOT = dataset_root('jobbench')
 REVISION = 'd43a66575635da0d3f6cb9a20976dc1a60f3ffc9'
 SOURCE = 'https://huggingface.co/datasets/JobBench/job-bench'
 METRIC = 'reward'

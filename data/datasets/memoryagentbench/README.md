@@ -22,9 +22,10 @@ action planning or stopping decisions, so it does not establish `control` covera
 
 ## Preparation
 
-Set `HG_MAB_DATA` to the external dataset directory; by default it is
-`../datasets/memoryagentbench` relative to the checkout. `HG_MAB_PREPARED` can
-independently select a prepared pool (default `$HG_MAB_DATA/prepared`). Imports do
+The default is `<HG_DATA_ROOT>/memoryagentbench`; `HG_DATA_MEMORYAGENTBENCH` can override it.
+See [dataset storage](../../../README.md#dataset-storage) for `.env` configuration
+and worktree sharing. `HG_DATA_MEMORYAGENTBENCH_PREPARED` can
+independently select a prepared pool (default `$HG_DATA_MEMORYAGENTBENCH/prepared`). Imports do
 not read the corpus. The four upstream splits are capability partitions, not
 train/test divisions. The default declared split uses HarnessGrad's deterministic
 task-ID hash rule, approximately 2:1 train/eval, with each complete episode kept
@@ -43,11 +44,11 @@ command, then use:
 
 ```sh
 python data/datasets/memoryagentbench/prepare_resources.py \
-  --resources "$HG_MAB_DATA/resources" \
-  --archive "$HG_MAB_DATA/resources/downloads/punkt_tab.zip"
+  --resources "$HG_DATA_MEMORYAGENTBENCH/resources" \
+  --archive "$HG_DATA_MEMORYAGENTBENCH/resources/downloads/punkt_tab.zip"
 python data/datasets/memoryagentbench/prepare.py \
-  --raw "$HG_MAB_DATA/raw" --resources "$HG_MAB_DATA/resources" \
-  --output "$HG_MAB_DATA/prepared"
+  --raw "$HG_DATA_MEMORYAGENTBENCH/raw" --resources "$HG_DATA_MEMORYAGENTBENCH/resources" \
+  --output "$HG_DATA_MEMORYAGENTBENCH/prepared"
 ```
 
 `specs/chunk-policy.json` pins `nltk==3.10.3`, `regex==2026.9.29` and `tiktoken==0.14.0`,

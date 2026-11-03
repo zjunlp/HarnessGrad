@@ -4,12 +4,12 @@ Pinned upstream adaptation; see data/scaffolds/native_research/PROVENANCE.json.
 Raw native data stays outside the repository. Importing this declaration performs no
 acquisition and makes no claim that its external runtime is provisioned.
 """
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 from data.scaffolds.native_research.adapter import Adapter, TaskMapping, downloads as source_downloads
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
-DATASET_ROOT = roots.dataset_root('widesearch', legacy='/mnt/20t/xubuqiang/datasets/widesearch/native-prepared')
+DATASET_ROOT = dataset_root('widesearch')
 ADAPTER = Adapter('widesearch', root=DATASET_ROOT)
 METRIC = 'widesearch.native-adapted'
 load = ADAPTER.load

@@ -14,9 +14,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from data.scaffolds import roots  # noqa: E402
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
-DATA = roots.dataset_root("agentdojo", "/mnt/20t/xubuqiang/datasets/agentdojo")
+DATA = dataset_root('agentdojo')
 COMMIT = '089ed468cf3ed0322acc66b0211f26d9d90dbf60'
 SOURCE = DATA / '_src' / f'agentdojo-{COMMIT}' / 'src' / 'agentdojo'
 
@@ -84,6 +84,10 @@ def prepare_cases():
 
 
 if __name__ == '__main__':
+    try:
+        DATA.resolve()
+    except DataRootNotConfigured as exc:
+        raise SystemExit(str(exc)) from None
     trusted_python = DATA / 'runtime/bin/python'
     if Path(sys.prefix) != DATA / 'runtime':
         raise SystemExit(f'Run this with {trusted_python}; provision that venv from the pinned source first.')

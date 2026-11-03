@@ -97,7 +97,7 @@ def test_missing_and_duplicate_reports(synthetic, tmp_path):
 
 
 def test_import_does_not_read_data(tmp_path):
-    env = {**os.environ, 'HG_LOCOMO_DATA': str(tmp_path / 'absent')}
+    env = {**os.environ, 'HG_DATA_LOCOMO': str(tmp_path / 'absent')}
     result = subprocess.run([sys.executable, '-c',
         'from data.datasets import locomo; assert locomo.KIND == "dataset"; '
         'assert not locomo.provision_status()["present"]'], cwd=ROOT, env=env,

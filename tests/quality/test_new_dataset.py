@@ -67,9 +67,10 @@ def _clean(name: str) -> None:
 
 
 @pytest.fixture(params=sorted(KINDS))
-def scaffold(request):
+def scaffold(request, tmp_path, monkeypatch):
     """Generate the scaffold, hand it to the test, then remove every artefact."""
     kind = request.param
+    monkeypatch.setenv("HG_DATA_ROOT", str(tmp_path / "datasets"))
     name = KINDS[kind]["module"]
     _clean(name)
     new_dataset.generate(name, kind, SOURCE)
@@ -80,9 +81,10 @@ def scaffold(request):
 
 
 @pytest.fixture
-def files_scaffold():
+def files_scaffold(tmp_path, monkeypatch):
     """The `files` scaffold on its own, for the tests about its shape rather than its kind."""
     name = KINDS["files"]["module"]
+    monkeypatch.setenv("HG_DATA_ROOT", str(tmp_path / "datasets"))
     _clean(name)
     new_dataset.generate(name, "files", SOURCE)
     try:

@@ -3,13 +3,13 @@
 See data/scaffolds/native_qa/README.md for source, split and fidelity boundaries.
 Imports never fetch data. Prepare the external data root explicitly before load().
 """
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 from data.scaffolds.native_qa import Dataset
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
 METRIC = 'officeqa-reward-tolerance-0'
-DATASET_ROOT = roots.dataset_root('officeqa_pro', legacy='/mnt/20t/xubuqiang/datasets/officeqa_pro')
+DATASET_ROOT = dataset_root('officeqa_pro')
 _spec = Dataset("officeqa_pro", DATASET_ROOT)
 DEFAULT_ENV = {"kind": "files"}
 

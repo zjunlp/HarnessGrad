@@ -35,8 +35,8 @@ def main():
     assert all(row["probe_events"] == [] for row in boundary[:-1])
     assert observations[-1]["source_gate_satisfied"] is False
     assert observations[-1]["official_scorer_executed"] is False
-    report = (ROOT / "registry/w-bfclcontain.md").read_text()
-    citations = re.findall(r"(?<![\w/])((?:tests|registry|data)/[\w./-]+):(\d+)", report)
+    report = (HERE / "README.md").read_text()
+    citations = re.findall(r"(?<![\w/])((?:tests|registry|data|harnessgrad)/[\w./-]+):(\d+)", report)
     for path, number in citations:
         assert 1 <= int(number) <= len((ROOT / path).read_text().splitlines()), (path, number)
     changed_existing = subprocess.check_output(

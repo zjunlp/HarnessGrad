@@ -3,23 +3,19 @@ from collections.abc import Mapping
 from functools import lru_cache
 import hashlib
 import json
-import os
 from pathlib import Path
 import sys
 
-from data.scaffolds import roots
+from harnessgrad.paths import configured_path, dataset_root
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
 SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'costbench'
-#: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above* the
-#: repository, so the default only worked in the checkout that wrote it.
-DATASET_ROOT = roots.dataset_root(
-    "costbench",
-    os.environ.get("HG_COSTBENCH_DATA", "/mnt/20t/xubuqiang/datasets/costbench"))
+
+DATASET_ROOT = dataset_root('costbench')
 PREPARED = DATASET_ROOT / 'dynamic-prepared-v1'
-RUNTIME = Path(os.environ.get('HG_COSTBENCH_RUNTIME', DATASET_ROOT / 'runtime'))
+RUNTIME = configured_path('HG_DATA_COSTBENCH_RUNTIME', DATASET_ROOT / 'runtime')
 REVISION = '6424069f3f773ade076bcedbed302ed47cfb1837'
 ARCHIVE_SHA256 = 'b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844'
 MANIFEST_SHA256 = 'a424801c3d156bfc9527534e715e40ed02cd812889ae0d1c711c9d8c792e4c14'

@@ -94,6 +94,7 @@ def java_home(workdir: Path) -> Path:
     candidates = [workdir / JRE_RELDIR / JRE_DIRNAME,
                   Path(os.environ["HG_SCIENCEWORLD_JAVA"]) if
                   os.environ.get("HG_SCIENCEWORLD_JAVA") else None]
+    # Resolve the host-only fallback lazily: staged copies have no platform imports.
     for candidate in candidates:
         if candidate and (candidate / "bin" / "java").is_file():
             # **Resolved, always.** py4j launches Java with `cwd=<the package's BASEPATH>`
@@ -102,32 +103,26 @@ def java_home(workdir: Path) -> Path:
             # whose cwd nobody set -- measured, and it cost a control run. Every path this
             # returns is absolute for that reason.
             return candidate.resolve()
-    # Only after the workdir copy and the explicit override miss: `staged_jre()` asks
-    # `data/scaffolds/roots.py`, and this module is also materialized inside a task
-    # workdir, where that package does not exist. Eagerly listing it as a candidate
-    # made the standalone `scw` CLI need the platform tree just to discard the result.
     staged = staged_jre()
-    candidates.append(staged)
-    if (staged / "bin" / "java").is_file():
+    if staged and (staged / "bin" / "java").is_file():
         return staged.resolve()
     raise RuntimeError(
         "no Java runtime found; tried " +
-        ", ".join(str(c) for c in candidates if c) +
+        ", ".join(str(c) for c in (*candidates, staged) if c) +
         ". The pinned JRE is provisioned by `python3 tools/datasets.py --fetch "
         "--dataset scienceworld`, and in a platform run it is materialized into the "
         "workdir by SETUP/VERIFY.inputs.")
 
 
-def staged_jre() -> Path:
+def staged_jre() -> Path | None:
     """The provisioned JRE under the dataset root (the by-hand path)."""
-    # Imported here, not at module level: this file is also materialized into a task
-    # workdir (as `scw_env.py` beside the `scw` CLI) and into the sealed `/scorer`
-    # root, where the `data` package does not exist. Only the by-hand path needs a
-    # root, and only the platform tree can answer it.
-    from data.scaffolds import roots
-    root = roots.dataset_root(
-        "scienceworld",
-        os.environ.get("HG_SCIENCEWORLD_DATA", "/mnt/20t/xubuqiang/datasets/scienceworld"))
+    try:
+        from harnessgrad.paths import dataset_root
+    except ModuleNotFoundError as exc:
+        if exc.name not in {"harnessgrad", "harnessgrad.paths"}:
+            raise
+        return None
+    root = dataset_root("scienceworld")
     return root / "jre" / JRE_DIRNAME
 
 

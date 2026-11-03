@@ -56,18 +56,19 @@ that every evaluation persona is unseen during study.
 
 ## Preparation
 
-Set `HG_PERSONAMEM_V2_DATA` to the external dataset directory; the default is
-`../datasets/personamem_v2` relative to the checkout. `downloads()` pins three
+The default is `<HG_DATA_ROOT>/personamem_v2`; `HG_DATA_PERSONAMEM_V2` can override it.
+See [dataset storage](../../../README.md#dataset-storage) for `.env` configuration
+and worktree sharing. `downloads()` pins three
 CSV files and the 999 current histories they reference, approximately 394 MB.
 Historical copies in the upstream directory are not needed. Corpus and prepared
 bytes stay outside the repository.
 
 ```sh
-export HG_PERSONAMEM_V2_DATA=/absolute/path/to/datasets/personamem_v2
+export HG_DATA_PERSONAMEM_V2=/absolute/path/to/datasets/personamem_v2
 python tools/datasets.py --fetch --dataset personamem_v2
 python data/datasets/personamem_v2/prepare.py \
-  --raw "$HG_PERSONAMEM_V2_DATA/raw" \
-  --output "$HG_PERSONAMEM_V2_DATA/prepared"
+  --raw "$HG_DATA_PERSONAMEM_V2/raw" \
+  --output "$HG_DATA_PERSONAMEM_V2/prepared"
 ```
 
 Preparation uses Python's standard library. It checks every source CSV and each

@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-ROOT_ENV_VAR = "HG_TAU2_DATA"
+ROOT_ENV_VAR = "HG_DATA_TAU2_BENCH"
 PAYLOAD = Path(__import__("os").environ.get(ROOT_ENV_VAR, "/mnt/20t/xubuqiang/datasets/tau2-bench"))
 
 pytestmark = pytest.mark.skipif(

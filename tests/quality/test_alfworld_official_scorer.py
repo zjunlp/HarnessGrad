@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "data" / "datasets" / "alfworld" / "lib"))
 
-DATA_ROOT = Path(os.environ.get("HG_ALFWORLD_DATA",
+DATA_ROOT = Path(os.environ.get("HG_DATA_ALFWORLD",
                                 "/mnt/20t/xubuqiang/datasets/alfworld"))
 UPSTREAM = (DATA_ROOT / "_src" / "repo" / "alfworld" / "agents" / "eval"
             / "evaluate_dagger.py")

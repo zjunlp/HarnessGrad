@@ -193,11 +193,9 @@ def run_check(module, record: dict, workdir: Path) -> tuple[float, str]:
             shutil.copy2(entry["from"], target)
     # `argv[0]` is the check's own interpreter name ("python3"); the by-hand path runs
     # it with the *current* interpreter, exactly as the platform's `files` branch would.
-    # The check imports its scorer by literal name, so the workdir must be where Python
-    # looks first -- the same thing the platform guarantees by running the check with the
-    # workdir as its working directory.
-    env = dict(os.environ, PYTHONPATH=str(workdir) + os.pathsep
-               + os.environ.get("PYTHONPATH", ""))
+    # The check loads only its declared scorer sources. Candidate task directories
+    # must never become Python import search roots.
+    env = dict(os.environ)
     argv = [sys.executable, *verifier["argv"][1:]]
     proc = subprocess.run(argv, cwd=workdir, capture_output=True, text=True, errors="replace", env=env)
     reward_path = workdir / base.REWARD_REL

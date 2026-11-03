@@ -53,13 +53,14 @@ used to declare the platform's hash third here; that invented division was remov
 """
 from __future__ import annotations
 
-from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import csv
 import io
 import json
 from pathlib import Path
+
+from harnessgrad.paths import dataset_root
 
 
 KIND = "dataset"
@@ -68,7 +69,8 @@ KIND = "dataset"
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = roots.dataset_root("bird_minidev", "/mnt/20t/xubuqiang/datasets/bird_minidev")
+
+DATASET_ROOT = dataset_root('bird_minidev')
 RELEASE = "2024-06-20/7BEB6DAB11E65F0FDE563E644A1EA319"
 DATA_SHA256 = "cc48ba16838204e4e214512030cb572eeb5f7bcdd999bae4b9b6ff12ec13b92f"
 DATA_MD5 = "7beb6dab11e65f0fde563e644a1ea319"

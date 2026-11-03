@@ -199,6 +199,47 @@ with `--split splits/math500.json` (or the experiment's `split` field) to both
 runs. [Custom split guide](docs/custom-dataset-splits.md) covers counts, groups,
 source provenance and a zero-cost example.
 
+<a id="dataset-storage"></a>
+
+## Dataset storage
+
+Set `HG_DATA_ROOT` in `.env` to choose the shared directory for external datasets:
+
+```dotenv
+HG_DATA_ROOT=/path/to/datasets
+```
+
+For example, GSM8K uses `<HG_DATA_ROOT>/gsm8k` and KUMO uses
+`<HG_DATA_ROOT>/kumo`. A single-dataset override such as `HG_DATA_KUMO` takes
+precedence. Existing directory names are preserved: CostBench's two adapters share
+`costbench`, and StrongREJECT uses `strongreject/native-v1` by default.
+
+Per-dataset variables use `HG_DATA_` followed by the full directory name in uppercase,
+with runs of separators replaced by `_`: `tau2-bench` uses `HG_DATA_TAU2_BENCH` and
+`strongreject/native-v1` uses `HG_DATA_STRONGREJECT_NATIVE_V1`. Retired names such as
+`HG_KUMO_DATA` are no longer read; rename existing shell or `.env` settings.
+Independent prepared/runtime overrides follow the same prefix:
+`HG_DATA_MEMORYAGENTBENCH_PREPARED`, `HG_DATA_COSTBENCH_RUNTIME`, and
+`HG_DATA_TAU3_BENCH_RUNTIME`.
+
+Environment variables override `.env` for the same key. Linked worktrees inherit
+the main checkout's `.env`; a worktree-local `.env` overrides that file. Relative
+paths are anchored to the main checkout, regardless of the current terminal directory.
+There is no implicit directory. Configure `HG_DATA_ROOT` before accessing external
+data, or set the dataset's explicit override. Missing configuration produces an
+instruction to set the path; listing datasets and generating documentation still work.
+Keep `.env` local to each server; `.env.example` is the committed template.
+
+Downloads, preparation tools and adapters share this resolver. Explicit preparation
+arguments such as `--root`, `--raw` and `--output` still override their defaults.
+`python3 tools/datasets.py --check --dataset kumo` reports the resolved absolute root.
+`DOWNLOADS.md` shows logical locations such as `<HG_DATA_ROOT>/kumo/upstream`,
+derived from each adapter's directory and each download's destination. Its per-dataset
+root override replaces the logical data-root prefix, preserving the download suffix.
+Source resources shipped in the repository continue to use repository-relative paths.
+Sealed native-runtime manifests remain independently pinned to their reviewed host
+and software; relocating dataset storage does not regenerate those manifests.
+
 ## 🧪 Test
 
 ```bash

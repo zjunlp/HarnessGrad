@@ -36,18 +36,18 @@ inputs and receipts outside the repository.
 
 ## Preparation
 
-Use Python 3.12 and external directories. `HG_COOPERBENCH_DATA` overrides the
-repository-adjacent `datasets/cooperbench` default. Clone the two sources, check
+Use Python 3.12 and external directories. `HG_DATA_COOPERBENCH` overrides the
+`<HG_DATA_ROOT>/cooperbench` default (see [dataset storage](../../../README.md#dataset-storage)). Clone the two sources, check
 out the exact commits above, and keep their relevant tracked and untracked trees
 clean. The source archive URL and hash are also declared by `downloads()`.
 
 ```sh
-export HG_COOPERBENCH_DATA=/your/data/cooperbench
+export HG_DATA_COOPERBENCH=/your/data/cooperbench
 python data/datasets/cooperbench/prepare.py \
-  --root "$HG_COOPERBENCH_DATA" --source-root /your/sources/CooperBench \
+  --root "$HG_DATA_COOPERBENCH" --source-root /your/sources/CooperBench \
   --harbor-root /your/sources/harbor
 python data/datasets/cooperbench/prepare.py \
-  --root "$HG_COOPERBENCH_DATA" --source-root /your/sources/CooperBench \
+  --root "$HG_DATA_COOPERBENCH" --source-root /your/sources/CooperBench \
   --image-group pallets_click_task/task2956 --pull \
   --base-runtime /your/selected-resource-runtime
 ```

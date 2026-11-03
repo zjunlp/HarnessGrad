@@ -84,7 +84,7 @@ def prepared_native(tmp_path_factory):
 @pytest.mark.parametrize('oracle',[True,False])
 def test_native_tool_relay_post_exit_state_verifier(oracle,prepared_native,tmp_path,monkeypatch):
     prepared,manifest=prepared_native
-    monkeypatch.setenv('HG_WORKBENCH_DATA',str(prepared))
+    monkeypatch.setenv('HG_DATA_WORKBENCH',str(prepared))
     adapter=Adapter('workbench')
     task=adapter.load()[0][0]
     case=adapter.case(manifest['records'][0],manifest)

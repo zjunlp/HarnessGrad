@@ -6,7 +6,7 @@ that terminal snapshot verification is the native separate/replay protocol.
 
 ```sh
 python3 data/datasets/jobbench/prepare.py --root /path/to/jobbench
-HG_JOBBENCH_DATA=/path/to/jobbench python3 -c \
+HG_DATA_JOBBENCH=/path/to/jobbench python3 -c \
   'from data.datasets import jobbench as d; print(d.provision_status())'
 ```
 

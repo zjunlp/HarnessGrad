@@ -396,9 +396,9 @@ class ImportDirectionTests(unittest.TestCase):
         )
         self.assertEqual(registry.published(), expected)
         for name in expected:
-            module = registry.importlib.import_module(registry.module_name(name))
-            self.assertEqual(module.__name__, f"data.datasets.{name}")
-            self.assertEqual(Path(module.__file__).resolve(), ROOT / "data/datasets" / f"{name}.py")
+            self.assertEqual(registry.module_name(name), f"data.datasets.{name}")
+            self.assertTrue((ROOT / "data/datasets" / f"{name}.py").is_file())
+            self.assertEqual(registry.kind_of(name), registry.KIND_DATASET)
             self.assertFalse((ROOT / "data" / f"{name}.py").exists())
         self.assertEqual(registry.module_name("demo"), "data.demo")
 

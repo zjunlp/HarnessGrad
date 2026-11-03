@@ -87,7 +87,7 @@ echo '>>>>> End Test Output'
 @pytest.mark.parametrize('mode,expected', [('repair', 1.), ('wrong', 0.), ('empty', 0.)])
 def test_actual_platform_native_patch_grade(native_fixture, mode, expected, tmp_path, monkeypatch):
     prepared, runtime, future = native_fixture
-    monkeypatch.setenv('HG_SWE_BENCH_DATA', str(prepared))
+    monkeypatch.setenv('HG_DATA_SWE_BENCH', str(prepared))
     monkeypatch.setenv('HG_SWE_BENCH_RUNTIME', str(runtime))
     adapter = Adapter('swe_bench')
     native_logs = []

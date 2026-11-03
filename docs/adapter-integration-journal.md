@@ -6282,3 +6282,29 @@ which the rule allows. What changed is that no harness now *depends* on the mode
 that. 83 adapter tests pass. The cost spread (961 → 38 949 for one word) remains a
 comparability fact, not a defect: five calls to answer "alpha" is how DSH works, and the
 number is now reported by every harness instead of one of them being silent.
+
+
+## Portable dataset storage integrated with current main (2026-11-03)
+
+External storage now requires `HG_DATA_ROOT` or the canonical per-dataset
+`HG_DATA_<NAME>` setting. Shell values override worktree and primary-checkout
+`.env` values for the same key; per-dataset settings take precedence over the
+shared root. Relative configured paths use the primary checkout as their base.
+There is no implicit storage directory and retired variable aliases are not read.
+All 58 external adapters use this contract; the repository-owned authored adapter
+needs no external root. Native QA/research declarations remain readable before
+configuration, while data access reports the missing setting.
+
+The download index retains all 59 published datasets without requiring local task
+pools, shows portable logical destinations, and summarizes large inventories.
+Fetch/check still use the actual configured paths and complete file/hash declarations;
+the current-main `hf-file` transport is retained. Readiness and split catalogs stay
+readable without configured storage or optional runtime dependencies.
+
+Legacy QA scoring uses isolated Python and imports only explicitly restored sources,
+ignoring candidate `.env`, `.git`, sibling modules and bytecode caches. The separate
+native QA entrypoint now uses the same isolation and source-loading rules for its
+declared scorer package. Synthetic sandbox controls check correct/incorrect answers
+and module/cache interference. BFCL whole-source hash assertions and fabricated
+observations are retained; reachability snapshots are regenerated for the integrated
+source tree. Independent native runtime host/ABI admission fields are preserved.

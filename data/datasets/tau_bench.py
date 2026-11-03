@@ -119,6 +119,8 @@ exists to study, so every airline task is an exam task.
 
 from __future__ import annotations
 
+from harnessgrad.paths import dataset_root
+
 
 #: See `data/scaffolds/registry.py:KIND_DATASET`. A fixture is platform test material and is
 #: deliberately not offered as a choice in the Launch form.
@@ -137,12 +139,13 @@ import os
 import sys
 from pathlib import Path
 
-from data.scaffolds import roots
 
 
 #: The committed assets, written by `tools/build_tau_bench_gt.py`. Kept beside this
 #: module: `data/datasets/tau_bench.py` is the adapter, `data/datasets/tau_bench/` is its content.
 ASSETS = Path(__file__).resolve().parent / "tau_bench"
+
+DATASET_ROOT = dataset_root("tau-bench")
 
 GT_DIR = ASSETS / "gt"
 DB_DIR = ASSETS / "db"
@@ -505,7 +508,7 @@ def downloads() -> list[dict]:
         "version": commit,
         "url": f"https://github.com/sierra-research/tau-bench/archive/{commit}.tar.gz",
         "size": "~67 MB unpacked",
-        "dst": str(roots.dataset_root("tau-bench", "/mnt/20t/xubuqiang/datasets/tau-bench")),
+        "dst": ".",
         "extract_to": ".",
         "note": "Only needed to REGENERATE `data/datasets/tau_bench/`: the adapter reads the "
                 "committed assets, which are already in git. Pinned to the commit in "

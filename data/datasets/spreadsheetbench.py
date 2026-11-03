@@ -50,12 +50,12 @@ What is deliberately not added, and what is not checked
 """
 from __future__ import annotations
 
-from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import json
-import os
 from pathlib import Path
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
@@ -73,10 +73,8 @@ ORACLE_SOURCE = "released"
 #: no study material in it. `--split declared` keeps this adapter's own division.
 OFFICIAL_EVAL = None
 
-#: Where the extracted release lives. Outside the platform tree on purpose.
-DATASET_ROOT = roots.dataset_root(
-    "spreadsheetbench",
-    os.environ.get("HG_SPREADSHEETBENCH_DATA", "/mnt/20t/xubuqiang/datasets/spreadsheetbench"))
+
+DATASET_ROOT = dataset_root('spreadsheetbench')
 
 #: The Hub release and its digests.
 REVISION = "ab0b742b0fc95b946f212d80ac7771b5531272e4"

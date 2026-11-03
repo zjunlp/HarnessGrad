@@ -6,7 +6,7 @@ that terminal snapshot verification is the native separate/replay protocol.
 
 ```sh
 python3 data/datasets/swe_bench_pro/prepare.py --root /path/to/swe_bench_pro
-HG_SWE_BENCH_PRO_DATA=/path/to/swe_bench_pro python3 -c \
+HG_DATA_SWE_BENCH_PRO=/path/to/swe_bench_pro python3 -c \
   'from data.datasets import swe_bench_pro as d; print(d.provision_status())'
 ```
 

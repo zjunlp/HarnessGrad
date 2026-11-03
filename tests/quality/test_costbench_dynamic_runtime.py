@@ -11,7 +11,7 @@ from data.datasets import costbench as dataset
 
 @pytest.fixture
 def make_runtime(tmp_path, monkeypatch):
-    root = Path(os.environ.get('HG_COSTBENCH_DATA', dataset.DATASET_ROOT))
+    root = Path(os.environ.get('HG_DATA_COSTBENCH', dataset.DATASET_ROOT))
     if not (root / 'prepared-v1/manifest.json').is_file():
         pytest.skip('CostBench prepared static data required')
     monkeypatch.syspath_prepend(str(dataset.ASSETS / 'lib'))
