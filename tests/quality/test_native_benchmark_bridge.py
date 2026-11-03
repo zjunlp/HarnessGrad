@@ -46,7 +46,7 @@ def test_private_export_and_native_dispatch(tmp_path, monkeypatch):
         assert options['task_id'] == 'task-1'
         return {'score': 0.75, 'passed': False, 'outcome': 'measured',
                 'evidence': {'measured': True, 'metrics': {'native': 0.75}}}
-    monkeypatch.setattr(bridge.importlib, 'import_module', lambda name: SimpleNamespace(run=run))
+    monkeypatch.setattr(bridge, '_native_module', lambda name: SimpleNamespace(run=run))
     verdict = consume(actor, spec)
     assert verdict['score'] == .75 and verdict['evidence']['measured'] is True
     assert verdict['evidence']['scorer_input']['verified'] is True
@@ -59,7 +59,7 @@ def test_refuse_unsafe_or_foreign_export(tmp_path, monkeypatch, kind):
     actor, case, spec = request(tmp_path)
     def must_not_run(*args, **kwargs):
         raise AssertionError('unsafe input reached native scorer')
-    monkeypatch.setattr(bridge.importlib, 'import_module', must_not_run)
+    monkeypatch.setattr(bridge, '_native_module', must_not_run)
     if kind == 'root-symlink':
         (actor / 'output').symlink_to(tmp_path, target_is_directory=True)
     elif kind in ('symlink', 'hardlink', 'fifo', 'overflow', 'empty-dirs', 'deep-dirs'):
@@ -96,7 +96,7 @@ def test_sealed_episode_uses_private_input_and_execution_binding(tmp_path, monke
     def run(selected, artifact_root, **options):
         assert json.loads((artifact_root / 'swe_episode/episode.json').read_text())['payload']['patch'] == 'trusted transport export'
         return {'score': 1., 'passed': True, 'outcome': 'measured', 'evidence': {'measured': True}}
-    monkeypatch.setattr(bridge.importlib, 'import_module', lambda name: SimpleNamespace(run=run))
+    monkeypatch.setattr(bridge, '_native_module', lambda name: SimpleNamespace(run=run))
     verdict = consume(actor, spec)
     assert verdict['score'] == 1.
     binding['trial_id'] = 'old-trial'
@@ -107,11 +107,11 @@ def test_sealed_episode_uses_private_input_and_execution_binding(tmp_path, monke
 
 def test_native_failure_and_false_completion_never_become_zero(tmp_path, monkeypatch):
     actor, case, spec = request(tmp_path)
-    monkeypatch.setattr(bridge.importlib, 'import_module', lambda name: SimpleNamespace(run=lambda *a, **k:
+    monkeypatch.setattr(bridge, '_native_module', lambda name: SimpleNamespace(run=lambda *a, **k:
         {'score': 0., 'passed': False, 'evidence': {'measured': False}}))
     assert consume(actor, spec)['score'] is None
     def fail(*args, **kwargs): raise ValueError('PRIVATE expected rubric')
-    monkeypatch.setattr(bridge.importlib, 'import_module', lambda name: SimpleNamespace(run=fail))
+    monkeypatch.setattr(bridge, '_native_module', lambda name: SimpleNamespace(run=fail))
     verdict = consume(actor, spec)
     assert verdict['score'] is None and 'PRIVATE' not in json.dumps(verdict)
 
