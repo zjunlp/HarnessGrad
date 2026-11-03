@@ -120,6 +120,27 @@ recheck comparable: one file in one shard, and a fresh temporary root per shard
 failure after the source has been edited with the suite still running is a
 measurement of the edit, not of the release: the integrity guard is doing its job.
 
+## Continuous integration
+
+`.github/workflows/quality.yml` runs two jobs on every push to `main` and every
+pull request. The `checks` job is deterministic and installs nothing beyond the
+interpreter: documentation links and fenced commands, the lanes, the registry and
+its declared refusals, this workflow's own references, and the checkout's
+cleanliness afterwards (`git status --porcelain` must be empty, so a generator
+that writes into the tree cannot turn a green run into a diff nobody reviewed).
+It prints how many adapters it could publish instead of asserting the host's 59 —
+that count is a function of which optional extras are installed, and a fresh
+runner has none; only a *broken* adapter fails the job. The `suite` job runs the
+entry point a contributor runs, `tools/run_tests.py --fast --jobs 3`, which keeps
+CI from drifting into a second selection of tests.
+
+What CI does not do is the reason to keep reading it carefully: no benchmark
+images, external checkouts, model endpoints or judge services are provisioned, so
+the files that need them skip, and `--fast` drops the seven measured-slow files.
+Those are covered by the four-shard run above, which remains a local gate. A green
+badge is evidence about the deterministic surface on a clean machine — not a claim
+that the platform was measured end to end.
+
 ## Practical limits
 
 The five-task recipes are bounded integration smokes. They are not full official

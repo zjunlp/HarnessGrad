@@ -1,0 +1,175 @@
+# The gate a stranger meets first: clone, no dependencies, run what the repository says.
+#
+# Two jobs, split by what they can *guarantee* on a machine that is not ours.
+#
+#   checks  gating. Documentation links and fenced commands, the lane split, this workflow's
+#           own references, the import-direction rules, the reviewed adapter inventory, the
+#           leaderboard record, the entrypoints, and the checkout's cleanliness afterwards.
+#           Every one reads files in the checkout, so on any Linux box with Python and pytest
+#           the answer is the same, and a red result is a change to fix.
+#
+#   report  advisory. The catalogue documents (DATASETS.md, the refusal declarations) and the
+#           quality suite through `tools/run_tests.py --fast`. These depend on what the
+#           machine has -- optional extras, provisioned datasets, a relay or a container
+#           runtime -- so a failure can mean "this runner is bare" rather than "this change is
+#           wrong". The job still runs them and still shows red; it may not fail the workflow,
+#           and it may not be quiet either.
+#
+# Why that split is honest rather than convenient: a dataset that drops because `numpy` is
+# absent is correct behaviour (the platform has no runtime dependencies on purpose), and a
+# test file that needs a provisioned dataset should skip rather than pass. Gating on either
+# would make the badge a statement about GitHub's image. `docs/release-validation.md` records
+# the full four-shard run on a provisioned machine: that is the stronger claim, and it stays a
+# local gate until dataset discovery stops depending on what is installed.
+#
+# No secrets are used and nothing is published, so a pull request from a fork is useful.
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks (documentation, registry, packaging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The one thing installed for the gate. The platform is standard library only, on
+      # purpose: `pyproject.toml` declares `dependencies = []` so an offline machine can
+      # install it, and the step below asserts that claim on an interpreter with nothing
+      # else added to it.
+      - name: Test runner
+        run: python3 -m pip install --quiet --disable-pip-version-check pytest
+
+      - name: Standard library only
+        run: |
+          python3 - <<'PY'
+          import pathlib, tomllib
+          project = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+          declared = project["dependencies"]
+          assert declared == [], f"runtime dependencies are not allowed: {declared}"
+          print("dependencies:", declared, "| requires-python:", project["requires-python"])
+          PY
+
+      # One pytest invocation per file, and a failed file is reported as an annotation that
+      # carries its own tail: a single invocation makes a red step say "exit code 1" and
+      # nothing else, and the log is readable only by someone with a token -- which is exactly
+      # the position a contributor on a fork is in.
+      - name: Documentation, registry and CI guards
+        run: |
+          status=0
+          for file in \
+            tests/quality/test_documentation_links.py \
+            tests/quality/test_documentation_commands.py \
+            tests/quality/test_test_lanes.py \
+            tests/quality/test_ci_workflow.py \
+            tests/quality/test_import_direction.py \
+            tests/quality/test_registry_broken_adapters.py \
+            tests/quality/test_leaderboards.py ; do
+            log="$RUNNER_TEMP/$(basename "$file" .py).log"
+            if python3 -m pytest -q "$file" \
+                 --basetemp="$RUNNER_TEMP/pytest-checks/$(basename "$file" .py)" > "$log" 2>&1 ; then
+              echo "ok   $file"
+            else
+              status=1
+              echo "FAIL $file"
+              tail -n 40 "$log"
+              detail=$(tail -n 12 "$log" | sed ':a;N;$!ba;s/\n/%0A/g')
+              echo "::error file=$file::$detail"
+            fi
+          done
+          exit $status
+
+      - name: Entrypoints import and answer help
+        run: |
+          python3 driver.py --help > /dev/null
+          python3 -c "import driver, harnessgrad.cli; print('import: ok')"
+
+      # A generator that writes into the checkout turns "green" into "green plus a diff a
+      # reviewer has to notice". The tree must be as clean after the checks as before them.
+      - name: The checkout is unchanged
+        run: |
+          git diff --check
+          test -z "$(git status --porcelain)" || {
+            echo "::error::the checks wrote into the checkout:"
+            git status --porcelain
+            exit 1
+          }
+
+  report:
+    name: Report (catalogue and suite)
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test runner and the two optional adapter extras
+        run: python3 -m pip install --quiet --disable-pip-version-check pytest numpy chess
+
+      # Known, named gaps rather than a surprise: a red suite should be read with these in
+      # mind, and a contributor should not have to infer them from a skip count.
+      - name: What this runner cannot do
+        run: |
+          cat <<'EOF'
+          - No provisioned dataset bytes: files that load a corpus without a fixture skip.
+          - No agent or judge endpoint: model-facing smoke tests skip.
+          - No docker image cache: container tasks that pull an image are slow or skip.
+          - `--fast` drops the seven files measured at minutes each.
+          The provisioned gate is the four-shard run in docs/release-validation.md.
+          EOF
+
+      - name: Catalogue documents
+        run: |
+          python3 tools/datasets_doc.py --check
+          python3 tools/check_dataset_blockers.py
+
+      - name: Adapters this machine can import
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, ".")
+          from data.scaffolds import registry
+          published = registry.published()
+          broken = registry.broken_adapters()
+          optional = ("ImportError", "ModuleNotFoundError", "FileNotFoundError")
+          print(f"published: {len(published)} of {len(published) + len(broken)} declared")
+          for name, error in sorted(broken.items()):
+              kind = "optional" if error.startswith(optional) else "BROKEN"
+              print(f"  {kind:8s} {name}: {error.splitlines()[0][:120]}")
+          real = {name: error for name, error in broken.items()
+                  if not error.startswith(optional)}
+          assert not real, f"adapters raise for a reason that is not a missing extra: {real}"
+          PY
+
+      # Two concurrent files on a four-core runner: this suite spends its time in subprocess
+      # work rather than in the parent process, and the load-sensitive failures measured on a
+      # large host start at three. `tools/run_tests.py` owns the lane split, the per-file
+      # temporary root outside the checkout, and the run-alone recheck of a failure.
+      - name: Suite
+        env:
+          HG_TEST_TMPDIR: ${{ runner.temp }}/hg-pytest
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 tools/run_tests.py --fast --jobs 2
