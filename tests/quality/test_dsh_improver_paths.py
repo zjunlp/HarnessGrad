@@ -134,6 +134,8 @@ def test_selected_installation_survives_identity_staging_and_restricted_executio
                         'agent_key_present': False, 'other_key_present': False,
                         'declared_key_present': True}
     assert result['changed'] == ['agent.py']
+    assert {'HG_AGENT_API_KEY', 'OTHER_API_KEY'} <= set(result['reported']['env_withheld'])
+    assert not {'HG_DSH_ROOT', 'HG_DSH_NODE'} & set(result['reported']['env_withheld'])
     plan = _method_sandbox_plan(workspace, [sys.executable, str(improver.ROOT / 'methods/a/run.py')],
                                 workspace, runtime=tuple(selected['runtime']))
     assert {root, home, node.parent.parent} <= set(plan['runtime_paths'])

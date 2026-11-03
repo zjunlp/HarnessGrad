@@ -6378,3 +6378,17 @@ a live payload. Production readiness invokes check-only in a subprocess; metadat
 and asset validation are not model/endpoint or binary-import health checks.
 
 Evidence is deliberately bounded: integrated production-declaration sandbox reruns measured oracle/noop 1/0 on one USER-toggle telecom task and [1,1,1]/[0,0,0] on the default three tasks. All eight executions recorded sandbox enforcement, complete relay cleanup and no fixture errors; the default airline judge returned complete 4/4 assertion coverage, excluded from reward. These deterministic fixtures do not authorize H0 or prove general model behavior. No new benchmark execution or timing claim is made here.
+
+### DSH installation paths survive relocation (2026-11-03)
+
+The DSH improver resolves one configured checkout, Node executable and prepared
+profile home for version probing, build identity, read-only bindings and actual
+execution. Its recorded runtime survives the restricted CLI environment without
+exposing other credentials or retaining personal-directory defaults.
+
+The task Harness stores all 277 plugin targets relative to its selected checkout.
+Preparation validates the dependency closure and records local sandbox bindings;
+stale farms, missing packages and escaping targets fail before link creation.
+Relocation controls cover normal and custom-command execution, configuration facts,
+loader interpreter selection and profile isolation. These model-free controls do
+not establish that a real DSH profile can boot or complete benchmark tasks.

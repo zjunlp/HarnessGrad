@@ -568,6 +568,7 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     if style == "dsh" and dsh_runtime:
         env["HG_DSH_ROOT"] = str(dsh_runtime["root"])
         env["HG_DSH_NODE"] = str(dsh_runtime["node"])
+        withheld = [name for name in withheld if name not in {"HG_DSH_ROOT", "HG_DSH_NODE"}]
     # The CLI's own state, seeded into the workspace because the sandbox binds the
     # improver's trees read-only and nothing under `$HOME` is reachable from inside it.
     if style == "dsh":
