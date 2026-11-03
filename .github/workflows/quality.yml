@@ -37,6 +37,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # 04:07 UTC: the nightly full suite. A push runs only what it can reach, and this is the
+    # job that keeps the whole tree measured -- once a day is enough for that claim, and a
+    # twenty-minute suite must not sit in front of a one-line fix.
+    - cron: '7 4 * * *'
 
 permissions:
   contents: read
@@ -185,9 +190,23 @@ jobs:
             grep -v -x -E 'test_(ci_workflow|contributors|documentation_commands|documentation_links|import_direction|registry_broken_adapters|test_lanes)\.py' \
               "$RUNNER_TEMP/selected.txt" > "$RUNNER_TEMP/suite.txt" || true
             suite=$(tr '\n' ' ' < "$RUNNER_TEMP/suite.txt")
+            # Written where a reader can see it without a token: the step summary is part of
+            # the run page, and "which tests did this run pick" is the question a red job asks.
+            {
+              echo "### Suite selected for this change"
+              echo
+              if [ -s "$RUNNER_TEMP/suite.txt" ]; then
+                sed 's/^/- `/' "$RUNNER_TEMP/suite.txt" | sed 's/$/`/'
+              else
+                echo "_nothing outside the guards: the guards ran in the checks job_"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "selected:"; cat "$RUNNER_TEMP/selected.txt" | sed 's/^/  /'
           fi
           echo "suite=$suite" >> "$GITHUB_OUTPUT"
+          # An annotation is readable from outside (a fork, a reviewer, me) without the log,
+          # which is what the last two diagnostics needed and could not get.
+          echo "::notice::base=${base:-<none>} selection=${suite:-<guards only>}"
 
       - name: Nothing in the suite can reach this change
         if: steps.select.outputs.suite == ''
@@ -202,17 +221,23 @@ jobs:
       # `tools/run_tests.py` owns the lane split, the per-file temporary root outside the
       # checkout, and the run-alone recheck of a failure.
       - name: Suite
-        if: steps.select.outputs.suite != ''
+        if: steps.select.outputs.suite != '' && steps.select.outputs.suite != '__full__'
         env:
           HG_TEST_TMPDIR: ${{ runner.temp }}/hg-pytest
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
-          if [ '${{ steps.select.outputs.suite }}' = "__full__" ]; then
-            python3 tools/run_tests.py --fast --jobs 4
-          else
-            args=""
-            for file in ${{ steps.select.outputs.suite }}; do
-              args="$args --file $file"
-            done
-            python3 tools/run_tests.py --fast --jobs 4 $args
-          fi
+          args=""
+          for file in ${{ steps.select.outputs.suite }}; do
+            args="$args --file $file"
+          done
+          python3 tools/run_tests.py --fast --jobs 4 $args
+
+      # A change with no computable base (a force-push) or a core path selects everything.
+      # That is the right *selection* and the wrong thing to block a push on: the full suite
+      # is a nightly job now, and the nightly job is the one that runs it.
+      - name: Full suite deferred to the nightly run
+        if: steps.select.outputs.suite == '__full__'
+        run: |
+          echo "::notice::this change selects everything; the full suite runs nightly (schedule)"
+          echo "The full suite is deferred to the nightly run for a change that selects everything." \
+            >> "$GITHUB_STEP_SUMMARY"

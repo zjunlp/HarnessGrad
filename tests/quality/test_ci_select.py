@@ -81,3 +81,15 @@ def test_a_wide_change_falls_back_to_the_full_suite() -> None:
 def test_a_change_to_a_test_runs_that_test() -> None:
     picked, _ = ci_select.select(["tests/quality/test_contributors.py"])
     assert "test_contributors.py" in picked
+
+
+def test_a_change_to_a_fixture_runs_its_consumer() -> None:
+    """`tests/fixtures/` once fell through a `startswith("test")` guard and selected nothing."""
+    picked, _ = ci_select.select(["tests/fixtures/hg_bfclguard/edges.jsonl"])
+    assert "test_bfclguard_reachability.py" in picked, picked
+
+
+def test_a_change_to_any_test_file_selects_it() -> None:
+    for name in ("test_dataset_classes.py", "test_trace_reader.py"):
+        picked, _ = ci_select.select([f"tests/quality/{name}"])
+        assert name in picked or set(picked) == set(ci_select.GUARDS), (name, picked)

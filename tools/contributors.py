@@ -44,6 +44,12 @@ ROOT = Path(__file__).resolve().parents[1]
 RECORD = ROOT / "registry" / "leaderboards.json"
 README = ROOT / "README.md"
 DETAILS = ROOT / "docs" / "contributors.md"
+#: Avatars are cached here as bytes, not fetched at render time. A GitHub README shows an SVG
+#: through an `<img>`, and an `<img>` may not load a remote resource from inside the SVG -- so
+#: a remote `href` in the drawing is never fetched, which is why the avatars looked empty. A
+#: data URI is part of the file and renders anywhere; keeping the bytes here also keeps the
+#: render reproducible when someone changes their profile picture.
+AVATARS = ROOT / ".github" / "assets" / "avatars"
 FIGURES = {board: ROOT / ".github" / "assets" / f"contributors-{board}.svg"
            for board in ("harness", "method", "benchmark")}
 PAGE = ROOT / "docs" / "contributors.html"
@@ -173,21 +179,67 @@ def _window(record: dict) -> list[str]:
             for offset in range(WINDOW_DAYS)]
 
 
+def avatar_data_uri(handle: str) -> str | None:
+    """The cached avatar as a data URI, or None when this person has no cached image."""
+    for suffix in (".png", ".jpg", ".jpeg"):
+        path = AVATARS / f"{handle}{suffix}"
+        if path.is_file():
+            import base64
+            kind = "jpeg" if suffix in (".jpg", ".jpeg") else "png"
+            return f"data:image/{kind};base64," + base64.b64encode(path.read_bytes()).decode()
+    return None
+
+
 def _avatar(handle: str, cx: float, cy: float, radius: float, colour: str) -> str:
     """A round avatar, with the initial underneath as the fallback.
 
-    The image is GitHub's own avatar URL. A README sanitises remote images in some renderers,
-    so the circle and the initial are drawn first: if the fetch is blocked the mark still
-    identifies the person instead of leaving a hole.
+    The image is a data URI from the cache (see `AVATARS` for why not a URL). The circle and
+    the initial are drawn first and stay visible if this person has no cached image, so a
+    missing avatar degrades to a letter rather than to a hole.
     """
     size = radius * 2
-    return (f'<g><circle cx="{cx:.1f}" cy="{cy:.1f}" r="{radius:.1f}" fill="{colour}" '
+    base = (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{radius:.1f}" fill="{colour}" '
             f'opacity="0.18"/>'
             f'<text x="{cx:.1f}" y="{cy + radius * 0.4:.1f}" font-size="{radius:.1f}" '
-            f'text-anchor="middle" fill="{colour}">{handle[:1].upper()}</text>'
-            f'<image href="https://github.com/{handle}.png?size=64" x="{cx - radius:.1f}" '
-            f'y="{cy - radius:.1f}" width="{size:.1f}" height="{size:.1f}" '
+            f'text-anchor="middle" fill="{colour}">{handle[:1].upper()}</text>')
+    uri = avatar_data_uri(handle)
+    if uri is None:
+        return f"<g>{base}</g>"
+    return (f'<g>{base}<image href="{uri}" x="{cx - radius:.1f}" y="{cy - radius:.1f}" '
+            f'width="{size:.1f}" height="{size:.1f}" '
             f'clip-path="circle({radius:.1f}px at {radius:.1f}px {radius:.1f}px)"/></g>')
+
+
+#: Two label rows closer than this overlap once the avatar and the handle are drawn.
+LABEL_GAP = 30.0
+
+
+def _label_layout(rows: list[tuple[str, float, int, str]],
+                  top: float, bottom: float) -> list[tuple[str, float, float, int, str]]:
+    """Place right-hand labels without overlap, keeping each tied to its curve's end.
+
+    `rows` is (handle, end-of-curve y, total, colour); the result is (handle, point y, label y,
+    total, colour), top to bottom. A label is pushed down until it clears the previous one, and
+    the whole stack is shifted back inside `[top, bottom]` afterwards, so a crowded panel stays
+    legible instead of spilling into the footnote. The leader line drawn from a point to its
+    label is what keeps a moved label honest.
+    """
+    ordered = sorted(rows, key=lambda row: row[1])
+    placed: list[list] = []
+    previous = float("-inf")
+    for handle, point_y, total, colour in ordered:
+        label_y = max(point_y, previous + LABEL_GAP)
+        placed.append([handle, point_y, label_y, total, colour])
+        previous = label_y
+    overflow = placed[-1][2] - bottom
+    if overflow > 0:
+        for row in placed:
+            row[2] -= overflow
+    if placed[0][2] < top:
+        delta = top - placed[0][2]
+        for row in placed:
+            row[2] += delta
+    return [tuple(row) for row in placed]
 
 
 def render_svg(record: dict, board: str) -> str:
@@ -245,6 +297,10 @@ def render_svg(record: dict, board: str) -> str:
             continue
         parts.append(f'<text x="{x_of(index):.1f}" y="{top + plot_h + 18}" font-size="10" '
                      f'fill="#6e7781" text-anchor="middle">{day[:7]}</text>')
+    # Rows are drawn first, then the right-hand labels, because two contributors whose curves
+    # end close together would otherwise print on top of each other: 9 and 8 entries are two
+    # pixels apart on a 300 px panel, and "crepuscular-drizzle" is wider than that.
+    label_rows: list[tuple[str, float, int, str]] = []
     for rank, handle in enumerate(people):
         values = series[handle]
         points = " ".join(f"{x_of(i):.1f},{y_of(v):.1f}" for i, v in enumerate(values))
@@ -259,16 +315,20 @@ def render_svg(record: dict, board: str) -> str:
             parts.append(f'<g><title>{days[index]} · @{handle} · cumulative {value} of '
                          f'{len(items)}</title><circle cx="{x_of(index):.1f}" '
                          f'cy="{y_of(value):.1f}" r="3" fill="{shade}"/></g>')
-        # right-hand label, one per line, at its final value
-        y = y_of(values[-1])
-        label_x = left + plot_w + 14
-        parts.append(_avatar(handle, label_x + 8, y - 3, 8, shade))
-        parts.append(f'<text x="{label_x + 20}" y="{y + 4:.1f}" font-size="11" '
+        label_rows.append((handle, y_of(values[-1]), values[-1], shade))
+    # Labels are laid out top to bottom with a minimum gap; a label that had to move keeps a
+    # leader line back to its curve's end, so the association is never guessed.
+    placed = _label_layout(label_rows, top + 10, height - 44)
+    label_x = left + plot_w + 14
+    for handle, point_y, label_y, total, shade in placed:
+        parts.append(f'<line x1="{left + plot_w + 2}" y1="{point_y:.1f}" '
+                     f'x2="{label_x + 2}" y2="{label_y:.1f}" stroke="{shade}" '
+                     f'stroke-width="1" opacity="0.5"/>')
+        parts.append(_avatar(handle, label_x + 8, label_y - 3, 8, shade))
+        parts.append(f'<text x="{label_x + 20}" y="{label_y + 4:.1f}" font-size="11" '
                      f'fill="#1f2328">{handle}</text>')
-        parts.append(f'<text x="{left + plot_w + 14}" y="{y + 17:.1f}" font-size="10" '
-                     f'fill="#6e7781">{values[-1]} entries</text>')
-        parts.append(f'<line x1="{left + plot_w + 2}" y1="{y:.1f}" x2="{left + plot_w + 8}" '
-                     f'y2="{y:.1f}" stroke="{shade}" stroke-width="2"/>')
+        parts.append(f'<text x="{label_x + 20}" y="{label_y + 17:.1f}" font-size="10" '
+                     f'fill="#6e7781">{total} entries</text>')
     parts.append(f'<text x="16" y="{height - 8}" font-size="10" fill="#6e7781">'
                  f'{days[0]} to {days[-1]}; the date is when an entry was adopted into the '
                  f'record. The website has a draggable window.</text>')
@@ -287,6 +347,9 @@ def render_html(record: dict) -> str:
     payload = json.dumps({
         "people": [{"handle": person["handle"], "name": person.get("name", "")}
                    for person in record["people"]],
+        "avatars": {person["handle"]: avatar_data_uri(person["handle"])
+                    for person in record["people"]
+                    if avatar_data_uri(person["handle"])},
         "updated": record.get("updated"),
         "entries": [{"name": entry["name"], "kind": entry["kind"],
                      "contributor": entry["contributor"], "since": entry["since"][:10],
@@ -393,6 +456,7 @@ function draw() {
       add('line', {x1: L, y1: Y(v), x2: L + pw, y2: Y(v), stroke: '#e6e8eb'});
       add('text', {x: L - 8, y: Y(v) + 4, 'font-size': 10, 'text-anchor': 'end', fill: '#6e7781'}).textContent = v;
     }
+    const labels = [];
     people.forEach((handle, row) => {
       let running = 0;
       const pts = [];
@@ -413,15 +477,36 @@ function draw() {
         });
         c.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
       }});
-      add('circle', {cx: L + pw + 16, cy: Y(running) - 3, r: 8, fill: colour, opacity: .18});
-      add('text', {x: L + pw + 16, y: Y(running) + 1, 'font-size': 10, 'text-anchor': 'middle', fill: colour})
-        .textContent = handle[0].toUpperCase();
-      add('image', {href: 'https://github.com/' + handle + '.png?size=64', x: L + pw + 8, y: Y(running) - 11,
-                    width: 16, height: 16, 'clip-path': 'circle(8px at 8px 8px)'});
-      add('text', {x: L + pw + 30, y: Y(running) + 1, 'font-size': 11, fill: 'CanvasText'}).textContent = handle;
-      add('text', {x: L + pw + 30, y: Y(running) + 14, 'font-size': 10, fill: '#6e7781'})
-        .textContent = running + ' entries';
+      labels.push([handle, Y(running), running, colour]);
     });
+    // Labels are placed after the lines: two contributors who end a few units apart would
+    // otherwise print on top of each other. A moved label keeps a leader line to its point.
+    labels.sort((a, b) => a[1] - b[1]);
+    let previous = -1e9;
+    const placedLabels = labels.map(row => {
+      const labelY = Math.max(row[1], previous + 30);
+      previous = labelY;
+      return [row[0], row[1], labelY, row[2], row[3]];
+    });
+    const overflow = placedLabels.length ? placedLabels[placedLabels.length - 1][2] - (T + ph + 8) : 0;
+    if (overflow > 0) placedLabels.forEach(row => { row[2] -= overflow; });
+    for (const [handle, pointY, labelY, total, colour] of placedLabels) {
+      add('line', {x1: L + pw + 2, y1: pointY, x2: L + pw + 14, y2: labelY, stroke: colour,
+                   'stroke-width': 1, opacity: .5});
+      add('circle', {cx: L + pw + 22, cy: labelY - 3, r: 8, fill: colour, opacity: .18});
+      add('text', {x: L + pw + 22, y: labelY + 1, 'font-size': 10, 'text-anchor': 'middle', fill: colour})
+        .textContent = handle[0].toUpperCase();
+      // The avatar is a cached data URI, like the drawing's: no fetch, so a blocked network
+      // or a changed avatar cannot turn the mark into a broken-image glyph.
+      const uri = DATA.avatars[handle];
+      if (uri) {
+        add('image', {href: uri, x: L + pw + 14, y: labelY - 11, width: 16, height: 16,
+                      'clip-path': 'circle(8px at 8px 8px)'});
+      }
+      add('text', {x: L + pw + 36, y: labelY + 1, 'font-size': 11, fill: 'CanvasText'}).textContent = handle;
+      add('text', {x: L + pw + 36, y: labelY + 14, 'font-size': 10, fill: '#6e7781'})
+        .textContent = total + ' entries';
+    }
     days.forEach((d, i) => { if (d.slice(8, 10) === '01')
       add('text', {x: X(i), y: T + ph + 16, 'font-size': 10, fill: '#6e7781', 'text-anchor': 'middle'}).textContent = d.slice(0, 7); });
     panel.appendChild(svg); host.appendChild(panel);

@@ -109,8 +109,6 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
 
     for path in paths:
         stem = _stem(Path(path).name)
-        if path.startswith("test"):
-            continue
         if any(path == core or path.startswith(core) for core in CORE):
             return [], [f"{path} is a core path: running everything"]
         if path.startswith(("docs/", ".github/")) or path.endswith(".md"):

@@ -125,6 +125,8 @@ def test_a_pull_request_is_covered() -> None:
     triggers = text.split("permissions:", 1)[0]
     assert re.search(r"pull_request", triggers), "pull requests are not covered"
     assert re.search(r"workflow_dispatch", triggers), "the workflow cannot be run by hand"
+    assert re.search(r"schedule", triggers), (
+        "the full suite is deferred to the nightly run, so the workflow needs a schedule")
     assert re.search(r"branches:\s*\[\s*main\s*\]", triggers), (
         "a push trigger must name main; an unnamed push doubles the queue for nothing")
 
