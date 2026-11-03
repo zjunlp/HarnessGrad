@@ -236,3 +236,8 @@ def test_mismatched_explicit_root_and_cli_are_refused(agent, tmp_path):
 def test_unprepared_harness_explains_required_configuration(agent):
     with pytest.raises(ValueError, match="configure_dsh_harness.py"):
         agent.runtime({"PATH": ""})
+
+
+def test_loader_diagnostic_records_missing_configuration_without_raising(agent, tmp_path):
+    result = agent._loader_probe(tmp_path, {"PATH": ""})
+    assert "DSH is not configured" in result["probe_error"]

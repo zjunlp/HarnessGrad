@@ -233,13 +233,13 @@ def _loader_probe(home: Path, env: dict, selected: dict | None = None) -> dict:
     Never raises and never blocks the task: a probe that fails is itself the answer, and it
     is recorded as text rather than dropped.
     """
-    selected = selected or runtime(env)
-    if selected["root"] is None or selected["node"] is None:
-        return {"probe_skipped": "custom command owns its runtime"}
-    node = selected["node"]
-    loader_js = str(selected["root"] / "vendor/loader/lib/index.js")
-    base = (home / ".dsh" / "profiles" / "headless").as_uri() + "/"
     try:
+        selected = selected or runtime(env)
+        if selected["root"] is None or selected["node"] is None:
+            return {"probe_skipped": "custom command owns its runtime"}
+        node = selected["node"]
+        loader_js = str(selected["root"] / "vendor/loader/lib/index.js")
+        base = (home / ".dsh" / "profiles" / "headless").as_uri() + "/"
         probe_env = dict(env, HG_PROBE_LOADER=loader_js, HG_PROBE_BASE=base)
         done = subprocess.run([node, "--input-type=module", "-e", _LOADER_PROBE_JS],
                               env=probe_env, capture_output=True, text=True, errors="replace", timeout=60)
