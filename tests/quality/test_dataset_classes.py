@@ -33,8 +33,29 @@ import dataset_classes  # noqa: E402
 from data.scaffolds import registry  # noqa: E402
 
 
+#: `classify_all()` imports every published adapter, which is the expensive part of this
+#: file: several tests ask the same question and the answer does not change between them.
+#: Cached here rather than in the tool, because a *test* may monkeypatch `CAPABILITY` and
+#: then must call `classify_all()` directly -- the cache is for the read-only questions.
+#: `_published()` imports every adapter too, and it is asked in a dozen tests.
+_PUBLISHED: list[str] | None = None
+
+
+def _published() -> list[str]:
+    global _PUBLISHED
+    if _PUBLISHED is None:
+        _PUBLISHED = list(registry.published())
+    return _PUBLISHED
+
+
+_CLASSIFIED: list[dict] | None = None
+
+
 def _rows() -> list[dict]:
-    return dataset_classes.classify_all()
+    global _CLASSIFIED
+    if _CLASSIFIED is None:
+        _CLASSIFIED = dataset_classes.classify_all()
+    return _CLASSIFIED
 
 
 def _declared_rows() -> list[dict]:
@@ -64,14 +85,14 @@ def _declared_closed_loop_here() -> set[str]:
 def test_every_published_dataset_is_classified_exactly_once():
     rows = _rows()
     names = [row["dataset"] for row in rows]
-    assert sorted(names) == sorted(registry.published())
+    assert sorted(names) == sorted(_published())
     assert len(names) == len(set(names))
 
 
 def test_the_capability_vocabulary_is_closed_and_total():
     rows = _rows()
     declared = set(dataset_classes.CAPABILITY)
-    assert declared == set(registry.published()), (
+    assert declared == set(_published()), (
         "CAPABILITY must name exactly the published datasets; the tool raises otherwise, so "
         "this assertion documents the property rather than reimplementing it")
     for row in rows:
@@ -379,7 +400,7 @@ def test_every_closed_loop_dataset_ships_a_program_or_is_a_container():
 
 def test_every_shipped_program_declares_a_readable_verb_set():
     """The failure mode this replaced: a new spelling silently yielding `single_shot`."""
-    for name in registry.published():
+    for name in _published():
         module = registry.importlib.import_module(f"data.datasets.{name}")
         if getattr(module, "REFUSED", None):
             continue
@@ -413,16 +434,35 @@ def classified():
 
 
 def test_the_json_view_is_machine_readable():
-    proc = subprocess.run([sys.executable, "tools/dataset_classes.py", "--json"],
-                          cwd=ROOT, capture_output=True, text=True, timeout=300)
-    assert proc.returncode == 0, proc.stderr[-400:]
-    rows = json.loads(proc.stdout)
-    assert len(rows) == len(registry.published())
+    rows = _cli_json()
+    assert len(rows) == len(_published())
     assert all({"dataset", "demand", "surface", "adversarial", "exercises",
                 "interaction", "tasks"} <= set(row) for row in rows)
     # One name per datum: the flat vocabulary's `domain` was `surface` plus half of
     # `interaction`, and carrying both spellings is how the two drifted apart.
     assert all("domain" not in row for row in rows)
+
+
+@pytest.fixture(scope="session")
+def _cli_json_module():
+    """Run the CLI once: every test that reads its JSON reads the same run."""
+    proc = subprocess.run([sys.executable, "tools/dataset_classes.py", "--json"],
+                          cwd=ROOT, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stderr[-400:]
+    return json.loads(proc.stdout)
+
+
+_CLI_ROWS: list[dict] | None = None
+
+
+def _cli_json() -> list[dict]:
+    global _CLI_ROWS
+    if _CLI_ROWS is None:
+        proc = subprocess.run([sys.executable, "tools/dataset_classes.py", "--json"],
+                              cwd=ROOT, capture_output=True, text=True, timeout=300)
+        assert proc.returncode == 0, proc.stderr[-400:]
+        _CLI_ROWS = json.loads(proc.stdout)
+    return _CLI_ROWS
 
 
 def test_the_interaction_and_runnable_flags_reach_the_cli():

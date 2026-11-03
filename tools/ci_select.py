@@ -79,8 +79,19 @@ def changed(base: str, head: str) -> list[str]:
 
 
 def _matching(prefixes: tuple[str, ...]) -> list[str]:
-    return sorted(path.name for path in TESTS.glob("test_*.py")
-                  if any(path.name.startswith(prefix) for prefix in prefixes))
+    """Test files whose name starts with one of `prefixes`.
+
+    A prefix that ends in `_` matches a family (`test_dataset_*`); one that does not is an
+    exact file name, which is how `tools/dataset_classes.py` finds `test_dataset_classes.py`
+    -- a stem-matched test with no trailing underscore is a family of one.
+    """
+    picked = []
+    for path in sorted(TESTS.glob("test_*.py")):
+        for prefix in prefixes:
+            if path.name == prefix or path.name.startswith(prefix):
+                picked.append(path.name)
+                break
+    return picked
 
 
 def _stem(name: str) -> str:
@@ -117,7 +128,7 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
             picked.update(wanted)
             reasons.append(f"{path}: {len(wanted)} method tests")
         elif path.startswith("tools/"):
-            wanted = _matching((f"test_{stem}_",))
+            wanted = _matching((f"test_{stem}.py", f"test_{stem}_"))
             picked.update(wanted)
             reasons.append(f"{path}: {len(wanted)} tool tests")
         elif path.startswith("tests/quality/"):

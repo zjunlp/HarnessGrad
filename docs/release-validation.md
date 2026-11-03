@@ -120,6 +120,42 @@ recheck comparable: one file in one shard, and a fresh temporary root per shard
 failure after the source has been edited with the suite still running is a
 measurement of the edit, not of the release: the integrity guard is doing its job.
 
+## What the suite costs, and what CI runs instead
+
+The gate used to run the whole `tests/quality` tree on every push. Measured on the CI runner,
+the gating `checks` job takes **14 s** and the advisory full `--fast` suite about **23 minutes
+at two workers**; on this host the same suite is about **750 s** over two workers, so the
+runner is the slower machine by a factor of three. The shape of both numbers explains the
+redesign: one file, `test_appworld_official_scorer.py`, is **1274 s** of the measured total
+on its own and is already excluded by `--fast`; three dataset sweeps account for most of what
+remains (`test_dataset_classes.py` ≈ 170 s for 33 tests, `test_dataset_controls.py` ≈ 180 s
+for 7, `test_qa_dataset_contract.py` ≈ 140 s), and they are expensive for a real reason —
+each re-runs classification or an oracle/no-op control *per dataset*, under patched inputs.
+
+They are kept, not deleted: deleting a sweep because it is slow is how a "total and closed"
+classification stops being either. What changed is *when* they run. `tools/ci_select.py` maps
+a changed path to the tests that can reach it —
+
+| change | selected |
+| --- | --- |
+| `data/datasets/<x>.py` | `test_<x>_*`, `test_dataset_*`, `test_datasets_doc` |
+| `base_harness/<x>/**`, `methods/<x>/**` | `test_<x>_*`, `test_harness_*` / `test_method_*` |
+| `tools/<x>.py` | `test_<x>.py` and `test_<x>_*` |
+| `tests/quality/<name>` | that file, plus the guards |
+| `docs/**`, `*.md`, `.github/**` | the guards only |
+| `driver.py`, `eval/**`, `harnessgrad/**`, anything unmapped, >25 files | everything |
+
+— always includes the guard set, and falls back to the full suite whenever it cannot reason
+about a change. The `report` job compares against the pull request's base and drops the guards
+because the `checks` job already ran them on that commit; a manual run has no base and still
+runs everything. So a documentation edit is seconds, an adapter edit is that adapter's tests
+plus the guards, and a core edit is the full suite — which is the only case that needs it.
+
+Two of the slow files were also made cheaper without losing an assertion: `test_dataset_classes`
+now caches `classify_all()`, `registry.published()` and the CLI's JSON for the tests that ask
+the same read-only question more than once. Tests that monkeypatch the vocabulary still call
+the tool directly, because a cache is exactly what they must not see.
+
 ## Continuous integration
 
 `.github/workflows/quality.yml` runs two jobs on every push to `main` and every

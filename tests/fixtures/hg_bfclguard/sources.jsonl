@@ -585,13 +585,13 @@
 {"bytes": 9588, "id": 584, "module": "tools.check_trace_contract", "path": "tools/check_trace_contract.py", "sha256": "ede1f0536d0a9888466a5d0c8cd71033a316827f15f900706261cd743770e384"}
 {"bytes": 5981, "id": 585, "module": "tools.check_triviaqa_hub_provenance_codex225", "path": "tools/check_triviaqa_hub_provenance_codex225.py", "sha256": "650571a67cf12e2469cbabb553ae7691e523393d05d6a2c2843ab23349796d23"}
 {"bytes": 658, "id": 586, "module": "tools.check_triviaqa_provenance", "path": "tools/check_triviaqa_provenance.py", "sha256": "c7dd6f3873a29a38a1b3825d964344b95b9cdeac492f516c136d5a9c6f26d01b"}
-{"bytes": 6853, "id": 587, "module": "tools.ci_select", "path": "tools/ci_select.py", "sha256": "8b83f0fb084f09b22553ac4b20543412fa458bc3ff8cf63d5bb9ef4f9cb0ba42"}
+{"bytes": 7302, "id": 587, "module": "tools.ci_select", "path": "tools/ci_select.py", "sha256": "2fa9f4b9d5de0863f43a3f47363a6ff35ee0aae3969944aaa7d16fd8f88ce56f"}
 {"bytes": 51497, "id": 588, "module": "tools.component_attribution", "path": "tools/component_attribution.py", "sha256": "a9bac10dfdff38d7ac0cb1bfe525d15201c5bbcf1b4fff7a9d2a5d553e4f069a"}
 {"bytes": 925, "id": 589, "module": "tools.configure_bun_harness", "path": "tools/configure_bun_harness.py", "sha256": "646c0efbb039b5db05efd3558ade0ee42c5b39052481e1fe9d95a6717d36e492"}
 {"bytes": 32901, "id": 590, "module": "tools.configure_harness", "path": "tools/configure_harness.py", "sha256": "721f95e5978da7fc98cb9fac26031c9510d7eb5cf9aaface2c321e1e0f8f670d"}
 {"bytes": 1062, "id": 591, "module": "tools.configure_responses_overlay", "path": "tools/configure_responses_overlay.py", "sha256": "c2c69997b05dcea38f2597688d48ac7b2ff791c517f620181f20cebce5df6818"}
 {"bytes": 10919, "id": 592, "module": "tools.contribute", "path": "tools/contribute.py", "sha256": "f508f4ec78d2996ebc8e44df1490245ca228450a787b8afa4e03921bf5ab90ce"}
-{"bytes": 29687, "id": 593, "module": "tools.contributors", "path": "tools/contributors.py", "sha256": "a6050c4dc386dfb912509dda6f0bafe13caaa0d950ef961df4e77059294bfaf7"}
+{"bytes": 33992, "id": 593, "module": "tools.contributors", "path": "tools/contributors.py", "sha256": "82ee417201e51a7cb77d6e12d352cbe1b787767458504dd8114bdc1a7199ccce"}
 {"bytes": 44030, "id": 594, "module": "tools.dataset_classes", "path": "tools/dataset_classes.py", "sha256": "4436a4e3255bcc89cf67b218d57b0f309cd7d172ebf4e8734291c75b876ace59"}
 {"bytes": 24985, "id": 595, "module": "tools.dataset_lint", "path": "tools/dataset_lint.py", "sha256": "6e28e3b5a98901092bc9f4299fc8740f79cee83d72a893875e1f38a7b43a3657"}
 {"bytes": 37909, "id": 596, "module": "tools.datasets", "path": "tools/datasets.py", "sha256": "8eaa6a557dba3f42c7500350a2dcb93945024553a5a18ea480bab9ae2bbdff54"}

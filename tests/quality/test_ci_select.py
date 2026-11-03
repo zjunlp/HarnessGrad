@@ -50,6 +50,14 @@ def test_a_tool_change_pulls_in_its_own_test() -> None:
     assert set(ci_select.GUARDS) <= set(picked)
 
 
+def test_a_tool_change_selects_its_test_with_or_without_a_suffix() -> None:
+    """`test_dataset_classes.py` has no trailing underscore; the prefix rule must still find it."""
+    picked, _ = ci_select.select(["tools/dataset_classes.py"])
+    assert "test_dataset_classes.py" in picked, picked
+    picked, _ = ci_select.select(["tools/contributors.py"])
+    assert "test_contributors.py" in picked, picked
+
+
 def test_a_core_path_falls_back_to_the_full_suite() -> None:
     for path in ("driver.py", "eval/run/runner.py", "harnessgrad/readiness.py"):
         picked, reasons = ci_select.select([path])

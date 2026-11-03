@@ -118,15 +118,28 @@ def test_the_interactive_page_carries_the_record_and_the_controls() -> None:
         {person["handle"] for person in _record()["people"]})
     for control in ('id="win"', 'id="end"', 'id="board"'):
         assert control in page, f"the page has no {control} control"
-    assert "github.com/" in page and ".png?size=64" in page, "the page draws no avatars"
+    assert "data:image/" in page, "the page draws no cached avatars"
+    assert ".png?size=64" not in page, "the page still fetches an avatar over the network"
     assert "function draw()" in page, "the page cannot redraw"
 
 
-def test_the_static_svg_labels_carry_an_avatar_with_a_fallback() -> None:
-    """A blocked remote image must not leave a hole: the initial is drawn underneath."""
+def test_avatars_are_cached_and_embedded_rather_than_linked() -> None:
+    """A README shows an SVG through an `<img>`, which may not load a remote resource.
+
+    So the avatar has to be part of the file: the drawing embeds a data URI from
+    `.github/assets/avatars/`, and every contributor has a cached image. The initial is drawn
+    underneath either way, so a person without a cached image degrades to a letter.
+    """
+    record = _record()
+    for person in record["people"]:
+        handle = person["handle"]
+        assert contributors.avatar_data_uri(handle), f"{handle} has no cached avatar"
     for board in ("harness", "method", "benchmark"):
-        svg = contributors.render_svg(_record(), board)
-        assert ".png?size=64" in svg, f"{board}: no avatar image"
+        svg = contributors.render_svg(record, board)
+        for handle, _ in contributors.totals(
+                [e for e in contributors.entries(record) if e["kind"] == board]):
+            assert "data:image/" in svg, f"{board}: no embedded avatar"
+            assert "github.com/" not in svg, f"{board}: the drawing still links an avatar URL"
         assert 'clip-path="circle(' in svg, f"{board}: the avatar is not clipped round"
         assert 'text-anchor="middle" fill=' in svg, f"{board}: no initial fallback"
 

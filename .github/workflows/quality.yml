@@ -194,10 +194,13 @@ jobs:
         run: |
           echo "documentation-only change: the guards already covered it in the checks job"
 
-      # Two concurrent files on a four-core runner: this suite spends its time in subprocess
-      # work rather than in the parent process, and the load-sensitive failures measured on a
-      # large host start at three. `tools/run_tests.py` owns the lane split, the per-file
-      # temporary root outside the checkout, and the run-alone recheck of a failure.
+      # Four concurrent files on a four-core runner. Measured: the full `--fast` suite takes
+      # ~23 minutes at two workers on this runner, and the cost is subprocess work rather than
+      # the parent process -- but the load-sensitive failures seen on a large host start at
+      # three concurrent files, so this is a compromise, and the job is advisory precisely
+      # because a runner's timing is not a property of the change.
+      # `tools/run_tests.py` owns the lane split, the per-file temporary root outside the
+      # checkout, and the run-alone recheck of a failure.
       - name: Suite
         if: steps.select.outputs.suite != ''
         env:
@@ -205,11 +208,11 @@ jobs:
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
           if [ '${{ steps.select.outputs.suite }}' = "__full__" ]; then
-            python3 tools/run_tests.py --fast --jobs 2
+            python3 tools/run_tests.py --fast --jobs 4
           else
             args=""
             for file in ${{ steps.select.outputs.suite }}; do
               args="$args --file $file"
             done
-            python3 tools/run_tests.py --fast --jobs 2 $args
+            python3 tools/run_tests.py --fast --jobs 4 $args
           fi
