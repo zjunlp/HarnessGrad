@@ -472,7 +472,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
         if command:
             try:
                 built = subprocess.run([str(part) for part in command], capture_output=True,
-                                       text=True, timeout=60)
+                                       text=True, errors="replace", timeout=60)
                 if built.returncode == 0 and built.stdout.strip():
                     version = f"{ver}+{built.stdout.strip().splitlines()[0][:40]}"
             except (OSError, subprocess.TimeoutExpired) as exc:

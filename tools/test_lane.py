@@ -116,14 +116,14 @@ def changed_files(base: str) -> list[str]:
     """Committed changes since the merge base, plus everything not committed yet."""
     names: list[str] = []
     merge_base = subprocess.run(["git", "merge-base", base, "HEAD"], cwd=ROOT,
-                                capture_output=True, text=True, check=False)
+                                capture_output=True, text=True, errors="replace", check=False)
     spec = f"{merge_base.stdout.strip()}...HEAD" if merge_base.returncode == 0 else base
     diff = subprocess.run(["git", "diff", "--name-only", spec], cwd=ROOT,
-                          capture_output=True, text=True, check=False)
+                          capture_output=True, text=True, errors="replace", check=False)
     if diff.returncode == 0:
         names += [line for line in diff.stdout.splitlines() if line.strip()]
     status = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
-                            capture_output=True, text=True, check=False)
+                            capture_output=True, text=True, errors="replace", check=False)
     if status.returncode == 0:
         for line in status.stdout.splitlines():
             if not line.strip():
