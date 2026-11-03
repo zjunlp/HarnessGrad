@@ -211,8 +211,20 @@ def resolve(name, tasks, declared, choice, *, side='train'):
 
 
 def check_eval_pair(train_run, name, split, protocol):
-    """Prevent a custom-trained checkpoint from being relabelled official eval."""
-    meta = json.loads((Path(train_run) / 'run_meta.json').read_text())
+    """Prevent a custom-trained checkpoint from being relabelled official eval.
+
+    A donor run older than `run_meta.json` (the legacy state layout some archived runs
+    still use) has no protocol to compare against, and refusing there would break a
+    checkpoint evaluation that never used a custom split at all. Missing metadata is
+    therefore "no recorded protocol", not a failure; a *recorded* protocol is enforced.
+    """
+    meta_path = Path(train_run) / 'run_meta.json'
+    if not meta_path.is_file():
+        if protocol is not None:
+            raise ValueError('paired evaluation needs the training run\'s run_meta.json to '
+                             'compare the custom split identity against; this donor has none')
+        return
+    meta = json.loads(meta_path.read_text())
     if meta.get('dataset') != name:
         return  # Cross-dataset transfer retains its existing protocol.
     previous = meta.get('split_protocol')

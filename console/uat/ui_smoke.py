@@ -170,6 +170,14 @@ def main() -> int:
         page.goto(base + f"/harness.html?candidate={RUN}-r20", wait_until="networkidle")
         page.wait_for_timeout(1600)
         check(page.eval_on_selector_all(".hg-srcbar__row", "e => e.length") >= 1, "版本列表有行")
+        # The bar paints twice: the base harnesses arrive with the first paint, the
+        # candidates come from a second fetch, and only then is the selected row in the DOM.
+        # Waiting for the row instead of for a longer timeout is what makes this a check of
+        # "a version ends up selected" rather than a check of how fast the machine is.
+        try:
+            page.wait_for_selector(".hg-srcbar__row[aria-selected='true']", timeout=8000)
+        except Exception:                                            # noqa: BLE001
+            pass
         selected = page.eval_on_selector_all(".hg-srcbar__row[aria-selected='true']",
                                              "els => els.map(e => e.dataset.source)")
         check(bool(selected), f"有一个版本被选中（{selected}）")
