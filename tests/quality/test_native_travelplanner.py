@@ -82,8 +82,17 @@ def test_prepared_adapter_conversion_and_hash_custody(planning, tmp_path, monkey
     monkeypatch.chdir(target)
     (target / 'travelplanner_database').symlink_to(target / 'database', target_is_directory=True)
     assets = Path(__file__).resolve().parents[2] / 'data/scaffolds/native_research'
+    # `scoring.py` imports the package's own `native` helper by bare name, so the directory
+    # still goes on `sys.path`; only the module *this test* loads is resolved by path.
     monkeypatch.syspath_prepend(str(assets))
-    from scoring import score
+    # Loaded by path, not by the bare name `scoring`: another module of that name can already
+    # be in `sys.modules` from an earlier test in the same session, and then this import
+    # silently binds a different `score` (observed as "score() takes 2 positional arguments").
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('native_research_scoring', assets / 'scoring.py')
+    scoring_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(scoring_module)
+    score = scoring_module.score
     received = []
     def converter(messages):
         received.append(messages)
