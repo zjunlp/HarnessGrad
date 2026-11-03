@@ -44,6 +44,7 @@
   "download": {
     "kinds": ["http", "hf-file", "hf-dataset", "pip", "authored"],
     "common_required": ["kind", "name", "version", "size", "note"],
+    "manifest": "Optional repository-relative path to an existing source file and checksum inventory; used for documentation links only.",
     "by_kind": {
       "authored": {"required": ["path", "sha256"]},
       "http": {"required": ["url", "dst"]},

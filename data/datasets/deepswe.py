@@ -5,8 +5,7 @@ manifest, fixed Harbor interpreter and independent local judge where required.
 """
 from pathlib import Path
 
-from data.scaffolds import roots
-import os
+from harnessgrad.paths import dataset_root
 from data.scaffolds import native_harbor as native
 
 KIND = 'dataset'
@@ -15,8 +14,7 @@ OFFICIAL_EVAL = None
 SPLIT = None
 SPLIT_SOURCE = 'none'
 DEFAULT_ENV = {'kind': 'files', 'network': 'none'}
-DATASET_ROOT = roots.dataset_root('deepswe',
-                              legacy=os.environ.get('HG_DEEPSWE_DATA', '/mnt/20t/xubuqiang/datasets/deepswe'))
+DATASET_ROOT = dataset_root('deepswe')
 REVISION = '0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea'
 SOURCE = 'https://github.com/datacurve-ai/deep-swe'
 METRIC = 'reward'

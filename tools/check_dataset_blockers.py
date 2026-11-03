@@ -72,8 +72,8 @@ def literal_declarations(path: Path, names: set[str]) -> dict:
 def published_declarations(root: Path = ROOT) -> tuple[str, ...]:
     """Conservative chooser coverage, including unprovisioned/refused datasets.
 
-    `data.scaffolds.registry.published()` imports adapters and may omit an import failure.
-    Reading KIND declarations covers every publishable source without loading a
+    Like `data.scaffolds.registry.published()`, reading KIND declarations covers
+    every publishable source without loading a
     mixed task pool. A missing literal KIND retains the registry's fixture default.
     """
     return tuple(path.stem for path in sorted((root / "data" / "datasets").glob("*.py"))

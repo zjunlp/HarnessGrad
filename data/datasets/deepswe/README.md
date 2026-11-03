@@ -6,7 +6,7 @@ that terminal snapshot verification is the native separate/replay protocol.
 
 ```sh
 python3 data/datasets/deepswe/prepare.py --root /path/to/deepswe
-HG_DEEPSWE_DATA=/path/to/deepswe python3 -c \
+HG_DATA_DEEPSWE=/path/to/deepswe python3 -c \
   'from data.datasets import deepswe as d; print(d.provision_status())'
 ```
 

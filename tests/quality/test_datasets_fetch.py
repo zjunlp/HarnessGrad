@@ -259,7 +259,7 @@ def test_the_fetch_command_line_prints_the_mirror(capsys, tmp_path, monkeypatch)
     monkeypatch.setattr(datasets, "_download", _recording_download(seen))
     base = tmp_path / "data" / "synthetic"
     entry = _http_entry(RAW_URL, "one.json")
-    monkeypatch.setattr(datasets, "datasets_with_downloads", lambda: [("synthetic", [entry])])
+    monkeypatch.setattr(datasets, "datasets_with_downloads", lambda **kwargs: [("synthetic", [entry])])
     monkeypatch.setattr(datasets, "dataset_root", lambda module: base)
 
     class _FakeImportlib:

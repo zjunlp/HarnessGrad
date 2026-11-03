@@ -13,6 +13,7 @@ driver says so out loud rather than picking one.
 """
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib
 import json
@@ -46,24 +47,25 @@ def module_name(name: str) -> str:
 
 def kind_of(name: str) -> str:
     """`"dataset"` or `"fixture"`, from the module's own declaration."""
-    module = importlib.import_module(module_name(name))
-    kind = getattr(module, "KIND", KIND_FIXTURE)
-    return kind if kind in (KIND_DATASET, KIND_FIXTURE) else KIND_FIXTURE
+    root = Path(__file__).resolve().parents[1]
+    source = root / (f"{name}.py" if name in _FIXTURE_NAMES else f"datasets/{name}.py")
+    for node in ast.parse(source.read_bytes()).body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "KIND" for t in node.targets):
+            if isinstance(node.value, ast.Constant) and node.value.value in (KIND_DATASET, KIND_FIXTURE):
+                return node.value.value
+    return KIND_FIXTURE
 
 
-#: An adapter that exists as a file but could not be imported, name -> the reason.
+#: An adapter declaration that could not be read, name -> the reason.
 #: Filled by `published()`; read by `broken_adapters()` and by `tools/datasets.py --list`.
 _IMPORT_ERRORS: dict[str, str] = {}
 
 
 def broken_adapters() -> dict[str, str]:
-    """Adapters this interpreter cannot even import, with the exception that stopped it.
+    """Unreadable adapter declarations, with the reason they were omitted.
 
-    A registry must not offer a name it cannot load, so `published()` still drops these -- but
-    dropping silently is how a fresh clone ends up showing 57 of 59 datasets with no
-    explanation. The three reasons seen in practice are a missing optional dependency
-    (`chess`, `numpy`), an asset the install did not ship (a wheel has no `specs/*.json`), and
-    a genuinely broken adapter. A caller that shows a catalogue should show this too.
+    Catalogs read source declarations without requiring storage or optional
+    runtimes. Load-time dependency and data errors are reported by `load()`.
     """
     published()
     return dict(_IMPORT_ERRORS)
@@ -75,11 +77,8 @@ def published() -> tuple[str, ...]:
     Programs that offer a choice -- the Launch form, the read API's option list -- read this
     rather than globbing `data/`, so "which datasets exist" has one answer.
 
-    **A name is here only if its adapter imports.** A module that cannot import is not a
-    dataset a reader can pick, and `load()` reports its own errors when someone actually runs
-    it; the reason it was dropped is kept in `_IMPORT_ERRORS` (`broken_adapters()`) rather than
-    thrown away, because "the catalogue is shorter here" is a fact a reader needs, not a
-    detail the platform may swallow.
+    Unreadable declarations are omitted with a diagnostic available through
+    `broken_adapters()`. Runtime availability does not remove catalog entries.
     """
     out = []
     _IMPORT_ERRORS.clear()
@@ -115,7 +114,11 @@ def provision_status(name: str) -> dict | None:
 
 
 def load(name: str) -> tuple[list[dict], dict[str, str]]:
-    """Return (tasks, scorable) for a dataset name."""
+    """Return tasks; adapters require external storage only when they access it.
+
+    A root declaration can serve preparation tools while runtime tasks come from
+    committed assets. Its presence alone does not make it a loading dependency.
+    """
     module = importlib.import_module(module_name(name))
     return module.load()
 

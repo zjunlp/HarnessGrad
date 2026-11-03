@@ -22,7 +22,6 @@ Two halves are tested, the same way `tests/quality/test_datasets_doc.py` tests
 """
 from __future__ import annotations
 
-import importlib
 import json
 import re
 import sys
@@ -113,6 +112,29 @@ def _row(text: str, name: str) -> list[str]:
     return rows[name]
 
 
+def test_source_declarations_survive_an_unavailable_runtime(tmp_path, monkeypatch):
+    adapters = tmp_path / "data/datasets"
+    adapters.mkdir(parents=True)
+    (adapters / "source_only.py").write_text('''\
+KIND = "dataset"
+SPLIT_SOURCE = "declared"
+OFFICIAL_EVAL = read_private_payload()
+raise RuntimeError("unavailable runtime must not be executed")
+''')
+    monkeypatch.setattr(inventory, "ROOT", tmp_path)
+
+    def unavailable(name):
+        raise ModuleNotFoundError("synthetic missing runtime")
+
+    monkeypatch.setattr(inventory.importlib, "import_module", unavailable)
+    row = inventory.row_for("source_only")
+    assert row.state == row.source == "declared"
+    assert row.train == row.eval == row.official == inventory.COMPUTED
+    host = inventory._host_row("source_only")
+    assert host.state == "not provisioned"
+    assert "synthetic missing runtime" in host.detail
+
+
 def _no_bytes(monkeypatch) -> list[str]:
     """Make every adapter's `load()` raise, as on a machine with no dataset at all.
 
@@ -121,8 +143,9 @@ def _no_bytes(monkeypatch) -> list[str]:
     payload would -- and the message is unique to the patch, which is what proves it fired.
     """
     patched: list[str] = []
-    for name in registry.published():
-        module = importlib.import_module(registry.module_name(name))
+    modules = {name: inventory._import_adapter(name) for name in registry.published()}
+    monkeypatch.setattr(inventory, "_import_adapter", modules.__getitem__)
+    for name, module in modules.items():
         if not callable(getattr(module, "load", None)):
             continue
 

@@ -11,15 +11,17 @@ The adapter reads only the pinned validation split, not test gold.
 """
 from __future__ import annotations
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
 from data.scaffolds.qa.evidence_scorers import (hotpot_exact_match, hotpot_f1_score,
                                       SpScore, hotpot_joint, hotpot_update_sp, MissingEvidence)
 
+from harnessgrad.paths import dataset_root
+
 KIND = "dataset"
 METRIC_NAME = "HotpotQA answer F1 (not official joint)"
 
-DATASET_ROOT = roots.dataset_root("hotpotqa", "/mnt/20t/xubuqiang/datasets/hotpotqa")
+
+DATASET_ROOT = dataset_root('hotpotqa')
 REVISION = "1908d6afbbead072334abe2965f91bd2709910ab"
 CONFIG = "fullwiki"
 VALIDATION = f"{CONFIG}/validation-00000-of-00001.parquet"

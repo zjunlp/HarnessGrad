@@ -11,6 +11,9 @@ import tarfile
 import tempfile
 import urllib.request
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
+
 REVISION = 'fc0055dc4e0a316c3f83133267fbd6faaa770992'
 ARCHIVE_SHA256 = '7a227036d07fdeb088dbd0c99fdb40ee9b9e0ebc06aadbc4dec1217b3383e57e'
 DOMAINS = {'airline': 50, 'retail': 114, 'telecom': 114, 'banking_knowledge': 97}
@@ -107,7 +110,7 @@ def prepare(source, target):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--root', type=Path, default=dataset_root('tau3_bench'))
     parser.add_argument('--archive', type=Path)
     parser.add_argument('--fetch', action='store_true')
     args = parser.parse_args()

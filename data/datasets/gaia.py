@@ -75,7 +75,7 @@ import json
 import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 
 
 KIND = "dataset"
@@ -97,7 +97,8 @@ METADATA_TEST = "2023/test/metadata.parquet"
 METADATA_TEST_SHA256 = "6fab73b48acadd363b4082d283d542702356177c76a0fc8ea84568978d4181d7"
 ROWS = 165
 
-DATASET_ROOT = roots.dataset_root("gaia", "/mnt/20t/xubuqiang/datasets/gaia")
+
+DATASET_ROOT = dataset_root('gaia')
 POOL = "pool.jsonl"
 POOL_SHA256 = "eab408ebea22fac494a55320acfc250c4425f01b6fd0860921374773e82ab54e"
 ATTACHMENTS = "attachments"

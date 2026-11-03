@@ -64,12 +64,12 @@ The platform driver may use its own supported Python. Keep the following directo
 outside the repository and outside the sandbox's private `/tmp`:
 
 ```bash
-export HG_TAU3_DATA=/absolute/datasets/tau3_bench
-export HG_TAU3_RUNTIME="$HG_TAU3_DATA/runtime"
-python3.12 -m venv "$HG_TAU3_RUNTIME"
-"$HG_TAU3_RUNTIME/bin/pip" install -r data/datasets/tau3_bench/requirements.lock
-"$HG_TAU3_RUNTIME/bin/python" -I data/datasets/tau3_bench/prepare.py \
-  --root "$HG_TAU3_DATA" --fetch
+export HG_DATA_TAU3_BENCH=/absolute/datasets/tau3_bench
+export HG_DATA_TAU3_BENCH_RUNTIME="$HG_DATA_TAU3_BENCH/runtime"
+python3.12 -m venv "$HG_DATA_TAU3_BENCH_RUNTIME"
+"$HG_DATA_TAU3_BENCH_RUNTIME/bin/pip" install -r data/datasets/tau3_bench/requirements.lock
+"$HG_DATA_TAU3_BENCH_RUNTIME/bin/python" -I data/datasets/tau3_bench/prepare.py \
+  --root "$HG_DATA_TAU3_BENCH" --fetch
 ```
 
 Alternatively supply `--archive /path/to/source.tar.gz`. Preparation verifies the
@@ -79,7 +79,7 @@ Preparation requires a fresh root.
 No model is called during preparation. `PYTHON_DOTENV_DISABLED=1` prevents upstream
 imports from reading ambient credential files.
 
-The relay and verifier both launch `HG_TAU3_RUNTIME/bin/python`. Verifier declarations
+The relay and verifier both launch `HG_DATA_TAU3_BENCH_RUNTIME/bin/python`. Verifier declarations
 include read-only `runtime_paths` for that environment and its base Python prefixes,
 queried from the selected interpreter once per runtime configuration. The verifier
 imports dependencies from that interpreter's own site-packages. Host `PATH`

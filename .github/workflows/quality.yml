@@ -81,7 +81,7 @@ jobs:
             tests/quality/test_ci_workflow.py \
             tests/quality/test_import_direction.py \
             tests/quality/test_registry_broken_adapters.py \
-            tests/quality/test_leaderboards.py ; do
+            tests/quality/test_contributors.py ; do
             log="$RUNNER_TEMP/$(basename "$file" .py).log"
             if python3 -m pytest -q "$file" \
                  --basetemp="$RUNNER_TEMP/pytest-checks/$(basename "$file" .py)" > "$log" 2>&1 ; then

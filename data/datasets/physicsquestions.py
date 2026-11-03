@@ -47,8 +47,9 @@ from __future__ import annotations
 import csv
 import re
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
@@ -59,7 +60,8 @@ ORACLE_SOURCE = "released"
 
 
 
-DATASET_ROOT = roots.dataset_root("physicsquestions", "/mnt/20t/xubuqiang/datasets/physicsquestions")
+
+DATASET_ROOT = dataset_root('physicsquestions')
 CSV_MEMBER = "data/bigbench/physics_question.csv"
 CSV_PATH = ("ReWOO-9cd0283043ff4be0c9d614fda2789d143ca6ffd1/data/bigbench/"
             "physics_question.csv")

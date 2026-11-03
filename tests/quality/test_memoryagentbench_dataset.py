@@ -314,21 +314,26 @@ def test_report_rejects_unbound_or_inconsistent_evidence(prepared, corruption):
         summarize(records, [row])
 
 
-def test_import_is_lazy_and_default_data_root_is_portable(tmp_path):
+def test_import_is_lazy_and_unconfigured_data_root_has_no_default(tmp_path):
     import subprocess
     root = Path(__file__).resolve().parents[2]
-    default = (Path.home() / '.local/share/harnessgrad/datasets/memoryagentbench')
     script = f"""import sys
 from pathlib import Path
 sys.path.insert(0, {str(root)!r})
 from data.datasets import memoryagentbench as dataset
+from harnessgrad.paths import DataRootNotConfigured, DatasetPath
 assert not dataset._rows.cache_info().currsize
-assert dataset.DATASET_ROOT == Path({str(default)!r}), dataset.DATASET_ROOT
+assert isinstance(dataset.DATASET_ROOT, DatasetPath)
+try:
+    Path(dataset.DATASET_ROOT)
+except DataRootNotConfigured as exc:
+    assert 'Set HG_DATA_ROOT' in str(exc)
+else:
+    raise AssertionError('unconfigured storage received an implicit default')
 assert not any(m in sys.modules for m in ('numpy', 'nltk', 'rouge_score', 'pyarrow', 'tiktoken'))
 """
     environment = {key: value for key, value in os.environ.items()
-                   if key not in ('HG_MAB_DATA', 'HG_MAB_PREPARED', 'HG_DATA_ROOT',
-                                  'HG_DATA_MEMORYAGENTBENCH')}
+                   if key not in ('HG_DATA_MEMORYAGENTBENCH', 'HG_DATA_MEMORYAGENTBENCH_PREPARED', 'HG_DATA_ROOT')}
     subprocess.run([sys.executable, '-I', '-S', '-c', script], cwd=tmp_path,
                    env=environment, check=True)
 

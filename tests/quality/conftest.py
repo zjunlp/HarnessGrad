@@ -115,7 +115,7 @@ def blocker_repository_evidence():
 
 
 @pytest.fixture(scope="module")
-def synthetic_gsm8k():
+def synthetic_gsm8k(tmp_path_factory):
     """Build an isolated adapter using three synthetic test and five train rows.
 
     Split names exercise the adapter contract; these are authored unit-test data,
@@ -148,6 +148,7 @@ def synthetic_gsm8k():
         "gsm8k_synthetic_contract", ROOT / "data" / "datasets" / "gsm8k.py")
     module = importlib.util.module_from_spec(spec)
     with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("HG_DATA_GSM8K", str(tmp_path_factory.mktemp("synthetic-gsm8k-storage")))
         patch.setattr(base, "parquet_rows", synthetic_rows)
         spec.loader.exec_module(module)
     assert reads == ["test", "train"]

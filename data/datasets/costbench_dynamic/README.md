@@ -76,9 +76,9 @@ First prepare the existing static dataset. Then, using the pinned Python 3.12
 runtime:
 
 ```bash
-export HG_COSTBENCH_DATA=/absolute/path/outside/repository/costbench
-"$HG_COSTBENCH_DATA/runtime/bin/python" data/datasets/costbench_dynamic/prepare.py \
-  --root "$HG_COSTBENCH_DATA"
+export HG_DATA_COSTBENCH=/absolute/path/outside/repository/costbench
+"$HG_DATA_COSTBENCH/runtime/bin/python" data/datasets/costbench_dynamic/prepare.py \
+  --root "$HG_DATA_COSTBENCH"
 ```
 
 Preparation verifies the static manifest and released queries, freezes private

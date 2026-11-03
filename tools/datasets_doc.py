@@ -32,13 +32,13 @@ Usage
 `--path` compares whatever copy it is pointed at; `tests/quality/test_datasets_doc.py`
 writes a fresh one into `tmp_path` instead of mutating the checked-in file.
 
-Import failures are findings, not crashes
------------------------------------------
-An adapter that raises on import must not take the table down with it, or one broken
-adapter would hide the other 38 -- the same rule `tools/dataset_lint.py` follows. The row
-is still emitted, with the exception type in it and the message in the notes. Its
-`provision` cell is `unknown` for the same reason: a module that will not import never got
-to declare what it needs.
+Catalog metadata before runtime installation
+--------------------------------------------
+Source declarations keep every dataset in the table even before its optional runtime
+or task pool is installed. When importing an adapter fails, reuse the download catalog's
+trusted-source reader for provisioning and literal declarations for metadata. This view
+cannot load tasks or report a locally provisioned runtime. If the source metadata also
+cannot be read, the row carries the exception and an `unknown` provisioning command.
 """
 from __future__ import annotations
 
@@ -49,11 +49,13 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import data.scaffolds.registry as registry  # noqa: E402
+from tools.check_dataset_blockers import published_declarations  # noqa: E402
 
 DOC = ROOT / "DATASETS.md"
 CONTROLS = ROOT / "tests" / "quality" / "test_dataset_controls.py"
@@ -216,12 +218,26 @@ class Row:
 
 def _published() -> tuple[str, ...]:
     """Every dataset a reader can choose, in name order."""
-    return tuple(sorted(registry.published()))
+    return tuple(published_declarations(ROOT))
 
 
 def _import_adapter(name: str):
-    """The adapter module for `name`. Raising here is a reportable row, not a crash."""
-    return importlib.import_module(registry.module_name(name))
+    """Metadata remains readable before optional runtimes or task pools are installed."""
+    try:
+        return importlib.import_module(registry.module_name(name))
+    except Exception:
+        # Reuse the download catalog's trusted-source declaration reader. This
+        # view exposes metadata only; it cannot load or report provisioned tasks.
+        from tools.datasets import _source_downloads
+
+        path = ROOT / "data/datasets" / f"{name}.py"
+        if not path.is_file():
+            raise
+        constants = _module_constants(ast.parse(path.read_text(encoding="utf-8")))
+        downloads = _source_downloads(path, resolve_root=False)
+        if constants.get("KIND") != "dataset" or not callable(downloads):
+            raise
+        return SimpleNamespace(__file__=str(path), downloads=downloads, **constants)
 
 
 # ------------------------------------------------------------------------ declarations ---
@@ -661,12 +677,12 @@ what is already on a given disk is a separate question, answered by `--host`.
 
 | column | comes from |
 | --- | --- |
-| `dataset` | `data/scaffolds/registry.py:published()` -- the adapters whose module declares `KIND = "dataset"`, sorted by name |
-| `kind` | the adapter's own `KIND` (`published()` already filters out fixtures, so this confirms rather than discriminates) |
+| `dataset` | `tools/check_dataset_blockers.py:published_declarations()` -- adapters declaring `KIND = "dataset"`, sorted by name, including those awaiting local data or optional dependencies |
+| `kind` | the adapter's own `KIND` (the source inventory already filters out fixtures) |
 | `official metric` | `METRIC_NAME` when the adapter declares it; else the first `metric` string found in the adapter's source -- an `official` block first, then a `METRIC*` constant, then any scoring function's `metric` entry (identifiers resolved against the module); else `— undeclared` |
 | `known deviation` | the `DEVIATIONS` table in `tools/datasets_doc.py`, each line verified by reading the adapter; `no` means a person read it and found the reward *is* the official metric, either with no warning in the prose or after clearing one into `CLEARED`; `undeclared deviation (review)` means the adapter's prose hints at one and neither table has recorded the reading |
 | `oracle source` | the adapter's `ORACLE_SOURCE`: `released` (the benchmark's own reference artifact) or `authored` (written here, validated by the released tests) |
-| `provision` | the adapter's own `downloads()`, the same declaration `DOWNLOADS.md` is rendered from: `python3 tools/datasets.py --fetch --dataset <name>` when it declares `http` / `hf-dataset` artifacts, `—` when there is nothing to fetch (bytes that ship with the repository, or a `pip`-only dependency installed separately), and `unknown (<Exception>)` when the declaration could not be read. It is a fact about the repository, not about this machine |
+| `provision` | the adapter's own `downloads()`, the same declaration `DOWNLOADS.md` is rendered from: `python3 tools/datasets.py --fetch --dataset <name>` when it declares `http` / `hf-dataset` / `hf-file` artifacts, `—` when there is nothing to fetch (bytes that ship with the repository, or a `pip`-only dependency installed separately), and `unknown (<Exception>)` when the declaration could not be read. It is a fact about the repository, not about this machine |
 | `control arm` | `tests/quality/test_dataset_controls.py:ROWS`: `dataset` when the row names a control to run, `exempt` when it records why there is none, `—` when the dataset has no row |
 | `metric test(s)` | `ROWS[...]["metric_tests"]` -- the files under `tests/quality/` that pin the official metric |
 | `refused` | the adapter's `REFUSED`, first line (truncated at 150 characters; the whole sentence is the adapter's `REFUSED`): this benchmark is refused by design and `load()` raises it |
@@ -680,15 +696,22 @@ receipt.
 ## How to provision a dataset
 
 The bytes live outside the tree and are never committed, under each dataset's own root:
-`HG_DATA_<NAME>` when it is set, else `$HG_DATA_ROOT/<name>`, else the per-user default
-`~/.local/share/harnessgrad/datasets/<name>`. `data/scaffolds/roots.py` is the one resolver,
-so no path in this file is a path from the machine that rendered it. A dataset's own
+`HG_DATA_<NAME>` when it is set, else `<HG_DATA_ROOT>/<dataset-directory>`.
+There is no implicit storage directory. Set `HG_DATA_ROOT` before accessing external
+data, or supply the dataset's explicit override; otherwise the command asks for a path.
+`harnessgrad.paths.dataset_root()` is the common resolver for adapters and preparation.
+Relative settings use the main checkout as their base. Worktrees share its `.env`.
+Set variables in the shell or
+`.env`; see [dataset storage](README.md#dataset-storage) for configuration precedence.
+Directory aliases and shared directories are listed in `DOWNLOADS.md`.
+Catalog declarations can be read from trusted source before optional runtimes or task
+pools are installed; this metadata does not attest local execution. A dataset's own
 `downloads()` is the authority on what it needs, and the `provision` cell is that command --
 the same on every machine:
 
     python3 tools/datasets.py --fetch --dataset <name>
 
-`--fetch` downloads the `http` and `hf-dataset` entries into that root, creating it on
+`--fetch` downloads the `http`, `hf-dataset` and `hf-file` entries into that root, creating it on
 demand -- which is what makes a fresh clone work -- and reports a `pip` entry rather than
 installing it, so install the package version pinned in `DOWNLOADS.md`. That file also
 carries the pinned version, sha256 and exact files for `<name>`, and `python3

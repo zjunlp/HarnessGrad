@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / 'data/datasets/costbench'
-DATA = Path(os.environ.get('HG_COSTBENCH_DATA', ROOT.parent / 'datasets/costbench'))
+DATA = Path(os.environ.get('HG_DATA_COSTBENCH', ROOT.parent / 'datasets/costbench'))
 
 
 def preparation():

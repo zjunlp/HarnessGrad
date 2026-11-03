@@ -22,6 +22,7 @@ import tempfile
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from harnessgrad.paths import configured_path, dataset_root
 from data.datasets.memoryagentbench.lib.inputs import (INTERPRETER_ENV, SPEC_SHA256, initialize,
     read_spec, render_question, split_context)
 from data.datasets.memoryagentbench.lib.storage import (DATASET_REVISION, canonical_sha256, file_sha256,
@@ -186,9 +187,11 @@ def selected_interpreter(value=None):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--raw", required=True, type=Path)
-    parser.add_argument("--resources", required=True, type=Path, help="Directory containing nltk/ and tiktoken/")
-    parser.add_argument("--output", required=True, type=Path, help="Fresh directory outside the platform checkout")
+    root = dataset_root("memoryagentbench")
+    parser.add_argument("--raw", default=root / "raw", type=Path)
+    parser.add_argument("--resources", default=root / "resources", type=Path, help="Directory containing nltk/ and tiktoken/")
+    parser.add_argument("--output", default=configured_path("HG_DATA_MEMORYAGENTBENCH_PREPARED", root / "prepared"),
+                        type=Path, help="Fresh directory outside the platform checkout")
     parser.add_argument("--task-id", action="append", dest="task_ids", help="Original stable task ID; repeat to select rows")
     args = parser.parse_args(argv)
     # The version gate measures the running interpreter, so the selected interpreter has to

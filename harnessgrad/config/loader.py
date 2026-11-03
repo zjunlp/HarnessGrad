@@ -71,7 +71,11 @@ def load(env: Mapping[str, str] | None = None) -> Config:
     so this is a loop over a declaration rather than a naming convention. Nothing is
     read from the process environment unless the caller asks for it.
     """
-    source = os.environ if env is None else env
+    source = env
+    if source is None:
+        from harnessgrad.paths import datasets_root
+        root = datasets_root(required=False)
+        source = {**os.environ, "HG_DATA_ROOT": str(root) if root is not None else ""}
     return Config(
         agent=_load_area(AgentConfig, source),
         judge=_load_area(JudgeConfig, source),
@@ -131,7 +135,7 @@ def current() -> Config:
     env = os.environ
     raw = _raw(env)
     if _CURRENT is None or raw != _RAW:
-        _CURRENT, _RAW = load(env), raw
+        _CURRENT, _RAW = load(), raw
     return _CURRENT
 
 

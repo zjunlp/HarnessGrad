@@ -13,7 +13,7 @@ The source archive hash and licenses are recorded beside these files.
 # configuration, not a file containing provider credentials.
 python3 tools/prepare_native_research.py hle --config /path/native-config.json \
   --output /path/hle-prepared --judge-model YOUR_DECLARED_MODEL
-export HG_HLE_DATA=/path/hle-prepared
+export HG_DATA_HLE=/path/hle-prepared
 ```
 
 A local config uses `data_path` (file or native split mapping). Fetching native

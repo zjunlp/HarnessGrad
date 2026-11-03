@@ -1,19 +1,12 @@
-"""One resolution helper, four rules, and no adapter that can smuggle a host path back.
+"""Portable adapter declarations and the retained root-diagnostic utility.
 
-Why this file exists
---------------------
-The release blocker was measured, not suspected: every adapter spelled the operator's
-absolute data root, and `tools/datasets.py` resolved `--fetch`'s destination from that
-same attribute, so a clone could neither fetch nor load anything. `data/scaffolds/roots.py`
-is the single answer now. A helper with a fallback order is only worth what its worst
-case does, so these tests pin each rule separately, the rule that must *not* win (a stale
-literal), the diagnostic that says which rule won, and the absence of the old spelling
-in every `data/**/*.py` -- statically, with `ast`, not by grep, because a docstring is
-allowed to quote the literal and an assignment is not.
+Adapters must call harnessgrad.paths.dataset_root and must not carry executable
+host-path literals. The actual storage precedence, .env and worktree behavior are
+covered by test_data_paths.py. Tests of the older roots utility below describe its
+diagnostic API, which shares the same explicit configuration rules.
 
-The last two tests are the other half of "mechanical": a provisioned dataset still
-loads, and the inventory the BFCL fixture pins still matches the file on disk. A
-migration that changed behaviour would show up there, not in the resolution tests.
+Provisioned-data loading and the independently pinned BFCL source row remain
+integration checks; neither is replaced by a source-spelling assertion.
 """
 from __future__ import annotations
 
@@ -37,9 +30,8 @@ CONTAIN = ROOT / "tests" / "fixtures" / "hg_bfclcontain"
 HOST_LITERAL = "/mnt/20t/xubuqiang/datasets/"
 DEFAULT_COLLECTION = Path(".local/share/harnessgrad/datasets")
 
-#: The per-dataset variables the old adapters carried. They are kept as the legacy value
-#: so a run recorded before the helper still resolves where it did; a test process that
-#: inherits one of them must not accidentally exercise it.
+#: Retired variables are not aliases. Clear them along with current storage variables
+#: so inherited server configuration cannot affect the fresh-clone checks.
 OLD_VARIABLES = (
     "HG_ALFWORLD_DATA", "HG_API_BANK_DATA", "HG_COOPERBENCH_DATA", "HG_COSTBENCH_DATA",
     "HG_COSTBENCH_RUNTIME", "HG_JERICHO_DATA", "HG_KUMO_DATA", "HG_LOCOMO_DATA",
@@ -50,84 +42,60 @@ OLD_VARIABLES = (
 
 
 @pytest.fixture(autouse=True)
-def clean_environment(monkeypatch):
+def clean_environment(monkeypatch, request):
     """Every test starts from "nothing configured", the fresh-clone case."""
+    if request.node.name == "test_a_provisioned_dataset_still_loads_tasks":
+        return
     for key in list(os.environ):
         if key.startswith("HG_DATA_") or key in OLD_VARIABLES:
             monkeypatch.delenv(key, raising=False)
 
 
-def test_precedence_per_dataset_then_collection_then_existing_legacy(tmp_path, monkeypatch):
-    legacy = tmp_path / "operator" / "gsm8k"
-    legacy.mkdir(parents=True)
+@pytest.fixture
+def roots_checkout(tmp_path, monkeypatch):
+    from harnessgrad import paths
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    monkeypatch.setattr(paths, "CHECKOUT", checkout)
+    return checkout
+
+
+def test_precedence_per_dataset_then_collection_then_unconfigured(roots_checkout, tmp_path, monkeypatch):
+    from harnessgrad.paths import DataRootNotConfigured
     collection = tmp_path / "collection"
-    (collection / "gsm8k").mkdir(parents=True)
+    override = tmp_path / "override"
+    monkeypatch.setenv("HG_DATA_ROOT", str(collection))
+    monkeypatch.setenv("HG_DATA_GSM8K", str(override))
+    assert roots.dataset_root("gsm8k") == override
+    monkeypatch.delenv("HG_DATA_GSM8K")
+    assert roots.dataset_root("gsm8k") == collection / "gsm8k"
+    monkeypatch.delenv("HG_DATA_ROOT")
+    with pytest.raises(DataRootNotConfigured, match="Set HG_DATA_ROOT"):
+        roots.dataset_root("gsm8k").resolve()
+
+
+def test_existing_old_directories_never_supply_an_implicit_default(roots_checkout, tmp_path, monkeypatch):
+    from harnessgrad.paths import DataRootNotConfigured
+    monkeypatch.setenv("HOME", str(tmp_path))
+    (tmp_path / DEFAULT_COLLECTION / "gsm8k").mkdir(parents=True)
+    (roots_checkout.parent / "datasets/gsm8k").mkdir(parents=True)
+    with pytest.raises(DataRootNotConfigured, match="Set HG_DATA_ROOT"):
+        roots.dataset_root("gsm8k").is_dir()
+
+
+def test_describe_reports_configured_and_unconfigured_paths(roots_checkout, tmp_path, monkeypatch):
+    unset = roots.describe("gsm8k")
+    assert unset["root"] is None and unset["source"] == "unconfigured"
+    assert not unset["exists"] and "Set HG_DATA_ROOT" in unset["error"]
+    monkeypatch.setenv("HG_DATA_ROOT", str(tmp_path / "collection"))
+    assert roots.describe("gsm8k") == {"name": "gsm8k",
+        "root": str(tmp_path / "collection/gsm8k"), "source": "HG_DATA_ROOT", "exists": False}
     override = tmp_path / "override"
     override.mkdir()
-
-    # Rule 1: the per-dataset variable, named from the dataset name.
-    monkeypatch.setenv("HG_DATA_ROOT", str(collection))
-    monkeypatch.setenv(roots.env_name("gsm8k"), str(override))
-    assert roots.env_name("gsm8k") == "HG_DATA_GSM8K"
-    assert roots.dataset_root("gsm8k", legacy) == override
-
-    # Rule 2: one export moves the whole collection, and it beats the legacy path even
-    # though the legacy path exists.
-    monkeypatch.delenv(roots.env_name("gsm8k"))
-    assert roots.dataset_root("gsm8k", legacy) == collection / "gsm8k"
-
-    # Rule 3: with nothing configured, the existing operator path wins, so every run
-    # recorded before this module still reads the same bytes.
-    monkeypatch.delenv("HG_DATA_ROOT")
-    assert roots.dataset_root("gsm8k", legacy) == legacy
-
-    # Rule 4: nothing configured and no legacy -> the portable per-user default.
-    monkeypatch.setenv("HOME", str(tmp_path))
-    absent = tmp_path / "not-provisioned" / "gsm8k"
-    assert not absent.exists()
-    assert roots.dataset_root("gsm8k", absent) == tmp_path / DEFAULT_COLLECTION / "gsm8k"
-    assert roots.dataset_root("gsm8k") == tmp_path / DEFAULT_COLLECTION / "gsm8k"
-
-
-def test_a_stale_literal_is_skipped_instead_of_beating_the_default(tmp_path, monkeypatch):
-    monkeypatch.setenv("HOME", str(tmp_path))
-    stale = tmp_path / "stale-literal-that-does-not-exist"
-    assert not stale.exists()
-    resolved = roots.dataset_root("gsm8k", stale)
-    assert resolved == tmp_path / DEFAULT_COLLECTION / "gsm8k"
-    assert stale not in resolved.parents and resolved != stale
-
-
-def test_describe_says_which_rule_won_and_whether_it_exists(tmp_path, monkeypatch):
-    override = tmp_path / "override"
-    override.mkdir()
-    monkeypatch.setenv(roots.env_name("gsm8k"), str(override))
-    assert roots.describe("gsm8k", roots.dataset_root("gsm8k", HOST_LITERAL + "gsm8k")) == {
-        "name": "gsm8k", "root": str(override), "source": "HG_DATA_GSM8K", "exists": True}
-
-    monkeypatch.delenv(roots.env_name("gsm8k"))
-    collection = tmp_path / "collection"
-    monkeypatch.setenv("HG_DATA_ROOT", str(collection))
-    info = roots.describe("gsm8k", roots.dataset_root("gsm8k", HOST_LITERAL + "gsm8k"))
-    assert info["source"] == "HG_DATA_ROOT"
-    assert info["root"] == str(collection / "gsm8k")
-    assert info["exists"] is False  # rule 2 answers "where", it does not create or check out
-
-    monkeypatch.delenv("HG_DATA_ROOT")
-    legacy = tmp_path / "legacy"
-    legacy.mkdir()
-    assert roots.describe("gsm8k", legacy, legacy=legacy)["source"] == "legacy"
-    assert roots.describe("gsm8k", legacy, legacy=legacy)["exists"] is True
-
-    monkeypatch.setenv("HOME", str(tmp_path))
-    assert roots.describe("gsm8k")["source"] == "default"
-    assert roots.describe("gsm8k")["exists"] is False
-
-    # A root supplied by the caller and not produced by any rule is named as such, so a
-    # monkeypatched adapter never looks like configuration.
-    elsewhere = tmp_path / "elsewhere"
-    assert roots.describe("gsm8k", elsewhere)["source"] == "explicit"
-    assert roots.describe("gsm8k", elsewhere)["root"] == str(elsewhere)
+    monkeypatch.setenv("HG_DATA_GSM8K", str(override))
+    assert roots.describe("gsm8k")["source"] == "HG_DATA_GSM8K"
+    assert roots.describe("gsm8k")["exists"]
+    assert roots.describe("gsm8k", tmp_path / "other")["source"] == "explicit"
 
 
 def _code_constants(path: Path):
@@ -148,29 +116,29 @@ def _code_constants(path: Path):
             yield node, parent
 
 
-def _called_by_data_root(node, parent) -> bool:
-    """Is this constant (or the `os.environ.get` around it) the helper's `legacy` argument?"""
-    cursor = node
-    for _ in range(3):
-        owner = parent.get(cursor)
-        if owner is None:
-            return False
-        if isinstance(owner, ast.Call):
-            name = ast.unparse(owner.func)
-            if name == "roots.dataset_root":
-                return True
-            if name != "os.environ.get":
-                return False
-        cursor = owner
-    return False
+def _portable_root_calls(tree) -> set[str]:
+    """Names actually bound to the canonical resolver, including import aliases."""
+    calls = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and not node.level and node.module == "harnessgrad.paths":
+            calls.update(alias.asname or alias.name for alias in node.names
+                         if alias.name == "dataset_root")
+        elif isinstance(node, ast.ImportFrom) and not node.level and node.module == "harnessgrad":
+            calls.update(f"{alias.asname or alias.name}.dataset_root" for alias in node.names
+                         if alias.name == "paths")
+        elif isinstance(node, ast.Import):
+            calls.update(f"{alias.asname or alias.name}.dataset_root" for alias in node.names
+                         if alias.name == "harnessgrad.paths")
+    return calls
 
 
 def test_no_data_module_assigns_a_host_path_to_dataset_root():
-    """The helper call is required; the old spelling survives only as its `legacy`."""
+    """Require the canonical resolver and reject host literals in executable code."""
     problems = []
     for path in sorted(DATA.rglob("*.py")):
         relative = path.relative_to(ROOT).as_posix()
         tree = ast.parse(path.read_bytes(), filename=relative)
+        helper_calls = _portable_root_calls(tree)
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 targets = {t.id for t in node.targets if isinstance(t, ast.Name)}
@@ -178,19 +146,22 @@ def test_no_data_module_assigns_a_host_path_to_dataset_root():
                 targets = {node.target.id}
             else:
                 continue
-            if "DATASET_ROOT" in targets:
+            if "DATASET_ROOT" in targets or (path.name == "terminal_bench.py" and "ROOT" in targets):
                 value = ast.unparse(node.value)
-                if "Path(" in value and HOST_LITERAL in value:
-                    problems.append(f"{relative}:{node.lineno}: {value}")
-                if "roots.dataset_root(" not in value:
-                    problems.append(f"{relative}:{node.lineno}: DATASET_ROOT is not a "
-                                    f"helper call: {value}")
-        # A `dst` in downloads(), a `ROOT` in a helper, or any other executable literal:
-        # the only place the operator's path may appear is roots.dataset_root(..., legacy).
-        for node, parent in _code_constants(path):
-            if not _called_by_data_root(node, parent):
-                problems.append(f"{relative}:{node.lineno}: host path outside the helper: "
-                                f"{node.value!r}")
+                if not (isinstance(node.value, ast.Call)
+                        and ast.unparse(node.value.func) in helper_calls
+                        and len(node.value.args) == 1 and not node.value.keywords):
+                    problems.append(f"{relative}:{node.lineno}: dataset root is not a "
+                                    f"canonical helper call: {value}")
+                else:
+                    directory = node.value.args[0]
+                    if not (isinstance(directory, ast.Constant) and isinstance(directory.value, str)
+                            and Path(directory.value).parts and not Path(directory.value).is_absolute()
+                            and ".." not in Path(directory.value).parts):
+                        problems.append(f"{relative}:{node.lineno}: dataset directory must be "
+                                        f"a relative literal: {value}")
+        for node, _ in _code_constants(path):
+            problems.append(f"{relative}:{node.lineno}: executable host path: {node.value!r}")
     assert not problems, "\n".join(problems)
 
 
@@ -198,7 +169,10 @@ def _provisioned():
     """`gsm8k` when it is on this machine, otherwise the first dataset that is."""
     order = ["gsm8k"] + [name for name in registry.published() if name != "gsm8k"]
     for name in order:
-        module = importlib.import_module(registry.module_name(name))
+        try:
+            module = importlib.import_module(registry.module_name(name))
+        except (ImportError, ValueError):
+            continue
         status = getattr(module, "provision_status", None)
         if not callable(status):
             continue

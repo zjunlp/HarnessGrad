@@ -108,11 +108,12 @@ def _run_check(module, record: dict, workdir: Path, *,
                 target.write_text(entry["content"])
             else:
                 shutil.copy2(entry["from"], target)
-    import os
-    env = dict(os.environ, PYTHONPATH=str(workdir) + os.pathsep
-               + os.environ.get("PYTHONPATH", ""))
-    proc = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=workdir,
-                          capture_output=True, text=True, env=env)
+    argv = [sys.executable, *verifier["argv"][1:]]
+    # Native declarations get interpreter flags from the runtime manifest. Like
+    # the direct QA control, this test supplies isolation for its own interpreter.
+    if "-I" not in argv[1:2]:
+        argv.insert(1, "-I")
+    proc = subprocess.run(argv, cwd=workdir, capture_output=True, text=True)
     reward_path = workdir / "verifier" / "reward.txt"
     reward = float(reward_path.read_text().strip()) if reward_path.is_file() else -1.0
     evidence_path = workdir / "verifier" / "evidence.json"

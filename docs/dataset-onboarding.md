@@ -117,7 +117,7 @@ onboarded without a way to show its grade is reachable.
 | --- | --- |
 | the dataset declaration | `data/datasets/<name>.py` — `KIND`, `load()`, `downloads()`, and optionally `provision_status()`, `SPLIT`, `ENV`, `VERIFY`, `SETUP` |
 | **which tasks are study material** | `SPLIT` (the dataset's division -- the benchmark's own, or `None`) and `OFFICIAL_EVAL` (the ids of the benchmark's own evaluation set, or `None` when the pool holds no study material). A run may replace the division with `--split default\|official\|<file.json>`; it records `split_source` and `split_sha`, and two curve points belong on one axis only when the sha agrees — INTERFACE.md §2.3 |
-| the data bytes | `/mnt/20t/xubuqiang/datasets/<name>/` — **never in git**; `DATASET_ROOT` must point outside the platform tree (lint rule: `lint_paths`) |
+| the data bytes | `<HG_DATA_ROOT>/<dataset-directory>/` — **never in git**; use `harnessgrad.paths.dataset_root()` to keep `DATASET_ROOT` portable and outside the platform tree (lint rule: `lint_paths`) |
 | dataset-private code | `data/datasets/<name>/{lib,cli,verify,control,oracle_harness}/` |
 | the machine-checkable contract | `data/dataset.schema.json` |
 | the checker | `tools/dataset_lint.py` |
@@ -161,6 +161,31 @@ authority; this table is a reading of it.
 `hf-file` adds `repo` + `file` + `dst`, `hf-dataset` adds `repo` + `dst`, `pip` adds
 `package`. Write the traps into `note` — a trap recorded only in a commit message is a trap
 the next person pays for again.
+
+An entry may also declare `manifest`, a repository-relative path to an existing file
+containing its full source inventory and checksums. This is a documentation link;
+fetching and verification still use `files` and `sha256`. The generated index summarizes
+lists exceeding eight files or 600 filename characters and links to the manifest.
+Without a manifest it provides the command to inspect the full JSON declaration.
+Small per-file checksum maps are rendered as tables.
+Download listing, checking and fetching do not require provisioned task pools:
+if an adapter cannot import, the tool evaluates its `downloads()` source and referenced
+definitions without executing unrelated pool initialization. A declaration that itself
+cannot be evaluated is an error rather than an omitted dataset. A source-only check
+reports the adapter import error separately from the resource-presence result.
+
+Resolve external storage with `from harnessgrad.paths import dataset_root` and
+`DATASET_ROOT = dataset_root("my_dataset")`. This honors `HG_DATA_MY_DATASET`, then
+`HG_DATA_ROOT` in the environment or `.env`. There is no implicit storage directory;
+unconfigured declarations remain importable and require configuration on filesystem
+access. Retired spellings are not aliases and are no longer read.
+Preparation scripts use the same function; they must not invent a separate default.
+See [dataset storage](../README.md#dataset-storage) for configuration precedence and
+linked-worktree behavior. Machine-specific absolute defaults are rejected by lint.
+The index displays logical paths derived from the `dataset_root()` declaration and
+each download's `dst`/`extract_to`, including directory aliases and shared roots.
+It names the per-dataset override separately. `--check` continues to report the
+current server's actual absolute paths; local `.env` settings do not enter the index.
 
 ```
 python3 tools/datasets.py --check   --dataset <name>    # are the bytes here?

@@ -9,10 +9,9 @@ import csv
 import hashlib
 import io
 import json
-import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -20,11 +19,8 @@ OFFICIAL_EVAL = None
 SPLIT = None
 SPLIT_SOURCE = "none"
 ASSETS = Path(__file__).with_suffix("")
-#: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above*
-#: the repository, so the default only ever worked in the checkout that wrote it.
-DATASET_ROOT = roots.dataset_root(
-    "strongreject/native-v1",
-    os.environ.get("HG_STRONGREJECT_DATA", "/mnt/20t/xubuqiang/datasets/strongreject/native-v1"))
+
+DATASET_ROOT = dataset_root('strongreject/native-v1')
 SOURCES = json.loads((ASSETS / "specs/sources.json").read_text())
 DEFAULT_JUDGE_MODEL = "gpt-4o-mini-2024-07-18"
 

@@ -20,12 +20,15 @@ import sys
 import tarfile
 import urllib.request
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
+
 ASSETS = Path(__file__).resolve().parent
 sys.path.insert(0, str(ASSETS / 'lib'))
 from bootstrap import bootstrap, REVISION
 ARCHIVE_SHA256 = 'b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844'
 QUERY_FILES = {'env/data/runtime/queries/queries.json': '2d15f439a22d55077d58b3d211129d403a8dcba55cbf4f7971f9de17b27253bb', 'env/data/runtime/queries/filtered_queries_with_requirements.json': '68f8fd8a6a2e87e564d94b2ed0333251ffd8536ab27fd78b9fafd568683274c7', 'env/data/runtime/train_queries/train/queries.json': 'ecae5294bd0b116d58a9731eb6aef29edeb9cc9dc860aecd17649a3a264bac9e', 'env/data/runtime/train_queries/train/filtered_queries_with_requirements.json': 'f42ec2f514584ac8e4d0ca2c965bbe76390cc130a088509647f625a254adccc9'}
-DEFAULT_ROOT = Path(os.environ.get('HG_COSTBENCH_DATA', Path(__file__).resolve().parents[4] / 'datasets/costbench'))
+DEFAULT_ROOT = dataset_root('costbench')
 PROTOCOL = {'refinement_level': 2, 'ban_longest_tool': True, 'min_atomic_cost': 15,
             'max_atomic_cost': 25, 'noise_std': 0.1, 'max_tool_steps': 20,
             'tool_creation_seed': 42, 'use_blocker': False}

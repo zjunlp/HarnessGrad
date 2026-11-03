@@ -41,14 +41,14 @@ Two machine facts worth knowing before the first download on this host: `hugging
 work. A pin verified only through a mirror is **mirror-verified**, and the record has to say
 so rather than claiming the canonical host agreed.
 
-**Where the bytes land is one decision, not forty.** Every adapter resolves its root through
-`data/scaffolds/roots.py`, in this order: `HG_DATA_<NAME>` for one dataset, `HG_DATA_ROOT` for
-the whole collection (e.g. `export HG_DATA_ROOT=/mnt/20t/xubuqiang/datasets`), the operator's
-old absolute path when that directory exists, and `~/.local/share/harnessgrad/datasets/<name>`
-otherwise. A fresh clone therefore needs no configuration before
-`python3 tools/datasets.py --fetch`, and
-`python3 -c "from data.scaffolds import roots; print(roots.describe('gsm8k'))"` reports which
-rule won and whether the directory is there.
+**Choose a shared directory for the data.** Adapters and preparation tools use
+`harnessgrad.paths.dataset_root()`. Set `HG_DATA_ROOT` for the whole collection
+(e.g. `export HG_DATA_ROOT=/srv/harnessgrad/datasets`), or a per-dataset variable such
+as `HG_DATA_GSM8K` to override it. Only the `HG_DATA_` spellings are read.
+See [dataset storage](../README.md#dataset-storage) for defaults, `.env` precedence,
+directory naming and linked-worktree behavior.
+`python3 tools/datasets.py --check --dataset gsm8k` reports the actual server paths
+and resource status; `DOWNLOADS.md` displays portable logical paths.
 
 ### 1.2 Find the function that computes the number
 

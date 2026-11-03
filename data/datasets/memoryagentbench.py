@@ -3,10 +3,10 @@
 400 questions use verifier-only model judging; the other 3,271 score locally.
 One ordered material sequence and its questions form each interactive task.
 
-Provision using ``python -m data.datasets.memoryagentbench.prepare``; set HG_MAB_DATA or
-HG_MAB_PREPARED for another external location, and HG_MAB_PYTHON to the isolated interpreter
-its three preparation pins require (they decide the sentence tables; see
-``specs/chunk-policy.json``). Import reads no data or gold.
+Provision using ``python -m data.datasets.memoryagentbench.prepare``; set
+HG_DATA_MEMORYAGENTBENCH or HG_DATA_MEMORYAGENTBENCH_PREPARED for another external
+location, and HG_MAB_PYTHON to the isolated interpreter its preparation pins require
+(see ``specs/chunk-policy.json``). Import reads no data or gold.
 Four upstream splits are capability partitions, not train/test divisions, so this adapter
 declares **no** division (`SPLIT is None`, `SPLIT_SOURCE == "none"`): the whole provisioned
 pool is evaluation material and `OFFICIAL_EVAL is None`. It used to declare the platform's
@@ -19,10 +19,9 @@ from collections.abc import Mapping
 from functools import lru_cache
 import hashlib
 import json
-import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import configured_path, dataset_root
 
 
 KIND = "dataset"
@@ -33,12 +32,9 @@ SPLIT_SOURCE = "none"
 ASSETS = Path(__file__).resolve().parent / "memoryagentbench"
 # Keep dataset-private imports available beside the registry's flat declaration.
 __path__ = [str(ASSETS)]
-#: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above* the
-#: repository, so the default only worked in the checkout that wrote it.
-DATASET_ROOT = roots.dataset_root(
-    "memoryagentbench",
-    os.environ.get("HG_MAB_DATA", "/mnt/20t/xubuqiang/datasets/memoryagentbench"))
-PREPARED_ROOT = Path(os.environ.get("HG_MAB_PREPARED", DATASET_ROOT / "prepared"))
+
+DATASET_ROOT = dataset_root('memoryagentbench')
+PREPARED_ROOT = configured_path('HG_DATA_MEMORYAGENTBENCH_PREPARED', DATASET_ROOT / 'prepared')
 REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
 
 

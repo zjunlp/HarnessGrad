@@ -150,7 +150,7 @@ read.
 Not a score. Four things:
 
 1. the staged check (`--check-only`) passes in your pull request description;
-2. `tools/leaderboards.py --check` passes, so the table matches the record;
+2. `python3 tools/contributors.py --check` passes, so the drawing matches the record;
 3. no file outside your contribution changed, and `runs/` is not committed;
 4. one sentence per artefact saying what it does, in English, in the file that defines it.
 

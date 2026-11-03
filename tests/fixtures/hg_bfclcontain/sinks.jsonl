@@ -9,17 +9,21 @@
 {"expression": "getattr(module, \"NOOP_EXPECTED\", 0.0)", "function": "_noop_expected", "line": 146, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
 {"expression": "getattr(module, \"setup_for\", None)", "function": "materialize", "line": 153, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
 {"expression": "getattr(module, \"verify_for\", None)", "function": "run_check", "line": 185, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
-{"expression": "subprocess.run(argv, cwd=workdir, capture_output=True, text=True, errors=\"replace\", env=env)", "function": "run_check", "line": 202, "path": "data/scaffolds/qa/control.py", "sink": "subprocess.run"}
-{"expression": "subprocess.run(\n            [sys.executable, f\"{base.CLI_REL}/{base.CLI_FILE}\", *cli_args],\n            cwd=workdir, capture_output=True, text=True, errors=\"replace\")", "function": "run_local", "line": 230, "path": "data/scaffolds/qa/control.py", "sink": "subprocess.run"}
-{"expression": "getattr(module, \"control_task\", None)", "function": "run_platform", "line": 256, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
-{"expression": "getattr(module, \"task_for\", None)", "function": "run_platform", "line": 257, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
-{"expression": "getattr(module, \"REFUSED\", None)", "function": "main", "line": 342, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
+{"expression": "subprocess.run(argv, cwd=workdir, capture_output=True, text=True, errors=\"replace\", env=env)", "function": "run_check", "line": 204, "path": "data/scaffolds/qa/control.py", "sink": "subprocess.run"}
+{"expression": "subprocess.run(\n            [sys.executable, f\"{base.CLI_REL}/{base.CLI_FILE}\", *cli_args],\n            cwd=workdir, capture_output=True, text=True, errors=\"replace\")", "function": "run_local", "line": 232, "path": "data/scaffolds/qa/control.py", "sink": "subprocess.run"}
+{"expression": "getattr(module, \"control_task\", None)", "function": "run_platform", "line": 258, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
+{"expression": "getattr(module, \"task_for\", None)", "function": "run_platform", "line": 259, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
+{"expression": "getattr(module, \"REFUSED\", None)", "function": "main", "line": 344, "path": "data/scaffolds/qa/control.py", "sink": "getattr"}
 {"expression": "subprocess.run([sys.executable, str(cli), verb,\n                           argument if argument is not None\n                           else oracle.read_text(encoding=\"utf-8\")],\n                          cwd=work, capture_output=True, text=True, errors=\"replace\")", "function": "main", "line": 64, "path": "data/scaffolds/qa/oracle_harness/agent.py", "sink": "subprocess.run"}
-{"expression": "__import__(module_name, fromlist=[\"score\"])", "function": "main", "line": 235, "path": "data/scaffolds/qa/verify/check.py", "sink": "__import__"}
-{"expression": "getattr(adapter, \"REDACT_EVIDENCE\", False)", "function": "main", "line": 236, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
-{"expression": "getattr(adapter, \"score\", None)", "function": "main", "line": 241, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
-{"expression": "getattr(adapter, \"score_prediction\", None)", "function": "main", "line": 254, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
-{"expression": "getattr(adapter, \"EVIDENCE_AWARE\", False)", "function": "main", "line": 258, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
+{"expression": "self.source_to_code(self.get_data(self.path), self.path)", "function": "get_code", "line": 63, "path": "data/scaffolds/qa/verify/check.py", "sink": "self.source_to_code"}
+{"expression": "spec_from_file_location(fullname, source, loader=loader)", "function": "find_spec", "line": 100, "path": "data/scaffolds/qa/verify/check.py", "sink": "spec_from_file_location"}
+{"expression": "__import__(module_name, fromlist=[\"score\"])", "function": "main", "line": 296, "path": "data/scaffolds/qa/verify/check.py", "sink": "__import__"}
+{"expression": "getattr(adapter, \"REDACT_EVIDENCE\", False)", "function": "main", "line": 297, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
+{"expression": "getattr(adapter, \"score\", None)", "function": "main", "line": 302, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
+{"expression": "getattr(adapter, \"score_prediction\", None)", "function": "main", "line": 315, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
+{"expression": "getattr(adapter, \"EVIDENCE_AWARE\", False)", "function": "main", "line": 319, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
+{"expression": "getattr(trusted_runner, name)", "function": "__getattr__", "line": 46, "path": "harnessgrad/__init__.py", "sink": "getattr"}
+{"expression": "getattr(self.resolve(), name)", "function": "__getattr__", "line": 131, "path": "harnessgrad/paths.py", "sink": "getattr"}
 {"expression": "ast.literal_eval(value)", "function": "convert_value", "line": 230, "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py", "sink": "ast.literal_eval"}
 {"expression": "getattr(builtins, type_str)", "function": "convert_value", "line": 234, "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py", "sink": "getattr"}
 {"expression": "ast.parse(cleaned_input, mode=\"eval\")", "function": "ast_parse", "line": 244, "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py", "sink": "ast.parse"}

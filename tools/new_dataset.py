@@ -101,7 +101,9 @@ KIND = "fixture"          # <- flip to "dataset" when the data and scorer are re
 #: are required too (`data/dataset.schema.json`:module.oracle_about).
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = base.Path("/mnt/20t/xubuqiang/datasets/${name}")
+from harnessgrad.paths import dataset_root
+
+DATASET_ROOT = dataset_root("${name}")
 
 #: The scaffold's table, generated in memory. Replace it with the real one.
 ROWS: list[dict] = $rows
@@ -270,7 +272,9 @@ KIND = "fixture"          # <- flip to "dataset" when the data and scorer are re
 #: are required too (`data/dataset.schema.json`:module.oracle_about).
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = Path("/mnt/20t/xubuqiang/datasets/$name")
+from harnessgrad.paths import dataset_root
+
+DATASET_ROOT = dataset_root("$name")
 
 #: Where the check writes its grade. The platform owns these names.
 REWARD_FILE = "/verifier/reward.txt"
@@ -561,7 +565,6 @@ Where the tasks come from: $source
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from data.scaffolds import registry
@@ -574,7 +577,9 @@ KIND = "fixture"          # <- flip to "dataset" when the data and scorer are re
 ORACLE_SOURCE = "released"
 
 #: The bytes live outside the platform tree and never in git (lint rule `lint_paths`).
-DATASET_ROOT = Path(os.environ.get("HG_${NAME}_DATA", "/mnt/20t/xubuqiang/datasets/$name"))
+from harnessgrad.paths import dataset_root
+
+DATASET_ROOT = dataset_root("$name")
 
 #: The scaffold\'s toy tasks, so the five gates can be run before a byte is downloaded.
 #: The id says `task`, not `eval`: the adapter declares no division, and an id that claims a

@@ -1,74 +1,63 @@
-# Contribution boards
+# Contribution graph: who did what, and when
 
-Four boards live in [`registry/leaderboards.json`](../registry/leaderboards.json) and are
-rendered into the README's [Contribution boards](../README.md#contribution-boards) section by
-`tools/leaderboards.py`. This page is the rule a pull request is reviewed against.
+The record is [`registry/leaderboards.json`](../registry/leaderboards.json); the drawing is
+[`.github/assets/contributors.svg`](../.github/assets/contributors.svg); the list of every entry
+per person is [`docs/contributors.md`](contributors.md). All three come from
+`python3 tools/contributors.py --write`, and `--check` fails when they disagree. This page is
+the rule a pull request is reviewed against.
 
-## Why a record file instead of a table
+## Why a graph rather than a ranking
 
-A board is a claim about who contributed what. A hand-edited table is a claim that goes stale
-the first time a pull request lands: the row is added in one place, remembered in neither, and
-the next person copies last quarter's numbers. So the record is JSON, the table is generated,
-and `tools/leaderboards.py --check` fails when the two disagree. A contributor's whole change is
-one row plus the command.
+A table with three rows reads as a scoreboard: someone has 87, someone has 2, and the number
+invites being read as quality. The graph keeps the same record and answers the question a reader
+actually has — *this person contributed these benchmarks, this method, this piece of the
+platform, in this month* — and a hover states the entries behind a square. Ordering on the left
+is by credited entries, and the right-hand column repeats the total **and** the rank, so the
+order is stated rather than implied by position.
 
-```bash
-python3 tools/leaderboards.py --check   # in CI
-python3 tools/leaderboards.py --write   # after editing the record
-```
+## What a credit is
 
-## What a row must carry
+One entry per credited artefact, in one of five kinds:
 
-Every entry, on any board:
+| kind | what it means | the field that names it |
+| --- | --- | --- |
+| `harness` | a directory under `base_harness/` that solves tasks | `path` |
+| `method` | an RSI method with a preset under `experiments/` | `preset` |
+| `benchmark` | an adapter under `data/datasets/` | `adapter` |
+| `platform` | a piece of the instrument itself (storage, readiness, identity, records) | `path` |
+| `result` | a measured score with a receipt | `receipt` + `harness_sha` |
+
+Every declared adapter must carry a credit: the check fails when one is missing, because a
+catalogue of 59 that credits 6 is a claim nobody can act on.
+
+## Fields
 
 | field | rule |
 | --- | --- |
-| `name` | matches the directory (`base_harness/<name>`), the preset (`experiments/method-<name>.json`) or the adapter (`data/datasets/<name>.py`) it names; a row that names nothing in the tree is refused, because a name we cannot run is not a contribution |
-| `contributor` | a GitHub handle, so a question about that entry has a person to @ |
-| `since` | the date the entry was first included |
-| `adoption` | independent reproductions reported in the pull request that added or updated the row; a declared number, not a scraped metric |
+| `contributor` | a handle that appears in `people`; a credit for an unknown person is refused |
+| `since` | the month the entry was adopted into this record. Not a claim about the first commit: the history was squashed for release, so this is the honest date available |
 | `note` | one line: what the thing is, not what it scores |
-| `contact` | optional: an address the website can show, so a reader can ask you about the entry. It is stored in the record and **never rendered into the README** — the table on GitHub shows the handle, and a public repository should not be where an email address is harvested from |
+| `contact` | optional; stored in the record for the website, **never rendered into the README**. The graph shows a handle, and a public repository should not be where an email address is harvested from |
 
-`tools/leaderboards.py` refuses a row whose `path`, `preset` or `adapter` does not exist, whose
-handle is not a handle, whose adoption is not an integer ≥ 1, or that appears twice on a board.
+## Getting on it
 
-## Ranking
+Low bar on purpose: a contribution is admitted because it *ran*, not because it scored. Three
+steps, and `tools/contribute.py` performs the sequence and refuses an entry whose artefact does
+not exist before a reviewer sees it:
 
-The three support boards rank **contributors**, not entries: each row is one org or person, and
-the number beside it is how many harnesses, methods or benchmarks they contributed. A board
-listing one row per item with the same name on every row ranks nothing — a reader cannot see
-what is being compared — and a column of 1s is not a ranking.
+```bash
+python3 tools/contribute.py harness --name my-harness --path base_harness/my-harness \
+    --contributor your-handle --contact you@example.com
+python3 tools/contributors.py --write
+# then open a pull request: one sentence about how you ran it is the whole review request
+```
 
-The README shows the top ten contributors and a count. The count links to
-[the details page](leaderboard-details.md), which names every entry, and the
-[website board](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) shows the same record
-plus the contact each contributor chose to publish. `adoption` stays in the record as the
-per-entry number of independent reproductions; the board's count is the number of entries.
+There is no target score and no minimum coverage. The one rule with evidence behind it is the
+`result` kind: a benchmark+metric group, a receipt committed in this repository, and the tree
+hash the score was measured on. Scores rank inside one group and never across groups.
 
-## The results board: what counts as a result
+## What the graph does not claim
 
-A results entry needs all of:
-
-| field | why |
-| --- | --- |
-| `benchmark`, `metric` | a score is meaningless without the axis it was measured on |
-| `receipt` | a file committed in this repository: the run's `end-summary.json`, a `curve.jsonl`, or a results-matrix export |
-| `harness_sha` | the 40-hex tree or commit id the score was measured on, so the candidate is a commit and not a description |
-| `score` | a number, comparable only inside its `(benchmark, metric)` group |
-| `contributor` | the person who can be asked how it was produced |
-
-Scores are grouped by `(benchmark, metric)` and ranked inside a group. There is no
-cross-benchmark column: a BBEH accuracy and a Terminal-Bench pass rate are not the same axis,
-and a table that puts them in one column invents a comparison that no run supports.
-
-An entry with a score and no receipt is refused rather than displayed, because the alternative
-is a leaderboard whose numbers cannot be checked — which is worse than an empty one. Until the
-first admissible entry arrives, the board says so.
-
-## What this is not
-
-Not a claim about which harness, method or benchmark is *best*. Adoption counts how many
-independent reproductions were reported to us; it does not rank quality, and a new entry
-starts at 1 by construction. The boards exist so a reader can find the contributor of an entry
-and ask, not so a number can be quoted without the receipt behind it.
+`since` is adoption month, so the x-axis is when the catalogue learned about something, not
+when the code was typed. Rows with few entries are not less valuable, they are recent or narrow.
+The website draws the same record with a date-range picker; this drawing is the static one.

@@ -11,10 +11,9 @@ from collections.abc import Mapping
 from functools import lru_cache
 import hashlib
 import json
-import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -23,11 +22,8 @@ OFFICIAL_EVAL = None
 #: return the platform's hash third as its `SPLIT`, which the operator removed on 2026-10-24.
 SPLIT_SOURCE = "none"
 ASSETS = Path(__file__).resolve().parent / "kumo"
-#: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above* the
-#: repository, so the default only worked in the checkout that wrote it.
-DATASET_ROOT = roots.dataset_root(
-    "kumo",
-    os.environ.get("HG_KUMO_DATA", "/mnt/20t/xubuqiang/datasets/kumo"))
+
+DATASET_ROOT = dataset_root('kumo')
 PREPARED = DATASET_ROOT / "prepared-v1"
 REVISION = "576748764f7d72634654d0784944a485eca9047c"
 MANIFEST_SHA256 = "05e20d7a9e7e8cff348f77e36cfb0d2842b549c344086e71fe478458b3cd05fe"
@@ -139,6 +135,7 @@ def downloads():
              "version": REVISION, "url": f"https://raw.githubusercontent.com/linhaowei1/kumo/{REVISION}",
              "size": "127892007 bytes across 5846 files", "dst": "upstream",
              "files": list(files), "sha256": files,
+             "manifest": "data/datasets/kumo/source-files.json",
              "note": "Prefer prepare.py --fetch for batched sparse Git download, then prepare.py audits 5300 rows twice and materializes 5290 eligible tasks. No model calls or pip dependencies; historical results omitted."}]
 
 

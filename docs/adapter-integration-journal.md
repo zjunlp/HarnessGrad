@@ -6282,3 +6282,77 @@ which the rule allows. What changed is that no harness now *depends* on the mode
 that. 83 adapter tests pass. The cost spread (961 → 38 949 for one word) remains a
 comparability fact, not a defect: five calls to answer "alpha" is how DSH works, and the
 number is now reported by every harness instead of one of them being silent.
+
+
+## Portable dataset storage integrated with current main (2026-11-03)
+
+External storage now requires `HG_DATA_ROOT` or the canonical per-dataset
+`HG_DATA_<NAME>` setting. Shell values override worktree and primary-checkout
+`.env` values for the same key; per-dataset settings take precedence over the
+shared root. Relative configured paths use the primary checkout as their base.
+There is no implicit storage directory and retired variable aliases are not read.
+All 58 external adapters use this contract; the repository-owned authored adapter
+needs no external root. Native QA/research declarations remain readable before
+configuration, while data access reports the missing setting.
+
+The download index retains all 59 published datasets without requiring local task
+pools, shows portable logical destinations, and summarizes large inventories.
+Fetch/check still use the actual configured paths and complete file/hash declarations;
+the current-main `hf-file` transport is retained. Readiness and split catalogs stay
+readable without configured storage or optional runtime dependencies.
+
+Legacy QA scoring uses isolated Python and imports only explicitly restored sources,
+ignoring candidate `.env`, `.git`, sibling modules and bytecode caches. The separate
+native QA entrypoint now uses the same isolation and source-loading rules for its
+declared scorer package. Synthetic sandbox controls check correct/incorrect answers
+and module/cache interference. BFCL whole-source hash assertions and fabricated
+observations are retained; reachability snapshots are regenerated for the integrated
+source tree. Independent native runtime host/ABI admission fields are preserved.
+
+
+### CooperBench preparation startup repair (2026-11-03)
+
+Restored the mainline path-based sibling-module loader while retaining portable
+storage configuration. CLI help works before storage is configured, and an unrelated
+`protocol` entry in `sys.modules` cannot replace CooperBench's own module. Tests
+retain prepared-data digest checks; locally cached assets are not repinned.
+
+
+### Storage checks follow actual data access (2026-11-03)
+
+The registry delegates loading to the adapter and preserves import failures. A
+`DATASET_ROOT` declaration used for preparation does not require external storage
+for runtime tasks bundled in git. With storage unconfigured, tau-bench retains
+634 default-pool tasks and 514 dev-pool tasks with their native split declarations;
+adapters that actually access external bytes still report the missing setting.
+
+
+### Isolated direct QA controls (2026-11-03)
+
+The direct control supplies Python `-I` when the verifier declaration relies on
+a native manifest for flags. Native script positions and independent admission
+pins are unchanged. Correct/incorrect-answer controls cover both declaration
+forms and task-created same-name modules; Chess selected controls use the actual
+isolated scorer and retain reference redaction checks for invalid input and
+missing dependencies. BFCL source/sink reviews are refreshed without dropping
+whole-source hash assertions or changing fabricated observations.
+
+
+### GSM8K regression runner uses production startup (2026-11-03)
+
+The synthetic GSM8K tests execute the verifier's declared flags and script directly,
+replacing the obsolete bootstrap that imported the staged scaffold before isolation.
+All original test assertions are preserved, including decimal-aware scoring, wrong
+and absent answers, gold re-materialization after tampering, and unmeasured evidence
+when gold is absent. The dataset contract's 17 tests and 47 scorer tests pass.
+
+
+### Synchronize current-main diagnostics and tests (2026-11-03)
+
+Rebased the portable-storage work onto `d9233ca7`, retaining main's experiment
+configuration tests and integrity classification. Adapter diagnostics now report
+unreadable source declarations while source catalogs remain independent of local
+storage and optional dependencies; actual runtime errors are reported by `load()`.
+Download JSON remains a list, with catalog diagnostics on stderr. Reachability
+evidence is regenerated against the integrated source tree, retaining the BFCL
+source inventory, sink reviews and independent native admission pins.

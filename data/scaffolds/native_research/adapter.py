@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 from harnessgrad.config.areas import ConfigMissing
+from harnessgrad.paths import DatasetPath, dataset_root
 from .profiles import COMMIT, PROFILES, SOURCES
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -38,22 +39,13 @@ class Adapter:
     def __init__(self, name, root=None):
         self.name = name
         self.profile = PROFILES[name]
-        # The adapter module above passes the root its own `roots.dataset_root()` call
-        # resolved; the fallback keeps `Adapter('x')` usable in a test or a tool without
-        # re-spelling the operator's absolute path here.
-        self._root = None if root is None else Path(root)
+        self._root = root if root is None or isinstance(root, DatasetPath) else Path(root)
 
     @property
     def root(self):
         if self._root is not None:
             return self._root
-        from data.scaffolds import roots
-        # A module that names a default spells it in its own
-        # `roots.dataset_root(..., legacy=...)` call and passes the result in; this fallback
-        # serves callers that construct `Adapter('x')` directly (tests, tools) and keeps the
-        # per-dataset variable those callers already document working.
-        return roots.dataset_root(self.name,
-                                  legacy=os.environ.get('HG_' + self.name.upper() + '_DATA'))
+        return dataset_root(self.name)
 
     def manifest(self):
         if self.root.resolve() == ROOT or self.root.resolve().is_relative_to(ROOT):

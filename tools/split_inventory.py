@@ -69,16 +69,19 @@ Four states, and the table names which one a dataset is in
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib
 import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import data.scaffolds.registry as registry  # noqa: E402
+from harnessgrad.paths import DataRootNotConfigured  # noqa: E402
 
 DOC = ROOT / "docs" / "dataset-splits.md"
 BEGIN = "<!-- split-inventory:begin -->"
@@ -137,8 +140,34 @@ def _published() -> tuple[str, ...]:
 
 
 def _import_adapter(name: str):
-    """The adapter module for `name`."""
-    return importlib.import_module(registry.module_name(name))
+    """Runtime adapter, or source declarations when external data is unavailable."""
+    try:
+        return importlib.import_module(registry.module_name(name))
+    except Exception as exc:
+        # Some legacy adapters construct task pools at import. A split catalog
+        # still reads their declarations without configuring or opening storage.
+        path = ROOT / "data/datasets" / f"{name}.py"
+        tree = ast.parse(path.read_bytes())
+
+        def unavailable(error=exc):
+            raise error
+
+        values = {"__file__": str(path), "load": unavailable,
+                  "_lazy_declarations": any(isinstance(node, ast.FunctionDef)
+                      and node.name == "__getattr__" for node in tree.body)}
+        for node in tree.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                if not isinstance(target, ast.Name) or target.id not in {
+                        "SPLIT_SOURCE", "OFFICIAL_EVAL", "REFUSED"}:
+                    continue
+                try:
+                    values[target.id] = ast.literal_eval(node.value)
+                except (ValueError, TypeError):
+                    if target.id == "OFFICIAL_EVAL":
+                        values[target.id] = _MISSING
+        return SimpleNamespace(**values)
 
 
 def _load(module):
@@ -159,7 +188,7 @@ def _attribute(module, name: str):
     """
     try:
         return getattr(module, name)
-    except AttributeError:
+    except (AttributeError, DataRootNotConfigured):
         return _MISSING
 
 
@@ -185,7 +214,8 @@ def _state(module, source) -> str:
     prevent: for `strongreject` its value depends on whether the CSV is on the disk.
     """
     if source is _MISSING or not isinstance(source, str) or not source.strip():
-        lazy = callable(getattr(module, "__getattr__", None))
+        lazy = (getattr(module, "_lazy_declarations", False)
+                or callable(getattr(module, "__getattr__", None)))
         return "undeclared" if lazy else "none"
     return "declared" if source.strip() == "declared" else "none"
 

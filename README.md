@@ -2,7 +2,7 @@
   <img src=".github/assets/logo.svg" alt="" width="76">
 </p>
 
-<h1 align="center">HarnessGrad: measure a harness that improves</h1>
+<h1 align="center">HarnessGrad: Harness As a Continual Learner</h1>
 
 <p align="center"><strong>A harness that improves is a learner, so what it <em>keeps</em> is measured as carefully as what it gains.</strong></p>
 
@@ -144,6 +144,47 @@ A harness declares which kinds it supports in `harness.json`; the platform refus
 the harness cannot run instead of silently degrading it. Nothing here pulls an image or a
 dataset on its own: `tools/datasets.py --fetch` and the dataset's own prepare step are explicit.
 
+<a id="dataset-storage"></a>
+
+## Dataset storage
+
+Set `HG_DATA_ROOT` in `.env` to choose the shared directory for external datasets:
+
+```dotenv
+HG_DATA_ROOT=/path/to/datasets
+```
+
+For example, GSM8K uses `<HG_DATA_ROOT>/gsm8k` and KUMO uses
+`<HG_DATA_ROOT>/kumo`. A single-dataset override such as `HG_DATA_KUMO` takes
+precedence. Existing directory names are preserved: CostBench's two adapters share
+`costbench`, and StrongREJECT uses `strongreject/native-v1` by default.
+
+Per-dataset variables use `HG_DATA_` followed by the full directory name in uppercase,
+with runs of separators replaced by `_`: `tau2-bench` uses `HG_DATA_TAU2_BENCH` and
+`strongreject/native-v1` uses `HG_DATA_STRONGREJECT_NATIVE_V1`. Retired names such as
+`HG_KUMO_DATA` are no longer read; rename existing shell or `.env` settings.
+Independent prepared/runtime overrides follow the same prefix:
+`HG_DATA_MEMORYAGENTBENCH_PREPARED`, `HG_DATA_COSTBENCH_RUNTIME`, and
+`HG_DATA_TAU3_BENCH_RUNTIME`.
+
+Environment variables override `.env` for the same key. Linked worktrees inherit
+the main checkout's `.env`; a worktree-local `.env` overrides that file. Relative
+paths are anchored to the main checkout, regardless of the current terminal directory.
+There is no implicit directory. Configure `HG_DATA_ROOT` before accessing external
+data, or set the dataset's explicit override. Missing configuration produces an
+instruction to set the path; listing datasets and generating documentation still work.
+Keep `.env` local to each server; `.env.example` is the committed template.
+
+Downloads, preparation tools and adapters share this resolver. Explicit preparation
+arguments such as `--root`, `--raw` and `--output` still override their defaults.
+`python3 tools/datasets.py --check --dataset kumo` reports the resolved absolute root.
+`DOWNLOADS.md` shows logical locations such as `<HG_DATA_ROOT>/kumo/upstream`,
+derived from each adapter's directory and each download's destination. Its per-dataset
+root override replaces the logical data-root prefix, preserving the download suffix.
+Source resources shipped in the repository continue to use repository-relative paths.
+Sealed native-runtime manifests remain independently pinned to their reviewed host
+and software; relocating dataset storage does not regenerate those manifests.
+
 ## Quick start: one real experiment
 
 The fastest genuinely measured run is **gsm8k × `loop` × `dgm`**: 5 tasks, no container image,
@@ -210,71 +251,35 @@ Harnesses I did not write enter the system in five minutes
 exists enters through a minimal external method
 ([`docs/bring-your-own-method.md`](docs/bring-your-own-method.md)).
 
-## Contribution boards
+## Contributors
 
-Four boards, one record: [`registry/leaderboards.json`](registry/leaderboards.json), rendered by
-`python3 tools/leaderboards.py --write`. The three support boards rank **contributors** by how
-many harnesses, methods or benchmarks they contributed, because a list with one name repeated
-on every row ranks nothing; the count links to
-[the details page](docs/leaderboard-details.md), which names each entry, and the
-[full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) also carry the contact
-each contributor chose to publish. A question about one entry therefore has someone to @.
+One record: [`registry/leaderboards.json`](registry/leaderboards.json) — every harness, method,
+benchmark, platform piece and measured result, each with its contributor and the month it was
+adopted. `python3 tools/contributors.py --write` draws the graph, the totals and
+[the page listing every entry per person](docs/contributors.md); `--check` fails when the
+drawing and the record disagree.
 
-### How to get on a board
+Hover a square to see what one person contributed in one month. Ordering is by credited
+entries, and the right-hand column repeats the total and the rank, so the order is stated
+rather than implied by position. The bar for a credit is that the thing runs — see
+[docs/leaderboards.md](docs/leaderboards.md), and `tools/contribute.py` for the three commands
+that add one.
 
-Three steps, and the bar is deliberately low: we would rather review a contribution than turn
-one away, and the requirements tighten only once there are enough of them to be worth writing
-down.
+<!-- BEGIN contributors (generated by tools/contributors.py --write) -->
+![Who contributed what, by month](.github/assets/contributors.svg)
 
-```bash
-# 1. add yourself -- the command checks the thing actually exists and can run
-python3 tools/contribute.py harness --name my-harness --path base_harness/my-harness \
-    --contributor your-handle --contact you@example.com
-
-# 2. re-render the tables
-python3 tools/leaderboards.py --write
-
-# 3. open a pull request with the two changed files and one sentence about how you ran it
-```
-
-`--contact` is optional and never appears in this README: it goes into the record so the
-website's board can show a way to reach you, and the table here shows your handle. A results
-entry additionally names a benchmark and metric, a receipt committed in this repository, and
-the tree hash the score was measured on — `tools/contribute.py result` asks for exactly those.
-Nothing is checked against a target score: a contribution is admitted because it *ran*, and a
-reviewer can see that from the receipt.
-
-The [skill](docs/skills/configure-harness-method-benchmark.md) is how we configure a harness,
-a method and a benchmark ourselves, written for an agent to follow end to end.
-
-<!-- BEGIN boards (generated by tools/leaderboards.py --write) -->
-
-Ranked by **how many entries a contributor has on the board**, ties by handle. The count links to the [details page](docs/leaderboard-details.md), which names every entry, and the [full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) carry the same record with contact details.
-
-### Harnesses
+One row per contributor, one column per month, and the number in a square is how many entries landed that month — hover it and it names them. The right-hand column repeats the total and the rank, so the ordering is stated rather than implied by position. [Every entry, per person](docs/contributors.md) is a list; the [website](https://zjunlp.github.io/HarnessGrad-Hub/contributors/) draws the same record with a date-range picker.
 
 | # | contributor | contributed |
 | --- | --- | --- |
-| 1 | [@zjunlp](https://github.com/zjunlp) | [8](docs/leaderboard-details.md#harness-zjunlp) |
-
-### RSI methods
-
-| # | contributor | contributed |
-| --- | --- | --- |
-| 1 | [@zjunlp](https://github.com/zjunlp) | [19](docs/leaderboard-details.md#method-zjunlp) |
-
-### Benchmarks
-
-| # | contributor | contributed |
-| --- | --- | --- |
-| 1 | [@zjunlp](https://github.com/zjunlp) | [6](docs/leaderboard-details.md#benchmark-zjunlp) |
+| 1 | [@Xubqpanda](https://github.com/Xubqpanda) | [87](docs/contributors.md#xubqpanda) |
+| 2 | [@trancefornow](https://github.com/trancefornow) | [3](docs/contributors.md#trancefornow) |
+| 3 | [@crepuscular-drizzle](https://github.com/crepuscular-drizzle) | [2](docs/contributors.md#crepuscular-drizzle) |
 
 ### Measured results
 
-*No comparable result has been contributed yet. The admission rule is in [docs/leaderboards.md](docs/leaderboards.md): a benchmark+metric group, a receipt in this repository, and the tree hash the score was measured on.*
-
-[Full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) keep every contributor; this table keeps the top 10.
-<!-- END boards -->
+*No comparable result has been contributed yet. A result needs a benchmark+metric group, a receipt in this repository, and the tree hash the score was measured on — see [docs/leaderboards.md](docs/leaderboards.md).*
+<!-- END contributors -->
 
 ## What the curves look like
 

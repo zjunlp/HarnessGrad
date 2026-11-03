@@ -85,8 +85,9 @@ from collections import Counter
 from copy import deepcopy
 from pathlib import Path
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 # Route shared prediction.json submissions to the structured scorer, including refusals.
@@ -96,7 +97,8 @@ EVIDENCE_AWARE = True
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
 
-DATASET_ROOT = roots.dataset_root("twowikimultihopqa", "/mnt/20t/xubuqiang/datasets/twowikimultihopqa")
+
+DATASET_ROOT = dataset_root('twowikimultihopqa')
 DATA_FILE = "dev.json"
 ALIAS_FILE = "id_aliases.json"
 WITNESS_FILE = "validation.parquet"

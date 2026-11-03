@@ -44,13 +44,13 @@ def snapshot(atomic_provider=None):
 
 @pytest.fixture
 def official(monkeypatch):
-    dataset_root = Path(os.environ.get('HG_COSTBENCH_DATA', ROOT.parent / 'datasets/costbench'))
+    dataset_root = Path(os.environ.get('HG_DATA_COSTBENCH', ROOT.parent / 'datasets/costbench'))
     source = dataset_root / 'bundle'
     if not (source / 'env/utils/eval.py').is_file():
         pytest.skip('pinned CostBench source is not prepared')
     monkeypatch.syspath_prepend(str(source))
     # The preparation runtime supplies its pinned pure-Python PyYAML module.
-    runtime = Path(os.environ.get('HG_COSTBENCH_RUNTIME', dataset_root / 'runtime'))
+    runtime = Path(os.environ.get('HG_DATA_COSTBENCH_RUNTIME', dataset_root / 'runtime'))
     for site in runtime.glob('lib/python*/site-packages'):
         monkeypatch.syspath_prepend(str(site))
     monkeypatch.setenv('COSTBENCH_TRAVEL_CONFIG', str(source / 'env/config/travel_config.yaml'))

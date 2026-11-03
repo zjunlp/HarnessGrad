@@ -95,24 +95,29 @@ def test_current_catalog_order_is_checked_in(declared_catalog, monkeypatch, reve
     assert registry.published() == EXPECTED_DATASETS
 
 
-def test_discovery_sorts_before_import_and_filters_without_reordering(monkeypatch):
-    """Import failures and fixtures remove entries from the sorted sequence."""
+def test_discovery_sorts_declarations_and_filters_without_runtime_imports(monkeypatch):
+    """Unreadable declarations and fixtures are excluded; missing runtimes are harmless."""
     directory = Path(registry.__file__).resolve().parent
     candidates = [directory / f"{name}.py" for name in (
         "z_order", "registry", "fixture", "broken", "a_order", "__init__")]
     monkeypatch.setattr(Path, "glob", lambda path, pattern: iter(candidates))
-    imported = []
+    read = []
+    original_read = Path.read_bytes
 
-    def import_module(name):
-        imported.append(name)
-        if name == "data.datasets.broken":
-            raise ImportError("synthetic unavailable adapter")
-        return SimpleNamespace(KIND=(registry.KIND_FIXTURE if name == "data.datasets.fixture"
-                                     else registry.KIND_DATASET))
+    def read_bytes(path):
+        if path.stem not in {"a_order", "broken", "fixture", "z_order"}:
+            return original_read(path)
+        read.append(path.stem)
+        if path.stem == "broken":
+            return b"KIND ="
+        kind = registry.KIND_FIXTURE if path.stem == "fixture" else registry.KIND_DATASET
+        return f'KIND = "{kind}"\nraise ImportError("runtime unavailable")\n'.encode()
 
-    monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=import_module))
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+    monkeypatch.setattr(registry, "importlib", SimpleNamespace(
+        import_module=lambda name: pytest.fail("catalog discovery imported a runtime")))
     assert registry.published() == ("a_order", "z_order")
-    assert imported == ["data.datasets.a_order", "data.datasets.broken", "data.datasets.fixture", "data.datasets.z_order"]
+    assert read == ["a_order", "broken", "fixture", "z_order"]
 
 
 @pytest.mark.parametrize("json_output", [False, True])

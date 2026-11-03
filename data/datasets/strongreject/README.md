@@ -17,7 +17,7 @@ Sources are pinned by revision and SHA256 in `specs/sources.json`:
 - Original 313-row dataset: `alexandrasouly/strongreject@f7cad6c17e624e21d8df2278e918ae1dddb4cb56`.
 
 ```bash
-export HG_STRONGREJECT_DATA=/path/outside/repository/strongreject
+export HG_DATA_STRONGREJECT_NATIVE_V1=/path/outside/repository/strongreject
 python data/datasets/strongreject/prepare.py --fetch
 python tools/dataset_lint.py --dataset strongreject
 ```

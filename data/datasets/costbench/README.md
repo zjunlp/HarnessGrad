@@ -111,8 +111,8 @@ filtered aggregate EMR.
 Run from the repository with a Python 3.12 platform environment and `uv` available:
 
 ```bash
-export HG_COSTBENCH_DATA=/absolute/path/outside/repository/costbench
-python3 data/datasets/costbench/prepare.py --root "$HG_COSTBENCH_DATA" --install
+export HG_DATA_COSTBENCH=/absolute/path/outside/repository/costbench
+python3 data/datasets/costbench/prepare.py --root "$HG_DATA_COSTBENCH" --install
 ```
 
 Preparation downloads the pinned archive, installs the isolated runtime,
@@ -124,8 +124,8 @@ partial preparation is diagnostic only. The generated lookup database is
 losslessly partitioned by location preference to avoid reloading a gigabyte per
 tool call. Each accessed shard is digest-checked before the original lookup runs.
 
-`HG_COSTBENCH_RUNTIME` optionally selects the installed runtime directory; by
-default it is `$HG_COSTBENCH_DATA/runtime`. The driver/verifier also requires
+`HG_DATA_COSTBENCH_RUNTIME` optionally selects the installed runtime directory; by
+default it is `$HG_DATA_COSTBENCH/runtime`. The driver/verifier also requires
 Python 3.12 because it loads this runtime's compiled dependencies. Metadata
 discovery remains lazy and does not need prepared data or those dependencies.
 
@@ -260,8 +260,8 @@ Build `expected-cells.json` before evaluation as a JSON list of
 
 ```bash
 python3 data/datasets/costbench/report.py \
-  --bundle "$HG_COSTBENCH_DATA/bundle" \
-  --runtime "$HG_COSTBENCH_DATA/runtime" \
+  --bundle "$HG_DATA_COSTBENCH/bundle" \
+  --runtime "$HG_DATA_COSTBENCH/runtime" \
   --expected-cells /path/to/expected-cells.json \
   /path/to/run/trial-evidence/round-0/*/*/*.json
 ```

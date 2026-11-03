@@ -7045,8 +7045,8 @@
     },
     "/scorer/data/scaffolds/roots.py": {
       "entry": "data/scaffolds/roots.py:1 (trusted scorer code, separate from actor files)",
-      "sha256": "1ce3bf812cf383486ff29cc23dccf72acc66fec7f1f3641a80d977950b964696",
-      "size": 4983,
+      "sha256": "316bf5a61d5efef74fc4f4776851baa49d58bb08d5c7afe7433cd2d3a343a1d0",
+      "size": 1491,
       "source": "data/scaffolds/roots.py"
     },
     "/scorer/data/scaffolds/scorer_input.py": {
@@ -7055,10 +7055,28 @@
       "size": 6166,
       "source": "data/scaffolds/scorer_input.py"
     },
+    "/scorer/harnessgrad/__init__.py": {
+      "entry": "harnessgrad/__init__.py:1 (trusted storage diagnostics dependency; no .env files staged)",
+      "sha256": "9d821099dab2eb6383dcffe6d492e5f3432d69edd27979f2b9e8517aafc412bd",
+      "size": 2229,
+      "source": "harnessgrad/__init__.py"
+    },
+    "/scorer/harnessgrad/env_file.py": {
+      "entry": "harnessgrad/env_file.py:1 (trusted storage diagnostics dependency; no .env files staged)",
+      "sha256": "b3ae1dd01f659d904282f8f3685a55d073c939987e8a4e1c5c0e705151cbfbc6",
+      "size": 636,
+      "source": "harnessgrad/env_file.py"
+    },
+    "/scorer/harnessgrad/paths.py": {
+      "entry": "harnessgrad/paths.py:1 (trusted storage diagnostics dependency; no .env files staged)",
+      "sha256": "a7afe3be250732149ff007df98be3893a404e0d720dd5fa515f042342b5a5137",
+      "size": 6509,
+      "source": "harnessgrad/paths.py"
+    },
     "/scorer/scw_env.py": {
       "entry": "data/datasets/scienceworld/lib/scw_env.py:1 (trusted scorer code, separate from actor files)",
-      "sha256": "dc5febddedabc13e37b7deec4ce6766e8349c48026808a7f7e01ecf00b176cfb",
-      "size": 12170,
+      "sha256": "bc320b8501c7c9d484087002404c260d0b2e4d6955f1241e0dda0dc15dc331c3",
+      "size": 11666,
       "source": "data/datasets/scienceworld/lib/scw_env.py"
     }
   },

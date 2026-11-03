@@ -30,6 +30,9 @@ def _sibling_module(name: str, relative: str):
     return module
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
+
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 protocol = _sibling_module("protocol", "lib/protocol.py")
 (SOURCE_REVISION, HARBOR_REVISION, HARBOR_ADAPTER_SHA256,
@@ -329,7 +332,7 @@ def prepare_mirror_runtime(root, group, base_runtime, assets, kind="hf_mirror", 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--root', type=Path, default=dataset_root('cooperbench'))
     parser.add_argument('--source-root', type=Path, required=True)
     parser.add_argument('--harbor-root', type=Path)
     parser.add_argument('--image-group', help='Prepare only this explicit repository/task group')

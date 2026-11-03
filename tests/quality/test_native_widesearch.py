@@ -185,7 +185,7 @@ def test_prepare_csv_preserves_native_float_nan_and_integer_differential(precise
     with pytest.raises(ValueError, match='gold CSV digest mismatch'):
         score('widesearch', private, response, no_judge)
     case_path.write_text(json.dumps(private))
-    monkeypatch.setenv('HG_WIDESEARCH_DATA', str(prepared))
+    monkeypatch.setenv('HG_DATA_WIDESEARCH', str(prepared))
     with pytest.raises(ValueError, match='private native case digest mismatch'):
         Adapter('widesearch').case(record, manifest)
 
@@ -255,7 +255,7 @@ def test_prepare_native_gold_and_hg_private_judge_broker(mode, tmp_path, monkeyp
     (source / 'widesearch_gold/native_control.csv').write_text('entity,description\nrow1,PRIVATE_GOLD_DESCRIPTION\n')
     prepared = tmp_path / 'prepared'
     prepare('widesearch', prepared, {'data_path': str(source)}, judge_model='local-scripted-widejudge')
-    monkeypatch.setenv('HG_WIDESEARCH_DATA', str(prepared))
+    monkeypatch.setenv('HG_DATA_WIDESEARCH', str(prepared))
     if sys.prefix != sys.base_prefix:
         monkeypatch.setenv('HG_JUDGE_WIDESEARCH_PYTHON', sys.executable)
         monkeypatch.setenv('HG_JUDGE_WIDESEARCH_RUNTIME_PATHS', json.dumps(list(dict.fromkeys([sys.prefix, sys.base_prefix]))))

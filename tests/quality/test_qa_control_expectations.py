@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +15,28 @@ sys.path.insert(0, str(ROOT))
 from data.datasets import bfcl_v3
 from data.scaffolds import registry  # noqa: E402
 from data.scaffolds.qa import control  # noqa: E402
+
+
+@pytest.mark.parametrize("declares_isolation", [True, False])
+@pytest.mark.parametrize("answer,reward", [("4", 1.0), ("5", 0.0)])
+def test_direct_control_isolates_python_even_when_runtime_supplies_flags(
+        synthetic_gsm8k, tmp_path, declares_isolation, answer, reward):
+    record = {**synthetic_gsm8k._RECORDS[0], "gold": {"answer": "4"}}
+    spec = synthetic_gsm8k._SPEC.verifier(record)
+    if not declares_isolation:
+        spec["argv"].remove("-I")
+    adapter = SimpleNamespace(VERIFY={record["task_id"]: spec})
+    script_directory = tmp_path / "qa/lib/verify"
+    script_directory.mkdir(parents=True)
+    (script_directory / "contextvars.py").write_text(
+        'open("candidate-imported", "w").write("executed")\n'
+        'raise RuntimeError("candidate module was imported")\n')
+    (tmp_path / "answer.txt").write_text(answer)
+    measured_reward, detail = control.run_check(adapter, record, tmp_path)
+    assert measured_reward == reward, detail
+    assert json.loads(detail)["measured"] is True, detail
+    assert not (tmp_path / "candidate-imported").exists()
+    assert ("-I" in spec["argv"]) == declares_isolation, "native declaration must be preserved"
 
 
 @pytest.mark.parametrize("path", ["local", "platform"])

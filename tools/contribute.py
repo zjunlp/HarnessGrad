@@ -154,10 +154,11 @@ def _add(args) -> int:
         print("\n(dry run: nothing written)")
         return 0
     _write(record)
-    subprocess.run([sys.executable, str(ROOT / "tools" / "leaderboards.py"), "--write"],
+    subprocess.run([sys.executable, str(ROOT / "tools" / "contributors.py"), "--write"],
                    check=True, cwd=ROOT)
     print("\nnext:\n"
-          "  git add registry/leaderboards.json README.md\n"
+          "  git add registry/leaderboards.json README.md .github/assets/contributors.svg "
+          "docs/contributors.md\n"
           "  git commit -m \"board: add <name>\"\n"
           "  open a pull request, and in its description say in one sentence how you ran it\n"
           "  (`--check-only` output pasted is enough; a score is not required)")
@@ -195,9 +196,10 @@ def _result(args) -> int:
         return 0
     record.setdefault("results", {"entries": []}).setdefault("entries", []).append(entry)
     _write(record)
-    subprocess.run([sys.executable, str(ROOT / "tools" / "leaderboards.py"), "--write"],
+    subprocess.run([sys.executable, str(ROOT / "tools" / "contributors.py"), "--write"],
                    check=True, cwd=ROOT)
-    print("\nnext: git add registry/leaderboards.json README.md && git commit && open a pull request")
+    print("\nnext: git add registry/leaderboards.json README.md .github/assets/contributors.svg "
+          "docs/contributors.md && git commit && open a pull request")
     return 0
 
 

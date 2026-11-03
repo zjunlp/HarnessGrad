@@ -47,7 +47,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 #: The staged vendored tree (`data/datasets/api_bank.py::DATASET_ROOT`), read directly from the
 #: tarball so the shipped `timed_switch.py` is exercised without unpacking 340 files.
-VENDOR_TARBALL = (Path(os.environ.get("HG_API_BANK_DATA", "/mnt/20t/xubuqiang/datasets/api-bank"))
+VENDOR_TARBALL = (Path(os.environ.get("HG_DATA_API_BANK", "/mnt/20t/xubuqiang/datasets/api-bank"))
                   / "_src" / "api-bank-vendor.tar.gz")
 
 

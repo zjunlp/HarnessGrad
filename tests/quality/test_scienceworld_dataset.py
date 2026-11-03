@@ -280,7 +280,7 @@ def test_java_home_is_absolute(scienceworld):
 def test_a_missing_jvm_is_an_error_not_a_silent_downgrade(scienceworld, tmp_path):
     import os
     from unittest import mock
-    with mock.patch.dict(os.environ, {"HG_SCIENCEWORLD_DATA": str(tmp_path / "none")},
+    with mock.patch.dict(os.environ, {"HG_DATA_SCIENCEWORLD": str(tmp_path / "none")},
                          clear=False):
         with pytest.raises(RuntimeError, match="no Java runtime"):
             scienceworld._LIB.java_home(tmp_path / "empty")
