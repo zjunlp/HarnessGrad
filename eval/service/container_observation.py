@@ -189,7 +189,7 @@ def _parse_bytes(raw: str | None) -> int | None:
 
 def _default_runner(timeout_s: float):
     def run(argv, stdin=None):
-        return subprocess.run(argv, input=stdin, capture_output=True, text=True,
+        return subprocess.run(argv, input=stdin, capture_output=True, text=True, errors="replace",
                               timeout=timeout_s + 30)
     return run
 

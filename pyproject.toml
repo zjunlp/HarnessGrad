@@ -1,0 +1,53 @@
+# Installable packaging for a project that is otherwise just a clone.
+#
+# `driver.py` stays where it is and stays the entrypoint every recorded argv names; the
+# console script is a second spelling of the same program, not a second implementation.
+# That is why this file declares one script (`harnessgrad`, dispatch in
+# `harnessgrad/cli.py`) and installs `driver.py` as a module instead of moving it.
+#
+# There are no runtime dependencies and there must not be any: the platform is pure
+# Python standard library, 3.10+, and that is a property users rely on when they install
+# it into a machine that has no network. `dependencies = []` is therefore a claim the
+# quality test asserts, not a default.
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harnessgrad"
+version = "0.1.0"
+description = "Measure agent-harness self-improvement round by round: tasks, sandbox, scoring and records."
+# PEP 639 spells this as `license = "MIT"`, but that form needs a `packaging` new enough
+# to validate the SPDX expression, and this tree is installed without network. The table
+# form is what setuptools accepts offline here, and it still ships `LICENSE` as the
+# wheel's `License-File`.
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+harnessgrad = "harnessgrad.cli:main"
+
+[tool.setuptools]
+# The entrypoint has to remain importable as `driver`, because that is the name in
+# INTERFACE.md, in `tools/serve_ui.py` and in every recorded run.
+py-modules = ["driver"]
+
+[tool.setuptools.packages.find]
+# The repository is not one regular package: `eval/`, `tools/`, `methods/`, `eval/ckpt/`
+# and most of `data/datasets/*/` deliberately have no `__init__.py`, and the import
+# direction guard (`tests/quality/test_import_direction.py`) relies on them staying
+# namespace packages. Adding `__init__.py` to satisfy the default finder would change the
+# import graph the guard reviews, so the finder is told to discover namespaces instead.
+#
+# `data.authored/` and `data.candidates/` are excluded because they are not code:
+# `authored/` is the console's draft-bundle root and `candidates/` holds copies of
+# user-edited harnesses. Both are read from the directory by path, and installing them
+# would ship generated working state as importable `data.*` packages.
+#
+# `scenarios*` is included even though it is not platform implementation: `driver.py`
+# imports `scenarios.load` at module import, so an installed CLI that could not find it
+# would fail before printing `run --help`.
+namespaces = true
+include = ["harnessgrad*", "eval*", "data*", "methods*", "tools*", "scenarios*"]
+exclude = ["data.authored*", "data.candidates*"]

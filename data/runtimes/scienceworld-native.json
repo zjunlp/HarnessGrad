@@ -49,7 +49,7 @@
     },
     "/lib/x86_64-linux-gnu/libXtst.so.6": {
       "entry": "ELF provider from /opt/hg-jre/lib/libawt_xawt.so; commands/0178.stdout.txt",
-      "sha256": "0c81be070f7857bdcab6bd528161d1049c374f1237aabf76d92e097b2d8ba16a",
+      "sha256": "4198b32dc9fba7dfc0ee2bb1b6bc85067c89adfc68d0279059ad82c207cc3c35",
       "size": 27128,
       "source": "/usr/lib/x86_64-linux-gnu/libXtst.so.6.1.0"
     },
@@ -7043,6 +7043,12 @@
       "size": 61,
       "source": "data/scaffolds/__init__.py"
     },
+    "/scorer/data/scaffolds/roots.py": {
+      "entry": "data/scaffolds/roots.py:1 (trusted scorer code, separate from actor files)",
+      "sha256": "1ce3bf812cf383486ff29cc23dccf72acc66fec7f1f3641a80d977950b964696",
+      "size": 4983,
+      "source": "data/scaffolds/roots.py"
+    },
     "/scorer/data/scaffolds/scorer_input.py": {
       "entry": "data/scaffolds/scorer_input.py:1 (trusted scorer code, separate from actor files)",
       "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee",
@@ -7051,8 +7057,8 @@
     },
     "/scorer/scw_env.py": {
       "entry": "data/datasets/scienceworld/lib/scw_env.py:1 (trusted scorer code, separate from actor files)",
-      "sha256": "71c48892b5fe8808c7d693b86f7c888670e3898c823b99e8e20b3aaae3eac863",
-      "size": 11371,
+      "sha256": "dc5febddedabc13e37b7deec4ce6766e8349c48026808a7f7e01ecf00b176cfb",
+      "size": 12170,
       "source": "data/datasets/scienceworld/lib/scw_env.py"
     }
   },

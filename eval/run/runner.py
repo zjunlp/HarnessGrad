@@ -552,7 +552,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             task_file = workdir / "task.json"
             actor_task = ({**task, "goal": chess_stepwise.GOAL}
                           if stepwise_session is not None else task)
-            task_file.write_text(json.dumps(runtime_task(actor_task, setup)))
+            task_file.write_text(json.dumps(
+                runtime_task(actor_task, setup, verdict_kind=(verifier or {}).get("kind"))))
 
         # Services come up before the harness and are health-checked before it starts
         # (INTERFACE.md §2.5.7, steps 1-3). A harness that starts against a service
@@ -1228,7 +1229,8 @@ def _harness_failure(result: dict) -> dict | None:
 
     **The second trigger, and the measured case that forced it.** A non-empty trace is
     not proof that the harness ran. Measured 2026-10-04 on the current platform:
-    `--harness cli_agent` with no CLI writes exactly one line,
+    `--harness cli_agent` (then in `base_harness/`, now a test fixture) with no CLI writes
+    exactly one line,
     `{"error": "HG_CLI is unset: no CLI to run"}`, never calls a model, exits 2 -- and the
     curve said `score 0.0, harness_failed: null, invalid: null`. The console warned and
     the verdict file carried the exit code, so the fact existed in two places and not on

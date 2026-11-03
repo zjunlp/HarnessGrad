@@ -375,6 +375,19 @@ def _parse(reply: str) -> dict:
     raise ValueError("no complete JSON action found in reply")
 
 
+def _answer_stamp(workdir: Path):
+    """`answer.txt` as it was, so a file the *task* asked for can be told apart.
+
+    Compared byte for byte rather than by existence: several datasets materialise the
+    task's inputs before the run, and an untouched placeholder is not an answer.
+    """
+    path = workdir / "answer.txt"
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
 def _answer_text(value: object) -> str:
     """Transport a final answer without inventing or dropping prediction fields.
 
@@ -543,6 +556,7 @@ def run(task: dict, workdir: Path) -> str:
     and hands to the Trainer (INTERFACE.md §4.1).
     """
     trace_path = workdir / "trace.jsonl"
+    before = _answer_stamp(workdir)
     shell, dialect = _shell_runtime()
     messages = [
         {"role": "system", "content": SYSTEM + (
@@ -743,12 +757,27 @@ def run(task: dict, workdir: Path) -> str:
             "model": round(model_s, 1), "commands": round(command_s, 1),
             "total": round(time.time() - started, 1)}}) + "\n")
 
+        # **谁写的 `answer.txt`,要分清楚。** 题面要求 agent 自己写这个文件时(gsm8k 的
+        # `_goal` 就写着"write the final answer ... to `answer.txt`"),那个文件是**题面的
+        # 交付物**;拿模型最后那句 `{"answer": ...}` 去盖掉它,等于把题面要的东西弄丢。
+        # 实测(2026-11-01,codex 侧同一类缺陷):模型先 `echo 391 > answer.txt`,再交一句
+        # 带旁白的 answer,写入顺序决定判分结果 —— 这不是模型能力,是 harness 覆盖了交付物。
+        # 所以:文件在这次运行里出现过且非空,就保留它;否则才写模型的回答。
+        current = _answer_stamp(workdir)
+        if current is not None and current != before and current.strip():
+            answer = current.decode("utf-8", "replace")
+            answer_source = "artifact"
+        else:
+            answer_source = "answer_action" if answer else "empty"
+        trace.write(json.dumps({"answer_source": answer_source}) + "\n")
+
         # What the run cost. Kept because a harness that cannot say what it spent
         # cannot be compared with a cheaper one at the same score -- and because
         # `USAGE` is the only place the model calls are counted.
         trace.write(json.dumps({"usage": dict(USAGE)}) + "\n")
 
-    (workdir / "answer.txt").write_text(answer)
+    if answer_source != "artifact":
+        (workdir / "answer.txt").write_text(answer)
     return answer
 
 

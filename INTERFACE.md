@@ -83,8 +83,12 @@ care about its internal structure. There is exactly one interface point:
 
 The platform invokes `entrypoint` with an interpreter the environment provides. Python,
 Node, a shell script and a compiled binary are all acceptable, and so is a **wrapper**
-around somebody else's program: `base_harness/cli_agent/` is the worked example, and it
-is how an agent CLI (Claude Code, Codex, OpenCode) becomes a harness here.
+around somebody else's program: `base_harness/codex/`, `opencode/`, `miniswe/` and the
+rest are the worked examples, and they are how an agent CLI (Claude Code, Codex,
+OpenCode) becomes a harness here. The generic wrapper that was the first example of
+this, `cli_agent`, moved to `tests/fixtures/base_harness/` on 2026-11-01: it drives one
+program and sees one exit code, so its trace cannot satisfy §4's clauses by construction,
+which makes it a test instrument rather than an example to copy.
 
 Three consequences a harness author should know, because each one has bitten a real
 harness on this platform:
@@ -166,6 +170,11 @@ modification happens:
 | `below_X` | tasks H0 scored `< X` | can the method fix what is broken |
 | `above_X` | tasks H0 scored `≥ X` | does the method preserve what works |
 | `random_N` | N tasks sampled with a recorded seed | cheap default |
+
+Two of these have to *pay* for the whole side before they can choose: `below_X` and `above_X`
+select on a score, so round 0 measures everything once. `all` is the whole side by definition,
+and `diagnostic`, `pilot_10pct` and `random_N` are chosen without any score at all — they are
+narrowed **before** round 0, so `random_5` costs five tasks, not a sweep to find five.
 
 > **Why H0 and not the current harness:** if the task set were re-selected each
 > round from the *current* scores, then as the harness improves its task set
@@ -1568,6 +1577,7 @@ repository rather than a claim in a paper. The platform records it every round:
 | --- | --- |
 | `improve_entrypoint` / `accept_entrypoint` | the surface the harness *declares* |
 | `editable_surface_touched` | which paths a round *actually* moved, from `git diff` |
+| `editable_surface_components` | which of the ten components those paths belong to, from the manifest's `components` map (`harnessgrad/components.py`; a map for reading, never a fence) |
 
 `"method/accept.py"` appearing in `editable_surface_touched` means the method
 rewrote its own acceptance rule. That is the line most published systems state
@@ -1832,10 +1842,15 @@ which is what the measured model emits (`{"tool": ...}}
 brace) -- produced `{...}}{...}`, which is not JSON. The harness treats an unparseable
 reply as a harness failure and **breaks the loop**, so four of five tasks in round 0 ended
 after a single model call with an empty answer, and every later round inherited a harness
-that could not act. The fix is the parser `base_harness/loop_rrsi_parse/` already shipped:
+that could not act. The fix is the parser `base_harness/loop` carries:
 `JSONDecoder.raw_decode` from the first `{`, which returns the first complete object and
-ignores whatever follows. All three base harnesses now share it, byte for byte, so this is
-a platform fix rather than a built-in head start for one candidate.
+ignores whatever follows. Both harnesses that parse actions (`loop`, and its floor
+`loop_plain`, which is a test fixture since 2026-11-01) now share
+it byte for byte, so this is a platform fix rather than a built-in head start for one
+candidate. The third copy that existed here (`loop_rrsi_parse`, the snapshot of RRSI round
+0A's candidate A) was removed on 2026-11-01 for exactly that reason: it held no rule of its
+own, only a third copy of this one, and copies drift. `git show 10ad781:base_harness/loop_rrsi_parse/agent.py`
+recovers it.
 
 What made the third one hard to see is worth recording too: the platform recorded
 `calls: 1` and `parse_error: Extra data ...` in the trace the whole time, and the round
@@ -1855,7 +1870,7 @@ The split is now explicit:
 
 | part | what it is | who owns it |
 |---|---|---|
-| **the improved harness** | the task-solving loop (`base_harness/loop`, `base_harness/cli_agent`, …) | the run |
+| **the improved harness** | the task-solving loop (`base_harness/loop`, `base_harness/codex`, …) | the run |
 | **the improver** | an external command that takes a prompt and works in a directory (`harnessgrad/improvers/improvers.json`) | the experiment, resolved once per run |
 | **the method** | a decision rule, plus optional `skill.md` and a declared `improver` | `methods/<name>/` |
 

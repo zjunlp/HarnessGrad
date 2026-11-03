@@ -1,10 +1,12 @@
 {
  "surface": "deepseek-harness-profile",
  "about": [
-  "What an improver may edit on this harness, declared by the harness itself.",
-  "Declarative, not code: the launcher reads this file and refuses an edit outside it,",
-  "so a method cannot reach the credentials, the settings that override the patch, or the",
-  "230 MB dependency tree. Verified 2026-10-21 (findings.md §185-186)."
+  "The DSH runtime profile a patch is applied to: the files a launcher *would* allow, so a",
+  "reader can see where an edit to the profile lands (docs/adapter-spec.md section 3).",
+  "Declared, not enforced -- nothing in this repository reads this file, and no edit is",
+  "refused on the strength of it. The platform records which declared component an edit",
+  "touched instead (harnessgrad/components.py). Profile root, and the DSH_HOME-versus-HOME",
+  "trap, measured 2026-10-21 (findings.md section 185-186)."
  ],
  "allow": [
   "cordis.patch.yml",

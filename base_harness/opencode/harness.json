@@ -10,14 +10,22 @@
     "exec"
   ],
   "runtime_paths": [
-    "/mnt/20t/xubuqiang/prior-art/opencode",
+    "/mnt/20t/xubuqiang/prior-art-v1",
     "/home/xubuqiang/.nvm/versions/node/v22.19.0/bin"
   ],
   "runtime": {
     "kind": "bun",
     "source": "opencode",
-    "entrypoint": "packages/cli/src/index.ts",
-    "package": "@opencode/cli"
+    "entrypoint": "packages/opencode/src/index.ts",
+    "package": "opencode"
   },
-  "notes": "Requires a prepared opencode/ source tree and Bun in the execution environment. Each candidate must own its source and workspace links. External source override is for explicit interface diagnostics only; it is refused by default. Container runtime still requires platform-specific provisioning."
+  "notes": "Requires a prepared opencode/ source tree (v1 line) and Bun in the execution environment. The source is declared in `runtime_paths` rather than copied into the candidate: the monorepo is 174 MB and 3,586 packages, and every `state_after_round<N>/` would carry a copy of it. Each candidate must own its workspace links. External source override is for explicit interface diagnostics only; it is refused by default. Container runtime still requires platform-specific provisioning.",
+  "components": {
+    "control": [
+      "harness.json"
+    ],
+    "delegation": [
+      "agent.py"
+    ]
+  }
 }

@@ -51,6 +51,16 @@ def _var(env: str, default: Any, doc: str, *, kind: str = "str",
                  metadata={"env": env, "doc": doc, "kind": kind, "secret": secret})
 
 
+class ConfigMissing(ValueError):
+    """配置**缺一项**，不是数据集/代码有问题。
+
+    和普通的 `ValueError`（"这个名字不合法"）分开，因为调用方的处理方式不同：一个
+    `ValueError` 是缺陷，要报错；`ConfigMissing` 是"这台机器上还没配"，可以跳过、
+    可以等配置好了再跑。`tools/dataset_lint.py` 就靠这个区分 `unprovisioned` 与
+    `error`。仍然是 `ValueError` 的子类，现有的 `except ValueError` 一行都不用改。
+    """
+
+
 @dataclass(frozen=True)
 class AgentConfig:
     """The model that solves the tasks.
@@ -339,7 +349,7 @@ class JudgeConfig:
         """
         model = override or self.model or default
         if model is None:
-            raise ValueError("configure a judge model override or HG_JUDGE_MODEL")
+            raise ConfigMissing("configure a judge model override or HG_JUDGE_MODEL")
         if (not isinstance(model, str) or not model.strip() or model != model.strip()
                 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in model)):
             raise ValueError("judge model must be a model ID without control characters or surrounding whitespace")

@@ -1,8 +1,0 @@
-{
-  "name": "loop_plain",
-  "version": "0.1.0-control",
-  "path": ".",
-  "entrypoint": "agent.py",
-  "backend": "cli",
-  "install": null
-}

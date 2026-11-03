@@ -595,6 +595,9 @@ def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dic
 def _verify_dispatch(workdir: Path, verifier: dict | None, answer: str, **options) -> dict:
     """Bind a supported host scorer's native pin to execution and verdict."""
     spec = verifier or {}
+    if 'native_benchmark' in spec:
+        from eval.verification.native_benchmark import verify
+        return verify(workdir, spec, **options)
     if "container_runtime" in spec:
         from eval.verification.observed import verify
         return verify(workdir, spec, answer, **options)

@@ -1,0 +1,24 @@
+{
+  "name": "shell",
+  "description": "Run a non-interactive POSIX shell command in the task environment. Supports pipes and redirects. Each call starts a fresh shell; cd and environment changes do not persist. Background services may continue after a completed command; their lifetime belongs to the caller or task environment. Redirect their stdout/stderr to a log file because output capture closes when the command exits. Timeout or cancellation stops the active command's process group. Returns JSON with exit_code, output (combined stdout/stderr, up to 32 KiB), timed_out, and truncated. This tool has the permissions of the running agent; cwd is not a filesystem sandbox.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "command": {
+        "type": "string",
+        "description": "Command to execute with /bin/sh -c."
+      },
+      "cwd": {
+        "type": "string",
+        "description": "Working directory, absolute or relative to the task directory; defaults to the task directory."
+      },
+      "timeout": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "Command timeout in seconds; defaults to 60. The overall agent timeout still applies."
+      }
+    },
+    "required": ["command"],
+    "additionalProperties": false
+  }
+}

@@ -12,5 +12,22 @@
   "env_kinds": [
     "files",
     "exec"
-  ]
+  ],
+  "components": {
+    "context": [
+      "knobs.json"
+    ],
+    "control": [
+      "harness.json"
+    ],
+    "delegation": [
+      "agent.py"
+    ],
+    "safety": [
+      "surface.json"
+    ],
+    "unattributed": [
+      "dsh_farm.tsv"
+    ]
+  }
 }

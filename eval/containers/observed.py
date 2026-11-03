@@ -122,9 +122,9 @@ def observe_pids(cgroup, *, root=Path('/sys/fs/cgroup')):
     return min(limits) if limits else None, evidence
 
 
-def observe(name, binding, policy, *, supervisor, python, expected_mounts):
+def observe(name, binding, policy, *, supervisor, python, expected_mounts, command=checked):
     """Kernel reads are collected before actor launch; never accept adapter facts."""
-    info = inspect(name)
+    info = json.loads(command('inspect', name))[0]
     pid = info['State']['Pid']
     group = Path(f'/proc/{pid}/cgroup').read_text().strip().splitlines()
     unified = [line[3:] for line in group if line.startswith('0::')]
@@ -137,7 +137,7 @@ def observe(name, binding, policy, *, supervisor, python, expected_mounts):
     quota, period = map(int, raw['cpu.max'].split())
     if quota * 1000 % period:
         raise RuntimeError('kernel CPU quota is not whole millicores')
-    kernel = json.loads(checked('exec', name, python, '-I', '-S',
+    kernel = json.loads(command('exec', name, python, '-I', '-S',
                                RUNTIME + '/helper.py', 'probe'))
     actual_mounts = {row['Destination']: row for row in info['Mounts'] if row['Type'] == 'bind'}
     if set(actual_mounts) != set(expected_mounts) or any(
@@ -179,9 +179,10 @@ def observe(name, binding, policy, *, supervisor, python, expected_mounts):
 
 
 class Runtime:
-    def __init__(self, spec, *, binding, timeout_s, mounts=(), env=None):
+    def __init__(self, spec, *, binding, timeout_s, mounts=(), env=None, deadline=None):
         self.workdir = validate(spec)
         self.spec, self.binding, self.timeout_s = spec, binding, timeout_s
+        self.deadline = deadline
         self.python = spec.get('python', '/usr/local/bin/python3')
         self.mounts, self.env = list(mounts), dict(env or {})
         self.name = 'hg-observed-' + uuid.uuid4().hex[:20]
@@ -197,10 +198,21 @@ class Runtime:
         self.created = []
         self.started = False
 
+    def remaining(self, timeout):
+        if self.deadline is None:
+            return timeout
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired('observed runtime deadline', timeout)
+        return min(timeout, remaining)
+
+    def checked(self, *args, timeout=60, **options):
+        return checked(*args, timeout=self.remaining(timeout), **options)
+
     def __enter__(self):
         try:
             # image inspect even for a digest: never let Docker implicitly pull.
-            image = json.loads(checked('image', 'inspect', self.spec['image']))[0]
+            image = json.loads(self.checked('image', 'inspect', self.spec['image']))[0]
             if image['Config'].get('Volumes'):
                 raise ValueError('observed image may not declare anonymous volumes')
             # Stable interpreter route, pinned to this image. Images without this path
@@ -208,9 +220,9 @@ class Runtime:
             source = self.spec.get('image_workspace')
             if source:
                 self.created.append(self.seed)
-                checked('create', '--pull=never', '--network=none', '--read-only', '--entrypoint',
+                self.checked('create', '--pull=never', '--network=none', '--read-only', '--entrypoint',
                         '/bin/true', '--name', self.seed, self.spec['image'])
-                checked('cp', self.seed + ':' + source.rstrip('/') + '/.', '-', timeout=300,
+                self.checked('cp', self.seed + ':' + source.rstrip('/') + '/.', '-', timeout=300,
                         limit=2 * self.spec['filesystems'][self.workdir]['bytes'] + (16 << 20),
                         output_path=self.directory / 'seed.tar')
             plan = {'workdir': self.workdir, 'seed': bool(source), 'staging': '/run/harnessgrad-inputs',
@@ -234,8 +246,8 @@ class Runtime:
                 if ',' in str(src) or ',' in str(dst): raise ValueError('commas are unsupported in mount paths')
                 argv += ['--mount', f'type=bind,src={Path(src).resolve()},dst={dst},readonly']
             self.created.append(self.name)
-            checked(*argv, self.spec['image'], '-I', '-S', RUNTIME + '/helper.py', 'idle')
-            checked('start', self.name)
+            self.checked(*argv, self.spec['image'], '-I', '-S', RUNTIME + '/helper.py', 'idle')
+            self.checked('start', self.name)
             self.started = True
             self.receipt['channels'] = {dst: (['send', 'receive'] if dst == '/run/harnessgrad-tool/tool.sock'
                 else ['POST chat/completions']) for _, dst in self.mounts if dst.endswith('.sock')}
@@ -245,17 +257,17 @@ class Runtime:
             self.receipt.update(observe(self.name, self.binding, self.policy, supervisor={
                 'pid': os.getpid(), 'timeout_ms': int(self.timeout_s * 1000),
                 'action': 'docker exec deadline kills container; normal completion kills actor UID processes; finally force-remove container'},
-                python=self.python, expected_mounts=expected_mounts))
+                python=self.python, expected_mounts=expected_mounts, command=self.checked))
             actual = self.receipt['evidence']['image_id']
             if actual != image['Id']: raise RuntimeError('container image changed at launch')
-            actor = json.loads(checked('exec', '--user=65534:65534', self.name, self.python, '-I', '-S',
+            actor = json.loads(self.checked('exec', '--user=65534:65534', self.name, self.python, '-I', '-S',
                                        RUNTIME + '/helper.py', 'identity'))
             if actor['uid'] != 65534 or actor['effective_caps'] != 0 or actor['no_new_privileges'] != 1:
                 raise RuntimeError('actor privilege separation not enforced')
             self.receipt['actor_identity'] = actor
             # Observe before initialization too: extraction/copying is bounded by
             # the very same kernel filesystem and resource limits.
-            checked('exec', self.name, self.python, '-I', '-S', RUNTIME + '/helper.py', 'init', timeout=300)
+            self.checked('exec', self.name, self.python, '-I', '-S', RUNTIME + '/helper.py', 'init', timeout=300)
             return self
         except BaseException as exc:
             if getattr(exc, 'receipt', None): self.receipt['admission'] = exc.receipt
@@ -270,7 +282,7 @@ class Runtime:
         started = time.monotonic()
         try:
             try:
-                proc = bounded(command, timeout=self.timeout_s, limit=8 << 20, truncate=True)
+                proc = bounded(command, timeout=self.remaining(self.timeout_s), limit=8 << 20, truncate=True)
                 self.receipt['console_logs'] = proc.output_retention
             except subprocess.TimeoutExpired:
                 # Do not wait for an in-container helper when actor PIDs may be
@@ -295,11 +307,11 @@ class Runtime:
                 checked('exec', self.name, self.python, '-I', '-S', RUNTIME + '/helper.py', 'quiesce', timeout=10)
 
     def clear(self, paths):
-        checked('exec', self.name, self.python, '-I', '-S', RUNTIME + '/helper.py',
+        self.checked('exec', self.name, self.python, '-I', '-S', RUNTIME + '/helper.py',
                 'clear', self.workdir, json.dumps(paths))
 
     def collect(self, paths, *, max_bytes=16 << 20, truncate=False):
-        return json.loads(checked('exec', self.name, self.python, '-I', '-S',
+        return json.loads(self.checked('exec', self.name, self.python, '-I', '-S',
             RUNTIME + '/helper.py', 'collect', self.workdir, json.dumps(paths), json.dumps(max_bytes),
             *(['truncate'] if truncate else []),
             limit=None if max_bytes is None else 2 * max_bytes + 65536))
@@ -310,7 +322,7 @@ class Runtime:
             try:
                 checked('rm', '--force', '--volumes', name, timeout=120)
                 p = bounded(['docker', 'inspect', name], timeout=30)
-                if p.returncode == 0 or b'No such' not in p.stderr:
+                if p.returncode == 0 or b'no such' not in p.stderr.lower():
                     errors.append('container absence not confirmed: ' + name)
             except Exception as exc:
                 errors.append(str(exc))

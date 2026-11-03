@@ -22,7 +22,7 @@ STATE_DIRNAME = ".state"
 def _git(repo: Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
-        check=True, capture_output=True, text=True,
+        check=True, capture_output=True, text=True, errors="replace",
     ).stdout
 
 
@@ -108,7 +108,12 @@ def commit_state(repo: Path, message: str) -> str:
     it cannot do with a hash we computed ourselves. Two rounds whose trees match now
     genuinely report the same identity, and the cache starts working.
     """
+    # Saved states retain mtimes. Equal-size replacements can therefore look
+    # unchanged to Git's stat cache (for example with core.trustctime=false).
+    # Stage additions/deletions first, then re-read all remaining tracked bytes.
+    # Keep Git's clean filters, tracked/ignored distinction and tree addresses.
     _git(repo, "add", "-A")
+    _git(repo, "add", "--renormalize", "--update")
     dirty = _git(repo, "status", "--porcelain").strip()
     if dirty:
         _git(repo, "commit", "-q", "-m", message)

@@ -59,6 +59,7 @@ import os
 from pathlib import Path
 import shlex
 import subprocess
+import time
 
 #: Where DSH lives and how to start it. Both are bound into the task container read-only by
 #: `harness.json`'s `runtime_paths`, so these are the paths *inside* it.
@@ -361,7 +362,7 @@ def facts(env: dict, home: Path, prompt: str, patch: "Path | None") -> dict:
         argv = [env.get("HG_AGENT_NODE", DEFAULT_NODE), env.get("HG_AGENT_DSH", DEFAULT_DSH),
                 "--profile", "headless", "--dump-config"]
         try:
-            proc = subprocess.run(argv, capture_output=True, text=True, env=env,
+            proc = subprocess.run(argv, capture_output=True, text=True, errors="replace", env=env,
                                   timeout=int(knobs().get("limits", {}).get("dump_config_timeout_s", 20)))
             if proc.returncode == 0:
                 dump = proc.stdout
@@ -380,11 +381,24 @@ def facts(env: dict, home: Path, prompt: str, patch: "Path | None") -> dict:
     return out
 
 
+def _answer_stamp(path: Path):
+    """`answer.txt` as it was before the CLI ran, so a task-written file is attributable."""
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
+
+
 def run(task: dict, workdir: Path) -> int:
     workdir = workdir.resolve()
     workdir.mkdir(parents=True, exist_ok=True)
     answer = workdir / "answer.txt"
-    answer.unlink(missing_ok=True)
+    # **`answer.txt` belongs to the task first.** This adapter used to delete it here and
+    # write the CLI's final message at the end, which is the same defect `codex` had: a
+    # dataset whose goal asks the agent to write `answer.txt` (gsm8k's does) would have had
+    # that file replaced by whatever the model said last -- and this model narrates before
+    # it answers. A file the agent wrote wins; the final message is the fallback.
+    before = _answer_stamp(answer)
 
     goal = task.get("goal") or task.get("instruction")
     if not isinstance(goal, str) or not goal.strip():
@@ -422,6 +436,24 @@ def run(task: dict, workdir: Path) -> int:
     env["NARB_DISABLE_NATIVE_CACHE"] = "1"
     env.setdefault("HOME", DEFAULT_HOME)
     home = Path(env["HOME"])
+    # **An operator's own home is refused, not used.** `DSH_HOME` below is named from
+    # `HOME`, so on this host (where `HOME` is a real account) DSH reads
+    # `~/.dsh/settings.yaml`, whose *saved* `agent-default-model` selection beats the
+    # `agent-default-model` row in the `--patch` generated two hundred lines down. Measured
+    # 2026-11-01: a host-side smoke with `HOME=/home/xubuqiang` loaded that document and
+    # answered through a **real DeepSeek endpoint** with the local key -- authentication
+    # failed, and the trace still said `agent_model: qwen3.5-9b-local`, `agent_base_url:
+    # http://127.0.0.1:8001/v1`. A record that names a model which did not run is worse than
+    # a failed run, so this is a refusal with the fix in the message. A task container's
+    # `HOME` starts empty and never reaches this branch.
+    inherited_settings = home / ".dsh" / "settings.yaml"
+    if inherited_settings.is_file() and env.get("HG_AGENT_DSH_KEEP_HOME") != "1":
+        raise ValueError(
+            f"refusing to run DSH against an operator home: {inherited_settings} holds a "
+            "saved model selection that overrides the model this adapter declares; point "
+            "HOME at a scratch directory (a container's HOME is empty, which is the case "
+            "this adapter is built for), or set HG_AGENT_DSH_KEEP_HOME=1 to run with that "
+            "configuration and accept that the recorded model may not be the model that ran")
     # **DSH's home, named rather than inferred.** `resolveDshHome` walks `$DSH_HOME` and
     # otherwise falls back to `os.homedir()` (`packages/util/home-paths/src/index.ts`), and
     # `$HOME` is not the only thing that answers that: an operator's own
@@ -492,32 +524,239 @@ def run(task: dict, workdir: Path) -> int:
                         "probe_resolves": probe.exists()}
         profile_info.update(_loader_probe(home, env))
         record({"profile": profile_info})
+        launched_at = time.time()
         proc = subprocess.Popen(command(prompt_path, patch), cwd=workdir, env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                 errors="replace")
+        def translate(out: str, err: str) -> None:
+            """The session log when there is one, the two text streams when there is not.
+
+            DSH publishes per-step structure only in the log it flushes on exit
+            (`sessions.flush`), so a killed run may leave nothing -- and then the text
+            translation is what a reader gets, which is why it is still here.
+            """
+            log = find_session_log(home, launched_at)
+            if log is not None:
+                events, how = read_session_log(log)
+                summary = _record_session(events, record) if events else {}
+                if summary.get("turns") or summary.get("actions"):
+                    _record_streams(out, err, record, turns=False)
+                    record({"session_log": {"path": str(log), "compression": how, **summary}})
+                    return
+                record({"session_log": {"path": str(log), "compression": how,
+                                        "events": len(events), "translated": False}})
+            _record_streams(out, err, record)
+
         try:
             out, err = proc.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
             out, err = proc.communicate()
-            _record_streams(out, err, record)
+            translate(out, err)
             record({"error": "dsh timed out", "timeout_s": timeout,
                     "deadline_s": float(os.environ.get("HG_AGENT_DEADLINE_S") or 0) or None})
             return 1
-        _record_streams(out, err, record)
+        translate(out, err)
         final = (out or "").strip()
-        if proc.returncode or not final:
-            record({"error": "dsh failed or printed no final message",
-                    "exit_code": proc.returncode})
-            return proc.returncode or 1
-        # The contract's answer file. For a task graded by its own tests this is a record of
-        # what the agent said it did; for an answer-graded task it is the answer.
-        answer.write_text(final + "\n", encoding="utf-8")
-        record({"submitted": True, "answer": final[:4000]})
+        if proc.returncode:
+            record({"error": "dsh failed", "exit_code": proc.returncode})
+            return proc.returncode
+        try:
+            record(submitted(answer, before, final))
+        except ValueError as exc:
+            record({"error": str(exc), "exit_code": 0})
+            return 1
     return 0
 
 
-def _record_streams(out: str, err: str, record) -> None:
+def submitted(answer: Path, before, final: str) -> dict:
+    """The `submitted` record: the task's file if the agent wrote one, else the message.
+
+    Separated from `run` so the precedence is testable without the CLI: the rule is the
+    whole content, and getting it wrong is invisible in a score (a task graded on an exact
+    file would be graded on the model's prose instead).
+    """
+    current = _answer_stamp(answer)
+    if current is not None and current != before and current.strip():
+        # The agent wrote the file the task asked for -- keep it, do not overwrite it with
+        # the final message.
+        return {"submitted": True, "answer": current.decode("utf-8", "replace")[:4000],
+                "answer_source": "artifact"}
+    if not final:
+        raise ValueError("dsh printed no final message and the task wrote no answer.txt")
+    # The contract's answer file. For a task graded by its own tests this is a record of
+    # what the agent said it did; for an answer-graded task it is the answer.
+    answer.write_text(final + "\n", encoding="utf-8")
+    return {"submitted": True, "answer": final[:4000], "answer_source": "final_message"}
+
+
+#: The session events DSH flushes, translated. `sessions.flush` (headless runner, before it
+#: exits) writes `<DSH_HOME>/sessions/<cwd-key>/<session-id>/session.v<N>.jsonl[.zstd]`, and
+#: that log is the only place this CLI publishes per-step structure: the process itself
+#: streams human text (reasoning to stderr, the final message to stdout).
+#:
+#: Measured on a real log on this host (330 events): 98 `tool/call`, 98 `tool/result`,
+#: 29 `assistant/message` each carrying `usage`, plus `turn/*` and `step/*` boundaries. So
+#: "DSH has no structured output" was wrong -- the adapter was reading the wrong stream.
+
+#: How the tool name maps onto the contract's `observation.kind`. Same vocabulary as the
+#: codex and opencode adapters, so a method can read one field across all three.
+_OBSERVATION_KINDS = {
+    "shell": "shell", "bash": "shell", "terminal": "shell",
+    "read": "filesystem", "write": "filesystem", "edit": "filesystem",
+    "patch": "filesystem", "glob": "filesystem", "grep": "filesystem",
+    "web_fetch": "api", "web_search": "api", "fetch": "api", "search": "api",
+}
+
+#: Bound on what one record may put in the trace. A patch can be megabytes, and the trace is
+#: read by a model: the full string stays available in `tool_input.chars`-style summaries and
+#: in the session log itself, which is kept beside the run.
+MAX_COMMAND_CHARS = 500
+MAX_OUTPUT_CHARS = 2000
+
+
+def observation_kind(tool: str) -> str:
+    return _OBSERVATION_KINDS.get((tool or "").lower(), "other")
+
+
+def _text_of(message: dict | None, depth: int = 0) -> str:
+    """The text parts of a DSH message, joined, at any nesting depth.
+
+    A tool result nests one level deeper than an assistant message -- measured on a real log:
+
+        tool/result  message.content[0] = {type: "tool-result", content: [{type: "text", ...}]}
+
+    so a one-level reader finds tool results with **zero** characters of output, which reads
+    as an environment that said nothing back.
+    """
+    if depth > 3:
+        return ""
+    content = (message or {}).get("content") or []
+    if isinstance(content, str):
+        return content
+    out = []
+    for part in content if isinstance(content, list) else []:
+        if not isinstance(part, dict):
+            continue
+        if part.get("type") == "text":
+            out.append(str(part.get("text") or ""))
+        elif part.get("content") is not None:
+            out.append(_text_of(part, depth + 1))
+    return "".join(out)
+
+
+def find_session_log(home: Path, since: float) -> Path | None:
+    """The session log this run flushed, or `None`.
+
+    Searched by modification time under the whole sessions root rather than by rebuilding the
+    path: the directory is bucketed by a hash of the cwd (`session-persistence-jsonl`'s
+    `projectKey`), so a change in that spelling would silently produce an empty trace, and an
+    empty trace reads as a harness that did nothing.
+    """
+    root = Path(home) / ".dsh" / "sessions"
+    try:
+        candidates = [path for path in root.rglob("session.*.jsonl*")
+                      if path.stat().st_mtime >= since - 5]
+    except OSError:
+        return None
+    return max(candidates, key=lambda path: path.stat().st_mtime, default=None)
+
+
+def read_session_log(path: Path) -> tuple[list[dict], str]:
+    """`(events, how)`. DSH writes JSONL, optionally zstd-compressed (`.jsonl.zstd`)."""
+    data: bytes
+    if str(path).endswith(".zstd"):
+        try:
+            import zstandard                                    # noqa: PLC0415
+            with open(path, "rb") as fh:
+                data = zstandard.ZstdDecompressor().stream_reader(fh).read()
+            how = "zstandard"
+        except ImportError:
+            proc = subprocess.run(["zstd", "-dc", str(path)], capture_output=True)
+            if proc.returncode != 0:
+                return [], "zstd-missing"
+            data, how = proc.stdout, "zstd-cli"
+    else:
+        data, how = path.read_bytes(), "plain"
+    events: list[dict] = []
+    for line in data.decode("utf-8", "replace").splitlines():
+        line = line.strip()
+        if line:
+            try:
+                events.append(json.loads(line))
+            except ValueError:
+                continue
+    return events, how
+
+
+def _record_session(events: list[dict], record) -> dict:
+    """Translate DSH's session events into the adapter contract's records.
+
+    Returns what the translation saw, for the trace: a run whose log is present but whose
+    shape changed (the format is versioned, `session.v3`) must be *visible* as a translation
+    that found nothing, not as a silent success.
+    """
+    calls: dict[str, dict] = {}
+    turns = actions = 0
+    tokens = {"input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0}
+    seen_usage = False
+    turn_end = None
+    for event in events:
+        kind, data = event.get("type"), event.get("data") or {}
+        if kind == "assistant/message":
+            turns += 1
+            text = _text_of(data.get("message"))
+            record({"step": turns, "reply": text})
+            usage = data.get("usage") or {}
+            for source, target in (("inputTokens", "input_tokens"),
+                                   ("outputTokens", "output_tokens"),
+                                   ("cacheReadTokens", "cached_input_tokens")):
+                value = usage.get(source)
+                if isinstance(value, int):
+                    tokens[target] += value
+                    seen_usage = True
+        elif kind == "tool/call":
+            calls[str(data.get("callId"))] = {
+                "name": str(data.get("name") or ""),
+                "arguments": str(data.get("arguments") or ""),
+                "turn": data.get("turn"), "step": data.get("step")}
+        elif kind == "tool/result":
+            call = calls.pop(str((data.get("message") or {}).get("source", {}).get("callId")), {})
+            actions += 1
+            name = call.get("name") or ""
+            arguments = call.get("arguments") or ""
+            message = data.get("message") or {}
+            output = _text_of(message)
+            meta = data.get("meta") or {}
+            code = meta.get("exitCode") if isinstance(meta, dict) else None
+            record({
+                "step": turns,
+                # The action is the tool plus what it was asked to do: the platform counts
+                # `command` records and treats two equal strings as a re-issue, so the name
+                # alone would make every `web_fetch` look like a repeat of the last one.
+                "command": f"{name} {arguments}".strip()[:MAX_COMMAND_CHARS],
+                "tool": name,
+                "tool_input_chars": len(arguments),
+                "observation": {"kind": observation_kind(name),
+                                "returncode": code if isinstance(code, int) else None,
+                                "output_chars": len(output),
+                                "truncated": len(output) > MAX_OUTPUT_CHARS},
+                **({"error": json.dumps(data["error"], ensure_ascii=False)[:MAX_OUTPUT_CHARS]}
+                   if data.get("error") else {})})
+        elif kind == "turn/end":
+            turn_end = (data.get("reason") or {}).get("kind") if isinstance(
+                data.get("reason"), dict) else data.get("reason")
+        elif kind == "session":
+            event_version = event.get("version")
+    if turns or seen_usage:
+        usage = dict(tokens) if seen_usage else {}
+        usage["calls"] = turns
+        record({"usage": usage})
+    return {"events": len(events), "turns": turns, "actions": actions,
+            "unmatched_calls": len(calls), "turn_end": turn_end}
+
+
+def _record_streams(out: str, err: str, record, *, turns: bool = True) -> None:
     """DSH's two streams, as trace records.
 
     It streams its reasoning to **stderr** and prints the final assistant message to
@@ -530,9 +769,24 @@ def _record_streams(out: str, err: str, record) -> None:
     for line in (err or "").splitlines():
         if line.strip():
             record({"reasoning": line.rstrip()})
-    for line in (out or "").splitlines():
-        if line.strip():
-            record({"reply": line.rstrip()})
+    # **One record for the whole final message.** A record per line made a five-line answer
+    # look like five model turns to `loop_facts`, which counts `reply` records as turns --
+    # the same double-count the miniswe and codex adapters had. Headless DSH is one shot,
+    # so its final message is one turn.
+    if not turns:
+        # The session log carries the turns and the usage; stderr reasoning is kept because
+        # it is the only human-readable record of what the agent was thinking.
+        return
+    answer = "\n".join(line for line in (out or "").splitlines() if line.strip())
+    if answer:
+        record({"reply": answer})
+    # DSH reports no token counts, and `_ended` reads a missing `usage` as a crash (a
+    # harness killed before its own end). Recording the turn it *did* make at this boundary
+    # keeps a successful run from being reported as a crashed one, and the note says what
+    # the number is: one invocation observed here, not the model calls inside it.
+    record({"usage": {"calls": 1,
+                      "note": "dsh reports no token counts; one invocation observed at the "
+                              "harness boundary"}})
 
 
 def main() -> int:

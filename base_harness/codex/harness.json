@@ -11,5 +11,13 @@
   "env_kinds": [
     "files",
     "exec"
-  ]
+  ],
+  "components": {
+    "control": [
+      "harness.json"
+    ],
+    "delegation": [
+      "agent.py"
+    ]
+  }
 }

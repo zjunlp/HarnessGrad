@@ -8,5 +8,14 @@
   "env_kinds": [
     "files",
     "exec"
-  ]
+  ],
+  "components": {
+    "control": [
+      "agent.py",
+      "harness.json"
+    ],
+    "unattributed": [
+      "requirements.txt"
+    ]
+  }
 }

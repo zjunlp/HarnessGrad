@@ -4,12 +4,12 @@ NATIVE_PINS = {
     "scienceworld": {
         "dataset": "scienceworld",
         "manifest": "data/runtimes/scienceworld-native.json",
-        "sha256": "78ed5155efaf2d990128070bbe4f8a1af80116bb12c25d27bbc1819a54901081",
+        "sha256": "c856a2aad3e7aed4d5352068e11397a6667ef39fb2e8325a6bcd30ee70a9733b",
     },
     "chessbench_puzzles": {
         "dataset": "chessbench_puzzles",
         "manifest": "data/runtimes/chessbench_puzzles-native.json",
-        "sha256": "615b3b6fb8a1b9eff2dd75187ba739a7dc3363f8e1af31b017600ab5f3632859",
+        "sha256": "3bdfcae905846eb46d7b60a0f5b9f3b9f3dfa1e288d3bba96dda25579e7a6cfe",
     },
     "alfworld": {
         "dataset": "alfworld",

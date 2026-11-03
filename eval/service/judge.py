@@ -127,10 +127,14 @@ class Judge:
                     raise JudgeUnavailable('tool messages require declared model tools')
             body = {**self.spec.get('parameters', {}), 'model': self.spec['model'],
                     'messages': messages, 'stream': False}
-            token_parameter = 'max_tokens'
+            if 'response_format' in self.spec:
+                body['response_format'] = self.spec['response_format']
+            token_parameter = self.spec.get('token_parameter', 'max_tokens')
             if self.api_options is not None:
                 body = {**self.api_options['parameters'], **self.api_options['fields'],
                         'model': self.spec['model'], 'messages': messages, 'stream': False}
+                if 'response_format' in self.spec:
+                    body['response_format'] = self.spec['response_format']
                 token_parameter = self.api_options['token_parameter']
             if self.spec.get('max_output_tokens') is not None:
                 body[token_parameter] = self.spec['max_output_tokens']
@@ -174,7 +178,8 @@ class Judge:
                 if os.environ.get('HG_JUDGE_REQUIRE_SERVED_MODEL') == '1':
                     raise JudgeUnavailable(
                         'the provider answered as a different model than the declaration froze')
-            return {'content': content, 'message': message, 'usage': record['usage']}
+            return {'content': content, 'message': message, 'usage': record['usage'],
+                    'finish_reason': result['choices'][0].get('finish_reason')}
         except Exception as exc:
             # Do not expose provider response bodies, URLs or credentials in errors.
             reason = str(exc) if isinstance(exc, JudgeUnavailable) else type(exc).__name__

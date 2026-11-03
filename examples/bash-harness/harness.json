@@ -1,0 +1,11 @@
+{
+  "name": "bash-example",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "run.py",
+  "backend": "cli",
+  "env_kinds": ["files"],
+  "components": {
+    "control": ["harness.json", "run.py", "run.sh"]
+  }
+}

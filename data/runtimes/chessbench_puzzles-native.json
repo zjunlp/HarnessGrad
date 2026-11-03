@@ -5405,8 +5405,8 @@
     },
     "/scorer/data/datasets/chessbench_puzzles.py": {
       "entry": "data/datasets/chessbench_puzzles.py:1 (trusted scorer code, separate from actor files)",
-      "sha256": "64d0e446d98e1f8894672ae8f8b10780f33d37b39abb85f5ab58f543c02d10d1",
-      "size": 17633,
+      "sha256": "c8985d40574b48d2234060b25e03283673177d5be158e4fed3e78d1b6f3de577",
+      "size": 17828,
       "source": "data/datasets/chessbench_puzzles.py"
     },
     "/scorer/data/scaffolds/__init__.py": {
@@ -5423,8 +5423,8 @@
     },
     "/scorer/data/scaffolds/qa/base.py": {
       "entry": "data/scaffolds/qa/base.py:1 (trusted scorer code, separate from actor files)",
-      "sha256": "3c2242e4ed82d76eb7732a6c077122f3d74fb4387860caa3b53a9d8a049a8d8a",
-      "size": 27878,
+      "sha256": "084f81ee396a76346c17652b99775900c0e55c97518947d4a603db1bc24d80b0",
+      "size": 30753,
       "source": "data/scaffolds/qa/base.py"
     },
     "/scorer/data/scaffolds/qa/evidence_scorers.py": {
@@ -5444,6 +5444,12 @@
       "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383",
       "size": 8624,
       "source": "data/scaffolds/qa/read.py"
+    },
+    "/scorer/data/scaffolds/roots.py": {
+      "entry": "data/scaffolds/roots.py:1 (trusted scorer code, separate from actor files)",
+      "sha256": "1ce3bf812cf383486ff29cc23dccf72acc66fec7f1f3641a80d977950b964696",
+      "size": 4983,
+      "source": "data/scaffolds/roots.py"
     },
     "/scorer/data/scaffolds/scorer_input.py": {
       "entry": "data/scaffolds/scorer_input.py:1 (trusted scorer code, separate from actor files)",

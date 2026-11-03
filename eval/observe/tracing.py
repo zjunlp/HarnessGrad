@@ -103,6 +103,14 @@ def loop_facts(trace_text: str) -> dict:
     empty_commands = duplicate_keys = context_trims = 0
     clipped_events = clipped_chars = history_dropped = 0
     repeated_commands = repeat_nudges = 0
+    #: The environment's answer, counted from `observation` records. A CLI harness does not
+    #: speak this platform's old `reply`/`command` dialect on its own, so the adapter writes
+    #: both -- and until something *reads* the observation, a contract that asks for it is
+    #: prose (`docs/adapter-spec.md`). `return_codes` is the part a method can act on: a run
+    #: whose commands all returned 0 and a run whose commands all returned 127 are two
+    #: different failures, and both look like "13 commands" without it.
+    observed = nonzero_returns = 0
+    return_codes: dict[str, int] = {}
     seen_commands: set[str] = set()
     missing: list[str] = []
     usage: dict = {}
@@ -125,6 +133,28 @@ def loop_facts(trace_text: str) -> dict:
                 close = reply.find("}")
                 if close != -1 and "{" in reply[close:]:
                     multi_object += 1
+        if isinstance(record.get("observation"), dict):
+            observed += 1
+            code = record["observation"].get("returncode")
+            if code not in (0, None):
+                nonzero_returns += 1
+            key = str(code)
+            return_codes[key] = return_codes.get(key, 0) + 1
+        elif "command" in record and ("exit" in record or "returncode" in record):
+            # **The v0 dialect**, which is `base_harness/loop`'s: the environment's answer
+            # travels inline on the action record as `exit`/`output` rather than under
+            # `observation`. It is read here rather than rewritten in the harness, because
+            # (a) every trace already stored was written this way and a reader that could
+            # not read them would make the whole history unreadable, and (b) changing
+            # `loop` changes its content address, which under this platform's own rules
+            # makes it a different harness -- a price to pay deliberately, not as a side
+            # effect of making a report uniform.
+            observed += 1
+            code = record.get("exit", record.get("returncode"))
+            if code not in (0, None):
+                nonzero_returns += 1
+            key = str(code)
+            return_codes[key] = return_codes.get(key, 0) + 1
         if "command" in record:
             commands += 1
             cmd = str(record.get("command") or "").strip()
@@ -176,6 +206,10 @@ def loop_facts(trace_text: str) -> dict:
         # the nudge only sees a repeat that arrives immediately after itself.
         "repeated_commands": repeated_commands,
         "repeat_nudges": repeat_nudges,
+        # What the environment said back, in the one shape every adapter writes.
+        "observations": observed,
+        "nonzero_returns": nonzero_returns,
+        "return_codes": return_codes,
         "context_trims": context_trims,
         "output_clipped_events": clipped_events,
         "output_clipped_chars": clipped_chars,

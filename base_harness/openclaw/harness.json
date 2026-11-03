@@ -1,0 +1,37 @@
+{
+  "name": "openclaw",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null,
+  "env_kinds": [
+    "files"
+  ],
+  "runtime_paths": [
+    "/home/xubuqiang/.nvm/versions/node/v22.16.0/bin",
+    "/home/xubuqiang/.nvm/versions/node/v22.16.0/lib/node_modules/openclaw"
+  ],
+  "notes": "Runs the installed OpenClaw CLI with --local and an isolated per-task config/state. The OpenClaw source and Node runtime are declared read-only runtime_paths; this candidate edits only the adapter prompt/config and does not vendor the upstream package. The files environment is supported; an exec/container run needs the same declared Node/OpenClaw trees provisioned in its image.",
+  "components": {
+    "context": [
+      "prompt.md"
+    ],
+    "tools": [
+      "config.json"
+    ],
+    "control": [
+      "harness.json"
+    ],
+    "delegation": [
+      "agent.py"
+    ],
+    "reliability": [
+      "runtime-identity.json"
+    ],
+    "unattributed": [
+      "README.md",
+      "mock_model.py"
+    ]
+  }
+}

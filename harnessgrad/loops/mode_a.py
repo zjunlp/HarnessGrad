@@ -32,6 +32,8 @@ from harnessgrad import code_metrics
 from harnessgrad import components
 from harnessgrad import config as platform_config
 from harnessgrad import policies
+from harnessgrad import scoring_identity
+from harnessgrad import snapshot
 from harnessgrad.channel import _stage_for_method
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
@@ -263,6 +265,27 @@ def _copy_method_round_input(work: Path, base_dir: Path, *,
     index_path.write_text(json.dumps(index, indent=1))
 
 
+def _snapshot_round(run_dir: Path, round_no: int, work: Path, *, run_id: str,
+                    harness_sha: str, parent_id: str | None = None) -> str | None:
+    """Write the round's portable snapshot; a failure must never abort the run.
+
+    A run always keeps a round's diff and only sometimes its full tree, so "open round
+    N" could fail with `round-not-stored` for a round the run had measured. The
+    snapshot closes that hole as one self-verifying JSON file beside the round's diff.
+    It is added to the record, never in place of it: the round is already committed and
+    measured by the time this runs, and losing that over a missing artifact would be
+    the worse failure. So the error is printed once and the run continues.
+    """
+    try:
+        stored = snapshot.write(run_dir, round_no, work, run_id=run_id,
+                                harness_sha=harness_sha, parent_id=parent_id)
+        return snapshot.load(stored)["id"]
+    except Exception as exc:  # noqa: BLE001 -- see the docstring: never fatal
+        print(f"harnessgrad: run {run_id} round {round_no}: snapshot not written: {exc}",
+              file=sys.stderr)
+        return None
+
+
 def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 task_ids, scorable, sampling, cache, cumulative,
                 train_ids=None, split=None, setups=None,
@@ -468,6 +491,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     # total number of measured rounds, so re-running the same command after a crash picks
     # up at `last + 1` instead of appending a second set of rounds.
     steps_done, step_attempts = start_steps, 0
+    #: Each round's snapshot chains to the one before it, so the artifact carries the same
+    #: lineage the curve does. A fresh run starts the chain; a resumed one picks up the
+    #: newest snapshot already on disk.
+    snapshot_parent = snapshot.last_id(run_dir)
     pending: list[dict] = []      # steps of the current submission, not yet measured
     submission_stop = False       # that submission asked to finish
     steps_in_submission = 0
@@ -654,6 +681,12 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # method that names a file it did not change is itself a finding.
         changed_files = [f["path"] for f in (diff.get("files") or [])]
         _save_round_state(run_dir, r, work, rejected_candidate=not has_manifest)
+        # The round's committed state as one portable, git-free JSON artifact, so the
+        # round stays openable even when `state_after_roundN` was not kept. Its own
+        # failure is reported and swallowed inside `_snapshot_round`.
+        snapshot_parent = (_snapshot_round(run_dir, r, work, run_id=run_id,
+                                           harness_sha=sha, parent_id=snapshot_parent)
+                           or snapshot_parent)
         # **An identical candidate costs nothing to measure.** A method without an early
         # stop that has nothing left to change still has to spend its remaining rounds,
         # and re-running 100 task evaluations to learn a number the record already holds
@@ -750,6 +783,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                                jobs=args.jobs, trials=args.trials,
                                gpu_budget=getattr(args, "gpu_budget", None)),
             sampling=sampling,
+            scoring_identity=getattr(args, "scoring_identity", None),
             scores=[res["per_task"][t] for t in _scored(res, task_ids)],
             task_ids=_scored(res, task_ids),
             train_scores=[res["per_task"][t] for t in _scored(res, train_ids)],
@@ -935,13 +969,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                     reference_tasks=baseline_studied, current_tasks=studied),
             }
             point["score_geomean"] = round(policies.geomean(list(studied.values())), 6)
-            point["capability_floor"] = {
-                "baseline": f"round-{baseline_point.get('round', 0)}",
-                **policies.floor_violations(
-                    studied, baseline_studied,
-                    candidate_std=(res.get("per_task_std") or {}),
-                    baseline_std=(baseline_point.get("per_task_std") or {})),
-            }
+            scoring_problems = scoring_identity.problems(
+                baseline_point.get("scoring_identity"), point.get("scoring_identity"))
+            if baseline_point.get("scoring_identity") is not None or point.get("scoring_identity") is not None:
+                point["baseline"]["comparable"] = not bool(point["baseline"]["problems"])
             # **The other direction.** `capability_floor` records only where a candidate is
             # *below* the baseline, because Anthropic's criterion is a disqualification.
             # Nothing asked where it is above, and `score_ci95` cannot answer it: that interval
@@ -951,10 +982,18 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             # points, so the comparison is paired and the discordant pairs are the signal.
             # Recorded beside the floor, not instead of it: one says "this candidate is
             # safely no worse", the other says "this candidate is better than chance allows".
-            point["improvement"] = {
-                "baseline": f"round-{baseline_point.get('round', 0)}",
-                **policies.improvement(studied, baseline_studied),
-            }
+            if not scoring_problems:
+                point["capability_floor"] = {
+                    "baseline": f"round-{baseline_point.get('round', 0)}",
+                    **policies.floor_violations(
+                        studied, baseline_studied,
+                        candidate_std=(res.get("per_task_std") or {}),
+                        baseline_std=(baseline_point.get("per_task_std") or {})),
+                }
+                point["improvement"] = {
+                    "baseline": f"round-{baseline_point.get('round', 0)}",
+                    **policies.improvement(studied, baseline_studied),
+                }
         # **What the candidate is, as code.** HarnessDev measured this on the harnesses
         # their creators wrote: "of 169 new functions or classes, 113 are reachable from
         # the entry point, 31 are reachable only through dead code, and 25 have no caller"

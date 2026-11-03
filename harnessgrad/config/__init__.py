@@ -37,7 +37,7 @@ Public API::
 from __future__ import annotations
 
 from harnessgrad.config.areas import (
-    AgentConfig, Config, EgressConfig, EnvironmentConfig, ImproverConfig,
+    AgentConfig, Config, ConfigMissing, EgressConfig, EnvironmentConfig, ImproverConfig,
     MethodConfig, RunConfig, RuntimeConfig, SandboxConfig, StorageConfig,
 )
 from harnessgrad.config.loader import (
