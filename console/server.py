@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""实验台 · 观察 API、对话与受守卫保护的实验启动器。
+"""实验台 · 观察 API 与受守卫保护的实验启动器。
 
 三个刻意的限制，都是为了**不干扰正在跑的实验**：
 
-1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/chat.html`
+1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/launch.html`
    只有在服务端预检查通过且用户二次确认后才允许启动一次 run。
 2. **只绑 127.0.0.1**。它是这台机器上的工具，不是服务。
 3. **不缓存到磁盘**。列表只在内存里缓存 2 秒，避免边跑边看时反复读 299 个目录。
@@ -34,7 +34,6 @@
     /api/explain?run=<id>&round=<n>[&force=1]  [not surfaced] LLM 解释这一轮改动（只读；缓存）
 
 显式写接口（POST）：
-    /api/chat                       调用配置好的模型；不启动实验
     /api/runs                       经启动守卫检查后启动一次实验
 
 数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
@@ -48,6 +47,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -55,11 +55,16 @@ import pathlib
 import subprocess
 import sys
 import re
+import shlex
 import shutil
 import threading
 import time
 import urllib.error
 import urllib.request
+import ipaddress
+import tempfile
+from email import policy as email_policy
+from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -403,6 +408,23 @@ def all_rows(force: bool = False) -> list[dict]:
                 except OSError:
                     continue
                 if row:
+                    # **能不能重建某一版，是这一行的事实，不是点开才知道的意外。**
+                    # 状态目录、单文件快照与补丁都是"这一轮的 harness 被存下来了"的证据；
+                    # 三者都没有的 run，曲线上的轮次在磁盘上并不存在，编辑页只能拒绝它。
+                    try:
+                        row["rounds_stored"] = sum(1 for _ in d.glob("state_after_round*"))
+                        row["diffs_stored"] = sum(1 for _ in (d / "diffs").glob("round-*.patch")) \
+                            if (d / "diffs").is_dir() else 0
+                        snapshots = sorted({int(p.stem[len("round-"):])
+                                            for p in (d / "snapshots").glob("round-*.json")
+                                            if p.stem[len("round-"):].isdigit()}) \
+                            if (d / "snapshots").is_dir() else []
+                        row["snapshot_rounds"] = snapshots
+                        row["snapshots_stored"] = len(snapshots)
+                    except OSError:
+                        row["rounds_stored"] = row["diffs_stored"] = 0
+                        row["snapshot_rounds"] = []
+                        row["snapshots_stored"] = 0
                     rows.append(row)
         rows.sort(key=lambda r: r["mtime_s"] or 0, reverse=True)
         _list_cache.update({"at": now, "rows": rows})
@@ -488,8 +510,8 @@ def adapters() -> list[dict]:
 def base_harnesses() -> list[str]:
     """The task harnesses this console may launch.
 
-    `base_harness/` also holds the platform's own probes and the improver agents
-    (`cli_agent`, `codex`, `deepseek-harness`, `oracle`, …): they are harnesses, but they are not
+    `base_harness/` also holds the platform's own controls and the improver-side agents
+    (`codex`, `opencode`, `oracle`, …): they are harnesses, but they are not
     task harnesses, and offering them in the launcher invited a run whose baseline was an
     improver. The launchable set is declared in `base_harness/launchable.json`; when that file is
     missing the console falls back to every directory, which keeps an older checkout usable.
@@ -612,15 +634,18 @@ def live_drivers_by_run() -> dict[str, dict]:
 #: key 只在服务端：浏览器拿到的是回复，不是凭证。缺这个文件时接口返回 503，
 #: 界面显示"未配置"，而不是假装能聊。
 LLM_CONFIG = ROOT / ".local" / "llm.json"
-#: The launcher's own configuration: the endpoint the *task agent* calls, and the endpoint the
-#: *chat* panel calls. Kept out of the repository (`.local/` is ignored) because both carry a key.
+#: 启动器自己的配置：*task agent* 调的那个端点，以及 *meta*（解释/助手）调的那个端点。
+#: 放在仓库外（`.local/` 已 gitignore），因为两个都带 key。
 SETTINGS = ROOT / ".local" / "settings.json"
 
 #: Two sides, two endpoints, and they are not the same thing: the task agent is the model the
-#: study's harness calls (a local VLLM server here), the chat panel is whatever model answers the
-#: operator (a hosted API). Merging them was how a launch could measure a different model than the
-#: form showed.
-SETTINGS_SIDES = ("task", "chat")
+#: study's harness 调的那个模型（这台机器上是本地 VLLM），meta 侧是回答操作者的那个模型
+#: （托管 API）。把两者合成一个，正是"启动测量到的模型和表单上写的不是同一个"的来源。
+SETTINGS_SIDES = ("task", "meta", "assistant")
+
+#: `chat` 是 2026-11-02 之前的名字：那一类其实是"Meta-Agent / 对话用的端点"。
+#: 读的时候仍然接受它，写的时候只写新名字，这样旧文件不用手改。
+SETTINGS_ALIASES = {"chat": "meta"}
 
 
 def load_settings() -> dict:
@@ -634,7 +659,10 @@ def load_settings() -> dict:
     out = {}
     for side in SETTINGS_SIDES:
         block = dict(data.get(side) or {})
-        if side == "chat" and not block.get("base_url"):
+        for alias, canonical in SETTINGS_ALIASES.items():
+            if canonical == side and not block.get("base_url"):
+                block = {**block, **(data.get(alias) or {})}
+        if side == "meta" and not block.get("base_url"):
             block = {**chat_fallback, **{k: v for k, v in block.items() if v}}
         out[side] = {
             "base_url": str(block.get("base_url") or "").strip(),
@@ -657,7 +685,13 @@ def save_settings(payload: dict) -> dict:
     current = load_settings()
     merged = {}
     for side in SETTINGS_SIDES:
-        incoming = payload.get(side) or {}
+        # 旧名字也要落到新分节上。`SETTINGS_ALIASES` 的注释说"写的时候只写新名字"，但
+        # 直接忽略 `chat` 块不是改名，是**丢掉**它：一个还在用旧名字的调用方保存成功、
+        # 页面却还是空的。`load_settings` 读文件时接受旧名字，写也应当接受。
+        incoming = {key: value for alias, canonical in SETTINGS_ALIASES.items()
+                    if canonical == side
+                    for key, value in (payload.get(alias) or {}).items()}
+        incoming.update(payload.get(side) or {})
         block = dict(current[side])
         for key in ("base_url", "api_key", "model"):
             value = str(incoming.get(key) or "").strip()
@@ -697,98 +731,19 @@ def probe_endpoint(base_url: str, api_key: str) -> dict:
     names = [row.get("id") for row in (body.get("data") or []) if isinstance(row, dict)]
     return {"ok": True, "models": names[:40], "count": len(names)}
 
-CHAT_SYSTEM = """你是 HarnessGrad 实验台的助手。这个平台在一个共享机器上跑"改 harness"的实验:
-给定数据集与基线 harness,一个改进器(improver)多轮地改这个 harness,每轮用平台自己的
-评测在给定题集上打分。你只做两件事:
-
-1. 回答关于这些数据的问题(数据集有哪些、某个 run 是什么、曲线怎么读、H0 是什么)。
-2. 当用户想**跑一次实验**时,给出配置。不要描述步骤,直接输出一个 fenced 代码块:
-
-```skill
-{"dataset": "<名字>", "harness": "<名字>", "improver": "<名字>", "improver_model": "<模型>",
- "rounds": <1-20>, "jobs": <1-64>, "trials": <1-3>, "reason": "<一句话说明为什么这样配>"}
-```
-
-可用的值:
-  datasets: <<DATASETS>>
-  base harnesses: <<HARNESSES>>
-  improvers: <<IMPROVERS>>
-
-规则:
-- 用中文回答,简短。不要编造数字;不知道就说不知道。
-- 基线 harness 默认用 `loop`(平台的研究基线);只有用户明确要别的才换。
-- 改进器默认 `dsh`;轮数默认 10、并发默认 12、trials 默认 1,除非用户说了别的。
-- **你不需要执行权限**:起跑由平台上的人点两次确认完成。你的输出就是那份配置。
-- 只要用户表达了"想跑 / 训练 / 在某个数据集上试",就必须在回复里带上那个 ```skill 代码块
-  (可以先写一句解释),不要用自然语言描述步骤、也不要说"我无法直接跑"。
-- 起跑由人点两次确认,你只提供配置;不要声称已经启动。
-- 如果用户没说要跑,就不要输出 skill 块。
-"""
-
-
-def llm_config() -> dict | None:
-    """The chat side's endpoint: the settings file first, the old `.local/llm.json` as fallback."""
-    chat = load_settings()["chat"]
-    if chat.get("base_url") and chat.get("api_key"):
-        return chat
-    data = read_json(LLM_CONFIG)
-    if not data.get("api_key") or not data.get("base_url"):
-        return None
-    return data
-
-
-def api_chat(messages: list[dict]) -> tuple[int, dict]:
-    cfg = llm_config()
-    if not cfg:
-        return 503, {"error": "chat-not-configured",
-                     "detail": f"缺少 {LLM_CONFIG.relative_to(ROOT)}（base_url / model / api_key）"}
-    form = launch_form()
-    system = (CHAT_SYSTEM
-              .replace("<<DATASETS>>", ", ".join(a["name"] for a in form["datasets"]))
-              .replace("<<HARNESSES>>", ", ".join(form["harnesses"]))
-              .replace("<<IMPROVERS>>",
-                       ", ".join(f"{x['name']}({x['model'] or '模型自选'})" for x in form["improvers"])))
-    payload = {"model": cfg.get("model") or "gpt-6.1-sol",
-               "messages": [{"role": "system", "content": system}] + [
-                   {"role": str(m.get("role") or "user")[:12],
-                    "content": str(m.get("content") or "")[:8000]} for m in messages[-12:]],
-               "max_tokens": 700, "temperature": 0.2}
-    def call() -> dict:
-        request = urllib.request.Request(
-            cfg["base_url"].rstrip("/") + "/chat/completions",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Authorization": f"Bearer {cfg['api_key']}",
-                     "Content-Type": "application/json",
-                     # 这个网关按客户端特征筛请求；显式声明 UA 比让它猜稳。
-                     "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
-        with urllib.request.urlopen(request, timeout=90) as response:
-            return json.loads(response.read().decode("utf-8", "replace"))
-
-    body = None
-    last_error = ""
-    for _attempt in range(3):
-        if _attempt:
-            # 网关在连发时会用 403 挡一下（不是鉴权问题：同样的请求隔开几秒就 200）。
-            time.sleep(1.2 * _attempt)
-        try:
-            body = call()
-            break
-        except urllib.error.HTTPError as exc:
-            last_error = f"{exc.code}: {exc.read()[:300].decode('utf-8', 'replace')}"
-            if exc.code not in (403, 429, 502, 503):
-                break
-        except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
-            last_error = str(exc)[:300]
-            break
-    if body is None:
-        return 502, {"error": "model-unreachable", "detail": last_error}
-    try:
-        text = body["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
-        return 502, {"error": "model-shape", "detail": json.dumps(body)[:300]}
-    usage = body.get("usage") or {}
-    return 200, {"text": text or "", "model": body.get("model"),
-                 "usage": {k: usage.get(k) for k in ("prompt_tokens", "completion_tokens")}}
+def method_catalogue() -> list[dict]:
+    """`methods/*/method.json` 的清单。没有 method.json 的目录不算一个可选方法。"""
+    rows = []
+    for path in sorted((PLATFORM_ROOT / "methods").glob("*/method.json")):
+        entry = read_json(path)
+        if not isinstance(entry, dict):
+            continue
+        name = path.parent.name
+        if name.startswith(("_", ".")):
+            continue
+        rows.append({"name": name, "title": str(entry.get("title") or name),
+                     "kind": str(entry.get("kind") or "method")})
+    return rows
 
 
 def launch_form() -> dict:
@@ -803,6 +758,9 @@ def launch_form() -> dict:
             # driver's `--improver` / `--improver-model`.
             "improvers": improver_rows,
             "meta_models": sorted({row["model"] for row in improver_rows if row["model"]}),
+            # `methods/` 是**怎么改**（决策规则），`improvers` 是**谁去改**（外部 CLI）。
+            # 之前表单只暴露后者，于是"有很多 RSI 方法"这件事在界面上完全看不见。
+            "methods": method_catalogue(),
             "pools": list(POOLS),
             "defaults": {"dataset": "alfworld", "harness": "loop",
                          "task_model": (task_models()[-1] if task_models() else "mock"),
@@ -821,6 +779,9 @@ def launch_argv(form: dict, run_id: str) -> list[str]:
             "--rounds", str(int(form["rounds"])),
             "--trials", str(int(form["trials"])),
             "--jobs", str(jobs),
+            *(["--method-entrypoint",
+               str(PLATFORM_ROOT / "methods" / str(form["method"]) / "run.py")]
+              if str(form.get("method") or "").strip() not in ("", "none") else []),
             "--improver", str(form["improver"]),
             "--improver-model", str(form["improver_model"]),
             "--run-id", run_id,
@@ -871,6 +832,13 @@ def guard_launch(form: dict) -> tuple[int, dict]:
                                 "HarnessGrad 需要 Python 3.10+")}
     if not DRIVER.is_file():
         return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{DRIVER}"}
+    method = str(form.get("method") or "").strip()
+    if method not in ("", "none"):
+        entry = PLATFORM_ROOT / "methods" / method / "run.py"
+        if not entry.is_file():
+            return 400, {"error": "unknown-method",
+                         "detail": f"methods/{method}/run.py 不存在；可选："
+                                   + ", ".join(row["name"] for row in method_catalogue())}
     if not RUNS.is_dir() or not os.access(RUNS, os.W_OK):
         return 400, {"error": "runs-root-not-writable",
                      "detail": f"runs 根目录不存在或不可写：{RUNS}"}
@@ -920,7 +888,7 @@ def api_launch(form: dict) -> tuple[int, dict]:
                          env={**os.environ, **launch_env(form)})
     with LAUNCH_LOG.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                                 "run_id": run_id, "argv": argv, "by": "console chat"},
+                                 "run_id": run_id, "argv": argv, "by": "console /launch.html"},
                                 ensure_ascii=False) + "\n")
     return 202, {"run_id": run_id, "argv": argv, "log": str(log_path.relative_to(ROOT))}
 
@@ -2290,6 +2258,901 @@ def _redact(text: str, secret: str) -> str:
     return text.replace(secret, "***") if secret else text
 
 
+
+# ── 场景工坊：构造环境的那一半 ─────────────────────────────────────────────
+#
+# 两个模式是独立的（见 docs/scenario-workspace.md）：构造环境产出 bundle，优化 Harness
+# 消费它。这里只做"落盘 + 读回"，因为工作区是单人本地工具：没有账号、没有队列。
+# 持久化的就是 `data/authored/<slug>/` 目录，服务重启后照样列出来，不需要重新 import。
+
+PLATFORM_ROOT = ROOT.parent
+AUTHORED_ROOT = pathlib.Path(os.environ.get("HG_CONSOLE_AUTHORED",
+                                            PLATFORM_ROOT / "data" / "authored"))
+SCENARIO_BUILDER = pathlib.Path(os.environ.get(
+    "HG_CONSOLE_SCENARIO_BUILDER", PLATFORM_ROOT / "tools" / "scenario_builder.py"))
+IMPORT_MAX_BYTES = 32 * 1024 * 1024        # 比场景归档小得多：这里只有文本和脚本
+
+
+
+# ── 自己改 harness：没有 RSI，人就是方法 ──────────────────────────────────
+#
+# 优化 Harness 不只是"交上来打分"，还有最常见的一种工作方式：拿一个起点，自己改几行，
+# 跑一题看看。所以这里提供的是**复制一份再改**，而不是就地编辑 `base_harness/` ——
+# 基线是所有曲线共同的起点，改它等于把历史测量的起点换掉。
+CANDIDATES = pathlib.Path(os.environ.get("HG_CONSOLE_CANDIDATES",
+                                         PLATFORM_ROOT / "data" / "candidates"))
+CANDIDATE_NAME = re.compile(r"[A-Za-z0-9._-]{1,48}")
+# 候选的来源账本：`data/candidates/.sources.json`。打开同一轮**不应该**每点一次就多出一份
+# 副本（383 KB 的 agent.py × N），但也不能覆盖用户已经改过的副本。所以记下创建时的指纹：
+# 打开时指纹没变就复用，变了（人改过）就再造一份带序号的新副本。
+CANDIDATE_INDEX = CANDIDATES / ".sources.json"
+
+
+def _candidate_tree_sha(root: pathlib.Path) -> dict[str, str]:
+    """目录里每个文件的 sha256。跳过缓存与 VCS，迁移不算改动。"""
+    out: dict[str, str] = {}
+    if not root.is_dir():
+        return out
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        if "__pycache__" in path.parts or path.suffix in (".pyc", ".pyo"):
+            continue
+        try:
+            out[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            continue
+    return out
+
+
+def _candidate_sources() -> dict:
+    data = read_json(CANDIDATE_INDEX) if CANDIDATE_INDEX.is_file() else None
+    return data if isinstance(data, dict) else {}
+
+
+def _remember_candidate(name: str, run_id: str, round_no: int, via: str,
+                        target: pathlib.Path, *, source: str | None = None,
+                        from_path: pathlib.Path | None = None) -> None:
+    record = {"run": run_id, "round": int(round_no), "via": via,
+              "created": int(time.time()), "files": _candidate_tree_sha(target)}
+    # `source` 是这一版**从哪里读出来的**（state / snapshot / replay），编辑屏用它说明
+    # 手里这份候选是怎么来的；`from` 是那一处的路径。旧账本没有这两个字段，读取时有回退。
+    if source:
+        record["source"] = source
+    if from_path is not None:
+        record["from"] = str(from_path)
+    index = _candidate_sources()
+    index[name] = record
+    try:
+        CANDIDATES.mkdir(parents=True, exist_ok=True)
+        CANDIDATE_INDEX.write_text(
+            json.dumps(index, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
+            encoding="utf-8")
+    except OSError:
+        # 账本写不下去不影响这次复制，只影响下次能不能复用。
+        pass
+
+
+def _candidate_record_source(record: dict) -> str:
+    """账本里这一版是哪个来源：`state` / `snapshot` / `replay`。
+
+    新账本直接写 `source`。旧账本的 `via` 只有 `replay` 与非 replay 两种，而非 replay 的
+    副本都来自 `state_after_roundN/`（那时还没有快照这一路），所以按 `state` 读。
+    """
+    source = record.get("source")
+    if source in ("state", "snapshot", "replay"):
+        return str(source)
+    return "replay" if record.get("via") == "replay" else "state"
+
+
+def _candidate_reusable(name: str, run_id: str, round_no: int) -> bool:
+    """这份同名候选是不是**上一次从同一轮原样复制出来的、之后没人动过**。
+
+    账本里没有记录的同名目录（这个特性上线前复制出来的）也接管：它本来就是那一轮的副本
+    （实测五个 `…-r20*` 与 `state_after_round20` 除 `harness.json` 的名字外逐字节相同），
+    接管后记下当前指纹，下次就能正常判定了。接管不会覆盖任何东西 —— 拿到手的就是那个
+    目录本身；人一旦改它，指纹变，下次就会新开一份。
+    """
+    target = CANDIDATES / name
+    if not target.is_dir() or not (target / "harness.json").is_file():
+        return False
+    record = _candidate_sources().get(name)
+    if isinstance(record, dict):
+        if record.get("run") != run_id or int(record.get("round", -1)) != int(round_no):
+            return False
+        return record.get("files") == _candidate_tree_sha(target)
+    _remember_candidate(name, run_id, round_no, "adopted", target)
+    return True
+
+
+
+# ── 右侧助手：不自己造 agent，借一个现成的 harness ─────────────────────────
+#
+# 结论先说：**不写新的 coding agent**。平台已经有六个 CLI adapter，它们已经会在这个沙箱里
+# 读写文件、调工具、产出 trace；"帮人改 harness"和"做题"在机械上是同一件事 —— 给一个目录、
+# 一段指示、让它动手。所以这里把 codex（可换）当助手用：`codex exec` 在候选目录里跑，
+# 平台只负责把"选中的行"原样塞进提示、把改动收集回来、把结果落成一个新候选。
+#
+# 这和 methods/ 里的 improver 是同一个角色，只是触发方式不同：那边由方法规则每轮调用一次，
+# 这边由人点一下按钮。所以它用**第三类端点**（assistant），不占 task/meta 的配置。
+ASSISTANT_KINDS = ("codex", "dsh", "opencode", "miniswe", "miniagent", "openclaw")
+
+
+ASSISTANT_THREADS = pathlib.Path(os.environ.get(
+    "HG_CONSOLE_ASSISTANT_THREADS", PLATFORM_ROOT / ".local" / "assistant-threads.json"))
+
+
+
+def force_new_thread() -> bool:
+    """本次请求要不要开新会话。用模块级变量而不是全局配置：它是一次调用的性质。"""
+    return bool(_FORCE_NEW_THREAD.get("value"))
+
+
+_FORCE_NEW_THREAD = {"value": False}
+
+def _threads() -> dict:
+    data = read_json(ASSISTANT_THREADS)
+    return data if isinstance(data, dict) else {}
+
+
+def _remember_thread(candidate: str, thread: str) -> None:
+    data = _threads()
+    data[candidate] = thread
+    ASSISTANT_THREADS.parent.mkdir(parents=True, exist_ok=True)
+    ASSISTANT_THREADS.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n",
+                                 encoding="utf-8")
+
+
+def _assistant_argv(env: dict, thread: str | None = None) -> list[str]:
+    """助手进程的命令行。**有会话就 resume**，否则新开一个并记住 thread id。
+
+    为什么必须这样：每条消息都新开一个 `codex exec` 时，模型看到的是一句孤立的话，
+    于是它回"我会先对照当前代码和各轮补丁…"——一段计划——然后进程结束，面板看起来像
+    停住了。成熟的做法（Copilot/Cursor 的 agent 模式）是一条**持续的会话**：模型→工具→
+    模型直到它自己停下。codex 的 `exec resume <thread>` 就是那个会话。
+    """
+    configured = shlex.split(env.get("HG_CONSOLE_ASSISTANT_CMD", ""))
+    if configured:
+        return configured
+    codex = env.get("HG_ASSISTANT_CODEX") or shutil.which("codex")
+    if not codex:
+        raise ValueError("没有可用的助手 CLI：设置 HG_CONSOLE_ASSISTANT_CMD，或把 codex 装上")
+    common = ["--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"]
+    if thread:
+        return [codex, "exec", "resume", thread, *common]
+    # 不再用 `--ephemeral`：它意味着"不落会话"，于是下一条消息又回到孤立提问。
+    return [codex, "exec", *common]
+
+
+def _snapshot(root: pathlib.Path) -> dict[str, str]:
+    """每个文件的当前内容，用来算"这一句到底改了什么"。"""
+    out = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and path.suffix in (".py", ".json", ".md", ".txt", ".sh", ".yaml", ".yml"):
+            try:
+                out[str(path.relative_to(root))] = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+    return out
+
+
+def workbench_edit(name: str, instruction: str, selection: str = "", kind: str = "codex") -> tuple[int, dict]:
+    """在候选的**副本**上让助手改代码，返回新候选名与逐文件 diff。"""
+    import difflib
+    if kind not in ASSISTANT_KINDS:
+        return 400, {"error": "unknown-assistant", "detail": f"可用的助手：{list(ASSISTANT_KINDS)}"}
+    if not isinstance(instruction, str) or not instruction.strip():
+        return 400, {"error": "no-instruction"}
+    source = CANDIDATES / str(name)
+    if not CANDIDATE_NAME.fullmatch(str(name)) or not (source / "harness.json").is_file():
+        return 404, {"error": "candidate-not-found", "detail": str(name)}
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    target = CANDIDATES / f"{name}-edit-{stamp}"
+    if target.exists():
+        return 409, {"error": "duplicate-candidate", "detail": str(target)}
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
+    before = _snapshot(target)
+    env = dict(os.environ)
+    settings = load_settings()["assistant"]
+    if settings.get("base_url"):
+        env["HG_AGENT_BASE_URL"] = settings["base_url"]
+    if settings.get("model"):
+        env["HG_AGENT_MODEL"] = settings["model"]
+    if settings.get("api_key"):
+        env["HG_AGENT_API_KEY"] = settings["api_key"]
+    thread = _threads().get(str(name)) if not force_new_thread() else None
+    try:
+        argv = _assistant_argv(env, thread)
+    except ValueError as exc:
+        shutil.rmtree(target, ignore_errors=True)
+        return 503, {"error": "assistant-not-configured", "detail": str(exc)}
+    prompt = instruction.strip()
+    if selection.strip():
+        prompt += ("\n\n下面是这次要看的范围（行号是文件里的真实行号，不要改动范围之外的内容）：\n"
+                   + selection.strip())
+
+    def run_turn(text: str):
+        """一轮 = 一次 CLI 调用；返回 (完成对象, 助手说的话, thread id)。"""
+        try:
+            done = subprocess.run(argv + ["-C", str(target), "-"], input=text, cwd=str(target),
+                                  capture_output=True, text=True, timeout=1800, env=env)
+        except subprocess.TimeoutExpired:
+            return None, "", ""
+        said, tid = "", ""
+        for line in (done.stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "thread.started":
+                tid = str(event.get("thread_id") or tid)
+            item = event.get("item")
+            if isinstance(item, dict) and item.get("type") == "agent_message" and item.get("text"):
+                said = str(item["text"])
+        return done, said, tid
+
+    done, said, tid = run_turn(prompt)
+    if done is None:
+        return 504, {"error": "assistant-timeout", "candidate": target.name}
+    if tid:
+        _remember_thread(str(name), tid)
+    continued = False
+    # **只说计划、没动文件**：同一个会话里催一次，而不是把"停住"当成回答。
+    touched_before_continue = _snapshot(target) != before
+    if not touched_before_continue and done.returncode == 0:
+        argv = _assistant_argv(env, _threads().get(str(name)))
+        done2, said2, tid2 = run_turn(
+            "继续执行：不要再复述计划，直接在仓库里改文件，改完用一句话说明改了什么。")
+        if done2 is not None and done2.returncode == 0:
+            continued = True
+            if said2:
+                said = said2
+            if tid2:
+                _remember_thread(str(name), tid2)
+    after = _snapshot(target)
+    diff, changed = [], []
+    for path in sorted(set(before) | set(after)):
+        if before.get(path) == after.get(path):
+            continue
+        changed.append(path)
+        diff.extend(difflib.unified_diff((before.get(path) or "").splitlines(True),
+                                         (after.get(path) or "").splitlines(True),
+                                         fromfile=f"a/{path}", tofile=f"b/{path}", n=2))
+    if not changed:
+        shutil.rmtree(target, ignore_errors=True)
+        return 200, {"candidate": None, "changed": [], "diff": "",
+                     "message": said or "助手没有改动任何文件",
+                     "stderr_tail": (done.stderr or "")[-600:]}
+    # **只报，不拦。** 助手第一版把注释插到了 shebang 上面 —— 文件仍然是合法 Python，
+    # 但 `#!/usr/bin/env python3` 不再生效。这类事人一眼能看出来，平台不该替他决定要不要，
+    # 但必须说出来：所以对每个改过的 .py 做一次编译检查，把结果放进响应。
+    syntax = {}
+    for path in changed:
+        if path.endswith(".py"):
+            try:
+                compile((target / path).read_text(encoding="utf-8", errors="replace"), path, "exec")
+                syntax[path] = "ok"
+            except SyntaxError as exc:
+                syntax[path] = f"{exc.msg} (line {exc.lineno})"
+    return 200, {"candidate": target.name, "changed": changed,
+                 "diff": "".join(diff)[:20000], "exit": done.returncode,
+                 "message": said, "syntax": syntax,
+                 "session": _threads().get(str(name)), "continued": continued,
+                 "stderr_tail": (done.stderr or "")[-600:]}
+
+
+def read_selection(root: pathlib.Path, path: str, first: int, last: int) -> str:
+    """把选中的行连行号一起取出来：模型看到的是"文件里第几行"，不是一段脱离上下文的片段。"""
+    rel = pathlib.PurePosixPath(str(path))
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError("unsafe path")
+    target = root / rel
+    if not target.is_file():
+        raise ValueError(f"{path} 不存在")
+    lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+    first = max(1, int(first))
+    last = min(len(lines), int(last))
+    if first > last:
+        raise ValueError("选中的范围为空")
+    body = "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(first, last + 1))
+    return f"{rel}:{first}-{last}\n{body}"
+
+
+
+def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
+    """把候选打成 tar.gz，供评测页一键带上。**只打包，不评测** —— 跑不跑仍是人的事。"""
+    import io
+    import tarfile
+    root = CANDIDATES / str(name)
+    if not CANDIDATE_NAME.fullmatch(str(name)) or not (root / "harness.json").is_file():
+        return 404, None
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+        for path in sorted(root.rglob("*")):
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
+                tar.add(path, arcname=str(path.relative_to(root)))
+    return 200, buffer.getvalue()
+
+
+
+
+
+def run_verdicts(run_id: str, round_no: int) -> dict:
+    """一轮里每道题的判定。**只读**：这里不跑任何东西，只把已存在的证据摆出来。"""
+    run_path = find_run(run_id)
+    if not run_path:
+        return {"error": "run-not-found", "detail": run_id}
+    folder = run_path / "verdicts" / f"round-{int(round_no)}"
+    if not folder.is_dir():
+        return {"error": "no-verdicts", "detail": f"verdicts/round-{round_no} 不存在"}
+    tasks = {}
+    for path in sorted(folder.glob("*.json")):
+        data = read_json(path)
+        if isinstance(data, dict):
+            tasks[str(data.get("task_id") or path.stem)] = as_num(data.get("score"))
+    return {"run": run_id, "round": int(round_no), "tasks": tasks, "n": len(tasks)}
+
+
+def run_compare(run_a: str, run_b: str, round_a: int = 0, round_b: int = 0) -> dict:
+    """两个 run 的逐题对照：`1→0` 与 `0→1` 各是哪些题。
+
+    这是 S3：它**只报数字**。要不要接受一次合并、掉几分换多少结构，不由平台决定
+    （作者的决定，写在 docs/scenario-workspace.md）。
+    """
+    a = run_verdicts(run_a, round_a)
+    b = run_verdicts(run_b, round_b)
+    if "error" in a:
+        return a
+    if "error" in b:
+        return b
+    ids = sorted(set(a["tasks"]) | set(b["tasks"]))
+    rows = []
+    for task_id in ids:
+        left, right = a["tasks"].get(task_id), b["tasks"].get(task_id)
+        if left == right:
+            continue
+        rows.append({"task": task_id, "a": left, "b": right,
+                     "direction": f"{int(left or 0)}→{int(right or 0)}"})
+    lost = [r for r in rows if (r["b"] or 0) < (r["a"] or 0)]
+    gained = [r for r in rows if (r["b"] or 0) > (r["a"] or 0)]
+    return {"a": {"run": run_a, "round": round_a, "n": a["n"]},
+            "b": {"run": run_b, "round": round_b, "n": b["n"]},
+            "lost": lost, "gained": gained, "changed": len(rows),
+            "only_in_a": sorted(set(a["tasks"]) - set(b["tasks"])),
+            "only_in_b": sorted(set(b["tasks"]) - set(a["tasks"]))}
+
+
+def run_range_diff(run_id: str, first: int, last: int) -> dict:
+    """两轮之间的**净改动**：`diff -ruN state_after_roundA state_after_roundB`。
+
+    git 里最常用的一屏不是"每个提交"，而是"这两点之间到底变了什么"。而分散的每轮补丁
+    回答不了"r1 到 r16 一共加了哪些功能" —— 中间有几轮互相覆盖，逐个读补丁要自己在
+    脑子里合并。这里直接给出净结果，和 `git diff A B` 一个意思。
+    """
+    import subprocess
+    run_path = find_run(run_id)
+    if not run_path:
+        return {"error": "run-not-found", "detail": run_id}
+    first, last = int(first), int(last)
+    if first >= last:
+        return {"error": "bad-range", "detail": "from 必须小于 to"}
+    a = run_path / f"state_after_round{first}"
+    b = run_path / f"state_after_round{last}"
+    if not (a.is_dir() and b.is_dir()):
+        missing = [f"r{n}" for n, path in ((first, a), (last, b)) if not path.is_dir()]
+        return {"error": "missing-state", "detail": f"缺 {', '.join(missing)} 的快照",
+                "hint": "先用 /api/harness/from-round 把这轮重放成候选，再比两个候选"}
+    done = subprocess.run(["diff", "-ruN", "-x", "__pycache__", "-x", "*.pyc",
+                           a.name, b.name], cwd=str(run_path),
+                          capture_output=True, text=True, errors="replace")
+    text = (done.stdout or "")
+    stat = subprocess.run(["diff", "-ruN", "--brief", "-x", "__pycache__", "-x", "*.pyc",
+                           a.name, b.name], cwd=str(run_path),
+                          capture_output=True, text=True, errors="replace")
+    changed = [line.split(" and ")[0].split("/", 1)[-1]
+               for line in (stat.stdout or "").splitlines() if line.strip()]
+    added = sum(1 for line in text.splitlines() if line.startswith("+") and not line.startswith("+++"))
+    removed = sum(1 for line in text.splitlines() if line.startswith("-") and not line.startswith("---"))
+    return {"run": run_id, "from": first, "to": last, "files": changed,
+            "added": added, "removed": removed, "diff": text[:60000]}
+
+
+def run_history(run_id: str, upto: int, since: int = 1) -> dict:
+    """一个 run 到第 `upto` 轮为止的**历史**：每轮的改动与补丁。
+
+    这些补丁就是 git 的历史。`harnessgrad/loops/mode_a.py` 每轮 `commit_state(work, ...)`
+    提交一次，`_save_round_diff` 写下的 `diffs/round-N.patch` 就是相邻两个提交之间的
+    `git diff`，而曲线点上的 `harness_sha` 是那个提交的 tree hash。run 目录里没有留下
+    `.git`（提交用的是 staging 工作树），所以历史以"每轮状态 + 补丁"的形式在这里，
+    可读、可重放（见 `harness_candidate_from_round`）。
+
+    给助手做合并时要的正是这一串：只看最新版，看不出哪些功能是同一轮加的、哪些是补丁
+    摞出来的。
+    """
+    run_path = find_run(run_id)
+    if not run_path:
+        return {"error": "run-not-found", "detail": run_id}
+    since = max(1, int(since))
+    upto = max(since, int(upto))
+    rows = []
+    for n in range(since, upto + 1):
+        patch_path = run_path / "diffs" / f"round-{n}.patch"
+        stat = read_json(run_path / "diffs" / f"round-{n}.json")
+        files = [str(item.get("path") or "") for item in (stat.get("files") or [])
+                 if isinstance(item, dict)]
+        added = sum(as_int(item.get("added")) or 0 for item in (stat.get("files") or [])
+                    if isinstance(item, dict))
+        removed = sum(as_int(item.get("removed")) or 0 for item in (stat.get("files") or [])
+                      if isinstance(item, dict))
+        patch = ""
+        if patch_path.is_file():
+            patch = patch_path.read_text(encoding="utf-8", errors="replace")[:12000]
+        rows.append({"round": n, "files": files, "added": added, "removed": removed,
+                     "patch": patch, "stored": patch_path.is_file()})
+    return {"run": run_id, "from": since, "to": upto, "rounds": rows}
+
+
+
+def _snapshot_api():
+    """`harnessgrad/snapshot.py`，从控制台指向的那棵平台树里按文件加载。
+
+    控制台可以独立启动（`python3 console/server.py`），所以不把平台根塞进 `sys.path`；
+    直接按路径加载。平台树里没有这个模块时为 None —— 快照这一路当作不可用，另外两路照旧。
+    """
+    source = PLATFORM / "harnessgrad" / "snapshot.py"
+    if not source.is_file():
+        return None
+    spec = importlib.util.spec_from_file_location("hg_console_snapshot", source)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except (OSError, ImportError, SyntaxError):
+        return None
+    return module
+
+
+def _round_snapshot_path(run_path, round_no: int) -> pathlib.Path:
+    return run_path / "snapshots" / f"round-{round_no}.json"
+
+
+def _check_out_snapshot(snapshot_file, target) -> str | None:
+    """把快照签出成候选目录；成功返回 None，失败返回一句能放进错误详情的理由。"""
+    api = _snapshot_api()
+    if api is None:
+        return "控制台找不到 harnessgrad/snapshot.py"
+    try:
+        api.check_out(snapshot_file, target)
+    except (api.SnapshotError, OSError) as exc:
+        shutil.rmtree(target, ignore_errors=True)
+        return str(exc)
+    if not (target / "harness.json").is_file():
+        shutil.rmtree(target, ignore_errors=True)
+        return f"{pathlib.Path(snapshot_file).name} 里没有 harness.json"
+    return None
+
+
+def harness_candidate_from_round(run_id: str, round_no: int,
+                                 replay: bool = False) -> tuple[int, dict]:
+    """把某一轮的 harness 变成一个候选，按**三处来源的顺序**取第一个可用的：
+
+    1. `state_after_roundN/` —— 整棵目录已经在那儿，复制最快；
+    2. `snapshots/round-N.json` —— 自校验的单文件快照，签出即可，不需要补丁；
+    3. `diffs/round-N.patch` —— 从第 0 轮（或基线）逐轮重放。
+
+    为什么需要后两路：只有一部分 run 留了 `state_after_roundN`（这台机器上 406 个），另外
+    617 个 run 只有曲线和 `diffs/round-N.patch`。没有重放，编辑页就只能编辑"留了快照的
+    那几轮"，等于大多数进化版本不可编辑 —— 而这些 diff 本来就是为了能重放而存的。快照则
+    是这两者之间的一档：run 里只要写了这一个文件，就不必再有状态目录或补丁。
+
+    重放是**可验证**的：实测 `round-1.patch` 打在 `state_after_round0` 上，得到的 agent.py
+    与 `state_after_round1/agent.py` 逐字节相同。用了哪条路径写进返回值
+    （`source` / `reconstructed` / `applied`），读的人才知道手里这份是怎么来的。
+    """
+    import subprocess
+    run_path = find_run(run_id)
+    if not run_path:
+        return 404, {"error": "run-not-found", "detail": run_id}
+    round_no = int(round_no)
+    if round_no < 0:
+        return 400, {"error": "bad-round", "detail": round_no}
+    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{round_no}")[:48]
+    target = CANDIDATES / base
+    # 同一个版本点第二次：复用上次原样复制的那一份，而不是再攒一个 `-1`、`-2`。
+    # 人改过（指纹变了）就还是新开一份，绝不覆盖别人的改动。
+    if not replay and _candidate_reusable(base, str(run_id), round_no):
+        manifest = read_json(target / "harness.json")
+        if isinstance(manifest, dict):
+            record = _candidate_sources().get(base) or {}
+            source = _candidate_record_source(record) if record else "state"
+            return 200, {"candidate": target.name,
+                         "from": str(record.get("from")
+                                     or run_path / f"state_after_round{round_no}"),
+                         "round": round_no, "source": source,
+                         "reconstructed": source == "replay",
+                         "applied": [], "reused": True,
+                         "files": sorted(p.name for p in target.iterdir() if p.is_file())}
+    suffix = 0
+    while target.exists():
+        suffix += 1
+        target = CANDIDATES / f"{base}-{suffix}"[:64]
+    CANDIDATES.mkdir(parents=True, exist_ok=True)
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".git", ".state")
+
+    state_dir = run_path / f"state_after_round{round_no}"
+    snapshot_file = _round_snapshot_path(run_path, round_no)
+    reconstructed = False
+    applied: list[int] = []
+    from_path = state_dir
+    source: str | None = None
+    snapshot_problem: str | None = None
+
+    if not replay and (state_dir / "harness.json").is_file():
+        # 第一路：整棵状态目录已经在那儿，直接复制。
+        shutil.copytree(state_dir, target, ignore=ignore)
+        source = "state"
+    elif not replay and snapshot_file.is_file():
+        # 第二路：单文件快照。签出会重新校验内容 id，坏文件在这里就被挡住。
+        snapshot_problem = _check_out_snapshot(snapshot_file, target)
+        if snapshot_problem is None:
+            source = "snapshot"
+            from_path = snapshot_file
+
+    if source is None:
+        # 第三路：按补丁重放。起点：同一个 run 的第 0 轮快照（同一条血脉），
+        # 否则平台自带的起点。
+        origin = run_path / "state_after_round0"
+        if (origin / "harness.json").is_file():
+            shutil.copytree(origin, target, ignore=ignore)
+            first = 1
+            from_round0 = True
+        elif BASE_HARNESS.is_dir():
+            shutil.copytree(BASE_HARNESS, target, ignore=ignore)
+            first = 1
+            from_round0 = False
+        else:
+            return 409, {"error": "no-origin",
+                         "detail": "既没有第 0 轮快照，也找不到 base_harness/loop"}
+        for n in range(first, round_no + 1):
+            patch = run_path / "diffs" / f"round-{n}.patch"
+            if not patch.is_file():
+                shutil.rmtree(target, ignore_errors=True)
+                # **说"存了 15 个补丁"就要能对上号。** 之前只列前 6 个、且按字典序排
+                # （round-1, round-10, round-11…），读者没法判断缺的是哪一轮。
+                # 这里把存在的轮次压成区间（r1–r15），并点名缺的那一轮。
+                rounds = sorted({int(p.stem.split("-")[1])
+                                 for p in (run_path / "diffs").glob("round-*.patch")
+                                 if p.stem.split("-")[1].isdigit()}) \
+                    if (run_path / "diffs").is_dir() else []
+                def spans(nums: list[int]) -> str:
+                    out, start = [], None
+                    for i, num in enumerate(nums):
+                        if start is None:
+                            start = num
+                        if i + 1 == len(nums) or nums[i + 1] != num + 1:
+                            out.append(f"r{start}" if start == num else f"r{start}–r{num}")
+                            start = None
+                    return "、".join(out)
+                # 三处都点名：说"存不下这一版"时，读者要能自己判断是哪一处缺了。
+                snapshot_clause = (
+                    f"snapshots/round-{round_no}.json 存在但签不出来（{snapshot_problem}）"
+                    if snapshot_problem else
+                    f"snapshots/round-{round_no}.json 不存在")
+                return 409, {
+                    "error": "round-not-stored",
+                    "detail": (f"这个 run 无法重建第 {round_no} 轮：没有可用的 "
+                               f"state_after_round{round_no}/，{snapshot_clause}，重放要用的 "
+                               f"diffs/round-{n}.patch 也不存在，因此无法重建这一版。"
+                               + (f" 它存了 {len(rounds)} 个补丁：{spans(rounds)}。"
+                                  if rounds else " 它没有 diffs/ 目录。")),
+                    "at_round": n, "stored_rounds": rounds}
+
+            done = subprocess.run(["patch", "-p1", "--batch", "--forward", "--silent"],
+                                  cwd=str(target), stdin=patch.open("rb"),
+                                  capture_output=True)
+            if done.returncode != 0:
+                detail = (done.stdout + done.stderr).decode("utf-8", "replace")[-400:]
+                shutil.rmtree(target, ignore_errors=True)
+                return 422, {"error": "patch-failed", "detail": detail,
+                             "at_round": n,
+                             "from_round0": from_round0}
+            applied.append(n)
+        reconstructed = True
+        source = "replay"
+    manifest = read_json(target / "harness.json")
+    if isinstance(manifest, dict):
+        manifest["name"] = target.name
+        (target / "harness.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    elif not (target / "harness.json").is_file():
+        shutil.rmtree(target, ignore_errors=True)
+        return 409, {"error": "no-manifest",
+                     "detail": f"r{round_no} 重放后仍然没有 harness.json"}
+    _remember_candidate(target.name, str(run_id), round_no, source, target,
+                        source=source, from_path=from_path)
+    return 201, {"candidate": target.name, "from": str(from_path), "round": round_no,
+                 "source": source, "reconstructed": reconstructed, "reused": False,
+                 "applied": applied,
+                 "files": sorted(p.name for p in target.iterdir() if p.is_file())}
+
+
+def harness_candidate_file(name: str, rel: str) -> dict:
+    """一个候选里的文件正文。只读、只在本目录内、带上行数方便算选区。"""
+    root = CANDIDATES / name
+    path = pathlib.PurePosixPath(rel)
+    if path.is_absolute() or ".." in path.parts:
+        return {"error": "unsafe-path", "detail": rel}
+    target = root / path
+    if not target.is_file():
+        return {"error": "file-not-found", "detail": rel}
+    text = target.read_text(encoding="utf-8", errors="replace")
+    return {"candidate": name, "path": str(path), "text": text,
+            "lines": len(text.splitlines()), "size": target.stat().st_size}
+
+def harness_candidates() -> dict:
+    """候选清单。`source` / `from` 来自来源账本，编辑屏据此说明这一版是怎么来的。"""
+    rows = []
+    index = _candidate_sources()
+    if CANDIDATES.is_dir():
+        for path in sorted(CANDIDATES.iterdir()):
+            manifest = read_json(path / "harness.json")
+            if not isinstance(manifest, dict) or not manifest.get("name"):
+                continue
+            files = sorted(p.name for p in path.iterdir() if p.is_file())
+            record = index.get(path.name) if isinstance(index.get(path.name), dict) else {}
+            rows.append({"dir": path.name, "name": manifest.get("name"),
+                         "files": files,
+                         "mtime": int(path.stat().st_mtime),
+                         # 没有账本记录的老副本：source 为 None，界面不替它猜来源。
+                         "source": _candidate_record_source(record) if record else None,
+                         "from": record.get("from") if record else None})
+    return {"root": str(CANDIDATES), "rows": rows}
+
+
+def harness_candidate_save(name: str, files: dict, from_base: bool = True,
+                           source: str = "") -> tuple[int, dict]:
+    """把编辑器里的内容写成一个新候选：`data/candidates/<name>/`。
+
+    `source` 是编辑器里**打开的那一版**的目录名，新候选以它为底。这一条不是锦上添花：
+    编辑屏每次只发送被改的那一个文件（`harness.js` 的 `save()`），所以种子决定了一份
+    新版本里其余文件是什么。实测 2026-11-02：打开一个提交出来的候选、改 agent.py、
+    另存为，得到的候选带着 `base_harness/loop/` 的 `harness.json` 和 `requirements.txt`，
+    提交里的其余文件全没了，而响应是 201 —— 读回去是另一个 harness。
+
+    `source` 为空时才退回"从 `base_harness/loop` 复制"：那是"从基线另存一份"的意思。
+    """
+    if not isinstance(name, str) or not CANDIDATE_NAME.fullmatch(name):
+        return 400, {"error": "bad-name", "detail": "候选名只允许字母数字与 . _ -（≤48）"}
+    if not isinstance(files, dict) or not files:
+        return 400, {"error": "no-files"}
+    # **先校验再落盘。** 边拷边校验会让一次被拒绝的保存留下半棵树；那棵树带着 base 的
+    # `harness.json`，于是它出现在候选清单里（用户从没成功保存过它），同一个名字再存
+    # 一次只能拿到 409。
+    for rel, body in files.items():
+        if not isinstance(rel, str) or not isinstance(body, str):
+            return 400, {"error": "bad-file", "detail": "文件名与内容都必须是字符串"}
+        rel_path = pathlib.PurePosixPath(rel)
+        if rel_path.is_absolute() or ".." in rel_path.parts:
+            return 400, {"error": "unsafe-path", "detail": rel}
+    seed = None
+    if source:
+        if (not isinstance(source, str) or not CANDIDATE_NAME.fullmatch(source)
+                or not (CANDIDATES / source / "harness.json").is_file()):
+            return 400, {"error": "bad-source", "detail": str(source)}
+        seed = CANDIDATES / source
+    target = CANDIDATES / name
+    if target.exists():
+        return 409, {"error": "duplicate-candidate", "detail": f"{target} 已存在"}
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".state", ".git")
+    try:
+        if seed is not None:
+            shutil.copytree(seed, target, ignore=ignore)
+        elif from_base and BASE_HARNESS.is_dir():
+            shutil.copytree(BASE_HARNESS, target, ignore=ignore)
+        else:
+            target.mkdir(parents=True)
+        written = []
+        for rel, body in files.items():
+            rel_path = pathlib.PurePosixPath(rel)
+            out = target / rel_path
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(body, encoding="utf-8")
+            written.append(str(rel_path))
+        manifest = read_json(target / "harness.json")
+        if not isinstance(manifest, dict) or not manifest.get("entrypoint"):
+            shutil.rmtree(target, ignore_errors=True)
+            return 400, {"error": "manifest-missing", "detail": "候选里没有可用的 harness.json"}
+        manifest["name"] = name
+        (target / "harness.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n",
+                                            encoding="utf-8")
+    except BaseException:
+        # 这个目录是本次调用建的（上面查过不存在），失败就整个收回去，别留下半个候选。
+        shutil.rmtree(target, ignore_errors=True)
+        raise
+    return 201, {"candidate": name, "path": str(target), "written": written,
+                 "trial": (f"python3 driver.py --harness-path {target} --dataset "
+                           "authored_example_fix_bug --sampling all --rounds 0 "
+                           f"--run-id manual-{name}-01")}
+
+
+def harness_candidate_trial(name: str, dataset: str, run_id: str = "") -> tuple[int, dict]:
+    """直接用 `--harness-path` 跑一次单点：这就是"人改了、看一题"的闭环。"""
+    target = CANDIDATES / str(name)
+    if not CANDIDATE_NAME.fullmatch(str(name)) or not (target / "harness.json").is_file():
+        return 404, {"error": "candidate-not-found", "detail": str(name)}
+    runs = pathlib.Path(os.environ.get("HG_CONSOLE_TRIAL_RUNS",
+                                       "/tmp/hg-console-trials"))
+    run_id = run_id or f"manual-{name}-{time.strftime('%Y%m%d-%H%M%S')}"
+    argv = [sys.executable, str(PLATFORM_ROOT / "driver.py"), "--harness-path", str(target),
+            "--dataset", str(dataset), "--sampling", "all", "--rounds", "0",
+            "--run-id", run_id, "--runs-root", str(runs), "--work-root", str(runs / "work")]
+    try:
+        done = subprocess.run(argv, cwd=str(PLATFORM_ROOT), capture_output=True, text=True,
+                              timeout=1800, env=dict(os.environ))
+    except subprocess.TimeoutExpired:
+        return 504, {"error": "trial-timeout", "run_id": run_id}
+    curve = runs / run_id / "curve.jsonl"
+    score = None
+    if curve.is_file():
+        first = curve.read_text(encoding="utf-8").splitlines()
+        if first:
+            score = read_json_str(first[0]).get("score")
+    return (200 if done.returncode == 0 else 422), {
+        "run_id": run_id, "exit": done.returncode, "score": score,
+        "stdout_tail": (done.stdout or "")[-1200:], "stderr_tail": (done.stderr or "")[-1200:]}
+
+
+def read_json_str(text: str) -> dict:
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+def author_bundles() -> dict:
+    """每个 authored bundle 的结构校验 + 三道门，都从磁盘现算，没有缓存。"""
+    rows = []
+    if not AUTHORED_ROOT.is_dir():
+        return {"root": str(AUTHORED_ROOT), "rows": rows}
+    spec = importlib.util.spec_from_file_location("_scenario_builder", SCENARIO_BUILDER)
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    for path in sorted(AUTHORED_ROOT.iterdir()):
+        if not path.is_dir() or not (path / "bundle.json").is_file():
+            continue
+        row = {"slug": path.name, "path": str(path)}
+        try:
+            data = json.loads((path / "bundle.json").read_text(encoding="utf-8"))
+            row.update(title=data.get("title"), env_kind=(data.get("env") or {}).get("kind"),
+                       tasks=len(data.get("tasks") or []),
+                       eval_visible_to_authors=data.get("eval_visible_to_authors"))
+            problems = builder.check_bundle(path)
+            row["valid"] = not problems
+            row["problems"] = problems
+            if row["valid"]:
+                gates = builder.gates(path)
+                row["gates_ok"] = bool(gates.get("ok"))
+                row["gates"] = [{"task_id": t["task_id"],
+                                 "oracle": t["oracle_passes"],
+                                 "empty": t["empty_fails"],
+                                 "deterministic": t["deterministic"],
+                                 "detail": t.get("detail", {})} for t in gates.get("tasks") or []]
+            else:
+                row["gates_ok"] = False
+        except (OSError, ValueError) as exc:
+            row["valid"] = False
+            row["problems"] = [str(exc)]
+            row["gates_ok"] = False
+        rows.append(row)
+    return {"root": str(AUTHORED_ROOT), "rows": rows}
+
+
+def _safe_extract(archive: pathlib.Path, target: pathlib.Path) -> None:
+    """tar/zip -> target, but only regular files and directories, and only inside target."""
+    import tarfile
+    import zipfile
+    target.mkdir(parents=True, exist_ok=True)
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as zf:
+            for member in zf.infolist():
+                name = member.filename
+                if member.is_dir():
+                    continue
+                if name.startswith("/") or ".." in pathlib.PurePosixPath(name).parts:
+                    raise ValueError(f"归档里有越界路径：{name}")
+                if (member.external_attr >> 16) & 0o170000 not in (0, 0o100000):
+                    raise ValueError(f"归档里有不允许的条目类型：{name}")
+                out = target / name
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_bytes(zf.read(member))
+        return
+    with tarfile.open(archive) as tf:
+        for member in tf.getmembers():
+            if member.isdir():
+                continue
+            if not member.isfile():
+                raise ValueError(f"归档里有不允许的条目类型：{member.name}")
+            if member.name.startswith("/") or ".." in pathlib.PurePosixPath(member.name).parts:
+                raise ValueError(f"归档里有越界路径：{member.name}")
+            out = target / member.name
+            out.parent.mkdir(parents=True, exist_ok=True)
+            with tf.extractfile(member) as src, out.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+
+
+def author_import(archive_path: pathlib.Path, wanted_slug: str = "") -> tuple[int, dict]:
+    """Import one bundle archive into `data/authored/<slug>/`, then validate and gate it."""
+    import tempfile
+    if not archive_path.is_file():
+        return 400, {"error": "no-archive"}
+    if archive_path.stat().st_size > IMPORT_MAX_BYTES:
+        return 413, {"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}
+    with tempfile.TemporaryDirectory(prefix="hg-import-") as tmp:
+        staging = pathlib.Path(tmp) / "x"
+        try:
+            _safe_extract(archive_path, staging)
+        except (tarfile.TarError, zipfile.BadZipFile, OSError, ValueError) as exc:
+            return 400, {"error": "bad-archive", "detail": str(exc)}
+        roots = [p for p in staging.iterdir()]
+        root = staging
+        if len(roots) == 1 and roots[0].is_dir():
+            root = roots[0]          # 允许"多套一层目录"的打包习惯
+        bundle = root / "bundle.json"
+        if not bundle.is_file():
+            return 400, {"error": "manifest-missing",
+                         "detail": "归档根（或唯一顶层目录）里没有 bundle.json"}
+        try:
+            data = json.loads(bundle.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            return 400, {"error": "manifest-invalid", "detail": str(exc)}
+        slug = wanted_slug or str(data.get("slug") or "").strip() or root.name
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", slug):
+            return 400, {"error": "bad-slug", "detail": f"不接受的 slug: {slug!r}"}
+        data["slug"] = slug
+        bundle.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        target = AUTHORED_ROOT / slug
+        if target.exists():
+            return 409, {"error": "duplicate-bundle", "detail": f"{target} 已存在；先删掉或换个 slug"}
+        AUTHORED_ROOT.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(root, target)
+    listed = author_bundles()
+    row = next((r for r in listed["rows"] if r["slug"] == slug), None)
+    if row is None or not row.get("valid"):
+        return 400, {"error": "bundle-invalid", "detail": row.get("problems") if row else "未找到",
+                     "row": row}
+    return 201, {"row": row, "imported": str(target)}
+
+
+def author_draft(note: str, materials: str = "") -> tuple[int, dict]:
+    """起草：把这段自然语言交给 scenario_builder，它自己会校验、跑门、重试。"""
+    if not isinstance(note, str) or not note.strip():
+        return 400, {"error": "bad-note"}
+    import subprocess
+    import tempfile
+    slug = "draft-" + time.strftime("%Y%m%d-%H%M%S")
+    out = AUTHORED_ROOT / slug
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [sys.executable, str(SCENARIO_BUILDER), "--draft", "-", "--out", str(out), "--json"]
+    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as fh:
+        fh.write(note)
+        note_path = fh.name
+    cmd[cmd.index("-")] = note_path
+    if materials:
+        cmd += ["--materials", materials]
+    try:
+        done = subprocess.run(cmd, cwd=str(PLATFORM_ROOT), capture_output=True, text=True,
+                              timeout=900, env=dict(os.environ))
+    finally:
+        os.unlink(note_path)
+    if done.returncode != 0:
+        return 422, {"error": "draft-refused", "detail": (done.stderr or done.stdout)[-1500:]}
+    listed = author_bundles()
+    row = next((r for r in listed["rows"] if r["slug"] == slug), None)
+    return 200, {"row": row, "output": (done.stdout or "")[-1500:]}
+
 def explain_config() -> tuple[str, str, str, list[str]]:
     """(base_url, model, api_key, missing_names)。只读 env，绝不把值写进日志或响应。"""
     values = [os.environ.get(name, "").strip() for name in EXPLAIN_ENV]
@@ -2515,12 +3378,17 @@ def _chat_completion(base_url: str, model: str, api_key: str,
                      system: str, user: str) -> str:
     """一次 OpenAI 兼容的 /chat/completions 调用。key 只在 header 里，不写日志。"""
     url = base_url.rstrip("/") + "/chat/completions"
+    # **JSON 模式,而不是希望模型自己吐 JSON。** 实测(2026-11-02,本地 qwen3.5-9b):
+    # 不加这个字段时,整段解释被解析成空四块并标 degraded;vLLM 的 json_object 模式在
+    # `tools/check_local_model.py` 里是验过的,所以这里显式要。端点若拒绝这个字段,
+    # `_explain_request` 会去掉它再试一次 —— 拒绝的端点不该让解释功能整个不可用。
     body = json.dumps({
         "model": model,
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
         "temperature": 0,
         "stream": False,
+        "response_format": {"type": "json_object"},
     }, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(url, data=body, method="POST", headers={
         "Content-Type": "application/json; charset=utf-8",
@@ -2650,6 +3518,116 @@ def _explain_cache_put(key: str, payload: dict) -> None:
         pass
 
 
+#: 区间解释的系统提示。和单轮那条的区别只有一件事：单轮问"这一改动了什么"，
+#: 区间问"这段时间的改动在往哪个方向走"，并允许它说"证据不足"。
+EXPLAIN_RANGE_SYSTEM = """你是 HarnessGrad 实验台的只读解释器。用户会给你一次实验里连续几轮\
+分数、每轮的改动摘要（文件名与增删行数），以及首尾两轮的 patch 片段。
+
+你的任务：判断这段时间的改动方向——在收敛（每轮更小、更具体）、在震荡（来回改同一处）、
+还是在退化（越改越散、或分数下降）。
+规则：
+1. 只使用用户提供的内容。没有给出的分数或日志不要猜；证据不足就直接说证据不足。
+2. 只输出一个 JSON 对象。不要 markdown 代码块，不要前后说明。
+3. JSON 必须且只能有这四个键：
+   - "claim": 一句中文，说明这段时间的走向（收敛 / 震荡 / 退化 / 证据不足）。
+   - "evidence": 2 到 4 条中文短句，每条引用具体的轮次、分数或改动。
+   - "risk": 一句中文，说明这个走向继续下去最可能坏在哪。
+   - "next": 一句中文，建议一次值得跑的对照或一次该停下来的检查。
+4. 所有字符串用中文。不要编造数字。
+"""
+
+
+def build_explain_range_inputs(path: pathlib.Path, run_id: str, first: int, last: int) -> dict:
+    """首尾轮之间的事实：每轮的分数与改动规模，以及首尾两轮的 patch 片段。"""
+    points, _state, _bad = read_curve(path)
+    by_round = {as_int(p.get("round")): p for p in points}
+    missing = [n for n in (first, last) if n not in by_round]
+    if missing:
+        raise ValueError(f"round {missing} 不在这个 run 的曲线里")
+    if first >= last:
+        raise ValueError("from 必须小于 to")
+    rows = []
+    for n in range(first, last + 1):
+        point = by_round.get(n)
+        if point is None:
+            continue
+        stat = read_json(path / "diffs" / f"round-{n}.json")
+        files = [str(item.get("path") or "") for item in (stat.get("files") or [])
+                 if isinstance(item, dict)]
+        added = sum(as_int(item.get("added")) or 0 for item in (stat.get("files") or [])
+                    if isinstance(item, dict))
+        removed = sum(as_int(item.get("removed")) or 0 for item in (stat.get("files") or [])
+                      if isinstance(item, dict))
+        rows.append({"round": n, "score": as_num(point.get("score")),
+                     "files": files, "added": added, "removed": removed})
+    if len(rows) < 2:
+        raise ValueError("这个区间里少于两轮有记录，无法判断走向")
+    patches = {}
+    for n in (first, last):
+        patch = path / "diffs" / f"round-{n}.patch"
+        if patch.is_file():
+            patches[n] = patch.read_text(encoding="utf-8", errors="replace")[:EXPLAIN_PATCH_BYTES // 2]
+    return {"run_id": run_id, "from": first, "to": last, "rows": rows, "patches": patches}
+
+
+def explain_range_prompt(inputs: dict) -> tuple[str, str]:
+    lines = [f"- r{row['round']}: score={row['score']} · +{row['added']}/-{row['removed']} · "
+             f"{', '.join(row['files'][:6]) or '（没有文件改动）'}" for row in inputs["rows"]]
+    parts = ["## 这段时间的事实（来自 run 目录）",
+             f"run: {inputs['run_id']}", f"区间: r{inputs['from']} → r{inputs['to']}",
+             "每轮：", *lines, ""]
+    for n, text in inputs["patches"].items():
+        parts += [f"## r{n} 的 patch 片段（前 {len(text)} 字符）", text, ""]
+    return EXPLAIN_RANGE_SYSTEM, "\n".join(parts)
+
+
+def api_explain_range(run_id: str, first: int, last: int, force: bool = False) -> tuple[int, dict]:
+    """一次区间解释：`/api/explain?run=..&from=..&to=..`。缓存键含区间两端。"""
+    started = time.perf_counter()
+    run_path = find_run(run_id)
+    if not run_path:
+        return 404, {"error": "run not found", "detail": f"没有这个 run：{run_id}"}
+    base_url, model, api_key, missing = explain_config()
+    if missing:
+        return 503, {"error": "explain-not-configured",
+                     "detail": "解释功能没有配置：" + "、".join(missing)}
+    try:
+        inputs = build_explain_range_inputs(run_path, run_id, first, last)
+    except ValueError as exc:
+        return 400, {"error": "explain-range", "detail": str(exc)}
+    system, user = explain_range_prompt(inputs)
+    prompt_sha = _sha(system + "\n\n" + user)
+    key = _explain_cache_key(f"{run_id}#range{first}-{last}", 0, "", model, prompt_sha)
+    if not force:
+        cached = _explain_cache_get(key)
+        if cached is not None:
+            cached["cache_hit"] = True
+            cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
+            return 200, cached
+    raw, parsed, why = "", None, ""
+    for attempt in range(2):
+        asked = system if attempt == 0 else (
+            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
+        try:
+            raw = _chat_completion(base_url, model, api_key, asked, user)
+        except ExplainUpstream as exc:
+            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
+        parsed, why = _parse_explain_reply(raw)
+        if parsed is not None:
+            break
+    elapsed = int(round((time.perf_counter() - started) * 1000))
+    if parsed is None:
+        return 200, {"claim": "", "evidence": [], "risk": "", "next": "", "model": model,
+                     "prompt_sha": prompt_sha, "cache_hit": False, "elapsed_ms": elapsed,
+                     "degraded": True, "parse_error": why, "raw": _clip(raw, 8000),
+                     "range": {"from": first, "to": last}}
+    payload = {**parsed, "model": model, "prompt_sha": prompt_sha, "cache_hit": False,
+               "elapsed_ms": elapsed, "range": {"from": first, "to": last}}
+    _explain_cache_put(key, {k: v for k, v in payload.items()
+                             if k not in ("cache_hit", "elapsed_ms")})
+    return 200, payload
+
+
 def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
     """(HTTP status, payload)。GET 是幂等的；缓存命中时 elapsed_ms 必须远小于一次调用。"""
     started = time.perf_counter()
@@ -2689,12 +3667,23 @@ def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
             cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
             return 200, cached
 
-    try:
-        raw = _chat_completion(base_url, model, api_key, system, user)
-    except ExplainUpstream as exc:
-        return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
-
-    parsed, why = _parse_explain_reply(raw)
+    # **被拒绝的回复再问一次,而不是把它标成"解释为空"。** 实测(2026-11-02,本地
+    # qwen3.5-9b):JSON 模式打开后模型确实回了 JSON,但 evidence 只有 1 条,而契约要
+    # 2-4 条;前端于是显示一个空解释,读的人会以为这一轮没有改动。这里把拒绝原因回传
+    # 给模型重问一次 —— 同一条提示词不会让 9B 改变输出,但"上一次错在哪"会。
+    raw = ""
+    parsed = None
+    why = ""
+    for attempt in range(2):
+        prompt_system = system if attempt == 0 else (
+            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
+        try:
+            raw = _chat_completion(base_url, model, api_key, prompt_system, user)
+        except ExplainUpstream as exc:
+            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
+        parsed, why = _parse_explain_reply(raw)
+        if parsed is not None:
+            break
     elapsed = int(round((time.perf_counter() - started) * 1000))
     if parsed is None:
         # 不猜、不把半截 JSON 塞进四个块；原样交给前端，前端明确标成 degraded。
@@ -2713,6 +3702,174 @@ def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
     _explain_cache_put(key, {k: v for k, v in payload.items()
                              if k not in ("cache_hit", "elapsed_ms")})
     return 200, payload
+
+
+def _submission_backend():
+    """Load the adjacent service for both standalone CLI and importlib tests."""
+    if str(ROOT.parent) not in sys.path:
+        sys.path.insert(0, str(ROOT.parent))
+    from console import submissions
+    return submissions
+
+
+def _submission_reject(code, detail, field=None):
+    _submission_backend()._reject(code, detail, field)
+
+
+def submission_origin(headers, *, port: int) -> None:
+    hosts = headers.get_all('Host', [])
+    try:
+        if len(hosts) != 1 or any(c in hosts[0] for c in '/@?#\\\r\n '):
+            raise ValueError('one numeric loopback Host is required')
+        url = urlparse('//' + hosts[0])
+        if not ipaddress.ip_address(url.hostname).is_loopback or url.port != port:
+            raise ValueError('Host must use a loopback address and this server port')
+    except (ValueError, TypeError) as exc:
+        _submission_reject('bad-host', str(exc), 'Host')
+    origins = headers.get_all('Origin', [])
+    if origins and origins != [f'http://127.0.0.1:{port}']:
+        _submission_reject('origin-forbidden', 'Origin must match this loopback service', 'Origin')
+
+
+def submission_length(headers) -> int:
+    values = headers.get_all('Content-Length', [])
+    if headers.get_all('Transfer-Encoding') or len(values) != 1 or not re.fullmatch(r'[0-9]+', values[0]):
+        _submission_reject('bad-multipart', 'one Content-Length and no Transfer-Encoding are required')
+    # Bound integer parsing as well as allocation.
+    if len(values[0]) > 10:
+        _submission_reject('payload-too-large', 'multipart envelope exceeds 20 MiB + 64 KiB')
+    length = int(values[0])
+    if length > 20*1024*1024 + 65536:
+        _submission_reject('payload-too-large', 'multipart envelope exceeds 20 MiB + 64 KiB')
+    return length
+
+
+def submission_form(headers, body: bytes) -> tuple[bytes, dict]:
+    if len(body) != submission_length(headers):
+        _submission_reject('bad-multipart', 'multipart body is incomplete')
+    types = headers.get_all('Content-Type', [])
+    if len(types) != 1 or len(types[0]) > 1024 or '\r' in types[0] or '\n' in types[0]:
+        _submission_reject('bad-multipart', 'one bounded Content-Type is required')
+    prefix = b'Content-Type: ' + types[0].encode('ascii', errors='replace') + b'\r\nMIME-Version: 1.0\r\n\r\n'
+    header = BytesParser(policy=email_policy.default).parsebytes(prefix, headersonly=True)
+    boundary = header.get_boundary()
+    if not boundary or not boundary.isascii() or not 1 <= len(boundary) <= 70:
+        _submission_reject('bad-multipart', 'a bounded ASCII boundary is required')
+    delimiter = re.compile(rb'(?:^|\r\n)--' + re.escape(boundary.encode()) + rb'(?:--)?[ \t]*(?:\r\n|$)')
+    if sum(1 for _ in delimiter.finditer(body)) > 5:
+        _submission_reject('bad-multipart', 'multipart accepts at most four parts')
+    try:
+        message = BytesParser(policy=email_policy.default).parsebytes(prefix + body)
+    except (RecursionError, ValueError) as exc:
+        _submission_reject('bad-multipart', f'multipart nesting or encoding is invalid: {exc}')
+    if message.get_content_type() != 'multipart/form-data' or not message.is_multipart() or message.defects:
+        _submission_reject('bad-multipart', 'valid multipart/form-data with a closing boundary is required')
+    fields = {}
+    archive = None
+    for part in message.iter_parts():
+        if part.is_multipart() or part.defects or part.get_content_disposition() != 'form-data':
+            _submission_reject('bad-multipart', 'nested or malformed multipart part')
+        if (len(part.get_all('Content-Disposition', [])) != 1
+                or sum(len(k)+len(str(v)) for k, v in part.raw_items()) > 8192
+                or part.get('Content-Transfer-Encoding', 'binary').lower() not in ('binary', '8bit')):
+            _submission_reject('bad-multipart', 'invalid multipart part headers or encoding')
+        names = [v for k, v in part.get_params(header='content-disposition', failobj=[]) if k == 'name']
+        name = names[0] if len(names) == 1 else None
+        if name not in ('archive', 'scenario', 'label', 'contact'):
+            _submission_reject('bad-multipart', 'unknown or missing multipart field', name or 'part')
+        if name in fields or (name == 'archive' and archive is not None):
+            _submission_reject('bad-multipart', f'duplicate {name} part', name)
+        raw = part.get_payload(decode=True)
+        if raw is None:
+            _submission_reject('bad-multipart', 'part must contain bytes', name)
+        if name == 'archive':
+            if len(raw) > 20*1024*1024:
+                _submission_reject('payload-too-large', 'archive exceeds 20 MiB', 'archive')
+            archive = raw
+        else:
+            if len(raw) > 4096:
+                _submission_reject('bad-multipart', f'{name} is too long', name)
+            try:
+                fields[name] = raw.decode('utf-8')
+            except UnicodeError:
+                _submission_reject('bad-multipart', f'{name} must be UTF-8', name)
+    if archive is None:
+        _submission_reject('bad-multipart', 'archive part is required', 'archive')
+    if not fields.get('scenario'):
+        _submission_reject('bad-multipart', 'scenario part is required', 'scenario')
+    label, contact = fields.get('label', ''), fields.get('contact', '')
+    if label and not re.fullmatch(r'[A-Za-z0-9._-]{1,64}', label):
+        _submission_reject('bad-multipart', 'label must match [A-Za-z0-9._-] and be <=64 characters', 'label')
+    if len(contact) > 200:
+        _submission_reject('bad-multipart', 'contact must be <=200 characters', 'contact')
+    return archive, fields
+
+
+def submission_query(query: dict, *, for_log: bool = False) -> dict:
+    allowed = {'tail'} if for_log else {'limit', 'cursor'}
+    for key, values in query.items():
+        if key not in allowed or len(values) != 1:
+            _submission_reject('bad-query', 'unknown or repeated query field', key)
+    key, default, maximum = ('tail', 20000, 200000) if for_log else ('limit', 50, 200)
+    value = query.get(key, [str(default)])[0]
+    if not re.fullmatch(r'[0-9]{1,6}', value) or not 1 <= int(value) <= maximum:
+        _submission_reject('bad-query', f'{key} must be an integer in 1..{maximum}', key)
+    result = {key: int(value)}
+    if not for_log:
+        cursor = query.get('cursor', [None])[0]
+        if cursor is not None and not re.fullmatch(r'sub-\d{8}T\d{6}Z-[0-9a-f]{8}', cursor):
+            _submission_reject('bad-query', 'cursor must be a submission ID', 'cursor')
+        result['cursor'] = cursor
+    return result
+
+
+_submission_init_lock = threading.Lock()
+
+
+def submission_service(httpd):
+    root = os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT')
+    if not root:
+        _submission_reject('service-not-ready', 'configure HG_CONSOLE_SUBMISSIONS_ROOT outside the platform')
+    if httpd.server_address[0] != '127.0.0.1':
+        _submission_reject('service-not-ready', 'submission service requires a 127.0.0.1 listener')
+    with _submission_init_lock:
+        if not hasattr(httpd, '_submission_service'):
+            try:
+                config = {
+                    'max_queue':int(os.environ.get('HG_CONSOLE_SUBMISSIONS_MAX_QUEUE','16')),
+                    'quota_bytes':int(os.environ.get('HG_CONSOLE_SUBMISSIONS_QUOTA_BYTES',str(5*1024**3))),
+                    'retention_seconds':float(os.environ.get('HG_CONSOLE_SUBMISSIONS_RETENTION_SECONDS',str(30*86400))),
+                    'sweep_seconds':float(os.environ.get('HG_CONSOLE_SUBMISSIONS_SWEEP_SECONDS','1'))}
+            except (ValueError,OverflowError):
+                _submission_reject('service-not-ready','invalid submission queue/quota/retention configuration')
+            httpd._submission_service = _submission_backend().SubmissionService(
+                platform_root=PLATFORM, submissions_root=pathlib.Path(root), runs_root=RUNS,
+                work_root=pathlib.Path(os.environ.get('HG_CONSOLE_SUBMISSIONS_WORK','/tmp/hg-submissions-work')),
+                budget_dir=BUDGET_DIR, liveness=lambda:(procfs_readable(), live_drivers_by_run()),
+                env_resolver=submission_env,**config)
+        return httpd._submission_service
+
+
+def submission_env(scenario_name, *, settings=None, base_env=None):
+    backend = _submission_backend()
+    spec, _ = backend._scenario(scenario_name, PLATFORM)
+    env = dict(os.environ if base_env is None else base_env)
+    # Native files tasks launch "python". Starting this server by absolute venv
+    # interpreter must work just as activating that venv before starting it.
+    env['PATH'] = str(pathlib.Path(sys.executable).parent) + os.pathsep + env.get('PATH','/usr/bin:/bin')
+    if spec['model']['backend'] == 'mock':
+        env['HG_AGENT_BACKEND'] = 'mock'
+        for name in ('HG_AGENT_MODEL','HG_AGENT_BASE_URL','HG_AGENT_API_KEY'):
+            env[name] = ''  # Keep driver.load_env's setdefault from repopulating them.
+    else:
+        task = (load_settings() if settings is None else settings)['task']
+        env['HG_AGENT_BACKEND'] = env.get('HG_AGENT_BACKEND') or 'openai'
+        if env['HG_AGENT_BACKEND'] == 'mock':
+            env['HG_AGENT_BACKEND'] = 'openai'
+        for key, variable in (('model','HG_AGENT_MODEL'),('base_url','HG_AGENT_BASE_URL'),('api_key','HG_AGENT_API_KEY')):
+            if task.get(key):
+                env[variable] = task[key]
+    return backend.scenario_environment(spec, env)
 
 
 # ─────────────────────────────────────────────────────── HTTP
@@ -2742,10 +3899,94 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, message: str, status: int = 400) -> None:
         self._send({"error": message}, status)
 
+    def _submission_error(self, exc) -> None:
+        if isinstance(exc, _submission_backend().SubmissionRejected):
+            source = exc.problems[0]
+        else:
+            source = {'code':'internal-error','detail':f'submission operation failed: {exc}'}
+        problem = {k:source[k] for k in ('code','detail','field','existing_submission_id') if k in source}
+        code = problem['code']
+        status = {'bad-host':400, 'origin-forbidden':403, 'submission-not-found':404,
+                  'bad-query':400, 'payload-too-large':413, 'archive-too-large':413,
+                  'service-not-ready':503, 'internal-error':500}.get(code,
+                  409 if code in ('scenario-not-available','duplicate-submission','queue-full','running','not-started') else 400)
+        self._send({'api_version':'1','error':problem}, status)
+
+    def _submission_get(self, parts, query) -> None:
+        try:
+            service = submission_service(self.server)
+            if parts == ['api','scenarios']:
+                if query:
+                    _submission_reject('bad-query','scenarios does not accept query fields',next(iter(query)))
+                settings, base_env = load_settings(), dict(os.environ)
+                payload = service.scenarios(driver_env=base_env, env_for_scenario=lambda name:
+                    submission_env(name, settings=settings, base_env=base_env))
+                return self._send(payload)
+            if parts == ['api','submissions']:
+                return self._send(service.list(**submission_query(query)))
+            if len(parts) == 4 and parts[3] == 'log':
+                raw = service.log(parts[2], **submission_query(query,for_log=True))
+                return self._send(raw, ctype='text/plain; charset=utf-8')
+            if len(parts) == 3:
+                if query:
+                    _submission_reject('bad-query','detail does not accept query fields',next(iter(query)))
+                return self._send(service.get(parts[2]))
+            _submission_reject('submission-not-found','submission route was not found')
+        except (ValueError,OSError,TypeError) as exc:
+            self._submission_error(exc)
+
+    def _submission_post(self) -> None:
+        token = None
+        service = None
+        try:
+            submission_origin(self.headers,port=self.server.server_port)
+            service = submission_service(self.server)
+            service._guard()  # Reject resource/config failures before reading an upload.
+            length = submission_length(self.headers)
+            token = service.reserve_upload(length)
+            self.connection.settimeout(30)
+            raw, fields = submission_form(self.headers,self.rfile.read(length))
+            service._quota_reserve(token,4096+len(raw)-length)
+            path = token['directory']/'archive.bin'
+            path.write_bytes(raw)  # Client filename is never used.
+            code, payload = service.submit(path,fields['scenario'],label=fields.get('label',''),
+                                           contact=fields.get('contact',''),upload_token=token,
+                                           driver_env=submission_env(fields['scenario']))
+            return self._send(payload,code)
+        except TimeoutError:
+            self.close_connection = True
+            self._submission_error(_submission_backend().SubmissionRejected([
+                {'code':'bad-multipart','detail':'upload read timed out'}]))
+        except (ValueError,OSError,TypeError) as exc:
+            self.close_connection = True
+            self._submission_error(exc)
+        finally:
+            if service is not None:
+                service.release_upload(token)
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        url = urlparse(self.path)
+        parts = [unquote(p) for p in url.path.strip('/').split('/') if p]
+        try:
+            submission_origin(self.headers,port=self.server.server_port)
+            if parts[:2] != ['api','submissions'] or len(parts) != 3:
+                _submission_reject('submission-not-found','submission route was not found')
+            if url.query:
+                _submission_reject('bad-query','DELETE does not accept query fields')
+            service = submission_service(self.server)
+            service.start()
+            code,payload = service.delete(parts[2])
+            return self._send(payload,code)
+        except (ValueError,OSError,TypeError) as exc:
+            self._submission_error(exc)
+
     def do_GET(self) -> None:  # noqa: N802
         url = urlparse(self.path)
         parts = [unquote(p) for p in url.path.strip("/").split("/") if p]
         query = parse_qs(url.query)
+
+        if parts[:2] == ['api','submissions'] or parts == ['api','scenarios']:
+            return self._submission_get(parts,parse_qs(url.query,keep_blank_values=True))
 
         if not parts or parts[0] != "api":
             return self._static(url.path)
@@ -2753,6 +3994,27 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parts[1:] == ["health"]:
                 return self._send(api_health())
+            if parts[1:] == ["author", "bundles"]:
+                return self._send(author_bundles())
+            if parts[1:] == ["harness", "candidates"]:
+                return self._send(harness_candidates())
+            if parts[1:] == ["harness", "archive"]:
+                code, blob = harness_candidate_archive((query.get("candidate") or [""])[0])
+                if blob is None:
+                    return self._error("candidate not found", code)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/gzip")
+                self.send_header("Content-Length", str(len(blob)))
+                self.send_header("Content-Disposition",
+                                 f'attachment; filename="{query["candidate"][0]}.tar.gz"')
+                self.end_headers()
+                return self.wfile.write(blob)
+            if parts[1:] == ["harness", "file"]:
+                name = (query.get("candidate") or [""])[0]
+                rel = (query.get("path") or [""])[0]
+                if not CANDIDATE_NAME.fullmatch(name) or not rel:
+                    return self._error("candidate and path are required", 400)
+                return self._send(harness_candidate_file(name, rel))
             if parts[1:] == ["runs"]:
                 kind = (query.get("kind") or [""])[0]
                 if kind not in ("", "study", "eval", "unknown"):
@@ -2761,6 +4023,33 @@ class Handler(BaseHTTPRequestHandler):
                 if kind:
                     rows = [r for r in rows if r["kind"] == kind]
                 return self._send({"rows": rows, "count": len(rows)})
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "verdicts":
+                raw = (query.get("round") or ["0"])[0]
+                if not re.fullmatch(r"\d{1,9}", raw):
+                    return self._error("round must be a non-negative integer", 400)
+                return self._send(run_verdicts(parts[2], int(raw)))
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "compare":
+                other = (query.get("with") or [""])[0]
+                if not other:
+                    return self._error("with parameter is required", 400)
+                try:
+                    ra = int((query.get("round") or ["0"])[0])
+                    rb = int((query.get("round_b") or ["0"])[0])
+                except ValueError:
+                    return self._error("round must be integers", 400)
+                return self._send(run_compare(parts[2], other, ra, rb))
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "range-diff":
+                first = (query.get("from") or [""])[0]
+                last = (query.get("to") or [""])[0]
+                if not (re.fullmatch(r"\d{1,9}", first) and re.fullmatch(r"\d{1,9}", last)):
+                    return self._error("from/to must be non-negative integers", 400)
+                return self._send(run_range_diff(parts[2], int(first), int(last)))
+            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "history":
+                to = (query.get("to") or ["0"])[0]
+                since = (query.get("from") or ["1"])[0]
+                if not (re.fullmatch(r"\d{1,9}", to) and re.fullmatch(r"\d{1,9}", since)):
+                    return self._error("from/to must be non-negative integers", 400)
+                return self._send(run_history(parts[2], int(to), int(since)))
             if len(parts) == 3 and parts[1] == "runs":
                 data = api_run(parts[2])
                 return self._send(data) if data else self._error("run not found", 404)
@@ -2797,11 +4086,6 @@ class Handler(BaseHTTPRequestHandler):
                     return self._error("name query parameter is required", 400)
                 data = api_trace(parts[2], int(parts[4]), name)
                 return self._send(data) if data else self._send({"error": "not found"}, 404)
-            if parts[1:] == ["chat", "status"]:
-                cfg = llm_config()
-                return self._send({"configured": bool(cfg),
-                                   "model": (cfg or {}).get("model"),
-                                   "base_url": (cfg or {}).get("base_url")})
             if parts[1:] == ["launch", "form"]:
                 return self._send(launch_form())
             if parts[1:] == ["settings"]:
@@ -2822,6 +4106,10 @@ class Handler(BaseHTTPRequestHandler):
                         ("dataset", "harness", "rounds", "jobs", "trials", "sampling")}
                 form["improver"] = (query.get("improver") or ["dsh"])[0]
                 form["improver_model"] = (query.get("improver_model") or ["deepseek-flash"])[0]
+                # 方法（怎么改）与改进器（谁去改）是两个字段；漏了前者，预览里就永远
+                # 没有 `--method-entrypoint`，而界面上的下拉却已经选好了 —— 两处不一致。
+                form["method"] = (query.get("method") or ["none"])[0]
+                form["task_model"] = (query.get("task_model") or [""])[0]
                 return self._send(launch_preview(form))
             if parts[1:] == ["methods"]:
                 return self._send({"rows": api_methods()})
@@ -2872,13 +4160,24 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1:] == ["explain"]:
                 run_id = (query.get("run") or [""])[0].strip()
                 raw_round = (query.get("round") or [""])[0].strip()
+                raw_from = (query.get("from") or [""])[0].strip()
+                raw_to = (query.get("to") or [""])[0].strip()
                 if not run_id:
                     return self._error("run query parameter is required", 400)
-                if not re.fullmatch(r"\d{1,9}", raw_round):
-                    return self._error("round must be a non-negative integer", 400)
                 force = (query.get("force") or ["0"])[0].strip().lower()
-                status, payload = api_explain(run_id, int(raw_round),
-                                              force not in ("", "0", "false", "no"))
+                force = force not in ("", "0", "false", "no")
+                # 一次请求要么问"这一轮改了什么"，要么问"这一段在往哪走"；两个都问就是
+                # 两个问题混在一个响应里，读的人分不清哪句对应哪个。
+                if raw_from or raw_to:
+                    if not (re.fullmatch(r"\d{1,9}", raw_from)
+                            and re.fullmatch(r"\d{1,9}", raw_to)):
+                        return self._error("from and to must be non-negative integers", 400)
+                    status, payload = api_explain_range(run_id, int(raw_from), int(raw_to),
+                                                        force=force)
+                else:
+                    if not re.fullmatch(r"\d{1,9}", raw_round):
+                        return self._error("round must be a non-negative integer", 400)
+                    status, payload = api_explain(run_id, int(raw_round), force)
                 # 只有配置好的解释才可缓存；503 的配置状态要立刻能被看见。
                 return self._send(payload, status,
                                   cache_control="private, max-age=300" if status == 200 else None)
@@ -2900,16 +4199,82 @@ class Handler(BaseHTTPRequestHandler):
         """The console's write surface: one launch, one chat, and the endpoint settings."""
         url = urlparse(self.path)
         route = url.path.strip("/")
-        if route == "api/chat":
+        if route == 'api/submissions':
+            if url.query:
+                self.close_connection = True
+                return self._submission_error(_submission_backend().SubmissionRejected([
+                    {'code':'bad-query','detail':'upload does not accept query fields'}]))
+            return self._submission_post()
+        if route == "api/harness/save":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = harness_candidate_save(str(body.get("name") or ""),
+                                                   body.get("files") or {},
+                                                   source=str(body.get("from") or ""))
+            return self._send(payload, code)
+        if route == "api/harness/from-round":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            try:
+                round_no = int(body.get("round"))
+            except (TypeError, ValueError):
+                return self._send({"error": "bad-round"}, 400)
+            code, payload = harness_candidate_from_round(
+                str(body.get("run") or ""), round_no, replay=bool(body.get("replay")))
+            return self._send(payload, code)
+        if route == "api/workbench/edit":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            selection = ""
+            sel = body.get("selection") or {}
+            if sel:
+                try:
+                    selection = read_selection(CANDIDATES / str(body.get("name") or ""),
+                                               str(sel.get("path") or ""),
+                                               int(sel.get("from") or 1),
+                                               int(sel.get("to") or 1))
+                except (ValueError, OSError) as exc:
+                    return self._send({"error": "bad-selection", "detail": str(exc)}, 400)
+            _FORCE_NEW_THREAD["value"] = bool(body.get("new_thread"))
+            code, payload = workbench_edit(str(body.get("name") or ""),
+                                           str(body.get("instruction") or ""), selection,
+                                           str(body.get("kind") or "codex"))
+            _FORCE_NEW_THREAD["value"] = False
+            return self._send(payload, code)
+        if route == "api/harness/trial":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = harness_candidate_trial(str(body.get("name") or ""),
+                                                    str(body.get("dataset") or
+                                                        "authored_example_fix_bug"))
+            return self._send(payload, code)
+        if route == "api/author/draft":
+            body = self._json_body()
+            if body is None:
+                return self._send({"error": "bad-json"}, 400)
+            code, payload = author_draft(str(body.get("note") or ""),
+                                         str(body.get("materials") or ""))
+            return self._send(payload, code)
+        if route == "api/author/import":
+            slug = (parse_qs(url.query).get("slug") or [""])[0]
             try:
                 length = int(self.headers.get("Content-Length") or 0)
-                body = json.loads((self.rfile.read(length) if length else b"{}").decode("utf-8") or "{}")
-                messages = body.get("messages")
-                if not isinstance(messages, list) or not messages:
-                    raise ValueError("messages must be a non-empty list")
-            except (ValueError, UnicodeDecodeError) as exc:
-                return self._send({"error": "bad-json", "detail": str(exc)}, 400)
-            code, payload = api_chat(messages)
+            except ValueError:
+                return self._send({"error": "bad-length"}, 400)
+            if length <= 0 or length > IMPORT_MAX_BYTES:
+                return self._send({"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}, 413)
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as fh:
+                fh.write(self.rfile.read(length))
+                archive = pathlib.Path(fh.name)
+            try:
+                code, payload = author_import(archive, slug)
+            finally:
+                archive.unlink(missing_ok=True)
             return self._send(payload, code)
         if route == "api/settings":
             body = self._json_body()
@@ -2969,17 +4334,28 @@ class Handler(BaseHTTPRequestHandler):
 class ConsoleServer(ThreadingHTTPServer):
     daemon_threads = True
 
+    def server_close(self):
+        try:
+            if hasattr(self,'_submission_service'):
+                self._submission_service.close()
+        finally:
+            super().server_close()
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=4460)
     ap.add_argument("--host", default="127.0.0.1")
     args = ap.parse_args()
+    if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT') and args.host != '127.0.0.1':
+        raise SystemExit('submission service requires --host 127.0.0.1')
     if not RUNS.is_dir():
         raise SystemExit(f"runs root not found: {RUNS}")
     httpd = ConsoleServer((args.host, args.port), Handler)
     print(f"hg-console on http://{args.host}:{args.port}  (runs={RUNS})", flush=True)
     try:
+        if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT'):
+            submission_service(httpd).start()
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass

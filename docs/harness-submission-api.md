@@ -4,6 +4,12 @@
 
 状态：**草案，冻结于第 0 周**。改动走 PR，且前后端双方都要 review；`api_version` 不兼容时升号。
 
+2026-10-30 A5 增补：本会话用户明确采纳下列请求错误码及查询边界；原冻结文本已备份。此增补随 A4–A7 独立 PR 送审，尚不代表前后端 owner 已 review。
+
+2026-10-30 A6 实现说明：用户已确认本阶段采用服务侧入场配额。以下队列/保留期口径落实原 A6 与 §5.5，随同一 PR 送前后端 review；原冻结备份不变。
+
+2026-11-01 待补齐项：场景 `limits.agent_timeout_s` 与 `limits.wall_clock_minutes` 尚未接入端到端执行，本次 PR 明确保留此缺口；当前拒绝非空 `limits`，不忽略配置继续评分。此标记不表示原契约要求已豁免，仍随 PR 交 owner review。
+
 ---
 
 ## 1. 范围与边界
@@ -50,7 +56,6 @@
   "env_kinds": ["files"],
   "budget": { "jobs": 1 },
   "model": { "backend": "live", "required": true },
-  "limits": { "agent_timeout_s": 900, "wall_clock_minutes": 240 },
   "note": "官方 dev 池，用于选择/对比；exam 侧请用 appworld-exam。"
 }
 ```
@@ -68,7 +73,9 @@
 | `env_kinds` | 是 | 场景需要的环境种类；harness 的 `env_kinds` 必须是它的超集 |
 | `budget.jobs` | 是 | 单提交并发；v1 固定 `1` |
 | `model.backend` | 是 | `live` 或 `mock`；`live` 要求服务端配置了端点与 key |
-| `limits` | 否 | 服务端硬上限，超出即拒绝而不是截断 |
+| `limits` | 否 | 预留的服务端硬上限字段；当前 CLI 与提交服务拒绝非空值，待平台落实执行能力后启用 |
+
+当前上传评分仅支持 `rounds=0` 且不声明非空 `limits` 的场景。提交服务对非零轮次或非空 `limits` 返回 `503 service-not-ready`；不会忽略限制后继续执行。上例省略尚不支持的 `limits`，实际是否可用仍须通过下述数据、模型与沙箱检查。本支持范围及文档收口随 A4–A7 PR 交前后端 owner review，尚不代表已批准。
 
 **场景是否可用的判定**（服务端每次请求都重新算，并写进响应）：`available` + `reason`（`ok` / `side-eval-unsupported` / `dataset-not-provisioned` / `no-model-endpoint` / `sandbox-unavailable`）。
 
@@ -92,6 +99,8 @@
 | 解包后仍 ≤ 200 MiB（防压缩炸弹） | `archive-too-large` |
 
 记录 `archive_sha256`（上传字节）与 `tree_sha256`（解包后按 `路径\0内容` 排序哈希），两者都进响应与 receipt。
+
+2026-11-01 随已合入主分支的 identity 命名同步：服务 `tree_sha256` 继续使用共享 `source_identity()`，读取其 `submission_sha256`；该上游函数排除 `__pycache__/` 与 `*.pyc`，其他输入仍参与。`run_meta.harness_source.harness_sha` 是实际 staged Git tree 身份，与曲线同名字段核对，不替代目录摘要。历史 `harness_source.sha256` 仅作为旧产物读取兼容，冲突字段拒绝；不改写旧 receipt 或摘要。公开字段名不变，此同步说明随 A4–A7 PR 交前后端 review，不代表已完成该 review。
 
 ### 4.2 manifest 检查（解包后、入队前）
 
@@ -139,6 +148,8 @@
 - `400` / `409` / `413` / `503` — 见 §6 错误码；`detail` 必填。
 
 ### 5.2 `GET /api/submissions?limit=50&cursor=<id>`
+
+`limit` 为 1..200 的整数，默认 50；按 created_at 与 submission_id 稳定倒序。`cursor` 为上一页最后一条的 submission_id；未知或非法 cursor 返回 `400 bad-query`，field=cursor。重复/未知查询字段同样拒绝，不静默截断非法参数。
 
 ```json
 {
@@ -201,14 +212,35 @@ received → validating → rejected
 
 ### 5.4 `GET /api/submissions/<id>/log?tail=20000`
 
+`tail` 为 1..200000 的字节数，默认 20000；只从本提交 driver 日志末尾读取这些字节。
+
 `text/plain`，driver 的 stdout/stderr 尾部。只在 `queued` 之后可读；`validating` 阶段返回 `409 not-started`。
 
 ### 5.5 `DELETE /api/submissions/<id>`
 
 - `queued` → 取消，`202`（不删 receipt）。
-- `running` → 拒绝，`409 running`（先 `POST .../cancel` 才终止）。
+- `running` → 拒绝，`409 running`；不终止 driver。本版本不提供运行中的 `POST .../cancel` 接口。
 - `scored`/`failed`/`rejected` → 标记清理，`202`；`GET` 仍可读，直到保留期结束。
 - 保留期：`submissions/<id>/` 默认 30 天（服务端可配），receipt 永久保留。
+
+实现口径：排队取消与派发使用同一锁；`received`/`validating` 返回 `503 service-not-ready`，不取消或删除正在校验的文件。终态 DELETE 幂等标记清理，保留原状态/结果，截止时间不重置。到期后 detail/log 返回 `404 submission-not-found`、list 不显示；后台清理 bulk，原路径 `receipt.json` 永久保留。永久 receipt 继续参与 archive+scenario 去重，到期后同包重投仍 409。运行中不发信号；本阶段不新增未冻结的 POST cancel 请求。
+
+队列按校验完成并持久化 queued 的先后 FIFO；`queue_position` 是响应时的 1 基位置（含正在运行的本服务任务），running/终态为 null。一个 dispatcher 串行调用原 driver，恢复时不会重跑已启动的 ID。服务重启后未启动队列只在场景、源树及非秘密模型/endpoint/pool/Python 身份一致时执行。
+
+服务配置（均须为正数，队列长度/字节数须为整数）：
+
+| 环境变量 | 默认值 | 含义 |
+| --- | --- | --- |
+| `HG_CONSOLE_SUBMISSIONS_MAX_QUEUE` | `16` | 等待/校验容量；一个正在运行的任务另计 |
+| `HG_CONSOLE_SUBMISSIONS_QUOTA_BYTES` | `5368709120` | 本服务 payload/run/work 的入场额度 |
+| `HG_CONSOLE_SUBMISSIONS_RETENTION_SECONDS` | `2592000` | 终态后公开保留期；验收可设 60 |
+| `HG_CONSOLE_SUBMISSIONS_SWEEP_SECONDS` | `1` | 后台清理扫描间隔 |
+
+另有 `HG_CONSOLE_CANDIDATES`：控制台编辑屏（`/api/harness/from-round`、`/api/harness/save`）写候选的根，默认平台树内的 `data/candidates/`；要隔离一次验收，必须像上面几个根一样显式指向平台外。
+
+入场额度包含接收预留、私有原包/解包/scratch、各提交的 run/work；receipt 与控制元数据保留。容量满返回 `409 queue-full`；额度不足返回 `503 service-not-ready`，detail 含 quota/used/reserved/requested/limit。此限制不是运行期文件系统硬配额，无法限制任意 harness 瞬时写盘；观察到超额后拒绝新的接纳，不清理活动任务腾空间。
+
+同 submissions root 只允许一个 A6 服务；执行租约由 driver 继承。A5 到 A6 升级须先停旧服务，未知所有者的旧接收目录保留核对，不自动删除。原 `/api/runs` 和直接 CLI 继续使用既有 liveness/slots 守卫，不宣称它们已纳入新服务的原子队列；部署需预留执行窗口。
 
 ### 5.6 `GET /api/scenarios`
 
@@ -228,6 +260,10 @@ received → validating → rejected
 
 | code | HTTP | 什么时候 | 前端要说什么 |
 | --- | --- | --- | --- |
+| `bad-host` | 400 | Host 缺失、重复、不可解析或不符合允许的数值回环地址及服务端口 | 请求地址不合法 |
+| `origin-forbidden` | 403 | Origin 存在但不精确匹配 `http://127.0.0.1:<实际端口>`；缺省允许 | 请求来源不允许 |
+| `submission-not-found` | 404 | ID 不合法、不存在或对外保留期已结束 | 找不到该提交 |
+| `bad-query` | 400 | limit/cursor/tail 重复、未知、格式错误或超出范围；带 field | 查询参数不合法 |
 | `bad-multipart` | 400 | 请求不是 multipart 或缺 `archive`/`scenario` | 表单没传全 |
 | `bad-archive` | 400 | 不是 tar/tar.gz/zip | 格式不支持 |
 | `payload-too-large` | 413 | 压缩后 > 20 MiB | 包太大，给出上限 |
@@ -250,6 +286,13 @@ received → validating → rejected
 | `running` | 409 | 对运行中的提交做非法操作 | 说明在跑 |
 | `not-started` | 409 | `validating` 阶段读 log | 请稍后 |
 | `service-not-ready` | 503 | 无预算目录/无 bwrap/读不到 `/proc` | 服务未就绪，附原因 |
+| `internal-error` | 500 | 服务内部错误（回执不可读、口径对不上、调度状态迁移失败） | 服务内部错误：保留 submission_id 与日志 |
+| `sandbox-unavailable` | 503 | `failed` 时表示服务端没有可用的沙箱，因此没有产出分数 | 沙箱不可用：说明没有分数，不是 0 分 |
+| `run-refused` | 200 | `failed` 时表示平台拒绝了这次评分；线上形如 `run-refused:<driver 的原因>` | 评分被平台拒绝：按 driver 的原因修正场景或 harness |
+
+上表是三张表里最严的一张：**上传与查询阶段**的错误码。最后三行（`internal-error`、`sandbox-unavailable`、`run-refused`）出现在一次提交的 **`failed` 终态**里（§4 的 `result.error.code`，与 §1 的清单一致），不是上传被拒的响应码；`run-refused` 线上带 `:<driver 的原因>` 后缀，前端按前缀匹配。
+
+`bad-multipart` 同时用于重复/未知部件、嵌套 multipart、非法 label/contact，带具体 field。HTTP 上传 envelope 上限为 20 MiB+64 KiB，归档原字节仍独立限制为 20 MiB；仅接受单一 Content-Length，不接受 Transfer-Encoding。非法 submission ID 不进行文件路径查找，统一 submission-not-found。
 
 ---
 

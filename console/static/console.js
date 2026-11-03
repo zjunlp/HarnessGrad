@@ -237,7 +237,11 @@
   }
 
   function updateNavCount() {
-    $("#nav-runs").textContent = state.rowsLoaded ? String(state.rows.length) : "—";
+    // The nav no longer carries a count: it said "rows currently loaded" here and "total
+    // runs" on the chat page (81 vs 784 for the same console), and two pages never filled
+    // it. A section list should not show a number that depends on which page you are on.
+    const badge = $("#nav-runs");
+    if (badge) badge.textContent = state.rowsLoaded ? String(state.rows.length) : "—";
   }
 
   function fillFilters() {
@@ -281,15 +285,33 @@
     };
   }
 
+  //: 列表里第一列只有 ~200px，长 id 从右边截会把 `-r16` / `-r20` 这个真正区分的尾巴
+  //: 一起截掉。所以掐头留尾，并补一个前导省略号；完整值在整行 title 与右侧栏里。
+  const tailText = (s, n = 30) => {
+    const t = String(s || "");
+    return t.length <= n ? t : "…" + t.slice(-(n - 1));
+  };
+
+  //: `pretty` 里的 dataset 前缀在"benchmark · 池"那一列已经有了；去掉它，第一列才有
+  //: 位置显示真正区分的 `sica_ci · 20261019T1816Z`。这一行放不下就从尾部省略（标签的
+  //: 开头是有信息量的部分），下一行的 id 掐头留尾 —— 两行各留一头，合起来才完整。
+  const shortLabel = (r) => {
+    const p = String(r.pretty || r.id || "");
+    const d = String(r.dataset || "");
+    return d && p.startsWith(d + " · ") ? p.slice(d.length + 3) : p;
+  };
+
+  //: 状态徽标。running 带一个会走的小圆点，其余用语义色（--ok/--warn），
+  //: 不写字面色值 —— 深色主题只换 token 就能跟着变。
   function statusPill(r) {
     if (r.status === "running") {
-      return `<span class="pill" data-tone="run">running${r.progress ? ` ${fmtInt(r.progress.done)}` : ""}</span>`;
+      return `<span class="badge badge--accent"><span class="dot live"></span>running${r.progress ? ` ${fmtInt(r.progress.done)}` : ""}</span>`;
     }
-    if (r.status === "empty") return `<span class="pill" data-tone="warn">无曲线</span>`;
+    if (r.status === "empty") return `<span class="badge badge--warn">无曲线</span>`;
     if (isNum(r.invalid) && Number(r.invalid) > 0) {
-      return `<span class="pill" data-tone="warn">invalid ${fmtInt(r.invalid)}</span>`;
+      return `<span class="badge badge--warn">invalid ${fmtInt(r.invalid)}</span>`;
     }
-    return `<span class="pill" data-tone="done">done</span>`;
+    return `<span class="badge badge--ok">done</span>`;
   }
 
   function runsSub() {
@@ -374,11 +396,13 @@
     }
 
     box.className = "";
-    box.innerHTML = `<table class="grid"><thead><tr>
-        <th>run</th><th>benchmark · 池</th><th>task-agent</th><th>meta</th>
+    box.innerHTML = `<table class="tbl runs"><thead><tr>
+        <th>run</th><th class="nowrap" title="benchmark · 题池（train / eval 池）">数据 · 池</th>
+        <th class="nowrap" title="task-agent：harness · 模型 · 每轮步数">harness</th>
+        <th class="nowrap">meta</th>
         <th class="num">轮</th><th class="num">最好</th>
-        <th class="num calls-col" title="最新一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>
-        <th>状态</th><th>更新</th></tr></thead><tbody>
+        <th class="num nowrap" title="最新一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>
+        <th class="nowrap">状态</th><th class="nowrap">更新</th></tr></thead><tbody>
       ${rows.map((r) => {
         const best = (r.status === "running" || r.best == null)
           ? "—"
@@ -394,15 +418,15 @@
           : (r.stamp === "h0" ? "无（基线）" : "—");
         const tasks = r.n_tasks == null ? "" : ` · ${r.n_tasks}题`;
         return `<tr data-clickable="true" data-run="${esc(r.id)}" data-active="${r.id === state.runId}" title="${esc(r.id)}">
-          <td><div>${esc(r.pretty)}</div><div class="row-id">${esc(r.id)}</div></td>
+          <td><div title="${esc(r.pretty)}">${esc(shortLabel(r))}</div><div class="row-id">${esc(tailText(r.id))}</div></td>
           <td>${esc(r.dataset || "—")} · ${esc(r.pool || "—")}</td>
-          <td>${agent}</td>
+          <td title="${esc(agentBits.join(' · '))}">${agent}</td>
           <td class="meta-cell" title="${esc(metaInfo.full)}">${metaCell}</td>
           <td class="num">${r.has_curve === false ? "—" : (r.rounds ?? "—")}</td>
           <td class="num">${best}</td>
-          <td class="num calls-col">${callsCell(r, r.n_tasks)}</td>
-          <td>${statusPill(r)}<span class="row-id">${tasks}</span></td>
-          <td class="row-id">${esc(r.mtime || "—")}</td></tr>`;
+          <td class="num">${callsCell(r, r.n_tasks)}</td>
+          <td><div class="run-status">${statusPill(r)}<span class="row-id">${tasks}</span></div></td>
+          <td class="row-id nowrap">${esc(r.mtime || "—")}</td></tr>`;
       }).join("")}</tbody></table>`;
 
     box.querySelectorAll("[data-run]").forEach((tr) => {
@@ -655,6 +679,81 @@
     return state.hRows;
   }
 
+  /* ── 起点选择器：族 → run → 轮次 ──────────────────────────────────────
+   * 折叠的是"族"，展开的是你点的那一支；轮次直接作为圆点列出来，不再先选 run 再等一个
+   * 第二个下拉刷新。选中仍然写回 state.hRun / state.hRound —— 后面所有渲染一行不改。
+   */
+  const pickerOpenRuns = new Set();
+  const pickerOpenFamilies = new Set();
+
+  function familyOf(id) {
+    return String(id).replace(/[-_]\d{8}(T\d{4,6})?Z?$/i, "").replace(/[-_]r\d+(-\d+)?$/i, "");
+  }
+
+  function renderPicker(rows) {
+    const panel = $("#h-picker");
+    if (!panel) return;
+    const families = new Map();
+    for (const row of rows) {
+      const key = familyOf(row.id);
+      if (!families.has(key)) families.set(key, []);
+      families.get(key).push(row);
+    }
+    const parts = ['<div class="hg-picker__group">起点</div>',
+      `<button type="button" class="hg-picker__run" data-run="${BASE}"
+        aria-selected="${state.hRun === BASE}"><span>Base_Harness/loop</span>
+        <span class="hg-picker__meta">只读</span></button>`];
+    for (const [family, members] of [...families.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+      const openFamily = pickerOpenFamilies.has(family) ||
+        members.some((m) => m.id === state.hRun);
+      parts.push(`<div class="hg-picker__group" data-family="${esc(family)}"
+        aria-expanded="${openFamily}">${esc(family)}
+        <span class="hg-picker__count">${members.length}</span></div>`);
+      if (!openFamily) continue;
+      for (const row of members) {
+        const openRun = pickerOpenRuns.has(row.id) || row.id === state.hRun;
+        parts.push(`<button type="button" class="hg-picker__run" data-run="${esc(row.id)}"
+          aria-selected="${row.id === state.hRun}"><span>${esc(row.pretty || row.id)}</span>
+          <span class="hg-picker__meta">${esc(row.mtime || "")}</span></button>`);
+        if (!openRun) continue;
+        parts.push(`<div class="hg-picker__rounds">${roundChips(row)}</div>`);
+      }
+    }
+    panel.innerHTML = parts.join("");
+    $("#h-current").textContent = state.hRun
+      ? `${state.hRun}${state.hRound == null ? "" : ` · r${state.hRound}`}` : "—";
+  }
+
+  function roundChips(row) {
+    const rounds = row.rounds_list || [];
+    if (!rounds.length) return '<span class="field__hint">这个 run 没有可选的轮次</span>';
+    return rounds.map((r) => `<button type="button" class="hg-picker__round"
+      data-round="${r.round}" aria-selected="${row.id === state.hRun && r.round === state.hRound}">r${r.round}</button>`).join("");
+  }
+
+  async function openPicker() {
+    pickerOpenFamilies.add(familyOf(state.hRun || ""));
+    pickerOpenRuns.add(state.hRun);
+    renderPicker(state.rows || []);
+    const panel = $("#h-picker");
+    panel.hidden = false;
+    $("#h-tree-btn").setAttribute("aria-expanded", "true");
+    // 轮次是按需取的：一个 run 展开时才去读它的曲线。
+    if (state.hRun && !(state.rows || []).find((r) => r.id === state.hRun)?.rounds_list) {
+      await fillRounds(state.hRun);
+    }
+  }
+
+  async function fillRounds(runId) {
+    try {
+      const data = await (await fetch(`/api/runs/${encodeURIComponent(runId)}`)).json();
+      const rounds = (data.curve || data.rounds || []).map((p) => ({ round: p.round, score: p.score }));
+      const row = (state.rows || []).find((r) => r.id === runId);
+      if (row) row.rounds_list = rounds;
+    } catch { /* 取不到就只显示 run */ }
+    renderPicker(state.rows || []);
+  }
+
   function renderHarnessRunOptions(rows) {
     const groups = [["study", "研究（多轮）"], ["eval", "单点测量"], ["unknown", "无曲线"]];
     let html = `<optgroup label="起点">
@@ -663,9 +762,20 @@
     for (const [kind, label] of groups) {
       const list = rows.filter((r) => r.kind === kind);
       if (!list.length) continue;
+      // **不能嵌套 optgroup。** 上一版把族放进外层 optgroup 里，而 HTML 不允许
+      // optgroup 里再放 optgroup —— 浏览器把内层丢掉，于是"研究（多轮）"下面是空的，
+      // 看上去像所有版本都不见了（实测 2026-11-02）。这里只留一层，族名并进选项文本：
+      // 一行仍然只有"族 · 时间"，但它是合法结构。
       html += `<optgroup label="${label}">`;
-      html += list.map((r) => {
-        const bits = [r.pretty || r.id];
+      const family = (id) => String(id)
+        .replace(/[-_]\d{8}(T\d{4,6})?Z?$/i, "")
+        .replace(/[-_]r\d+(-\d+)?$/i, "");
+      const sorted = list.slice().sort((a, b) =>
+        String(b.mtime || "").localeCompare(String(a.mtime || "")));
+      html += sorted.map((r) => {
+        const id = String(r.id);
+        const tail = id.slice(family(id).length).replace(/^[-_]/, "");
+        const bits = [family(id), tail || id];
         if (r.mtime) bits.push(r.mtime);
         if (kind === "unknown") bits.push("无曲线");
         return `<option value="${esc(r.id)}"${r.id === state.hRun ? " selected" : ""}>${esc(bits.join(" · "))}</option>`;
@@ -686,6 +796,71 @@
     }
     const want = `#/harness/${encodeURIComponent(state.hRun)}${state.hRound == null ? "" : "/" + state.hRound}`;
     if (location.hash !== want) history.replaceState(null, "", want);
+  }
+
+  /* ─────────────────────── 版本 · 解释这一轮
+     这一块只做呈现：是否解释、用哪个模型、缓存命中、被拒绝的原因，全部由服务端给
+     (`/api/explain`)。页面不补全、不猜、不把半截 JSON 修成四段 —— 服务端把它标成
+     degraded 时，这里照原样显示原文和拒绝原因。 */
+  async function explainRound() {
+    const panel = $("#h-explain");
+    const button = $("#h-explain-btn");
+    if (!panel) return;
+    if (!state.hRun || state.hRun === BASE || state.hRound == null) {
+      panel.innerHTML = '<div class="empty"><span class="empty__title">先选一个实验和一轮</span>解释针对"这一轮的改动"，基线没有改动可解释。</div>';
+      return;
+    }
+    if (button) button.disabled = true;
+    panel.innerHTML = '<div class="stack" style="padding:4px 0"><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:95%"></div><div class="skeleton" style="width:55%"></div></div>';
+    try {
+      const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&round=${state.hRound}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        panel.innerHTML = `<div class="empty"><span class="empty__title">没有拿到解释</span>${esc(payload.detail || payload.error || response.status)}</div>`;
+        return;
+      }
+      renderExplain(panel, payload);
+    } catch (error) {
+      panel.innerHTML = `<div class="empty"><span class="empty__title">请求失败</span>${esc(error.message)}</div>`;
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function explainRange() {
+    const panel = $("#h-explain");
+    if (!panel || !state.hRun || state.hRound == null) return;
+    panel.innerHTML = '<div class="stack" style="padding:4px 0"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:90%"></div></div>';
+    try {
+      const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&from=0&to=${state.hRound}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        panel.innerHTML = `<div class="empty"><span class="empty__title">没有拿到趋势解释</span>${esc(payload.detail || payload.error || response.status)}</div>`;
+        return;
+      }
+      renderExplain(panel, payload);
+    } catch (error) {
+      panel.innerHTML = `<div class="empty"><span class="empty__title">请求失败</span>${esc(error.message)}</div>`;
+    }
+  }
+
+  function renderExplain(panel, data) {
+    if (data.degraded) {
+      panel.innerHTML =
+        '<div class="explain__block"><div class="explain__label">模型回复没有通过契约</div>' +
+        `<div class="hint">${esc(data.parse_error || "未知原因")}</div></div>` +
+        `<pre class="wlog" style="max-height:220px">${esc(data.raw || "")}</pre>`;
+      return;
+    }
+    const evidence = (data.evidence || []).map((item) => `<li>${esc(item)}</li>`).join("");
+    panel.innerHTML =
+      (data.range ? `<div class="explain__label">r${esc(data.range.from)} → r${esc(data.range.to)} 的走向</div>` : "") +
+      `<div class="explain__claim">${esc(data.claim)}</div>` +
+      `<div class="explain__block"><div class="explain__label">依据</div><ul class="explain__list">${evidence}</ul></div>` +
+      `<div class="explain__block"><div class="explain__label">风险</div><div>${esc(data.risk)}</div></div>` +
+      `<div class="explain__block"><div class="explain__label">下一步</div><div>${esc(data.next)}</div></div>` +
+      `<div class="explain__meta">${esc(data.model)} · ${data.elapsed_ms}ms${data.cache_hit ? " · 缓存" : ""}</div>` +
+      (data.range ? "" : '<div class="explain__block"><button class="btn btn--sm" type="button" id="h-range-btn">看这一段（基线 → 这一轮）的趋势</button></div>');
   }
 
   function renderHarnessRoundOptions(rounds) {
@@ -745,6 +920,7 @@
       state.hMode = "diff";
     }
     renderHarnessRunOptions(rows);
+    renderPicker(rows);
     if (state.hRun === BASE) {
       await renderBase(seq);
       return;
@@ -1570,7 +1746,103 @@
       renderHarness();
     };
   });
+  const pickerButton = $("#h-tree-btn");
+  if (pickerButton) {
+    pickerButton.addEventListener("click", () => {
+      const panel = $("#h-picker");
+      if (panel.hidden) openPicker();
+      else { panel.hidden = true; pickerButton.setAttribute("aria-expanded", "false"); }
+    });
+    $("#h-picker").addEventListener("click", async (event) => {
+      const family = event.target.closest("[data-family]");
+      if (family) {
+        const key = family.dataset.family;
+        if (pickerOpenFamilies.has(key)) pickerOpenFamilies.delete(key);
+        else pickerOpenFamilies.add(key);
+        renderPicker(state.rows || []);
+        return;
+      }
+      const round = event.target.closest("[data-round]");
+      if (round) {
+        if (state.hRun === BASE) return;
+        state.hRound = Number(round.dataset.round);
+        syncHarnessHash();
+        renderHarness();
+        renderPicker(state.rows || []);
+        // 选完一轮就收起：选择器是"去哪里"，不是常驻控件。
+        $("#h-picker").hidden = true;
+        $("#h-tree-btn").setAttribute("aria-expanded", "false");
+        return;
+      }
+      const run = event.target.closest("[data-run]");
+      if (!run) return;
+      state.hRun = run.dataset.run;
+      state.hRound = null;
+      state.hFile = null;
+      state.hBaseFile = null;
+      state.hPatchFile = 0;
+      state.hMode = state.hRun === BASE ? "file" : "diff";
+      pickerOpenRuns.add(state.hRun);
+      syncHarnessHash();          // 和 select 走同一条路径：URL 要跟着变
+      renderHarness();
+      await fillRounds(state.hRun);
+    });
+  }
   window.addEventListener("hashchange", route);
+  /* 版本 → 编辑：把这一版复制成候选再跳过去。
+   * 直接编辑 run 里的 `state_after_roundN` 会改掉历史测量的证据，所以先复制。 */
+  const editButton = $("#h-edit-btn");
+  if (editButton) editButton.addEventListener("click", async () => {
+    if (!state.hRun || state.hRun === BASE || state.hRound == null) {
+      alert("先选一个实验和一轮：基线没有对应的 harness 版本。");
+      return;
+    }
+    // 服务器给每一行带了 rounds_stored / diffs_stored / snapshot_rounds：状态目录、单文件
+    // 快照、补丁三者都没有的 run，曲线上的轮次在磁盘上并不存在 —— 点下去必然失败，提前说出来。
+    // 快照也是可重建的来源（snapshots/round-N.json，签出即可），所以它是第三处证据。
+    if (!(state.rows || []).length) { try { await loadRuns({ render: false }); } catch { /* 照旧 */ } }
+    const row = (state.rows || []).find((r) => r.id === state.hRun);
+    const snapRounds = (row && Array.isArray(row.snapshot_rounds)) ? row.snapshot_rounds : [];
+    const snapPath = `snapshots/round-${state.hRound}.json`;
+    if (row && !row.rounds_stored && !row.diffs_stored && !snapRounds.includes(state.hRound)) {
+      const hint = document.getElementById("h-start-hint");
+      if (hint) {
+        hint.textContent = snapRounds.length
+          ? `第 ${state.hRound} 轮无法重建：没有 state_after_roundN/、diffs/round-${state.hRound}.patch；`
+            + `快照只到 snapshots/round-${Math.max(...snapRounds)}.json，没有 ${snapPath}。`
+          : `这个 run 没有留任何一轮的 state_after_roundN/、${snapPath} 或 `
+            + `diffs/round-${state.hRound}.patch：曲线上的轮次在磁盘上不存在，无法重建。`;
+      }
+      return;
+    }
+    editButton.disabled = true;
+    editButton.textContent = "复制中…";
+    try {
+      const response = await fetch("/api/harness/from-round", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ run: state.hRun, round: state.hRound }) });
+      const payload = await response.json();
+      if (!response.ok) {
+        // 服务端的理由已经是给读者看的（哪一轮、缺什么、存了哪些），放进工具栏比弹窗好：
+        // 弹窗关掉就没了，而这条信息正是"接下来该做什么"。
+        const hint = document.getElementById("h-start-hint");
+        const text = `${payload.error || "复制失败"}：${payload.detail || ""}`;
+        if (hint) hint.textContent = text;
+        else alert(text);
+        return;
+      }
+      location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
+    } finally {
+      editButton.disabled = false;
+      editButton.textContent = "编辑这一版";
+    }
+  });
+  const explainButton = $("#h-explain-btn");
+  if (explainButton) explainButton.addEventListener("click", explainRound);
+  const explainPanel = $("#h-explain");
+  if (explainPanel) explainPanel.addEventListener("click", (event) => {
+    if (event.target && event.target.id === "h-range-btn") explainRange();
+  });
 
   loadHealth();
   route().finally(() => {

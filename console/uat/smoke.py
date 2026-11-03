@@ -29,6 +29,7 @@ import datetime as dt
 import hashlib
 import http.client
 import json
+import math
 import os
 import pathlib
 import re
@@ -141,10 +142,15 @@ _FIX_DETAIL = {
 # ─────────────────────────────────────────────────────── 主类
 class UAT:
     def __init__(self, url: str, runs_root: pathlib.Path, timeout_ms: int,
-                 evidence: pathlib.Path, headed: bool = False, local_server: bool = True):
+                 evidence: pathlib.Path, headed: bool = False, local_server: bool = True,
+                 submission_id: str | None = None, submissions_root: pathlib.Path | None = None):
         self.url = url.rstrip("/")
         self.local_server = local_server
         self.runs_root = runs_root
+        self.submission_runs_root = pathlib.Path(runs_root).resolve()
+        self.submissions_root = pathlib.Path(submissions_root).resolve() if submissions_root else None
+        self.submission_id = submission_id
+        self.submission_required = bool(submission_id or submissions_root)
         self.timeout_ms = timeout_ms
         self.evidence = evidence
         self.headed = headed
@@ -379,7 +385,7 @@ class UAT:
         try:
             p = self.evidence / f"{sid}.png"
             page.screenshot(path=str(p), full_page=False)
-            return str(p.relative_to(CONSOLE))
+            return str(p.relative_to(CONSOLE)) if p.is_relative_to(CONSOLE) else str(p.resolve())
         except Exception:  # noqa: BLE001
             return ""
 
@@ -428,7 +434,10 @@ class UAT:
         self.samples["kinds"] = self.health.get("kinds") or {}
         self.samples["datasets"] = sorted({r["dataset"] for r in study["rows"] if r.get("dataset")})
         self.samples["harnesses"] = sorted({r["harness"] for r in study["rows"] if r.get("harness")})
-        self.samples["trace"] = _pick_trace_sample(self, study["rows"])
+        self.samples["trace"] = _pick_trace_sample(self, every["rows"])
+        first = every['rows'][0] if every['rows'] else None
+        first_rounds = self.api(f'/api/runs/{first["id"]}').get('rounds',[]) if first else []
+        self.samples['version_content'] = bool(first_rounds and first_rounds[-1].get('has_diff'))
         self.version = app_version(self.url, local_server=self.local_server)
         self.commit = "hg-console@" + hashlib.sha256(self.version.encode()).hexdigest()[:8]
 
@@ -452,7 +461,7 @@ def app_version(url: str, local_server: bool) -> str:
             parts.append(f"server.py:{hashlib.sha256(sp.read_bytes()).hexdigest()[:10]}")
     else:
         parts.append("server.py:?(--url 模式读不到)")
-    for rel in ("/index.html", "/console.js", "/app.css", "/tokens.css"):
+    for rel in ("/index.html", "/console.js", "/app.css", "/tokens.css", "/submit.html", "/submit.js"):
         try:
             body = urllib.request.urlopen(url + rel, timeout=10).read()
             parts.append(f"{rel.lstrip('/')}:{hashlib.sha256(body).hexdigest()[:10]}")
@@ -572,15 +581,26 @@ def c1_1(t: UAT):
 @check("1-2", "1 冷启动", "每个视图到达渲染态，不卡在“读取…”", "S1")
 def c1_2(t: UAT):
     p = t.open("/#/runs")
-    t.wait(p, "() => !!document.querySelector('#runs-table table.grid tbody tr')", "runs 列表")
+    populated = bool(t.samples.get('study',{}).get('rows'))
+    selector = '#runs-table table.grid tbody tr' if populated else '#runs-table .empty-title'
+    t.wait(p,f'() => !!document.querySelector({json.dumps(selector)})',"runs 列表/明确空态")
     for link, sel, desc in (
         ("harness", "#h-editor .ln", "版本的三栏（diff/文件）"),
         ("trace", "#trace-root #tasks [data-name]", "轨迹"),
     ):
         p.evaluate("l => document.querySelector('a[data-view-link=' + l + ']').click()", link)
-        t.wait(p, f"() => document.querySelectorAll('{sel}').length > 0", desc)
+        empty_allowed = (not t.samples.get('version_content',bool(t.samples.get('target')))
+                         if link=='harness' else not t.samples.get('trace'))
+        empty = ("[...document.querySelectorAll('#h-editor .empty-title, #h-tree .empty-title')]"
+                 ".some(e => ['没有 run','这一轮没有状态快照','这个 run 没有可查看的轮次',"
+                 "'这一轮没有 diff','这一轮没有改动'].includes(e.textContent.trim()))" if link=='harness' else
+                 "[...document.querySelectorAll('#trace-root #tasks .load')]"
+                 ".some(e => ['没有带轨迹的 run。','这个 run 没有保留轨迹。'].includes(e.textContent.trim()))")
+        t.wait(p, f"() => document.querySelectorAll('{sel}').length > 0"
+               + (f' || ({empty})' if empty_allowed else ''), desc)
     stuck = p.evaluate("""() => [...document.querySelectorAll('.view[data-active=true] .load')]
         .map(e => e.innerText.trim())""")
+    stuck = [value for value in stuck if value not in ('没有带轨迹的 run。','这个 run 没有保留轨迹。')]
     if stuck:
         raise Fail(f"视图里还留着加载态 {stuck} | {t.where(p, '.view[data-active=true]')}")
     return "runs / 覆盖 / 版本 / 轨迹 四屏都渲染出内容"
@@ -616,6 +636,27 @@ def c1_5(t: UAT):
     return "四屏正文无 NaN / undefined / Infinity / null"
 
 
+@check("1-6", "1 冷启动", "提交页静态入口可打开且无写请求", "S1")
+def c1_6(t: UAT):
+    def scenarios(route):
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({
+            "api_version": "1", "items": [{"name": "uat-smoke", "dataset": "demo",
+                "split": "declared", "side": "train", "pool": "train", "sampling": "all",
+                "rounds": 0, "trials": 1, "tasks": None, "available": True,
+                "reason": "ok", "expected_minutes": None, "note": "GET-only fixture."}]}))
+
+    p = t.open("/submit.html", routes=[("**/api/scenarios", scenarios)])
+    t.wait(p, "() => !!document.querySelector('#dropzone')", "提交页上传区")
+    if not p.title().strip():
+        raise Fail("提交页没有 title")
+    if p.locator("#scenario option").count() != 2:
+        raise Fail("提交页没有显示只读场景清单")
+    recent = [(method, url) for method, url in t.reqs if "/submit.html" in url or "/api/scenarios" in url]
+    if any(method != "GET" for method, _url in recent):
+        raise Fail(f"提交页无操作时发出了非 GET 请求：{recent}")
+    return "submit.html 与 GET-only 场景清单可渲染；无操作阶段无写请求"
+
+
 # ═══════════════════════════════════════════════════════ 场景 5：实验列表
 @check("5-1", "5 实验列表", "study 筛选行数 = /api/runs?kind=study count", "S1")
 def c5_1(t: UAT):
@@ -639,10 +680,13 @@ def c5_2(t: UAT):
     got, want = t.agree(p, "() => document.querySelectorAll('#runs-table tbody tr[data-run]').length",
                         lambda: t.api("/api/runs?kind=eval")["count"],
                         retry=lambda: p.evaluate("() => document.querySelector('[data-kind=\"eval\"]').click()"))
-    if not got:
+    if not got and want:
         raise Fail(f"kind=eval 一行都没渲染 | {t.where(p, '#runs-table')}")
     if got != want:
         raise Fail(f"DOM {got} 行 != API count {want} | {t.where(p, '#runs-table')}")
+    if want==0:
+        t.wait(p,"() => [...document.querySelectorAll('#runs-table .empty-title')]"
+               ".some(e => e.textContent.trim() === '这一类还没有 run')",'eval真实空态')
     return f"{got} 行 == count {want}"
 
 
@@ -766,6 +810,8 @@ def c5_7(t: UAT):
 # ═══════════════════════════════════════════════════════ 场景 6：实验详情
 @check("6-1", "6 实验详情", "点一行，右栏更新到该 run", "S1")
 def c6_1(t: UAT):
+    if len(t.samples.get('study',{}).get('rows',[]))<2:
+        raise Blocked('真实study样本少于2条，无法验证切换行；未生成额外实验')
     p = t.open("/#/runs")
     rows = t.wait(p, "() => document.querySelectorAll('#runs-table tbody tr[data-run]').length > 1 && [...document.querySelectorAll('#runs-table tbody tr[data-run]')].map(tr => tr.dataset.run)")
     seen = []
@@ -1607,6 +1653,8 @@ def c10_2(t: UAT):
 @check("10-3", "10 轨迹", "只看失败 = 0 分任务；长输出有展开且展开后可见更多", "S2")
 def c10_3(t: UAT):
     s = _trace_sample(t)
+    if s.get('long_lines',0)<=14:
+        raise Blocked('真实trace没有超过14行的command output，未伪造长输出验证展开')
     api = t.api(f"/api/runs/{s['run']}/rounds/{s['round']}/traces")
     p = _open_trace(t, s["run"], s["round"])
     p.click("button[data-filter=fail]")
@@ -1790,6 +1838,192 @@ DELETED = [
 ]
 
 
+def submission_json(t: UAT, path: str, *, expected_status: int = 200) -> dict:
+    t.reqs.append(('GET',t.url+path))
+    status,body = t.raw_get(path)
+    try:
+        data = json.loads(body)
+    except (ValueError,UnicodeError) as exc:
+        raise Fail(f'GET {path}: invalid JSON ({status})') from exc
+    if status==503 and not t.submission_required:
+        raise Blocked('提交服务未启用/未就绪；本次未验提交，不计A7通过')
+    if status!=expected_status or not isinstance(data,dict) or data.get('api_version')!='1':
+        raise Fail(f'GET {path}: HTTP {status}, expected {expected_status}; {trunc(data)}')
+    return data
+
+
+def submission_sample(t: UAT) -> dict:
+    if not t.submission_id:
+        rows = submission_json(t,'/api/submissions').get('items',[])
+        row = next((row for row in rows if row.get('status')=='scored'),None)
+        if row is None:
+            raise Fail('no scored submission; perform the handbook upload first')
+        t.submission_id = row.get('submission_id')
+    if not isinstance(t.submission_id,str) or not re.fullmatch(r'sub-\d{8}T\d{6}Z-[0-9a-f]{8}',t.submission_id):
+        raise Fail('invalid submission ID')
+    detail = submission_json(t,'/api/submissions/'+t.submission_id)
+    if detail.get('submission_id')!=t.submission_id or detail.get('run_id')!=t.submission_id:
+        raise Fail('submission/run identity mismatch')
+    return detail
+
+
+def submission_artifacts(t: UAT) -> tuple[pathlib.Path,dict]:
+    detail = submission_sample(t)
+    if not t.submissions_root:
+        if t.submission_required:
+            raise Fail('trusted local submissions root is required')
+        raise Blocked('未提供本地receipt根；远端观察不代表A7产物核对通过')
+    actual = t.health.get('runs_root')
+    if actual is None or pathlib.Path(actual).resolve()!=t.submission_runs_root:
+        raise Fail('server runs root differs from the trusted submission artifact root')
+    identity = detail['submission_id']
+    run = t.submission_runs_root/identity
+    record = t.submissions_root/identity
+    for path,root in ((run,t.submission_runs_root),(record,t.submissions_root)):
+        if path.is_symlink() or not path.resolve().is_relative_to(root) or not path.is_dir():
+            raise Fail('missing or unsafe submission artifact directory')
+    path = record/'receipt.json'
+    if path.is_symlink():
+        raise Fail('receipt symlink is not trusted')
+    try:
+        data = json.loads(path.read_text())
+    except (OSError,ValueError) as exc:
+        raise Fail(f'cannot read permanent receipt: {exc}') from exc
+    if data.get('submission_id')!=identity or data.get('run_id')!=identity:
+        raise Fail('permanent receipt identity mismatch')
+    return run,data
+
+
+def _submission_hashes(t: UAT, run: pathlib.Path):
+    paths = [run/'run_meta.json',run/'curve.jsonl',t.submissions_root/t.submission_id/'receipt.json']
+    paths += list((run/'verdicts').rglob('*.json'))
+    result = {}
+    for path in paths:
+        root = t.submissions_root if path.name=='receipt.json' and path.parent.name==t.submission_id else run
+        if path.is_symlink() or not path.resolve().is_relative_to(root):
+            raise Fail('artifact symlink/escape is not trusted')
+        result[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return result
+
+
+def _submission_projection(t: UAT):
+    run,receipt = submission_artifacts(t)
+    if receipt.get('status')!='scored' or receipt.get('exit_code')!=0:
+        raise Fail('receipt does not prove scored with driver exit0')
+    sys.path.insert(0,str(CONSOLE.parent))
+    from console.submissions import read_submission_result
+    try:
+        return read_submission_result(run,receipt=receipt)
+    except (ValueError,OSError) as exc:
+        raise Fail(f'original artifact projection failed: {exc}') from exc
+
+
+@check('14-1','14 提交服务','场景清单、可用性与未知时间正确','S1')
+def c14_1(t: UAT):
+    rows = submission_json(t,'/api/scenarios').get('items')
+    if not isinstance(rows,list) or not rows:
+        raise Fail('scenario list is empty or malformed')
+    reasons = {'ok','dataset-not-provisioned','no-model-endpoint','sandbox-unavailable',
+               'docker-unavailable','side-eval-unsupported'}
+    for row in rows:
+        if type(row.get('available')) is not bool or row.get('reason') not in reasons:
+            raise Fail('invalid scenario available/reason')
+        if row['available'] != (row['reason']=='ok'):
+            raise Fail('scenario availability contradicts its reason')
+        tasks = row.get('tasks')
+        minutes = row.get('expected_minutes')
+        if tasks is not None and (type(tasks) is not int or tasks<0):
+            raise Fail('unknown task count is not zero')
+        if minutes is not None and (type(minutes) not in (int,float) or not math.isfinite(minutes) or minutes<0):
+            raise Fail('invalid measured expected_minutes')
+    return f'{len(rows)} reviewed scenarios; unavailable reasons retained'
+
+
+@check('14-2','14 提交服务','列表分池与错误体，不造总分','S0')
+def c14_2(t: UAT):
+    page = submission_json(t,'/api/submissions')
+    selected = submission_sample(t)
+    wanted = _submission_projection(t)
+    expected = {pool:value['score'] for pool,value in wanted['pools'].items()}
+    seen = set()
+    total = 0
+    deadline = time.monotonic()+t.timeout_ms/1000
+    while True:
+        rows = page.get('items')
+        if not isinstance(rows,list):
+            raise Fail('submission list is not an array')
+        for row in rows:
+            pools = row.get('pools')
+            if (row.get('score') is not None or not isinstance(pools,dict)
+                    or any(type(value) not in (int,float) or not math.isfinite(value) for value in pools.values())
+                    or (row.get('status')!='scored' and pools)):
+                raise Fail('list must keep measured numeric pools and no cross-pool score')
+        total += len(rows)
+        row = next((row for row in rows if row.get('submission_id')==t.submission_id),None)
+        if row is not None:
+            if row.get('status')!='scored' or row['pools']!=expected or selected.get('result')!=wanted:
+                raise Fail('selected list pools differ from original measured projection')
+            break
+        cursor = page.get('next_cursor')
+        if not cursor or cursor in seen or time.monotonic()>=deadline:
+            raise Fail('selected submission not found in visible list within bounded pagination')
+        seen.add(cursor)
+        page = submission_json(t,'/api/submissions?'+urllib.parse.urlencode({'cursor':cursor}))
+    invalid = submission_json(t,'/api/submissions?limit=0',expected_status=400)
+    absent = submission_json(t,'/api/submissions/not-a-submission-id',expected_status=404)
+    for data,code in ((invalid,'bad-query'),(absent,'submission-not-found')):
+        if data.get('error',{}).get('code')!=code or not data['error'].get('detail'):
+            raise Fail('incorrect structured submission error')
+    return f'{total} rows, selected measured pools agree; bad-query400/not-found404'
+
+
+@check('14-3','14 提交服务','指定提交身份/状态与result时机','S1')
+def c14_3(t: UAT):
+    detail = submission_sample(t)
+    if detail.get('status')!='scored' or detail.get('queue_position') is not None:
+        raise Fail('handbook submission has not scored or has a terminal queue position')
+    if not isinstance(detail.get('result',{}).get('pools'),dict) or not detail['result']['pools']:
+        raise Fail('scored submission is missing pool results')
+    run,_ = submission_artifacts(t)
+    t.obs['submission_before'] = _submission_hashes(t,run)
+    return f"{t.submission_id}: scored, queue_position=null"
+
+
+@check('14-4','14 提交服务','结果等于本次原始产物，invalid不补零','S0')
+def c14_4(t: UAT):
+    detail = submission_sample(t)
+    measured = _submission_projection(t)
+    if detail.get('result')!=measured:
+        raise Fail('HTTP result differs from the strict platform artifact projection')
+    return f'{t.submission_id}: original curve/verdict/receipt agree; pools={list(measured["pools"])}'
+
+
+@check('14-5','14 提交服务','日志tail仅属于本提交','S1')
+def c14_5(t: UAT):
+    run,_ = submission_artifacts(t)
+    path = t.submissions_root/t.submission_id/'driver.log'
+    if path.is_symlink() or not path.resolve().is_relative_to(t.submissions_root/t.submission_id):
+        raise Fail('log symlink/escape')
+    local = path.read_bytes()[-20000:] if path.exists() else b''
+    route = '/api/submissions/'+t.submission_id+'/log?tail=20000'
+    t.reqs.append(('GET',t.url+route))
+    status,body = t.raw_get(route)
+    if status!=200 or body!=local:
+        raise Fail('HTTP log tail differs from this submission driver.log')
+    return f'{len(body)} exact tail bytes'
+
+
+@check('14-6','14 提交服务','只读请求与产物内容保持','S0')
+def c14_6(t: UAT):
+    if any(method!='GET' for method,_ in t.reqs):
+        raise Fail('non-GET request observed')
+    run,_ = submission_artifacts(t)
+    before = t.obs.get('submission_before')
+    if not before or before!=_submission_hashes(t,run):
+        raise Fail('selected receipt/measurement changed during UAT or baseline missing')
+    return f'{t.submission_id}: GET only, receipt/curve/meta/verdict hashes unchanged'
+
+
 # ─────────────────────────────────────────────────────── 跑
 def run(t: UAT, holder: dict | None = None, out: str | None = None,
         write: bool = True) -> int:
@@ -1848,6 +2082,9 @@ def run(t: UAT, holder: dict | None = None, out: str | None = None,
     passed = [v for v in auto if v["res"] == "过"]
     blocked = len(t.results) + len(BLOCKED) - len(auto)
     hard = [v for v in auto if v["res"] == "不过" and v["check"].sev in ("S0", "S1")]
+    if t.submission_required and any(t.results.get(f'14-{i}',{}).get('res')!='过' for i in range(1,7)):
+        hard.append({'check':Check('14-required','14 提交服务','required checks incomplete','S0'),
+                     'ev':'required submission checks are not all PASS'})
     if write or aborted:
         record = write_record(t, auto, passed, blocked, out=out,
                               partial=dt.datetime.now(dt.timezone.utc).strftime("%H%M%S")
@@ -1870,6 +2107,13 @@ def run(t: UAT, holder: dict | None = None, out: str | None = None,
 def write_record(t: UAT, auto, passed, blocked: int, partial: str = "",
                  out: str | None = None) -> str:
     now = dt.datetime.now(dt.timezone.utc)
+    submission_rows = {sid:{'result':value['res'],'evidence':value['ev']} for sid,value in t.results.items()
+                       if sid.startswith('14-')}
+    source = {'observer_sha256':hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest(),
+              'backend_sha256':hashlib.sha256((CONSOLE/'submissions.py').read_bytes()).hexdigest() if t.local_server else None}
+    (t.evidence/'submission-checks.json').write_text(json.dumps({'submission_id':t.submission_id,
+        'required':t.submission_required,'trusted_runs_root':str(t.submission_runs_root),
+        'source':source,'checks':submission_rows,'requests':t.reqs},ensure_ascii=False,indent=2))
     day = now.strftime("%Y-%m-%d")
     if out:
         target = pathlib.Path(out)
@@ -1898,6 +2142,8 @@ def write_record(t: UAT, auto, passed, blocked: int, partial: str = "",
         "| 屏幕分辨率 | 1440 × 900 |",
         f"| 被测地址 | `{t.url}`（{'由本脚本起在 --port 上，跑完即关' if t.local_server else '--url 指向已有实例，未启停'}） |",
         f"| runs 根目录 | `{t.runs_root}`（{len(t.samples.get('all', {}).get('rows', []))} 个 run 可见） |",
+        f"| 提交核对 | `{t.submission_id or '未选定'}`；必测={t.submission_required}；可信根 `{t.submission_runs_root}` |",
+        f"| 提交源码指纹 | `{source}`（--url的远端backend为unknown） |",
         f"| 时间（UTC） | {now.strftime('%Y-%m-%d %H:%M:%S')} |",
         f"| 在跑的 driver | {len((t.health or {}).get('running') or [])} 个（读取 `/proc`，未启停） |",
         *([f"| 重复运行 | {t.repeat_total} 轮（同一套判定项连跑，看逐项是否稳定） |"]
@@ -2043,10 +2289,40 @@ def port_holder(port: int) -> str:
     return "未知进程"
 
 
-def start_server(port: int) -> subprocess.Popen:
-    proc = subprocess.Popen([sys.executable, str(SERVER_PY), "--port", str(port)],
+def _serve_readonly(port: int) -> int:
+    """Use production GET handlers without starting any submission lifecycle."""
+    sys.path.insert(0,str(CONSOLE.parent))
+    from console.server import ConsoleServer, Handler
+
+    class ReadOnlyHandler(Handler):
+        def _readonly(self):
+            self.close_connection = True
+            self._send({'api_version':'1','error':{'code':'read-only-uat',
+                        'detail':'this UAT observer accepts GET only'}},405)
+        do_POST = do_DELETE = do_PUT = do_PATCH = _readonly
+
+    server = ConsoleServer(('127.0.0.1',port),ReadOnlyHandler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
+
+
+def start_server(port: int, *, runs_root: pathlib.Path, platform_root: pathlib.Path,
+                 submissions_root: pathlib.Path | None = None) -> subprocess.Popen:
+    env = dict(os.environ,HG_CONSOLE_RUNS=str(runs_root.resolve()),HG_CONSOLE_PLATFORM=str(platform_root.resolve()))
+    if submissions_root is None:
+        env.pop('HG_CONSOLE_SUBMISSIONS_ROOT',None)
+    else:
+        env['HG_CONSOLE_SUBMISSIONS_ROOT'] = str(submissions_root.resolve())
+    if env.get('HG_CONSOLE_SUBMISSIONS_WORK'):
+        env['HG_CONSOLE_SUBMISSIONS_WORK'] = str(pathlib.Path(env['HG_CONSOLE_SUBMISSIONS_WORK']).resolve())
+    proc = subprocess.Popen([sys.executable, str(HERE/'smoke.py'), '--_serve-readonly', "--port", str(port)],
                             cwd=str(CONSOLE), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            text=True, start_new_session=True)
+                            text=True, start_new_session=True,env=env)
     base = f"http://127.0.0.1:{port}"
     for _ in range(150):
         if proc.poll() is not None:
@@ -2057,7 +2333,7 @@ def start_server(port: int) -> subprocess.Popen:
             return proc
         except Exception:  # noqa: BLE001
             time.sleep(0.1)
-    proc.terminate()
+    stop_server(proc)
     raise SystemExit("console 15 s 内没有起来")
 
 
@@ -2103,13 +2379,18 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="hg-console UAT 冒烟（只读实测）")
     ap.add_argument("--port", type=int, default=4470, help="自己起 console 的端口（默认 4470）")
     ap.add_argument("--url", default=None, help="测一个已经在跑的 console，例如 http://127.0.0.1:4450")
-    ap.add_argument("--runs-root", default=str(DEFAULT_RUNS), help="真实 runs 目录（对照 patch/文件用）")
+    ap.add_argument("--runs-root", default=os.environ.get('HG_CONSOLE_RUNS',str(DEFAULT_RUNS)), help="真实 runs 目录（对照 patch/文件用）")
+    ap.add_argument('--submission-id',default=None,help='核对指定提交，不自动换成别的成功记录')
+    ap.add_argument('--submissions-root',default=os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT'),help='本地永久receipt根目录')
+    ap.add_argument('--_serve-readonly',action='store_true',help=argparse.SUPPRESS)
     ap.add_argument("--timeout", type=int, default=20000, help="单次等待毫秒（默认 20000）")
     ap.add_argument("--headed", action="store_true", help="显示浏览器（调试用）")
-    ap.add_argument("--out", default=None, help="记录写到哪（默认 uat/uat-<UTC 日期>.md）")
+    ap.add_argument("--out", default=os.environ.get('HG_CONSOLE_UAT_OUT'), help="记录路径（也可用 HG_CONSOLE_UAT_OUT）")
     ap.add_argument("--repeat", type=int, default=1,
                     help="整套判定项连跑 N 轮，末尾打印逐项稳定性（默认 1）")
     args = ap.parse_args(argv)
+    if args._serve_readonly:
+        return _serve_readonly(args.port)
 
     if args.repeat < 1:
         ap.error("--repeat 至少为 1")
@@ -2123,14 +2404,18 @@ def main(argv=None) -> int:
             print(f"端口 {args.port} 已被占用（{port_holder(args.port)}）；换一个 --port，"
                   f"或用 --url 指向已有的 console。", file=sys.stderr)
             return 2
-        if not DEFAULT_RUNS.is_dir() and not pathlib.Path(args.runs_root).is_dir():
+        if not pathlib.Path(args.runs_root).is_dir():
             print(f"runs 根目录不存在：{args.runs_root}", file=sys.stderr)
             return 2
-        proc = start_server(args.port)
 
     day = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%H%M%S")
-    evidence = HERE / "evidence" / day / stamp
+    if args.out:
+        target = pathlib.Path(args.out).resolve()
+        target.parent.mkdir(parents=True,exist_ok=True)
+        evidence = target.parent/(target.stem+'-evidence')
+    else:
+        evidence = HERE / "evidence" / day / stamp
     evidence.mkdir(parents=True, exist_ok=True)
 
     # Ctrl-C / SIGTERM：先把**自己起的**服务器关掉，再让人退出。
@@ -2152,16 +2437,24 @@ def main(argv=None) -> int:
         except (ValueError, OSError):
             pass
 
-    from playwright.sync_api import sync_playwright
-
     t = UAT(urls, pathlib.Path(args.runs_root), args.timeout, evidence,
-            headed=args.headed, local_server=not args.url)
+            headed=args.headed, local_server=not args.url,submission_id=args.submission_id,
+            submissions_root=pathlib.Path(args.submissions_root) if args.submissions_root else None)
     t.repeat_total = args.repeat
     codes: list[int] = []
     try:
+        from playwright.sync_api import sync_playwright
         with sync_playwright() as pw:
             t.pw = pw
-            t.browser = pw.chromium.launch(headless=not args.headed)
+            try:
+                t.browser = pw.chromium.launch(headless=not args.headed)
+            except Exception as exc:
+                print(f'浏览器不可用：{exc}',file=sys.stderr)
+                return 2
+            if not args.url:
+                holder['proc'] = start_server(args.port,runs_root=t.runs_root,
+                    platform_root=pathlib.Path(os.environ.get('HG_CONSOLE_PLATFORM',str(CONSOLE.parent))),
+                    submissions_root=t.submissions_root)
             try:
                 t.prepare()
             except Fail as exc:
@@ -2186,6 +2479,9 @@ def main(argv=None) -> int:
                     break
             if args.repeat > 1 and codes:
                 print_stability(t)
+    except (ImportError,RuntimeError) as exc:
+        print(f'UAT环境失败：{exc}',file=sys.stderr)
+        return 2
     finally:
         for ctx in t.contexts:
             try:

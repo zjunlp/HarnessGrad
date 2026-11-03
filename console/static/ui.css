@@ -1,0 +1,358 @@
+/* HarnessGrad 控制台的设计系统（纯静态，不需要构建）。
+ *
+ * 为什么不是 Tailwind：控制台是一个 `python3 server.py` 直接发的静态目录，加一条构建链
+ * 会让"改一行样式"变成"装依赖 + 跑构建 + 记得产物"。所以这里把 Tailwind/shadcn 的**纪律**
+ * 搬过来，而不是把它的工具链搬过来：
+ *
+ *   · 一套色阶（neutral 0-900 + 一个 accent），页面里不许出现字面色值；
+ *   · 一套间距（4 的倍数）与字号阶（11/12/13/15/20），不许写 `font-size: 12.5px`；
+ *   · 组件只有这些（btn / card / table / badge / tabs / field / empty / dialog / drawer /
+ *     kv / skeleton），新页面只写布局，不写新皮肤。
+ *
+ * 加载顺序：tokens.css → app.css → ui.css → 页面内样式。ui.css 只定义**新的**类名，
+ * 不覆盖 app.css 里已有的表格与曲线，所以趋势图和轨迹渲染不受影响。
+ */
+
+:root {
+  /* ── 色阶：neutral 只有九级，够用，也不需要每次挑颜色 ─────────────── */
+  --n-0: #ffffff;
+  --n-25: #fcfcfd;
+  --n-50: #f7f8f9;
+  --n-100: #f0f1f3;
+  --n-200: #e4e6ea;
+  --n-300: #d3d6dc;
+  --n-400: #a8adb7;
+  --n-500: #7c828e;
+  --n-600: #5b616e;
+  --n-700: #3f444e;
+  --n-800: #262a32;
+  --n-900: #14161b;
+
+  --accent: #3358d4;
+  --accent-ink: #2445b5;
+  --accent-soft: #eef1fd;
+  --accent-line: #c8d3f6;
+
+  --ok: #0f7b52;
+  --ok-soft: #eefaf4;
+  --ok-line: #bfe3d3;
+  --warn: #9a5b06;
+  --warn-soft: #fdf7ec;
+  --warn-line: #eed9b4;
+  --bad: #b42318;
+  --bad-soft: #fdf3f2;
+  --bad-line: #f2c7c2;
+
+  /* ── 间距：4 的倍数。半个像素的微调是本文件存在的理由之一 ─────────── */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* ── 字号阶：只有五级 ───────────────────────────────────────────── */
+  --t-1: 11px;
+  --t-2: 12px;
+  --t-3: 13px;
+  --t-4: 15px;
+  --t-5: 20px;
+
+  --r-1: 6px;
+  --r-2: 8px;
+  --r-3: 10px;
+  --r-4: 14px;
+
+  --line: 1px solid var(--n-200);
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, .05);
+  --shadow-2: 0 8px 24px rgba(16, 24, 40, .10), 0 2px 6px rgba(16, 24, 40, .06);
+
+  --font: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* 系统类：任何页面都可以直接用，不要另起一套名字 */
+.hg-mono { font-family: var(--mono); }
+.hg-muted { color: var(--n-500); }
+.hg-num { font-variant-numeric: tabular-nums; }
+.hg-row { display: flex; align-items: center; gap: var(--s-2); }
+.hg-stack { display: flex; flex-direction: column; gap: var(--s-3); }
+.hg-grow { flex: 1; }
+
+/* ── 按钮 ─────────────────────────────────────────────────────────── */
+.btn {
+  appearance: none; font: inherit; font-size: var(--t-2); font-weight: 560;
+  line-height: 1; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: 8px 12px; border-radius: var(--r-1);
+  border: var(--line); background: var(--n-0); color: var(--n-800);
+  box-shadow: var(--shadow-1);
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
+}
+.btn:hover { background: var(--n-50); border-color: var(--n-300); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.btn--primary {
+  background: var(--n-900); border-color: var(--n-900); color: var(--n-0);
+}
+.btn--primary:hover { background: var(--n-800); border-color: var(--n-800); }
+.btn--accent { background: var(--accent); border-color: var(--accent); color: var(--n-0); }
+.btn--accent:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn--ghost { border-color: transparent; background: transparent; box-shadow: none; }
+.btn--ghost:hover { background: var(--n-100); }
+.btn--sm { padding: 5px 9px; font-size: var(--t-1); }
+
+/* ── 卡片 ─────────────────────────────────────────────────────────── */
+.card {
+  background: var(--n-0); border: var(--line); border-radius: var(--r-3);
+}
+.card__head {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-3) var(--s-4); border-bottom: var(--line);
+}
+.card__title { font-size: var(--t-3); font-weight: 640; }
+.card__sub { font-size: var(--t-2); color: var(--n-500); }
+.card__body { padding: var(--s-4); }
+.card__foot { padding: var(--s-3) var(--s-4); border-top: var(--line); background: var(--n-25); }
+
+/* ── 表格 ─────────────────────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--t-2); }
+.tbl th {
+  text-align: left; font-weight: 600; font-size: var(--t-1); letter-spacing: .04em;
+  text-transform: uppercase; color: var(--n-500);
+  padding: var(--s-2) var(--s-3); border-bottom: var(--line);
+}
+.tbl td { padding: var(--s-3); border-bottom: var(--line); vertical-align: top; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover { background: var(--n-25); }
+.tbl code { font-family: var(--mono); font-size: var(--t-1); color: var(--n-600); }
+
+/* 实验列表（#/runs）：784 行、9 列，一屏要能扫完。
+   `table-layout: fixed` 是这里的关键 —— 自动布局下，某一行的长 harness 名会把整张表
+   撑宽 90px，最右的"更新"列被切到可视区外；固定布局把列宽钉死，长文案用省略号，
+   换一页、换一个筛选条件列宽也不跳。 */
+.nowrap { white-space: nowrap; }
+.tbl.runs { table-layout: fixed; }
+.tbl.runs th {
+  padding: var(--s-2) var(--s-2);
+  /* 列宽钉死后，表头也不能把邻居顶开：超了就省略，完整名字在 title 里。 */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tbl.runs td { padding: 7px var(--s-2); }
+.tbl.runs th:nth-child(1) { width: 22%; }
+.tbl.runs th:nth-child(2) { width: 11.5%; }
+.tbl.runs th:nth-child(3) { width: 14.5%; }
+.tbl.runs th:nth-child(4) { width: 11%; }
+.tbl.runs th:nth-child(5) { width: 4.5%; }
+.tbl.runs th:nth-child(6) { width: 7%; }
+.tbl.runs th:nth-child(7) { width: 6%; }
+.tbl.runs th:nth-child(8) { width: 13%; }
+.tbl.runs th:nth-child(9) { width: 10.5%; }
+.tbl.runs td.num, .tbl.runs th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* 前四列是长文案，一律单行省略；完整值在整行的 title 与右侧栏里。 */
+.tbl.runs td:nth-child(-n+4) {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tbl.runs tbody td:nth-child(6), .tbl.runs tbody td:nth-child(8) { white-space: nowrap; }
+/* 单元格自己不折行也不许把表撑宽：固定布局下列宽是钉死的，超出的部分裁掉（有 title）。 */
+.tbl.runs tbody td:nth-child(n+5) { overflow: hidden; }
+.tbl.runs tbody tr[data-clickable="true"] { cursor: pointer; }
+/* 选中行走强调色左边线 —— 用 `box-shadow: inset` 而不是 `border-left`，否则列会错位一像素。 */
+.tbl.runs tbody tr[data-active="true"] {
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.tbl.runs tbody tr[data-active="true"]:hover { background: var(--accent-soft); }
+.run-status { display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+.run-status .row-id { font-size: var(--t-1); }
+/* 只看一行的筛选条：搜索框按控件尺寸，不靠行内样式 */
+.input.runs-q { width: 200px; }
+
+/* ── 徽标 / 状态 ──────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  font-size: var(--t-1); font-weight: 600; line-height: 1;
+  padding: 3px 7px; border-radius: 999px;
+  border: 1px solid var(--n-200); background: var(--n-50); color: var(--n-600);
+}
+.badge--ok { border-color: var(--ok-line); background: var(--ok-soft); color: var(--ok); }
+.badge--warn { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn); }
+.badge--bad { border-color: var(--bad-line); background: var(--bad-soft); color: var(--bad); }
+.badge--accent { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: inline-block; }
+.dot.live { animation: hg-live 1.6s ease-in-out infinite; }
+@keyframes hg-live { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .dot.live { animation: none; } }
+
+/* `.pill` / `data-tone` 是迁移前的名字，submit 与 author 两屏还在用。
+   只把配色接到语义 token 上，深色主题就跟着走；等这两屏也换到 `.badge` 时整段删除。 */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid transparent;
+  font-size: var(--t-1); font-weight: 600; line-height: 1;
+}
+.pill[data-tone="done"] { border-color: var(--ok-line); background: var(--ok-soft); color: var(--ok); }
+.pill[data-tone="run"] { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+.pill[data-tone="warn"] { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn); }
+.pill[data-tone="bad"] { border-color: var(--bad-line); background: var(--bad-soft); color: var(--bad); }
+
+/* ── 表单 ─────────────────────────────────────────────────────────── */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field__label { font-size: var(--t-2); font-weight: 560; color: var(--n-700); }
+.field__hint { font-size: var(--t-1); color: var(--n-500); }
+.input, .select, .textarea {
+  font: inherit; font-size: var(--t-2); color: var(--n-900);
+  padding: 8px 10px; border-radius: var(--r-1);
+  border: 1px solid var(--n-300); background: var(--n-0);
+  width: 100%;
+}
+.textarea { line-height: 1.55; resize: vertical; }
+.input:focus, .select:focus, .textarea:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── 标签页 / 分段 ────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 2px; border-bottom: var(--line); padding: 0 var(--s-4); }
+.tab {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: var(--t-3); font-weight: 560; color: var(--n-500);
+  padding: 10px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--n-900); border-bottom-color: var(--n-900); }
+.seg {
+  display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-2);
+  background: var(--n-100);
+}
+.seg button {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: var(--t-2); font-weight: 560; color: var(--n-600);
+  padding: 5px 10px; border-radius: var(--r-1);
+}
+.seg button[aria-pressed="true"] { background: var(--n-0); color: var(--n-900); box-shadow: var(--shadow-1); }
+
+/* ── 空状态 / 骨架 ────────────────────────────────────────────────── */
+.empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-2); padding: var(--s-10) var(--s-6); text-align: center;
+  color: var(--n-500); font-size: var(--t-2);
+}
+.empty__title { font-size: var(--t-3); font-weight: 600; color: var(--n-700); }
+.skeleton {
+  border-radius: var(--r-1); background: linear-gradient(90deg, var(--n-100), var(--n-200), var(--n-100));
+  background-size: 200% 100%; animation: hg-shimmer 1.4s ease-in-out infinite;
+  height: 12px;
+}
+@keyframes hg-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── 键值对 ───────────────────────────────────────────────────────── */
+.kv { display: grid; grid-template-columns: minmax(72px, 34%) 1fr; gap: 6px var(--s-3); font-size: var(--t-2); }
+.kv dt { color: var(--n-500); }
+.kv dd { margin: 0; color: var(--n-800); overflow-wrap: anywhere; }
+
+/* ── 对话框 / 抽屉 ────────────────────────────────────────────────── */
+.scrim {
+  position: fixed; inset: 0; background: rgba(20, 22, 27, .32);
+  display: grid; place-items: center; z-index: 60; padding: var(--s-6);
+}
+.dialog {
+  width: min(680px, 100%); max-height: 82vh; overflow: auto;
+  background: var(--n-0); border-radius: var(--r-4); box-shadow: var(--shadow-2);
+}
+.dialog__head {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-4); border-bottom: var(--line);
+  position: sticky; top: 0; background: var(--n-0);
+}
+.dialog__body { padding: var(--s-4); font-size: var(--t-2); line-height: 1.6; }
+.dialog__foot { padding: var(--s-3) var(--s-4); border-top: var(--line); display: flex; justify-content: flex-end; gap: var(--s-2); }
+
+/* ── 解释面板：claim / evidence / risk / next ─────────────────────── */
+.explain__claim { font-size: var(--t-3); line-height: 1.6; color: var(--n-900); }
+.explain__block { margin-top: var(--s-3); }
+.explain__label {
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--n-500); margin-bottom: 4px;
+}
+.explain__list { margin: 0; padding-left: 18px; color: var(--n-700); font-size: var(--t-2); line-height: 1.6; }
+.explain__meta { margin-top: var(--s-3); font-size: var(--t-1); color: var(--n-400); font-family: var(--mono); }
+
+/* 深色：只换色阶。组件、页面、表格都不需要知道有这回事。 */
+:root[data-theme="dark"] {
+  --n-0: #17191e;
+  --n-25: #1c1f25;
+  --n-50: #22262d;
+  --n-100: #2a2f38;
+  --n-200: #343a45;
+  --n-300: #434a57;
+  --n-400: #6b7382;
+  --n-500: #98a0ae;
+  --n-600: #b7bec9;
+  --n-700: #d3d8e0;
+  --n-800: #e8ebf0;
+  --n-900: #f7f8fa;
+  --accent: #8aa4ff;
+  --accent-ink: #a9bcff;
+  --accent-soft: #202844;
+  --accent-line: #35406a;
+  --ok: #6ee7b7;  --ok-soft: #12271f;  --ok-line: #1f4a39;
+  --warn: #f5c26b; --warn-soft: #2a2113; --warn-line: #4a3a1c;
+  --bad: #fca5a5;  --bad-soft: #2b1616;  --bad-line: #4d2425;
+  --line: 1px solid var(--n-200);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .35);
+}
+/* 外壳那套 `--sh-*` 变量是**独立的一份**，深色时必须一起换，否则 body 暗了 `.main`
+   还是 #fbfbfc（实测：深色下 .main 仍是 rgb(251,251,252)，整块发白）。 */
+:root[data-theme="dark"] {
+  --sh-bg: #111318;
+  --sh-card: #17191e;
+  --sh-line: #2a2f38;
+  --sh-line-2: #343a45;
+  --sh-ink: #e8ebf0;
+  --sh-ink-2: #b7bec9;
+  --sh-ink-3: #8b919d;
+}
+:root[data-theme="dark"] body { background: #111318; color: var(--n-800); }
+:root[data-theme="dark"] .side, :root[data-theme="dark"] .main .topbar,
+:root[data-theme="dark"] .sh-bar { background: var(--n-25); }
+:root[data-theme="dark"] .card, :root[data-theme="dark"] .dialog,
+:root[data-theme="dark"] .settings { background: var(--n-0); }
+:root[data-theme="dark"] .main .col, :root[data-theme="dark"] .main .pad { background: var(--n-25); }
+/* 字号：一个变量，正文与表格跟随 */
+body { font-size: var(--sh-font-size, 13px); }
+.main table, .tbl { font-size: calc(var(--sh-font-size, 13px) - 1px); }
+
+/* **`[hidden]` 必须真的隐藏。** 浏览器的默认规则是 `[hidden] { display: none }`，但它的
+ * 优先级低于任何带 class 的 `display` 声明 —— 于是 `.scrim { display: grid }` 把
+ * `hidden` 完全盖掉了：JS 里 `el.hidden = true` 生效（属性确实变成 true），画面却一点
+ * 没变。设置弹窗"关不掉"就是这个原因，而只检查 `el.hidden` 的测试看不出这一点。
+ */
+[hidden] { display: none !important; }
+
+/* 老样式（app.css）里的表单控件、表格行、代码块自带浅色底。深色下逐个换掉：
+   它们是迁移前的东西，迁移完成后这一段就可以删。 */
+:root[data-theme="dark"] table tbody tr,
+:root[data-theme="dark"] table thead,
+:root[data-theme="dark"] .tbl tbody tr { background: transparent; }
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] pre,
+:root[data-theme="dark"] .wlog,
+:root[data-theme="dark"] .wcmd {
+  background: var(--n-25);
+  color: var(--n-800);
+  border-color: var(--n-300);
+}
+:root[data-theme="dark"] .main { background: var(--sh-bg); }
+:root[data-theme="dark"] .filters,
+:root[data-theme="dark"] .lab-toolbar { background: var(--n-25); border-color: var(--n-200); }
+/* 两个漏网的：首页的搜索输入框与作者页的说明框用的是行内/更高优先级的浅色底。 */
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="file"]),
+:root[data-theme="dark"] textarea:not([style*="background"]) {
+  background: var(--n-25) !important;
+  color: var(--n-800) !important;
+}

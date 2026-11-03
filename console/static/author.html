@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HarnessGrad · 场景工坊</title>
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/ui.css">
+<link rel="stylesheet" href="/shell.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">HG</div>
+      <div><div class="brand-name">HarnessGrad</div><div class="brand-sub">构造环境</div></div>
+    </div>
+    <nav class="nav"><!-- shell.js 按模式注入 --></nav>
+    <div class="side-foot">
+      <div class="status-line">本机工作区</div>
+      <div class="status-line" id="author-root">…</div>
+      <a class="side-link" href="https://zjunlp.github.io/HarnessGrad-Hub/" target="_blank" rel="noreferrer">公开站 ↗</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1 id="page-title">场景</h1>
+      <span class="sub" id="page-sub"></span>
+      <span class="spacer"></span>
+      <button class="wbtn" type="button" id="refresh">刷新</button>
+    </div>
+
+    <div class="workshop">
+      <!-- ① 场景 -->
+      <section data-panel="scenarios">
+        <h2>已经构造好的环境</h2>
+        <p class="lead">每个目录就是一场景：<code>bundle.json</code> 加上材料与参考解。下面这些是
+          磁盘上真实存在的——重启服务不需要再导入。</p>
+        <div class="wcard">
+          <table class="wtable" id="bundles">
+            <thead><tr><th>场景</th><th>题数</th><th>环境</th><th>结构</th><th>三道门</th><th>可用</th></tr></thead>
+            <tbody><tr><td colspan="6" class="hint">读取中…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ② 起草 -->
+      <section data-panel="draft" hidden>
+        <h2>用一段说明起草一个场景</h2>
+        <p class="lead">写清楚：学生要做什么、手里有什么材料、怎么算做对了。模型起草后，
+          平台会自己跑三道门（参考解必须 1.0、空手必须 0、两次一致），不过就把原因回传重写。</p>
+        <div class="wcard">
+          <h3><span class="step">1</span>任务说明</h3>
+          <p class="hint">不需要写代码。举例：「我给了一个 broken.py 和 test_broken.py，让学生改到测试通过，不许改测试。」</p>
+          <textarea id="note" rows="7" style="width:100%;font:inherit;font-size:12.5px;padding:10px;border:1px solid var(--sh-line-2);border-radius:8px;background:var(--n-0);color:var(--n-900)"
+                    placeholder="任务：……&#10;材料：……&#10;判定：……"></textarea>
+          <div class="wrow">
+            <input id="materials" placeholder="材料目录（可选，绝对路径）" style="flex:1;min-width:240px;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--sh-line-2);border-radius:7px">
+            <button class="primary" id="draft-go" type="button">起草并跑门</button>
+          </div>
+          <div class="wlog" id="draft-log" hidden></div>
+        </div>
+        <div class="wcard">
+          <h3><span class="step">2</span>也行：在终端里用同一套规则</h3>
+          <p class="hint">页面的按钮只是把这条命令跑一遍；不想点按钮时照抄即可。</p>
+          <div class="wcmd">python3 tools/scenario_builder.py --draft note.md --materials ./mat --out data/authored/my-scenario
+python3 tools/scenario_builder.py --gates data/authored/my-scenario</div>
+        </div>
+      </section>
+
+      <!-- ③ 导入 -->
+      <section data-panel="import" hidden>
+        <h2>导入一个已经做好的场景</h2>
+        <p class="lead">接受 <code>tar.gz</code> / <code>tar</code> / <code>zip</code>：归档根（或唯一顶层目录）
+          里要有 <code>bundle.json</code>。导入会先解到临时目录、校验、跑门，通过之后才落到
+          <code>data/authored/&lt;slug&gt;/</code> —— 之后它一直在。</p>
+        <div class="wcard">
+          <div class="wdrop" id="drop">把归档拖到这里，或点一下选择文件</div>
+          <div class="wrow">
+            <input type="file" id="file" accept=".tar.gz,.tgz,.tar,.zip" hidden>
+            <input id="slug" placeholder="slug（可选，默认用 bundle.json 里的）" style="flex:1;min-width:240px;font:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--sh-line-2);border-radius:7px">
+            <button class="primary" id="upload" type="button" disabled>导入并跑门</button>
+          </div>
+          <div class="wlog" id="import-log" hidden></div>
+        </div>
+        <div class="wcard">
+          <h3><span class="step">→</span>导入之后</h3>
+          <p class="hint">它会出现在「场景」里，并且在模式「优化 Harness」的实验表单里可选——
+            把它变成可运行的评分场景还需要平台侧的通用适配器（下一步）。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="/shell.js" defer></script>
+<script src="/author.js" defer></script>
+</body>
+</html>

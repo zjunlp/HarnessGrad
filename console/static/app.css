@@ -269,7 +269,9 @@ table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: 
 
 /* ───────────────────────────────────────────────────────── 视图布局 */
 .cols { display: grid; min-height: 0; flex: 1; }
-.cols[data-cols="2"] { grid-template-columns: minmax(0,1fr) 340px; }
+/* 右栏宽度跟着视口走：窄屏上 320px 的固定右栏会把九列的实验表挤到横向溢出，
+   宽屏上又浪费。260–320px 之间，22vw 起步。 */
+.cols[data-cols="2"] { grid-template-columns: minmax(0,1fr) clamp(260px, 22vw, 320px); }
 .cols[data-cols="3"] { grid-template-columns: 232px minmax(0,1fr) 360px; }
 .col { min-width: 0; min-height: 0; overflow: auto; }
 .col + .col { border-left: 1px solid var(--hg-alias-border-l2); }
@@ -387,8 +389,10 @@ table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: 
 body { --side-w: 248px; }
 body[data-sidebar="collapsed"] { --side-w: 56px; }
 .sidebar-toggle {
-  position: fixed; top: 50%; left: calc(var(--side-w) - 13px); transform: translateY(-50%);
-  z-index: 30; display: grid; place-items: center; width: 26px; height: 34px;
+  /* 把手整个落在侧栏内。之前在侧栏边缘外挂一半（`- 13px`），于是它盖住了正文第一列的
+     头几个字 —— 1280 宽时正好压在实验表第一行的 run 名上。 */
+  position: fixed; top: 50%; left: calc(var(--side-w) - 22px); transform: translateY(-50%);
+  z-index: 30; display: grid; place-items: center; width: 22px; height: 30px;
   border-radius: 8px; border: 1px solid var(--hg-alias-border-l2);
   background: var(--hg-alias-bg-layer-1); color: var(--hg-alias-label-secondary);
   font-size: 13px; cursor: pointer; transition: left .16s ease;

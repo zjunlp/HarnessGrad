@@ -1,0 +1,607 @@
+/* 控制台外壳：两个模式、每个模式一套左侧导航。
+ *
+ * 为什么是一个新文件而不是改 app.css：app.css 里的表格、趋势图墙、文件树都还要用，
+ * 这些是"数据密度"的资产，不该被一次换肤带走。这里只覆盖**外壳**——字体、留白、分隔线、
+ * 模式条、导航——并且刻意保持单调：一种强调色、发丝边框、无阴影，好让数字和曲线是页面上
+ * 唯一有颜色的东西。
+ *
+ * 参考的两处：penguin-harness 的 monorepo 站点把"产品/文档/演示"分区，每个区有自己的导航；
+ * 以及 shadcn/Linear 一类的仪表盘用"顶部模式 + 左侧分区"而不是把十几个入口平铺。
+ */
+
+:root {
+  --sh-font: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+             "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --sh-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --sh-ink: #16181d;
+  --sh-ink-2: #5b616e;
+  --sh-ink-3: #8b919d;
+  --sh-line: #e6e8ec;
+  --sh-line-2: #d6d9df;
+  --sh-bg: #fbfbfc;
+  --sh-card: #ffffff;
+  --sh-accent: #2f5bd3;      /* 一种强调色，只用于"当前"和主按钮 */
+  --sh-accent-soft: #eef2fd;
+  --sh-warn: #b45309;
+  --sh-bad: #b42318;
+  --sh-ok: #0f7b52;
+  --sh-radius: 10px;
+  --sh-bar: 46px;
+}
+
+body {
+  font-family: var(--sh-font);
+  background: var(--sh-bg);
+  color: var(--sh-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 顶部模式条 ───────────────────────────────────────────────────────── */
+.sh-bar {
+  position: sticky; top: 0; z-index: 40;
+  height: var(--sh-bar);
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 16px 0 14px;
+  background: var(--sh-card);
+  border-bottom: 1px solid var(--sh-line);
+}
+.sh-bar .sh-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 650; font-size: 13.5px; letter-spacing: .01em;
+}
+.sh-bar .sh-logo b {
+  width: 22px; height: 22px; border-radius: 6px; background: var(--sh-ink);
+  color: #fff; font-size: 10.5px; font-weight: 700;
+  display: grid; place-items: center; letter-spacing: 0;
+}
+.sh-modes {
+  display: flex; gap: 2px; padding: 3px;
+  background: #f1f2f5; border-radius: 8px;
+}
+.sh-mode {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: 12.5px; font-weight: 550; color: var(--sh-ink-2);
+  padding: 5px 12px; border-radius: 6px; white-space: nowrap;
+}
+.sh-mode[aria-pressed="true"] {
+  background: var(--sh-card); color: var(--sh-ink);
+  box-shadow: 0 0 0 1px var(--sh-line-2), 0 1px 1px rgba(16, 24, 40, .04);
+}
+.sh-bar .sh-spacer { flex: 1; }
+.sh-bar .sh-env {
+  font-size: 11.5px; color: var(--sh-ink-3); font-family: var(--sh-mono);
+  display: flex; align-items: center; gap: 6px;
+}
+.sh-bar .sh-env i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--sh-ok); display: inline-block;
+}
+.sh-bar .sh-env[data-state="bad"] i { background: var(--sh-bad); }
+
+/* ── 左侧分区导航 ─────────────────────────────────────────────────────── */
+.app { padding-top: 0; }
+.side {
+  background: var(--sh-card);
+  border-right: 1px solid var(--sh-line);
+  gap: 2px;
+}
+/* 顶部模式条已经有产品名了，侧栏再写一遍就是两次自我介绍。这里只留模式名。 */
+.side .brand { display: none; }
+.side .brand-mark { border-radius: 6px; background: var(--sh-ink); }
+.side .brand-name { font-size: 13px; font-weight: 650; }
+.side .brand-sub { font-size: 11px; color: var(--sh-ink-3); }
+
+.side .nav { padding: 8px 8px 4px; display: flex; flex-direction: column; gap: 1px; }
+.sh-section {
+  padding: 14px 14px 6px; font-size: 10.5px; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--sh-ink-3);
+}
+.side .nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 7px;
+  font-size: 13px; color: var(--sh-ink-2); text-decoration: none;
+  border: 0; line-height: 1.3;
+}
+.side .nav-item:hover { background: #f4f5f7; color: var(--sh-ink); }
+.side .nav-item[aria-current="page"] {
+  background: var(--sh-accent-soft); color: var(--sh-accent); font-weight: 600;
+}
+.side .nav-item .sh-tag {
+  margin-left: auto; font-size: 10px; font-weight: 600; color: var(--sh-ink-3);
+  border: 1px solid var(--sh-line-2); border-radius: 999px; padding: 1px 6px;
+}
+.side-foot { border-top: 1px solid var(--sh-line); padding: 10px 14px 14px; }
+.side-foot .status-line, .side-foot .side-link { font-size: 11.5px; }
+
+/* 折叠态：只留一个字，和原来的 sidebar.js 兼容 */
+body[data-sidebar="collapsed"] .side .nav-item { justify-content: center; padding: 8px 0; }
+body[data-sidebar="collapsed"] .side .brand { padding: 14px 8px 10px; }
+
+/* ── 主内容：卡片化，去掉满屏的灰底块 ──────────────────────────────── */
+.main { background: var(--sh-bg); }
+.main .topbar {
+  border-bottom: 1px solid var(--sh-line); background: var(--sh-card);
+  padding: 14px 20px; gap: 12px;
+}
+.main .topbar h1 { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+.main .topbar .sub { font-size: 12px; color: var(--sh-ink-3); }
+.main .filters {
+  background: var(--sh-card); border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius); padding: 10px 12px; margin: 14px 18px;
+}
+.main .filters button.chip {
+  border-radius: 999px; font-size: 12px; border-color: var(--sh-line-2);
+}
+.main .chip[aria-pressed="true"] { background: var(--sh-accent-soft); border-color: #c9d5f7; color: var(--sh-accent); }
+.main table { font-variant-numeric: tabular-nums; }
+.main table thead th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--sh-ink-3); }
+.main .col, .main .pad { background: var(--sh-card); border: 1px solid var(--sh-line); border-radius: var(--sh-radius); }
+.main .err {
+  border-radius: var(--sh-radius);
+  border: 1px solid #f2c7c2; background: #fdf3f2; color: var(--sh-bad);
+}
+
+/* ── 构造环境：一屏三步的向导 ──────────────────────────────────────── */
+.workshop { padding: 18px 20px 40px; max-width: 1080px; }
+.workshop h2 { font-size: 15px; font-weight: 650; margin: 0 0 4px; }
+.workshop p.lead { font-size: 12.5px; color: var(--sh-ink-2); margin: 0 0 18px; max-width: 62ch; }
+.wcard {
+  background: var(--sh-card); border: 1px solid var(--sh-line);
+  border-radius: var(--sh-radius); padding: 16px 18px; margin-bottom: 14px;
+}
+.wcard h3 { font-size: 13px; font-weight: 640; margin: 0 0 3px; display: flex; align-items: center; gap: 8px; }
+.wcard .hint { font-size: 12px; color: var(--sh-ink-3); margin: 0 0 12px; }
+.wcard .step {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--sh-ink); color: #fff;
+  font-size: 10.5px; font-weight: 700; display: grid; place-items: center;
+}
+.wdrop {
+  border: 1px dashed var(--sh-line-2); border-radius: 8px; padding: 18px;
+  text-align: center; font-size: 12.5px; color: var(--sh-ink-2); background: #fcfcfd;
+}
+.wdrop[data-over="true"] { border-color: var(--sh-accent); background: var(--sh-accent-soft); }
+.wrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.wrow button, .wbtn {
+  appearance: none; font: inherit; font-size: 12.5px; font-weight: 560; cursor: pointer;
+  border: 1px solid var(--sh-line-2); background: var(--sh-card); color: var(--sh-ink);
+  padding: 7px 12px; border-radius: 7px;
+}
+.wrow button.primary, .wbtn.primary {
+  background: var(--sh-ink); border-color: var(--sh-ink); color: #fff;
+}
+.wrow button:disabled { opacity: .45; cursor: not-allowed; }
+.wtable { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12.5px; }
+.wtable th {
+  text-align: left; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--sh-ink-3); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--sh-line);
+}
+.wtable td { padding: 8px; border-bottom: 1px solid var(--sh-line); vertical-align: top; }
+.wtable tr:last-child td { border-bottom: 0; }
+.wtable code { font-family: var(--sh-mono); font-size: 11.5px; color: var(--sh-ink-2); }
+.pill { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--sh-line-2); color: var(--sh-ink-2); }
+.pill[data-tone="ok"] { border-color: #bfe3d3; background: #effaf5; color: var(--sh-ok); }
+.pill[data-tone="bad"] { border-color: #f2c7c2; background: #fdf3f2; color: var(--sh-bad); }
+.pill[data-tone="wait"] { border-color: #eed9b4; background: #fdf8ee; color: var(--sh-warn); }
+.wlog {
+  font-family: var(--sh-mono); font-size: 11.5px; line-height: 1.55;
+  background: #fafbfc; border: 1px solid var(--sh-line); border-radius: 8px;
+  padding: 10px 12px; white-space: pre-wrap; max-height: 220px; overflow: auto;
+  color: var(--sh-ink-2);
+}
+.wcmd {
+  font-family: var(--sh-mono); font-size: 11.5px; background: #f6f7f9;
+  border: 1px solid var(--sh-line); border-radius: 7px; padding: 8px 10px; color: var(--sh-ink-2);
+  white-space: pre-wrap;
+}
+
+/* ── 设置：左侧分节、右侧逐行（参考 deepseek-harness 的设置面板层次） ───────── */
+.settings {
+  width: min(860px, 100%); max-height: 84vh; display: flex; flex-direction: column;
+  background: var(--n-0); border-radius: var(--r-4); box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+.settings__head {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-4) var(--s-5); border-bottom: var(--line);
+  font-size: var(--t-4);
+}
+.settings__body { display: grid; grid-template-columns: 190px minmax(0, 1fr); min-height: 0; }
+.settings__nav {
+  display: flex; flex-direction: column; gap: 2px; padding: var(--s-3);
+  background: var(--n-25); border-right: var(--line);
+}
+.settings__nav button {
+  appearance: none; border: 0; background: transparent; cursor: pointer; text-align: left;
+  font: inherit; font-size: var(--t-3); color: var(--n-600);
+  padding: 9px 12px; border-radius: var(--r-1);
+}
+.settings__nav button:hover { background: var(--n-100); color: var(--n-900); }
+.settings__nav button[aria-current="page"] {
+  background: var(--n-0); color: var(--n-900); font-weight: 600;
+  box-shadow: 0 0 0 1px var(--n-200);
+}
+.settings__pane { overflow: auto; padding: var(--s-2) var(--s-5) var(--s-5); }
+.settings__row {
+  display: grid; grid-template-columns: minmax(140px, 240px) minmax(0, 1fr);
+  gap: var(--s-4) var(--s-5); align-items: start;
+  padding: var(--s-4) 0; border-bottom: var(--line);
+}
+.settings__row:last-of-type { border-bottom: 0; }
+.settings__label b { display: block; font-size: var(--t-3); font-weight: 620; }
+.settings__label span { display: block; margin-top: 3px; font-size: var(--t-2); color: var(--n-500); }
+.settings__control { display: flex; justify-content: flex-end; }
+.settings__control > .input, .settings__control > .seg { max-width: 320px; }
+.settings__stack { display: flex; flex-direction: column; gap: var(--s-2); width: min(360px, 100%); }
+.settings__foot { display: flex; justify-content: flex-end; padding-top: var(--s-4); }
+
+/* ── 侧栏宽度可拖 ──────────────────────────────────────────────────────────
+ *
+ * **宽度必须写在 grid 轨道上，不能只写 .side 的 width。** app.css 里 `.app` 是
+ * `grid-template-columns: 248px minmax(0,1fr)`，轨道不跟着变，于是内容变宽、主区不动，
+ * 侧栏就压到了工作区上（实测：拖到 380px 后重叠，正文仍是 248px 的槽位）。
+ * 所以这里改的是轨道本身：
+ */
+.app { position: relative; grid-template-columns: var(--sh-side, 248px) minmax(0, 1fr); }
+body[data-sidebar="collapsed"] .app { grid-template-columns: 72px minmax(0, 1fr); }
+.side { width: auto; min-width: 0; }
+.sh-resize {
+  position: absolute; top: 0; bottom: 0; width: 8px; z-index: 30;
+  cursor: col-resize; background: transparent; border: 0; padding: 0;
+  left: calc(var(--sh-side, 248px) - 4px);
+}
+.sh-resize:hover, .sh-resize[data-dragging="true"] { background: var(--accent-soft); }
+.sh-resize::after {
+  content: ""; position: absolute; top: 50%; left: 3px; width: 2px; height: 28px;
+  margin-top: -14px; border-radius: 2px; background: var(--n-300);
+}
+.sh-resize:hover::after, .sh-resize[data-dragging="true"]::after { background: var(--accent); }
+/* 收起以后分界线仍然要在：不然下一次想展开就找不到它了。 */
+body[data-sidebar="collapsed"] .sh-resize { left: calc(72px - 4px); }
+
+/* 收起态：整条标签居中、截断即可。app.css 原来的做法是 font-size:0 + ::before 首字，
+   而外壳会在 hashchange 时重画导航，两者叠在一起就变成了竖排的单字。 */
+body[data-sidebar="collapsed"] .side .nav-item {
+  font-size: var(--t-2); padding: 8px 4px; justify-content: center;
+  white-space: nowrap; overflow: hidden; gap: 0; text-align: center;
+}
+body[data-sidebar="collapsed"] .side .nav-item::before { content: none; }
+body[data-sidebar="collapsed"] .side .sh-section { display: none; }
+
+/* ── 右侧对话：有历史、能带上选中行。不是一次性输入框。 ─────────────────── */
+.hg-chat {
+  border-left: 1px solid var(--n-200); background: var(--n-0);
+  min-height: calc(100vh - 100px); position: sticky; top: 46px;
+  display: flex; flex-direction: column; max-height: calc(100vh - 46px);
+}
+.hg-chat__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-2); padding: var(--s-3) var(--s-4); border-bottom: var(--line);
+  font-size: var(--t-3); flex: 0 0 auto;
+}
+.hg-chat__thread {
+  flex: 1 1 auto; overflow: auto; padding: var(--s-3) var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+.hg-chat__empty { color: var(--n-500); font-size: var(--t-2); line-height: 1.7; }
+.hg-msg { display: flex; flex-direction: column; gap: 4px; }
+.hg-msg__who { font-size: var(--t-1); font-weight: 650; color: var(--n-500); letter-spacing: .04em; }
+.hg-msg__body {
+  font-size: var(--t-2); line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: 9px 11px; border-radius: var(--r-2); border: var(--line); background: var(--n-25);
+}
+.hg-msg--user .hg-msg__body { background: var(--accent-soft); border-color: var(--accent-line); }
+.hg-msg__sel { font-family: var(--mono); font-size: var(--t-1); color: var(--accent-ink); }
+.hg-msg details summary { cursor: pointer; font-size: var(--t-1); color: var(--n-500); }
+.hg-msg pre { margin: 6px 0 0; max-height: 240px; }
+.hg-chat__compose {
+  flex: 0 0 auto; border-top: var(--line); padding: var(--s-3) var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-2); background: var(--n-0);
+}
+
+/* ── Harness 版本列表：一个可扫的树，不是一条下划线的下拉 ─────────────────
+   版本名很长（hand-edit-demo-edit-20261102-131044），原生 select 展开后一条下划线
+   横贯整行，扫读时很难停在某一项上。这里用分行 + 元信息 + "最新/当前" 标记。 */
+.hg-src { display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow: auto; }
+.hg-src__group { font-size: var(--t-1); font-weight: 650; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--n-500); padding: 2px 2px 4px; }
+.hg-src__row {
+  display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
+  padding: 7px 9px; border-radius: var(--r-1); border: 1px solid transparent;
+  background: transparent; cursor: pointer;
+}
+.hg-src__row:hover { background: var(--n-50); border-color: var(--n-200); }
+.hg-src__row[aria-selected="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line);
+}
+.hg-src__name { font-family: var(--mono); font-size: var(--t-2); color: var(--n-800);
+  overflow-wrap: anywhere; }
+.hg-src__row[aria-selected="true"] .hg-src__name { color: var(--accent-ink); font-weight: 600; }
+.hg-src__meta { font-size: var(--t-1); color: var(--n-500); }
+.hg-src__flags { display: flex; gap: 4px; margin-top: 2px; }
+
+/* ── 折叠按钮必须钉在分界线上 ─────────────────────────────────────────────
+ * app.css 用的是 `left: calc(var(--side-w) - 13px)`，而 `--side-w` 从来没被我们的拖拽
+ * 改过，所以拖完侧栏、或收起之后，按钮就留在原来的位置，飘到正文里去（截图里它在
+ * 表格中间，还带着"收起侧栏"的提示）。这里改成跟 `--sh-side` 走。
+ */
+/* 把手整个落在侧栏内（宽 22px）：`-- 13px` 那样外挂一半会压住正文第一列。 */
+.sidebar-toggle {
+  left: calc(var(--sh-side, 248px) - 22px);
+}
+body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 22px); }
+
+/* 左下角状态行："平台" 两个字被挤成竖排。标签不换行，值换行。 */
+.side-foot .status-line { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.side-foot .status-line > *:first-child { white-space: nowrap; }
+
+/* ── 版本选择条：一行高度，可搜索。编辑页的重点是文件树与代码，不是版本列表。 ── */
+.hg-srcbar {
+  display: flex; gap: 6px; overflow-x: auto; padding: 8px 14px;
+  border-bottom: var(--line); background: var(--n-25);
+}
+.hg-srcbar__row {
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 1px; text-align: left;
+  padding: 5px 9px; border-radius: var(--r-1); border: 1px solid var(--n-200);
+  background: var(--n-0); cursor: pointer; max-width: 260px;
+}
+.hg-srcbar__row:hover { border-color: var(--n-300); }
+.hg-srcbar__row[aria-selected="true"] { border-color: var(--accent-line); background: var(--accent-soft); }
+.hg-srcbar__name { font-family: var(--mono); font-size: var(--t-1); color: var(--n-800);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.hg-srcbar__meta { font-size: 10.5px; color: var(--n-500); }
+.hg-srcbar__empty { font-size: var(--t-2); color: var(--n-500); padding: 2px; }
+
+/* ── git log 式的历史泳道 ────────────────────────────────────────────────
+ * 一条竖线 + 每轮一个节点，右侧是这一轮改了什么、+多少/-多少。
+ * 这一屏要回答的是"功能是哪几轮加的"，所以强调**顺序**而不是表格对齐。 */
+.hg-rail { position: relative; padding: 6px 0 6px 18px; max-height: 260px; overflow: auto; }
+.hg-rail::before {
+  content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px;
+  width: 2px; background: var(--n-200); border-radius: 2px;
+}
+.hg-rail__row {
+  position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 8px; align-items: baseline; width: 100%; text-align: left;
+  padding: 5px 8px; border-radius: var(--r-1); background: transparent; border: 0; cursor: pointer;
+}
+.hg-rail__row:hover { background: var(--n-50); }
+.hg-rail__node {
+  position: absolute; left: -14px; top: 10px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--n-0); border: 2px solid var(--n-400);
+}
+.hg-rail__row:hover .hg-rail__node { border-color: var(--accent); }
+.hg-rail__label { font-family: var(--mono); font-size: var(--t-2); color: var(--n-800); }
+.hg-rail__meta { font-size: var(--t-1); color: var(--n-500); overflow-wrap: anywhere; }
+.hg-rail__stat { font-family: var(--mono); font-size: var(--t-1); white-space: nowrap; }
+.hg-rail__stat .ok { color: var(--ok); font-weight: 600; margin-right: 6px; }
+.hg-rail__stat .bad { color: var(--bad); font-weight: 600; }
+
+/* 历史页签里的泳道：窄栏里也要读得清，所以节点离文字更近、统计靠右对齐。 */
+#history-panel .hg-rail { max-height: 420px; }
+#history-panel .hg-rail__row { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 4px 6px; }
+#history-panel .hg-rail__node { left: -12px; top: 8px; width: 7px; height: 7px; }
+#history-panel .hg-rail { padding-left: 14px; }
+#history-panel .hg-rail::before { left: 5px; }
+#patch-wrap pre { margin: 0; }
+
+/* ── 间距与边界的收口（编辑页） ──────────────────────────────────────────
+ * 上一版的问题是"文字贴着边界"：chip 的内边距只有 5/9，卡片体上边距 10，代码框没有
+ * 内边距，历史行 4/6 —— 都在 4px 的倍数上，但**都在下限量级**。这一块把编辑页的
+ * 间距统一抬到 8/12/16 三档，并把行高、边界、圆角对齐到设计系统的值。
+ */
+.hg-srcbar { gap: 8px; padding: 10px 16px; }
+.hg-srcbar__row { padding: 8px 12px; gap: 3px; border-radius: 8px; }
+.hg-srcbar__name { font-size: 11.5px; line-height: 1.35; }
+.hg-srcbar__meta { font-size: 10.5px; line-height: 1.3; }
+
+.card__head { padding: 12px 16px; gap: 12px; }
+.card__body { padding: 16px; }
+.card__title { letter-spacing: -0.005em; }
+
+#editor { padding: 12px 14px; line-height: 1.62; border-radius: 8px; }
+#instruction { padding: 10px 12px; line-height: 1.6; }
+#files { gap: 2px; }
+#files button { padding: 6px 10px; border-radius: 6px; }
+#left-tabs { padding: 4px; border-radius: 8px; }
+#left-tabs button { padding: 5px 12px; }
+
+#history-panel .hg-rail { padding-left: 18px; }
+#history-panel .hg-rail__row { padding: 7px 10px; gap: 10px; }
+#history-panel .hg-rail__label { font-size: 12px; }
+#patch-wrap { margin-top: 14px; padding-top: 12px; border-top: var(--line); }
+#patch-wrap pre { padding: 12px 14px; }
+
+.hg-chat__head { padding: 12px 16px; }
+.hg-chat__thread { padding: 12px 16px; gap: 14px; }
+.hg-chat__compose { padding: 12px 16px; gap: 10px; }
+.hg-msg__body { padding: 10px 13px; line-height: 1.65; }
+
+.field__label { line-height: 1.4; }
+.field__hint { line-height: 1.5; }
+.side .nav-item { padding: 8px 12px; }
+.side-foot { gap: 8px; }
+
+/* 顶部版本条：标题、计数、当前版本都不许折行 —— 上一版"版本"两个字竖着排、
+   计数断成两行、当前 id 折两行，全是因为它们在 flex 里被允许收缩。 */
+.card__head .card__title,
+.card__head .card__sub,
+#source-hint,
+#source-current { white-space: nowrap; flex: 0 0 auto; }
+#source-current { font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.card__head #source-search { flex: 1 1 180px; max-width: 320px; }
+
+/* ── 起点选择器：族 → run → 轮次 ──────────────────────────────────────────
+ * 收起时只占一行；展开也只展开你点的那一支。原生 select 装不下这个层次，也折叠不了。 */
+.hg-picker {
+  position: absolute; z-index: 35; top: 46px; left: 12px; width: min(560px, 70vw);
+  max-height: min(70vh, 560px); overflow: auto;
+  background: var(--n-0); border: var(--line); border-radius: var(--r-3);
+  box-shadow: var(--shadow-2); padding: 8px;
+}
+.lab-toolbar { position: relative; }
+.hg-picker__group {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  font-size: var(--t-1); font-weight: 650; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--n-500); cursor: pointer; border-radius: var(--r-1);
+}
+.hg-picker__group:hover { background: var(--n-50); }
+.hg-picker__count { font-weight: 600; color: var(--n-400); }
+.hg-picker__run {
+  display: flex; gap: 8px; align-items: baseline; width: 100%; text-align: left;
+  padding: 6px 8px 6px 20px; border: 0; background: transparent; cursor: pointer;
+  border-radius: var(--r-1); font-family: var(--mono); font-size: 11.5px; color: var(--n-800);
+}
+.hg-picker__run:hover { background: var(--n-50); }
+.hg-picker__run[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.hg-picker__meta { margin-left: auto; font-size: 10.5px; color: var(--n-500); }
+.hg-picker__rounds { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px 8px 20px; }
+.hg-picker__round {
+  border: 1px solid var(--n-200); background: var(--n-0); border-radius: 999px;
+  font-family: var(--mono); font-size: 11px; padding: 3px 9px; cursor: pointer;
+}
+.hg-picker__round:hover { border-color: var(--n-300); }
+.hg-picker__round[aria-selected="true"] { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-ink); }
+
+/* ── 评测页接到设计系统上 ────────────────────────────────────────────────
+ * 这一页有自己的 .submit-* 类名（写于设计系统之前）。与其重写标记，先把它的类映射到
+ * ui.css 的 token 与组件尺寸上：字号、圆角、边框、内边距、控件高度都对齐。
+ * 迁移完成后这段可以整块删掉。 */
+.submit-hero h1 { font-size: var(--t-5); font-weight: 660; letter-spacing: -.015em; margin: 0 0 4px; }
+.submit-hero p { font-size: var(--t-2); color: var(--n-500); margin: 0; max-width: 62ch; }
+.submit-wrap { padding: 18px 20px 40px; }
+.submit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.submit-card {
+  background: var(--n-0); border: var(--line); border-radius: var(--r-3); overflow: hidden;
+}
+.submit-card-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px; border-bottom: var(--line);
+}
+.submit-card-head h2 { font-size: var(--t-3); font-weight: 640; margin: 0; }
+.submit-card-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.submit-drop {
+  border: 1px dashed var(--n-300); border-radius: var(--r-2); background: var(--n-25);
+  padding: 22px 16px; text-align: center; font-size: var(--t-2); color: var(--n-600);
+  cursor: pointer;
+}
+.submit-drop:hover { border-color: var(--n-400); background: var(--n-50); }
+.submit-field { display: flex; flex-direction: column; gap: 6px; }
+.submit-field label { font-size: var(--t-2); font-weight: 560; color: var(--n-700); }
+.submit-field input, .submit-field select {
+  font: inherit; font-size: var(--t-2); padding: 8px 10px; border-radius: var(--r-1);
+  border: 1px solid var(--n-300); background: var(--n-0); color: var(--n-900);
+}
+.submit-field input:focus, .submit-field select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.submit-btn {
+  font: inherit; font-size: var(--t-2); font-weight: 560; cursor: pointer;
+  padding: 9px 14px; border-radius: var(--r-1);
+  border: 1px solid var(--n-900); background: var(--n-900); color: var(--n-0);
+}
+.submit-btn:disabled { opacity: .45; cursor: not-allowed; }
+.submit-muted { font-size: var(--t-1); color: var(--n-500); line-height: 1.6; }
+.submit-scenario-meta, .submit-actions, .submit-demo { font-size: var(--t-1); }
+.submit-error {
+  margin: 0 0 14px; padding: 10px 12px; border-radius: var(--r-2);
+  border: 1px solid var(--bad-line); background: var(--bad-soft); color: var(--bad);
+  font-size: var(--t-2);
+}
+.submit-error:not([data-visible="true"]) { display: none; }
+
+/* ── 轨迹屏：接到设计系统上 ──────────────────────────────────────────────
+ * 这一屏的标记由 trace-view.js 生成，样式写在 app.css 的 `.trace-root` 下。它在浅色下
+ * 可用，但深色下 `.bar` 与 `.task` 还是纯白（实测 rgb(255,255,255)）—— 因为那几条规则
+ * 用的是 `--hg-alias-*`，而深色只换了我这套 `--n-*`。
+ * 这里把它按 token 重画：字号跟 `--t-*`、圆角跟 `--r-*`、边界跟 `--line`，两套主题都成立。
+ */
+.trace-root { background: var(--n-25); }
+.trace-root .bar {
+  background: var(--n-0); border-bottom: var(--line); padding: 10px 16px; gap: 8px;
+}
+.trace-root .bar-title { font-size: var(--t-3); color: var(--n-900); }
+.trace-root .bar select, .trace-root .bar input {
+  font-size: var(--t-2); padding: 6px 9px; border-radius: var(--r-1);
+  border: 1px solid var(--n-300); background: var(--n-0); color: var(--n-900);
+}
+.trace-root .bar .chip {
+  font-size: var(--t-1); padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--n-200); background: var(--n-0); color: var(--n-600);
+}
+.trace-root .bar .chip[aria-pressed="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink);
+  font-weight: 600;
+}
+.trace-root .trace-list { border-right: var(--line); background: var(--n-0); }
+.trace-root .task {
+  border-radius: var(--r-1); font-size: var(--t-2); color: var(--n-800);
+  border-color: transparent;
+}
+.trace-root .task:hover { background: var(--n-50); }
+.trace-root .task[aria-current="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink);
+}
+.trace-root .task .tid { font-size: var(--t-1); color: var(--n-500); }
+.trace-root .task .sc { background: var(--n-100); color: var(--n-600); }
+.trace-root .step-card {
+  border: var(--line); border-radius: var(--r-2); background: var(--n-0);
+}
+.trace-root .step-head {
+  border-bottom: var(--line); padding: 8px 12px; font-size: var(--t-1); color: var(--n-500);
+}
+.trace-root .step-no { font-size: var(--t-2); color: var(--n-800); }
+.trace-root .reply { padding: 10px 12px; font-size: var(--t-2); color: var(--n-800); line-height: 1.6; }
+.trace-root .reply.cmd { background: var(--n-25); }
+.trace-root .cmd { border-top: 1px dashed var(--n-200); padding: 10px 12px; }
+.trace-root .cmd-line { font-size: var(--t-1); color: var(--n-700); }
+.trace-root .out {
+  background: var(--n-25); border: var(--line); border-radius: var(--r-1);
+  font-size: 11px; padding: 10px 12px; color: var(--n-700);
+}
+.trace-root .env { color: var(--n-500); }
+.trace-root .vhead { padding: 16px 18px 0; }
+.trace-root .empty-title { color: var(--n-800); }
+.trace-root .empty-sub { color: var(--n-500); }
+
+/* ── 深色：外壳自己的那几个色也必须换 ──────────────────────────────────────
+ * 之前只换了 `--n-*`（设计系统的色阶），而外壳还有一套 `--sh-*` 和几处直接写的浅色：
+ *   · `.brand-mark` 用 `--sh-ink`，深色下变成一块浅色方块；
+ *   · `.sh-modes` 的分段控件写死 #f1f2f5；
+ *   · 侧栏底部的 `.status-line` 继承 app.css 的浅色底。
+ * 实测深色下这几处仍然是 rgb(232,235,240)/rgb(241,242,245)/rgb(255,255,255)。
+ */
+:root[data-theme="dark"] {
+  --sh-accent: #8aa4ff;
+  --sh-accent-soft: #202844;
+  --sh-accent-line: #35406a;
+}
+:root[data-theme="dark"] .side .brand-mark { background: var(--n-800); color: var(--n-900); }
+:root[data-theme="dark"] .sh-modes { background: var(--n-100); }
+:root[data-theme="dark"] .sh-mode[aria-pressed="true"] {
+  background: var(--n-0); color: var(--n-900);
+  box-shadow: 0 0 0 1px var(--n-300), 0 1px 1px rgba(0,0,0,.4);
+}
+:root[data-theme="dark"] .side-foot .status-line,
+:root[data-theme="dark"] .status-line { background: transparent; color: var(--n-500); }
+:root[data-theme="dark"] .side-foot .status-line b { color: var(--n-800); }
+:root[data-theme="dark"] .side .nav-item[aria-current="page"] {
+  background: var(--sh-accent-soft); color: var(--sh-accent);
+}
+:root[data-theme="dark"] .pill { border-color: var(--n-300); color: var(--n-600); }
+:root[data-theme="dark"] .pill[data-tone="ok"] { background: var(--ok-soft); border-color: var(--ok-line); color: var(--ok); }
+:root[data-theme="dark"] .pill[data-tone="bad"] { background: var(--bad-soft); border-color: var(--bad-line); color: var(--bad); }
+
+/* 两处上一次没写进去的深色规则（`.chip` 与 submit 页的卡片）。 */
+:root[data-theme="dark"] .chip {
+  background: var(--n-25); border-color: var(--n-200); color: var(--n-700);
+}
+:root[data-theme="dark"] .chip[aria-pressed="true"],
+:root[data-theme="dark"] .filters .chip[aria-pressed="true"] {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent-ink);
+}
+:root[data-theme="dark"] .submit-page .submit-card { background: var(--n-0); }
+:root[data-theme="dark"] .submit-page .pill,
+:root[data-theme="dark"] .submit-card .pill { background: var(--n-50); border-color: var(--n-200); color: var(--n-600); }
+:root[data-theme="dark"] .side .brand-mark { background: var(--n-200); color: var(--n-900); }
+
+/* 版本条里展开的轮次：一小排圆点，不再弹窗问"第几轮"。 */
+.hg-srcbar__rounds { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; flex: 0 0 100%; }
