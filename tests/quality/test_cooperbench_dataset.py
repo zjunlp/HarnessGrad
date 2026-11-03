@@ -83,7 +83,13 @@ def test_missing_runtime_is_not_silently_filtered(prepared, monkeypatch, tmp_pat
 
 
 def test_prepared_manifest_and_selected_runtime_load():
-    if not (dataset.DATASET_ROOT / 'prepared-v1/manifest.json').exists():
+    from harnessgrad.paths import DataRootNotConfigured
+
+    try:
+        prepared = (dataset.DATASET_ROOT / 'prepared-v1/manifest.json').exists()
+    except DataRootNotConfigured:
+        prepared = False
+    if not prepared:
         pytest.skip('prepared CooperBench inputs needed for manifest integration check')
     rows = dataset.roster()  # Validate the adapter's fixed manifest, without mocks.
     assert len(rows) == 652
