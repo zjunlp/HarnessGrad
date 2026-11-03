@@ -107,12 +107,14 @@ def interpreter_prefix() -> Path | None:
     needs nothing extra (step 1 already bound `/usr`); `/mnt/8t/.../anaconda3/bin/python3`
     needs its prefix, or the subject starts and immediately dies importing `openai`.
     """
-    exe = Path(sys.executable).resolve()
-    for parent in exe.parents:
-        if (parent / "pyvenv.cfg").exists() or (parent / "conda-meta").is_dir():
-            return parent
-        if parent == Path("/"):
-            break
+    # Resolve only after checking the venv path: its executable is commonly a symlink
+    # into /usr, while its pyvenv.cfg and packages belong to the original prefix.
+    for exe in (Path(sys.executable).absolute(), Path(sys.executable).resolve()):
+        for parent in exe.parents:
+            if (parent / "pyvenv.cfg").exists() or (parent / "conda-meta").is_dir():
+                return parent
+            if parent == Path("/"):
+                break
     return None
 
 

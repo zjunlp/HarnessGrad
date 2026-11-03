@@ -35,7 +35,7 @@ example, not evidence of a general improvement method.
 
 The request supplies absolute `base_harness`, `workspace`, and `trajectory_out`
 paths, task IDs, and `platform_api_version`. Validate the API with `require_api`.
-Read staged round evidence from `base_harness/_harnessgrad/`, including
+Read staged round evidence from `<base_harness>/_harnessgrad/`, including
 `round.json`, `tasks/`, `traces/`, `history/`, `states/`, and `SKILL.md`. The base is
 read-only; put edits and candidate directories under `workspace`. The platform
 hides its private tree from the method.

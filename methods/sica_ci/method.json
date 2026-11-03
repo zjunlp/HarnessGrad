@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "SICA:置信下界选择(移植)",
  "note": "SICA 选择规则的移植版:沿用本地 CLB 数学,有可用 CI 时将选中的历史 round 写入 step.incumbent_round。平台负责测量与停止预算;具体数学及历史源码恢复方面的偏差见 deviations。",
  "deviations": [

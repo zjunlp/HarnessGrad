@@ -43,6 +43,11 @@ from eval.verification.pristine import enforce_verdict_binding
 from eval.policy.unobserved_diagnostic import Authorization
 
 
+def _files_python() -> str:
+    """Keep the host's python selection; python3-only hosts use this interpreter."""
+    return "python" if shutil.which("python") else sys.executable
+
+
 def _refuse_unobserved_policies(task: dict, env: dict | None,
                                verifier: dict | None, *, run_id: str = "",
                                diagnostic_authorization: Authorization | None = None,
@@ -602,16 +607,15 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # The interpreter is **the platform's own** for `exec`, mounted in read-only,
         # rather than whatever `python` the image happens to have -- which may be
         # nothing (measured: the real Terminal-Bench image has no `python3` at all).
-        # `files` keeps the bare name, because there the host's PATH is the right answer
-        # and changing it would change what every existing dataset measures.
+        # `files` keeps the host's python selection when that alias exists. A fresh
+        # machine with only python3 can use the interpreter running the platform.
         task_arg = (container_mod.to_container(task_file, workdir, task_mount)
                     if is_exec else str(task_file))
         workdir_arg = task_mount if is_exec else str(workdir)
         # The image's interpreter when it has one (§2.5.3), the platform's when it does
-        # not. `files` keeps the bare name: there the host's PATH is the right answer and
-        # changing it would change what every existing dataset measures.
+        # not. Preserve a files run's existing PATH selection when available.
         image_python = container_mod.image_python(env_spec["image"]) if is_exec else None
-        python = image_python or (sys.executable if is_exec else "python")
+        python = image_python or (sys.executable if is_exec else _files_python())
         argv = [python, str(repo / entry), "--task", task_arg,
                 "--workdir", workdir_arg]
 

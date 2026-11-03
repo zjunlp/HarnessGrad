@@ -273,7 +273,8 @@ if [ "$FAILED" = 0 ]; then
     printf '  Local demo only; no model credentials needed. No production/H0 authorization.\n\n'
     printf '      HG_AGENT_BACKEND=mock python3 driver.py --dataset demo --sampling all \\\n'
     printf '          --harness loop --mode A --rounds 2 \\\n'
-    printf '          --run-id control --method-entrypoint "python %s/methods/noop/run.py"\n\n' "$ROOT"
+    printf -v method_command '%q %q' "$PY" "$ROOT/methods/noop/run.py"
+    printf '          --run-id control --method-entrypoint %q\n\n' "$method_command"
     exit 0
 fi
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, fields
 import os
+from pathlib import Path
 from typing import Any, Mapping
 
 from harnessgrad.config.areas import (
@@ -34,6 +35,22 @@ from harnessgrad.config.areas import (
 
 
 # ------------------------------------------------------------------ parsing ---
+
+def read_env_file(path: Path) -> dict[str, str]:
+    """Read the platform's simple .env format without mutating the environment."""
+    if not path.exists():
+        return {}
+    values = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key:
+            values.setdefault(key, value.strip().strip("'\""))
+    return values
+
 
 def _parse(raw: str | None, default: Any, kind: str) -> Any:
     """One raw environment value, as the point-of-use read would have produced it."""

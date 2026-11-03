@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "Dream-RSI：基于各轮代理值的 argmax 选择",
  "note": "依据 Dream-RSI/papers/Dream-RSI.pdf（v1，2026-09-14）第 5–6 页 §3、公式 (1) 核对，未取得上游实现（README.md:64–65,126–135）。上游已升版：arXiv:2609.14858 v2（2026-10-06）重写了第 3 节，把正文 Eq. (1) 换成附录 B.2 那条 Pareto 目标（归一化 hypervolume 减 λ 并行惩罚），把预算系数换成 ρ∈{0,.25,.5,.75,1} 的扫描，并把 M 明确为 4（当前策略 + 3 个新版本）。本端口实现的是 v1 的线性 Eq. (1)，也就是被替换掉的那一版；该差异见 deviations[appendix_objective]。v2 还新增了第 4 个域 harness optimization（§4.4）。此处实际用各轮 studied score、harness token/1000 和 n_trials 作代理，默认 b1=0.001、b2=0.0 均为移植版选择。保留 argmax 结构，但 guarantee_holds 只核对记录中代理值的大小关系；它不保证论文回放目标、质量、部署或下一候选不退化。选中的 staged state 仅作为后续编辑起点。上游指纹见 docs/upstream-pins.md。",
  "deviations": [

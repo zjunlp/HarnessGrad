@@ -337,11 +337,70 @@ def _harness_calls(point: dict) -> int | None:
     return None
 
 
+def _measurement_context(point: dict, meta: dict) -> dict:
+    """Keep the comparison evidence beside the score, including historical absences."""
+    identity = point.get("identity") or {}
+    run_config = (meta.get("config") or {}).get("run") or {}
+    selected = (point.get("sampling") or {}).get("task_ids")
+    planned = len(selected) if isinstance(selected, list) else None
+    per_task = point.get("per_task")
+    scored = len(per_task) if isinstance(per_task, dict) else point.get("n_scored")
+    if not isinstance(scored, int) or isinstance(scored, bool):
+        scored = None
+    invalid = point.get("n_invalid")
+    if invalid is None and isinstance(point.get("invalid"), (dict, list)):
+        invalid = len(point["invalid"])
+    def known(*values):
+        return next((value for value in values if value is not None), None)
+    return {
+        "split_protocol": known(point.get("split_protocol"), meta.get("split_protocol")),
+        "split_sha": known(point.get("split_sha"), meta.get("split_sha")),
+        "trials": known(identity.get("trials"), point.get("n_trials"), meta.get("trials"),
+                        run_config.get("trials")),
+        "seed": known(run_config.get("seed"), (point.get("env") or {}).get("seed")),
+        "evaluated_from": known(point.get("evaluated_from"), meta.get("evaluated_from"), meta.get("from_run")),
+        "baseline": point.get("baseline"),
+        "scoring_identity": known(point.get("scoring_identity"), meta.get("scoring_identity")),
+        "scorer_isolation_class": point.get("scorer_isolation_class"),
+        "scorer_isolation_comparable": point.get("scorer_isolation_comparable"),
+        "per_task_scorer_isolation": point.get("per_task_scorer_isolation"),
+        "verifier_kinds": point.get("verifier_kinds"),
+        "evaluation_protocols": point.get("evaluation_protocols"),
+        "protocol_comparability": point.get("protocol_comparability"),
+        "planned_tasks": planned,
+        "n_tasks": scored,
+        "unmeasured": (planned - scored if planned is not None and scored is not None
+                       and planned >= scored else None),
+        "invalid": invalid,
+        "invalid_tasks": point.get("invalid"),
+        "measured_by_platform": point.get("measured_by_platform"),
+        "unmeasured_reason": _unmeasured_reason(point),
+    }
+
+
+def _unmeasured_reason(point: dict):
+    refusal = point.get("unmeasured")
+    return (refusal if isinstance(refusal, dict) and refusal.get("reason")
+            else point.get("unmeasured_reason"))
+
+
+def _measured_score(point: dict) -> float | None:
+    """Numeric placeholders from rejected/empty rounds are not observations.
+
+    Missing legacy coverage fields do not establish a failure; a measured zero
+    remains a score. Partial rounds can still carry a measured aggregate.
+    """
+    if (point.get("measured_by_platform") is False or point.get("n_scored") == 0
+            or _unmeasured_reason(point)):
+        return None
+    return _numeric(point.get("score"))
+
+
 def _build_row(run_id: str, meta: dict, points: list[dict],
                method: str, method_source: str) -> dict:
     """Summarise one run from its own scored points."""
     scored = [(p, _round_of(p, i)) for i, p in enumerate(points)
-              if _numeric(p.get("score")) is not None]
+              if _measured_score(p) is not None]
     scored.sort(key=lambda item: item[1])
 
     first_point, _ = scored[0]
@@ -371,6 +430,10 @@ def _build_row(run_id: str, meta: dict, points: list[dict],
     has_trend = len(scored) >= 2
     delta = (best - r0) if has_trend else None
     last_delta = (last - r0) if has_trend else None
+    selected = sampling.get("task_ids")
+    planned = len(selected) if isinstance(selected, list) else None
+    unmeasured = (planned - n_tasks if planned is not None and n_tasks is not None
+                  and planned >= n_tasks else None)
 
     return {
         "run_id": run_id,
@@ -393,6 +456,13 @@ def _build_row(run_id: str, meta: dict, points: list[dict],
         "invalid": _sum_field([p for p, _ in scored], lambda p: p.get("n_invalid")),
         "calls": _sum_field([p for p, _ in scored], _harness_calls),
         "n_tasks": n_tasks,
+        "planned_tasks": planned,
+        "unmeasured": unmeasured,
+        **{key: value for key, value in _measurement_context(last_point, meta).items()
+           if key not in ("planned_tasks", "n_tasks", "unmeasured", "invalid")},
+        # A last-point summary must not erase an earlier comparison failure.
+        "measurement_context": [{"round": _round_of(p, i), **_measurement_context(p, meta)}
+                                for i, p in enumerate(points)],
     }
 
 
@@ -412,6 +482,9 @@ def _skip(run_id: str, meta: dict, points: list[dict], method: str,
         "pool": _string(sampling.get("selected_within")),
         "reason": reason,
         "detail": detail,
+        **_measurement_context(tail, meta),
+        "measurement_context": [{"round": _round_of(p, i), **_measurement_context(p, meta)}
+                                for i, p in enumerate(points)],
     }
 
 
@@ -472,11 +545,15 @@ def summarise(run_dir: Path, run_id: str, index: dict[str, Path],
         return "skipped", _skip(run_id, meta, points, method, method_source,
                                 "running", "the run record marks this run as in flight")
 
-    scored = [p for p in points if _numeric(p.get("score")) is not None]
+    scored = [p for p in points if _measured_score(p) is not None]
     if not scored:
+        refusals = [_unmeasured_reason(p) for p in points if _unmeasured_reason(p)]
+        detail = "curve points carry no measured numeric score (no scored measurement was recorded)"
+        if refusals:
+            detail += "; " + "; ".join(json.dumps(reason, ensure_ascii=False) for reason in refusals)
         return "skipped", _skip(
             run_id, meta, points, method, method_source, "unmeasured",
-            "curve points carry no numeric score (the run was measured but not scored)")
+            detail)
 
     row = _build_row(run_id, meta, points, method, method_source)
 
@@ -572,7 +649,7 @@ def _table(header: list[str], rows: list[list[str]]) -> list[str]:
 
 _ROW_COLUMNS = ["run_id", "method", "harness", "dataset", "pool", "side", "agent_model",
                 "r0", "last", "best", "best_round", "delta_pp", "last_delta_pp",
-                "rounds", "invalid", "calls", "n_tasks"]
+                "rounds", "invalid", "calls", "n_tasks", "coverage", "comparison"]
 _SKIP_COLUMNS = ["run_id", "method", "harness", "dataset", "side", "reason", "detail"]
 
 
@@ -585,7 +662,33 @@ def _row_cells(row: dict) -> list[str]:
         _dash(row.get("best_round")), _pp(row.get("delta_pp")), _pp(row.get("last_delta_pp")),
         _dash(row.get("rounds")), _dash(row.get("invalid")), _dash(row.get("calls")),
         _dash(row.get("n_tasks")),
+        f"{_dash(row.get('n_tasks'))}/{_dash(row.get('planned_tasks'))}",
+        _comparison_label(row),
     ]
+
+
+def _comparison_label(row: dict) -> str:
+    labels = []
+    contexts = row.get("measurement_context") or [row]
+    for context in contexts:
+        protocol = context.get("split_protocol")
+        if protocol:
+            labels.append(str(protocol.get("kind") or "unknown split protocol"))
+            if protocol.get("official_score_comparable") is False:
+                labels.append("noncomparable to official score")
+        baseline = context.get("baseline") or {}
+        if baseline.get("comparable") is False or baseline.get("problems"):
+            labels.append("noncomparable: " + "; ".join(str(p) for p in baseline.get("problems") or []))
+        if context.get("scorer_isolation_comparable") is False:
+            labels.append("noncomparable scorer isolation")
+        if (context.get("unmeasured") or 0) > 0 or (context.get("invalid") or 0) > 0:
+            labels.append("partial")
+        refusal = context.get("unmeasured_reason")
+        if refusal:
+            labels.append("unmeasured: " + json.dumps(refusal, ensure_ascii=False))
+        elif context.get("measured_by_platform") is False:
+            labels.append("unmeasured by platform")
+    return "; ".join(dict.fromkeys(labels)) or DASH
 
 
 def _skip_cells(entry: dict) -> list[str]:
@@ -624,6 +727,11 @@ def render_markdown(payload: dict, *, group_by: str = "method") -> str:
         "- `rounds` — number of scored curve points; `invalid` — sum of `n_invalid` over "
         "them; `calls` — sum of `cost.harness_model_calls` over them; `n_tasks` — tasks in "
         "the last point's `per_task`.",
+        "- `coverage` is scored/planned on the last point; `partial` flags missing or invalid "
+        "measurements. Unmeasured is planned minus scored; invalid and unmeasured may overlap. "
+        "`comparison` retains custom-heldout and recorded noncomparable warnings.",
+        "- Explicitly unmeasured or zero-coverage placeholders do not enter score arithmetic. "
+        "Their coverage and refusal reasons remain in `measurement_context` and comparison notes.",
         f"- `{DASH}` means the run record does not define or does not record that value. "
         "It is **never** a zero. A single scored point (an eval measurement) has no trend, "
         "so its deltas are "

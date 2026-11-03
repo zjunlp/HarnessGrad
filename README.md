@@ -28,11 +28,15 @@ The unit is a **plasticity/stability pair** — what a round gains, and what it 
 
 ## 📦 Install
 
-`bubblewrap`, `git`, `python3 >= 3.10`; the platform itself has **no third-party Python dependencies**.
+Linux (including WSL2 with working user namespaces), `bubblewrap`, `git`, and
+`python3 >= 3.10`. The platform itself has **no third-party Python dependencies**;
+individual harnesses and datasets declare their own dependencies.
 
 ```bash
-./install.sh --check      # verify only, change nothing
-./install.sh              # install what is missing, then verify
+./install.sh              # install/check the system prerequisites and sandbox
+python3 -m venv "$HOME/.venvs/harnessgrad"
+. "$HOME/.venvs/harnessgrad/bin/activate"
+python3 -m pip install -e .
 ```
 
 `bwrap` being installed is not the same as a working sandbox, so `install.sh` builds a real namespace and looks for itself inside it, and refuses to call the machine ready if that fails.
@@ -44,8 +48,8 @@ Three steps, no model calls until step 3.
 ### 1. Is this machine ready? (creates nothing, spends nothing)
 
 ```bash
-python3 -m pip install -e .          # or: ./install.sh    (bubblewrap + git + python3)
-harnessgrad run --config experiments/quickstart.json --check-only
+harnessgrad run --config experiments/quickstart.json \
+    --set dataset=demo --set sampling=all --set rounds=0 --check-only
 ```
 
 ```
@@ -53,10 +57,11 @@ check     req  result  detail
 python    yes  ok      python 3.12.4
 git       yes  ok      git version 2.34.1
 bwrap     yes  ok      /usr/bin/bwrap: namespace builds (bubblewrap 0.6.1)
-dataset   yes  ok      gsm8k: 8792 tasks
+dataset   yes  ok      demo: 8 tasks (test fixture, not a published dataset)
 harness   yes  ok      <checkout>/base_harness/loop (cli, entrypoint agent.py, env_kinds files, exec)
 writable  yes  ok      runs root: runs can be created; work root: ../harnessgrad_work exists and is writable
 disk      no   ok      .: 93.1 GB free (a run needs about 5 GB)
+method    no   ok      no improvement rounds requested
 ready: every required check passed
 ```
 
@@ -73,11 +78,12 @@ is about *that* invocation.
 submit, while `echo_base` submits a changed candidate and reaches round 2.
 
 ```bash
-export HG_AGENT_BACKEND=mock
-python3 driver.py --dataset demo --sampling all --harness loop --rounds 2 --run-id control \
-    --method-entrypoint "python $PWD/methods/noop/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --rounds 2 --run-id treat-A \
-    --method-entrypoint "python $PWD/methods/echo_base/run.py"
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
+    --set dataset=demo --set sampling=all --set method=noop --set rounds=2 \
+    --set run_id=control --improver none
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
+    --set dataset=demo --set sampling=all --set rounds=2 \
+    --set run_id=treat-A --improver none
 python3 tools/run_summary.py runs/treat-A          # one page per run
 python3 tools/plot_curve.py runs/control runs/treat-A
 ```
@@ -86,11 +92,25 @@ python3 tools/plot_curve.py runs/control runs/treat-A
 
 ### 3. A real experiment
 
-A checked-in experiment file is the reviewable form of a command line:
+Prepare GSM8K and the reference harness dependencies first. Dataset bytes are
+stored in your user data directory; `HG_DATA_ROOT` can relocate them.
+
+```bash
+python3 -m pip install -r base_harness/loop/requirements.txt 'pyarrow==23.0.0'
+python3 tools/datasets.py --fetch --dataset gsm8k
+python3 tools/datasets.py --check --dataset gsm8k
+```
+
+Use an already running local OpenAI-compatible endpoint. These settings explicitly
+select the live backend; `local` is the placeholder credential for an endpoint
+that does not authenticate. Set a real credential if your endpoint requires one.
 
 ```bash
 export HG_AGENT_BASE_URL=http://127.0.0.1:8001/v1 HG_AGENT_MODEL=qwen3.5-9b-local
-harnessgrad run --config experiments/quickstart.json --set rounds=3 --set run_id=first-study
+export HG_AGENT_BACKEND=openai HG_AGENT_API_KEY=local
+harnessgrad run --config experiments/quickstart.json --improver none --check-only
+harnessgrad run --config experiments/quickstart.json --improver none \
+    --set rounds=3 --set run_id=first-study
 python3 tools/run_summary.py runs/first-study
 python3 tools/results_matrix.py --runs runs --md results.md   # method × dataset → score
 ```
@@ -106,8 +126,21 @@ the mock backend, 24 s against one local `qwen3.5-9b` endpoint, `0.000` at both 
 `loop` is a deliberately bare harness, and moving that flat line is exactly what a method is
 for. `--set sampling=all` or `--set sampling=below_0.3` are the interesting regimes, and they
 cost what their names say: a score-based policy has to measure the whole side once in order to
-choose from it. `--set method=dgm --set rounds=10` is where the platform stops being a demo;
-`experiments/method-*.json` has one file per published method.
+choose from it.
+
+The reference `echo_base` method makes a fixed edit. Published methods also need
+their editor configured, independently of the agent model. For a local editor:
+
+```bash
+export HG_METHOD_BASE_URL=http://127.0.0.1:8001/v1 HG_METHOD_MODEL=qwen3.5-9b-local
+export HG_METHOD_API_KEY=local
+harnessgrad run --config experiments/method-dgm.json --improver local --check-only
+harnessgrad run --config experiments/method-dgm.json --improver local --set run_id=dgm-study
+```
+
+`experiments/method-*.json` has one file per published method. Preflight checks
+entrypoints and declared editor settings without making model calls; endpoint
+authentication is established by the run. Use fresh run IDs when repeating examples.
 
 Which datasets are usable here, what their grade is, and whether that grade is the
 benchmark's own metric: [`DATASETS.md`](DATASETS.md) (generated — `python3
@@ -138,6 +171,7 @@ python3 tools/run_tests.py --dataset gsm8k  # that dataset plus the core platfor
 | 🧭 [`docs/design-notes.md`](docs/design-notes.md) | why it is shaped this way, and what building it caught |
 | 🛠️ [`docs/writing_a_harness.md`](docs/writing_a_harness.md) · [`docs/dataset-onboarding.md`](docs/dataset-onboarding.md) | contributing a harness, adding a dataset |
 | 🚪 [`docs/bring-your-own-harness.md`](docs/bring-your-own-harness.md) | the on-ramp for an outside harness: a directory with an `agent.py` → a point on a measured curve, every command verified |
+| 🔌 [`docs/bring-your-own-method.md`](docs/bring-your-own-method.md) | bring an external RSI method, validate its candidate and trajectory, then run it |
 | 🧪 [`docs/test-suite.md`](docs/test-suite.md) | test lanes and the `--basetemp` rule |
 | 🤖 [`AGENTS.md`](AGENTS.md) | operating rules, including the staged-pilot policy |
 

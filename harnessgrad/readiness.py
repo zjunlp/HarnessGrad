@@ -10,8 +10,8 @@ argv, and prints the answer before anything is created, staged or called.
 Three rules the checks keep, each learned from the checks that came before them:
 
 * **A check reports a fact; it does not act.** It runs no model, starts no harness and
-  writes nothing. The only subprocesses are `git --version` and the sandbox's own
-  namespace probe, which is `true` under `bwrap` and nothing else, so `--check-only` is
+  writes nothing. Subprocesses inspect tool versions/builds and the sandbox's own
+  namespace probe (`true` under `bwrap`), so `--check-only` is
   safe on a machine where nothing has been configured yet -- which is exactly when it is
   worth running.
 * **`required` is a property of the selected run, not of the check.** `bwrap` is
@@ -34,8 +34,10 @@ is launched, not in one front end's form validation.
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import shutil
+import shlex
 import subprocess
 import sys
 import time
@@ -114,6 +116,7 @@ def plan_checks(args) -> list[Check]:
         except Exception as exc:                              # noqa: BLE001 - see module doc
             checks.append(Check(name, required, False,
                                 f"probe raised {type(exc).__name__}: {exc}"))
+    checks.extend(method_checks(args))
     if getattr(args, "check_net", False):
         try:
             checks.append(_endpoint_check())
@@ -121,6 +124,67 @@ def plan_checks(args) -> list[Check]:
             checks.append(Check("endpoint", False, False,
                                 f"probe raised {type(exc).__name__}: {exc}"))
     return checks
+
+
+def method_checks(args) -> list[Check]:
+    """Validate declared method requirements without executing a method or model."""
+    if getattr(args, "side", "train") == "eval" or getattr(args, "rounds", 0) == 0:
+        return [Check("method", False, True, "no improvement rounds requested")]
+    entry = getattr(args, "method_entrypoint", None)
+    if not entry:
+        return [Check("method", True, False, "improvement rounds need --method-entrypoint")]
+    try:
+        argv = shlex.split(entry) if isinstance(entry, str) else list(entry)
+        from harnessgrad.methods import _check_method_entrypoint
+        problem = _check_method_entrypoint(argv)
+        if problem:
+            return [Check("method", True, False, problem)]
+        checks = [Check("method", True, True, "entrypoint exists; execution is not probed")]
+        script = next((Path(part) for part in argv if part.endswith(".py")), None)
+        manifest = script.parent / "method.json" if script is not None else None
+        requirements = (json.loads(manifest.read_text(encoding="utf-8")).get("requires") or {}
+                        if manifest is not None and manifest.is_file() else {})
+        if requirements.get("editor_model"):
+            checks.append(_editor_check(args))
+        return checks
+    except Exception as exc:                                  # noqa: BLE001 - a check reports failures
+        return [Check("method", True, False, f"invalid method configuration: {exc}")]
+
+
+def _editor_check(args) -> Check:
+    """Use the existing improver resolver; external/self-contained methods opt out."""
+    from tools.improver import load_config, resolve
+
+    config = current()
+    if config.improver.selection:
+        # methods.cli_improver gives the explicit command priority over registry names.
+        command = shlex.split(config.improver.selection)
+        if not command or shutil.which(command[0]) is None:
+            executable = command[0] if command else "<empty>"
+            return Check("editor", True, False, f"CLI improver is not executable: {executable}")
+        return Check("editor", True, True, f"CLI improver: {command[0]}")
+    requested = getattr(args, "improver", None) or config.improver.name or ""
+    disabled = requested.strip().lower() in ("none", "noop", "null")
+    direct = all((config.method.base_url, config.method.model, config.method.api_key))
+    resolved = {} if disabled else resolve(
+        load_config(), requested=requested,
+        model_override=getattr(args, "improver_model", None) or "")
+    if resolved.get("ok") and resolved.get("kind") == "cli":
+        return Check("editor", True, True, f"CLI improver: {resolved.get('name')}")
+    if requested and not disabled and not resolved.get("ok"):
+        return Check("editor", True, False, resolved.get("reason") or "improver unavailable")
+    if resolved.get("ok"):
+        key_env = resolved.get("api_key_env")
+        key = os.environ.get(key_env) if key_env else config.method.api_key
+        configured = bool(resolved.get("base_url") and resolved.get("model") and key)
+    else:
+        configured = direct
+    if not configured:
+        return Check("editor", True, False,
+                     "configure an improver or HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY")
+    if importlib.util.find_spec("openai") is None:
+        return Check("editor", True, False, "the method endpoint needs the openai package")
+    return Check("editor", True, True, "endpoint configured; authentication is not probed")
 
 
 def render(checks) -> str:

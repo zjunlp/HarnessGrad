@@ -74,6 +74,12 @@ def test_every_default_is_non_secret_or_redacted_in_describe():
 
 # ---------------------------------------------------------------- loading ---
 
+def test_env_file_keeps_the_first_assignment(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("HG_AGENT_BASE_URL='http://first/v1'\n"
+                        "HG_AGENT_BASE_URL=http://second/v1\n", encoding="utf-8")
+    assert config.read_env_file(env_file) == {"HG_AGENT_BASE_URL": "http://first/v1"}
+
 def test_load_reads_the_mapping_it_is_given_not_the_process_environment(monkeypatch):
     monkeypatch.setenv("HG_AGENT_MODEL", "from-the-process")
     cfg = config.load({})

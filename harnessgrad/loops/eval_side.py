@@ -354,6 +354,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     records instead of living on one point.
     """
     cache: dict = {}
+    planned_ids = [t["task_id"] for t in tasks]
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}
     sha = commit_state(work, f"eval of {args.from_run} round "
@@ -515,7 +516,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                            declared=res.get("identity_declared"),
                            jobs=args.jobs, trials=args.trials,
                            gpu_budget=getattr(args, "gpu_budget", None)),
-        sampling={"dataset": args.dataset, "policy": "all", "task_ids": list(scored),
+        sampling={"dataset": args.dataset, "policy": "all", "task_ids": planned_ids,
                   "selection_basis_round": 0, "selected_within": "eval"},
         scores=[res["per_task"][t] for t in scored], task_ids=scored,
         scoring_identity=getattr(args, "scoring_identity", None),

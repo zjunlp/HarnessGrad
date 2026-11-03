@@ -1,5 +1,6 @@
 {
  "kind": "published",
+ "requires": {"editor_model": true},
  "title": "DGM:归档里的父代采样",
  "fidelity_profile": "archive-aligned-staged-eval-dual-role",
  "source_commit": "bd7c0773c8f7d17549a3b67e7d783c47f7fba407",
