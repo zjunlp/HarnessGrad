@@ -1343,18 +1343,6 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
-    # Known model/method configuration failures belong before H0 can spend a
-    # single generation. Unknown external methods may be self-contained.
-    args.harness_dir = str(harness_src)
-    local_checks = readiness.configuration_checks(args)
-    if args.check_net:
-        local_checks.extend(readiness.endpoint_checks(args))
-    failed_configuration = [check for check in local_checks if check.required and not check.ok]
-    if failed_configuration:
-        print(readiness.render(local_checks))
-        print('refusing to run: model/method configuration failed before H0', file=sys.stderr)
-        return 2
-
     try:
         tasks_all, scorable, split = datasets.load_split(args.dataset)
         oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
@@ -1790,6 +1778,21 @@ def _main(attempt: dict) -> int:
               f"({PLATFORM_ROOT}). A harness there can read the driver and .env "
               f"and write anywhere in the platform. Pass --work-root outside it.",
               file=sys.stderr)
+        return 2
+
+    # A known model/method misconfiguration is refused here too -- before H0 can spend a
+    # single generation -- but *after* the isolation check above, because where the run writes
+    # is a safety property and this is a configuration one. Ordered the other way round, a run
+    # with its workspace inside the platform reported the missing method endpoint and hid the
+    # violation (`test_isolation` caught that when the preflight was first merged).
+    args.harness_dir = str(harness_src)
+    local_checks = readiness.configuration_checks(args)
+    if args.check_net:
+        local_checks.extend(readiness.endpoint_checks(args))
+    failed_configuration = [check for check in local_checks if check.required and not check.ok]
+    if failed_configuration:
+        print(readiness.render(local_checks))
+        print('refusing to run: model/method configuration failed before H0', file=sys.stderr)
         return 2
 
     if work.exists():
