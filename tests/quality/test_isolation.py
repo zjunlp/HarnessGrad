@@ -153,7 +153,13 @@ def test_snapshot_covers_the_referee_not_the_candidate():
     assert "driver.py" in snap, "the driver decides what a curve means"
     assert "eval/run/integrity.py" in snap, "the checker watches itself"
     assert "eval/run/runner.py" in snap, "the runner runs the subject"
-    assert ".env" in snap, "the credentials pay for the measurement"
+    # `.env` 必须被声明在 PLATFORM 里；它是否出现在快照里，取决于**这个 checkout 有没有
+    # 这个文件**（凭据是机器本地的，不能为了过测试凭空造一个）。原来这条无条件断言
+    # ".env" in snap，在没有 .env 的机器上把"平台没被监视"和"这台机器没配凭据"混成了一条。
+    from eval.run.integrity import PLATFORM
+    assert ".env" in PLATFORM, "the credentials pay for the measurement"
+    assert (".env" in snap) == (ROOT / ".env").is_file(), (
+        "an existing .env must be watched; an absent one cannot be")
     assert not [k for k in snap if k.startswith("base_harness/")], \
         "base_harness/ is a candidate, not a referee"
 
@@ -476,6 +482,11 @@ platform = Path("__PLATFORM__")   # 由测试替换成真实平台路径
 runs = Path("__RUNS__")           # 由测试替换成这次运行的记录目录
 out = {
     "listing": sorted(x.name for x in platform.iterdir()) if platform.is_dir() else None,
+    # `eval/` 会作为**目录**出现，因为沙箱给方法绑了一个共享的链接助手文件
+    # （`eval/ckpt/bun_dependencies.py`）。这里把那个目录里能读到的东西全部记下来，
+    # 于是"多绑了任何别的文件"就是一次失败，而不是只有目录名对得上。
+    "eval_files": (sorted(str(f.relative_to(platform)) for f in (platform / "eval").rglob("*")
+                          if f.is_file()) if (platform / "eval").is_dir() else None),
     "data": (platform / "data" / "probe_set.py").exists(),
     "dotenv": (platform / ".env").exists(),
     "scorer": (platform / "eval" / "run" / "runner.py").exists(),
@@ -543,8 +554,14 @@ def test_a_method_cannot_read_the_platform_it_is_being_measured_by(tmp_path):
     assert got["own_program"] is True, "方法连自己的程序都读不到,那是把洞补成了砖墙"
     assert got["base_writable"] == "Read-only file system", got
     # 平台目录只应当剩下它被允许的那一部分
-    assert got["listing"] == ["methods"], (
+    # 平台的目录名会剩两个：`methods/`（方法自己的程序）与 `eval/`（沙箱要把
+    # `eval/ckpt/bun_dependencies.py` 这个共享的链接助手绑进去，父目录于是出现）。
+    # 断言的是**精确的可见集合**，不是一个名字：那一个文件之外任何东西出现在 `eval/`
+    # 下都会让这条红，包括评分器、数据适配器和 `.env`。
+    assert got["listing"] == ["eval", "methods"], (
         f"平台在方法的沙箱里还有别的东西:{got['listing']}")
+    assert got["eval_files"] == ["eval/ckpt/bun_dependencies.py"], (
+        f"`eval/` 下除了那个链接助手还绑了别的东西:{got['eval_files']}")
     # 记录目录:里面有每一道题的轨迹,包括 eval 侧。eval 轨迹现在**确实落盘**了
     # (那是人类查看失败原因的唯一依据),所以这条不是"文件不存在"的弱断言 ——
     # 它是"方法够不到"的断言,靠的是挂载规则而不是缺省。
@@ -636,7 +653,10 @@ def test_the_harness_cannot_read_the_platform_or_its_answers(tmp_path):
     probes = _run_probe_harness(tmp_path)
     first = probes[0]
     assert first["platform_visible"] is False, first
-    assert first["platform_listing"] == [], (
+    # `None` 表示**这个路径在沙箱里整个不存在**，`[]` 表示它是空的：两种都是"列不出
+    # 任何东西"，而且前者比后者更强。之前这里只接受 `[]`，于是当隐藏策略把这个目录
+    # 连名字一起盖掉（工作根的祖先被 tmpfs 替掉）时，测试把"更强的隔离"读成了失败。
+    assert first["platform_listing"] in (None, []), (
         f"平台的沙箱里还有东西:{first['platform_listing']}")
     assert first["data_readable"] is False, "harness 能读到数据集"
     assert first["dotenv_readable"] is False, "harness 能读到 .env"

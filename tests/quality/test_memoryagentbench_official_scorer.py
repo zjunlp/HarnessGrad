@@ -23,6 +23,20 @@ MOVIES = {"/films/The_Matrix_(1999)": 1, "/films/Alien_(1979)": 2,
           "/films/Alien_(2003)": 3, "/films/Cat": 4, "/films/Bat": 5}
 
 
+def _rouge():
+    """官方文本诊断需要 `rouge-score`；本地 exact-match / F1 控制不需要。
+
+    `rouge-score` 与 `editdistance` 是**准备与官方差分测试**的依赖，钉在
+    `data/datasets/memoryagentbench/requirements-prepare.txt`（`rouge-score==0.1.2`、
+    `editdistance==0.8.1`）。没装时跳过并点명 requirements 文件，而不是让整个文件红 ——
+    同一仓库的 ALFWorld 测试对 `textworld` 用的就是 `pytest.importorskip`。
+    """
+    return pytest.importorskip(
+        "rouge_score",
+        reason="official text diagnostics need rouge-score "
+               "(pip install -r data/datasets/memoryagentbench/requirements-prepare.txt)")
+
+
 def test_exact_source_inventory_and_literal_star():
     assert len(scoring.PRIMARY_METRICS) == 22
     with pytest.raises(ValueError, match="unknown"):
@@ -42,6 +56,7 @@ def test_icl_keeps_official_format_semantics(prediction, expected):
 
 
 def test_default_max_and_alias_normalization():
+    _rouge()
     result = scoring.score_question("detective_qa", "Explanation\nAnswer: The Paris!", [["London"], ["Paris"]])
     assert result["score"] == 1
     assert result["metrics"]["f1"] == 1
@@ -53,10 +68,12 @@ def test_default_max_and_alias_normalization():
 
 
 def test_special_yes_no_f1():
+    _rouge()
     assert scoring.local_metrics("detective_qa", "yes indeed", ["yes"])["f1"] == 0
 
 
 def test_eventqa_primary_any_alias_differs_from_all_elements_diagnostic():
+    _rouge()
     result = scoring.score_question("eventqa_full", "Answer: rain", ["rain", "snow"])
     assert result["score"] == 1
     assert result["metrics"]["eventqa_recall"] == 0
@@ -74,6 +91,7 @@ def test_missing_prediction_has_no_score(source):
 
 @pytest.mark.parametrize("source", sorted(scoring.JUDGE_SOURCES))
 def test_judge_cannot_be_replaced_with_overlap(source):
+    _rouge()
     result = scoring.score_question(source, "gold", ["gold"])
     assert result == {"status": "unmeasured", "metric": scoring.PRIMARY_METRICS[source],
                       "reason": "judge_required"}
@@ -193,7 +211,11 @@ def test_fixed_official_recommendation_ties_and_duplicate_names(official, predic
 
 
 def test_stdlib_distance_matches_official_dependency_including_unicode():
-    import editdistance
+    # 与官方 `editdistance` 逐对比较：没有它就只测到我们自己的实现，所以跳过并点名依赖。
+    editdistance = pytest.importorskip(
+        "editdistance",
+        reason="the differential needs the official editdistance "
+               "(pip install -r data/datasets/memoryagentbench/requirements-prepare.txt)")
     import random
     rng = random.Random(29)
     pairs = [("", ""), ("é🐈", "e猫"), ("a" * 500, "a" * 499 + "b")]

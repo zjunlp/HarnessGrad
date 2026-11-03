@@ -2,10 +2,26 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
 import pytest
+
+#: **Tests must not write into the tree they are testing.** Several load a harness's
+#: `agent.py` with `spec.loader.exec_module`, which caches bytecode beside the source --
+#: `base_harness/<name>/__pycache__/`. That is not cosmetic here: `harness_sha` is a content
+#: address of the harness tree, `tools/validate_harness.py:source_identity` counts every
+#: regular file including caches, and the integrity check hashes the platform's own files.
+#: Measured 2026-11-01: after the adapter tests ran, `base_harness/loop` gained a
+#: `__pycache__`, and `test_scenario.py`'s receipt assertion failed with `entries` 3 -> 4
+#: while the source was byte-identical.
+sys.dont_write_bytecode = True
+# ... and for every **child** the lane starts (the driver, a harness, the CLI under test). A
+# harness that imports a sibling module -- `base_harness/miniswe/agent.py` imports
+# `mock_model.py` -- caches bytecode beside its own source, which is a write into the tree the
+# platform is hashing. In a sandboxed run that write simply fails; unsandboxed, it lands.
+os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")
 
 ROOT = Path(__file__).resolve().parents[2]
 

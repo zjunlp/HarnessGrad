@@ -54,7 +54,16 @@ def metadata_boundary(monkeypatch, adapter_code):
     original_import = builtins.__import__
 
     def metadata_import(name, *args, **kwargs):
-        if name not in {"__future__", "json", "pathlib", "data.scaffolds.qa.base"}:
+        # `data.scaffolds.roots` answers "where do this dataset's bytes live": it reads
+        # environment variables and stats the legacy path, and it opens nothing. The
+        # property here is "computing ENV/SETUP/VERIFY reads no dataset bytes", so a path
+        # resolver belongs on the allowlist and a provisioned-pool reader would not.
+        # `from data.scaffolds import roots` reaches `__import__` as `data.scaffolds`
+        # (the package), not as `data.scaffolds.roots`; both spellings are on the list so
+        # the guard keeps refusing a *reader* while allowing a path resolver.
+        if name not in {"__future__", "json", "pathlib", "data.scaffolds",
+                        "data.scaffolds.qa", "data.scaffolds.qa.base",
+                        "data.scaffolds.roots"}:
             denied("non-metadata import")()
         return original_import(name, *args, **kwargs)
 

@@ -28,13 +28,23 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
-#: 三个 base harness。它们对解析必须给出同一个答案:如果 `loop_plain`(对照)和
+#: 两个 base harness。它们对解析必须给出同一个答案:如果 `loop_plain`(对照)和
 #: `loop` 读同一句话读出不同的动作,那"两个候选的差别"里就有一份是平台自己造的。
-HARNESSES = ("loop", "loop_plain", "loop_rrsi_parse")
+#:
+#: 第三个曾经在这里:`loop_rrsi_parse`,RRSI 第 0 轮候选 A 的快照(版本号 `0.2.0+r0A`)。
+#: 删掉它的理由不是它错,而是它**没有自己的内容**:它带的解析器和这两个逐字节相同,
+#: 于是它只是同一段代码的第三份拷贝,而拷贝会漂移 —— 两套解析规则就是两个候选之间的
+#: 差别被平台自己造出来。归档里 924 个 run、1161 个曲线点没有一个用的是它。要复现那一轮
+#: 的产物,git 里有(`git show 10ad781:base_harness/loop_rrsi_parse/agent.py`)。
+HARNESSES = ("loop", "loop_plain")
+
+#: 两个根:发布的 harness 与测试夹具。`loop_plain` 是夹具(见 driver.py:_harness_roots)。
+ROOTS = (ROOT / "base_harness", ROOT / "tests" / "fixtures" / "base_harness")
 
 
 def _load(name: str):
-    path = ROOT / "base_harness" / name / "agent.py"
+    path = next(root / name / "agent.py" for root in ROOTS
+                if (root / name / "agent.py").is_file())
     spec = importlib.util.spec_from_file_location(f"hg_harness_{name}", path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module

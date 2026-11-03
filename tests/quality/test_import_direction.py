@@ -32,6 +32,28 @@ ALLOWED_EVAL_CONFIG_EDGES = {
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
+    ("data-eval", "data/scaffolds/flashrsi_research/swe_relay.py", "eval.run.native_supervisor"):
+        "Fixed native relay cleanup is supervised independently of blocked startup, calls and patch sealing.",
+    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/relay.py", "eval.run.native_supervisor"):
+        "Harbor worlds use the same bounded parent cleanup and exact owned-container inventory as SWE.",
+    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/session.py", "eval.run.native_supervisor"):
+        "A trusted runtime publishes exact owned Docker names before any create/start operation.",
+    ("data-eval", "data/scaffolds/flashrsi_research/swe_native.py", "eval.containers.observed"):
+        "Fixed native SWE execution reuses kernel-observed offline containers and private patch export.",
+    ("data-eval", "data/scaffolds/flashrsi_research/swe_relay.py", "eval.service.tool_transport"):
+        "Selected native repository is exposed only through the existing private UNIX capability.",
+    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/relay.py", "eval.service.tool_transport"):
+        "Fixed native Harbor worlds use the existing private UNIX capability and sealed records.",
+    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/session.py", "eval.containers.observed"):
+        "Native actor worlds reuse the admitted container executor rather than opening a Docker socket to the actor.",
+    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/public_runtime.py", "eval.containers.observed"):
+        "Explicit native public-network profile reuses bounded Docker transport; it does not claim observed-offline admission.",
+    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/verify.py", "eval.service.modelgate"):
+        "Native independent rubric judges resolve only trusted host model declarations, never actor-selected endpoints.",
+    ("data-eval", "data/scaffolds/flashrsi_research/workbench_relay.py", "eval.service.tool_transport"):
+        "Selected native workplace state uses the existing private relay; no actor scoring operation.",
+    ("data-eval", "data/scaffolds/flashrsi_research/web_relay.py", "eval.service.tool_transport"):
+        "Files/network=none actors access selected host web providers over the existing UNIX capability.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.runner"):
         "Dynamic protocol control validates real sandbox execution and sealed scoring.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.tool_relay"):
@@ -280,7 +302,12 @@ class ImportDirectionTests(unittest.TestCase):
         # imports, shared by adapters exactly like `data.scaffolds`. It was added by the sealed
         # native-runtime work and never classified here, which made every adapter that imports
         # `data.runtimes.NATIVE_PINS` an unclassified data directory / a forbidden edge.
-        infrastructure = {"scaffolds", "datasets", "__pycache__", "runtimes"}
+        # `authored` 是控制台「起草」的产物根：每个 bundle 一个目录（bundle.json + 材料 +
+        # oracle），由 `tools/scenario_builder.py` 读写，和 `runtimes` 一样是纯数据、没有 import。
+        # `candidates` 是控制台"编辑这一版"复制出来的候选 harness 根（每个目录一个
+        # harness.json + 代码），也是纯数据：它不参与 import，平台只复制和读取它。
+        infrastructure = {"scaffolds", "datasets", "__pycache__", "runtimes", "authored",
+                          "candidates"}
         for directory in (ROOT / "data").iterdir():
             if directory.is_dir():
                 self.assertIn(directory.name, infrastructure, f"unclassified data directory: {directory}")
@@ -305,45 +332,67 @@ class ImportDirectionTests(unittest.TestCase):
 
     def test_publication_preserves_the_reviewed_adapter_inventory(self):
         from data.scaffolds import registry
+        # Reviewed FlashRSI source/alias inventory; runtime readiness is separate.
         expected = (
             'agentdojo',
             'aime',
             'alfworld',
             'api_bank',
             'appworld',
+            'authored_example_fix_bug',
+            'bbeh',
             'bfcl_v3',
             'bird_minidev',
+            'browsecomp',
             'chessbench_puzzles',
             'cooperbench',
             'costbench',
             'costbench_dynamic',
+            'deepsearchqa',
+            'deepswe',
             'ds1000',
             'fever',
             'gaia',
             'gsm8k',
+            'harvey_lab',
+            'hle',
             'hotpotqa',
             'jericho',
+            'jobbench',
             'kumo',
             'livecodebench',
+            'livemathbench',
             'locomo',
+            'math',
+            'math500',
             'memoryagentbench',
             'musique',
             'nestful',
+            'nq',
+            'officeqa_pro',
             'personamem_v2',
             'physicsquestions',
             'reasoning_gym',
             'scienceworld',
+            'searchqa',
             'sotuqa',
             'sportsunderstanding',
             'spreadsheetbench',
+            'spreadsheetbench2',
             'strategyqa',
             'strongreject',
+            'supergpqa',
+            'swe_bench',
+            'swe_bench_pro',
             'tau2_bench',
             'tau3_bench',
             'tau_bench',
             'terminal_bench',
+            'travelplanner',
             'triviaqa',
             'twowikimultihopqa',
+            'widesearch',
+            'workbench',
         )
         self.assertEqual(registry.published(), expected)
         for name in expected:

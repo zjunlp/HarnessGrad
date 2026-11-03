@@ -1,0 +1,15 @@
+{
+  "name": "cli-agent",
+  "version": "0.1.0",
+  "path": ".",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "install": null,
+  "env_kinds": [
+    "files"
+  ],
+  "notes": "**It is a test fixture, not a shipped harness** (moved out of `base_harness/` on 2026-11-01), because a trace it writes cannot satisfy the adapter contract by construction. `driver.py:_harness_roots` keeps the name resolvable for the tests that drive a foreign CLI through the sandbox. A translation layer: runs any prompt-taking agent CLI (Claude Code, Codex, OpenCode, ...) as the harness. Configure with HG_CLI / HG_CLI_PROMPT / HG_CLI_ENV / HG_CLI_MODEL; see agent.py's docstring. It is a **probe and a scaffold, not a study baseline**: it executes exactly one program and can see only that program's exit code and how much it printed, so the trace it writes has one action for the entire session, no per-turn `reply` and no `usage.calls` -- tools/check_trace_contract.py rejects it by construction, which is the correct answer rather than a bug. Use it to find out whether a CLI can be driven at all inside the sandbox, then write that CLI's own adapter (the adapters beside this one are the worked examples; docs/adapter-spec.md is the five trace clauses they must meet). `runtime_paths` names the trees a CLI lives in when it is not under /usr; the value here is this machine's (a directory outside the platform holding tools/fake_cli.py's copy) and a real deployment replaces it.",
+  "runtime_paths": [
+    "/mnt/20t/xubuqiang/Study/harnessgrad_cli"
+  ]
+}

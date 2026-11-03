@@ -19,13 +19,26 @@ SCAFFOLDS = DATA / "scaffolds"
 
 # Independent, reviewed inventory: do not derive this expectation from discovery.
 EXPECTED_DATASETS = (
-    "agentdojo", "aime", "alfworld", "api_bank", "appworld", "bfcl_v3",
-    "bird_minidev", "chessbench_puzzles", "cooperbench", "costbench", "costbench_dynamic", "ds1000", "fever", "gaia",
-    "gsm8k", "hotpotqa", "jericho", "kumo", "livecodebench", "locomo",
-    "memoryagentbench", "musique", "nestful", "personamem_v2",
-    "physicsquestions", "reasoning_gym", "scienceworld", "sotuqa",
-    "sportsunderstanding", "spreadsheetbench", "strategyqa", "strongreject", "tau2_bench",
-    "tau3_bench", "tau_bench", "terminal_bench", "triviaqa", "twowikimultihopqa",
+    # `authored_example_fix_bug` 是控制台「起草」发布的示例场景：它是一个公开的适配器，
+    # 所以这份独立评审过的清单里也要有它（成员变化照样要评审，不从发现里派生）。
+    # The twenty FlashRSI ports (2026-11-02) join for the same reason: each has a
+    # reviewed section in `docs/dataset-reviews/flashrsi-transfer.md` and declares
+    # `KIND = "dataset"`. Membership is still reviewed, never derived.
+    "agentdojo", "aime", "alfworld", "api_bank",
+    "appworld", "authored_example_fix_bug", "bbeh", "bfcl_v3",
+    "bird_minidev", "browsecomp", "chessbench_puzzles", "cooperbench",
+    "costbench", "costbench_dynamic", "deepsearchqa", "deepswe",
+    "ds1000", "fever", "gaia", "gsm8k",
+    "harvey_lab", "hle", "hotpotqa", "jericho",
+    "jobbench", "kumo", "livecodebench", "livemathbench",
+    "locomo", "math", "math500", "memoryagentbench",
+    "musique", "nestful", "nq", "officeqa_pro",
+    "personamem_v2", "physicsquestions", "reasoning_gym", "scienceworld",
+    "searchqa", "sotuqa", "sportsunderstanding", "spreadsheetbench",
+    "spreadsheetbench2", "strategyqa", "strongreject", "supergpqa",
+    "swe_bench", "swe_bench_pro", "tau2_bench", "tau3_bench",
+    "tau_bench", "terminal_bench", "travelplanner", "triviaqa",
+    "twowikimultihopqa", "widesearch", "workbench",
 )
 FIXTURES = (
     "demo.py", "probe_set.py", "broken_service.py", "verify_demo.py",

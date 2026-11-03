@@ -289,6 +289,7 @@ harnessgrad_work/
 /docs/*
 !/docs/resume-design.md
 !/docs/writing_a_harness.md
+!/docs/adapter-spec.md
 !/docs/dataset-onboarding.md
 !/docs/local-model-endpoints.md
 !/docs/dataset-first-day.md
@@ -460,3 +461,28 @@ console/.local/
 
 # the console's endpoint settings live here and carry API keys
 .local/
+
+# 候选副本的来源账本：记录每个副本创建时的文件指纹，用来判断"打开同一轮要不要复用"。
+# 它是这台机器上的状态（时间戳 + 本地路径决策），不是源文件。
+# The console's edit screen writes one copy per opened version here (383 KB agent.py copies
+# accumulate fast), plus the `.sources.json` ledger that decides whether a copy is reused.
+# It is per-machine state, not source: 68 files of it were tracked before 2026-11-03 and the
+# console recreates whatever it needs. Tracked copies in a public repository are also how a
+# reader ends up diffing two machines' scratch directories.
+data/candidates/
+
+# Harness integration decision and acceptance record.
+!/docs/openclaw-miniagent-integration.md
+
+# The on-ramp page: the one sequence that takes an outside researcher from a directory with an
+# `agent.py` to a point on a measured curve, with every command and its real output. It is the
+# page `README.md`'s documentation table and `docs/writing_a_harness.md` §5 both point at, so
+# publishing it is what makes those two pointers resolve in a clone; `docs/writing_a_harness.md`
+# stays the contract and `docs/adapter-spec.md` the adapter rules, and this page only runs them.
+!/docs/bring-your-own-harness.md
+
+# The FlashRSI comparison page: the release date depends on a reader being able to check
+# "why not just use their repo" against sourced cells rather than a claim, so it is public --
+# every FlashRSI cell names a URL and a date, and every cell about this repository names a
+# path a reader can open.
+!/docs/comparison-flashrsi.md

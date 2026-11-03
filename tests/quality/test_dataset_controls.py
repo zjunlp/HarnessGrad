@@ -45,10 +45,38 @@ QUALITY = ROOT / "tests" / "quality"
 #: metric. An empty `control` with an `exempt` sentence is a dataset that has no oracle arm,
 #: and the sentence has to say why and what writing one would take.
 ROWS: dict[str, dict] = {
+    # Pinned FlashRSI ports; controls do not imply production authorization.
+    'bbeh': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'bbeh'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'browsecomp': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'deepsearchqa': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'deepswe': {'control': [], 'metric_tests': ['test_flashrsi_harbor.py'], 'exempt': 'The focused protocol suite contains real official evaluator and source/admission controls. No full released dataset oracle/noop sweep is claimed. Provision the native data, independent runtime and declared scorer first; separate/collect/pristine replay requirements remain fail-closed where unsupported. A separately reviewed real benchmark diagnostic is still required.'},
+    'harvey_lab': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'hle': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'jobbench': {'control': [], 'metric_tests': ['test_flashrsi_harbor.py'], 'exempt': 'The focused protocol suite contains real official evaluator and source/admission controls. No full released dataset oracle/noop sweep is claimed. Provision the native data, independent runtime and declared scorer first; separate/collect/pristine replay requirements remain fail-closed where unsupported. A separately reviewed real benchmark diagnostic is still required.'},
+    'livemathbench': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'math': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'math'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'math500': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'math500'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'nq': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'nq'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'officeqa_pro': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'officeqa_pro'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'searchqa': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'searchqa'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'spreadsheetbench2': {'control': [], 'metric_tests': ['test_flashrsi_harbor.py'], 'exempt': 'The focused protocol suite contains real official evaluator and source/admission controls. No full released dataset oracle/noop sweep is claimed. Provision the native data, independent runtime and declared scorer first; separate/collect/pristine replay requirements remain fail-closed where unsupported. A separately reviewed real benchmark diagnostic is still required.'},
+    'supergpqa': {'control': ['data/scaffolds/flashrsi_qa/control.py', '--dataset', 'supergpqa'], 'metric_tests': ['test_flashrsi_qa_adapters.py']},
+    'swe_bench': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'swe_bench_pro': {'control': [], 'metric_tests': ['test_flashrsi_harbor.py'], 'exempt': 'The focused protocol suite contains real official evaluator and source/admission controls. No full released dataset oracle/noop sweep is claimed. Provision the native data, independent runtime and declared scorer first; separate/collect/pristine replay requirements remain fail-closed where unsupported. A separately reviewed real benchmark diagnostic is still required.'},
+    'travelplanner': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'widesearch': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+    'workbench': {'control': [], 'metric_tests': ['test_flashrsi_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},
+
     "costbench_dynamic": {"control": ["data/datasets/costbench_dynamic/control.py"],
                           "metric_tests": ["test_costbench_dynamic_dataset.py",
                                            "test_costbench_dynamic_runtime.py",
                                            "test_costbench_dynamic_scoring.py"]},
+    # 「起草」发布的示例场景：控制的两臂就是 `--gates` 里的 oracle / 空手两臂，由
+    # `tools/scenario_builder.py --control <bundle> --oracle|--noop` 折成控制协议要的那个
+    # 数字。度量测试是编译层（SETUP/VERIFY）与起草层（三道门）各自的那两个文件。
+    "authored_example_fix_bug": {
+        "control": ["tools/scenario_builder.py", "--control", "data/authored/example-fix-bug"],
+        "metric_tests": ["test_authored_dataset.py", "test_scenario_builder.py"]},
     "costbench": {"control": ["data/datasets/costbench/control.py"],
                   "metric_tests": ["test_costbench_official_scorer.py", "test_costbench_dataset.py"]},
     "personamem_v2": {
@@ -67,7 +95,6 @@ ROWS: dict[str, dict] = {
                     "strongreject/disinformation_and_deception_0004_pap_logical_appeal"],
         "metric_tests": ["test_strongreject_official_scorer.py", "test_strongreject_dataset.py"],
         "requires_judge": True,
-        "noop_score": None,
     },
     "cooperbench": {
         "control": ["data/datasets/cooperbench/control.py", "--task-id", "cooperbench/pallets_click_task/task2956/f1-2"],

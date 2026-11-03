@@ -155,11 +155,33 @@ def test_controls_through_selected_episode_and_actual_verifier(prepared, tmp_pat
         assert payload['payload']['seal']['status'] == ('incomplete' if mode == 'noop' else 'complete')
 
 
+def _load_check_in_process(path):
+    """在进程内加载 verifier 的 `check.py`：它靠 `sys.path` 上的顶层包 `lib` 导入自己。
+
+    **顶层包名 `lib` 在数据集之间会撞。** `personamem_v2` 也有 `lib/`，套件按文件名顺序
+    跑时先导入的那个 `lib` 留在 `sys.modules` 里，后来者的 `from lib.evaluation import …`
+    就拿到别人的包 —— 实测 `ImportError: cannot import name 'JUDGE_SOURCES' from
+    'lib.scoring' (…/personamem_v2/lib/scoring.py)`。真实运行里每个 check 都是独立子进程，
+    没有这个问题；这里在加载前把 `lib*` 摘掉，加载完原样还回去。
+    """
+    saved = {name: module for name, module in sys.modules.items()
+             if name == 'lib' or name.startswith('lib.')}
+    for name in saved:
+        del sys.modules[name]
+    try:
+        spec = importlib.util.spec_from_file_location('mab_check_test', path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        for name in [n for n in sys.modules if n == 'lib' or n.startswith('lib.')]:
+            del sys.modules[name]
+        sys.modules.update(saved)
+
+
 def test_verifier_rejects_cross_task_or_modified_seal(prepared):
     tid, service, gold = prepared
-    spec = importlib.util.spec_from_file_location('mab_check_test', dataset.ASSETS / 'verify/check.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = _load_check_in_process(dataset.ASSETS / 'verify/check.py')
     session = Session(service)
     relay_sha = hashlib.sha256(dataset._service_content(dataset._rows()[tid]).encode()).hexdigest()
     record = {'schema': 'harnessgrad.interaction-record.v1', 'binding': {'task_id': tid,
@@ -295,16 +317,18 @@ def test_report_rejects_unbound_or_inconsistent_evidence(prepared, corruption):
 def test_import_is_lazy_and_default_data_root_is_portable(tmp_path):
     import subprocess
     root = Path(__file__).resolve().parents[2]
+    default = (Path.home() / '.local/share/harnessgrad/datasets/memoryagentbench')
     script = f"""import sys
 from pathlib import Path
 sys.path.insert(0, {str(root)!r})
 from data.datasets import memoryagentbench as dataset
 assert not dataset._rows.cache_info().currsize
-assert dataset.DATASET_ROOT == Path('/mnt/20t/xubuqiang/datasets/memoryagentbench'), dataset.DATASET_ROOT
+assert dataset.DATASET_ROOT == Path({str(default)!r}), dataset.DATASET_ROOT
 assert not any(m in sys.modules for m in ('numpy', 'nltk', 'rouge_score', 'pyarrow', 'tiktoken'))
 """
     environment = {key: value for key, value in os.environ.items()
-                   if key not in ('HG_MAB_DATA', 'HG_MAB_PREPARED')}
+                   if key not in ('HG_MAB_DATA', 'HG_MAB_PREPARED', 'HG_DATA_ROOT',
+                                  'HG_DATA_MEMORYAGENTBENCH')}
     subprocess.run([sys.executable, '-I', '-S', '-c', script], cwd=tmp_path,
                    env=environment, check=True)
 

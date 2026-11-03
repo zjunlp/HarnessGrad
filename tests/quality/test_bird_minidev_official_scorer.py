@@ -243,9 +243,13 @@ def test_the_module_imports_without_its_data(tmp_path):
     reporting it. The module body must survive a missing root and carry the reason into
     `load()`."""
     source = ADAPTER.read_text(encoding="utf-8")
-    patched = re.sub(r'DATASET_ROOT = Path\("[^"]*"\)',
-                     f'DATASET_ROOT = Path({str(tmp_path)!r})', source, count=1)
-    assert patched != source, "the DATASET_ROOT line moved; fix this test rather than the regex"
+    # The assignment can be the literal it used to be or the resolver that replaced it
+    # (`roots.dataset_root("bird_minidev", "<legacy literal>")`); either way this test
+    # replaces the whole right-hand side with an empty directory, which is what "the bytes
+    # are not here" means.
+    patched, changes = re.subn(r'DATASET_ROOT = (?:Path|roots\.dataset_root)\([^\n]*\)',
+                               f'DATASET_ROOT = Path({str(tmp_path)!r})', source, count=1)
+    assert changes == 1, "the DATASET_ROOT line moved; fix this test rather than the regex"
     namespace = {"__name__": "data.bird_minidev_unprovisioned", "__file__": str(ADAPTER)}
     exec(compile(patched, str(ADAPTER), "exec"), namespace)   # must not raise
     assert namespace["_RECORDS"] == []

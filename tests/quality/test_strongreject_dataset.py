@@ -7,6 +7,7 @@ import pytest
 from data.datasets import strongreject as dataset
 from data.scaffolds import registry
 from eval.run import runner
+from eval.run.metrics import mean
 from eval.verification.verifier import _verify
 from test_shared_dataset_runtime import harness
 
@@ -29,8 +30,9 @@ def endpoint(monkeypatch):
         def do_POST(self):
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             state["requests"].append(request)
+            reply = state["reply"](request) if callable(state["reply"]) else state["reply"]
             body = json.dumps({"model": dataset.JUDGE_MODEL,
-                               "choices": [{"message": {"content": state["reply"]}}],
+                               "choices": [{"message": {"content": reply}}],
                                "usage": {"prompt_tokens": 7, "completion_tokens": state['completion_tokens']}}).encode()
             self.send_response(state["status"])
             self.send_header("Content-Length", str(len(body)))
@@ -53,10 +55,8 @@ def test_inventory_protocol_and_split(prepared):
     assert len(rows) == 150
     assert sum(row["attack_unchanged"] for row in rows.values()) == 5
     assert {r["jailbreak_method"] for r in rows.values() if r["attack_unchanged"]} == {"pap_logical_appeal"}
-    train = {rows[t]["forbidden_prompt"] for t in prepared.SPLIT["train"]}
-    evaluation = {rows[t]["forbidden_prompt"] for t in prepared.SPLIT["eval"]}
-    assert train and evaluation and not train & evaluation
-    assert len(prepared.SPLIT["train"]) + len(prepared.SPLIT["eval"]) == 150
+    assert prepared.SPLIT is None
+    assert prepared.SPLIT_SOURCE == "none"
     assert registry.kind_of("strongreject") == "dataset"
     assert "strongreject" in registry.published()
     assert len(registry.load("strongreject")[0]) == 150
@@ -116,17 +116,85 @@ def test_judge_failures_unmeasured(prepared, tmp_path, endpoint, reply, status):
     assert result["score"] is None and result["outcome"] == "unmeasured", result
 
 
-@pytest.mark.parametrize("content", [None, "", "  \n"])
-def test_absent_final_answer_is_not_scored_as_a_refusal(prepared, tmp_path, endpoint, content):
+@pytest.mark.parametrize("content", [None, b"", b"  \n", b"\xff"])
+def test_missing_or_invalid_text_scores_zero_without_judging(prepared, tmp_path, endpoint, content):
     tid = next(iter(prepared.rows()))
     if content is not None:
-        (tmp_path / "answer.txt").write_text(content)
+        (tmp_path / "answer.txt").write_bytes(content)
     (tmp_path / "stdout.log").write_text("This log must never become a response.")
     result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
-    assert result["score"] is None and result["outcome"] == "unmeasured", result
+    assert result["score"] == 0 and result["passed"] is False, result
+    assert "unmeasured" not in result
     assert not endpoint["requests"]
-    assert result['evidence']['measured'] is False
+    assert result['evidence']['measured'] is True
+    assert result['evidence']['submission_failed'] is True
     assert result['evidence']['error'].startswith('InvalidSubmission:')
+    assert not {"official", "defense_score", "answer_sha256"} & result['evidence'].keys()
+
+
+def test_omitting_a_zero_score_answer_does_not_raise_the_mean(prepared, tmp_path, endpoint, monkeypatch):
+    monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(work))
+    tasks, scorable = prepared.load()
+    tasks = tasks[:2]
+    first, second = [task["task_id"] for task in tasks]
+    endpoint["reply"] = lambda request: (
+        "1.b 0\n2.b 5\n3.b 5" if "CONTROL_UNSAFE_ANSWER" in request["messages"][-1]["content"]
+        else "1.b 1\n2.b 1\n3.b 1")
+    for scenario in ("complete", "omit_zero_score_answer"):
+        parent = tmp_path / scenario
+        parent.mkdir()
+        body = (
+            "import json\n"
+            "task=json.loads(Path(a.task).read_text())\n"
+            "(w/'trace.jsonl').write_text(json.dumps({'event':'synthetic_control',"
+            "'usage':{'calls':0,'input_tokens':0,'output_tokens':0}})+'\\n')\n"
+            f"if task['task_id']=={first!r}: (w/'answer.txt').write_text('CONTROL_SAFE_ANSWER')\n"
+        )
+        if scenario == "complete":
+            body += "else: (w/'answer.txt').write_text('CONTROL_UNSAFE_ANSWER')\n"
+        result = runner.evaluate(harness(parent, body), tasks, scorable,
+            setups={tid: prepared.SETUP[tid] for tid in (first, second)},
+            verifiers={tid: prepared.VERIFY[tid] for tid in (first, second)},
+            envs={tid: prepared.ENV[tid] for tid in (first, second)},
+            run_id="strongreject-submission-" + scenario)
+        assert result["invalid"] == {}, result
+        assert result["startup_failure"] is None, result
+        assert result["per_task"] == {first: 1.0, second: 0.0}, result
+        assert mean(list(result["per_task"].values()), dataset="strongreject") == .5
+        if scenario != "complete":
+            assert result["verdicts"][second]["evidence"]["submission_failed"] is True
+    assert len(endpoint["requests"]) == 3
+
+
+def test_answer_io_failure_remains_unmeasured(prepared, tmp_path, endpoint):
+    spec = prepared.VERIFY[next(iter(prepared.rows()))]
+    (tmp_path / "answer.txt").write_text("Synthetic response.")
+    # Inject a disk-read fault inside the real verifier process, before judging.
+    script = f'''
+import errno, runpy, sys
+from pathlib import Path
+read_text = Path.read_text
+def faulty_read(path, *args, **kwargs):
+    if path == Path('answer.txt'):
+        raise OSError(errno.EIO, 'synthetic disk read failure')
+    return read_text(path, *args, **kwargs)
+Path.read_text = faulty_read
+sys.argv = {spec['argv'][2:]!r}
+runpy.run_path(sys.argv[0], run_name='__main__')
+'''
+    spec["argv"] = [*spec["argv"][:2], "-c", script]
+    result = _verify(tmp_path, spec, "", sandbox=True, timeout_s=15)
+    assert result["score"] is None and result["outcome"] == "unmeasured", result
+    assert result["exit_code"] == 3, result
+    evidence = json.loads((tmp_path / "verifier/evidence.json").read_text())
+    assert evidence["measured"] is False
+    assert "synthetic disk read failure" in evidence["error"]
+    assert "submission_failed" not in evidence
+    assert not (tmp_path / "verifier/reward.txt").exists()
+    assert not endpoint["requests"]
 
 
 @pytest.mark.parametrize("model", [dataset.DEFAULT_JUDGE_MODEL, "Ling-3.1-flash"])
@@ -155,8 +223,8 @@ os.environ['HG_STRONGREJECT_JUDGE_MODEL']='actor-selected-model'
     assert endpoint["requests"][0]["model"] == model
 
 
-@pytest.mark.parametrize("kind", ["symlink", "hardlink", "directory"])
-def test_unsafe_answer_files_are_unmeasured(prepared, tmp_path, endpoint, kind):
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "directory", "fifo", "unreadable"])
+def test_invalid_answer_files_score_zero_without_judging(prepared, tmp_path, endpoint, kind):
     import os
     answer = tmp_path / "answer.txt"
     target = tmp_path / "other.txt"
@@ -167,9 +235,18 @@ def test_unsafe_answer_files_are_unmeasured(prepared, tmp_path, endpoint, kind):
         os.link(target, answer)
     elif kind == "directory":
         answer.mkdir()
+    elif kind == "fifo":
+        os.mkfifo(answer)
+    elif kind == "unreadable":
+        answer.write_text("Synthetic response.")
+        answer.chmod(0)
     tid = next(iter(prepared.rows()))
     result = _verify(tmp_path, prepared.VERIFY[tid], "", sandbox=True, timeout_s=15)
-    assert result["score"] is None and result["outcome"] == "unmeasured", result
+    assert result["score"] == 0 and result["passed"] is False, result
+    assert "unmeasured" not in result
+    assert result["evidence"]["measured"] is True
+    assert result["evidence"]["submission_failed"] is True
+    assert "official" not in result["evidence"]
     assert not endpoint["requests"]
 
 
@@ -198,6 +275,7 @@ def test_profile_identity_is_separate_and_default_is_unchanged(prepared, monkeyp
     original = prepared.VERIFY[tid]
     tasks, metrics = prepared.load()
     split = prepared.SPLIT
+    groups = prepared.SPLIT_GROUPS
     assert prepared.METRIC == "strongreject.rubric.defense.gpt-4o-mini-2024-07-18.v1"
     assert original["judge"] == {"model": "gpt-4o-mini-2024-07-18", "max_calls": 1,
                                  "max_output_tokens": None, "timeout_s": 300, "parameters": {"temperature": 0},
@@ -206,6 +284,7 @@ def test_profile_identity_is_separate_and_default_is_unchanged(prepared, monkeyp
     alternate = prepared.VERIFY[tid]
     other_tasks, other_metrics = prepared.load()
     assert other_tasks == tasks and prepared.SPLIT == split
+    assert prepared.SPLIT_GROUPS == groups
     assert set(metrics.values()).isdisjoint(other_metrics.values())
     assert set(other_metrics.values()) == {"strongreject.rubric.defense.Ling-3.1-flash.v1"}
     case = lambda spec: json.loads(next(i["content"] for i in spec["inputs"] if i["path"] == "strongreject_case.json"))
@@ -277,7 +356,7 @@ def test_control_entrypoint_with_synthetic_judge(prepared, tmp_path, endpoint, p
         args.append("--platform")
     result = subprocess.run(args, capture_output=True, text=True, timeout=25)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert ("reward 1" if oracle else "CONTROL UNMEASURED") in result.stdout
+    assert ("reward 1" if oracle else "reward 0") in result.stdout
     assert len(endpoint["requests"]) == int(oracle)
 
 
@@ -327,7 +406,7 @@ def test_declared_judge_budget_reaches_broker(prepared, tmp_path, endpoint):
 
 
 @pytest.mark.parametrize("configured", [False, True])
-def test_registered_controls_respect_judge_prerequisite_and_unmeasured_noop(
+def test_registered_controls_respect_judge_prerequisite_and_zero_noop(
         prepared, endpoint, monkeypatch, configured):
     import runpy
     from pathlib import Path

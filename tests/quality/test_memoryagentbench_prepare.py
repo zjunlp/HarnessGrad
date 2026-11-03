@@ -1,11 +1,14 @@
 """Offline input boundary and selected-artifact validation, without a model."""
 import json
+import os
 from pathlib import Path
+import sys
 
 import pytest
 
 from data.datasets.memoryagentbench.lib import inputs, storage
-from data.datasets.memoryagentbench.prepare import build_artifacts, prepare, validate_raw
+from data.datasets.memoryagentbench.prepare import (build_artifacts, prepare, selected_interpreter,
+                                                    validate_raw)
 
 
 class Sentences:
@@ -140,6 +143,48 @@ def test_dependency_version_mismatch_is_rejected(tmp_path, monkeypatch):
     monkeypatch.setattr(inputs.importlib.metadata, "version", lambda package: "unexpected")
     with pytest.raises(ValueError, match="dependency_version_mismatch"):
         inputs.initialize(tmp_path)
+
+
+def test_dependency_mismatch_message_carries_the_pins_installed_and_the_fix(tmp_path, monkeypatch):
+    """The 2026-11-02 receipt: the gate said `dependency_version_mismatch:nltk` and nothing else."""
+    pins = inputs.read_spec("chunk-policy.json")["dependencies"]
+    installed = {"nltk": "3.9.2", "regex": "2023.10.3", "tiktoken": "0.7.0"}
+    assert set(installed) == set(pins)
+    monkeypatch.setattr(inputs.importlib.metadata, "version", installed.__getitem__)
+    with pytest.raises(ValueError) as caught:
+        inputs.initialize(tmp_path)
+    message = str(caught.value)
+    assert message.startswith("dependency_version_mismatch:nltk:")
+    for package, version in pins.items():
+        assert f"{package}=={version}" in message   # pinned
+    for package, version in installed.items():
+        assert f"{package}=={version}" in message   # installed here
+    assert sys.executable in message
+    assert inputs.INTERPRETER_ENV in message
+    assert inputs.install_command(pins) in message
+    assert message.count("pip install") == 1
+
+
+def test_absent_dependency_is_named_as_not_installed(tmp_path, monkeypatch):
+    def absent(package):
+        raise inputs.importlib.metadata.PackageNotFoundError(package)
+    monkeypatch.setattr(inputs.importlib.metadata, "version", absent)
+    with pytest.raises(ValueError, match="nltk==not installed"):
+        inputs.initialize(tmp_path)
+
+
+def test_prepared_interpreter_is_validated_and_keeps_the_venv_path(tmp_path):
+    assert selected_interpreter(value="") is None
+    with pytest.raises(ValueError, match="HG_MAB_PYTHON must name an installed absolute interpreter"):
+        selected_interpreter(value="relative/bin/python")
+    with pytest.raises(ValueError, match="HG_MAB_PYTHON must name an installed absolute interpreter"):
+        selected_interpreter(value=str(tmp_path / "absent" / "python"))
+    # A venv's bin/python is a symlink to the base interpreter: resolving both sides would
+    # make a prepared environment compare equal to the shared one and never be used.
+    venv = tmp_path / "venv"; (venv / "bin").mkdir(parents=True)
+    (venv / "bin" / "python").symlink_to(sys.executable)
+    assert selected_interpreter(value=str(venv / "bin" / "python")) == venv / "bin" / "python"
+    assert selected_interpreter(value=sys.executable) == Path(os.path.abspath(sys.executable))
 
 
 def test_raw_pin_and_missing_file_fail_closed(tmp_path):

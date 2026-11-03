@@ -228,13 +228,25 @@ assert not f.readline()
 
 
 def test_no_connection_and_launch_failure_cleanup(case, monkeypatch):
+    """没连上：一条 incomplete 的 verdict（有 receipt、无分数）。
+
+    启动就失败：**没有 verdict，而是一条 invalid**。两者都"不是分数"，但不是同一件事 ——
+    没连上时中继真的跑过，它交得出 receipt（含清理证据）；启动失败时中继根本没起来，
+    没有 receipt 可交。`_run_one` 对这种情况返回
+    `_invalid(..., stage="harness launch")`，这段代码就是为了不再把启动失败伪装成
+    `exit -1`（"被信号杀死"）而写的，所以这里断言的是那条 invalid 的形状，而不是
+    一个不存在的中继记录。
+    """
     assert_incomplete(execute(case, "pass\n"))
 
     def fail_launch(*args, **kwargs):
         raise OSError("fabricated launch failure")
 
     monkeypatch.setattr(runner.sandbox_mod, "run", fail_launch)
-    assert_incomplete(execute(case, "pass\n"))
+    failed = execute(case, "pass\n")
+    assert "verdict" not in failed, failed
+    assert failed["invalid"]["stage"] == "harness launch", failed["invalid"]
+    assert "score" not in failed and failed.get("exit_code") is None
 
 
 def test_invalid_trusted_reference_is_unmeasured(case):

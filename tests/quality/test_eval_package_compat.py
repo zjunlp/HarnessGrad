@@ -73,9 +73,20 @@ def test_repository_root_survives_the_move():
     assert PLATFORM_ROOT == ROOT
 
 
+LEGACY_ADAPTER = ROOT / "legacy/adapters/harnessgrad_domain/adapter.py"
+
+
 def test_legacy_critic_recognizes_both_scorer_path_locations():
+    """历史提交的适配器里那份 `critic_patterns`，必须同时认旧路径与新路径。
+
+    那份适配器**不在本仓库里**：它是当年提交上来的候选 harness（`legacy/` 从未进过
+    git，只存在于留有它的机器上）。所以文件不在时这条跳过，而不是让每个 checkout 都红
+    ——它证明的是那份历史产物的属性，不是平台自己的属性。
+    """
+    if not LEGACY_ADAPTER.is_file():
+        pytest.skip(f"historical adapter is not in this checkout: {LEGACY_ADAPTER}")
     # Inspect declarations without importing or executing the historical adapter.
-    tree = ast.parse((ROOT / "legacy/adapters/harnessgrad_domain/adapter.py").read_text())
+    tree = ast.parse(LEGACY_ADAPTER.read_text())
     patterns = next(ast.literal_eval(node.value) for node in ast.walk(tree)
                     if isinstance(node, ast.Assign)
                     and any(isinstance(target, ast.Name) and target.id == "critic_patterns"

@@ -38,7 +38,19 @@ ROOT = Path(__file__).resolve().parents[2]
 #: two were matched here as `subprocess.*` calls and no longer are, but the call they became is
 #: matched in its new home - `process.run`'s `Popen` carries `errors="replace"` - so the property is
 #: unchanged and the smaller count is the accurate one, not a gap.
-EXPECTED_CALLS = {"base_harness": 8, "eval": 10, "data": 20, "harnessgrad": 6, "tools": 22}
+#: 2026-11-02：数据集一侧的辅助库（CooperBench / MemoryAgentBench 的 judge 与镜像工具）
+#: 让 `data` 从 20 涨到 57、`tools` 从 22 涨到 32、`eval` 从 10 涨到 15、`base_harness`
+#: 从 8 涨到 11。按这条测试自己的规矩：先确认**每一个**新站点都写了解码方式（下面的属性
+#: 检查覆盖全部匹配到的调用，所以数字只钉范围），再更新这里的计数。
+#: 2026-11-02（第二次）：`harnessgrad/readiness.py` 让 `--check-only` 能先问"这台机器
+#: 能不能跑"，它多了一个 text-mode 调用（`git --version`），于是 `harnessgrad` 6 → 7。
+#: 属性检查（每个调用都写了解码方式）覆盖它，所以数字仍然只是范围。
+#: 2026-11-03: `data` 57 -> 42 and `tools` 32 -> 31. The `data` drop is the 68 tracked copies
+#: under `data/candidates/` leaving git: they were the console's per-version scratch (a 383 KB
+#: `agent.py` each) and the scan counted their subprocess calls as if they were source. The
+#: `tools` drop is the export/dataset tool work of the same day; every remaining site is covered
+#: by the property check, so these numbers are a range and never the claim itself.
+EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 42, "harnessgrad": 7, "tools": 31}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.

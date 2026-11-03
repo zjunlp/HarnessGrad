@@ -122,7 +122,14 @@ def test_method_metadata_records_multiple_children_and_default():
 
 
 def test_one_call_submits_a_whole_batch(tmp_path, monkeypatch):
-    """一次调用 = k 个子代,每个子代一棵独立的树,`stop: true`。"""
+    """一次调用 = k 个子代，每个子代一棵独立的树；`stop` 是 **false**。
+
+    "这一批交完了"不是"这次运行结束了"。平台的预算数的是**测量过的状态**
+    （`mode_a.py`："measured states, not method calls"），而
+    `children = max(1, min(children, remaining))` 的存在就是为了让一次批次铺满剩余预算。
+    实测 2026-10-20：这条路径上返回 `stop=True` 会让运行在**第一批**就结束
+    （AppWorld r3 / 10，archive 再没被复用，每个子代的 `dgm_parent` 都是 r0），所以
+    现在固定回 `stop: false`，交给宏观迭代与真正的收敛规则去结束。"""
     mod = _load()
     base = _base(tmp_path, _history())
     traj = tmp_path / "traj.json"
@@ -136,7 +143,7 @@ def test_one_call_submits_a_whole_batch(tmp_path, monkeypatch):
     for step in written["steps"]:
         assert Path(step["harness_dir"]).is_dir()
         assert step["method_reported"]["dgm"]["child"] >= 1
-    assert reply["changed"] is True and reply["stop"] is True, reply
+    assert reply["changed"] is True and reply["stop"] is False, reply
     assert reply["steps"] == 3, reply
 
 
