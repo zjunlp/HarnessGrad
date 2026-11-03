@@ -9,9 +9,9 @@ observations.
 
 ## Storage migration review (2026-11-03)
 
-This storage integration targets the current-main baseline `df9e5108`. The
-review covers explicit storage configuration and trusted scorer imports. The
-reviewed changes are:
+This storage integration was reviewed against `df9e5108` and is now rebased
+onto `d9233ca7`. The review covers explicit storage configuration and trusted
+scorer imports. The reviewed changes are:
 
 - `data/datasets/bfcl_v3.py:97` uses the portable root resolver instead of the
   legacy host path. The ASTs of `bare_name`, `gold_names`, `parse_prediction` and
