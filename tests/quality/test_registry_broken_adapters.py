@@ -58,7 +58,10 @@ def test_checkout_has_all_reviewed_adapter_declarations():
     assert not broken, (
         "these adapter declarations cannot be read, so the catalogue is missing them: "
         + "; ".join(f"{name} ({reason})" for name, reason in sorted(broken.items())))
-    assert len(published) == 59, f"expected 59 published datasets, got {len(published)}"
+    declared = len([path for path in (ROOT / "data/datasets").glob("*.py")
+                    if path.stem != "__init__"])
+    assert len(published) == declared, (
+        f"expected every declared adapter ({declared}) to be published, got {len(published)}")
 
 
 def test_missing_runtime_is_reported_at_load_without_shortening_catalog(monkeypatch):
@@ -66,7 +69,9 @@ def test_missing_runtime_is_reported_at_load_without_shortening_catalog(monkeypa
         raise ModuleNotFoundError("synthetic unavailable runtime")
 
     monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=unavailable))
-    assert len(registry.published()) == 59
+    declared = len([path for path in (ROOT / "data/datasets").glob("*.py")
+                    if path.stem != "__init__"])
+    assert len(registry.published()) == declared
     assert registry.broken_adapters() == {}
     with pytest.raises(ModuleNotFoundError, match="synthetic unavailable runtime"):
         registry.load("gsm8k")
