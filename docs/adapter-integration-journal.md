@@ -6316,3 +6316,12 @@ Restored the mainline path-based sibling-module loader while retaining portable
 storage configuration. CLI help works before storage is configured, and an unrelated
 `protocol` entry in `sys.modules` cannot replace CooperBench's own module. Tests
 retain prepared-data digest checks; locally cached assets are not repinned.
+
+
+### Storage checks follow actual data access (2026-11-03)
+
+The registry delegates loading to the adapter and preserves import failures. A
+`DATASET_ROOT` declaration used for preparation does not require external storage
+for runtime tasks bundled in git. With storage unconfigured, tau-bench retains
+634 default-pool tasks and 514 dev-pool tasks with their native split declarations;
+adapters that actually access external bytes still report the missing setting.
