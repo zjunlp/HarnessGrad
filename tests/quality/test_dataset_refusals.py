@@ -13,6 +13,7 @@ FEVER and HotpotQA now have a structured evidence answer contract and are not re
 """
 from __future__ import annotations
 
+import pathlib
 import sys
 from pathlib import Path
 
@@ -147,7 +148,11 @@ def test_hotpot_answer_only_metrics_are_computable_and_distinct():
 def test_the_refusing_modules_still_declare_the_dataset_contract(refused):
     """A refusal does not excuse the parts a program can still decide."""
     assert refused.KIND == "dataset"
-    assert refused.DATASET_ROOT.is_absolute()
+    # The declaration must be a path without needing storage to be configured: resolving it here
+    # made this test depend on `HG_DATA_ROOT`, which is exactly what a refusal file must not do
+    # (it is read on a machine that has never provisioned anything).
+    root = refused.DATASET_ROOT
+    assert isinstance(root, pathlib.Path) or hasattr(root, "directory"), root
     downloads = refused.downloads()
     assert downloads and all(entry.get("version") for entry in downloads)
     for entry in downloads:
