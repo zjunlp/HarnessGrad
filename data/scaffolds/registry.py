@@ -114,26 +114,12 @@ def provision_status(name: str) -> dict | None:
 
 
 def load(name: str) -> tuple[list[dict], dict[str, str]]:
-    """Return (tasks, scorable) for a dataset name."""
-    from harnessgrad.paths import DatasetPath, dataset_root
-    try:
-        module = importlib.import_module(module_name(name))
-    except Exception:
-        # Report missing storage even when an optional dependency fails before
-        # the adapter reaches its root declaration.
-        source = Path(__file__).resolve().parents[1] / "datasets" / f"{name}.py"
-        if source.is_file() and kind_of(name) == KIND_DATASET:
-            for node in ast.parse(source.read_bytes()).body:
-                if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Call)
-                        and isinstance(node.value.func, ast.Name) and node.value.func.id == "dataset_root"
-                        and node.value.args and isinstance(node.value.args[0], ast.Constant)
-                        and any(isinstance(t, ast.Name) and t.id in {"DATASET_ROOT", "ROOT"} for t in node.targets)):
-                    dataset_root(node.value.args[0].value).resolve()
-        raise
-    for attribute in ("DATASET_ROOT", "ROOT"):
-        root = getattr(module, attribute, None)
-        if isinstance(root, DatasetPath):
-            root.resolve()
+    """Return tasks; adapters require external storage only when they access it.
+
+    A root declaration can serve preparation tools while runtime tasks come from
+    committed assets. Its presence alone does not make it a loading dependency.
+    """
+    module = importlib.import_module(module_name(name))
     return module.load()
 
 

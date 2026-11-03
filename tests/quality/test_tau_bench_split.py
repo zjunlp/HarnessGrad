@@ -120,6 +120,18 @@ def test_the_declared_split_passes_the_registry_check(monkeypatch):
     assert set(split["train"]) | set(split["eval"]) == {t["task_id"] for t in tasks}
 
 
+@pytest.mark.parametrize("pool,count", [("test", 634), ("dev", 514)])
+def test_registry_loads_committed_assets_without_external_storage(monkeypatch, pool, count):
+    from harnessgrad import paths
+    monkeypatch.setattr(paths, "_settings", lambda: {})
+    module = _reload(monkeypatch, pool)
+    assert isinstance(module.DATASET_ROOT, paths.DatasetPath)
+    tasks, scorable, split = registry.load_split("tau_bench")
+    assert len(tasks) == len(scorable) == count
+    assert split == module.SPLIT
+    assert (tasks, scorable) == module.load()
+
+
 def test_pool_dev_scores_the_official_dev_split_and_never_studies_it(monkeypatch):
     """The selection protocol: train is studied, dev is scored, the exam is not loaded."""
     module = _reload(monkeypatch, "dev")

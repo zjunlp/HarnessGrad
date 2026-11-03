@@ -290,6 +290,35 @@ def test_missing_storage_preserves_catalogs_and_refuses_data_access(checkout, ca
     assert "Set HG_DATA_ROOT" in error and "Traceback" not in error
 
 
+def test_registry_defers_storage_requirements_to_actual_data_access(checkout, monkeypatch):
+    from types import SimpleNamespace
+    from data.scaffolds import registry
+    root = paths.dataset_root("external-probe")
+    called = []
+
+    def load():
+        called.append(True)
+        (root / "pool.json").read_text()
+
+    monkeypatch.setattr(registry, "importlib", SimpleNamespace(
+        import_module=lambda name: SimpleNamespace(DATASET_ROOT=root, load=load)))
+    with pytest.raises(paths.DataRootNotConfigured, match="Set HG_DATA_ROOT"):
+        registry.load("external-probe")
+    assert called == [True], "registry must let the adapter determine whether it needs storage"
+
+
+def test_registry_does_not_mask_unrelated_import_errors_as_missing_storage(checkout, monkeypatch):
+    from types import SimpleNamespace
+    from data.scaffolds import registry
+
+    def unavailable(name):
+        raise ModuleNotFoundError("unavailable optional runtime")
+
+    monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=unavailable))
+    with pytest.raises(ModuleNotFoundError, match="unavailable optional runtime"):
+        registry.load("tau_bench")
+
+
 @pytest.mark.parametrize("family,name", [("qa", "bbeh"), ("research", "browsecomp")])
 def test_native_family_declarations_do_not_resolve_unconfigured_storage(
         checkout, tmp_path, family, name):

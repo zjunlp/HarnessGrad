@@ -364,7 +364,7 @@
 {"bytes": 1620, "id": 363, "module": "data.scaffolds.qa.prediction", "path": "data/scaffolds/qa/prediction.py", "sha256": "598ebb5fe688f561d6cb6388ef202be4233de14058c51e65391613c7a6bedd7e"}
 {"bytes": 8624, "id": 364, "module": "data.scaffolds.qa.read", "path": "data/scaffolds/qa/read.py", "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"}
 {"bytes": 17488, "id": 365, "module": "data.scaffolds.qa.verify.check", "path": "data/scaffolds/qa/verify/check.py", "sha256": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f"}
-{"bytes": 48785, "id": 366, "module": "data.scaffolds.registry", "path": "data/scaffolds/registry.py", "sha256": "3d99aa75028f34d3593423066a62816011e174399f691928d39df12fa0d1c4f8"}
+{"bytes": 47899, "id": 366, "module": "data.scaffolds.registry", "path": "data/scaffolds/registry.py", "sha256": "0abd80b0316cd205b7a1e445146609f4a4deb6f21ca6cbba1bf720a4dce2950c"}
 {"bytes": 1491, "id": 367, "module": "data.scaffolds.roots", "path": "data/scaffolds/roots.py", "sha256": "316bf5a61d5efef74fc4f4776851baa49d58bb08d5c7afe7433cd2d3a343a1d0"}
 {"bytes": 16025, "id": 368, "module": "data.scaffolds.runtime_extensions", "path": "data/scaffolds/runtime_extensions.py", "sha256": "cd658cee4bf1dedc7828773c8c6d3626de1b074aedd15f8046cb7c948b549797"}
 {"bytes": 6166, "id": 369, "module": "data.scaffolds.scorer_input", "path": "data/scaffolds/scorer_input.py", "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"}
