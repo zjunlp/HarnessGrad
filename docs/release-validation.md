@@ -109,6 +109,17 @@ this run and must not be added as independent coverage. The skip is the
 optional external RRSI checkout. Original vendored regex escape warnings remain
 unchanged for source-byte fidelity.
 
+The whole `tests/quality` tree was run once more on release commit `c15479b`,
+split into four disjoint shards so the wall clock stays inside one working
+session: **1515 / 1984 / 1524 / 1696 passed**, **249 / 65 / 79 / 50 skipped**,
+and no failures — 6719 passed and 443 skipped in 7162 collected tests. The split
+is a timing device, not four samples: every file appears in exactly one shard, so
+these numbers are the single-suite result written as a sum. Two rules make a
+recheck comparable: one file in one shard, and a fresh temporary root per shard
+(`--basetemp=/tmp/pytest-z0` style, outside the checkout). A shard that reports a
+failure after the source has been edited with the suite still running is a
+measurement of the edit, not of the release: the integrity guard is doing its job.
+
 ## Practical limits
 
 The five-task recipes are bounded integration smokes. They are not full official
