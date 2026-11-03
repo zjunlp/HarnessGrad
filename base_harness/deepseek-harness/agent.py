@@ -96,12 +96,12 @@ def runtime(env: dict | None = None) -> dict:
     declared = _declared_paths()
     explicit_root = env.get("HG_AGENT_DSH_ROOT")
     cli = env.get("HG_AGENT_DSH")
+    wrapper_cli = next((part for part in wrapper[1:]
+                        if not part.startswith("-") and part.endswith(CLI_RELATIVE.as_posix())), None)
+    if wrapper_cli:
+        cli = wrapper_cli
     if not cli and explicit_root:
         cli = str(Path(explicit_root).expanduser() / CLI_RELATIVE)
-    if not cli:
-        # A command carrying bin.js can still use a prepared farm. An opaque
-        # wrapper owns its setup and must not inherit some other installation.
-        cli = next((part for part in wrapper if part.endswith(CLI_RELATIVE.as_posix())), None)
     if not cli and not wrapper:
         cli = next((str(root / CLI_RELATIVE) for root in declared
                     if (root / CLI_RELATIVE).is_file()), None)
@@ -116,24 +116,35 @@ def runtime(env: dict | None = None) -> dict:
     elif not wrapper:
         raise ValueError("DSH is not configured; run tools/configure_dsh_harness.py "
                          "or set HG_AGENT_DSH and declare its runtime_paths")
-    node = env.get("HG_AGENT_NODE") if root is not None or not wrapper else None
-    if not node and root is not None:
-        node = next((str(bound) for bound in declared
-                     if bound.is_file() and os.access(bound, os.X_OK)), None)
-    if not node and root is not None:
-        node = next((str(path) for bound in declared
-                     for path in (bound / "node", bound / "bin/node") if path.is_file()), None)
-    if node or not wrapper:
-        node = _executable(node or "node", env)
-    argv = list(wrapper) if wrapper else [node, str(cli)]
     if wrapper:
+        argv = list(wrapper)
         argv[0] = _executable(argv[0], env)
+        # A direct interpreter + bin.js override names the interpreter that
+        # actually runs. Prepared bindings or HG_AGENT_NODE must not substitute
+        # another one for diagnostics. An opaque wrapper may choose internally;
+        # even an explicit DSH root does not reveal its interpreter.
+        node = argv[0] if wrapper_cli and wrapper[1] == wrapper_cli else None
+        if node is not None:
+            argv[1] = str(cli)
+    else:
+        node = env.get("HG_AGENT_NODE")
+        if not node:
+            node = next((str(bound) for bound in declared
+                         if bound.is_file() and os.access(bound, os.X_OK)), None)
+        if not node:
+            node = next((str(path) for bound in declared
+                         for path in (bound / "node", bound / "bin/node") if path.is_file()), None)
+        node = _executable(node or "node", env)
+        argv = [node, str(cli)]
     return {"argv": argv, "root": root, "node": node, "cli": str(cli) if cli else None}
 
 
 def farm_targets(root: Path, manifest: Path | None = None) -> list[tuple[str, Path]]:
     """Validate the complete farm before writing any links or profile directories."""
-    root = root.resolve(strict=True)
+    try:
+        root = root.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"DSH root cannot be resolved: {root}: {exc}") from exc
     if not root.is_dir():
         raise ValueError(f"DSH root is not a directory: {root}")
     entries = []
@@ -155,8 +166,10 @@ def farm_targets(root: Path, manifest: Path | None = None) -> list[tuple[str, Pa
         destination = root / relative
         try:
             resolved = destination.resolve(strict=True)
-        except OSError as exc:
+        except FileNotFoundError as exc:
             raise ValueError(f"DSH dependency is missing: {destination}") from exc
+        except (OSError, RuntimeError) as exc:
+            raise ValueError(f"DSH dependency cannot be resolved: {destination}: {exc}") from exc
         if not resolved.is_relative_to(root) or not resolved.is_dir():
             raise ValueError(f"DSH dependency escapes its installation or is not a package: {destination}")
         entries.append((name, destination))
