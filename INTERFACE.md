@@ -1934,6 +1934,25 @@ what the improver will call. The resolver reads that file and records what it fi
 (`tools/improver.py:declared_model`). A fact the platform cannot see any other way is still a
 fact the platform is responsible for recording.
 
+##### DSH installation paths
+
+For the bundled `dsh` CLI improver, configure the built checkout with `HG_DSH_ROOT`
+and a prepared profile home with `HG_IMPROVER_DSH_HOME`, or set `root` and `home`
+in a local `HG_IMPROVER_CONFIG` registry. `HG_DSH_NODE` overrides the registry's
+`interpreter`; otherwise that interpreter is resolved once from `PATH`. There is
+no per-user installation fallback. The checkout must contain `apps/cli/lib/bin.js`,
+and the source and profile home must be outside the hidden platform checkout.
+
+The resolver expands `{root}` and `{home}` in this entry's `runtime` and
+`build_command` fields. An environment override also relocates the corresponding
+literal paths in older registries that identify the checkout with `git -C`.
+The same canonical checkout and Node executable are used for the version probe,
+build identity, runtime bindings and CLI execution. `identity.improver.dsh_runtime`
+records these paths and the CLI/Node file hashes; the restricted subprocess restores
+only the resolved installation, preserving its credential allowlist. The prepared
+profile home is copied into writable round state as before. This configuration is
+independent of the task Harness's `HG_AGENT_DSH` / `HG_AGENT_NODE` settings.
+
 ##### The default skill, and why it is not the method
 
 `harnessgrad/improvers/skill.md` is the platform's default: it says what a harness is, where the evidence

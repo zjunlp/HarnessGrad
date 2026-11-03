@@ -268,7 +268,7 @@ class Candidate:
         return h.hexdigest()
 
 
-def _run_version(path: Path, timeout: int = 60) -> tuple[bool, str, str]:
+def _run_version(path: Path, timeout: int = 60, *, env: dict | None = None) -> tuple[bool, str, str]:
     """Run `<path> --version`. Returns (ok, version, reason).
 
     This is the whole verification: a codex that cannot print its version cannot run a
@@ -276,7 +276,7 @@ def _run_version(path: Path, timeout: int = 60) -> tuple[bool, str, str]:
     """
     try:
         proc = subprocess.run([str(path), "--version"], capture_output=True, text=True, errors="replace",
-                              timeout=timeout)
+                              timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         return False, "", f"`--version` timed out after {timeout}s"
     except OSError as exc:
@@ -352,6 +352,79 @@ def load_config(path: Path | None = None) -> dict:
             raise FileNotFoundError(f"configured improver registry does not exist: {path}")
         return {}
     return json.loads(path.read_text())
+
+
+def _dsh_installation(entry: dict, launcher: Path) -> tuple[dict, dict, dict]:
+    """Resolve the bundled DSH launcher before probing or binding its installation.
+
+    Opaque third-party launchers keep their declared behavior. A local registry can
+    opt into this installation contract by declaring a `root` and `argv_style=dsh`.
+    The two placeholders belong to DSH's path declarations, not arbitrary env expansion.
+    """
+    bundled = launcher.resolve() == (ROOT / 'methods/dsh-improver').resolve()
+    if not bundled and not (entry.get('argv_style') == 'dsh' and 'root' in entry):
+        return entry, {}, {}
+    if entry.get('argv_style') != 'dsh':
+        raise ValueError('the bundled DSH launcher requires argv_style=dsh')
+    cfg = current_config().improver
+    build = entry.get('build_command') or []
+    declared_root = str(entry.get('root') or '')
+    # Local registries written before `root` existed name it in git's -C argument.
+    if not declared_root and len(build) >= 3 and build[:2] == ['git', '-C']:
+        declared_root = str(build[2]) if build[2] != '{root}' else ''
+    raw_root = cfg.dsh_root or declared_root
+    if not raw_root:
+        raise ValueError('the DSH improver needs HG_DSH_ROOT or its registry root')
+    root = Path(raw_root).expanduser().resolve()
+    cli = root / 'apps/cli/lib/bin.js'
+    if not cli.is_file() or not cli.resolve().is_relative_to(root):
+        raise ValueError(f'no built DSH CLI inside configured root: {cli}')
+    raw_node = cfg.dsh_node or str(entry.get('interpreter') or 'node')
+    found = shutil.which(str(Path(raw_node).expanduser()))
+    if not found:
+        raise ValueError(f'DSH Node executable is unavailable: {raw_node}; set HG_DSH_NODE')
+    node = Path(found).resolve()
+    if node.is_relative_to(ROOT):
+        raise ValueError(f'DSH Node must be outside the hidden platform checkout: {node}')
+    node_root = _interpreter_prefix(node) or node.parent
+    raw_home = cfg.dsh_home or str(entry.get('home') or '')
+    if not raw_home:
+        raise ValueError('the DSH improver needs HG_IMPROVER_DSH_HOME or its registry home')
+    home = Path(raw_home).expanduser().resolve()
+    if not home.is_dir():
+        raise ValueError(f'prepared DSH improver home does not exist: {home}')
+    for path in (root, home):
+        if path.is_relative_to(ROOT) or ROOT.is_relative_to(path):
+            raise ValueError(f'DSH runtime must not contain or lie within the platform checkout: {path}')
+
+    replacements = []
+    for old, new in ((declared_root, root), (str(entry.get('home') or ''), home)):
+        if old and '{' not in old:
+            replacements.append((Path(old).expanduser().resolve(), new))
+    replacements.sort(key=lambda pair: len(pair[0].parts), reverse=True)
+
+    def expand(value):
+        value = str(value)
+        if '{root}' in value or '{home}' in value:
+            return re.sub(r'\{(root|home)\}', lambda match: str(
+                {'root': root, 'home': home}[match.group(1)]), value)
+        path = Path(value).expanduser()
+        if path.is_absolute():
+            for old, new in replacements:
+                if path.is_relative_to(old):
+                    return str(new / path.relative_to(old))
+        return value
+
+    effective = {**entry, 'root': str(root), 'home': str(home), 'interpreter': str(node),
+                 'runtime': list(dict.fromkeys([str(root), str(home), str(node_root),
+                                                *(expand(p) for p in entry.get('runtime') or [])])),
+                 'build_command': [expand(p) for p in build]}
+    execution_env = {'HG_DSH_ROOT': str(root), 'HG_DSH_NODE': str(node)}
+    identity = {'root': str(root), 'node': str(node), 'entrypoint': str(cli),
+                'sha256': Candidate(cli).sha256(), 'node_sha256': Candidate(node).sha256()}
+    if not identity['sha256'] or not identity['node_sha256']:
+        raise ValueError('cannot read the configured DSH CLI or Node executable')
+    return effective, execution_env, identity
 
 
 def resolve(config: dict | None = None, *, version: str = "", requested: str = "",
@@ -466,15 +539,23 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
             return {"ok": False, "name": entry.get("name") or key, "kind": entry.get("kind"),
                     "requested": requested or key,
                     "reason": f"the {key!r} improver's launcher is missing: {path}"}
-        ok, ver, reason = _run_version(path)
+        try:
+            entry, execution_env, dsh_runtime = _dsh_installation(entry, path)
+        except (OSError, ValueError) as exc:
+            return {"ok": False, "name": entry.get("name") or key, "kind": entry.get("kind"),
+                    "requested": requested or key, "reason": str(exc)}
+        probe_env = {**os.environ, **execution_env} if execution_env else None
+        ok, ver, reason = _run_version(path, env=probe_env)
         version = ver
         command = entry.get("build_command") or []
         if command:
             try:
                 built = subprocess.run([str(part) for part in command], capture_output=True,
-                                       text=True, errors="replace", timeout=60)
+                                       text=True, errors="replace", timeout=60, env=probe_env)
                 if built.returncode == 0 and built.stdout.strip():
                     version = f"{ver}+{built.stdout.strip().splitlines()[0][:40]}"
+                elif dsh_runtime:
+                    version = f"{ver}+unidentified(exit={built.returncode})"
             except (OSError, subprocess.TimeoutExpired) as exc:
                 # Recorded as a version that says it could not check, rather than silently
                 # dropping the field: a point whose improver identity is `0.1.5+unknown` is
@@ -508,7 +589,9 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                 prefix = _interpreter_prefix(Path(found))
                 if prefix is not None and str(prefix) not in trees:
                     trees.append(str(prefix))
-        for implied in runtime_trees(path):
+        # The bundled DSH launcher already lives under visible methods/. Its
+        # dependency set is explicit and must not borrow the Codex config home.
+        for implied in (() if dsh_runtime else runtime_trees(path)):
             if implied not in trees:
                 trees.append(implied)
         return {"ok": bool(ok), "path": str(path), "version": version,
@@ -522,6 +605,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                 # point (`_improver_identity` filters them out) -- but the method needs both,
                 # and the resolution is the only place that read them off the entry.
                 "home": tool_home,
+                **({"dsh_runtime": dsh_runtime} if dsh_runtime else {}),
                 "api_key_env": str(entry.get("api_key_env") or ""),
                 **{key: str(entry[key]) for key in ("base_url", "provider", "profile", "wire")
                    if entry.get(key)},

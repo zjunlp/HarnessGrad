@@ -178,6 +178,10 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     # with `llm-pi-ai` providers nobody chose for it.
     if (improver or {}).get("home"):
         env["HG_IMPROVER_DSH_HOME"] = str(improver["home"])
+    dsh_runtime = (improver or {}).get("dsh_runtime") or {}
+    if dsh_runtime:
+        env["HG_DSH_ROOT"] = str(dsh_runtime["root"])
+        env["HG_DSH_NODE"] = str(dsh_runtime["node"])
     env["HARNESSGRAD_WORKSPACE"] = str(work.resolve())
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = (f"{work.resolve()}{os.pathsep}{existing}"
