@@ -514,6 +514,7 @@ def summarise(run_dir: Path) -> dict:
         "improver_model": improver_model,
         "agent_model": agent_model,
         "evaluated_from": evaluated_from,
+        "split_protocol": meta.get('split_protocol') or last.get('split_protocol'),
         "harness_sha_first": harness_sha_first,
         "harness_sha_last": harness_sha_last,
         "rounds": len(per_round),
@@ -644,6 +645,10 @@ def _verdict_line(summary: dict) -> str:
 def render_markdown(summary: dict) -> str:
     """The one page. At most ~40 lines, and every unknown stays a named absence."""
     lines = [f"# Run summary: {summary['run_id']}", _context_line(summary), _identity_line(summary), ""]
+    if summary.get('split_protocol'):
+        protocol = summary['split_protocol']
+        lines += ['Custom held-out partition; not an official benchmark/leaderboard score. '
+                  f"Official evaluation tasks reused for study: {_fmt_human(protocol.get('official_eval_reused_for_train'))}.", '']
     lines.append(_verdict_line(summary))
     lines.append("")
 

@@ -105,6 +105,8 @@ def plan_checks(args) -> list[Check]:
         ("writable", True, _writable_check),
         ("disk", False, _disk_check),
     ]
+    if getattr(args, 'split', None) not in (None, 'declared'):
+        guards.insert(4, ('split', True, _split_check))
     checks: list[Check] = []
     for name, required, probe in guards:
         try:
@@ -283,6 +285,20 @@ def _dataset_check(args) -> Check:
     if not tasks:
         return Check("dataset", True, False, f"{name}: load() returned no tasks")
     return Check("dataset", True, True, f"{name}: {len(tasks)} tasks")
+
+
+def _split_check(args) -> Check:
+    """Use the real resolver before a check-only launch can call a split valid."""
+    from data.scaffolds.custom_split import resolve
+    try:
+        tasks, _, declared = datasets.load_split(args.dataset)
+        split, _, protocol = resolve(args.dataset, tasks, declared, args.split, side=args.side)
+        detail = f"{len(split['train'])} train / {len(split['eval'])} eval"
+        if protocol:
+            detail += f" / {protocol['counts']['excluded']} excluded; custom held-out"
+        return Check('split', True, True, detail)
+    except (OSError, ValueError, ImportError) as exc:
+        return Check('split', True, False, str(exc))
 
 
 def _harness_check(args) -> Check:

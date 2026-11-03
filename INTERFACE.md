@@ -277,6 +277,21 @@ of four sources, and every run records the choice as `split_source`, plus a
 | `official` | `OFFICIAL_EVAL`: the benchmark's own evaluation set, taken from the adapter | `official` |
 | `<file.json>` | a division the caller supplies, validated like any other | `file:<resolved path>` |
 
+`harnessgrad split create` generates a versioned custom experiment manifest from
+a seeded train ratio or count. It can repartition the loaded pool, including a
+pool consisting only of official evaluation tasks, without editing the adapter's
+declarations. `--source official-eval` partitions only that declared subset and
+lists all other tasks as explicitly excluded. Related `SPLIT_GROUPS` remain
+indivisible across train/eval/excluded. The driver validates roster, public task
+content and source/group declaration hashes, then records the parsed manifest
+and its original file digest under `run_meta.json:split_protocol`. Curve and
+summary outputs identify these scores as custom held-out, not official benchmark
+scores. Custom method feedback includes training members, counts and hashes, but
+does not include the held-out ID list or private manifest. A paired eval reuses
+the custom training partition and task contents; resume also requires unchanged
+manifest bytes. Legacy `{train,eval}` files remain supported. See
+[custom experiment partitions](docs/custom-dataset-splits.md) for commands.
+
 **Two points belong on one axis only when `split_sha` agrees.** This is §2.1's rule applied
 to the second thing that fixes the task set: §2.1 pins *which tasks* are drawn (the sampling
 policy) and this pins *which side* each drawn task is on. A curve whose points were scored

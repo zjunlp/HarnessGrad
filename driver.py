@@ -770,6 +770,17 @@ def _readiness(args) -> int:
             print(f"refusing --prepare-only: {run_dir} already holds {existing}; "
                   f"preserve it and pass a fresh --run-id", file=sys.stderr)
             return 2
+    prepared_split = {}
+    if args.split not in (None, 'declared'):
+        from data.scaffolds.custom_split import resolve as resolve_split
+        try:
+            tasks, _, declared = datasets.load_split(args.dataset)
+            division, source, protocol = resolve_split(args.dataset, tasks, declared, args.split, side=args.side)
+            prepared_split = {'split': division, 'split_source': source,
+                'split_sha': datasets.split_sha(division), 'split_protocol': protocol}
+        except (OSError, ValueError, ImportError) as exc:
+            print(f'refusing --prepare-only: split: {exc}', file=sys.stderr)
+            return 2
     run_dir.mkdir(parents=True, exist_ok=True)
     # `platform_config.dump()` is the same redaction a real run's first write uses: every
     # secret field is `{"present": bool}` and never a value, because `run_meta.json` is
@@ -788,6 +799,7 @@ def _readiness(args) -> int:
         framework_version=FRAMEWORK_VERSION,
         prepared_by="--prepare-only",
         launched=False,
+        **prepared_split,
     )
     print(run_dir)
     return 0
@@ -1045,7 +1057,7 @@ def _main(attempt: dict) -> int:
                          "the benchmark's own evaluation set "
                          "as the adapter declares it, which is the comparable run -- the "
                          "whole official set, with no study material in this pool. Anything "
-                         "else is a path to a JSON file {\"train\": [...], \"eval\": [...]}. "
+                         "else is a custom split manifest from `harnessgrad split create`, or a legacy JSON file {\"train\": [...], \"eval\": [...]}. "
                          "The division is a property of the experiment protocol, not of the "
                          "benchmark, so the run may supply it; whichever is used is recorded "
                          "on the run as `split_source` and `split_sha`, and two points are "
@@ -1337,63 +1349,31 @@ def _main(attempt: dict) -> int:
         print(f'refusing --scenario: dataset {args.dataset!r} could not be loaded: {exc}',
               file=sys.stderr)
         return 2
-    # **Whose division this run uses.** The train/eval division is a property of the
-    # experiment protocol, not of the benchmark: the same dataset supports "study the
-    # official train split and report on the official test split" and "study a third of the
-    # pool and report on another third", and those are different claims. So the adapter's
-    # declaration is the *default* answer rather than the only one, and the run may name a
-    # different division. What it may not do is leave the choice unrecorded: `split_source`
-    # and `split_sha` go on the run, because two curve points are comparable only if they
-    # scored the same tasks -- the same rule §2.1 already applies to the sampling policy.
-    # `None` when nothing divided the pool: a dataset with no declaration and no `--split`
-    # runs on everything, and calling that source "declared" would name a declaration that
-    # does not exist. The warning below still fires, because that run cannot support a
-    # generalisation claim.
-    split_source = "declared" if split is not None else None
-    if args.split and args.split != "declared":
+    # Experiment partitions override adapter defaults explicitly, with a frozen
+    # manifest and origin receipt. The adapter's official declaration stays intact.
+    from data.scaffolds.custom_split import resolve as resolve_split
+    try:
+        split, split_source, split_protocol = resolve_split(
+            args.dataset, tasks_all, split, args.split, side=args.side)
+    except (OSError, ValueError, ImportError) as exc:
+        console.note(f"--split {args.split}: {exc}", level="error")
+        return 2
+    if split_protocol is not None:
+        reused = split_protocol['official_eval_reused_for_train']
+        origin = 'unknown' if reused is None else str(reused)
+        console.note(f"custom held-out partition: {len(split['train'])} train / "
+                     f"{len(split['eval'])} eval; official evaluation tasks used for study: "
+                     f"{origin}. This is not an official benchmark split/leaderboard score.",
+                     level="info")
+    # A custom study partition cannot subsequently be evaluated as the whole
+    # official exam. Bind a paired eval to the frozen training partition.
+    if args.side == 'eval' and args.from_run:
+        from data.scaffolds.custom_split import check_eval_pair
         try:
-            split_groups = datasets.load_split_groups(args.dataset, tasks_all)
-        except (OSError, ValueError, ImportError) as exc:
-            console.note(str(exc), level="error")
+            check_eval_pair(runs_root / args.from_run, args.dataset, split, split_protocol)
+        except (OSError, ValueError) as exc:
+            console.note(f'refusing custom split evaluation: {exc}', level='error')
             return 2
-        if args.split == "default":
-            # Both derived divisions go through the same guard as a supplied file: the
-            # platform's hash rule can put every task on one side of a small pool, and that
-            # is a message about the dataset, not a traceback out of the driver.
-            try:
-                split = datasets.validate_split(
-                    args.dataset, tasks_all,
-                    datasets.default_split(tasks_all, split_groups=split_groups),
-                    require_nonempty=(args.side,), split_groups=split_groups)
-            except ValueError as exc:
-                console.note(str(exc), level="error")
-                return 2
-            split_source = "default"
-        elif args.split == "official":
-            try:
-                split = datasets.validate_split(
-                    args.dataset, tasks_all, datasets.official_split(args.dataset, tasks_all),
-                    require_nonempty=(args.side,), split_groups=split_groups)
-            except ValueError as exc:
-                console.note(str(exc), level="error")
-                return 2
-            split_source = "official"
-        else:
-            path = Path(args.split)
-            if not path.is_file():
-                console.note(
-                    f"--split {args.split!r} is neither `declared`, `default`, `official`, "
-                    f"nor a readable file path", level="error")
-                return 2
-            try:
-                supplied = json.loads(path.read_text())
-                split = datasets.validate_split(args.dataset, tasks_all, supplied,
-                                                require_nonempty=(args.side,),
-                                                split_groups=split_groups)
-            except (json.JSONDecodeError, ValueError) as exc:
-                console.note(f"--split {path}: {exc}", level="error")
-                return 2
-            split_source = f"file:{path.resolve()}"
     # **A run is about one side, and the narrowing happens here**, before round 0 and
     # before the workspace is staged. That placement is the design: the other side is
     # never loaded, never evaluated, and its traces are never written, so "the method
@@ -1493,6 +1473,13 @@ def _main(attempt: dict) -> int:
     if args.resume:
         meta_path = run_dir / "run_meta.json"
         saved_meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+        saved_protocol = saved_meta.get('split_protocol')
+        if saved_protocol is not None or split_protocol is not None:
+            if (saved_protocol is None or split_protocol is None
+                    or saved_protocol['file_sha256'] != split_protocol['file_sha256']
+                    or saved_protocol.get('task_content_sha256') != split_protocol.get('task_content_sha256')):
+                console.note('refusing --resume: frozen split manifest changed; use the original manifest', level='error')
+                return 2
         try:
             scoring_identity.require_same(saved_meta.get("scoring_identity"), args.scoring_identity)
         except ValueError as exc:
@@ -1952,6 +1939,7 @@ def _main(attempt: dict) -> int:
         split=split,
         split_declared=split is not None,
         split_source=split_source,
+        split_protocol=split_protocol,
         split_sha=datasets.split_sha(split) if split else None,
         # **What this run is a measurement of, and of which platform.** `evaluated_from`
         # is what an interrupted eval run needs to verify a `--resume` target: today the

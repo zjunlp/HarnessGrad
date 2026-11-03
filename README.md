@@ -109,6 +109,13 @@ Which datasets are usable here, what their grade is, and whether that grade is t
 benchmark's own metric: [`DATASETS.md`](DATASETS.md) (generated — `python3
 tools/datasets_doc.py --check` fails when it drifts).
 
+Want your own study/held-out partition, including one carved from an official
+validation or test pool? Run `harnessgrad split create --dataset math500
+--train-ratio 0.2 --seed 42 --output splits/math500.json`, then pass that same file
+with `--split splits/math500.json` (or the experiment's `split` field) to both
+runs. [Custom split guide](docs/custom-dataset-splits.md) covers counts, groups,
+source provenance and a zero-cost example.
+
 ## 🧪 Test
 
 ```bash

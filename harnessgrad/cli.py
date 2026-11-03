@@ -35,6 +35,7 @@ _HELP = """\
 
 usage:
   {program} run [driver arguments ...]   run driver.py with those arguments
+  {program} split create|check ...      create or validate an experiment partition
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 
@@ -174,8 +175,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if command == "run":
         return _run(_driver_argv(rest))
+    if command == 'split':
+        from harnessgrad.splits import main as split_main
+        return split_main(rest)
     print(f"{PROGRAM}: unknown command {command!r}", file=sys.stderr)
-    print(f"Try '{PROGRAM} --help' for the two commands: run, version.", file=sys.stderr)
+    print(f"Try '{PROGRAM} --help' for the commands: run, split, version.", file=sys.stderr)
     return 2
 
 

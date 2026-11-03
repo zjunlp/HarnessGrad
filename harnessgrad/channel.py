@@ -77,7 +77,7 @@ def _for_method(point: dict) -> dict:
     field in place would quietly remove it from the record too -- the run would then
     lose the very detail the platform is supposed to keep.
 
-    **Nothing is withheld**, and the split is the reason. There used to be a
+    Training scores and traces remain available. There used to be a
     `WITHHELD = ("per_task",)` here, written for the shape §2.6 replaced: one point
     carrying both sides, where `per_task` was the exam and `train_per_task` was the
     diagnostic. Two things then went wrong at once. §2.6 made a run cover one side and
@@ -98,7 +98,14 @@ def _for_method(point: dict) -> dict:
             "refusing to stage an exam curve point into a method channel: methods exist "
             "only on the train side, and `per_task` on an exam point is the exam "
             "(INTERFACE.md §2.3, §2.6)")
-    return dict(point)
+    result = dict(point)
+    if (point.get('split_protocol') or {}).get('kind') == 'custom-heldout':
+        # Keep the private manifest and the complete eval ID list out of both
+        # round.json and history. Counts and protocol hashes identify this
+        # experiment without telling an optimizer which IDs it will be tested on.
+        split = point.get('split') or {}
+        result['split'] = {'train': list(split.get('train', []))}
+    return result
 
 def _resolve_checks(spec: dict, budget: list[int]) -> dict:
     """A verifier's inputs, resolved to text so a method reads the *check* not a pointer.

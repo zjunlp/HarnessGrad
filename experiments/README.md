@@ -138,3 +138,11 @@ get no `method-*.json`:
   default `deepseek` endpoint comes from `.env`, and a CLI improver (`dsh`, `codex`) comes
   from the machine; `--improver none` is for a method that carries its own, such as `noop`.
   This is a deployment fact, not a missing artifact.
+
+## Custom study/held-out partitions
+
+The `split` field accepts `declared`, `official`, `default`, or a file created by
+`harnessgrad split create`. For example, add `"split": "splits/math500.json"`
+beside `"dataset": "math500"`, or pass `--set split=splits/math500.json`.
+Both train and checkpoint-eval runs must reuse the same file. See
+[the custom split guide](../docs/custom-dataset-splits.md) for a complete example.

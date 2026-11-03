@@ -57,6 +57,7 @@ _FLAGS: dict[str, str] = {
     "side": "--side",
     "sampling": "--sampling",
     "pool": "--pool",
+    "split": "--split",
     "rounds": "--rounds",
     "jobs": "--jobs",
     "trials": "--trials",

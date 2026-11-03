@@ -787,6 +787,19 @@ def _write_curve(path: Path, curve: list[dict]) -> None:
                  if point.get("score", ...) is not None
                  and point.get("measured_by_platform") is not False
                  and point.get("n_scored") != 0)
+    # A standalone curve must not look like an official benchmark report after
+    # the caller repartitioned official evaluation rows. Include only protocol
+    # identity/counts here: the frozen manifest (including held-out IDs) remains
+    # in private run metadata, outside the method's training feedback channel.
+    protocol = None
+    meta_path = path.parent / 'run_meta.json'
+    if meta_path.is_file():
+        protocol = json.loads(meta_path.read_text()).get('split_protocol')
+    if protocol is not None:
+        summary = {key: protocol[key] for key in ('kind', 'file_sha256', 'counts',
+            'official_eval_reused_for_train', 'official_score_comparable')}
+        for point in curve:
+            point['split_protocol'] = summary
     with path.open("w") as fh:
         for point in curve:
             # External/legacy points need the same explicit label as new points.
