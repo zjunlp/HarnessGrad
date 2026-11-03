@@ -81,16 +81,14 @@ the two revisions would produce a number under this name that neither paper supp
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
-DATASET_ROOT = roots.dataset_root(
-    "tau2-bench",
-    os.environ.get("HG_TAU2_DATA", "/mnt/20t/xubuqiang/datasets/tau2-bench"))
+
+DATASET_ROOT = dataset_root('tau2-bench')
 
 #: The tag, and the archive digest that pins the bytes.
 REPO_TAG = "v0.1.0"

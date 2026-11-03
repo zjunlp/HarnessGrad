@@ -45,7 +45,7 @@ def fixture(tmp_path, name, monkeypatch):
     source.write_text(json.dumps(row(name)) + '\n')
     output = tmp_path / 'prepared'
     manifest = prepare(name, output, {'data_path': str(source)}, judge_model='local-scripted-judge')
-    monkeypatch.setenv('HG_' + name.upper() + '_DATA', str(output))
+    monkeypatch.setenv('HG_DATA_' + name.upper(), str(output))
     adapter = Adapter(name)
     return adapter, manifest
 

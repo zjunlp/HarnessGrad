@@ -11,8 +11,8 @@
  },
  {
   "path": "data/datasets/bfcl_v3.py",
-  "bytes": 28917,
-  "sha256": "880021519f9801c2546fd7b6f559976e7f673a2effc9fc353a0be549968c3d43"
+  "bytes": 28884,
+  "sha256": "0d31ea8aac99489c5f92bb01681a8d1f80b2c0dd35d129885023c88d2d69879d"
  },
  {
   "path": "data/scaffolds/__init__.py",
@@ -26,8 +26,8 @@
  },
  {
   "path": "data/scaffolds/qa/base.py",
-  "bytes": 30753,
-  "sha256": "084f81ee396a76346c17652b99775900c0e55c97518947d4a603db1bc24d80b0"
+  "bytes": 31362,
+  "sha256": "12f623f9f18b37312eaefa94247a25832ee70d31468b48037f748e7f21712402"
  },
  {
   "path": "data/scaffolds/qa/cli/qa",
@@ -36,8 +36,8 @@
  },
  {
   "path": "data/scaffolds/qa/control.py",
-  "bytes": 16853,
-  "sha256": "36a365513e5988c1dc09ec6548ae7668eba65990feec0b824c265b4c801ea9fb"
+  "bytes": 16682,
+  "sha256": "05baceae4717f27867135faf20441734a7af8e89d23343beef07d40836c4b51c"
  },
  {
   "path": "data/scaffolds/qa/evidence_scorers.py",
@@ -61,8 +61,28 @@
  },
  {
   "path": "data/scaffolds/qa/verify/check.py",
-  "bytes": 14936,
-  "sha256": "ec603e0d7fc655473dde92260d70cefefc0dd107eaa0d9273df1e7eeb0d0763c"
+  "bytes": 17488,
+  "sha256": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f"
+ },
+ {
+  "path": "data/scaffolds/roots.py",
+  "bytes": 1491,
+  "sha256": "316bf5a61d5efef74fc4f4776851baa49d58bb08d5c7afe7433cd2d3a343a1d0"
+ },
+ {
+  "path": "harnessgrad/__init__.py",
+  "bytes": 2229,
+  "sha256": "9d821099dab2eb6383dcffe6d492e5f3432d69edd27979f2b9e8517aafc412bd"
+ },
+ {
+  "path": "harnessgrad/env_file.py",
+  "bytes": 636,
+  "sha256": "b3ae1dd01f659d904282f8f3685a55d073c939987e8a4e1c5c0e705151cbfbc6"
+ },
+ {
+  "path": "harnessgrad/paths.py",
+  "bytes": 6509,
+  "sha256": "a7afe3be250732149ff007df98be3893a404e0d720dd5fa515f042342b5a5137"
  },
  {
   "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/constants/type_mappings.py",

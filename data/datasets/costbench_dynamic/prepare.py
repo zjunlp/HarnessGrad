@@ -17,6 +17,9 @@ import re
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
+
 ASSETS = Path(__file__).resolve().parent.parent / 'costbench'
 sys.path.insert(0, str(ASSETS / 'lib'))
 from bootstrap import bootstrap, REVISION
@@ -197,7 +200,7 @@ def prepare(root, smoke=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--root', type=Path, default=dataset_root('costbench'))
     parser.add_argument('--smoke', action='store_true')
     args = parser.parse_args()
     prepare(args.root.resolve(), args.smoke)

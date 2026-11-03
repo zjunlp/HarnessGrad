@@ -2,7 +2,9 @@
 
 Coverage: **5,290 of 5,300** released standard cases (5,040 easy, 250 hard).
 Source: `linhaowei1/kumo@576748764f7d72634654d0784944a485eca9047c`.
-The default data root is the workspace sibling `datasets/kumo`; override with `HG_KUMO_DATA`.
+The data root is `<HG_DATA_ROOT>/kumo`; `HG_DATA_KUMO` can override it.
+Set `HG_DATA_ROOT` or `HG_DATA_KUMO` before accessing data; no directory is selected implicitly.
+See [dataset storage](../../../README.md#dataset-storage) for `.env` configuration.
 Data, private answers, books and audit artifacts stay outside this repository.
 
 The adapter is registered as `reasoning / planning_and_search` and exercises

@@ -11,7 +11,6 @@ from collections import Counter
 import hashlib
 import importlib.metadata
 import json
-import os
 from pathlib import Path
 import re
 import sys
@@ -20,6 +19,7 @@ import sys
 #: Imported here as well as lazily in `missing()` because `getattr` must be able to
 #: convert it into `AttributeError` -- see the comment there.
 from harnessgrad.config.areas import ConfigMissing
+from harnessgrad.paths import DataRootNotConfigured, DatasetPath, configured_path, dataset_root
 
 SOURCE_COMMIT = 'e9c7667945f959d62da27204649a82f94d1b6705'
 PACKAGE = Path(__file__).resolve().parent
@@ -137,21 +137,18 @@ class Dataset:
     def __init__(self,name,root=None):
         self.name=name; self.source=CATALOG[name]
         if root is None:
-            # Same resolver every other adapter uses; the old per-dataset variable and the
-            # old literal survive as the `legacy` tier, so a run recorded before the
-            # migration keeps resolving to the bytes it was measured on.
-            from data.scaffolds import roots
-            # Same fallback as the research family: the adapter module above passes its own
-            # `roots.dataset_root(..., legacy=...)`, and a caller that constructs
-            # `Dataset('x')` directly keeps the per-dataset variable it documents.
-            root=roots.dataset_root(name,legacy=os.environ.get(f'HG_{name.upper()}_ROOT'))
-        self.root=Path(root).expanduser().resolve()
-        if self.root == PACKAGE.parents[2] or PACKAGE.parents[2] in self.root.parents:
-            raise ValueError('dataset root must be outside the platform tree')
+            root=dataset_root(name)
+        # Catalogs need only declarations. Resolve and validate storage when
+        # records are requested, so imports need neither configuration nor data.
+        self.root=root if isinstance(root,DatasetPath) else Path(root).expanduser()
         self._records=None
 
     def records(self):
         if self._records is not None: return self._records
+        root=Path(self.root).resolve()
+        if root == PACKAGE.parents[2] or PACKAGE.parents[2] in root.parents:
+            raise ValueError('dataset root must be outside the platform tree')
+        self.root=root
         path=self.root/'source-manifest.json'
         if not path.is_file(): missing(f'{self.name}: source manifest missing; run python3 -m data.scaffolds.native_qa.prepare --dataset {self.name} --root {self.root}')
         manifest=json.loads(path.read_text(encoding='utf-8'))
@@ -216,7 +213,7 @@ class Dataset:
         return tasks,{r['task_id']:'' for r in self.records()}
 
     def corpus(self):
-        corpus=Path(os.environ.get('HG_OFFICEQA_PRO_CORPUS',str(self.root/'corpus'))).expanduser().resolve()
+        corpus=Path(configured_path('HG_DATA_OFFICEQA_PRO_CORPUS',self.root/'corpus')).resolve()
         if not corpus.is_dir(): missing('officeqa_pro requires a separately prepared public corpus directory; question/answer CSV must not be inside it')
         paths=list(corpus.rglob('*'))
         if not paths or any(p.is_symlink() or (p.is_file() and p.suffix.lower() not in ('.txt','.md','.pdf','.json')) for p in paths): raise ValueError('OfficeQA corpus must contain only ordinary public txt/md/pdf/json documents')
@@ -236,8 +233,8 @@ class Dataset:
     #: (`harnessgrad.config.areas`) at module level, and this directory is materialised
     #: inside the sandbox, where the platform tree is hidden -- the verifier died with
     #: `ModuleNotFoundError: No module named 'harnessgrad'` because `from native_qa.scoring
-    #: import score` executes the package `__init__`. Without it the directory is a
-    #: namespace package, so the same import loads `scoring.py` and no platform code.
+    #: import score` executes the package `__init__`. The check creates its own package
+    #: with an empty search path and imports only the restored sources listed below.
     #: `prepare.py` and `control.py` are not copied either: the verifier never calls them,
     #: and every file in its directory is code that can affect a score.
     VERIFIER_MODULES = ('check.py', 'scoring.py', 'metrics.py', 'bbeh_official.py',
@@ -250,7 +247,7 @@ class Dataset:
             source=PACKAGE/module
             if not source.is_file(): missing(f'{self.name}: verifier module {module} is missing')
             inputs.append({'path':f'verifier/native_qa/{module}','from':str(source)})
-        spec = {'kind':'command','argv':['python3','verifier/native_qa/check.py','gold.json',digest,r['task_id'],self.name],
+        spec = {'kind':'command','argv':['python3','-I','verifier/native_qa/check.py','gold.json',digest,r['task_id'],self.name],
                 'inputs':inputs,'scorer_input':{'task_id':r['task_id'],'path':'gold.json','sha256':digest},
                 'reward_file':'/verifier/reward.txt','evidence_file':'/verifier/evidence.json',
                 'timeout_s':30,'result_contract':{'version':1,'score_range':[0,1],'require_exit_zero':True}}
@@ -297,7 +294,7 @@ class Dataset:
             if name=='OFFICIAL_EVAL':
                 if 'train' not in self.source['splits']: return None
                 return [r['task_id']for r in self.records()if r['source_split']!='train']
-        except ConfigMissing as exc:
+        except (ConfigMissing, DataRootNotConfigured) as exc:
             raise AttributeError(str(exc)) from exc
         raise AttributeError(name)
 

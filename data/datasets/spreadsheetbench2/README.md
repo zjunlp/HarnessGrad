@@ -14,7 +14,7 @@ material implicitly.
 ```sh
 python3 data/datasets/spreadsheetbench2/prepare.py --root /path/to/data \
   --archive /path/to/spreadsheetbench-v2-09-10.zip
-HG_SPREADSHEETBENCH2_DATA=/path/to/data python3 tools/dataset_lint.py --dataset spreadsheetbench2
+HG_DATA_SPREADSHEETBENCH2=/path/to/data python3 tools/dataset_lint.py --dataset spreadsheetbench2
 ```
 
 Without `--archive`, preparation downloads the exact pinned HF archive, using

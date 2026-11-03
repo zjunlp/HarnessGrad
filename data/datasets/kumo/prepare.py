@@ -9,15 +9,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
+
 REVISION = "576748764f7d72634654d0784944a485eca9047c"
 SCENARIOS = {"easy": "truth_num=4+action_num=6+valid_truth_num=1",
              "hard": "truth_num=12+action_num=16+valid_truth_num=1"}
-DEFAULT_ROOT = Path(os.environ.get("HG_KUMO_DATA", Path(__file__).resolve().parents[4] / "datasets/kumo"))
+DEFAULT_ROOT = dataset_root('kumo')
 
 
 def canonical(value):

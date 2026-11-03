@@ -14,7 +14,12 @@ from test_shared_dataset_runtime import harness
 
 @pytest.fixture
 def prepared():
-    if not dataset.provision_status()["present"]:
+    from harnessgrad.paths import DataRootNotConfigured
+    try:
+        present = dataset.provision_status()["present"]
+    except DataRootNotConfigured:
+        present = False
+    if not present:
         pytest.skip("run strongreject/prepare.py for the pinned source data")
     return dataset
 

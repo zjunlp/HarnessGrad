@@ -18,7 +18,7 @@ applied patch with no parseable native test execution remain unmeasured.
 
 1. Prepare the complete native source using
    `tools/prepare_native_research.py swe_bench --config CONFIG --output ROOT`
-   and set `HG_SWE_BENCH_DATA=ROOT`. Native rows must retain `image`, `eval_script`,
+   and set `HG_DATA_SWE_BENCH=ROOT`. Native rows must retain `image`, `eval_script`,
    `log_parser`, baseline and private test/patch fields; this does not invent
    missing deployment metadata. Image assets are refused, matching upstream.
 2. In an isolated interpreter install `swebench` from the exact evaluator revision

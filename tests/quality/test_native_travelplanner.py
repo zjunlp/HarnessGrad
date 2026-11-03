@@ -74,7 +74,7 @@ def test_prepared_adapter_conversion_and_hash_custody(planning, tmp_path, monkey
     source.write_text(json.dumps(row) + '\n')
     target = tmp_path / 'prepared'
     manifest = prepare('travelplanner', target, {'data_path': str(source), 'database_path': str(database)}, judge_model='scripted-converter')
-    monkeypatch.setenv('HG_TRAVELPLANNER_DATA', str(target))
+    monkeypatch.setenv('HG_DATA_TRAVELPLANNER', str(target))
     adapter = Adapter('travelplanner')
     task = adapter.load()[0][0]
     assert row['reference_information'] in task['goal']

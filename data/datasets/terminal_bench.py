@@ -8,7 +8,7 @@ Where the task set lives
 A checkout of `harbor-framework/terminal-bench-2` (measured: 89 tasks, 83 MB, 117 MB for
 a sample image). It is deliberately outside the platform tree:
 
-    HG_TERMINAL_BENCH   default /mnt/20t/xubuqiang/datasets/terminal-bench
+    HG_DATA_TERMINAL_BENCH   default <HG_DATA_ROOT>/terminal-bench
 
 Each task is a directory with a uniform shape -- measured across all 89, with no
 exceptions: `instruction.md`, `task.toml`, `environment/` (a Dockerfile, often with
@@ -78,6 +78,8 @@ score on the eval side is a score on a third of the benchmark, not on the benchm
 
 from __future__ import annotations
 
+from harnessgrad.paths import dataset_root
+
 
 #: See `data/scaffolds/registry.py:KIND_DATASET`. A fixture is platform test material and is
 #: deliberately not offered as a choice in the Launch form.
@@ -102,13 +104,11 @@ import re
 import tomllib
 from pathlib import Path
 
-from data.scaffolds import roots
 
 #: Where the checkout is. Outside the platform tree on purpose: it is dataset content,
 #: not platform code, and the platform hashes its own tree.
-ROOT = roots.dataset_root(
-    "terminal-bench",
-    os.environ.get("HG_TERMINAL_BENCH", "/mnt/20t/xubuqiang/datasets/terminal-bench"))
+
+ROOT = dataset_root('terminal-bench')
 
 #: Tasks to leave out, by name, with the reason. **Empty**, and deliberately kept empty
 #: rather than deleted: a task that genuinely needs a multi-container environment should
@@ -162,14 +162,14 @@ def _task_dirs() -> list[Path]:
     Terminal-Bench 2 keeps its tasks at the repository root; Terminal-Bench **2.1**
     keeps them under `tasks/` — measured: 89 at the root of `terminal-bench-2` and 91
     under `tasks/` in `terminal-bench-2-1`, with the *same* `20251031` image tags in
-    both. Looking in both places rather than pinning one means `HG_TERMINAL_BENCH` can
+    both. Looking in both places rather than pinning one means `HG_DATA_TERMINAL_BENCH` can
     point at either checkout, and the version a run measured is already on every curve
     point as the task ids.
     """
     if not ROOT.is_dir():
         raise ValueError(
             f"no Terminal-Bench checkout at {ROOT}. Clone one, or point "
-            f"HG_TERMINAL_BENCH at it:\n"
+            f"HG_DATA_TERMINAL_BENCH at it:\n"
             f"    git clone --depth 1 https://github.com/harbor-framework/"
             f"terminal-bench-2.git {ROOT}")
     for candidate in (ROOT, ROOT / "tasks"):
@@ -285,7 +285,7 @@ SPLIT_SOURCE = "none"
 
 
 #: The checkout commit this adapter was validated against, measured with
-#: `git -C /mnt/20t/xubuqiang/datasets/terminal-bench rev-parse HEAD`
+#: `git -C <dataset-root> rev-parse HEAD`
 #: (remote: `harbor-framework/terminal-bench-2`). Kept as a constant rather than read
 #: from `.git`, because the pin has to survive the checkout being copied without its
 #: history -- a provenance that disappears with a `cp` is not a pin.
@@ -307,7 +307,7 @@ def downloads() -> list[dict]:
         "url": f"https://github.com/harbor-framework/terminal-bench-2/archive/"
                f"{COMMIT}.tar.gz",
         "size": "~83 MB unpacked",
-        "dst": str(ROOT),
+        "dst": ".",
         "extract_to": ".",
         "note": "The task instructions, Dockerfiles and checks. Pinned by commit sha. "
                 "The task IMAGES are separate and much larger -- measured ~104 GB, "

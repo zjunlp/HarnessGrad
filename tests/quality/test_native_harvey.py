@@ -172,7 +172,7 @@ def test_real_hg_actor_files_private_native_dual_verifier(tmp_path,monkeypatch,p
     (task_root/'task.json').write_text(json.dumps(task))
     prepared=tmp_path/'prepared'
     prepare('harvey_lab',prepared,{'data_path':str(task_root)},fetch=False)
-    monkeypatch.setenv('HG_HARVEY_LAB_DATA',str(prepared))
+    monkeypatch.setenv('HG_DATA_HARVEY_LAB',str(prepared))
     source=tmp_path/'actor';source.mkdir()
     (source/'harness.json').write_text(json.dumps({'name':'harvey-file-transport-control','version':'1','entrypoint':'agent.py','env_kinds':['files'],'role':'control'}))
     (source/'agent.py').write_text('''import os,json

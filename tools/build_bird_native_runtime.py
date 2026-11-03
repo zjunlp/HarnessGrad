@@ -70,7 +70,7 @@ def main():
     adapter = f'data/datasets/{args.dataset}.py'
     check = ('data/scaffolds/qa/verify/check.py' if args.dataset == 'chessbench_puzzles'
              else f'data/datasets/{args.dataset}/verify/check.py')
-    entry = (site('data/scaffolds/qa/base.py', '"python3", f"{CHECK_DIR}/{CHECK_NAME}"')
+    entry = (site('data/scaffolds/qa/base.py', '"python3", "-I", f"{CHECK_DIR}/{CHECK_NAME}"')
              if args.dataset == 'chessbench_puzzles' else site(adapter, '"python3", "check.py"'))
     add(exe, entry + ' (interpreter selected by native_runtime binding)')
     add(exe.parent / 'python3', entry + ' (closed child PATH alias)')
@@ -90,6 +90,9 @@ def main():
     helper = {'jericho': 'jer_env', 'alfworld': 'gym_env', 'scienceworld': 'scw_env'}.get(args.dataset)
     if helper:
         trusted[f'/scorer/{helper}.py'] = f'data/datasets/{args.dataset}/lib/{helper}.py'
+    if args.dataset in {'scienceworld', 'chessbench_puzzles'}:
+        for name in ('__init__', 'paths', 'env_file'):
+            trusted[f'/scorer/harnessgrad/{name}.py'] = f'harnessgrad/{name}.py'
     if args.dataset == 'chessbench_puzzles':
         trusted['/scorer/data/datasets/chessbench_puzzles.py'] = adapter
         trusted['/scorer/data/datasets/__init__.py'] = 'data/datasets/__init__.py'

@@ -62,8 +62,9 @@ from __future__ import annotations
 
 import json
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
@@ -72,7 +73,8 @@ KIND = "dataset"
 ORACLE_SOURCE = "released"
 
 
-DATASET_ROOT = roots.dataset_root("aime", "/mnt/20t/xubuqiang/datasets/aime")
+
+DATASET_ROOT = dataset_root('aime')
 
 #: `GAIR-NLP/AIME-Preview` at the commit this adapter pins. See the module docstring for why
 #: it is a commit and not the branch Harbor's own adapter reads.

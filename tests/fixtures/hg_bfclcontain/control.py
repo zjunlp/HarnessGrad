@@ -29,11 +29,16 @@ PLATFORM = "data/datasets/bfcl_v3.py"
 SCOPES = ["tests/fixtures/bfcl_ast_source", "tests/fixtures/external_provenance_b5/bfcl",
           "data/scaffolds/qa"]
 EXTRA_PATHS = [PLATFORM, "data/scaffolds/qa/cli/qa", "data/__init__.py",
-               "data/scaffolds/__init__.py", "data/datasets/__init__.py"]
+               "data/scaffolds/__init__.py", "data/datasets/__init__.py",
+               # Trusted storage helpers copied by QASpec.verifier(). They belong
+               # to the source review even though fabricated slices never import them.
+               "data/scaffolds/roots.py", "harnessgrad/__init__.py",
+               "harnessgrad/paths.py", "harnessgrad/env_file.py"]
 PARSER_NAMES = {"ast_parse", "resolve_ast_call", "resolve_ast_by_type",
                 "default_decode_ast_prompting", "convert_value", "_convert_value"}
 PLATFORM_NAMES = {"bare_name", "parse_prediction", "gold_names", "score"}
 SINK_NAMES = {"eval", "exec", "compile", "ast.parse", "ast.literal_eval", "getattr",
+              "spec_from_file_location", "self.source_to_code",
               "__import__", "importlib.import_module", "importlib.__import__",
               "subprocess.Popen", "subprocess.run", "subprocess.call",
               "subprocess.check_call", "subprocess.check_output", "os.system", "os.popen"}

@@ -39,7 +39,7 @@ Stdlib only, on the platform's Python 3.12; it copies source and reads `tasks.js
 imports `tau2` (which needs 3.13 and the isolated runtime):
 
 ```bash
-python3 data/datasets/tau2_bench/prepare.py --root /mnt/20t/xubuqiang/datasets/tau2-bench
+python3 data/datasets/tau2_bench/prepare.py
 ```
 
 It needs the pinned tarball at `<root>/_src/tau2-bench-v0.1.0.tar.gz` and the extracted tree at

@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 import re
 import shutil
 
@@ -26,8 +26,7 @@ OFFICIAL_EVAL = None
 SPLIT = None
 SPLIT_SOURCE = 'none'
 DEFAULT_ENV = {'kind': 'files'}
-DATASET_ROOT = roots.dataset_root('spreadsheetbench2',
-                              legacy=os.environ.get('HG_SPREADSHEETBENCH2_DATA', '/mnt/20t/xubuqiang/datasets/spreadsheetbench2'))
+DATASET_ROOT = dataset_root('spreadsheetbench2')
 REVISION = '5a2215ed4121945ab09d8723df2995602090b042'
 EVALUATOR_REVISION = 'a7bdc2d358e052d35a94768e1f487c0d9e9c0011'
 METRIC = 'spreadsheetbench2.official.accuracy'

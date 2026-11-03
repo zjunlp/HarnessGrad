@@ -45,6 +45,7 @@ import json
 import re
 from pathlib import Path
 from typing import Callable, Sequence
+from harnessgrad.paths import DataRootNotConfigured, DatasetPath
 
 #: Re-exported so an adapter imports one module (`data.scaffolds.qa.base`) for the scaffold and the
 #: reader both. `read` itself stays a separate module because the *check* imports it
@@ -163,7 +164,7 @@ class QASpec:
         pool_is: str | None = None,
     ) -> None:
         self.name = name
-        self.root = Path(root)
+        self.root = root if isinstance(root, DatasetPath) else Path(root)
         self._rows = rows
         self._question = question
         self._gold = gold
@@ -230,6 +231,10 @@ class QASpec:
         if self.load_error is None:
             try:
                 self._records = self.records()
+            except DataRootNotConfigured:
+                # Listing metadata before configuration must not permanently
+                # poison a later explicitly configured load in this process.
+                self._records = []
             except Exception as exc:  # noqa: BLE001 - carried, not swallowed
                 self.load_error = f"{type(exc).__name__}: {exc}"
                 self._records = []
@@ -380,7 +385,7 @@ class QASpec:
             "kind": self.VERIFIER_KIND,
             "scorer_input": scorer_input,
             "argv": [
-                "python3", f"{CHECK_DIR}/{CHECK_NAME}",
+                "python3", "-I", f"{CHECK_DIR}/{CHECK_NAME}",
                 "--dataset", self.name,
                 "--answer", ANSWER_FILE,
                 "--prediction", PREDICTION_FILE,
@@ -409,6 +414,9 @@ class QASpec:
                 # so the import would resolve into the tree the sandbox hides.
                 {"path": f"{DATASET_PACKAGE}/__init__.py",
                  "from": str(ROOT / DATASET_PACKAGE / "__init__.py")},
+                {"path": "qa/lib/harnessgrad/__init__.py", "from": str(ROOT / "harnessgrad/__init__.py")},
+                {"path": "qa/lib/harnessgrad/paths.py", "from": str(ROOT / "harnessgrad/paths.py")},
+                {"path": "qa/lib/harnessgrad/env_file.py", "from": str(ROOT / "harnessgrad/env_file.py")},
                 {"path": f"{DATASET_PACKAGE}/scaffolds/__init__.py",
                  "from": str(ROOT / "data/scaffolds/__init__.py")},
                 # The adapters resolve their root through `data/scaffolds/roots.py`;
@@ -476,12 +484,12 @@ class QASpec:
         that adds `DATASET_ROOT` by accident would put the lint's path rule on a
         variable nobody declared.
 
-        **A missing data root is not an import failure.** `data/scaffolds/registry.py::published`
-        imports every module in `data/` to decide what the Launch form offers, and
-        `tools/dataset_lint.py` imports one to lint it -- both must work on a machine
-        where `--fetch` has not run. So a table that cannot be read is recorded in
-        `load_error` and re-raised by `load()`, which is the call that actually needs the
-        bytes. This is the same split `data/datasets/alfworld.py` makes with `_LOAD_ERROR`.
+        **Unconfigured storage is not an import failure.** Registry discovery reads
+        source declarations; lint and direct adapter imports still need metadata
+        before configuration or provisioning. DatasetPath defers filesystem access
+        until the loader needs it. Missing configuration is not cached as a pool
+        error; other unreadable tables are recorded in `load_error` and re-raised
+        by `load()`, which is the call that actually needs the bytes.
         """
         records = self.ensure()
         ids = [r["task_id"] for r in records]

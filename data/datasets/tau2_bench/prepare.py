@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare the pinned τ² v0.1.0 **telecom** payload; never execute a model request.
 
-    python3 data/datasets/tau2_bench/prepare.py --root /mnt/20t/xubuqiang/datasets/tau2-bench
+    python3 data/datasets/tau2_bench/prepare.py --root /your/data/tau2-bench
 
 Why a prepared payload at all, when v0.1.0 ships plain JSON: because the payload is what separates
 **what the actor may see** from **what the verifier sees**. `public.json` is copied into the task
@@ -22,10 +22,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import shutil
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
 
 SCHEMA = 'hg-tau2-payload.v1'
 REVISION = 'v0.1.0'
@@ -130,12 +132,10 @@ def prepare(source: Path, target: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--root', default=os.environ.get('HG_TAU2_DATA'))
+    parser.add_argument('--root', type=Path, default=dataset_root('tau2-bench'))
     parser.add_argument('--source', default=None,
                         help='extracted tau2-bench-0.1.0 tree (default: <root>/tau2-bench-0.1.0)')
     args = parser.parse_args()
-    if not args.root:
-        raise SystemExit('pass --root or set HG_TAU2_DATA')
     root = Path(args.root)
     source = Path(args.source) if args.source else root / 'tau2-bench-0.1.0'
     return prepare(source, root)

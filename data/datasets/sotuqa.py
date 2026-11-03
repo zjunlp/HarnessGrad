@@ -52,12 +52,14 @@ from __future__ import annotations
 
 import csv
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
-DATASET_ROOT = roots.dataset_root("sotuqa", "/mnt/20t/xubuqiang/datasets/sotuqa")
+
+DATASET_ROOT = dataset_root('sotuqa')
 CSV_MEMBER = "data/SOTU/SOTU_QA.csv"
 CSV_PATH = "ReWOO-9cd0283043ff4be0c9d614fda2789d143ca6ffd1/data/SOTU/SOTU_QA.csv"
 N_TOTAL = 74

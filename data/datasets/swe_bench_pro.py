@@ -5,8 +5,7 @@ manifest, fixed Harbor interpreter and independent local judge where required.
 """
 from pathlib import Path
 
-from data.scaffolds import roots
-import os
+from harnessgrad.paths import dataset_root
 from data.scaffolds import native_harbor as native
 
 KIND = 'dataset'
@@ -15,9 +14,7 @@ OFFICIAL_EVAL = None
 SPLIT = None
 SPLIT_SOURCE = 'none'
 DEFAULT_ENV = {'kind': 'files', 'network': 'none'}
-DATASET_ROOT = roots.dataset_root(
-    'swe_bench_pro',
-    legacy=os.environ.get('HG_SWE_BENCH_PRO_DATA', '/mnt/20t/xubuqiang/datasets/swe_bench_pro'))
+DATASET_ROOT = dataset_root('swe_bench_pro')
 REVISION = '66f92766bba642462d4bbe5479e83f91f9211862'
 SOURCE = 'https://github.com/scaleapi/SWE-bench_Pro-os'
 METRIC = 'resolved'

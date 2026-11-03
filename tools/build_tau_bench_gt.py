@@ -6,8 +6,8 @@
     python3 tools/build_tau_bench_gt.py --check         # fail if anything drifted
 
 It reads a checkout of `sierra-research/tau-bench` (default
-`/mnt/20t/xubuqiang/datasets/tau-bench`, override with `--checkout` or
-`HG_TAU_BENCH`) and writes, under `data/datasets/tau_bench/`:
+`<HG_DATA_ROOT>/tau-bench`, override with `--checkout` or
+`HG_DATA_TAU_BENCH`) and writes, under `data/datasets/tau_bench/`:
 
     gt/<task_id>.json     one task's ground truth: domain, official split, user id,
                           instruction and the action sequence. This is the answer, and
@@ -57,7 +57,6 @@ import argparse
 import hashlib
 import importlib.util
 import json
-import os
 import shutil
 import sys
 import types
@@ -71,7 +70,10 @@ DB_DIR = OUT / "db"
 POLICY_DIR = OUT / "policy"
 LIB_DIR = OUT / "lib"
 
-DEFAULT_CHECKOUT = "/mnt/20t/xubuqiang/datasets/tau-bench"
+sys.path.insert(0, str(ROOT))
+from harnessgrad.paths import dataset_root
+
+DEFAULT_CHECKOUT = dataset_root("tau-bench")
 
 #: **The benchmark's own division**, taken file by file, and the only source of the
 #: split this adapter declares.
@@ -333,8 +335,7 @@ def build(checkout: Path) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--checkout", default=os.environ.get("HG_TAU_BENCH",
-                                                             DEFAULT_CHECKOUT))
+    parser.add_argument("--checkout", default=DEFAULT_CHECKOUT)
     parser.add_argument("--check", action="store_true",
                         help="verify the committed assets match a fresh build")
     args = parser.parse_args()

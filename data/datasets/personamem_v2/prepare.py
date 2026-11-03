@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from harnessgrad.paths import dataset_root
 from data.datasets.personamem_v2.lib.inputs import history_chunks, question, question_id
 from data.datasets.personamem_v2.lib.protocol import REVISION, CODE_REVISION, METRIC, SPLITS, canonical, digest
 from data.datasets.personamem_v2.lib.storage import file_sha, task_id
@@ -151,8 +152,9 @@ def prepare(raw, output, selected=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--raw", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    root = dataset_root("personamem_v2")
+    parser.add_argument("--raw", type=Path, default=root / "raw")
+    parser.add_argument("--output", type=Path, default=root / "prepared")
     parser.add_argument("--task-id", action="append")
     args = parser.parse_args()
     print(json.dumps(prepare(args.raw, args.output, args.task_id)))

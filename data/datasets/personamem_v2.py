@@ -3,10 +3,9 @@ from collections.abc import Mapping
 from functools import lru_cache
 import hashlib
 import json
-import os
 from pathlib import Path
 
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -14,11 +13,8 @@ ORACLE_COVERAGE = "Every provisioned official MCQ; reference letters remain veri
 SPLIT_SOURCE = "declared"
 ASSETS = Path(__file__).resolve().parent / "personamem_v2"
 __path__ = [str(ASSETS)]
-#: Absolute, like every other adapter's: `parents[3]` resolved to the directory *above*
-#: the repository, so the default only ever worked in the checkout that wrote it.
-DATASET_ROOT = roots.dataset_root(
-    "personamem_v2",
-    os.environ.get("HG_PERSONAMEM_V2_DATA", "/mnt/20t/xubuqiang/datasets/personamem_v2"))
+
+DATASET_ROOT = dataset_root('personamem_v2')
 PREPARED_ROOT = DATASET_ROOT / "prepared"
 
 
@@ -147,6 +143,7 @@ def downloads():
              "repo": pins["dataset"], "version": pins["revision"], "dst": "raw",
              "files": list(pins["files"]),
              "sha256": {name: value["sha256"] for name, value in pins["files"].items()},
+             "manifest": "data/datasets/personamem_v2/specs/source.json",
              "size": str(sum(v["bytes"] for v in pins["files"].values())) + " bytes",
              "note": "Pinned official native train/val/benchmark; offline preparation separates private gold and ordered history. Includes only text-32k inputs."}]
 

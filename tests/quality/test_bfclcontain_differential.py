@@ -31,6 +31,18 @@ def test_source_inventory_and_sink_frontier_have_not_drifted():
         assert review["function"] == sink["function"]
 
 
+def test_source_inventory_covers_bfcl_verifier_python_inputs():
+    from data.datasets import bfcl_v3
+
+    spec = bfcl_v3.verify_for({"task_id": "authored/bfcl-inventory",
+                               "gold": {"functions": ["fabricated_echo"], "subset": "simple"}})
+    sources = {Path(entry["from"]).relative_to(control.ROOT).as_posix()
+               for entry in spec["inputs"]
+               if "from" in entry and entry["from"].endswith(".py")}
+    inventory = {row["path"] for row in json.loads((HERE / "source-inventory.json").read_text())}
+    assert sources <= inventory, f"unreviewed verifier sources: {sorted(sources - inventory)}"
+
+
 @pytest.mark.parametrize("case", CASES, ids=lambda case: case["id"])
 def test_fabricated_full_call_differential(case):
     actual = control.differential([case])[0]

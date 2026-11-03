@@ -4,12 +4,12 @@ Pinned upstream adaptation; see data/scaffolds/native_research/PROVENANCE.json.
 Raw native data stays outside the repository. Importing this declaration performs no
 acquisition and makes no claim that its external runtime is provisioned.
 """
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 from data.scaffolds.native_research.adapter import Adapter, TaskMapping, downloads as source_downloads
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
-DATASET_ROOT = roots.dataset_root('harvey_lab', legacy='/mnt/20t/xubuqiang/datasets/harvey_lab/native-prepared')
+DATASET_ROOT = dataset_root('harvey_lab')
 ADAPTER = Adapter('harvey_lab', root=DATASET_ROOT)
 METRIC = 'harvey_lab.native-adapted'
 load = ADAPTER.load

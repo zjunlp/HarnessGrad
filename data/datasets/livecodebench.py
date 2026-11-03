@@ -55,7 +55,6 @@ and reports how much of the pool has one -- `ORACLE_COVERAGE`. The references li
 """
 from __future__ import annotations
 
-from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import base64
@@ -66,13 +65,16 @@ from pathlib import Path
 
 import numpy as np
 
+from harnessgrad.paths import dataset_root
+
 
 KIND = "dataset"
 #: The reference solutions are **ours** and the released tests validate them; see the module
 #: docstring and `data/dataset.schema.json` (`module.oracle_about`).
 ORACLE_SOURCE = "authored"
 
-DATASET_ROOT = roots.dataset_root("livecodebench", "/mnt/20t/xubuqiang/datasets/livecodebench")
+
+DATASET_ROOT = dataset_root('livecodebench')
 REVISION = "0fe84c3912ea0c4d4a78037083943e8f0c4dd505"
 UPSTREAM_COMMIT = "28fef95ea8c9f7a547c8329f2cd3d32b92c1fa24"
 #: The compressed upstream source archive, which is what `downloads()` declares.

@@ -122,4 +122,9 @@ def main():
         duplicate_questions=args.duplicate_questions or 'error'),indent=2))
 
 
-if __name__=='__main__': main()
+if __name__=='__main__':
+    from harnessgrad.paths import DataRootNotConfigured
+    try:
+        main()
+    except DataRootNotConfigured as exc:
+        raise SystemExit(str(exc)) from None

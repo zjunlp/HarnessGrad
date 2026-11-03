@@ -68,11 +68,11 @@ What is deliberately not added
 """
 from __future__ import annotations
 
-from data.scaffolds import roots
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
-import os
 from pathlib import Path
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
@@ -90,11 +90,8 @@ ORACLE_SOURCE = "released"
 #: no study material in it. `--split declared` keeps this adapter's own division.
 OFFICIAL_EVAL = None
 
-#: Where the ROMs are extracted. Outside the platform tree on purpose: dataset bytes are not
-#: platform code. `HG_JERICHO_DATA` overrides it.
-DATASET_ROOT = roots.dataset_root(
-    "jericho",
-    os.environ.get("HG_JERICHO_DATA", "/mnt/20t/xubuqiang/datasets/jericho"))
+
+DATASET_ROOT = dataset_root('jericho')
 
 #: Where the BYU-PCCL archive extracts the suite, relative to the dataset root.
 GAMES_SUBDIR = "z-machine-games-master/jericho-game-suite"

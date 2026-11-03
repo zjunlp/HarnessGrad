@@ -16,9 +16,9 @@ provisioning list in a document forks, and the fork shows up as "someone followe
 docs and got different bytes" -- which is why the renderer is this tool and the
 authority is the loader.
 
-The split the whole feature rests on: **data lands under
-`/mnt/20t/xubuqiang/datasets/<name>/` and never in git; code -- how to load and how to
-score -- stays in git.** A dataset whose `downloads()` names a `dst` inside the platform
+The split the whole feature rests on: **data lands in the adapter's configured
+data root outside the checkout; code -- how to load and how to score -- stays in git.**
+A dataset whose `downloads()` names a `dst` inside the platform
 tree is refused by `tools/dataset_lint.py` for exactly that reason.
 
 A version must be pinned: a release tag, a commit sha or an exact package version. A
@@ -29,10 +29,11 @@ moving target even if one were allowed.
 -----------------------------------
 `--check` says what is missing; `--fetch` is the other half, and it lives here rather
 than in a shell script so that the same `downloads()` entries are the only list. It
-understands the three transports the loaders use:
+understands the four artifact kinds the loaders use:
 
     http        GET `url` (redirects followed) into `dst`
     hf-dataset  GET `https://<endpoint>/datasets/<repo>/resolve/<revision>/<file>`
+    hf-file     GET one pinned repository file into the file-shaped `dst`
     pip         never fetched here -- it is an install, and `--check` reports it
 
 `--file` narrows an entry to a subset of the files it names, which is how a dataset
@@ -62,6 +63,7 @@ left by a blocked fetch made the next sanctioned command die on a missing `.giti
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import importlib
 import importlib.metadata
@@ -72,8 +74,9 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
-from pathlib import Path
-from urllib.parse import urlsplit
+from pathlib import Path, PurePosixPath
+from types import SimpleNamespace
+from urllib.parse import quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "DOWNLOADS.md"
@@ -97,18 +100,89 @@ GH_RAW_MIRROR_ENV = "HG_GH_RAW_MIRROR"
 
 sys.path.insert(0, str(ROOT))
 import data.scaffolds.registry as registry  # noqa: E402
+from harnessgrad.paths import env_name  # noqa: E402
+from harnessgrad.paths import DataRootNotConfigured, scorer_paths  # noqa: E402
+from tools.check_dataset_blockers import published_declarations  # noqa: E402
 
 
 def _schema() -> dict:
     return json.loads(SCHEMA_PATH.read_text())
 
 
-def datasets_with_downloads() -> list[tuple[str, list[dict]]]:
-    """Every published dataset that declares `downloads()`, in name order."""
+def _source_downloads(path: Path, *, resolve_root: bool = True):
+    """Load downloads() and its source dependencies, excluding eager task-pool code.
+
+    This is only a catalog fallback for trusted adapter code that cannot import on an
+    unprovisioned machine. It is not a sandbox or a substitute for runtime imports.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    providers = {}
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+            names = [node.name]
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            names = [alias.asname or alias.name.split(".")[0] for alias in node.names]
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            names = [target.id for target in targets if isinstance(target, ast.Name)]
+        else:
+            continue
+        providers.update((name, node) for name in names)
+    if "downloads" not in providers:
+        return None
+    pending = ["downloads", "DATASET_ROOT", "ROOT"]
+    selected = set()
+    while pending:
+        node = providers.get(pending.pop())
+        if node is None or node in selected:
+            continue
+        selected.add(node)
+        pending.extend(child.id for child in ast.walk(node)
+                       if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load))
+    body = [node for node in tree.body if node in selected
+            or isinstance(node, ast.ImportFrom) and node.module == "__future__"]
+    namespace = {"__file__": str(path), "__name__": registry.module_name(path.stem),
+                 "__package__": "data.datasets"}
+    code = compile(ast.Module(body=body, type_ignores=[]), str(path), "exec")
+    if resolve_root:
+        exec(code, namespace)
+    else:
+        # A private source namespace, never a cached runtime adapter. Catalogs
+        # need declarations without discovering host storage or loading a pool.
+        with scorer_paths():
+            exec(code, namespace)
+    return namespace.get("downloads")
+
+
+def _download_adapter(name: str):
+    """Read provisioning metadata even before optional runtime/data installation."""
+    try:
+        return importlib.import_module(registry.module_name(name))
+    except Exception as exc:
+        try:
+            fn = _source_downloads(ROOT / "data" / "datasets" / f"{name}.py")
+        except Exception as fallback_exc:
+            raise RuntimeError(f"Cannot read {name} downloads(): adapter import failed "
+                               f"({exc}); source declaration also failed") from fallback_exc
+        values = {key: fn.__globals__[key] for key in ("DATASET_ROOT", "ROOT")
+                  if fn and key in fn.__globals__}
+        return SimpleNamespace(downloads=fn, **values,
+                               _adapter_import_error=f"{type(exc).__name__}: {exc}")
+
+
+def datasets_with_downloads(*, source_fallback: bool = False) -> list[tuple[str, list[dict]]]:
+    """Read catalog declarations even when an adapter's task pool is unavailable.
+
+    Callers can retain registry-only discovery with source_fallback=False.
+    """
     out = []
-    for name in registry.published():
-        module = importlib.import_module(registry.module_name(name))
-        fn = getattr(module, "downloads", None)
+    names = published_declarations(ROOT) if source_fallback else registry.published()
+    for name in names:
+        try:
+            fn = (_source_downloads(ROOT / "data/datasets" / f"{name}.py", resolve_root=False)
+                  if source_fallback else getattr(importlib.import_module(registry.module_name(name)), "downloads", None))
+        except Exception as exc:
+            raise RuntimeError(f"Cannot read {name} downloads() source declaration") from exc
         if callable(fn):
             out.append((name, list(fn() or [])))
     return out
@@ -198,17 +272,19 @@ def check_entry(entry: dict, base: Path) -> dict:
 
 
 def check_dataset(name: str, downloads: list[dict]) -> dict:
-    module = importlib.import_module(registry.module_name(name))
+    module = _download_adapter(name)
     base = dataset_root(module)
     entries = [check_entry(entry, base) for entry in downloads]
     status = {}
+    if hasattr(module, "_adapter_import_error"):
+        status["adapter_import_error"] = module._adapter_import_error
     fn = getattr(module, "provision_status", None)
     if callable(fn):
         try:
             status = fn()
         except Exception as exc:  # noqa: BLE001
             status = {"error": f"{type(exc).__name__}: {exc}"}
-    return {"dataset": name, "entries": entries, "status": status,
+    return {"dataset": name, "root": str(base), "entries": entries, "status": status,
             "present": all(e["present"] for e in entries) if entries else False}
 
 
@@ -453,6 +529,96 @@ def _hf_tail(entry: dict, file: str, endpoint: str) -> str:
     return f"/datasets/{entry.get('repo')}/resolve/{entry.get('version')}/{file}"
 
 
+# These are document layout limits, independent of download selection or verification.
+INLINE_FILE_LIMIT = 8
+INLINE_FILE_CHARS = 600
+
+
+def _short_file_list(files: list[str]) -> bool:
+    return len(files) <= INLINE_FILE_LIMIT and sum(map(len, files)) <= INLINE_FILE_CHARS
+
+
+def _logical_data_root(dataset: str) -> tuple[str, str | None]:
+    """Describe the adapter's declared layout without resolving machine settings.
+
+    Read the shared resolver call rather than assuming a directory from the adapter
+    name: two adapters may share storage, and some use version subdirectories.
+    """
+    source = ROOT / "data" / "datasets" / f"{dataset}.py"
+    if source.is_file():
+        for node in ast.parse(source.read_text(encoding="utf-8")).body:
+            targets = (node.targets if isinstance(node, ast.Assign) else
+                       [node.target] if isinstance(node, ast.AnnAssign) else [])
+            if not any(isinstance(target, ast.Name) and target.id in {"DATASET_ROOT", "ROOT"}
+                       for target in targets):
+                continue
+            call = node.value
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+                    and call.func.id == "dataset_root" and call.args):
+                continue
+            try:
+                directory = ast.literal_eval(call.args[0])
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(directory, str):
+                continue
+            path = PurePosixPath(directory)
+            if path.is_absolute() or ".." in path.parts or not path.parts:
+                continue
+            return f"<HG_DATA_ROOT>/{path}", env_name(directory)
+    return "<DATASET_ROOT>", None
+
+
+def _logical_destination(destination: str, root: str) -> str:
+    path = PurePosixPath(destination)
+    if path.is_absolute():
+        return "<ABSOLUTE_DESTINATION>"
+    return str(PurePosixPath(root) / path)
+
+
+def _render_inventory(entry: dict, dataset: str, root: str) -> list[str]:
+    """Summarize large inventories without changing the provisioning declaration."""
+    lines = []
+    files = sorted(entry.get("files") or [])
+    checksums = entry.get("sha256")
+    summarize_files = bool(files) and not _short_file_list(files)
+    summarize_checksums = isinstance(checksums, dict) and not _short_file_list(list(checksums))
+    if files:
+        if summarize_files:
+            examples = [path if len(path) <= 120 else path[:57] + "..." + path[-60:]
+                        for path in files[:3]]
+            preview = ", ".join(f"`{path}`" for path in examples)
+            label = "file" if len(files) == 1 else "files"
+            lines.append(f"- **Files:** {len(files):,} {label} (examples: {preview})")
+        else:
+            lines.append("- **Files:** " + ", ".join(f"`{path}`" for path in files))
+    if entry.get("dst"):
+        lines.append(f"- **Destination:** `{_logical_destination(entry['dst'], root)}`")
+    if entry.get("extract_to"):
+        lines.append(f"- **Extract to:** `{_logical_destination(entry['extract_to'], root)}`")
+    absolute_destination = any(PurePosixPath(entry[key]).is_absolute()
+                               for key in ("dst", "extract_to") if entry.get(key))
+    if entry.get("manifest"):
+        target = quote(entry["manifest"], safe="/")
+        lines.append(f"- **Manifest:** [Full file list and checksums]({target})")
+    if absolute_destination or (not entry.get("manifest") and (summarize_files or summarize_checksums)):
+        lines.append("- **Full declaration:** "
+                     f"`python3 tools/datasets.py --list --json --dataset {dataset}`")
+    if isinstance(checksums, dict) and checksums:
+        if summarize_checksums:
+            label = "checksum" if len(checksums) == 1 else "checksums"
+            lines.append(f"- **SHA256:** {len(checksums):,} per-file {label} (see full inventory above)")
+        else:
+            lines.extend(["- **SHA256:** Per-file checksums:", "",
+                          "| File | SHA256 |", "| --- | --- |"])
+            for path, digest in sorted(checksums.items()):
+                cell = path.replace("|", r"\|")
+                lines.append(f"| `{cell}` | `{digest}` |")
+    elif checksums:
+        lines.append(f"- **SHA256:** `{checksums}`")
+    return lines
+
+
 def render_index(rows: list[dict]) -> str:
     """DOWNLOADS.md, from the loaders. See the module docstring for why it is generated."""
     lines = [
@@ -460,13 +626,20 @@ def render_index(rows: list[dict]) -> str:
         "",
         "# Dataset downloads",
         "",
-        "The authority for every line below is the named dataset's own `downloads()`",
-        "function; this file is rendered from it by `python3 tools/datasets.py --write`.",
-        "Editing this file changes a copy, not the loader -- and a copy forks. Data lands",
-        "under `/mnt/20t/xubuqiang/datasets/<name>/` and is never committed; the code that",
-        "loads and scores it stays in git.",
+        "This human-readable index is generated from each dataset adapter's `downloads()`",
+        "declaration by `python3 tools/datasets.py --write`. Destinations show portable logical",
+        "paths under `<HG_DATA_ROOT>`, using each adapter's declared directory and download `dst`.",
+        "Set `HG_DATA_ROOT` in `.env` or the environment before accessing external data; there is no implicit directory.",
+        "per-dataset overrides take precedence. See [data directory configuration](README.md#dataset-storage).",
+        "Each override replaces that dataset's entire data root; the relative download path stays the same.",
+        "`<DATASET_ROOT>` denotes an adapter-defined root; `<ABSOLUTE_DESTINATION>` denotes an explicit",
+        "absolute destination available in the full declaration. Manifest links are repository-relative.",
         "",
-        "`python3 tools/datasets.py --check` reports which of these are present locally.",
+        "Large file lists and checksum maps are summarized; follow the linked manifests",
+        "or run `python3 tools/datasets.py --list --json --dataset <name>` for full declarations.",
+        "",
+        "`python3 tools/datasets.py --check` reports the current server's resolved absolute roots",
+        "and which resources are present locally.",
         "",
         f"**Egress on a walled host.** With `{GH_RAW_MIRROR_ENV}` unset, `--fetch` asks for",
         "the URL above byte for byte. Set it to a proxy prefix (for example",
@@ -494,10 +667,16 @@ def render_index(rows: list[dict]) -> str:
             lines.append("_Declares no downloads._")
             lines.append("")
             continue
+        root, override = _logical_data_root(name)
+        lines.append(f"- **Data root:** `{root}`")
+        if override:
+            lines.append(f"- **Root override:** `{override}`")
+        lines.append("")
         for entry in row["entries"]:
             size = entry.get("size") or "size not stated"
-            lines.append(f"### {entry.get('name')} ({entry['kind']}, {entry.get('version')})")
+            lines.append(f"### {entry.get('name')}")
             lines.append("")
+            lines.append(f"- **Type:** `{entry['kind']}`")
             lines.append(f"- **Version (pinned):** `{entry.get('version')}`")
             lines.append(f"- **Size:** {size}")
             if entry.get("url"):
@@ -506,22 +685,16 @@ def render_index(rows: list[dict]) -> str:
                 lines.append(f"- **Repo:** `{entry['repo']}`")
             if entry.get("file"):
                 lines.append(f"- **File:** `{entry['file']}`")
-            if entry.get("files"):
-                lines.append("- **Files:** "
-                             + ", ".join(f"`{f}`" for f in entry["files"]))
             if entry.get("package"):
                 lines.append(f"- **Package:** `{entry['package']}=={entry.get('version')}`")
-            if entry.get("dst"):
-                lines.append(f"- **Destination:** `{entry['dst']}`")
-            if entry.get("sha256"):
-                lines.append(f"- **sha256:** `{entry['sha256']}`")
+            lines.extend(_render_inventory(entry, name, root))
             lines.append("")
             lines.append(f"> {entry.get('note', '').strip()}")
             lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def main(argv=None) -> int:
+def _main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--list", action="store_true", help="print each dataset's needs")
@@ -542,7 +715,7 @@ def main(argv=None) -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    rows = datasets_with_downloads()
+    rows = datasets_with_downloads(source_fallback=True)
     if args.dataset:
         rows = [r for r in rows if r[0] in set(args.dataset)]
 
@@ -554,7 +727,7 @@ def main(argv=None) -> int:
     if args.fetch:
         failed = 0
         for name, entries in rows:
-            module = importlib.import_module(registry.module_name(name))
+            module = _download_adapter(name)
             base = dataset_root(module)
             print(f"== {name}  (root {base})")
             for entry in entries:
@@ -580,7 +753,7 @@ def main(argv=None) -> int:
             extra = ""
             if status and status.get("tasks") is not None:
                 extra = f" ({status.get('tasks')} task(s) loadable)"
-            print(f"{mark} {row['dataset']}{extra}")
+            print(f"{mark} {row['dataset']}{extra} (root: {row['root']})")
             for entry in row["entries"]:
                 flag = "  ok " if entry["present"] else "  -- "
                 print(f"{flag} [{entry['kind']}] {entry['name']} @ {entry['version']}"
@@ -588,15 +761,14 @@ def main(argv=None) -> int:
         return 1 if failed else 0
 
     # Default and --list: what each dataset asks for.
-    # An adapter this interpreter cannot import is missing from `rows`, and saying so is part
-    # of the answer: a catalogue that is silently one entry shorter is how a fresh clone looks
-    # broken. (A wheel has no `specs/*.json`; `chess` and `numpy` are optional dependencies.)
+    # Report omitted source declarations without importing runtime adapters or
+    # mixing diagnostics into the machine-readable catalog payload.
     if args.json:
         # Shape kept as a list of rows: it is a machine interface, and the diagnostics below
         # go to stderr rather than into a payload a caller already parses.
         print(json.dumps([{"dataset": n, "downloads": e} for n, e in rows],
                          indent=1, sort_keys=True))
-        _report_unimportable()
+        _report_unreadable()
         return 0
     for name, entries in rows:
         print(f"{name}: {len(entries)} item(s)")
@@ -608,21 +780,29 @@ def main(argv=None) -> int:
             print(f"      {entry.get('note', '').strip()}")
     if not rows:
         print("no published dataset declares downloads()")
-    _report_unimportable()
+    _report_unreadable()
     return 0
 
 
-def _report_unimportable() -> None:
+def _report_unreadable() -> None:
     """Name the adapters the catalogue had to drop, and why."""
     broken = registry.broken_adapters()
     if not broken:
         return
-    print(f"\n{len(broken)} adapter(s) could not be imported and are not listed above:",
+    print(f"\n{len(broken)} adapter declaration(s) could not be read:",
           file=sys.stderr)
     for name, reason in sorted(broken.items()):
         print(f"  {name}: {reason[:160]}", file=sys.stderr)
-    print("Install the named module or provision the missing asset; `load()` names the "
-          "same reason when the adapter is used directly.", file=sys.stderr)
+    print("Repair the named source declaration; runtime and storage errors are "
+          "reported when loading the dataset.", file=sys.stderr)
+
+
+def main(argv=None) -> int:
+    try:
+        return _main(argv)
+    except DataRootNotConfigured as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

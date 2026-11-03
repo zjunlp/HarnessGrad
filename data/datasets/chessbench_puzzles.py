@@ -24,8 +24,9 @@ import re
 
 import chess
 
-from data.scaffolds import roots
 from data.scaffolds.qa import base
+
+from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
 
@@ -34,7 +35,8 @@ KIND = "dataset"
 ORACLE_SOURCE = "released"
 # The shared verifier otherwise includes the complete private reference in evidence.
 REDACT_EVIDENCE = True
-DATASET_ROOT = roots.dataset_root("chessbench_puzzles", "/mnt/20t/xubuqiang/datasets/chessbench_puzzles")
+
+DATASET_ROOT = dataset_root('chessbench_puzzles')
 CSV_PATH = DATASET_ROOT / "_src" / "puzzles.csv"
 CSV_MEMBER = "puzzles.csv"
 REVISION = "90ae0e6b121673fc3079aaeffa047580bb600c0a"
@@ -442,6 +444,9 @@ def setup_for(record: dict) -> dict:
 def verify_for(record: dict) -> dict:
     from data.runtimes import NATIVE_PINS
     spec = _SPEC.verifier(record)
+    # The native runner supplies -I -S from its independently pinned manifest;
+    # retain its fixed script-at-argv[1] route contract.
+    spec['argv'].remove('-I')
     spec['native_runtime'] = NATIVE_PINS['chessbench_puzzles'].copy()
     return spec
 

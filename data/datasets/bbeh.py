@@ -3,13 +3,13 @@
 See data/scaffolds/native_qa/README.md for source, split and fidelity boundaries.
 Imports never fetch data. Prepare the external data root explicitly before load().
 """
-from data.scaffolds import roots
+from harnessgrad.paths import dataset_root
 from data.scaffolds.native_qa import Dataset
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
 METRIC = 'bbeh-correctness'
-DATASET_ROOT = roots.dataset_root('bbeh', legacy='/mnt/20t/xubuqiang/datasets/bbeh')
+DATASET_ROOT = dataset_root('bbeh')
 _spec = Dataset("bbeh", DATASET_ROOT)
 DEFAULT_ENV = {"kind": "files"}
 

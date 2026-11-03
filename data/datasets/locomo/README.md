@@ -44,7 +44,7 @@ Use a Conda environment with the platform dependencies and
 This adapter uses the existing native sandbox and local HTTP model route; it does
 not add Python runtime projection or an external HTTPS gateway.
 Put that environment's `bin` directory on PATH (including for the sandbox verifier).
-Set `HG_LOCOMO_DATA` to the directory containing `raw/locomo10.json`.
+Set `HG_DATA_LOCOMO` to the directory containing `raw/locomo10.json`.
 
 ```sh
 python tools/dataset_lint.py --dataset locomo --json
@@ -52,7 +52,7 @@ HG_AGENT_BACKEND=mock python data/datasets/locomo/control.py --task-id locomo/co
 HG_AGENT_BACKEND=mock python data/datasets/locomo/control.py --task-id locomo/conv-26 --noop
 HG_AGENT_BACKEND=mock python data/datasets/locomo/control.py --task-id locomo/conv-26 --oracle --platform
 HG_AGENT_BACKEND=mock python data/datasets/locomo/control.py --task-id locomo/conv-26 --noop --platform
-LOCOMO_AUDIT_DATA="$HG_LOCOMO_DATA/raw/locomo10.json" python -m pytest -q tests/quality/test_locomo_dataset.py tests/quality/test_locomo_harbor_scoring.py
+LOCOMO_AUDIT_DATA="$HG_DATA_LOCOMO/raw/locomo10.json" python -m pytest -q tests/quality/test_locomo_dataset.py tests/quality/test_locomo_harbor_scoring.py
 ```
 
 ## Results and manual aggregation
