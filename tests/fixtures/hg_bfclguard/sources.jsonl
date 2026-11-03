@@ -589,7 +589,7 @@
 {"bytes": 32901, "id": 588, "module": "tools.configure_harness", "path": "tools/configure_harness.py", "sha256": "721f95e5978da7fc98cb9fac26031c9510d7eb5cf9aaface2c321e1e0f8f670d"}
 {"bytes": 1062, "id": 589, "module": "tools.configure_responses_overlay", "path": "tools/configure_responses_overlay.py", "sha256": "c2c69997b05dcea38f2597688d48ac7b2ff791c517f620181f20cebce5df6818"}
 {"bytes": 10919, "id": 590, "module": "tools.contribute", "path": "tools/contribute.py", "sha256": "f508f4ec78d2996ebc8e44df1490245ca228450a787b8afa4e03921bf5ab90ce"}
-{"bytes": 17869, "id": 591, "module": "tools.contributors", "path": "tools/contributors.py", "sha256": "a38fc828b39f6b6fc4d931a05ffa01ce4d33129c5ead7a6f3122077195380f9c"}
+{"bytes": 29687, "id": 591, "module": "tools.contributors", "path": "tools/contributors.py", "sha256": "a6050c4dc386dfb912509dda6f0bafe13caaa0d950ef961df4e77059294bfaf7"}
 {"bytes": 44030, "id": 592, "module": "tools.dataset_classes", "path": "tools/dataset_classes.py", "sha256": "4436a4e3255bcc89cf67b218d57b0f309cd7d172ebf4e8734291c75b876ace59"}
 {"bytes": 24985, "id": 593, "module": "tools.dataset_lint", "path": "tools/dataset_lint.py", "sha256": "6e28e3b5a98901092bc9f4299fc8740f79cee83d72a893875e1f38a7b43a3657"}
 {"bytes": 37909, "id": 594, "module": "tools.datasets", "path": "tools/datasets.py", "sha256": "8eaa6a557dba3f42c7500350a2dcb93945024553a5a18ea480bab9ae2bbdff54"}

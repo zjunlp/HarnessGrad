@@ -278,7 +278,7 @@
       {
         "name": "bfcl_v3",
         "adapter": "data/datasets/bfcl_v3.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -306,21 +306,21 @@
       {
         "name": "cooperbench",
         "adapter": "data/datasets/cooperbench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
       {
         "name": "costbench",
         "adapter": "data/datasets/costbench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
       {
         "name": "costbench_dynamic",
         "adapter": "data/datasets/costbench_dynamic.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -356,14 +356,14 @@
       {
         "name": "gaia",
         "adapter": "data/datasets/gaia.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
       {
         "name": "gsm8k",
         "adapter": "data/datasets/gsm8k.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-10-24",
         "adoption": 1,
         "note": "gold answers, cheap to score"
@@ -406,14 +406,14 @@
       {
         "name": "kumo",
         "adapter": "data/datasets/kumo.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
       {
         "name": "livecodebench",
         "adapter": "data/datasets/livecodebench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -427,7 +427,7 @@
       {
         "name": "locomo",
         "adapter": "data/datasets/locomo.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -448,7 +448,7 @@
       {
         "name": "memoryagentbench",
         "adapter": "data/datasets/memoryagentbench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -483,14 +483,14 @@
       {
         "name": "personamem_v2",
         "adapter": "data/datasets/personamem_v2.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
       {
         "name": "physicsquestions",
         "adapter": "data/datasets/physicsquestions.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -525,7 +525,7 @@
       {
         "name": "sportsunderstanding",
         "adapter": "data/datasets/sportsunderstanding.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -546,14 +546,14 @@
       {
         "name": "strategyqa",
         "adapter": "data/datasets/strategyqa.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
       {
         "name": "strongreject",
         "adapter": "data/datasets/strongreject.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -589,7 +589,7 @@
       {
         "name": "tau3_bench",
         "adapter": "data/datasets/tau3_bench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "crepuscular-drizzle",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -618,7 +618,7 @@
       {
         "name": "triviaqa",
         "adapter": "data/datasets/triviaqa.py",
-        "contributor": "Xubqpanda",
+        "contributor": "trancefornow",
         "since": "2026-11-03",
         "note": "declared adapter"
       },
@@ -708,9 +708,25 @@
     {
       "name": "platform core",
       "path": "harnessgrad",
-      "contributor": "Xubqpanda",
+      "contributor": "crepuscular-drizzle",
       "since": "2026-10-01",
       "note": "driver, rounds, sandbox, records, scoring"
+    },
+    {
+      "name": "dataset storage migration",
+      "path": "harnessgrad/paths.py",
+      "contributor": "crepuscular-drizzle",
+      "since": "2026-11-03",
+      "note": "58 adapters moved from an operator's absolute path to one resolver: HG_DATA_<NAME> > HG_DATA_ROOT, no implicit directory, portable catalogues"
+    },
+    {
+      "name": "env-file precedence",
+      "path": "harnessgrad/env_file.py",
+      "contributor": "crepuscular-drizzle",
+      "since": "2026-11-03",
+      "note": "shell > worktree .env > primary .env, read without importing an adapter"
     }
-  ]
+  ],
+  "note_on_attribution": "Credits are per artefact and were rewritten twice (2026-11-01, 2026-11-03) to remove a third-party project name; git history was squashed at the same time, so per-file authorship no longer exists. What the record can still show: who wrote the migration that touched a file last (#34, 58 adapters), and who is credited for the artefact. A credit that looks wrong should be corrected here, in one line, and the drawings follow.",
+  "attribution": "Benchmarks are credited to whoever proposed the dataset, not to whoever touched it last: the PRs that introduced the adapter decide, and a later migration (#34 changed every adapter's storage contract) does not move the credit. Where no PR introduced an adapter it predates the pull-request history and is credited to the catalogue's author."
 }

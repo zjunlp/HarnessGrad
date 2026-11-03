@@ -18,6 +18,7 @@ on:
     branches: [main]
     paths:
       - 'site-redirect/**'
+      - 'docs/contributors.html'
       - '.github/workflows/site-redirect.yml'
   workflow_dispatch:
 
@@ -40,6 +41,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/configure-pages@v5
+
+      # The interactive page lives where it is generated (`docs/contributors.html`) and is
+      # copied into the artifact here, with the page's own relative links intact.
+      - name: Stage the contribution page
+        run: |
+          cp docs/contributors.html site-redirect/contributors.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

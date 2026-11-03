@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HarnessGrad — contributions</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 28px 32px; font: 14px/1.5 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;
+         background: Canvas; color: CanvasText; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 18px; opacity: .7; font-size: 13px; }
+  .bar { display: flex; gap: 18px; align-items: center; margin: 0 0 22px; flex-wrap: wrap; }
+  .bar label { font-size: 13px; opacity: .8; }
+  select, input[type=range] { font: inherit; }
+  .panel { margin: 0 0 26px; }
+  .panel h2 { font-size: 15px; margin: 0 0 6px; }
+  .panel svg { width: 100%; height: auto; display: block; }
+  .tip { position: fixed; pointer-events: none; background: Canvas; color: CanvasText;
+         border: 1px solid rgba(128,128,128,.35); border-radius: 8px; padding: 8px 10px;
+         font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.12); opacity: 0; transition: opacity .08s;
+         max-width: 320px; z-index: 10; }
+  .tip b { font-weight: 600; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; opacity: .8; margin: 6px 0 0; }
+  .legend span { display: inline-flex; gap: 6px; align-items: center; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style></head><body>
+<h1>HarnessGrad — who contributed what</h1>
+<p class="sub" id="sub"></p>
+<div class="bar">
+  <label>Window
+    <select id="win">
+      <option value="30">last 30 days</option>
+      <option value="90" selected>last 90 days</option>
+      <option value="180">last 180 days</option>
+      <option value="0">everything</option>
+    </select>
+  </label>
+  <label>Ends at <input id="end" type="date"></label>
+  <label>Board
+    <select id="board">
+      <option value="all">all three</option>
+      <option value="harness">harnesses</option>
+      <option value="method">RSI methods</option>
+      <option value="benchmark">benchmarks</option>
+    </select>
+  </label>
+</div>
+<div id="panels"></div>
+<div class="tip" id="tip"></div>
+<script id="data" type="application/json">{"people": [{"handle": "Xubqpanda", "name": "Buqiang Xu"}, {"handle": "crepuscular-drizzle", "name": "Wen Yu"}, {"handle": "trancefornow", "name": "Trance"}], "updated": "2026-11-03", "entries": [{"name": "loop", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-01", "note": "reference CLI harness: one agent loop, no framework"}, {"name": "codex", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-12", "note": "OpenAI Codex CLI as the solver"}, {"name": "opencode", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-12", "note": "opencode CLI, measured through the recording relay"}, {"name": "deepseek-harness", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-20", "note": "DeepSeek open harness"}, {"name": "openclaw", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-20", "note": "OpenClaw agent runtime"}, {"name": "miniagent", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-22", "note": "small teaching harness, easy to edit"}, {"name": "miniswe", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-24", "note": "minimal SWE-style harness"}, {"name": "oracle", "kind": "harness", "contributor": "Xubqpanda", "since": "2026-10-24", "note": "control harness that always answers correctly"}, {"name": "dgm", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-24", "note": "Darwin Godel Machine: edit the harness, keep what scores"}, {"name": "rrsi", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-24", "note": "reflective RSI loop"}, {"name": "adas", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-25", "note": "meta-agent search over harness designs"}, {"name": "ahe", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-25", "note": "agentic harness engineering"}, {"name": "ace", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-26", "note": "playbook grows from the run's own traces"}, {"name": "skillopt", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-26", "note": "skills as the editable surface"}, {"name": "evoprompt", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-27", "note": "evolutionary prompt search"}, {"name": "evo_harness", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-27", "note": "evolutionary search over the harness itself"}, {"name": "opro", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-28", "note": "optimization by prompting"}, {"name": "tthe", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-28", "note": "test-time harness evolution"}, {"name": "dream_rsi", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-29", "note": "dream-then-refine RSI"}, {"name": "sica_ci", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-29", "note": "self-improving coding agent"}, {"name": "gepa", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-30", "note": "reflective prompt evolution"}, {"name": "darwinx", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-30", "note": "Darwinian tree search over harness variants"}, {"name": "arbor", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-31", "note": "tree-structured research agent"}, {"name": "hyperagents", "kind": "method", "contributor": "Xubqpanda", "since": "2026-10-31", "note": "hyperagent edit proposals"}, {"name": "meta_harness", "kind": "method", "contributor": "Xubqpanda", "since": "2026-11-01", "note": "a harness that edits harnesses"}, {"name": "harnessx", "kind": "method", "contributor": "Xubqpanda", "since": "2026-11-01", "note": "harness crossover from the search frontier"}, {"name": "modular_rsi", "kind": "method", "contributor": "Xubqpanda", "since": "2026-11-02", "note": "modular blocks are edited one at a time"}, {"name": "agentdojo", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "aime", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "alfworld", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "api_bank", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter — refused by contract"}, {"name": "appworld", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-10-29", "note": "stateful API tasks; TGC verified"}, {"name": "authored_example_fix_bug", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "bbeh", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-10-24", "note": "hard reasoning; the light first real experiment"}, {"name": "bfcl_v3", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "bird_minidev", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "browsecomp", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "chessbench_puzzles", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "cooperbench", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "costbench", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "costbench_dynamic", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "deepsearchqa", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-10-28", "note": "search and judge services must be provisioned"}, {"name": "deepswe", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "ds1000", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "fever", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "gaia", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "gsm8k", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-10-24", "note": "gold answers, cheap to score"}, {"name": "harvey_lab", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "hle", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "hotpotqa", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "jericho", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "jobbench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "kumo", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "livecodebench", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "livemathbench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "locomo", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "math", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "math500", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "memoryagentbench", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "musique", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "nestful", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter — refused by contract"}, {"name": "nq", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "officeqa_pro", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "personamem_v2", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "physicsquestions", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "reasoning_gym", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "scienceworld", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "searchqa", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "sotuqa", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter — refused by contract"}, {"name": "sportsunderstanding", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "spreadsheetbench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "spreadsheetbench2", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "strategyqa", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "strongreject", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "supergpqa", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "swe_bench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "swe_bench_pro", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-10-27", "note": "repository-level patches, per-task images"}, {"name": "tau2_bench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter — refused by contract"}, {"name": "tau3_bench", "kind": "benchmark", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "declared adapter"}, {"name": "tau_bench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "terminal_bench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-10-26", "note": "container tasks; official scorer in the image"}, {"name": "travelplanner", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "triviaqa", "kind": "benchmark", "contributor": "trancefornow", "since": "2026-11-03", "note": "declared adapter"}, {"name": "twowikimultihopqa", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "widesearch", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "workbench", "kind": "benchmark", "contributor": "Xubqpanda", "since": "2026-11-03", "note": "declared adapter"}, {"name": "dataset root resolver", "kind": "platform", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "one place that answers where a dataset's bytes live; no machine literal in an adapter"}, {"name": "provisioning CLI", "kind": "platform", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "per-dataset fetch/check from the adapter's own declaration"}, {"name": "method launch validation", "kind": "platform", "contributor": "trancefornow", "since": "2026-11-03", "note": "refuses a method that cannot start before a round spends a model call"}, {"name": "measurement identity in the matrix", "kind": "platform", "contributor": "trancefornow", "since": "2026-11-03", "note": "a row carries the harness, split and scorer identity its score was measured with"}, {"name": "readiness rows", "kind": "platform", "contributor": "trancefornow", "since": "2026-11-03", "note": "editor and method are separate pre-H0 rows"}, {"name": "platform core", "kind": "platform", "contributor": "crepuscular-drizzle", "since": "2026-10-01", "note": "driver, rounds, sandbox, records, scoring"}, {"name": "dataset storage migration", "kind": "platform", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "58 adapters moved from an operator's absolute path to one resolver: HG_DATA_<NAME> > HG_DATA_ROOT, no implicit directory, portable catalogues"}, {"name": "env-file precedence", "kind": "platform", "contributor": "crepuscular-drizzle", "since": "2026-11-03", "note": "shell > worktree .env > primary .env, read without importing an adapter"}]}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const KINDS = [['harness','Harnesses','#5c8a57'],['method','RSI methods','#8a5a9e'],
+               ['benchmark','Benchmarks','#2f6f8f']];
+const person = Object.fromEntries(DATA.people.map(p => [p.handle, p]));
+const tip = document.getElementById('tip');
+document.getElementById('sub').textContent =
+  DATA.entries.length + ' credited entries · record updated ' + DATA.updated +
+  ' · hover a point for the entries it counted';
+
+const day = s => new Date(s + 'T00:00:00Z');
+const iso = d => d.toISOString().slice(0, 10);
+
+function windowDays() {
+  const span = +document.getElementById('win').value;
+  const days = [...new Set(DATA.entries.map(e => e.since))].sort();
+  const end = document.getElementById('end').value || days[days.length - 1];
+  const last = day(end);
+  const start = span ? new Date(last.getTime() - (span - 1) * 86400000) : day(days[0]);
+  const out = [];
+  for (let d = start; d <= last; d = new Date(d.getTime() + 86400000)) out.push(iso(d));
+  return out;
+}
+
+function draw() {
+  const days = windowDays();
+  const boards = document.getElementById('board').value === 'all' ? KINDS : KINDS.filter(k => k[0] === document.getElementById('board').value);
+  const host = document.getElementById('panels');
+  host.innerHTML = '';
+  for (const [kind, title, colour] of boards) {
+    const items = DATA.entries.filter(e => e.kind === kind && e.since >= days[0] && e.since <= days[days.length - 1]);
+    const people = [...new Set(items.map(e => e.contributor))];
+    const panel = document.createElement('div'); panel.className = 'panel';
+    const h = document.createElement('h2'); h.textContent = title + ' — ' + items.length + ' entries'; panel.appendChild(h);
+    if (!people.length) {
+      const p = document.createElement('p'); p.textContent = 'nothing in this window'; p.className = 'sub';
+      panel.appendChild(p); host.appendChild(panel); continue;
+    }
+    const W = 920, H = 90 + 34 * people.length, L = 44, R = 190, T = 18, B = 28;
+    const pw = W - L - R, ph = H - T - B;
+    const totals = Object.fromEntries(people.map(p => [p, items.filter(e => e.contributor === p).length]));
+    const maxTotal = Math.max(1, ...Object.values(totals));
+    const X = i => L + pw * (i / Math.max(days.length - 1, 1));
+    const Y = v => T + ph * (1 - v / maxTotal);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const add = (tag, attrs) => { const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]); svg.appendChild(n); return n; };
+    for (const v of [0, Math.round(maxTotal / 2), maxTotal]) {
+      add('line', {x1: L, y1: Y(v), x2: L + pw, y2: Y(v), stroke: '#e6e8eb'});
+      add('text', {x: L - 8, y: Y(v) + 4, 'font-size': 10, 'text-anchor': 'end', fill: '#6e7781'}).textContent = v;
+    }
+    people.forEach((handle, row) => {
+      let running = 0;
+      const pts = [];
+      const counts = [];
+      days.forEach((d, i) => { const n = items.filter(e => e.contributor === handle && e.since === d).length;
+        running += n; pts.push([X(i), Y(running)]); counts.push(n); });
+      const poly = add('path', {d: pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' '),
+                                fill: 'none', stroke: colour, 'stroke-width': 2});
+      if (people.length > 1) poly.setAttribute('stroke-dasharray', ['', '5 3', '2 3'][row % 3]);
+      days.forEach((d, i) => { if (counts[i]) {
+        const c = add('circle', {cx: pts[i][0], cy: pts[i][1], r: 3.2, fill: colour});
+        const names = items.filter(e => e.contributor === handle && e.since === d).map(e => e.name);
+        c.addEventListener('mousemove', ev => {
+          tip.style.opacity = 1; tip.style.left = (ev.clientX + 12) + 'px'; tip.style.top = (ev.clientY + 12) + 'px';
+          tip.innerHTML = '<b>' + d + ' · @' + handle + '</b><br>' + names.length + ' entr' +
+            (names.length === 1 ? 'y' : 'ies') + ': ' + names.slice(0, 8).join(', ') +
+            (names.length > 8 ? ' and ' + (names.length - 8) + ' more' : '');
+        });
+        c.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+      }});
+      add('circle', {cx: L + pw + 16, cy: Y(running) - 3, r: 8, fill: colour, opacity: .18});
+      add('text', {x: L + pw + 16, y: Y(running) + 1, 'font-size': 10, 'text-anchor': 'middle', fill: colour})
+        .textContent = handle[0].toUpperCase();
+      add('image', {href: 'https://github.com/' + handle + '.png?size=64', x: L + pw + 8, y: Y(running) - 11,
+                    width: 16, height: 16, 'clip-path': 'circle(8px at 8px 8px)'});
+      add('text', {x: L + pw + 30, y: Y(running) + 1, 'font-size': 11, fill: 'CanvasText'}).textContent = handle;
+      add('text', {x: L + pw + 30, y: Y(running) + 14, 'font-size': 10, fill: '#6e7781'})
+        .textContent = running + ' entries';
+    });
+    days.forEach((d, i) => { if (d.slice(8, 10) === '01')
+      add('text', {x: X(i), y: T + ph + 16, 'font-size': 10, fill: '#6e7781', 'text-anchor': 'middle'}).textContent = d.slice(0, 7); });
+    panel.appendChild(svg); host.appendChild(panel);
+  }
+}
+const all = [...new Set(DATA.entries.map(e => e.since))].sort();
+document.getElementById('end').value = all[all.length - 1];
+document.getElementById('win').addEventListener('change', draw);
+document.getElementById('board').addEventListener('change', draw);
+document.getElementById('end').addEventListener('change', draw);
+draw();
+</script></body></html>

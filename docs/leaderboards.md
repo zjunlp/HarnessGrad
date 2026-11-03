@@ -1,8 +1,8 @@
 # Contribution graph: who did what, and when
 
-The record is [`registry/leaderboards.json`](../registry/leaderboards.json); the drawing is
-[`.github/assets/contributors.svg`](../.github/assets/contributors.svg); the list of every entry
-per person is [`docs/contributors.md`](contributors.md). All three come from
+The record is [`registry/leaderboards.json`](../registry/leaderboards.json); the drawings are
+`.github/assets/contributors-<board>.svg` (one per board); the list of every entry per person is
+[`docs/contributors.md`](contributors.md). All three come from
 `python3 tools/contributors.py --write`, and `--check` fails when they disagree. This page is
 the rule a pull request is reviewed against.
 

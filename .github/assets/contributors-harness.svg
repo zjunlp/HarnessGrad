@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" role="img" aria-label="Harnesses growth">
+<rect width="900" height="300" fill="#ffffff"/>
+<text x="16" y="28" font-size="13" font-weight="600" fill="#1f2328">Harnesses — cumulative contributions</text>
+<text x="16" y="44" font-size="11" fill="#6e7781">8 entries; steps are days, so a flat segment means nothing landed</text>
+<line x1="52" y1="254.0" x2="768" y2="254.0" stroke="#e6e8eb" stroke-width="1"/>
+<text x="44" y="258.0" font-size="10" fill="#6e7781" text-anchor="end">0</text>
+<line x1="52" y1="156.0" x2="768" y2="156.0" stroke="#e6e8eb" stroke-width="1"/>
+<text x="44" y="160.0" font-size="10" fill="#6e7781" text-anchor="end">4</text>
+<line x1="52" y1="58.0" x2="768" y2="58.0" stroke="#e6e8eb" stroke-width="1"/>
+<text x="44" y="62.0" font-size="10" fill="#6e7781" text-anchor="end">8</text>
+<text x="272.3" y="272" font-size="10" fill="#6e7781" text-anchor="middle">2026-09</text>
+<text x="508.4" y="272" font-size="10" fill="#6e7781" text-anchor="middle">2026-10</text>
+<text x="752.3" y="272" font-size="10" fill="#6e7781" text-anchor="middle">2026-11</text>
+<polyline points="52.0,254.0 59.9,254.0 67.7,254.0 75.6,254.0 83.5,254.0 91.3,254.0 99.2,254.0 107.1,254.0 114.9,254.0 122.8,254.0 130.7,254.0 138.5,254.0 146.4,254.0 154.3,254.0 162.2,254.0 170.0,254.0 177.9,254.0 185.8,254.0 193.6,254.0 201.5,254.0 209.4,254.0 217.2,254.0 225.1,254.0 233.0,254.0 240.8,254.0 248.7,254.0 256.6,254.0 264.4,254.0 272.3,254.0 280.2,254.0 288.0,254.0 295.9,254.0 303.8,254.0 311.6,254.0 319.5,254.0 327.4,254.0 335.3,254.0 343.1,254.0 351.0,254.0 358.9,254.0 366.7,254.0 374.6,254.0 382.5,254.0 390.3,254.0 398.2,254.0 406.1,254.0 413.9,254.0 421.8,254.0 429.7,254.0 437.5,254.0 445.4,254.0 453.3,254.0 461.1,254.0 469.0,254.0 476.9,254.0 484.7,254.0 492.6,254.0 500.5,254.0 508.4,229.5 516.2,229.5 524.1,229.5 532.0,229.5 539.8,229.5 547.7,229.5 555.6,229.5 563.4,229.5 571.3,229.5 579.2,229.5 587.0,229.5 594.9,180.5 602.8,180.5 610.6,180.5 618.5,180.5 626.4,180.5 634.2,180.5 642.1,180.5 650.0,180.5 657.8,131.5 665.7,131.5 673.6,107.0 681.5,107.0 689.3,58.0 697.2,58.0 705.1,58.0 712.9,58.0 720.8,58.0 728.7,58.0 736.5,58.0 744.4,58.0 752.3,58.0 760.1,58.0 768.0,58.0" fill="none" stroke="#5c8a57" stroke-width="2" stroke-linejoin="round"/>
+<g><title>2026-10-01 · @Xubqpanda · cumulative 1 of 8</title><circle cx="508.4" cy="229.5" r="3" fill="#5c8a57"/></g>
+<g><title>2026-10-12 · @Xubqpanda · cumulative 3 of 8</title><circle cx="594.9" cy="180.5" r="3" fill="#5c8a57"/></g>
+<g><title>2026-10-20 · @Xubqpanda · cumulative 5 of 8</title><circle cx="657.8" cy="131.5" r="3" fill="#5c8a57"/></g>
+<g><title>2026-10-22 · @Xubqpanda · cumulative 6 of 8</title><circle cx="673.6" cy="107.0" r="3" fill="#5c8a57"/></g>
+<g><title>2026-10-24 · @Xubqpanda · cumulative 8 of 8</title><circle cx="689.3" cy="58.0" r="3" fill="#5c8a57"/></g>
+<g><circle cx="790.0" cy="55.0" r="8.0" fill="#5c8a57" opacity="0.18"/><text x="790.0" y="58.2" font-size="8.0" text-anchor="middle" fill="#5c8a57">X</text><image href="https://github.com/Xubqpanda.png?size=64" x="782.0" y="47.0" width="16.0" height="16.0" clip-path="circle(8.0px at 8.0px 8.0px)"/></g>
+<text x="802" y="62.0" font-size="11" fill="#1f2328">Xubqpanda</text>
+<text x="782" y="75.0" font-size="10" fill="#6e7781">8 entries</text>
+<line x1="770" y1="58.0" x2="776" y2="58.0" stroke="#5c8a57" stroke-width="2"/>
+<text x="16" y="292" font-size="10" fill="#6e7781">2026-08-04 to 2026-11-03; the date is when an entry was adopted into the record. The website has a draggable window.</text>
+</svg>

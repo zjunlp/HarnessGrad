@@ -1,7 +1,7 @@
 {
  "schema": "harnessgrad.trends.v1",
  "about": "Recorded rounds from local study runs. One line per method: the longest recorded run of that method on that benchmark, because two samples drawn as one average would be an invention. The vertical axis is a score, but its ticks are deliberately not drawn: the panels answer 'did the curve move' inside one benchmark, and a number lifted from this figure would be quoted without the harness tree hash, the task set (held-out), and the scorer identity that make it comparable. The receipt carries those identifiers.",
- "selection": "For each (benchmark, method): the run with the most recorded rounds, at least 8. Repeated runs of one method that were shorter are omitted from the drawing and remain listed in the source archive; the receipt does not imply they agree.",
+ "selection": "The seven methods the website publishes checkpoints for. A run that stopped early is drawn as far as it went: `ahe` stops after round 4 on ALFWorld because its rule stops when the curve plateaus, and an early stop is the method's own decision, not missing data. `meta_harness` has runs in the archive and is not drawn because the site publishes no checkpoint for it.",
  "policy": {
   "x": "round index; round 0 is the harness as handed to the method",
   "y": "training-side score, axis unlabelled on purpose",
@@ -178,28 +178,6 @@
      "side": "train"
     },
     {
-     "label": "meta_harness",
-     "run_id": "appworld-study-meta_harness-20261020T0414Z",
-     "rounds": 11,
-     "scores": [
-      0.0111,
-      0.0,
-      0.0111,
-      0.0,
-      0.0,
-      0.0333,
-      0.0333,
-      0.0,
-      0.0,
-      0.0222,
-      0.0333
-     ],
-     "curve_sha256": "ef4eaa2c91ebd9f8",
-     "harness_sha_first": "7a40f6ddd0ce",
-     "agent_model": "qwen3.5-9b-local",
-     "side": "train"
-    },
-    {
      "label": "sica_ci",
      "run_id": "appworld-study-sica_ci-20261019T1816Z",
      "rounds": 21,
@@ -269,6 +247,21 @@
    "dataset": "alfworld",
    "title": "ALFWorld \u2014 training side",
    "runs": [
+    {
+     "label": "ahe",
+     "run_id": "rsi10-20261017T123952Z-ahe-train",
+     "rounds": 4,
+     "scores": [
+      0.53,
+      0.92,
+      1.0,
+      1.0
+     ],
+     "curve_sha256": "e6e6204688603b9b",
+     "harness_sha_first": "7a40f6ddd0ce",
+     "agent_model": "qwen3.5-9b-local",
+     "side": "train"
+    },
     {
      "label": "dgm",
      "run_id": "rsi10-20261020T1715Z-dgm-train",
@@ -353,28 +346,6 @@
       0.98
      ],
      "curve_sha256": "3c9d788f37f27e23",
-     "harness_sha_first": "7a40f6ddd0ce",
-     "agent_model": "qwen3.5-9b-local",
-     "side": "train"
-    },
-    {
-     "label": "meta_harness",
-     "run_id": "rsi10-20261020T1656Z-meta_harness-train",
-     "rounds": 11,
-     "scores": [
-      0.53,
-      0.58,
-      0.57,
-      0.55,
-      0.24,
-      0.61,
-      0.61,
-      0.6,
-      0.61,
-      0.62,
-      0.6
-     ],
-     "curve_sha256": "b1bb3e945ccb57fd",
      "harness_sha_first": "7a40f6ddd0ce",
      "agent_model": "qwen3.5-9b-local",
      "side": "train"

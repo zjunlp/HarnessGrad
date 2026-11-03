@@ -64,26 +64,71 @@ def test_the_readme_block_is_the_record_rendered() -> None:
         "stale: run python3 tools/contributors.py --write")
 
 
-def test_the_svg_is_the_record_rendered_and_has_a_tooltip_per_cell() -> None:
-    svg = contributors.FIGURE.read_text(encoding="utf-8")
-    assert svg == contributors.render_svg(_record()), (
-        "the graph is stale; run python3 tools/contributors.py --write")
-    tooltips = re.findall(r"<title>([^<]+)</title>", svg)
-    assert tooltips, "the graph has no tooltips, so a square says nothing"
-    for tooltip in tooltips:
-        assert "· @", tooltip
-    # One tooltip per non-empty (person, month) cell.
-    expected = {(entry["contributor"], entry["since"][:7])
-                for entry in contributors.entries(_record())}
-    assert len(tooltips) == len(expected), (len(tooltips), len(expected))
+def test_each_board_has_its_own_growth_curve() -> None:
+    """Three boards, three curves; a board nobody has contributed to has no line."""
+    record = _record()
+    titles = {"harness": "Harnesses", "method": "RSI methods", "benchmark": "Benchmarks"}
+    assert set(contributors.FIGURES) == set(titles)
+    for board, path in contributors.FIGURES.items():
+        svg = path.read_text(encoding="utf-8")
+        assert svg == contributors.render_svg(record, board), (
+            f"{path.name} is stale; run python3 tools/contributors.py --write")
+        assert titles[board] in svg, f"{path.name} has no title for its board"
+        entries = [entry for entry in contributors.entries(record) if entry["kind"] == board]
+        credited = {entry["contributor"] for entry in entries}
+        for handle, count in contributors.totals(entries):
+            assert handle in svg, f"{board}/{handle} has no line"
+            assert f"{count} entries" in svg, f"{board}/{handle}: the total is not drawn"
+        # Everyone on the board's list, and nobody who has no entry there.
+        for person in {p["handle"] for p in record["people"]} - credited:
+            assert person not in svg, f"{board}: @{person} has no entry but a row"
 
 
-def test_the_right_column_reports_total_and_rank() -> None:
-    svg = contributors.render_svg(_record())
-    order = contributors.totals(contributors.entries(_record()))
-    for rank, (handle, count) in enumerate(order, start=1):
-        assert f'>{count}</text>' in svg, f"{handle}: total is not drawn"
-        assert f"#{rank} of {len(order)}" in svg, f"{handle}: rank is not drawn"
+def test_the_curve_is_cumulative_and_monotone() -> None:
+    """A star-history shape only says something if the line never goes down."""
+    record = _record()
+    for board in ("harness", "method", "benchmark"):
+        entries = [entry for entry in contributors.entries(record) if entry["kind"] == board]
+        days = contributors._window(record)
+        for handle, _ in contributors.totals(entries):
+            running = 0
+            for day in days:
+                running += len([entry for entry in entries
+                                if entry["contributor"] == handle
+                                and entry["since"][:10] == day])
+                assert running >= 0
+            total = len([entry for entry in entries if entry["contributor"] == handle])
+            assert running <= total, "the curve cannot exceed the credited entries"
+
+
+def test_the_interactive_page_carries_the_record_and_the_controls() -> None:
+    """The static SVG cannot change; the page can, so it must hold the data and the range."""
+    page = contributors.PAGE.read_text(encoding="utf-8")
+    assert page == contributors.render_html(_record()), (
+        "docs/contributors.html is stale; run python3 tools/contributors.py --write")
+    import json as _json
+    import re as _re
+
+    block = _re.search(r'<script id="data" type="application/json">(.*?)</script>', page,
+                       _re.S)
+    assert block, "the page has no inline data block"
+    data = _json.loads(block.group(1))
+    assert len(data["entries"]) == len(contributors.entries(_record()))
+    assert {person["handle"] for person in data["people"]} == (
+        {person["handle"] for person in _record()["people"]})
+    for control in ('id="win"', 'id="end"', 'id="board"'):
+        assert control in page, f"the page has no {control} control"
+    assert "github.com/" in page and ".png?size=64" in page, "the page draws no avatars"
+    assert "function draw()" in page, "the page cannot redraw"
+
+
+def test_the_static_svg_labels_carry_an_avatar_with_a_fallback() -> None:
+    """A blocked remote image must not leave a hole: the initial is drawn underneath."""
+    for board in ("harness", "method", "benchmark"):
+        svg = contributors.render_svg(_record(), board)
+        assert ".png?size=64" in svg, f"{board}: no avatar image"
+        assert 'clip-path="circle(' in svg, f"{board}: the avatar is not clipped round"
+        assert 'text-anchor="middle" fill=' in svg, f"{board}: no initial fallback"
 
 
 def test_the_details_page_lists_every_entry_per_person() -> None:

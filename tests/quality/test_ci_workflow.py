@@ -19,7 +19,9 @@ import re
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-WORKFLOW = ROOT / ".github" / "workflows" / "quality.yml"
+WORKFLOWS = (ROOT / ".github" / "workflows" / "quality.yml",
+             ROOT / ".github" / "workflows" / "contributors.yml")
+WORKFLOW = WORKFLOWS[0]
 
 #: Paths inside the repository that the workflow may name. The pattern deliberately stops
 #: at a quoted or whitespace boundary, so a shell flag after a path is not swallowed.
@@ -29,8 +31,8 @@ PYTHON_PATTERN = re.compile(r"python-version:\s*['\"]?([0-9]+(?:\.[0-9]+)*)")
 FLOOR_PATTERN = re.compile(r'requires-python\s*=\s*"[>=!~ ]*([0-9]+(?:\.[0-9]+)*)')
 
 
-def _text() -> str:
-    return WORKFLOW.read_text(encoding="utf-8")
+def _text(workflow: pathlib.Path | None = None) -> str:
+    return (workflow or WORKFLOW).read_text(encoding="utf-8")
 
 
 def test_the_workflow_exists_and_is_yaml_safe() -> None:
@@ -42,18 +44,20 @@ def test_the_workflow_exists_and_is_yaml_safe() -> None:
 
 
 def test_every_test_file_it_names_exists() -> None:
-    named = sorted({match.group(0) for match in PATH_PATTERN.finditer(_text())})
-    assert named, "the workflow names no test file at all"
-    missing = [path for path in named if not (ROOT / path).is_file()]
-    assert not missing, f"the workflow runs files that do not exist: {missing}"
+    for workflow in WORKFLOWS:
+        named = sorted({match.group(0) for match in PATH_PATTERN.finditer(_text(workflow))})
+        assert named, f"{workflow.name} names no test file at all"
+        missing = [path for path in named if not (ROOT / path).is_file()]
+        assert not missing, f"{workflow.name} runs files that do not exist: {missing}"
 
 
 def test_every_script_it_runs_exists() -> None:
-    invoked = sorted({match.group(0) for match in PATH_PATTERN.finditer(_text())})
-    scripts = [path for path in invoked if path.startswith("tools/")]
-    assert scripts, "the workflow invokes no tool"
-    missing = [path for path in scripts if not (ROOT / path).is_file()]
-    assert not missing, f"the workflow invokes scripts that do not exist: {missing}"
+    for workflow in WORKFLOWS:
+        invoked = sorted({match.group(0) for match in PATH_PATTERN.finditer(_text(workflow))})
+        scripts = [path for path in invoked if path.startswith("tools/")]
+        assert scripts, f"{workflow.name} invokes no tool"
+        missing = [path for path in scripts if not (ROOT / path).is_file()]
+        assert not missing, f"{workflow.name} invokes scripts that do not exist: {missing}"
 
 
 def test_the_suite_job_goes_through_the_lane_runner() -> None:
@@ -77,11 +81,13 @@ def test_actions_are_pinned_to_a_major_version() -> None:
     no bot that bumps them, and a stale SHA keeps a security fix out. A major tag is the
     promise GitHub Actions documentation makes, and a floating branch is not.
     """
-    refs = [match.group(1) for match in ACTION_PATTERN.finditer(_text())]
-    assert refs, "the workflow uses no action"
-    floating = [ref for ref in set(refs) if "@" in ref
-                and not re.fullmatch(r"[^@]+@v[0-9]+", ref)]
-    assert not floating, f"actions must be pinned to a major tag: {sorted(floating)}"
+    for workflow in WORKFLOWS:
+        refs = [match.group(1) for match in ACTION_PATTERN.finditer(_text(workflow))]
+        assert refs, f"{workflow.name} uses no action"
+        floating = [ref for ref in set(refs) if "@" in ref
+                    and not re.fullmatch(r"[^@]+@v[0-9]+", ref)]
+        assert not floating, (
+            f"{workflow.name}: actions must be pinned to a major tag: {sorted(floating)}")
 
 
 def test_jobs_declare_a_timeout() -> None:
@@ -91,15 +97,16 @@ def test_jobs_declare_a_timeout() -> None:
     the same indentation, which is why the section is sliced first rather than searching the
     whole file.
     """
-    text = _text()
-    assert "\njobs:" in text, "the workflow declares no jobs section"
-    section = text.split("\njobs:", 1)[1]
-    headers = list(re.finditer(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$", section))
-    assert headers, "the workflow declares no job"
-    for index, match in enumerate(headers):
-        end = headers[index + 1].start() if index + 1 < len(headers) else len(section)
-        assert "timeout-minutes:" in section[match.end():end], (
-            f"job {match.group(1)} declares no timeout")
+    for workflow in WORKFLOWS:
+        text = _text(workflow)
+        assert "\njobs:" in text, f"{workflow.name} declares no jobs section"
+        section = text.split("\njobs:", 1)[1]
+        headers = list(re.finditer(r"(?m)^  ([a-z][a-z0-9_-]*):\s*$", section))
+        assert headers, f"{workflow.name} declares no job"
+        for index, match in enumerate(headers):
+            end = headers[index + 1].start() if index + 1 < len(headers) else len(section)
+            assert "timeout-minutes:" in section[match.end():end], (
+                f"{workflow.name}: job {match.group(1)} declares no timeout")
 
 
 def test_permissions_are_read_only() -> None:
