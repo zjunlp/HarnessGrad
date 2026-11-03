@@ -1334,18 +1334,6 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
-    # Known model/method configuration failures belong before H0 can spend a
-    # single generation. Unknown external methods may be self-contained.
-    args.harness_dir = str(harness_src)
-    local_checks = readiness.configuration_checks(args)
-    if args.check_net:
-        local_checks.extend(readiness.endpoint_checks(args))
-    failed_configuration = [check for check in local_checks if check.required and not check.ok]
-    if failed_configuration:
-        print(readiness.render(local_checks))
-        print('refusing to run: model/method configuration failed before H0', file=sys.stderr)
-        return 2
-
     try:
         tasks_all, scorable, split = datasets.load_split(args.dataset)
         oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
@@ -1640,55 +1628,6 @@ def _main(attempt: dict) -> int:
             level="warn")
         improver = {}
 
-    # **A CLI improver needs a model that emits standard tool_calls, and that is a gate --
-    # not a convention.** Measured (2026-10-04): codex pointed at the local 9B connected,
-    # spent 8,699 tokens and did nothing, because the endpoint returned the model's call as
-    # `<tool_call><function=...>` **text** and codex needs structured calls on
-    # `wire_api = "responses"`. The requirement had been raised before and was written down
-    # nowhere (`grep -rn tool_call docs/ INTERFACE.md` was empty), so it kept being
-    # rediscovered instead of enforced. `tools/probe_tool_calls.py` is the check.
-    #
-    # What it can and cannot decide: a **custom** provider in the CLI's own config names a
-    # `base_url`, so that endpoint can be probed and refused. A hosted provider's endpoint
-    # is the CLI's built-in and cannot be reached from here -- then the result is recorded
-    # as *unprobed*, which is a fact rather than a silent pass.
-    # `HG_IMPROVER_SKIP_TOOL_GATE=1` overrides, for an operator who knows an endpoint's
-    # tool support better than a one-shot probe does.
-    improver_tool_calls: bool | None = None
-    improver_tool_calls_detail = ""
-    if improver.get("ok") and improver.get("kind") == "cli":
-        base_url = _cli_provider_base_url(improver)
-        if base_url:
-            if platform_config.current().improver.skip_tool_gate == "1":
-                improver_tool_calls_detail = "gate skipped by HG_IMPROVER_SKIP_TOOL_GATE"
-                console.note("improver tool-call gate skipped by request", level="warn")
-            else:
-                improver_tool_calls, improver_tool_calls_detail = _probe_tool_calls(
-                    base_url, improver.get("model") or "")
-                if not improver_tool_calls:
-                    console.note(
-                        "refusing to run: the improver "
-                        f"{improver.get('name')!r} would use model "
-                        f"{improver.get('model')!r} at {base_url}, and that endpoint does "
-                        f"not return structured tool_calls "
-                        f"({improver_tool_calls_detail}).\n"
-                        "  A CLI improver edits files by calling tools; a model whose calls "
-                        "come back as text cannot drive it, and the run would spend its "
-                        "budget producing nothing.\n"
-                        "  Fix the endpoint (server-side parsing: `--enable-auto-tool-choice "
-                        "--tool-call-parser <name>`), or set HG_IMPROVER_SKIP_TOOL_GATE=1 "
-                        "to run anyway.",
-                        level="error")
-                    return 2
-        else:
-            improver_tool_calls_detail = ("the CLI's provider is built in, so its endpoint "
-                                          "cannot be probed from here")
-        console.note(
-            "improver tool calls: "
-            + ("yes" if improver_tool_calls else
-               ("no" if improver_tool_calls is False else "unprobed"))
-            + f" ({improver_tool_calls_detail[:90]})")
-
     # **The capability check goes first, and the order is the whole point.**
     #
     # Both of these refuse before anything is paid for, so either order is "correct" in
@@ -1782,6 +1721,71 @@ def _main(attempt: dict) -> int:
               f"and write anywhere in the platform. Pass --work-root outside it.",
               file=sys.stderr)
         return 2
+
+    # A known model/method misconfiguration is refused here too -- before H0 can spend a
+    # single generation -- but *after* the isolation check above, because where the run writes
+    # is a safety property and this is a configuration one. Ordered the other way round, a run
+    # with its workspace inside the platform reported the missing method endpoint and hid the
+    # violation (`test_isolation` caught that when the preflight was first merged).
+    args.harness_dir = str(harness_src)
+    local_checks = readiness.configuration_checks(args)
+    if args.check_net:
+        local_checks.extend(readiness.endpoint_checks(args))
+    failed_configuration = [check for check in local_checks if check.required and not check.ok]
+    if failed_configuration:
+        print(readiness.render(local_checks))
+        print('refusing to run: model/method configuration failed before H0', file=sys.stderr)
+        return 2
+
+    # This probe can generate tokens; workspace and configuration admission precede it.
+    # **A CLI improver needs a model that emits standard tool_calls, and that is a gate --
+    # not a convention.** Measured (2026-10-04): codex pointed at the local 9B connected,
+    # spent 8,699 tokens and did nothing, because the endpoint returned the model's call as
+    # `<tool_call><function=...>` **text** and codex needs structured calls on
+    # `wire_api = "responses"`. The requirement had been raised before and was written down
+    # nowhere (`grep -rn tool_call docs/ INTERFACE.md` was empty), so it kept being
+    # rediscovered instead of enforced. `tools/probe_tool_calls.py` is the check.
+    #
+    # What it can and cannot decide: a **custom** provider in the CLI's own config names a
+    # `base_url`, so that endpoint can be probed and refused. A hosted provider's endpoint
+    # is the CLI's built-in and cannot be reached from here -- then the result is recorded
+    # as *unprobed*, which is a fact rather than a silent pass.
+    # `HG_IMPROVER_SKIP_TOOL_GATE=1` overrides, for an operator who knows an endpoint's
+    # tool support better than a one-shot probe does.
+    improver_tool_calls: bool | None = None
+    improver_tool_calls_detail = ""
+    if improver.get("ok") and improver.get("kind") == "cli":
+        base_url = _cli_provider_base_url(improver)
+        if base_url:
+            if platform_config.current().improver.skip_tool_gate == "1":
+                improver_tool_calls_detail = "gate skipped by HG_IMPROVER_SKIP_TOOL_GATE"
+                console.note("improver tool-call gate skipped by request", level="warn")
+            else:
+                improver_tool_calls, improver_tool_calls_detail = _probe_tool_calls(
+                    base_url, improver.get("model") or "")
+                if not improver_tool_calls:
+                    console.note(
+                        "refusing to run: the improver "
+                        f"{improver.get('name')!r} would use model "
+                        f"{improver.get('model')!r} at {base_url}, and that endpoint does "
+                        f"not return structured tool_calls "
+                        f"({improver_tool_calls_detail}).\n"
+                        "  A CLI improver edits files by calling tools; a model whose calls "
+                        "come back as text cannot drive it, and the run would spend its "
+                        "budget producing nothing.\n"
+                        "  Fix the endpoint (server-side parsing: `--enable-auto-tool-choice "
+                        "--tool-call-parser <name>`), or set HG_IMPROVER_SKIP_TOOL_GATE=1 "
+                        "to run anyway.",
+                        level="error")
+                    return 2
+        else:
+            improver_tool_calls_detail = ("the CLI's provider is built in, so its endpoint "
+                                          "cannot be probed from here")
+        console.note(
+            "improver tool calls: "
+            + ("yes" if improver_tool_calls else
+               ("no" if improver_tool_calls is False else "unprobed"))
+            + f" ({improver_tool_calls_detail[:90]})")
 
     if work.exists():
         if staged:

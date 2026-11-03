@@ -124,6 +124,14 @@ def test_every_live_text_subprocess_says_how_to_decode():
             if "__pycache__" in path.parts or (
                     root == "data" and path.parts[-2:] == ("verify", "check.py")):
                 continue
+            # `data/candidates/` is the console's per-version scratch: one copy of a
+            # harness's `agent.py` per version a user opened in the editor, gitignored and
+            # recreated by the UI. Counting the subprocess calls inside those copies made the
+            # inventory a function of whether somebody had used the editor on this machine
+            # (42 sites before a UAT run, 48 after), which is the same class of host fact this
+            # file already refuses to pin for datasets.
+            if root == "data" and "candidates" in path.parts:
+                continue
             relative = path.relative_to(ROOT).as_posix()
             for lineno, has_errors in _subprocess_text_calls(path):
                 checked[root] += 1

@@ -24,3 +24,23 @@ probes and a temporary matrix/summary receipt. The parent owns the integration
 suite and driver smoke results. Two upstream fresh-venv cases encountered
 fixture setup errors because WSL lacks ensurepip, so those cases remain
 unverified in this environment.
+
+## Incremental review against `ec7552f0`
+
+After the first merge at `a44ee93a`, upstream moved the configuration gate
+behind the workspace isolation refusal. H0 evaluation still followed both, but
+the CLI tool-capability probe preceded them. A missing absolute method plus a
+configured CLI editor could therefore send Responses and Chat generations
+before rejection. The first revised regression selected `--improver none`,
+which bypassed that probe. A focused WSL invocation of the real driver with a
+temporary demo run, an injected CLI resolution and a probe sentinel reproduced
+the order without sending any request.
+
+The repair moves the CLI capability probe behind both admission checks and
+keeps it before workspace creation and baseline evaluation. The new driver
+regression selects a fake CLI and exercises both a missing method and an
+inside-platform workspace. Independently rerunning the missing-method sentinel
+on the frozen code returned exit 2 with the missing-script reason, zero probe
+calls and no workspace. The prior finding is closed for the `ec7552f0`
+integration. Broader test and dependency-inventory results are tracked by the
+parent.

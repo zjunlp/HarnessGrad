@@ -162,15 +162,50 @@ def test_endpoint_editor_requires_installed_sdk(tmp_path, monkeypatch):
     assert any(row.required and not row.ok and "openai package" in row.detail for row in rows)
 
 
-def test_missing_method_stops_before_dataset_loading(tmp_path, monkeypatch):
-    def unexpected_load(*args, **kwargs):
-        pytest.fail("a missing method must be rejected before loading or measuring tasks")
+def test_missing_method_stops_before_baseline(tmp_path, monkeypatch):
+    def unexpected_evaluation(*args, **kwargs):
+        pytest.fail("a missing method must be rejected before measuring the baseline")
 
-    monkeypatch.setattr(driver.datasets, "load_split", unexpected_load)
+    monkeypatch.setattr(driver, "evaluate", unexpected_evaluation)
+    monkeypatch.setattr(driver, "_probe_tool_calls", unexpected_evaluation)
     entry = shlex.join([sys.executable, str(tmp_path / "absent.py")])
     monkeypatch.setattr(sys, "argv", ["driver.py", "--dataset", "demo", "--sampling", "all",
                                     "--rounds", "1", "--method-entrypoint", entry,
                                     "--improver", "none", "--runs-root", str(tmp_path / "runs"),
                                     "--work-root", str(tmp_path / "work"), "--no-sandbox"])
     assert driver.main() == 2
-    assert not (tmp_path / "runs").exists()
+    # Upstream checks workspace isolation before configuration and preserves refusal metadata.
+    assert not list((tmp_path / "runs").rglob("curve.jsonl"))
+    assert not (tmp_path / "work").exists()
+
+
+@pytest.mark.parametrize("failure", ["missing_method", "workspace"])
+def test_cli_capability_probe_waits_for_local_admission(tmp_path, monkeypatch, failure, capsys):
+    def unexpected_call(*args, **kwargs):
+        pytest.fail("local refusal must precede CLI model capability probes and baseline calls")
+
+    monkeypatch.setattr(driver, "resolve_improver", lambda *a, **kw: {
+        "ok": True, "kind": "cli", "name": "fixture-cli", "model": "fixture-model",
+        "version": "fixture", "path": sys.executable, "sha256": "0" * 64})
+    monkeypatch.setattr(driver, "_cli_provider_base_url", lambda _: "http://127.0.0.1:9/v1")
+    monkeypatch.setattr(driver, "_probe_tool_calls", unexpected_call)
+    monkeypatch.setattr(driver, "evaluate", unexpected_call)
+    monkeypatch.setenv("HG_IMPROVER_NAME", "")
+    monkeypatch.delenv("HG_IMPROVER_SKIP_TOOL_GATE", raising=False)
+    method = (tmp_path / "absent.py" if failure == "missing_method"
+              else ROOT / "methods" / "noop" / "run.py")
+    work_root = (tmp_path / "work" if failure == "missing_method"
+                 else ROOT / "invalid-cli-probe-work-root")
+    entry = shlex.join([sys.executable, str(method)])
+    monkeypatch.setattr(sys, "argv", ["driver.py", "--dataset", "demo", "--sampling", "all",
+        "--tasks", "t01", "--rounds", "1", "--method-entrypoint", entry,
+        "--improver", "fixture-cli", "--runs-root", str(tmp_path / "runs"),
+        "--work-root", str(work_root), "--no-sandbox"])
+    assert driver.main() == 2
+    output = capsys.readouterr()
+    if failure == "workspace":
+        assert "inside the platform" in output.err
+    else:
+        assert "configuration failed before H0" in output.err
+    assert not list((tmp_path / "runs").rglob("curve.jsonl"))
+    assert not work_root.exists()
