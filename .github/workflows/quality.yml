@@ -9,11 +9,18 @@
 #           the answer is the same, and a red result is a change to fix.
 #
 #   report  advisory. The catalogue documents (DATASETS.md, the refusal declarations) and the
-#           quality suite through `tools/run_tests.py --fast`. These depend on what the
-#           machine has -- optional extras, provisioned datasets, a relay or a container
-#           runtime -- so a failure can mean "this runner is bare" rather than "this change is
-#           wrong". The job still runs them and still shows red; it may not fail the workflow,
-#           and it may not be quiet either.
+#           part of the suite this change can reach, through `tools/ci_select.py` and
+#           `tools/run_tests.py --fast`. These depend on what the machine has -- optional
+#           extras, provisioned datasets, a relay or a container runtime -- so a failure can
+#           mean "this runner is bare" rather than "this change is wrong". The job still runs
+#           them and still shows red; it may not fail the workflow, and it may not be quiet
+#           either.
+#
+# Why the suite is selected rather than whole: it is ~750 s of real subprocess work, and a
+# pull request that edits one adapter does not need the appworld scorer. `ci_select.py` maps
+# a changed path to the tests that can reach it, always includes the guards, and falls back to
+# the full suite for a core path or a change it cannot map -- a missed test is a bug in that
+# file, a redundant one is a minute.
 #
 # Why that split is honest rather than convenient: a dataset that drops because `numpy` is
 # absent is correct behaviour (the platform has no runtime dependencies on purpose), and a
@@ -77,6 +84,7 @@ jobs:
           for file in \
             tests/quality/test_documentation_links.py \
             tests/quality/test_documentation_commands.py \
+            tests/quality/test_ci_select.py \
             tests/quality/test_test_lanes.py \
             tests/quality/test_ci_workflow.py \
             tests/quality/test_import_direction.py \
@@ -163,13 +171,45 @@ jobs:
           assert not real, f"adapters raise for a reason that is not a missing extra: {real}"
           PY
 
+      # What this change can reach. A pull request compares against its base; a push compares
+      # against the previous tip; a manual run has no base and therefore runs everything.
+      # The guards are dropped here because the `checks` job already ran them on this commit.
+      - name: Select the tests this change can reach
+        id: select
+        run: |
+          base='${{ github.event.pull_request.base.sha || github.event.before }}'
+          suite="__full__"
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ]; then
+            python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' --files \
+              > "$RUNNER_TEMP/selected.txt"
+            grep -v -x -E 'test_(ci_workflow|contributors|documentation_commands|documentation_links|import_direction|registry_broken_adapters|test_lanes)\.py' \
+              "$RUNNER_TEMP/selected.txt" > "$RUNNER_TEMP/suite.txt" || true
+            suite=$(tr '\n' ' ' < "$RUNNER_TEMP/suite.txt")
+            echo "selected:"; cat "$RUNNER_TEMP/selected.txt" | sed 's/^/  /'
+          fi
+          echo "suite=$suite" >> "$GITHUB_OUTPUT"
+
+      - name: Nothing in the suite can reach this change
+        if: steps.select.outputs.suite == ''
+        run: |
+          echo "documentation-only change: the guards already covered it in the checks job"
+
       # Two concurrent files on a four-core runner: this suite spends its time in subprocess
       # work rather than in the parent process, and the load-sensitive failures measured on a
       # large host start at three. `tools/run_tests.py` owns the lane split, the per-file
       # temporary root outside the checkout, and the run-alone recheck of a failure.
       - name: Suite
+        if: steps.select.outputs.suite != ''
         env:
           HG_TEST_TMPDIR: ${{ runner.temp }}/hg-pytest
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
-          python3 tools/run_tests.py --fast --jobs 2
+          if [ '${{ steps.select.outputs.suite }}' = "__full__" ]; then
+            python3 tools/run_tests.py --fast --jobs 2
+          else
+            args=""
+            for file in ${{ steps.select.outputs.suite }}; do
+              args="$args --file $file"
+            done
+            python3 tools/run_tests.py --fast --jobs 2 $args
+          fi
