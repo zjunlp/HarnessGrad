@@ -552,7 +552,28 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 `task_ids=side_ids` 调用这两个接口并执行运行时预检。惰性适配器应把私有数据、运行时及模型依赖的
 检查放在选中声明的取值路径，避免模块导入或遍历键时提前解析全部值。
 
-## 9. 接口校验参考
+<a id="scoring-identity"></a>
+
+## 9. 可选评分身份
+
+适配器通过新增 `data/datasets/<name>/scoring_profile.py` 显式启用，文件导出
+`profile()`，返回带非空 `metric` 字符串的 JSON object。内容应描述实际生效的评分
+协议、judge 模型及参数、评分器和模板版本、endpoint 摘要。禁止放入题目、参考答案、
+模板正文或凭据。数据集决定哪些版本与参数定义其评分；公共层不推断其他适配器的 metric。
+
+未提供此文件时，不导入额外数据或模型依赖，不新增记录字段，也不改变旧的复用与比较规则。
+提供后，配置加载完成时解析一次，记录为
+`scoring_identity={version: 1, profile: {...}, sha256: ...}`；摘要覆盖规范 JSON 中的
+`version/profile`。身份写入曲线点、运行元数据及 H0。适配器负责使声明与实际 verifier
+一致；应记录影响评分的版本和参数，凭据轮换不应改变身份。
+
+H0 查找、`--h0-from`、训练及评测 `--resume` 要求记录与当前身份相同。缺失、损坏、
+不一致的身份会拒绝复用或续跑，拒绝续跑时不改写旧元数据。历史记录仍可读取；已启用
+身份的数据集不能把缺失字段当成相同配置。记录带身份而当前声明消失时同样拒绝。
+不同身份的冻结基线保留分数，但比较标为不可比，不计算配对提升或能力下限。
+身份两侧均缺失的旧比较保留原有行为。
+
+## 10. 接口校验参考
 
 接口测试包括可信记录隔离、模型通道、结果约束、重复试验、固定 peer 和任务选择：
 
@@ -568,3 +589,46 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 - `tests/quality/test_registry_selection.py`
 
 运行方式见 [测试说明](test-suite.md)。
+
+## FlashRSI structured verifier judgement
+
+The optional `VERIFY.judge.response_format` accepts a named, strict `json_schema`
+request object. `VERIFY.judge.token_parameter` selects `max_tokens` (legacy default)
+or `max_completion_tokens`; an explicit non-reasoning model profile still owns its
+native token parameter. These fields are authored by the trusted adapter, not by
+an actor request. Model, schema, limit and parameters remain in the judge receipt.
+The broker returns provider `finish_reason` with content/message/usage so native
+scorers can reject truncated/incomplete generations. Absence preserves existing
+call shapes and clients. Native HLE uses this capability for its pinned structured
+answer/confidence verdict; no credentials or gold enter the actor namespace.
+
+## Fixed native benchmark verification
+
+`VERIFY.native_benchmark` selects one of five platform-owned native handlers:
+`swe_bench`, `harvey_lab`, `deepswe`, `jobbench`, `swe_bench_pro`. It requires
+`kind="command"`, `argv=["harnessgrad-native", DATASET]`, selected `scorer_input`,
+matching `case_sha256`, and `result_contract={version:1, score_range:[0,1],
+require_exit_zero:true}`. It cannot combine with another judge/runtime/scorer
+bundle or an arbitrary executable. Registry validation and runtime dispatch both
+check this contract. Model access and container admission belong to the fixed
+handler; the actor never obtains a Docker socket or a scoring operation.
+
+The private case is read from trusted VERIFY `inputs` (a regular owned source or
+bounded platform-authored content), rehashed and task-bound independently of the
+actor directory. Harbor and SWE repository handlers consume only immutable
+sealed relay records, additionally bound to the exact run and trial. Harvey's
+selected `output/**` is exported into a private temporary root through dirfds:
+no symlinks/devices/hardlinks, at most64MiB,10000total entries,32directory levels.
+No module or executable from actor storage runs on the host. Native completion
+and range evidence are required; failed exports/providers/scorers/cleanup remain
+unmeasured. Returned evidence contains hashes/aggregate metrics, not private
+rubrics, raw labels or credentials.
+
+The bridge records `scorer_isolation_class="unknown"`. It alone does not establish
+HG's complete `pristine-offline` image/ABI closure or production admission. Each
+native adapter documents its actual topology and remaining production gates.
+
+Observed Runtime accepts an optional platform-only absolute monotonic `deadline`;
+when supplied, image inspection, copying, initialization, kernel observation and
+commands share that deadline. Existing callers retain their per-command behavior
+when it is absent. Cleanup keeps its separate bounded teardown grace and receipt.

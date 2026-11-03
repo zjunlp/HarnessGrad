@@ -22,9 +22,16 @@ on disk (two measurements of one state are two numbers, and picking either is a 
 can defend), and it refuses to *publish* a baseline with holes: fewer tasks than the study set, any
 invalid task, or no `h0_sha` is not a baseline.
 
+`--study-ids` is forwarded to the driver's `--tasks` selector for every dataset,
+before setup and H0 evaluation. Empty or duplicate-ID files are refused before
+launch; completed and reused baselines must match the actual study IDs.
+Use `--split default`, `--split official` or `--split <file.json>` to choose an
+explicit division; the default remains `declared`. Explicit split selections
+are included in H0 configuration identity, with JSON files identified by content.
+
 **What counts as the same configuration** is the dataset, the side, the study-id set (by content,
-not by path), the agent model and the endpoint. A different model or a different study set is a
-different H0, and the tool measures one rather than reusing.
+not by path), an explicitly selected split, the agent model and the endpoint. A different model
+or a different study set is a different H0, and the tool measures one rather than reusing.
 
 `--h0-from` copies the donor's point **and its `round0_traces`**, so every method's first input
 traces are the same traces too -- which matters for methods that read the traces rather than the
@@ -167,7 +174,35 @@ python3 tools/datasets.py --write                        # regenerate DOWNLOADS.
 **Hugging Face note (measured on this machine): `huggingface.co` is unreachable;
 `hf-mirror.com` works and serves the same repo ids and commit SHAs.** `--endpoint` defaults
 to the mirror. `raw.githubusercontent.com` is also blocked; use `codeload.github.com` or
-`github.com/…/raw/…`.
+`github.com/…/raw/…`. When the provenance really is a raw file, `HG_GH_RAW_MIRROR=<proxy
+prefix>` makes `--fetch` ask for `<mirror>/https://raw.githubusercontent.com/<path>`; it is
+off by default and rewrites no other host (a mirror in front of a checksummed URL elsewhere
+would surface as a hash mismatch). The header of `DOWNLOADS.md` carries the same one-liner.
+
+**A dataset can be blocked twice, at the transport and at its preparation interpreter, and
+one fix does not lift the other.** `memoryagentbench` measured both (2026-11-02, re-measured
+2026-11-03): its pinned `punkt_tab.zip` is on the reset-blocked `raw.githubusercontent.com`,
+and its preparation imports `nltk`/`regex`/`tiktoken` at versions that decide the sentence
+tables, so it cannot run in the interpreter every other dataset shares. Two commands
+provision it, each with one variable set per blocker:
+
+```sh
+HG_GH_RAW_MIRROR=https://ghproxy.net python3 tools/datasets.py --fetch --dataset memoryagentbench
+HG_MAB_PYTHON=/tmp/hg-mab-venv/bin/python python3 data/datasets/memoryagentbench/prepare.py \
+    --raw "$R/raw" --resources "$R/resources" --output "$R/prepared"
+```
+
+with `R=<the dataset root>`, and the prepared interpreter built once:
+`python3 -m venv /tmp/hg-mab-venv && /tmp/hg-mab-venv/bin/pip install nltk==3.10.3
+regex==2026.9.29 tiktoken==0.14.0`. Unset, the fetch still ends `FAIL … curl exited 35:
+curl: (35) Recv failure: 连接被对方重置`, and the preparation refuses with
+`dependency_version_mismatch:nltk` plus the three pins, the three installed versions and
+that install command. `HG_MAB_PYTHON` is a **prepared interpreter, not an install into the
+shared one**: it is the shape `HG_SWE_PYTHON` and `HG_JUDGE_*_PYTHON` already use, and
+`prepare.py` re-executes itself under it before reading anything. Note
+`requirements-prepare.txt` pins `nltk==3.10.4` (the first release outside
+GHSA-8mgp-746c-j5xp's `<= 3.10.3` range) while the gate demands the reproducible `3.10.3`:
+install the gate's three versions, not the file.
 
 ---
 

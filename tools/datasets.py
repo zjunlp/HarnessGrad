@@ -42,6 +42,22 @@ machine (measured: HTTP 000 after a 30 s timeout); `HG_HF_ENDPOINT` overrides it
 the choice is visible at the call site instead of being an implicit convenience.
 `sha256` is verified whenever the entry declares it, and a mismatch deletes the
 partial download rather than leaving bytes on disk that look provisioned.
+
+The same wall has a second door, and it is off by default. `HG_GH_RAW_MIRROR`, set to a
+proxy prefix, rewrites `https://raw.githubusercontent.com/<path>` to
+`<mirror>/https://raw.githubusercontent.com/<path>` before the transfer -- and only that
+host. Measured 2026-11-02: `raw.githubusercontent.com` is reset-blocked from this machine
+(`curl: (35) Recv failure` on every A record) while `github.com` and `hf-mirror.com`
+answer, so a dataset whose provenance *is* a raw file could not be provisioned at all:
+`strongreject` landed 8 of 155 files, and `memoryagentbench`'s pinned `punkt_tab.zip`
+failed the same way. Unset, every URL is exactly what the loader declared; the `--fetch`
+line names the mirror when one was used, so provenance is not lost.
+
+A failed transfer also leaves no directory behind. `_download` records which parents it
+had to create and removes them again, deepest first and only while empty, so an
+"already prepared?" guard is not fooled by a fetch that produced nothing -- measured:
+kumo's `prepare.py` skips its clone when `<root>/upstream` exists, and the empty tree
+left by a blocked fetch made the next sanctioned command die on a missing `.gitignore`.
 """
 from __future__ import annotations
 
@@ -57,6 +73,7 @@ import sys
 import tempfile
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "DOWNLOADS.md"
@@ -66,6 +83,17 @@ SCHEMA_PATH = ROOT / "data" / "dataset.schema.json"
 #: is the revision (commit) either way, so the pin survives the endpoint swap -- which is
 #: the point of pinning a revision rather than a branch.
 DEFAULT_HF_ENDPOINT = os.environ.get("HG_HF_ENDPOINT", "https://hf-mirror.com")
+
+#: The one host `HG_GH_RAW_MIRROR` is allowed to stand in front of. Nothing else: a
+#: mirror that silently rewrote a checksummed URL on another host would surface as a hash
+#: mismatch, which reads like corrupt data rather than the transport choice it is.
+GH_RAW_HOST = "raw.githubusercontent.com"
+
+#: The opt-in GitHub-raw mirror. `raw.githubusercontent.com` is reset-blocked from this
+#: host (measured 2026-11-02: `curl: (35) Recv failure` on every A record) while
+#: `github.com` answers. Unset means off, and off means the URL is the loader's URL byte
+#: for byte -- the only URL its `sha256` was taken from.
+GH_RAW_MIRROR_ENV = "HG_GH_RAW_MIRROR"
 
 sys.path.insert(0, str(ROOT))
 import data.scaffolds.registry as registry  # noqa: E402
@@ -198,11 +226,15 @@ def entry_url(entry: dict, endpoint: str = DEFAULT_HF_ENDPOINT) -> str | None:
     kind = entry.get("kind")
     if kind == "http":
         return entry.get("url")
-    if kind == "hf-dataset":
+    if kind in ("hf-dataset", "hf-file"):
         repo, revision = entry.get("repo"), entry.get("version")
         if not (repo and revision):
             return None
         # One URL per file, built per file in `fetch_entry`; this is the shape check.
+        # `hf-file` differs only in carrying one `file` and a file-shaped `dst`: the
+        # documented contract already had it (`docs/dataset-onboarding.md`), the transport
+        # did not, so a declared `hf-file` used to report "no fetch transport" while
+        # `DOWNLOADS.md` advertised `--fetch` for it.
         return f"{endpoint}/datasets/{repo}/resolve/{revision}"
     return None
 
@@ -216,32 +248,96 @@ def selected_files(entry: dict, only: list[str] | None) -> list[str]:
     return declared
 
 
+def gh_raw_mirror() -> str:
+    """The configured GitHub-raw mirror prefix, or `""` (off, the default).
+
+    Read at call time rather than at import: the variable is an operator's answer to "this
+    host cannot reach that one", so a wrapper, a test or a second fetch in the same process
+    must be able to change it. A trailing slash is dropped so the joined URL has exactly
+    one, whichever spelling the operator used.
+    """
+    return os.environ.get(GH_RAW_MIRROR_ENV, "").strip().rstrip("/")
+
+
+def gh_raw_url(url: str, mirror: str | None = None) -> str:
+    """`url` fetched through the GitHub-raw mirror, or unchanged when it does not apply.
+
+    The `netloc` test is the whole safety property: `hf-mirror.com`, `github.com`,
+    `codeload.github.com`, a release asset or any other host is returned byte-identical, so
+    a mirror can never be the reason a declared checksum fails.
+    """
+    prefix = gh_raw_mirror() if mirror is None else mirror.strip().rstrip("/")
+    if not prefix:
+        return url
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or parts.netloc != GH_RAW_HOST:
+        return url
+    return f"{prefix}/{url}"
+
+
+def _absent_parents(target: Path) -> list[Path]:
+    """The directories `target.parent.mkdir(parents=True)` would create, deepest first.
+
+    Read *before* creating them: this is the set a failed transfer may remove, and a
+    directory that already existed is deliberately not in it -- cleanup must never delete
+    something this call did not create.
+    """
+    absent, parent = [], target.parent
+    while not parent.exists() and parent != parent.parent:
+        absent.append(parent)
+        parent = parent.parent
+    return absent
+
+
+def _remove_created(dirs: list[Path]) -> None:
+    """Remove the directories a failed call created, bottom-up, only while empty.
+
+    `rmdir` refuses a non-empty directory; stopping at the first refusal is what keeps a
+    tree that another entry already wrote into (or that the operator filled) intact, and a
+    pre-existing directory is never in `dirs` in the first place.
+    """
+    for directory in dirs:
+        try:
+            directory.rmdir()
+        except OSError:
+            break
+
+
 def _download(url: str, target: Path, *, timeout: int = 600) -> None:
     """GET `url` into `target`, atomically enough that a failure leaves no half file.
 
     `curl` when it is available (it follows the mirror's redirects and reports a real
     exit code on a truncated transfer); `urllib` otherwise, so the tool still works on a
     host without curl.
+
+    A failure also removes the directories this call created, so a fetch that never
+    transferred a byte leaves no empty tree for a dataset's "already prepared?" guard to
+    read as prepared.
     """
+    created = _absent_parents(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".part")
-    if shutil.which("curl"):
-        proc = subprocess.run(
-            ["curl", "-sSL", "--fail", "--retry", "2", "--max-time", str(timeout),
-             "-o", str(tmp), url],
-            capture_output=True, text=True, errors="replace")
-        if proc.returncode != 0:
-            tmp.unlink(missing_ok=True)
-            raise RuntimeError(f"curl exited {proc.returncode}: {proc.stderr.strip()[:200]}")
-    else:
-        try:
-            with urllib.request.urlopen(url, timeout=timeout) as response, \
-                    tmp.open("wb") as handle:
-                shutil.copyfileobj(response, handle)
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise
-    tmp.replace(target)
+    try:
+        if shutil.which("curl"):
+            proc = subprocess.run(
+                ["curl", "-sSL", "--fail", "--retry", "2", "--max-time", str(timeout),
+                 "-o", str(tmp), url],
+                capture_output=True, text=True, errors="replace")
+            if proc.returncode != 0:
+                tmp.unlink(missing_ok=True)
+                raise RuntimeError(f"curl exited {proc.returncode}: {proc.stderr.strip()[:200]}")
+        else:
+            try:
+                with urllib.request.urlopen(url, timeout=timeout) as response, \
+                        tmp.open("wb") as handle:
+                    shutil.copyfileobj(response, handle)
+            except Exception:
+                tmp.unlink(missing_ok=True)
+                raise
+        tmp.replace(target)
+    except BaseException:
+        _remove_created(created)
+        raise
 
 
 def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
@@ -259,7 +355,7 @@ def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
     name = entry.get("name")
     if kind == "pip":
         return True, f"[pip] {entry.get('package')}=={entry.get('version')} (install separately)"
-    if kind not in ("http", "hf-dataset"):
+    if kind not in ("http", "hf-dataset", "hf-file"):
         return False, f"[{kind}] {name}: no fetch transport"
 
     dst = entry.get("dst")
@@ -269,20 +365,39 @@ def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
     if not target.is_absolute():
         target = base / target
 
-    files = selected_files(entry, only)
     url = entry_url(entry, endpoint)
     if url is None:
         return False, f"[{kind}] {name}: cannot build a URL (needs repo/file/version)"
-    if not files:
-        files = [""]
+    # `hf-file` names ONE file and `dst` is that file; `hf-dataset` names a tree and `dst`
+    # is its directory. The distinction is why the loop below cannot share one `out`.
+    single_file = kind == "hf-file"
+    if single_file:
+        declared_file = str(entry.get("file") or "")
+        if not declared_file:
+            return False, f"[{kind}] {name}: no `file`"
+        if only and declared_file not in only:
+            return False, (f"[{kind}] {name}: --file names {only}, "
+                           f"this entry declares {declared_file}")
+        files = [declared_file]
+    else:
+        files = selected_files(entry, only)
+        if not files:
+            files = [""]
 
+    mirror = gh_raw_mirror()
+    mirrored = False
     written = []
     for relative in files:
-        if kind == "hf-dataset":
+        if kind in ("hf-dataset", "hf-file"):
             full = f"{endpoint}{_hf_tail(entry, relative, endpoint)}"
         else:
             full = url if not relative else f"{url.rstrip('/')}/{relative}"
-        out = target if not relative else target / relative
+        out = target if (single_file or not relative) else target / relative
+        # The rewrite happens on the finished URL, once per file, so the mirror and the
+        # `--fetch` message cannot disagree about what was actually requested.
+        fetch_url = gh_raw_url(full, mirror)
+        mirrored = mirrored or fetch_url != full
+        via = f" (via mirror {mirror})" if fetch_url != full else ""
         # `sha256` is a string for a one-file entry and a `{tail: digest}` map for a
         # multi-file one; the map is what lets a single `--check` verify every file
         # rather than just the first.
@@ -295,17 +410,21 @@ def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
         if out.is_file() and not force and expected and _sha256(out) == expected:
             written.append(f"{relative or out.name} (present, sha256 ok)")
             continue
+        created = _absent_parents(out)
         try:
-            _download(full, out)
+            _download(fetch_url, out)
         except Exception as exc:  # noqa: BLE001 - reported, not raised
-            return False, f"[{kind}] {name}: {relative or out.name}: {exc}"
+            return False, f"[{kind}] {name}: {relative or out.name}: {exc}{via}"
         if expected:
             actual = _sha256(out)
             if actual != expected:
                 out.unlink(missing_ok=True)
+                # Same rule as a failed transfer: a file the checksum rejected must not
+                # leave an empty tree that looks provisioned.
+                _remove_created(created)
                 return False, (f"[{kind}] {name}: {relative or out.name}: sha256 "
                                f"{actual[:12]}... != {expected[:12]}...; removed the "
-                               f"download")
+                               f"download{via}")
             written.append(f"{relative or out.name} (sha256 ok)")
         else:
             written.append(f"{relative or out.name} "
@@ -323,7 +442,10 @@ def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
             if src.is_file():
                 shutil.unpack_archive(str(src), str(dest))
         written.append(f"extracted -> {dest}")
-    return True, f"[{kind}] {name}: " + "; ".join(written)
+    # The mirror is part of provenance, like the sha256: a reader who has to re-fetch has
+    # to know which URL these bytes came from, and `--fetch` prints this line verbatim.
+    return True, (f"[{kind}] {name}: " + "; ".join(written)
+                  + (f" (via mirror {mirror})" if mirrored else ""))
 
 
 def _hf_tail(entry: dict, file: str, endpoint: str) -> str:
@@ -345,6 +467,23 @@ def render_index(rows: list[dict]) -> str:
         "loads and scores it stays in git.",
         "",
         "`python3 tools/datasets.py --check` reports which of these are present locally.",
+        "",
+        f"**Egress on a walled host.** With `{GH_RAW_MIRROR_ENV}` unset, `--fetch` asks for",
+        "the URL above byte for byte. Set it to a proxy prefix (for example",
+        "`https://ghproxy.example/`) and a `raw.githubusercontent.com` URL is fetched as",
+        "`<mirror>/https://raw.githubusercontent.com/<path>` instead; no other host is",
+        "rewritten, because a mirror in front of a checksummed upstream would turn a",
+        "transport choice into a hash mismatch. Measured 2026-11-02: that host is",
+        "reset-blocked from this machine while `github.com` and `hf-mirror.com` work, which",
+        "is why `strongreject` (155 of 155 URLs) and `memoryagentbench`'s pinned",
+        "`punkt_tab.zip` could not be fetched without one. Re-measured 2026-11-03:",
+        f"`{GH_RAW_MIRROR_ENV}=https://ghproxy.net` served that `punkt_tab.zip` byte for byte",
+        "(`sha256 ok`), so a mirror is the supported route for that host, not a workaround;",
+        "a dataset that also pins preparation packages needs an interpreter of its own, which",
+        "is documented in `docs/dataset-onboarding.md` under the download contract.",
+        "The `--fetch` line names the mirror it used,",
+        "and a failed transfer removes the directories it had to create, so a half-fetched",
+        "dataset does not read as prepared.",
         "",
     ]
     for row in rows:

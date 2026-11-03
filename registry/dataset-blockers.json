@@ -122,6 +122,45 @@
     },
     {
       "blockers": [],
+      "dataset": "authored_example_fix_bug",
+      "demand": "artifact",
+      "exercises": [
+        "tools",
+        "verification"
+      ],
+      "historical_runs": [],
+      "shared_blockers": [],
+      "surface": "code_generation"
+    },
+    {
+      "dataset": "bbeh",
+      "demand": "reasoning",
+      "surface": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## bbeh"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "blockers": [],
       "dataset": "bfcl_v3",
       "demand": "tool_use",
       "exercises": [
@@ -182,6 +221,34 @@
       ],
       "shared_blockers": [],
       "surface": "text_to_sql"
+    },
+    {
+      "dataset": "browsecomp",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context",
+        "tools",
+        "control"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## browsecomp"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
     },
     {
       "blockers": [],
@@ -323,6 +390,62 @@
       "historical_runs": []
     },
     {
+      "dataset": "deepsearchqa",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context",
+        "tools",
+        "control"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## deepsearchqa"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "deepswe",
+      "demand": "artifact",
+      "surface": "code_generation",
+      "exercises": [
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-native-runtime",
+          "family": "trusted-verifier-runtime",
+          "status": "runtime",
+          "observed": "Native actor capabilities, artifact-only sealing, fixed Harbor replay and independent native verifier routes are implemented. Real local protocol controls exercise positive/negative paths; Pro uses the pinned original PatchReplayAgent and JobBench the original weighted rubric judge. Production source/image closure and full official oracle controls remain unprovisioned; native-public profiles are not HG quota/egress attestations, and timeout partial scoring is not admitted.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## deepswe"
+            }
+          ],
+          "next_action": "Provision the task-bound native-runtime manifest, immutable actor/replay/verifier images and Harbor0.23.0; JobBench additionally needs an explicitly admitted public actor profile and independent declared local judge. Review full source/scorer/private-material closure and original oracle/noop controls before any staged production diagnostic."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "ds1000",
       "demand": "artifact",
@@ -336,7 +459,7 @@
           "evidence": [
             {
               "kind": "repository",
-              "locator": "## DS1000 \u2014 host slice and timeout evidence",
+              "locator": "## DS1000 — host slice and timeout evidence",
               "path": "docs/adapter-integration-journal.md"
             },
             {
@@ -430,6 +553,62 @@
       "surface": "reasoning"
     },
     {
+      "dataset": "harvey_lab",
+      "demand": "artifact",
+      "surface": "document",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-native-runtime",
+          "family": "trusted-verifier-runtime",
+          "status": "runtime",
+          "observed": "The native execution and independent scorer bridge is implemented and exercised by explicitly declared local controls. Default production sources, images/dependencies, complete upstream oracle controls and scorer/runtime closure have not been provisioned or authorized; no production score was produced.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## harvey_lab"
+            }
+          ],
+          "next_action": "Provision the pinned real source/runtime and explicit local judge/image profiles; verify full private-material and scorer closure, then independently review native oracle/noop evidence before a staged diagnostic. Local instrument controls do not authorize production."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "hle",
+      "demand": "reasoning",
+      "surface": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## hle"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "hotpotqa",
       "demand": "evidence",
@@ -442,7 +621,7 @@
           "evidence": [
             {
               "kind": "repository",
-              "locator": "## HotpotQA \u2014 structured evidence and time budget",
+              "locator": "## HotpotQA — structured evidence and time budget",
               "path": "docs/adapter-integration-journal.md"
             },
             {
@@ -473,6 +652,35 @@
       "historical_runs": [],
       "shared_blockers": [],
       "surface": "interactive_fiction"
+    },
+    {
+      "dataset": "jobbench",
+      "demand": "artifact",
+      "surface": "document",
+      "exercises": [
+        "context",
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-native-runtime",
+          "family": "trusted-verifier-runtime",
+          "status": "runtime",
+          "observed": "Native actor capabilities, artifact-only sealing, fixed Harbor replay and independent native verifier routes are implemented. Real local protocol controls exercise positive/negative paths; Pro uses the pinned original PatchReplayAgent and JobBench the original weighted rubric judge. Production source/image closure and full official oracle controls remain unprovisioned; native-public profiles are not HG quota/egress attestations, and timeout partial scoring is not admitted.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## jobbench"
+            }
+          ],
+          "next_action": "Provision the task-bound native-runtime manifest, immutable actor/replay/verifier images and Harbor0.23.0; JobBench additionally needs an explicitly admitted public actor profile and independent declared local judge. Review full source/scorer/private-material closure and original oracle/noop controls before any staged production diagnostic."
+        }
+      ],
+      "historical_runs": []
     },
     {
       "blockers": [
@@ -516,6 +724,33 @@
       "surface": "code_generation"
     },
     {
+      "dataset": "livemathbench",
+      "demand": "reasoning",
+      "surface": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## livemathbench"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [
         {
           "evidence": [
@@ -550,6 +785,60 @@
       "historical_runs": [],
       "shared_blockers": [],
       "surface": "long_context"
+    },
+    {
+      "dataset": "math",
+      "demand": "reasoning",
+      "surface": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## math"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "math500",
+      "demand": "reasoning",
+      "surface": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## math500"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
     },
     {
       "blockers": [
@@ -621,6 +910,59 @@
       "surface": "tool_calling"
     },
     {
+      "dataset": "nq",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## nq"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "officeqa_pro",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context",
+        "tools"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## officeqa_pro"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [
         {
           "evidence": [
@@ -688,7 +1030,7 @@
           "evidence": [
             {
               "kind": "repository",
-              "locator": "## ScienceWorld \u2014 platform integrity",
+              "locator": "## ScienceWorld — platform integrity",
               "path": "docs/adapter-integration-journal.md"
             }
           ],
@@ -700,6 +1042,32 @@
       ],
       "shared_blockers": [],
       "surface": "science_simulation"
+    },
+    {
+      "dataset": "searchqa",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## searchqa"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
     },
     {
       "blockers": [
@@ -754,6 +1122,34 @@
       "surface": "spreadsheet"
     },
     {
+      "dataset": "spreadsheetbench2",
+      "demand": "artifact",
+      "surface": "spreadsheet",
+      "exercises": [
+        "context",
+        "tools",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## spreadsheetbench2"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "strategyqa",
       "demand": "reasoning",
@@ -795,6 +1191,89 @@
       "historical_runs": [],
       "shared_blockers": [],
       "surface": "reasoning"
+    },
+    {
+      "dataset": "supergpqa",
+      "demand": "reasoning",
+      "surface": "reasoning",
+      "exercises": [
+        "context",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## supergpqa"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "swe_bench",
+      "demand": "artifact",
+      "surface": "code_generation",
+      "exercises": [
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-native-runtime",
+          "family": "trusted-verifier-runtime",
+          "status": "runtime",
+          "observed": "The native execution and independent scorer bridge is implemented and exercised by explicitly declared local controls. Default production sources, images/dependencies, complete upstream oracle controls and scorer/runtime closure have not been provisioned or authorized; no production score was produced.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## swe_bench"
+            }
+          ],
+          "next_action": "Provision the pinned real source/runtime and explicit local judge/image profiles; verify full private-material and scorer closure, then independently review native oracle/noop evidence before a staged diagnostic. Local instrument controls do not authorize production."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "swe_bench_pro",
+      "demand": "artifact",
+      "surface": "code_generation",
+      "exercises": [
+        "tools",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-native-runtime",
+          "family": "trusted-verifier-runtime",
+          "status": "runtime",
+          "observed": "Native actor capabilities, artifact-only sealing, fixed Harbor replay and independent native verifier routes are implemented. Real local protocol controls exercise positive/negative paths; Pro uses the pinned original PatchReplayAgent and JobBench the original weighted rubric judge. Production source/image closure and full official oracle controls remain unprovisioned; native-public profiles are not HG quota/egress attestations, and timeout partial scoring is not admitted.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## swe_bench_pro"
+            }
+          ],
+          "next_action": "Provision the task-bound native-runtime manifest, immutable actor/replay/verifier images and Harbor0.23.0; JobBench additionally needs an explicitly admitted public actor profile and independent declared local judge. Review full source/scorer/private-material closure and original oracle/noop controls before any staged production diagnostic."
+        }
+      ],
+      "historical_runs": []
     },
     {
       "blockers": [
@@ -883,6 +1362,34 @@
       "surface": "terminal"
     },
     {
+      "dataset": "travelplanner",
+      "demand": "reasoning",
+      "surface": "planning_and_search",
+      "exercises": [
+        "context",
+        "control",
+        "verification"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## travelplanner"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
       "blockers": [],
       "dataset": "triviaqa",
       "demand": "evidence",
@@ -918,6 +1425,62 @@
       ],
       "shared_blockers": [],
       "surface": "information_seeking"
+    },
+    {
+      "dataset": "widesearch",
+      "demand": "evidence",
+      "surface": "information_seeking",
+      "exercises": [
+        "context",
+        "tools",
+        "control"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## widesearch"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
+    },
+    {
+      "dataset": "workbench",
+      "demand": "tool_use",
+      "surface": "tool_dialogue",
+      "exercises": [
+        "context",
+        "tools",
+        "control"
+      ],
+      "shared_blockers": [],
+      "blockers": [
+        {
+          "id": "flashrsi-production-measurement",
+          "family": "measurement-coverage",
+          "status": "measurement",
+          "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
+          "evidence": [
+            {
+              "kind": "repository",
+              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "locator": "## workbench"
+            }
+          ],
+          "next_action": "Preserve the pinned source and official scoring protocol. Provision the pinned real data and dependencies, run official oracle/noop controls, then obtain a separately reviewed one-task one-trial diagnostic receipt before scaling."
+        }
+      ],
+      "historical_runs": []
     }
   ],
   "review": {

@@ -35,6 +35,20 @@ records, judge/environment model channels, repeated trials and fixed peer execut
 Dataset tests cover these integrations; API receipts and validation artifacts are
 kept outside the repository.
 
+## StrongREJECT H0 study-set selection — 2026-11-02
+
+`tools/prepare_h0.py` now forwards study IDs through the driver's generic `--tasks`
+selector before setup and H0 evaluation, retaining the legacy AppWorld/ALFWorld
+pool knobs. It rejects empty and duplicate-ID files before launch and checks actual
+membership when publishing or reusing H0. Explicit `--split` selections are forwarded
+and included in configuration identity; the default remains `declared`.
+
+Validation: `test_prepare_h0.py`, `test_scoring_identity.py`,
+`test_strongreject_splits.py` and `test_strongreject_scoring_identity.py` passed
+79 tests. The pinned StrongREJECT controls stop the real driver before setup and
+confirm that 99 requested train IDs select exactly 99 tasks for declared, default
+and JSON splits; cross-side IDs are rejected. No real model was called.
+
 ## CostBench follow-up migration to rebuilt main — 2026-10-27
 
 The eleven CostBench follow-up commits were replayed onto upstream
@@ -6075,3 +6089,191 @@ failure is resolved by the stack's existing registrations. Both full-catalog
 filter tests stop on missing AgentDojo prepared data before their assertions
 (one failure, one setup error); a passing full-catalog run is not claimed.
 Validation used prepared local data and mock controls, with no model calls.
+
+## codex and opencode: why they were not launchable, and their first live traces — 2026-11-01
+
+`base_harness/launchable.json` was created in `3a8dfd0` holding
+`["loop", "deepseek_harness"]`, and its `_why` line called `codex_agent`, `dsh_agent`
+and `cli_agent` "the improver agents" and therefore "not a task agent a study should
+start from". That was the classification of the day, not a test result. `miniswe`
+(`44e1dc9`), `miniagent` and `openclaw` (`6680d7b`) were added to the list as they
+were integrated; `codex` and `opencode` never received the same edit, so their
+absence was an omission rather than a refusal. Neither failed a gate: both declare
+`env_kinds: ["files", "exec"]` like `deepseek-harness`, both adapters translate every
+record the contract asks for, and `tests/quality/test_codex_adapter.py` plus
+`test_opencode_adapter.py` pass (24 tests).
+
+What was actually missing was evidence from a real run: all of the archive's runs are
+on `loop`, so neither had ever driven its own CLI against this platform's endpoint.
+Two host-side smokes on 2026-11-01, one prompt each, `HG_AGENT_BASE_URL` at the local
+`8001`, no dataset and no verifier:
+
+* **codex** — 11 trace records, `tools/check_trace_contract.py` OK `[v1]`,
+  `usage.calls: 1`, 9 003 input / 33 output tokens. The adapter took the CLI's final
+  message as the answer, and that message carried the model's narration
+  (`"The user wants me to calculate 17*23 and reply with only the number.\n\n\n17*23 = 391"`).
+  So a task scored on exact answer text would fail on the narration, not on the
+  arithmetic -- a property of this model at this prompt, recorded rather than fixed.
+* **opencode** — 8 records, contract OK `[v1]`, `calls: 1`, 10 826 input / 4 output
+  tokens, `answer.txt` exactly `391`, `answer_source: final_message`, 7.3 s. Its
+  session export exits 1 (`export.ok: false`); that path is best-effort and the answer
+  did not depend on it.
+
+Both are now on the launchable list, which restores what the manifest already claimed.
+Neither is a measured point: no dataset, no verifier, no receipt, so no number is
+claimed here. The next step is the ordinary one -- a one-task diagnostic per harness
+through the driver, with the receipt the staged pilot policy requires.
+
+### Fixed the same day: the codex adapter was overwriting the task's own answer
+
+The narration above was not a model quirk the platform had to live with -- it was a
+defect in this adapter. `-o <workdir>/answer.txt`, preceded by `answer.txt.unlink()`,
+meant Codex's final message **replaced** whatever the task's goal had asked the agent to
+write. `opencode` never did that: it prefers a `answer.txt` the agent changed
+(`answer_source: artifact`) and only falls back to the final message.
+
+So `answer.txt` now belongs to the task first: `-o` writes to a scratch file inside the
+adapter's private Codex home, a file the agent wrote is kept and recorded as `artifact`,
+and the final message is copied in only when the agent left no answer
+(`final_message`). The prompt also stopped implying that the final message is only a
+description when the task asked for a file.
+
+Measured live the same day, one task whose goal says *write the final answer to
+`answer.txt`*: the model ran `echo 391 > answer.txt`, the adapter recorded
+`answer_source: artifact` with `391`, the trace still passes
+`tools/check_trace_contract.py`, and the fallback path is covered by two new tests with a
+stand-in CLI. Neither path invents an answer format: the dataset's goal states what to
+deliver (gsm8k's `_goal` names `answer.txt` or `python3 qa submit`), the verifier decides
+how to read it, and the harness's only job is not to lose it.
+
+## Every harness keeps a task-written `answer.txt` — 2026-11-01
+
+Checked all seven runnable harnesses against the same question after the codex fix: *if
+the task's goal tells the agent to write `answer.txt` (gsm8k's does), does the harness
+keep that file, and does it say so on the trace?* Live, one prompt each, host side, the
+local `8001`, no dataset and no verifier. `answer_source: artifact` in every row means the
+file the agent wrote is what the platform collected; `commands` counts executed actions.
+
+| harness | before the fix | now | live evidence |
+| --- | --- | --- | --- |
+| `opencode` | files → artifact → final message | unchanged | already correct in code |
+| `miniswe` | files → artifact → final message | unchanged | 4 commands, `artifact`, contract OK |
+| `miniagent` | files → artifact → final message | unchanged | 1 command, `artifact`, contract OK |
+| `openclaw` | files → artifact → final message | unchanged | 1 command, `artifact`, contract OK |
+| `codex` | deleted `answer.txt`, wrote `-o` into it | artifact → final message | `echo 391 > answer.txt`, `artifact` |
+| `deepseek-harness` | deleted `answer.txt`, wrote the final message into it | artifact → final message | 6 commands / 6 observations, `artifact` |
+| `loop` (baseline) | always overwrote `answer.txt` with the `{"answer": …}` value | keeps a changed file | `echo $((17*23)) > answer.txt`, `artifact` |
+| `oracle` | control: runs the dataset's own reference solution, writes no `answer.txt` | out of scope | — |
+
+The `loop` change cannot move the archive: all 924 archived runs are AppWorld or ALFWorld,
+both graded by a `command` verifier against the environment's state, and neither dataset's
+adapter mentions `answer.txt` at all. What the change does affect is a task whose goal asks
+for the file — which is exactly the case the old code got wrong.
+
+One defect the `deepseek-harness` smoke exposed is about the host, not the adapter: with
+`HOME` pointing at this machine's real `~/.dsh`, DSH loads the operator's own
+`settings.yaml` and answered through a **real DeepSeek endpoint** with the local key, which
+failed authentication and produced a trace with 1 call and 0 commands. With an isolated
+`HOME` (what a container gives it) the same run answered through `qwen3.5-9b-local`. So a
+host-side diagnostic of this harness must set `HOME` to a scratch directory, or it is not
+measuring the model it names. The adapter's own docstring says the container case is the
+one that matters; this is what that costs when it is skipped.
+
+Covered by `tests/quality/test_answer_delivery.py` (the precedence, both branches, a
+pre-seeded placeholder, and `loop` end to end with scripted replies) plus the two new
+codex tests. 83 passed / 1 skipped across the affected files.
+
+**Follow-up, same day:** the host-side case is now a refusal rather than a trap. If the
+selected `HOME` already holds `.dsh/settings.yaml`, `deepseek-harness` stops with the path
+and the fix in the message, instead of running and recording a model it did not use
+(`HG_AGENT_DSH_KEEP_HOME=1` opts back in, for reproducing an operator configuration on
+purpose). A task container's `HOME` starts empty, so the container path is untouched. Test:
+`test_an_operator_home_is_refused_rather_than_silently_used`.
+
+## The first H0 row from the six frontier harnesses — 2026-11-01
+
+One task, one trial, one endpoint (`8001`), `jobs=1`, through the driver rather than by
+calling an entry point by hand: `demo/t01` ("Answer with the word alpha"), a **fixture**
+(`data/demo.py`, 8 trivial exact-match tasks), direct evaluation (`--rounds 0
+--sampling all`). Six runs, ids `h0-<harness>-demo-01`, receipts under
+`/tmp/hg-h0/runs/` (disposable: a fixture diagnostic, not a publishable measurement).
+Every run reported `n_invalid: 0`, `n_harness_failed: 0`, sandbox `bwrap`, and the model
+it actually used.
+
+| harness | score | calls | tokens | what the verifier read |
+| --- | --- | --- | --- | --- |
+| opencode | 1.000 | 1 | 10 819 | `alpha` |
+| deepseek-harness | 1.000 | 3 | 22 922 | `alpha` |
+| miniagent | 1.000 | 1 | 953 | `alpha` |
+| openclaw | 1.000 | 1 | 0 (reports none) | `alpha` |
+| codex | 0.000 | 1 | 17 698 | `Done. I can see the command successfully returned "alpha" as the output.` |
+| miniswe | 0.000 | 5 | 7 514 | `Wait, I need to re-read the instructions more carefully. The task says "Answer w…` |
+
+Two zeros, and neither is a capability difference: both models produced `alpha`
+somewhere and then handed over prose. That is the `final_message` path of the answer rule
+working exactly as documented -- the task said "answer with the word alpha" and did not
+ask for a file, so the harness had nothing but the last message to deliver. It is also the
+first evidence for what the paper wants to claim about harnesses: on an exact-match
+answer task, *who formats the hand-over* moves the score between 0 and 1 with the same
+model.
+
+Three things the row exposes that a single harness would not:
+
+* **Cost is not comparable yet.** 953 → 22 922 tokens for the same one-word answer, and
+  `openclaw` reports `0` because its session carries no token totals (`null`, rendered as
+  0 in this table's `cost.harness_tokens`). Any cost claim has to name which harness
+  reported and which did not.
+* **`miniagent` ran on the host interpreter** and the run said so: its
+  `requirements.txt` is unpinned until an overlay is built
+  (`tools/configure_harness.py --harness base_harness/miniagent`), so its dependencies,
+  including the `requests` bump below, are whatever the host has.
+* **Sampling parameters are not pinned by the adapter contract.** `loop` sends
+  `temperature=0.0` explicitly (`base_harness/loop/agent.py`); the six CLI harnesses leave
+  temperature, top-p and the rest to their own defaults, and no record carries them. Two
+  harnesses on one model are therefore not necessarily two samples of the same
+  distribution -- a comparability note that belongs next to every cross-harness number,
+  not only in this journal.
+
+### The two zeros were the harness, not the model — and one was a missing token count
+
+Both zeros in the row above were traced to the adapter and fixed the same day.
+
+**`openclaw` reported no tokens because nobody asked for them.** The CLI's
+`normalizeModelCompat` forces `supportsUsageInStreaming: false` for every
+OpenAI-completions model whose `baseUrl` is not `api.openai.com`, and
+`@mariozechner/pi-ai` only sends `stream_options: {include_usage: true}` when that flag is
+not false. vLLM returns a usage block when asked -- verified with a raw `curl -N` before
+touching anything -- so the zeros in the session file were openclaw's, not the endpoint's.
+The adapter now declares `compat: {"supportsUsageInStreaming": true}` on the generated
+provider model (`supportsDeveloperRole` deliberately unset: this chat template has no
+`developer` role). Same task, before → after: `0` → **9 548** tokens and `3` calls.
+
+**`codex` and `miniswe` handed over prose because that is what they asked for.** `codex`'s
+prompt said *"your final message should briefly describe the result"* -- the model obeyed,
+and the exact-match verifier read the description. `miniswe` did say "answer only", but
+buried mid-sentence and with nothing else to fall back on, so the run submitted the musing
+it ended on. Strengthening the sentence was not enough (measured: codex answered *"The user
+wants me to complete a task by writing the answer "alpha" as specified."*, miniswe *"The
+task.json says ... and there's no answer.txt file"*). What fixed it was naming the channel
+the platform actually collects: **"otherwise write your final answer, and nothing else, to
+`answer.txt` in the working directory"**. Then the artifact rule does the rest, and the
+final message stays only as a fallback.
+
+That rule is now the same sentence in all six adapters (`codex`, `miniswe`, `opencode`,
+`miniagent`, `openclaw`, and DSH's `knobs.json` preamble, which is a declared knob rather
+than code). The same one-task diagnostic, all six, one endpoint:
+
+| harness | score | calls | tokens | answer came from |
+| --- | --- | --- | --- | --- |
+| codex | 1.000 | 1 | 17 770 | `answer.txt` (artifact) |
+| deepseek-harness | 1.000 | 5 | 38 949 | `answer.txt` (artifact) |
+| miniswe | 1.000 | 5 | 7 686 | `answer.txt` (artifact) |
+| openclaw | 1.000 | 3 | 9 548 | `answer.txt` (artifact) |
+| miniagent | 1.000 | 1 | 961 | final message |
+| opencode | 1.000 | 1 | 10 834 | final message |
+
+Two rows still deliver by final message: those models answered cleanly and wrote nothing,
+which the rule allows. What changed is that no harness now *depends* on the model doing
+that. 83 adapter tests pass. The cost spread (961 → 38 949 for one word) remains a
+comparability fact, not a defect: five calls to answer "alpha" is how DSH works, and the
+number is now reported by every harness instead of one of them being silent.

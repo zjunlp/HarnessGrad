@@ -411,6 +411,11 @@ class QASpec:
                  "from": str(ROOT / DATASET_PACKAGE / "__init__.py")},
                 {"path": f"{DATASET_PACKAGE}/scaffolds/__init__.py",
                  "from": str(ROOT / "data/scaffolds/__init__.py")},
+                # The adapters resolve their root through `data/scaffolds/roots.py`;
+                # a check that materialized the package without it would import the
+                # adapter and fail before scoring anything.
+                {"path": f"{DATASET_PACKAGE}/scaffolds/roots.py",
+                 "from": str(ROOT / "data/scaffolds/roots.py")},
                 {"path": f"{DATASET_PACKAGE}/scaffolds/qa/__init__.py", "from": str(QA_DIR / "__init__.py")},
                 {"path": f"{DATASET_PACKAGE}/scaffolds/qa/read.py", "from": str(QA_DIR / "read.py")},
                 {"path": f"{DATASET_PACKAGE}/scaffolds/qa/base.py", "from": str(QA_DIR / "base.py")},

@@ -147,9 +147,33 @@ UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
 from harnessgrad.components import COMPONENTS as FUNCTIONS  # noqa: E402
 
 EXERCISES: dict[str, tuple[str, ...]] = {
+    # Pinned FlashRSI transfer declarations; provisioning is a separate axis.
+    'bbeh': ('context', 'verification'),
+    'browsecomp': ('context', 'tools', 'control'),
+    'deepsearchqa': ('context', 'tools', 'control'),
+    'deepswe': ('tools', 'control', 'verification'),
+    'harvey_lab': ('context', 'tools', 'control', 'verification'),
+    'hle': ('context', 'verification'),
+    'jobbench': ('context', 'tools', 'control', 'verification'),
+    'livemathbench': ('context', 'verification'),
+    'math': ('context', 'verification'),
+    'math500': ('context', 'verification'),
+    'nq': ('context',),
+    'officeqa_pro': ('context', 'tools'),
+    'searchqa': ('context',),
+    'spreadsheetbench2': ('context', 'tools', 'verification'),
+    'supergpqa': ('context', 'verification'),
+    'swe_bench': ('tools', 'control', 'verification'),
+    'swe_bench_pro': ('tools', 'control', 'verification'),
+    'travelplanner': ('context', 'control', 'verification'),
+    'widesearch': ('context', 'tools', 'control'),
+    'workbench': ('context', 'tools', 'control'),
+
     # Official optimal-path agreement makes tool-price planning score-relevant.
     "costbench": ("context", "tools", "control", "cost"),
     "costbench_dynamic": ("context", "tools", "control", "cost", "recovery"),
+    # 一题一循环：跑测试、看失败、改文件。和 ds1000 一样是 tools + verification。
+    "authored_example_fix_bug": ("tools", "verification"),
     "cooperbench": ("context", "tools", "control", "verification"),
     "kumo": ("context", "tools", "control", "verification"),
     "alfworld": ("context", "tools", "control", "recovery"),
@@ -202,7 +226,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
 #: How few independent benchmark families make a function covered. Protocol
 #: variants remain separate adapters but cannot manufacture independent coverage.
 MIN_MEMBERS_PER_FUNCTION = 2
-FUNCTION_COVERAGE_FAMILY = {"costbench_dynamic": "costbench"}
+FUNCTION_COVERAGE_FAMILY = {"costbench_dynamic": "costbench", "math500": "math"}
 
 #: Functions below that floor, with the reason and the shape of the gap. Same two-way rule as
 #: `UNCOVERED_DEMANDS`: a function under the floor must appear here, and a function here must be
@@ -237,9 +261,34 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
 #: than two so the levels cannot drift apart: there is no way to add a dataset to a demand and
 #: forget its surface, which a second dict keyed by the same names would allow.
 CAPABILITY: dict[str, tuple[str, str]] = {
+    # Pinned FlashRSI transfer declarations; provisioning is a separate axis.
+    'bbeh': ('reasoning', 'reasoning'),
+    'browsecomp': ('evidence', 'information_seeking'),
+    'deepsearchqa': ('evidence', 'information_seeking'),
+    'deepswe': ('artifact', 'code_generation'),
+    'harvey_lab': ('artifact', 'document'),
+    'hle': ('reasoning', 'reasoning'),
+    'jobbench': ('artifact', 'document'),
+    'livemathbench': ('reasoning', 'reasoning'),
+    'math': ('reasoning', 'reasoning'),
+    'math500': ('reasoning', 'reasoning'),
+    'nq': ('evidence', 'information_seeking'),
+    'officeqa_pro': ('evidence', 'information_seeking'),
+    'searchqa': ('evidence', 'information_seeking'),
+    'spreadsheetbench2': ('artifact', 'spreadsheet'),
+    'supergpqa': ('reasoning', 'reasoning'),
+    'swe_bench': ('artifact', 'code_generation'),
+    'swe_bench_pro': ('artifact', 'code_generation'),
+    'travelplanner': ('reasoning', 'planning_and_search'),
+    'widesearch': ('evidence', 'information_seeking'),
+    'workbench': ('tool_use', 'tool_dialogue'),
+
     "costbench": ("tool_use", "tool_dialogue"),
     "costbench_dynamic": ("tool_use", "tool_dialogue"),
     "kumo": ("reasoning", "planning_and_search"),
+    # 控制台"起草"产出的示例场景：材料里有一个坏掉的函数和自带测试，改到测试通过为止。
+    # 交上去的是改过的文件，所以和 ds1000 / livecodebench 同一格。
+    "authored_example_fix_bug": ("artifact", "code_generation"),
     "cooperbench": ("artifact", "code_generation"),
     "alfworld": ("environment", "embodied_text"),
     "agentdojo": ("tool_use", "tool_dialogue"),
@@ -311,6 +360,28 @@ ACT_VERBS = ("do", "call", "send_message", "ack")
 #: edits this map, the tool stops and someone looks. A single source would have hidden the
 #: `agentdojo` mistake above; the derived side is what caught it.
 EXPECTED_INTERACTION = {
+    # Pinned FlashRSI transfer declarations; provisioning is a separate axis.
+    'bbeh': 'single_shot',
+    'browsecomp': 'closed_loop',
+    'deepsearchqa': 'closed_loop',
+    'deepswe': 'single_shot',
+    'harvey_lab': 'single_shot',
+    'hle': 'single_shot',
+    'jobbench': 'single_shot',
+    'livemathbench': 'single_shot',
+    'math': 'single_shot',
+    'math500': 'single_shot',
+    'nq': 'single_shot',
+    'officeqa_pro': 'single_shot',
+    'searchqa': 'single_shot',
+    'spreadsheetbench2': 'single_shot',
+    'supergpqa': 'single_shot',
+    'swe_bench': 'single_shot',
+    'swe_bench_pro': 'single_shot',
+    'travelplanner': 'single_shot',
+    'widesearch': 'closed_loop',
+    'workbench': 'closed_loop',
+
     "costbench": "closed_loop",
     "costbench_dynamic": "closed_loop",
     "cooperbench": "closed_loop",
@@ -326,6 +397,9 @@ EXPECTED_INTERACTION = {
     # Derived, not declared: the QA scaffold's shipped CLI exposes only answer submission, so
     # `classify()` reads `single_shot` off the program and this entry has to agree with it.
     "aime": "single_shot",
+    # 「起草」的示例场景没有 CLI（材料里只有一个坏函数和它自带的测试）：agent 改文件、
+    # 提交，检查器跑一次测试。程序侧读出来是 single_shot，这里声明同一个值。
+    "authored_example_fix_bug": "single_shot",
     "jericho": "closed_loop",
     "musique": "single_shot",
     "reasoning_gym": "single_shot",

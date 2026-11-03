@@ -74,6 +74,23 @@ def published() -> tuple[str, ...]:
 _VALID = ("train", "eval")
 
 
+def provision_status(name: str) -> dict | None:
+    """What the adapter says about its bytes being on this machine, or `None`.
+
+    `None` means the adapter has no such hook -- it is making no claim, which is a
+    different answer from `{"present": False}` ("I know where my bytes go and they are
+    not there"). Callers that print a readiness table need that distinction, and they
+    need it **without importing the adapter themselves**: `harnessgrad/` must reach a
+    dataset only through this module (the import-boundary rule in
+    `tests/quality/test_boundaries.py`).
+    """
+    module = importlib.import_module(module_name(name))
+    status = getattr(module, "provision_status", None)
+    if not callable(status):
+        return None
+    return status()
+
+
 def load(name: str) -> tuple[list[dict], dict[str, str]]:
     """Return (tasks, scorable) for a dataset name."""
     module = importlib.import_module(module_name(name))
@@ -97,11 +114,42 @@ def load_split(name: str) -> tuple[list[dict], dict[str, str], dict | None]:
     split = getattr(module, "SPLIT", None)
     if split is None:
         return tasks, scorable, None
-    return tasks, scorable, validate_split(name, tasks, split)
+    return tasks, scorable, validate_split(
+        name, tasks, split, split_groups=load_split_groups(name, tasks))
+
+
+def _validate_split_groups(name: str, tasks: list[dict], groups: dict) -> dict[str, str]:
+    """A complete, private task-to-group declaration; group ids are SHA-256 hex."""
+    if not isinstance(groups, dict):
+        raise ValueError(f"dataset {name!r}: SPLIT_GROUPS must be a dict")
+    known = {task["task_id"] for task in tasks}
+    if set(groups) != known:
+        raise ValueError(
+            f"dataset {name!r}: SPLIT_GROUPS must cover exactly the task ids; "
+            f"missing={sorted(known - set(groups))}, "
+            f"unknown={sorted(set(groups) - known, key=str)}")
+    for tid, group in groups.items():
+        if not isinstance(group, str) or not re.fullmatch(r"[0-9a-f]{64}", group):
+            raise ValueError(
+                f"dataset {name!r}: SPLIT_GROUPS[{tid!r}] must be a lowercase "
+                f"SHA-256 group id")
+    return dict(groups)
+
+
+def load_split_groups(name: str, tasks: list[dict]) -> dict[str, str] | None:
+    """Optional adapter opt-in: related tasks must stay on the same split side.
+
+    The adapter hashes its private grouping key once and declares only that digest.
+    Neither the grouping key nor this mapping is added to the actor's tasks.
+    """
+    module = importlib.import_module(module_name(name))
+    groups = getattr(module, "SPLIT_GROUPS", None)
+    return None if groups is None else _validate_split_groups(name, tasks, groups)
 
 
 def validate_split(name: str, tasks: list[dict], split: dict,
-                   *, require_nonempty: tuple[str, ...] = _VALID) -> dict:
+                   *, require_nonempty: tuple[str, ...] = _VALID,
+                   split_groups: dict[str, str] | None = None) -> dict:
     """Validate a mapping and return it normalized to both sides.
 
     This runs on splits that did **not** come from the dataset's own declaration: one the
@@ -115,6 +163,9 @@ def validate_split(name: str, tasks: list[dict], split: dict,
       material in this pool at all. Requiring a filled `train` side there would make the
       most comparable run on the platform impossible to express, so the caller names the
       sides it needs filled.
+
+    `split_groups` is an explicit opt-in; when supplied, related tasks must stay
+    together. This function never imports an adapter to infer groups for callers.
     """
     unknown = set(split) - set(_VALID)
     if unknown:
@@ -149,6 +200,15 @@ def validate_split(name: str, tasks: list[dict], split: dict,
     empty = [side for side in require_nonempty if not groups[side]]
     if empty:
         raise ValueError(f"dataset {name!r}: split has an empty side: {empty}")
+    if split_groups is not None:
+        split_groups = _validate_split_groups(name, tasks, split_groups)
+        train_groups = {split_groups[tid] for tid in groups["train"]}
+        eval_groups = {split_groups[tid] for tid in groups["eval"]}
+        shared = train_groups & eval_groups
+        if shared:
+            raise ValueError(
+                f"dataset {name!r}: SPLIT_GROUPS group(s) {sorted(shared)} have "
+                f"tasks on both sides of the split; related tasks must stay together")
     return groups
 
 
@@ -175,15 +235,24 @@ def is_eval_id(task_id: str) -> bool:
     return hashlib.sha256(task_id.encode()).digest()[0] % 3 == 0
 
 
-def default_split(tasks: list[dict]) -> dict:
+def default_split(tasks: list[dict], *, split_groups: dict[str, str] | None = None) -> dict:
     """The platform's default division, named rather than implied.
 
     Every adapter used to write this rule for itself, which made "the platform's default"
     indistinguishable from "what this benchmark does". It is a protocol choice, so
     `--split default` names it, a dataset's own declaration overrides it, and the run
     records which of the two it used.
+
+    An adapter may opt in to grouping. Its group id is already a SHA-256 digest,
+    so the same first-byte rule is applied directly, without hashing it again.
+    Absent that declaration, task-id hashing and ordering are unchanged.
     """
     ids = [t["task_id"] for t in tasks]
+    if split_groups is not None:
+        split_groups = _validate_split_groups("default", tasks, split_groups)
+        evaluation = {tid for tid in ids if int(split_groups[tid][:2], 16) % 3 == 0}
+        return {"train": [tid for tid in ids if tid not in evaluation],
+                "eval": [tid for tid in ids if tid in evaluation]}
     return {"train": [i for i in ids if not is_eval_id(i)],
             "eval": [i for i in ids if is_eval_id(i)]}
 
@@ -703,6 +772,9 @@ def _check_verifier(spec, tid: str, name: str) -> None:
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
     from data.scaffolds.scorer_isolation import declared_class
     declared_class(spec)
+    if 'native_benchmark' in spec:
+        from data.scaffolds.runtime_extensions import validate_native_benchmark
+        validate_native_benchmark(spec)
     if "result_max_bytes" in spec:
         limit = spec["result_max_bytes"]
         if "container_runtime" not in spec:

@@ -41,6 +41,15 @@ Two machine facts worth knowing before the first download on this host: `hugging
 work. A pin verified only through a mirror is **mirror-verified**, and the record has to say
 so rather than claiming the canonical host agreed.
 
+**Where the bytes land is one decision, not forty.** Every adapter resolves its root through
+`data/scaffolds/roots.py`, in this order: `HG_DATA_<NAME>` for one dataset, `HG_DATA_ROOT` for
+the whole collection (e.g. `export HG_DATA_ROOT=/mnt/20t/xubuqiang/datasets`), the operator's
+old absolute path when that directory exists, and `~/.local/share/harnessgrad/datasets/<name>`
+otherwise. A fresh clone therefore needs no configuration before
+`python3 tools/datasets.py --fetch`, and
+`python3 -c "from data.scaffolds import roots; print(roots.describe('gsm8k'))"` reports which
+rule won and whether the directory is there.
+
 ### 1.2 Find the function that computes the number
 
 Read the scorer, not the paper. The paper describes the headline; the scorer decides what is

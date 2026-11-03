@@ -17,7 +17,8 @@ What it checks (see the schema for the exact spelling)
     ENV/SETUP/VERIFY cover every task id (delegated to data/scaffolds/registry.py, so there is
         one answer to "is this environment/verifier valid", not two)
     VERIFY.inputs `dst` values are TOP LEVEL absolute paths
-    a `command` verifier declares `reward_file`, and it is absolute
+    external `command` verifiers declare an absolute `reward_file`; fixed native
+    handlers instead declare their selected-input/structured-result contract
     downloads() present, non-empty, each entry well-formed, each version PINNED
     the dataset's data root is outside the platform tree
 
@@ -34,6 +35,8 @@ import importlib
 import json
 import sys
 from pathlib import Path, PurePosixPath
+
+from harnessgrad.config import ConfigMissing
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "data" / "dataset.schema.json"
@@ -99,6 +102,8 @@ def _outside_platform(path: Path, root: Path) -> bool:
 _ENTRY_KEYS = {
     "kind", "name", "version", "size", "note", "url", "repo", "file", "files",
     "sha256", "dst", "extract_to", "package",
+    # `authored` 用 `path` 指向仓库里的 bundle（见 `downloads()` 的规则）。
+    "path",
 }
 
 
@@ -141,6 +146,23 @@ def lint_downloads(downloads, schema: dict, result: Result) -> None:
             result.error(f"{where} ({entry.get('name')!r}) has no plain-language note "
                          f"({len(note)} chars; the schema asks for at least "
                          f"{spec['note_min_chars']})")
+        path = entry.get("path")
+        if kind == "authored":
+            # **和 `dst` 的规则相反，而且是有意的。** `dst` 管的是下载下来的载荷：那是
+            # 别人发布的字节，不能落进平台树里冒充平台自己的源码。一个 authored bundle
+            # 的数据恰恰**就是**仓库里的源码级材料（`data/authored/<slug>`，随 git 走），
+            # 所以这里要求它存在、且在平台树内 —— 不然摘要就成了对一个不存在的目录的声明。
+            target = ROOT / str(path or "")
+            try:
+                inside = target.resolve().is_relative_to(ROOT.resolve())
+            except OSError:
+                inside = False
+            if not path or not inside:
+                result.error(f"{where} ({entry.get('name')!r}): an authored bundle must live "
+                             f"inside the repository; path={path!r}")
+            elif not target.is_dir():
+                result.error(f"{where} ({entry.get('name')!r}): authored bundle path does not "
+                             f"exist: {path}")
         dst = entry.get("dst")
         if dst:
             p = Path(str(dst))
@@ -196,7 +218,15 @@ def lint_verify(verifiers, task_ids: set[str], schema: dict, result: Result) -> 
             continue
         if kind != "command":
             continue
-        for key in spec["command_required"]:
+        required = spec["command_required"]
+        if 'native_benchmark' in verifier:
+            from data.scaffolds.runtime_extensions import validate_native_benchmark
+            try:
+                validate_native_benchmark(verifier)
+            except ValueError as exc:
+                result.error(f'VERIFY[{tid!r}] native benchmark declaration: {exc}')
+            required = spec['native_command_required']
+        for key in required:
             if not verifier.get(key):
                 result.error(f"VERIFY[{tid!r}] is a command verifier without `{key}`")
         for key in spec["absolute_paths"]:
@@ -381,6 +411,12 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
 
     try:
         tasks, scorable = registry.load(name)
+    except ConfigMissing as exc:
+        # **"还没配"不是"做错了"。** 一个 adapter 在构建 VERIFY 时要解析 judge 模型
+        # （tau3_bench 就是这样），而 judge 是平台配置、不是数据集的一部分：没配时
+        # lint 该说"这台机器上还没法校验它"，而不是给数据集记一条错误。
+        result.unprovisioned = f"needs platform configuration: {exc}"
+        return result
     except Exception as exc:  # noqa: BLE001
         if require_data:
             result.error(f"load() raised {type(exc).__name__}: {exc}")
@@ -390,12 +426,21 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
 
     task_ids = lint_tasks(tasks, scorable, schema, result)
     lint_split(getattr(module, "SPLIT", None), task_ids, schema, result)
+    try:
+        split_groups = registry.load_split_groups(name, tasks)
+        if split_groups is not None and getattr(module, "SPLIT", None) is not None:
+            registry.validate_split(name, tasks, module.SPLIT, split_groups=split_groups)
+    except ValueError as exc:
+        result.error(str(exc))
 
     # The contract checks the platform already owns are delegated, not re-implemented:
     # two answers to "is this ENV/VERIFY valid" is exactly the fork this repository is
     # built to avoid.
     try:
         _, setups, verifiers = registry.load_tasks(name)
+    except ConfigMissing as exc:
+        result.unprovisioned = f"needs platform configuration: {exc}"
+        return result
     except Exception as exc:  # noqa: BLE001
         result.error(f"registry.load_tasks: {type(exc).__name__}: {exc}")
         # Still lint the declared VERIFY directly. The platform's validator stops at the
