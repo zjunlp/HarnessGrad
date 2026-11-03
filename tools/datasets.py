@@ -588,9 +588,15 @@ def main(argv=None) -> int:
         return 1 if failed else 0
 
     # Default and --list: what each dataset asks for.
+    # An adapter this interpreter cannot import is missing from `rows`, and saying so is part
+    # of the answer: a catalogue that is silently one entry shorter is how a fresh clone looks
+    # broken. (A wheel has no `specs/*.json`; `chess` and `numpy` are optional dependencies.)
     if args.json:
+        # Shape kept as a list of rows: it is a machine interface, and the diagnostics below
+        # go to stderr rather than into a payload a caller already parses.
         print(json.dumps([{"dataset": n, "downloads": e} for n, e in rows],
                          indent=1, sort_keys=True))
+        _report_unimportable()
         return 0
     for name, entries in rows:
         print(f"{name}: {len(entries)} item(s)")
@@ -602,7 +608,21 @@ def main(argv=None) -> int:
             print(f"      {entry.get('note', '').strip()}")
     if not rows:
         print("no published dataset declares downloads()")
+    _report_unimportable()
     return 0
+
+
+def _report_unimportable() -> None:
+    """Name the adapters the catalogue had to drop, and why."""
+    broken = registry.broken_adapters()
+    if not broken:
+        return
+    print(f"\n{len(broken)} adapter(s) could not be imported and are not listed above:",
+          file=sys.stderr)
+    for name, reason in sorted(broken.items()):
+        print(f"  {name}: {reason[:160]}", file=sys.stderr)
+    print("Install the named module or provision the missing asset; `load()` names the "
+          "same reason when the adapter is used directly.", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -367,7 +367,7 @@
 {"bytes": 1620, "id": 366, "module": "data.scaffolds.qa.prediction", "path": "data/scaffolds/qa/prediction.py", "sha256": "598ebb5fe688f561d6cb6388ef202be4233de14058c51e65391613c7a6bedd7e"}
 {"bytes": 8624, "id": 367, "module": "data.scaffolds.qa.read", "path": "data/scaffolds/qa/read.py", "sha256": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"}
 {"bytes": 14936, "id": 368, "module": "data.scaffolds.qa.verify.check", "path": "data/scaffolds/qa/verify/check.py", "sha256": "ec603e0d7fc655473dde92260d70cefefc0dd107eaa0d9273df1e7eeb0d0763c"}
-{"bytes": 46799, "id": 369, "module": "data.scaffolds.registry", "path": "data/scaffolds/registry.py", "sha256": "28d65f62425c95605fe856d481620a8e0ad14283e1b077238ba2be894b9ce26c"}
+{"bytes": 47969, "id": 369, "module": "data.scaffolds.registry", "path": "data/scaffolds/registry.py", "sha256": "2792db7e2cd060a438ac1a4c5084b2a381df2bf7d80dcd360371507af88a7dcc"}
 {"bytes": 4983, "id": 370, "module": "data.scaffolds.roots", "path": "data/scaffolds/roots.py", "sha256": "1ce3bf812cf383486ff29cc23dccf72acc66fec7f1f3641a80d977950b964696"}
 {"bytes": 16025, "id": 371, "module": "data.scaffolds.runtime_extensions", "path": "data/scaffolds/runtime_extensions.py", "sha256": "cd658cee4bf1dedc7828773c8c6d3626de1b074aedd15f8046cb7c948b549797"}
 {"bytes": 6166, "id": 372, "module": "data.scaffolds.scorer_input", "path": "data/scaffolds/scorer_input.py", "sha256": "3d567c5a7dcf19c011425979cf845c6352c468960ae406ec639a8d6e27c0dfee"}
@@ -588,7 +588,7 @@
 {"bytes": 1062, "id": 587, "module": "tools.configure_responses_overlay", "path": "tools/configure_responses_overlay.py", "sha256": "c2c69997b05dcea38f2597688d48ac7b2ff791c517f620181f20cebce5df6818"}
 {"bytes": 44030, "id": 588, "module": "tools.dataset_classes", "path": "tools/dataset_classes.py", "sha256": "4436a4e3255bcc89cf67b218d57b0f309cd7d172ebf4e8734291c75b876ace59"}
 {"bytes": 23656, "id": 589, "module": "tools.dataset_lint", "path": "tools/dataset_lint.py", "sha256": "d1b7a8cef477e3047d01056223fa75813bc101da13381af205c6639cea630dbb"}
-{"bytes": 28051, "id": 590, "module": "tools.datasets", "path": "tools/datasets.py", "sha256": "77432bd0d3d8a524f474493f33d640b9e9a358d5d16a88340b04cb300c8129eb"}
+{"bytes": 29126, "id": 590, "module": "tools.datasets", "path": "tools/datasets.py", "sha256": "c45ce27d5702ddf8a6993eec72b902e512e34f3196e07b2829ae2d417286c54b"}
 {"bytes": 45912, "id": 591, "module": "tools.datasets_doc", "path": "tools/datasets_doc.py", "sha256": "951f02ad389655e6619630c3a99f4e992e930f54858d10fba034ad3ad3328adc"}
 {"bytes": 5863, "id": 592, "module": "tools.diagnose_appworld", "path": "tools/diagnose_appworld.py", "sha256": "43c879cd3934493283b4cb558f50c4fa58ac7e20df2dd4451cbe70753bd18849"}
 {"bytes": 2291, "id": 593, "module": "tools.egress_forwarder", "path": "tools/egress_forwarder.py", "sha256": "1cb061b059b5080f792ab072de02f01d1a139ebede04038b7f289bd0dcefb722"}

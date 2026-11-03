@@ -51,23 +51,46 @@ def kind_of(name: str) -> str:
     return kind if kind in (KIND_DATASET, KIND_FIXTURE) else KIND_FIXTURE
 
 
+#: An adapter that exists as a file but could not be imported, name -> the reason.
+#: Filled by `published()`; read by `broken_adapters()` and by `tools/datasets.py --list`.
+_IMPORT_ERRORS: dict[str, str] = {}
+
+
+def broken_adapters() -> dict[str, str]:
+    """Adapters this interpreter cannot even import, with the exception that stopped it.
+
+    A registry must not offer a name it cannot load, so `published()` still drops these -- but
+    dropping silently is how a fresh clone ends up showing 57 of 59 datasets with no
+    explanation. The three reasons seen in practice are a missing optional dependency
+    (`chess`, `numpy`), an asset the install did not ship (a wheel has no `specs/*.json`), and
+    a genuinely broken adapter. A caller that shows a catalogue should show this too.
+    """
+    published()
+    return dict(_IMPORT_ERRORS)
+
+
 def published() -> tuple[str, ...]:
     """Every dataset a reader is meant to choose from, in name order.
 
     Programs that offer a choice -- the Launch form, the read API's option list -- read this
     rather than globbing `data/`, so "which datasets exist" has one answer.
+
+    **A name is here only if its adapter imports.** A module that cannot import is not a
+    dataset a reader can pick, and `load()` reports its own errors when someone actually runs
+    it; the reason it was dropped is kept in `_IMPORT_ERRORS` (`broken_adapters()`) rather than
+    thrown away, because "the catalogue is shorter here" is a fact a reader needs, not a
+    detail the platform may swallow.
     """
     out = []
+    _IMPORT_ERRORS.clear()
     for path in sorted((Path(__file__).resolve().parents[1] / "datasets").glob("*.py")):
         if path.stem in ("registry", "__init__"):
             continue
         try:
             if kind_of(path.stem) == KIND_DATASET:
                 out.append(path.stem)
-        except Exception:                                     # noqa: BLE001
-            # A module that will not import is not a dataset a reader can pick, and
-            # `load()` reports its own errors when someone actually runs it.
-            continue
+        except Exception as exc:                              # noqa: BLE001
+            _IMPORT_ERRORS[path.stem] = f"{type(exc).__name__}: {exc}"
     return tuple(out)
 
 
