@@ -216,11 +216,18 @@ local images), not contention — but both keep the lane on signals (c)/(d).
 ### Smokes
 
 * `python3 -m pytest -q -p no:cacheprovider --basetemp=… tests/quality/test_test_lanes.py` → **8 passed**.
+  (Historical: that file was deleted 2026-10-27 with the slim, so the command now exits `4`
+  with `file or directory not found`. It is kept as the record of the run that held then; no
+  guard replaces it today.)
 * Falsification of the guard: a bogus `EXCLUSIVE` entry with no signal, a stale
   name, a duplicate, and an undocumented `SLOW`/`EXCLUSIVE` overlap were each
   injected and each was rejected.
 * `python3 tools/run_tests.py --list` after the original change: **141 parallel files,
   9 exclusive files**; after the two source fixes above: **143 parallel, 7 exclusive**.
+  Re-measured 2026-11-03 on the release tree: **348 parallel, 7 exclusive** (355 files
+  total, 3255 s of parallel work at 32 jobs, 1361 s exclusive). The exclusive lane stayed
+  at 7 while the parallel lane grew with every delivery, which is the intended direction --
+  a new test joins the parallel lane unless it trips one of the signals below.
 
 ## What is static-only
 

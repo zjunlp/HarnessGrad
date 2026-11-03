@@ -52,12 +52,16 @@ harnessgrad run --config experiments/quickstart.json --check-only
 check     req  result  detail
 python    yes  ok      python 3.12.4
 git       yes  ok      git version 2.34.1
-bwrap     yes  ok      /usr/bin/bwrap builds a namespace
+bwrap     yes  ok      /usr/bin/bwrap: namespace builds (bubblewrap 0.6.1)
 dataset   yes  ok      gsm8k: 8792 tasks
-harness   yes  ok      base_harness/loop (cli, entrypoint agent.py)
-writable  yes  ok      runs root and work root can be created
-disk      no   ok      119.5 GB free (a run needs about 5 GB)
+harness   yes  ok      <checkout>/base_harness/loop (cli, entrypoint agent.py, env_kinds files, exec)
+writable  yes  ok      runs root: runs can be created; work root: ../harnessgrad_work exists and is writable
+disk      no   ok      .: 93.1 GB free (a run needs about 5 GB)
+ready: every required check passed
 ```
+
+*(trimmed: the `harness` row names your checkout's absolute path, and the free-space figure is
+this machine's; a detail longer than the table's 96-column cell is cut with `...`.)*
 
 `--prepare-only` instead creates the run directory and its redacted `run_meta.json` and
 launches nothing. Both flags read the same arguments the real run will read, so the answer

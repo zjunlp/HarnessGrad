@@ -108,13 +108,14 @@ is about drawing it correctly.
 Go to `docs/dataset-onboarding.md`. Start from the generator rather than a copy:
 
 ```sh
-python3 tools/new_dataset.py --kind qa|command <name> --source-url … \
+python3 tools/new_dataset.py --kind qa <name> --source-url … \
     --source-version … --source-size … --source-note "the trap"
 ```
 
 The scaffold already passes the five gates against a toy table, so what you replace is the
-data and the metric, not the wiring. `--kind files` refuses on purpose: read the reason it
-prints.
+data and the metric, not the wiring. `--kind` takes one of `qa`, `command` or `files`: a
+`files` dataset ships a runtime tree the agent acts inside, and its check inspects the state
+rather than one answer string.
 
 ### 3.2 Refused
 

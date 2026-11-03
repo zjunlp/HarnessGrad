@@ -14,7 +14,7 @@ python3 tools/prepare_h0.py --dataset appworld --side train \
 #    --h0-from h0-appworld-<stamp>
 
 # then every study run for that dataset passes it
-driver.py ... --h0-from h0-appworld-<stamp>
+python3 driver.py ... --h0-from h0-appworld-<stamp>
 ```
 
 The tool refuses instead of measuring when a valid baseline for the same configuration is already
