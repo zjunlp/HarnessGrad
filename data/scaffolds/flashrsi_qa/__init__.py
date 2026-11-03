@@ -122,11 +122,10 @@ class Dataset:
             # old literal survive as the `legacy` tier, so a run recorded before the
             # migration keeps resolving to the bytes it was measured on.
             from data.scaffolds import roots
-            # No legacy tier: this adapter family arrived on 2026-11-02, so no recorded run
-            # resolves through an older literal and there is nothing to keep working. The
-            # adapter module above passes its own `roots.dataset_root(..., legacy=...)` when
-            # it needs one.
-            root=roots.dataset_root(name)
+            # Same fallback as the research family: the adapter module above passes its own
+            # `roots.dataset_root(..., legacy=...)`, and a caller that constructs
+            # `Dataset('x')` directly keeps the per-dataset variable it documents.
+            root=roots.dataset_root(name,legacy=os.environ.get(f'HG_{name.upper()}_ROOT'))
         self.root=Path(root).expanduser().resolve()
         if self.root == PACKAGE.parents[2] or PACKAGE.parents[2] in self.root.parents:
             raise ValueError('dataset root must be outside the platform tree')

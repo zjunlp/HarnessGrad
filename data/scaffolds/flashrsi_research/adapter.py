@@ -48,10 +48,12 @@ class Adapter:
         if self._root is not None:
             return self._root
         from data.scaffolds import roots
-        # No legacy tier here for the same reason as the QA family: this adapter arrived on
-        # 2026-11-02. A module that keeps an old default spells it in its own
-        # `roots.dataset_root(..., legacy=...)` call and passes the result in.
-        return roots.dataset_root(self.name)
+        # A module that names a default spells it in its own
+        # `roots.dataset_root(..., legacy=...)` call and passes the result in; this fallback
+        # serves callers that construct `Adapter('x')` directly (tests, tools) and keeps the
+        # per-dataset variable those callers already document working.
+        return roots.dataset_root(self.name,
+                                  legacy=os.environ.get('HG_' + self.name.upper() + '_DATA'))
 
     def manifest(self):
         if self.root.resolve() == ROOT or self.root.resolve().is_relative_to(ROOT):
