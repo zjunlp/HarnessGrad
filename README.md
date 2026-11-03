@@ -48,12 +48,23 @@ Shipped experiments, each with a documented cost and prerequisites:
 | a paper you want to reproduce | nothing yet: pick the recipe and read its cost | [rsi-experiments.md](docs/rsi-experiments.md) |
 
 **59 benchmarks** are declared, and the registry knows how to obtain each one. These four are
-declared and *refused* rather than approximated, because the thing they need does not exist
-here: `api_bank` (the dialogue state its recorded replies depend on), `nestful` (a Win Rate
-its own release does not reproduce), `sotuqa` (a headline judge metric that resolved to a
-retired model), `tau2_bench` (no second party). Each lifts when that missing piece is
-declared in the receipt's `identity`; until then `load()` raises, and
-[`registry/dataset-blockers.json`](registry/dataset-blockers.json) says why.
+declared but not yet measurable, and the four † are why. Three need an artefact this
+repository cannot produce, so no amount of code closes them: `api_bank` needs the dialogue
+state its recorded API replies depend on (the gold call reproduces its own recorded reply on
+262 of 508 samples), `nestful` needs a release whose official Win Rate reproduces itself (the
+pinned scorer returned 1857/4 then 1854/7 on the same gold sequences), and `sotuqa` needs a
+judge model that can be named and re-run (its `acc` resolved to `text-davinci-003`).
+
+`tau2_bench` is the fourth and the different one: its exclusion was lifted, its two missing
+facilities ship in this repository (`tau3_bench/lib/runtime.py` runs the official user
+simulator, `eval/service/judge.py` the judge), and what remains is a v0.1.0 pin and a split —
+τ² tasks below 1.0.1 are not comparable with results at or above it, so mixing revisions would
+produce a number neither paper supports. Its `load()` still raises, and the receipt's
+`identity` is where the missing piece has to appear when it stops.
+
+Every one is recorded with its reason in
+[`registry/dataset-blockers.json`](registry/dataset-blockers.json), and the reasoning for the
+four is in [`docs/refusal-policy.md`](docs/refusal-policy.md).
 
 ## Why one command is enough
 
