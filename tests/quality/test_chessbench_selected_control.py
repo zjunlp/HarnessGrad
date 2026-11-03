@@ -187,11 +187,12 @@ def staged_verifier(tmp_path):
     return tmp_path, gold, spec
 
 
-def assert_redacted_failure(staged_verifier, expected_error):
+def assert_redacted_failure(staged_verifier, expected_error, *, without_site_packages=False):
     workdir, gold, spec = staged_verifier
+    flags = ["-I", "-S"] if without_site_packages else ["-I"]
     proc = subprocess.run(
-        [sys.executable, *spec["argv"][1:]], cwd=workdir,
-        env={**os.environ, "PYTHONPATH": str(workdir)},
+        [sys.executable, *flags, *spec["argv"][1:]], cwd=workdir,
+        env=os.environ.copy(),
         capture_output=True, text=True, timeout=30,
     )
     assert proc.returncode == 3, proc.stdout + proc.stderr
@@ -226,7 +227,7 @@ def test_import_failure_evidence_redacts_private_reference(staged_verifier, fail
     workdir = staged_verifier[0]
     if failure == "missing_adapter":
         (workdir / "data/datasets/chessbench_puzzles.py").unlink()
-    else:
-        (workdir / "chess.py").write_text(
-            'raise ImportError("synthetic unavailable chess dependency")\n')
-    assert_redacted_failure(staged_verifier, "could not import data.datasets.chessbench_puzzles")
+    # A task-created chess.py is ignored by isolated startup. Excluding trusted
+    # site packages models an actually unavailable dependency instead.
+    assert_redacted_failure(staged_verifier, "could not import data.datasets.chessbench_puzzles",
+                            without_site_packages=failure == "missing_chess_dependency")
