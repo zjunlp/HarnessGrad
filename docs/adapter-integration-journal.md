@@ -6325,3 +6325,14 @@ The registry delegates loading to the adapter and preserves import failures. A
 for runtime tasks bundled in git. With storage unconfigured, tau-bench retains
 634 default-pool tasks and 514 dev-pool tasks with their native split declarations;
 adapters that actually access external bytes still report the missing setting.
+
+
+### Isolated direct QA controls (2026-11-03)
+
+The direct control supplies Python `-I` when the verifier declaration relies on
+a native manifest for flags. Native script positions and independent admission
+pins are unchanged. Correct/incorrect-answer controls cover both declaration
+forms and task-created same-name modules; Chess selected controls use the actual
+isolated scorer and retain reference redaction checks for invalid input and
+missing dependencies. BFCL source/sink reviews are refreshed without dropping
+whole-source hash assertions or changing fabricated observations.
