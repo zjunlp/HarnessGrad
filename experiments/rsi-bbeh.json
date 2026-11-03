@@ -1,0 +1,14 @@
+{
+  "dataset": "bbeh",
+  "harness": "loop",
+  "split": "splits/bbeh.json",
+  "side": "train",
+  "sampling": "random_5",
+  "method": "dgm",
+  "rounds": 1,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 42,
+  "run_id": "bbeh-dgm-study",
+  "fail_on_incomplete": true
+}

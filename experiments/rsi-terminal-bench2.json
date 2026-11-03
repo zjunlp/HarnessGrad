@@ -1,0 +1,14 @@
+{
+  "dataset": "terminal_bench",
+  "harness": "loop",
+  "split": "splits/terminal-bench2.json",
+  "side": "train",
+  "sampling": "random_5",
+  "method": "dgm",
+  "rounds": 1,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 42,
+  "run_id": "terminal-bench2-dgm-study",
+  "fail_on_incomplete": true
+}

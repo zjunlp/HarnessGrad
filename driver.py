@@ -1155,9 +1155,12 @@ def _main(attempt: dict) -> int:
                          "the directory and exit 0, launching nothing. Combined with "
                          "--check-only, the checks gate the preparation")
     ap.add_argument("--check-net", action="store_true",
-                    help="--check-only: also GET {HG_AGENT_BASE_URL}/models with a 3 s "
+                    help="--check-only: also GET /models for each necessary agent/method endpoint with a 3 s "
                          "timeout. Opt-in because it is the one check that leaves the "
                          "machine")
+    ap.add_argument('--fail-on-incomplete', action='store_true',
+                    help='exit 2 when the requested experiment ended with method/measurement failures; '
+                         'a valid method-requested early stop remains successful')
     # `--config` / `--set` are expanded into the flags they name before the parser sees
     # them (`_expand_experiment_argv`); nothing else about the parse changes.
     expanded = _expand_experiment_argv(sys.argv[1:])
@@ -1340,6 +1343,18 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
 
+    # Known model/method configuration failures belong before H0 can spend a
+    # single generation. Unknown external methods may be self-contained.
+    args.harness_dir = str(harness_src)
+    local_checks = readiness.configuration_checks(args)
+    if args.check_net:
+        local_checks.extend(readiness.endpoint_checks(args))
+    failed_configuration = [check for check in local_checks if check.required and not check.ok]
+    if failed_configuration:
+        print(readiness.render(local_checks))
+        print('refusing to run: model/method configuration failed before H0', file=sys.stderr)
+        return 2
+
     try:
         tasks_all, scorable, split = datasets.load_split(args.dataset)
         oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
@@ -1435,6 +1450,11 @@ def _main(attempt: dict) -> int:
               file=sys.stderr)
         return 2
     setups, verifiers, envs = _narrow_to_run(setups, verifiers, envs, side_ids)
+    model_checks = readiness.selected_model_checks(args, verifiers=verifiers, setups=setups)
+    if any(check.required and not check.ok for check in model_checks):
+        print(readiness.render(model_checks))
+        print('refusing to run: selected judge/environment configuration failed before H0', file=sys.stderr)
+        return 2
     if scenario_spec is not None:
         try:
             _check_scenario_runtime(scenario_spec, model, manifest(harness_src), envs)
@@ -2053,6 +2073,21 @@ def _main(attempt: dict) -> int:
             improver=improver, after_evaluation=save_policy_receipt)
         if budget_binding is not None:
             _write_run_meta(run_dir, budget=budget_binding.metadata())
+        from harnessgrad.completion import describe as describe_completion
+        eval_curve = run_dir / 'curve.jsonl'
+        if result == 0 and eval_curve.is_file():
+            points = [json.loads(line) for line in eval_curve.read_text().splitlines() if line.strip()]
+            completion = describe_completion(points, requested_rounds=0)
+        else:
+            completion = {'status': 'incomplete', 'requested_rounds': 0, 'completed_rounds': 0,
+                'reason': 'held-out measurement did not complete', 'failed_rounds': [], 'coverage_complete': False}
+        _write_run_meta(run_dir, completion=completion, fail_on_incomplete=args.fail_on_incomplete)
+        console.note(f"{completion['status'].upper()}: held-out measurement; {completion['reason']}",
+                     level='warn' if completion['status'] == 'incomplete' else 'info')
+        if result == 0:
+            _write_end_summary(args, run_dir, eval_curve)
+        if args.fail_on_incomplete and completion['status'] == 'incomplete':
+            return 2
         return result
 
     cache: dict = {}
@@ -2403,6 +2438,15 @@ def _main(attempt: dict) -> int:
     # the console prints the table it describes. This is the only call site -- a refusal,
     # an exception or a run that measured no curve never reaches it -- and a failure inside
     # it is one line on stderr that never reaches the exit code (`_write_end_summary`).
+    from harnessgrad.completion import describe as describe_completion
+    final_meta = json.loads((run_dir / 'run_meta.json').read_text())
+    completion = describe_completion(curve, requested_rounds=args.rounds,
+        failed_steps=final_meta.get('failed_steps') or [], method_stopped=final_meta.get('method_stopped', False))
+    _write_run_meta(run_dir, completion=completion, fail_on_incomplete=args.fail_on_incomplete)
+    label = completion['status'].upper()
+    console.note(f"{label}: {completion['completed_rounds']}/{completion['requested_rounds']} "
+                 f"improvement rounds; {completion['reason']}",
+                 level='warn' if completion['status'] == 'incomplete' else 'info')
     summary_path = _write_end_summary(args, run_dir, curve_path)
     console.results(curve, split=split)
     console.artifact("curve", curve_path)
@@ -2410,7 +2454,7 @@ def _main(attempt: dict) -> int:
         console.artifact("summary", summary_path)
     console.artifact("workspace", work)
     console.artifact("events", run_dir / "events.jsonl")
-    return 0
+    return 2 if args.fail_on_incomplete and completion['status'] == 'incomplete' else 0
 
 
 def main() -> int:

@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 5  # 5 adds the read-only host-side tool socket (`eval/containers/tool_route.py`);
+PLAN_VERSION = 6  # 6 mounts the active venv and its base interpreter as distinct runtime trees;
+                  # 5 adds the read-only host-side tool socket (`eval/containers/tool_route.py`);
                   # 4 was the offline model socket and the trusted namespace-local HTTP bootstrap.
 
 #: Runtime trees a subject may need, bound read-only at their host paths. Kept as
@@ -100,20 +101,50 @@ class SandboxUnavailable(RuntimeError):
     """bwrap is missing or cannot build a namespace. Never silently fall back."""
 
 
-def interpreter_prefix() -> Path | None:
-    """The tree holding the running interpreter, if it lives outside the host root.
+def interpreter_prefixes() -> tuple[Path, ...]:
+    """Actual active Python environment and base userland, never their parents.
 
-    A conda env or a venv is one directory that must survive step 2. `/usr/bin/python3`
-    needs nothing extra (step 1 already bound `/usr`); `/mnt/8t/.../anaconda3/bin/python3`
-    needs its prefix, or the subject starts and immediately dies importing `openai`.
+    Resolving ``sys.executable`` first loses a normal venv: its ``bin/python`` is
+    a symlink into the base interpreter but packages and pyvenv.cfg remain in
+    ``sys.prefix``. Preserve both paths so the same executable keeps the same
+    dependencies inside the namespace. These are trusted launcher facts, not
+    paths chosen by an actor or guessed from PATH.
     """
-    exe = Path(sys.executable).resolve()
-    for parent in exe.parents:
-        if (parent / "pyvenv.cfg").exists() or (parent / "conda-meta").is_dir():
-            return parent
-        if parent == Path("/"):
-            break
-    return None
+    prefixes = []
+    for value in (sys.prefix, sys.base_prefix):
+        path = Path(value)
+        if (not path.is_absolute() or path == Path('/') or '..' in path.parts
+                or not path.is_dir()):
+            raise SandboxUnavailable(f'the Python runtime prefix is not an absolute directory: {value!r}')
+        if any(part.is_symlink() for part in (path, *path.parents)):
+            raise SandboxUnavailable(f'the Python runtime prefix contains a symlink: {path}; '
+                                     'use its physical directory when creating the environment')
+        if not any(path == parent or parent in path.parents for parent in map(Path, RUNTIME)):
+            if path not in prefixes:
+                prefixes.append(path)
+    return tuple(prefixes)
+
+
+def interpreter_prefix() -> Path | None:
+    """Compatibility helper for callers interested in the first external prefix."""
+    prefixes = interpreter_prefixes()
+    return prefixes[0] if prefixes else None
+
+
+def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writable_paths, state_dirs):
+    """Validate automatic runtime projections without reopening hidden storage."""
+    prefixes = interpreter_prefixes()
+    hidden = hidden_trees(work_root, platform)
+    writable = tuple(Path(p).resolve() for p in (work_root, task_dir, *writable_paths, *state_dirs))
+    for prefix in prefixes:
+        if any(prefix == tree or tree in prefix.parents for tree in hidden):
+            raise SandboxUnavailable(f'Python environment {prefix} is under a hidden sandbox tree; '
+                                     'create the venv outside /tmp and outside the platform/work directory '
+                                     '(for example ~/.venvs/harnessgrad). The sandbox will not expose that tree.')
+        if any(prefix == path or path in prefix.parents for path in writable):
+            raise SandboxUnavailable(f'Python environment {prefix} is inside writable task/work storage; '
+                                     'create the venv separately (for example ~/.venvs/harnessgrad)')
+    return prefixes
 
 
 def hidden_trees(work_root: Path, platform: Path) -> list[Path]:
@@ -217,8 +248,7 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
         if Path(path).exists():
             plan += ["--ro-bind", path, path]
 
-    prefix = interpreter_prefix()
-    if prefix is not None:
+    for prefix in _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs):
         plan += ["--ro-bind", str(prefix), str(prefix)]
 
     # Trees the harness declares it needs, bound read-only.
@@ -805,7 +835,7 @@ def self_check(platform: Path, work_root: Path) -> dict:
                        work_root=work_root, task_dir=tmp_path,
                        env={}, timeout_s=60, cwd=tmp_path,
                        repo=fake_repo, state_dirs=(state_dir,))
-        except (subprocess.TimeoutExpired, OSError) as exc:
+        except (subprocess.TimeoutExpired, OSError, SandboxUnavailable) as exc:
             return {"ok": False, "detail": f"sandbox probe did not run: {exc}"}
 
     if proc.returncode != 0:
@@ -869,7 +899,7 @@ def self_check(platform: Path, work_root: Path) -> dict:
                         work_root=work_root, task_dir=Path(tmp2),
                         env={}, timeout_s=60, cwd=Path(tmp2),
                         repo=Path(tmp2), task_dir_writable=False)
-        except (subprocess.TimeoutExpired, OSError) as exc:
+        except (subprocess.TimeoutExpired, OSError, SandboxUnavailable) as exc:
             return {"ok": False, "detail": f"verification probe did not run: {exc}"}
 
     if proc2.returncode != 0:

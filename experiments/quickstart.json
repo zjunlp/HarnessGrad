@@ -1,10 +1,10 @@
 {
-  "dataset": "gsm8k",
+  "dataset": "demo",
   "harness": "loop",
   "side": "train",
-  "sampling": "random_5",
+  "sampling": "all",
   "method": "echo_base",
-  "rounds": 1,
+  "rounds": 2,
   "jobs": 1,
   "trials": 1,
   "seed": 0,

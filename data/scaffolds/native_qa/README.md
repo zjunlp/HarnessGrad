@@ -20,8 +20,15 @@ run upstream's experiment runner. Scorer bytes and source paths are recorded in
 
 NQ here is explicitly the contextual short-answer subset defined by upstream; it
 is not the official NQ long/short answer offset F1 or an answerable-rate claim.
-BBEH duplicate question groups cause refusal, matching upstream's default; this
-port does not silently choose a label or filter contradictory duplicates.
+BBEH duplicate question groups cause refusal, matching upstream's default. An
+explicit preparation option `--duplicate-questions exclude` implements its
+whole-group exclusion policy: every repeated question is removed, including all
+contradictory labels. Source JSONL remains complete and digest-bound; a `selection`
+receipt records the policy, source/retained/excluded counts and question-ID hashes.
+The loader recomputes those fields before filtering, rather than trusting an
+arbitrary exclusion list. This creates a filtered experimental pool, not a full
+official benchmark score. The pinned 4520-row source excludes 9 repeated rows and
+retains 4511 tasks under this explicit policy. Other QA datasets do not accept it.
 
 ## Prepare, without changing runtime behavior
 
@@ -30,7 +37,7 @@ installation. Preparation is the only phase that may use the network:
 
 ```bash
 python3 -m data.scaffolds.native_qa.prepare --dataset searchqa
-python3 -m data.scaffolds.native_qa.prepare --dataset bbeh
+python3 -m data.scaffolds.native_qa.prepare --dataset bbeh --duplicate-questions exclude
 python3 -m data.scaffolds.native_qa.prepare --dataset math500
 ```
 
@@ -54,13 +61,13 @@ under that hidden sandbox tree refuse with `ConfigMissing`. The adapter checks
 and uses the current platform interpreter for this dependency. This does not
 relax sandbox isolation or add an automatic dependency install.
 
-The existing driver startup self-check separately requires a sandbox-visible
-platform interpreter (the normal system/Conda environment). A symlinked venv
-interpreter can fail that startup probe even when this adapter's explicit scorer
-runtime is valid. The instrument tests exercise the latter through `run_one`;
-driver/registry tests run in the normal platform environment. Provision Math-Verify
-in the platform environment used for a driver launch; do not disable sandboxing
-to bypass its startup guard. This port does not expand global interpreter mounts.
+Sandbox plan 6 mounts the active venv and its base interpreter as distinct
+read-only runtime trees, preserving symlink-venv dependencies during the driver
+startup probe and task/scorer execution. Use an environment such as
+`~/.venvs/harnessgrad`, outside `/tmp`, the platform checkout and task/work
+storage. Hidden or writable runtime prefixes are refused before launch; do not
+disable sandboxing to bypass that guard. Provision Math-Verify in the environment
+used to launch the driver.
 
 OfficeQA-Pro separately requires `HG_OFFICEQA_PRO_CORPUS` or `<root>/corpus`.
 Supply the entire public corpus directory, with only ordinary txt/md/pdf/json

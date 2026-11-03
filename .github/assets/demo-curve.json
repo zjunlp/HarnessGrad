@@ -1,0 +1,96 @@
+{
+  "schema": "harnessgrad.offline-demo-figure.v1",
+  "mock_only": true,
+  "note": "Actual authored demo fixture controls with a mock solver and deterministic scripted edits. No benchmark or model capability claim.",
+  "reproduction": [
+    "HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --set run_id=demo-edit --improver none --fail-on-incomplete",
+    "HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --set method=noop --set run_id=demo-control --improver none --fail-on-incomplete"
+  ],
+  "runs": [
+    {
+      "run_id": "release-scripted",
+      "label": "Scripted edit (echo_base)",
+      "dataset": "demo",
+      "agent_backend": "mock",
+      "side": "train",
+      "task_count": 4,
+      "completion": {
+        "status": "complete",
+        "requested_rounds": 2,
+        "completed_rounds": 2,
+        "reason": "requested improvement measurements completed",
+        "failed_rounds": [],
+        "coverage_complete": true
+      },
+      "sandbox_plan": 6,
+      "curve_sha256": "95a3dcc14be1d1a5aaf49524823bd325acf7c52ef5fd6bb45414381c84004077",
+      "points": [
+        {
+          "round": 0,
+          "score": 0.0,
+          "n_scored": 4,
+          "harness_sha": "9c5ba821c310ba2636ebf991aee3191eb6dbe5d1"
+        },
+        {
+          "round": 1,
+          "score": 1.0,
+          "n_scored": 4,
+          "harness_sha": "93f34aa96a6eb3faaffa2faaae45fad398eca065"
+        },
+        {
+          "round": 2,
+          "score": 1.0,
+          "n_scored": 4,
+          "harness_sha": "fc2897bed84b70f08075a20b1a3cd067d8938428"
+        }
+      ]
+    },
+    {
+      "run_id": "release-control",
+      "label": "No-op control",
+      "dataset": "demo",
+      "agent_backend": "mock",
+      "side": "train",
+      "task_count": 4,
+      "completion": {
+        "status": "early_stop",
+        "requested_rounds": 2,
+        "completed_rounds": 1,
+        "reason": "method explicitly stopped before its maximum round budget",
+        "failed_rounds": [],
+        "coverage_complete": true
+      },
+      "sandbox_plan": 6,
+      "curve_sha256": "16238022e59b77e72d082f6637eaa4e5f3b55928bf89d03bb4574cc19c426a28",
+      "points": [
+        {
+          "round": 0,
+          "score": 0.0,
+          "n_scored": 4,
+          "harness_sha": "9c5ba821c310ba2636ebf991aee3191eb6dbe5d1"
+        },
+        {
+          "round": 1,
+          "score": 0.0,
+          "n_scored": 4,
+          "harness_sha": "9c5ba821c310ba2636ebf991aee3191eb6dbe5d1"
+        }
+      ]
+    }
+  ],
+  "heldout_check": {
+    "dataset": "demo",
+    "side": "eval",
+    "score": 1.0,
+    "n_scored": 4,
+    "harness_sha": "fc2897bed84b70f08075a20b1a3cd067d8938428",
+    "completion": {
+      "status": "complete",
+      "requested_rounds": 0,
+      "completed_rounds": 0,
+      "reason": "requested improvement measurements completed",
+      "failed_rounds": [],
+      "coverage_complete": true
+    }
+  }
+}

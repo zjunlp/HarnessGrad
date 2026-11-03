@@ -305,6 +305,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     budget, DGM with its archive -- runs in mode B, because re-wiring its
     schedule would change the thing being measured.
     """
+    if args.rounds <= start_steps:
+        return curve  # An H0-only harness smoke needs no optimizer process.
     argv = args.method_entrypoint
     if not argv:
         print("mode A needs --method-entrypoint pointing at an external method",
@@ -480,7 +482,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             console.note(f"round {r}: the trajectory is unreadable: {exc}", level="error")
             failed_steps.append({"round": r,
                                  "why": f"unreadable trajectory: {exc}"[:400]})
-            return None, None, 0.0, 0.0
+            return None, None, 0.0
         return reply, traj, gen_s
 
     #: What the method said about its own search, recorded from the first trajectory that
@@ -1085,6 +1087,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
            if "selection_pool_size" in declared_shape else {}),
         improver=improver or None,
         failed_steps=failed_steps,
+        method_stopped=bool(submission_stop and not pending),
         rounds_measured=len([p for p in curve if p.get("measured_by_platform")]),
         # A submission larger than the remaining budget is truncated, and that is a fact a
         # reader needs: the method asked for more states than the run paid for.

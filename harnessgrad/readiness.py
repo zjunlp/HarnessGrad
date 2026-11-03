@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -114,12 +115,260 @@ def plan_checks(args) -> list[Check]:
         except Exception as exc:                              # noqa: BLE001 - see module doc
             checks.append(Check(name, required, False,
                                 f"probe raised {type(exc).__name__}: {exc}"))
+    try:
+        checks.extend(configuration_checks(args))
+    except (OSError, ValueError, TypeError, AttributeError):
+        checks.append(Check('models', True, False, 'model/method configuration is invalid; no task launched'))
+    if any(check.name == 'dataset' and check.ok for check in checks):
+        checks.extend(selected_model_checks(args))
     if getattr(args, "check_net", False):
         try:
-            checks.append(_endpoint_check())
-        except Exception as exc:                              # noqa: BLE001
-            checks.append(Check("endpoint", False, False,
-                                f"probe raised {type(exc).__name__}: {exc}"))
+            checks.extend(endpoint_checks(args))
+        except (OSError, ValueError, TypeError, AttributeError):
+            checks.append(Check('endpoint', True, False, 'model channel configuration is invalid; no probe sent'))
+    return checks
+
+
+def _method_plan(args):
+    """Inspect trusted declarations only; never import/run candidate or method code."""
+    rounds = getattr(args, 'rounds', None)
+    if rounds is None:
+        rounds = 0 if getattr(args, 'sampling', '') in ('diagnostic', 'pilot_10pct') else 3
+    if getattr(args, 'side', 'train') == 'eval' or rounds == 0:
+        return None
+    entry = getattr(args, 'method_entrypoint', None)
+    if not entry:
+        return {'error': 'improvement rounds need --method-entrypoint (or experiment method)'}
+    from harnessgrad.methods import _check_method_entrypoint
+    argv = shlex.split(entry) if isinstance(entry, str) else entry
+    if not argv or not (Path(argv[0]).is_file() or shutil.which(argv[0])):
+        return {'error': 'method executable is missing'}
+    problem = _check_method_entrypoint(argv)
+    if problem:
+        return {'error': problem}
+    if any(part.endswith('.py') and not Path(part).is_file() for part in argv):
+        return {'error': 'method script is missing; use an existing absolute entrypoint'}
+    method = None
+    for arg in argv:
+        path = Path(arg)
+        if path.name == 'run.py' and path.parent.parent.resolve() == (PLATFORM_ROOT / 'methods').resolve():
+            method = path.parent
+            break
+    if method is None:
+        return {'custom': True}  # A self-contained external method may need no editor.
+    manifest = json.loads((method / 'method.json').read_text())
+    if manifest.get('kind') not in ('published', 'improver'):
+        return {'custom': True}
+    return {'name': method.name, 'requires': manifest.get('requires') or {},
+            'endpoint_only': bool(manifest.get('requires', {}).get('editor_model'))
+                or method.name == 'rrsi' or (method.name == 'meta_harness' and rounds > 1)}
+
+
+def _editor_plan(args, method):
+    cfg = current()
+    direct = {'kind': 'openai-compatible', 'base_url': cfg.method.base_url,
+              'model': cfg.method.model, 'key': cfg.method.api_key}
+    requested = getattr(args, 'improver', None)
+    if requested in ('none', 'noop', 'null'):
+        return direct
+    path = Path(cfg.improver.registry) if cfg.improver.registry else PLATFORM_ROOT/'harnessgrad/improvers/improvers.json'
+    registry = json.loads(path.read_text())
+    chosen = requested or registry.get('default')
+    entry = (registry.get('improvers') or {}).get(chosen)
+    if entry is None:
+        if requested and (Path(requested).is_file() or shutil.which(requested)):
+            return {'kind': 'cli', 'path': requested}
+        return {'error': 'selected improver is not declared or executable; configure --improver local or HG_METHOD_*'}
+    if entry.get('kind') == 'cli':
+        executable = entry.get('path') or shutil.which(chosen)
+        launcher = entry.get('launcher')
+        if launcher:
+            executable = str(PLATFORM_ROOT / launcher)
+        return {'kind':'cli', 'path': executable}
+    key = os.environ.get(entry['api_key_env']) if entry.get('api_key_env') else cfg.method.api_key
+    selected = {'kind': 'openai-compatible', 'base_url': entry.get('base_url') or cfg.method.base_url,
+            'model': getattr(args, 'improver_model', None) or entry.get('model') or cfg.method.model,
+            'key': key}
+    # Match the driver: an unavailable default improver does not override a
+    # fully configured method-owned endpoint. An explicit named selection does.
+    if requested is None and not all(selected.get(k) for k in ('base_url','model','key')):
+        if all(direct.get(k) for k in ('base_url','model','key')):
+            return direct
+    return selected
+
+
+def _resource(root, relative):
+    if (not isinstance(relative, str) or not relative or Path(relative).is_absolute()
+            or '..' in Path(relative).parts):
+        return False
+    path = root / relative
+    return path.resolve().is_relative_to(root.resolve()) and path.is_file()
+
+
+def configuration_checks(args):
+    """Cheap local prerequisites, shared by check-only and the real pre-H0 gate."""
+    checks = []
+    agent = current().agent
+    if agent.backend != 'mock':
+        missing = [label for label, value in [('HG_AGENT_MODEL',agent.model),
+            ('HG_AGENT_BASE_URL',agent.base_url),('HG_AGENT_API_KEY',agent.api_key)] if not value]
+        checks.append(Check('agent', True, not missing,
+            'configure ' + ', '.join(missing) if missing else f'{agent.backend}: model configured; credential present'))
+    try:
+        method = _method_plan(args)
+        if method is None or method.get('custom'):
+            return checks
+        if method.get('error'):
+            return [*checks, Check('method', True, False, method['error'])]
+        editor = _editor_plan(args, method)
+        error = editor.get('error')
+        if editor.get('kind') == 'cli':
+            path = editor.get('path')
+            if not path or not (Path(path).is_file() or shutil.which(path)):
+                error = 'selected CLI improver executable is missing'
+            if method['endpoint_only']:
+                direct = current().method
+                if not all((direct.base_url, direct.model, direct.api_key)):
+                    error = 'this method has structured roles requiring HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY as well as its CLI editor'
+        elif not error:
+            missing = [label for label in ('base_url','model','key') if not editor.get(label)]
+            if missing:
+                error = 'method editor needs HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY (or an explicitly configured improver)'
+        requires = method['requires']
+        minimum = requires.get('min_trials', 1)
+        if getattr(args, 'trials', 1) < minimum:
+            error = f"{method['name']} needs --trials >= {minimum}"
+        root, root_error = _harness_dir(args)
+        options = json.loads(os.environ.get('HG_POLICY_CONFIG', '{}'))
+        if not isinstance(options, dict):
+            raise ValueError('HG_POLICY_CONFIG must be a JSON object')
+        if requires.get('instruction_file') and not root_error:
+            instruction = options.get('instruction_path')
+            choices = [p for p in ('prompts/system.md','prompt.md','CLAUDE.md','AGENTS.md') if _resource(root,p)]
+            if not (instruction and _resource(root,instruction)) and not (instruction is None and len(choices)==1):
+                error = 'declare a loaded instruction_path in HG_POLICY_CONFIG or use a prompt-carrying harness (e.g. miniagent)'
+        if requires.get('modules'):
+            minimum = max(minimum, options.get('num_rollouts', 2))
+            if getattr(args, 'trials', 1) < minimum:
+                error = f"ModularRSI needs --trials >= num_rollouts ({minimum})"
+            modules = options.get('modules')
+            if (not isinstance(modules,dict) or not modules or any(not isinstance(v,list) or not v for v in modules.values())):
+                error = 'ModularRSI needs explicit HG_POLICY_CONFIG modules {name:[relative files]}'
+            else:
+                paths = [p for values in modules.values() for p in values]
+                if len(paths)!=len(set(paths)) or any(not _resource(root,p) for p in paths):
+                    error = 'ModularRSI modules need disjoint existing harness files'
+        checks.append(Check('method', True, not error, error or f"{method['name']}: editor and local requirements configured"))
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        checks.append(Check('method', True, False, f'method configuration is invalid ({type(exc).__name__})'))
+    return checks
+
+
+def _probe_endpoint(name, base, key, *, required=True):
+    if not base:
+        return Check(name, required, False, 'required endpoint base URL is not configured')
+    started = time.monotonic()
+    try:
+        request = urllib.request.Request(str(base).rstrip('/') + '/models', method='GET',
+            headers={'Accept':'application/json', **({'Authorization':'Bearer '+key} if key else {})})
+        with urllib.request.urlopen(request, timeout=ENDPOINT_TIMEOUT) as response:
+            response.read(1 << 20)
+            status = response.status
+        return Check(name, required, True, f'GET /models -> {status} in {time.monotonic()-started:.2f}s; no generation requested')
+    except Exception as exc:
+        # Provider errors can echo credentials or URLs with query secrets.
+        return Check(name, required, False, f'GET /models failed ({type(exc).__name__}); check endpoint, authentication and model route')
+
+
+def endpoint_checks(args):
+    checks = []
+    agent = current().agent
+    if agent.backend != 'mock':
+        checks.append(_probe_endpoint('agent-endpoint', agent.base_url, agent.api_key))
+    method = _method_plan(args)
+    if method and not method.get('custom') and not method.get('error'):
+        editor = _editor_plan(args, method)
+        if editor.get('kind') == 'openai-compatible':
+            checks.append(_probe_endpoint('method-endpoint', editor.get('base_url'), editor.get('key')))
+        elif method.get('endpoint_only'):
+            cfg = current().method
+            checks.append(_probe_endpoint('method-endpoint', cfg.base_url, cfg.api_key))
+    if not checks:
+        checks.append(Check('endpoint', False, True, 'no live HTTP model channel selected; no network probe needed'))
+    return checks
+
+
+def _selected_declarations(args):
+    """Resolve exactly the run's pre-H0 task selection without reading other values."""
+    from data.scaffolds.custom_split import resolve
+    from eval.run.metrics import select_task_set
+    tasks, _, declared = datasets.load_split(args.dataset)
+    division, _, _ = resolve(args.dataset, tasks, declared, getattr(args, 'split', None), side=args.side)
+    ids = list(division[args.side]) if division else [t['task_id'] for t in tasks]
+    requested = getattr(args, 'tasks', None)
+    if requested:
+        asked = {tid.strip() for tid in requested.split(',') if tid.strip()}
+        if not asked <= set(ids):
+            raise ValueError('requested tasks do not belong to selected split side')
+        ids = [tid for tid in ids if tid in asked]
+    sampling = getattr(args, 'sampling', 'all')
+    if sampling in ('diagnostic', 'pilot_10pct') or sampling.startswith('random_'):
+        ids = select_task_set({}, sampling, within=ids)
+    # Score-based sampling needs every selected-side task for H0, before its
+    # scores exist. It cannot reduce model prerequisites before that first pass.
+    if not ids:
+        raise ValueError('no tasks selected')
+    _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=ids)
+    return setups, verifiers
+
+
+def selected_model_checks(args, *, verifiers=None, setups=None):
+    """Validate ordinary selected verifier/environment channels without starting them.
+
+    Judge.__init__ validates frozen specs and local configuration only. No socket,
+    subprocess, filesystem output or model request is created until __enter__,
+    which preflight never calls. Native dual-provider/container routes keep their
+    own separate readiness contracts.
+    """
+    from eval.service.judge import Judge
+    try:
+        if verifiers is None or setups is None:
+            setups, verifiers = _selected_declarations(args)
+    except Exception as exc:
+        return [Check('selected-models', True, False,
+            f'selected dataset declarations could not be loaded ({type(exc).__name__}); check selected task data/runtime configuration')]
+    specifications = {'judge': [], 'environment': []}
+    for spec in verifiers.values():
+        if spec.get('judge') is not None:
+            specifications['judge'].append(spec['judge'])
+    for spec in setups.values():
+        model = (spec.get('tool_relay') or {}).get('model')
+        if model is not None:
+            specifications['environment'].append(model)
+    checks = []
+    for role, declarations in specifications.items():
+        if not declarations:
+            continue
+        prefix = 'HG_JUDGE' if role == 'judge' else 'HG_ENV'
+        try:
+            cfg = getattr(current(), role)
+            for declaration in declarations:
+                # A trial seed is an execution context, not a provider setting.
+                # Use a well-typed stand-in solely to validate the channel spec.
+                Judge(declaration, role=role, trial_seed=0)
+            checks.append(Check(role, True, True,
+                f'{len(declarations)} selected {role} model declarations configured; no generation requested'))
+            if getattr(args, 'check_net', False):
+                checks.append(_probe_endpoint(role+'-endpoint', cfg.base_url, cfg.api_key))
+        except Exception as exc:
+            try:
+                missing_base = not getattr(current(), role).base_url
+            except Exception:
+                missing_base = False
+            detail = (f'{prefix}_BASE_URL must be configured for the selected {role} channel'
+                if missing_base else f'selected {role} channel configuration invalid ({type(exc).__name__}); '
+                    f'check {prefix}_BASE_URL and the frozen model/profile declaration')
+            checks.append(Check(role, True, False, detail))
     return checks
 
 
@@ -263,20 +512,10 @@ def _dataset_check(args) -> Check:
                      f"{name!r} is not a published dataset; "
                      f"`python3 tools/datasets.py --list` prints the {len(published)} "
                      f"that are")
-    # Through the registry, never by importing the adapter here: `harnessgrad/` reaches a
-    # dataset only through `data/scaffolds/registry.py` (the import-boundary rule this
-    # table exists to serve). `provision_status` is `None` when the adapter makes no claim,
-    # which is different from a claim that the bytes are absent.
-    try:
-        answer = datasets.provision_status(name)
-    except Exception as exc:                                  # noqa: BLE001
-        return Check("dataset", True, False,
-                     f"{name}: the adapter's provision_status() raised "
-                     f"{type(exc).__name__}: {exc}")
-    if isinstance(answer, dict) and not answer.get("present"):
-        where = answer.get("split_dir") or answer.get("root") or "its data directory"
-        return Check("dataset", True, False,
-                     f"{name}: not provisioned — no data at {where}")
+    # Do not call provision_status here: some adapters implement it by probing
+    # every instance runtime, including tasks this run never selects. Public
+    # inventory establishes source presence; selected SETUP/VERIFY values are
+    # checked independently below. Full-pool status remains an explicit host tool.
     try:
         tasks, _scorable = datasets.load(name)
     except Exception as exc:                                  # noqa: BLE001
@@ -284,7 +523,22 @@ def _dataset_check(args) -> Check:
                      f"{name}: load() raised {type(exc).__name__}: {exc}")
     if not tasks:
         return Check("dataset", True, False, f"{name}: load() returned no tasks")
-    return Check("dataset", True, True, f"{name}: {len(tasks)} tasks")
+    detail = f"{name}: {len(tasks)} tasks; source loaded, checking selected declarations"
+    return Check("dataset", True, True, detail)
+
+
+def _split_check(args) -> Check:
+    """Use the real resolver before a check-only launch can call a split valid."""
+    from data.scaffolds.custom_split import resolve
+    try:
+        tasks, _, declared = datasets.load_split(args.dataset)
+        split, _, protocol = resolve(args.dataset, tasks, declared, args.split, side=args.side)
+        detail = f"{len(split['train'])} train / {len(split['eval'])} eval"
+        if protocol:
+            detail += f" / {protocol['counts']['excluded']} excluded; custom held-out"
+        return Check('split', True, True, detail)
+    except (OSError, ValueError, ImportError) as exc:
+        return Check('split', True, False, str(exc))
 
 
 def _split_check(args) -> Check:
@@ -393,46 +647,6 @@ def _disk_check(args) -> Check:
     return Check("disk", False, free >= FREE_DISK_BYTES,
                  f"{probe}: {free / 2 ** 30:.1f} GB free "
                  f"(a run needs about {FREE_DISK_BYTES / 2 ** 30:.0f} GB)")
-
-
-def _endpoint_check() -> Check:
-    """`GET {HG_AGENT_BASE_URL}/models` in three seconds, and never a credential by value.
-
-    `--check-net` is opt-in because this is the one probe that leaves the machine: a
-    `--check-only` on an air-gapped host must still answer the local questions. The key is
-    sent (an endpoint that requires it would answer 401 otherwise) and scrubbed from
-    every string that reaches the table, because `run_meta.json` and this table are both
-    written to disk and read by people.
-    """
-    agent = current().agent
-    base = (agent.base_url or "").strip().rstrip("/")
-    if not base:
-        return Check("endpoint", False, False,
-                     "HG_AGENT_BASE_URL is unset, so there is no endpoint to probe")
-    url = f"{base}/models"
-    key = agent.api_key or ""
-    request = urllib.request.Request(url, method="GET",
-                                     headers={"Accept": "application/json"})
-    if key:
-        request.add_header("Authorization", f"Bearer {key}")
-    started = time.monotonic()
-    try:
-        with urllib.request.urlopen(request, timeout=ENDPOINT_TIMEOUT) as response:
-            body = response.read(1 << 20)
-            status = getattr(response, "status", 0)
-    except Exception as exc:                                  # noqa: BLE001
-        return Check("endpoint", False, False,
-                     _without(f"GET {url}: {type(exc).__name__}: {exc}", key))
-    elapsed = time.monotonic() - started
-    listed = ""
-    try:
-        payload = json.loads(body or b"{}")
-        count = len(payload.get("data") or [])
-        listed = f", {count} models listed"
-    except (ValueError, AttributeError):
-        pass
-    return Check("endpoint", False, True,
-                 _without(f"GET {url} -> {status} in {elapsed:.2f}s{listed}", key))
 
 
 # ------------------------------------------------------------------ helpers ---

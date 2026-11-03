@@ -98,7 +98,10 @@ def test_the_platform_is_not_on_the_subjects_disk(tmp_path, staged_harness):
     # platform's parent as well would erase the name, but it would also erase the
     # work root's siblings, and a name is not a secret. The contents are what matter
     # and the contents are gone: an empty listing, not a hidden one.
-    assert seen["listing"] == [], seen
+    # A worktree beneath private /tmp disappears entirely; a platform elsewhere
+    # can survive as an empty mount point. Both views keep every platform byte
+    # absent, which the explicit probes above/below also verify.
+    assert seen["listing"] in ([], "not-a-dir"), seen
     assert seen["env"] is False and seen["driver"] is False, seen
     assert seen["impl"] is False, seen
     assert seen["scorer"] is False and seen["methods"] is False, seen
@@ -164,7 +167,7 @@ def test_the_work_root_survives_and_the_platform_does_not(tmp_path, staged_harne
     assert seen["harness_readable"] is True, "the harness lost its own source"
     assert seen["platform_readable"] is False, "the driver is still readable"
     assert seen["impl_readable"] is False, "the implementation package is still readable"
-    assert seen["platform_listing"] == [], seen
+    assert seen["platform_listing"] in ([], "not-a-dir"), seen
 
 
 @needs_bwrap

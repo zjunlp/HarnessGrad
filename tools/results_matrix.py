@@ -393,6 +393,9 @@ def _build_row(run_id: str, meta: dict, points: list[dict],
         "invalid": _sum_field([p for p, _ in scored], lambda p: p.get("n_invalid")),
         "calls": _sum_field([p for p, _ in scored], _harness_calls),
         "n_tasks": n_tasks,
+        "completion": meta.get('completion'),
+        "partition": ('custom-heldout' if meta.get('split_protocol') else meta.get('split_source')),
+        "split_sha": meta.get('split_sha'),
     }
 
 
@@ -471,6 +474,11 @@ def summarise(run_dir: Path, run_id: str, index: dict[str, Path],
     if _marked_running(meta, points):
         return "skipped", _skip(run_id, meta, points, method, method_source,
                                 "running", "the run record marks this run as in flight")
+
+    completion = meta.get('completion')
+    if isinstance(completion, dict) and completion.get('status') == 'incomplete':
+        return 'skipped', _skip(run_id, meta, points, method, method_source,
+            'incomplete', str(completion.get('reason') or 'the run did not complete its protocol'))
 
     scored = [p for p in points if _numeric(p.get("score")) is not None]
     if not scored:
@@ -570,7 +578,7 @@ def _table(header: list[str], rows: list[list[str]]) -> list[str]:
     return lines
 
 
-_ROW_COLUMNS = ["run_id", "method", "harness", "dataset", "pool", "side", "agent_model",
+_ROW_COLUMNS = ["run_id", "method", "harness", "dataset", "pool", "side", "partition", "status", "agent_model",
                 "r0", "last", "best", "best_round", "delta_pp", "last_delta_pp",
                 "rounds", "invalid", "calls", "n_tasks"]
 _SKIP_COLUMNS = ["run_id", "method", "harness", "dataset", "side", "reason", "detail"]
@@ -580,6 +588,7 @@ def _row_cells(row: dict) -> list[str]:
     return [
         row["run_id"], _dash(row.get("method")), _dash(row.get("harness")),
         _dash(row.get("dataset")), _dash(row.get("pool")), _dash(row.get("side")),
+        _dash(row.get('partition')), _dash((row.get('completion') or {}).get('status')),
         _dash(row.get("agent_model")),
         _pct(row.get("r0")), _pct(row.get("last")), _pct(row.get("best")),
         _dash(row.get("best_round")), _pp(row.get("delta_pp")), _pp(row.get("last_delta_pp")),
@@ -633,6 +642,9 @@ def render_markdown(payload: dict, *, group_by: str = "method") -> str:
         "- `side=train` is a training curve: the method has read the traces of the tasks it "
         "is scored on, so its score is inflated by construction. A `side` of "
         f"`{DASH}` means the record does not say which side the run measured.",
+        "- `partition=custom-heldout` is a user partition, never an official leaderboard score. "
+        "The JSON retains `split_sha`. `status` is the run's completion observation; "
+        "explicitly incomplete experiments are listed in the skipped table even when H0 has a valid score.",
         "- `method` comes from the curve point's `identity.method`, else the run's "
         "`method_entrypoint`, else the `evaluated_from` run, else the platform's run-id "
         "template, else `unknown`; `method_source` in the JSON says which. `pool` is the "

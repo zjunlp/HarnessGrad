@@ -7,6 +7,7 @@ retained. Gold rows never enter task.json or SETUP.
 from __future__ import annotations
 
 import csv
+from collections import Counter
 import hashlib
 import importlib.metadata
 import json
@@ -36,6 +37,24 @@ CATALOG = {
 def missing(message):
     from harnessgrad.config.areas import ConfigMissing
     raise ConfigMissing(message)
+
+
+def bbeh_selection(native_ids, policy='error'):
+    """The pinned BBEH policy: exclude every row of each repeated question.
+
+    IDs hash only category/question, never the answer. Counting happens before
+    partitioning, so contradictory labels cannot be arbitrarily retained and a
+    repeated question cannot leak across the experiment's two sides.
+    """
+    if policy not in ('error', 'exclude'):
+        raise ValueError('BBEH duplicate_questions must be error or exclude')
+    counts = Counter(native_ids)
+    repeated = {tid for tid, count in counts.items() if count > 1}
+    excluded = repeated if policy == 'exclude' else set()
+    excluded_rows = sum(counts[tid] for tid in excluded)
+    return {'duplicate_questions': policy, 'source_row_count': sum(counts.values()),
+        'excluded_duplicate_rows': excluded_rows, 'excluded_question_ids': sorted(excluded),
+        'retained_row_count': sum(counts.values()) - excluded_rows}, repeated
 
 
 def required(row, field):
@@ -161,13 +180,31 @@ class Dataset:
                 if result is None: continue
                 native_id,question,gold=result
                 native_key=native_id if self.name in ('bbeh','supergpqa','math','math500') else f'{split}/{native_id}'
-                if native_key in seen: raise ValueError(f'{self.name}: duplicate native question/id; no arbitrary exclusion')
+                if native_key in seen and self.name != 'bbeh': raise ValueError(f'{self.name}: duplicate native question/id; no arbitrary exclusion')
                 seen.add(native_key)
                 # Native IDs can contain separators. An encoded stable hash retains
                 # provenance without allowing path-shaped IDs to escape run storage.
                 task_id=f'{self.name}/{split}/'+hashlib.sha256(native_id.encode()).hexdigest()
                 records.append({'task_id':task_id,'source_split':split,'native_id':native_id,'question':question,'gold':gold})
         if splits!=set(self.source['splits']): raise ValueError('prepared source omits a native split; partial pool cannot masquerade as full release')
+        selection = manifest.get('selection')
+        if self.name == 'bbeh':
+            if selection is not None and not isinstance(selection, dict):
+                raise ValueError('BBEH selection receipt must be an object')
+            if selection is not None and any(type(selection.get(key)) is not int for key in
+                    ('source_row_count', 'excluded_duplicate_rows', 'retained_row_count')):
+                raise ValueError('BBEH selection receipt row counts must be integers')
+            policy = selection.get('duplicate_questions') if selection is not None else 'error'
+            expected, repeated = bbeh_selection([r['native_id'] for r in records], policy)
+            if selection is not None and selection != expected:
+                raise ValueError('BBEH selection receipt differs from the digest-bound source rows')
+            if repeated and policy == 'error':
+                raise ValueError('bbeh: duplicate native question/id; no arbitrary exclusion. '
+                    'Prepare with --duplicate-questions exclude to explicitly remove every repeated group')
+            if policy == 'exclude':
+                records = [r for r in records if r['native_id'] not in repeated]
+        elif selection is not None:
+            raise ValueError('duplicate-question selection is supported only for BBEH')
         if not records: raise ValueError('no eligible source tasks')
         self._records=records
         return records

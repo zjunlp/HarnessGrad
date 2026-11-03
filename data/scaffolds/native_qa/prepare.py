@@ -15,7 +15,7 @@ from pathlib import Path
 import tempfile
 import zipfile
 
-from . import CATALOG, Dataset
+from . import CATALOG, Dataset, bbeh_selection, parse_row
 
 
 def read(path):
@@ -63,7 +63,11 @@ def native_sources(name, root):
                 yield split, iter(data[split])
 
 
-def prepare(name, root, local=()):
+def prepare(name, root, local=(), *, duplicate_questions='error'):
+    if duplicate_questions not in ('error', 'exclude'):
+        raise ValueError('duplicate_questions must be error or exclude')
+    if name != 'bbeh' and duplicate_questions != 'error':
+        raise ValueError('--duplicate-questions is supported only for BBEH')
     root=Path(root).expanduser().resolve()
     if (root/'source-manifest.json').exists():
         raise ValueError('source-manifest.json already exists; use a fresh data root to preserve custody')
@@ -79,12 +83,15 @@ def prepare(name, root, local=()):
         sources=native_sources(name,root)
         acquisition='huggingface pinned revision'
     files=[]; split_counts={split:0 for split in CATALOG[name]['splits']}
+    native_ids=[]
     for index,(split,rows) in enumerate(sources):
         relative=f'rows/{index:02d}-{split}.jsonl'; target=root/relative
         target.parent.mkdir(exist_ok=True)
         digest=hashlib.sha256();count=0
         with target.open('wb') as stream:
             for row in rows:
+                if name == 'bbeh':
+                    native_ids.append(parse_row(name, row, split)[0])
                 encoded=(json.dumps(row,ensure_ascii=False,allow_nan=False)+'\n').encode('utf-8')
                 stream.write(encoded);digest.update(encoded);count+=1
         files.append({'path':relative,'split':split,'sha256':digest.hexdigest(),'rows':count})
@@ -94,6 +101,8 @@ def prepare(name, root, local=()):
     manifest={'version':1,'dataset':name,'source':spec['source'],'revision':spec['revision'],
               'upstream_commit':'e9c7667945f959d62da27204649a82f94d1b6705',
               'acquisition':acquisition,'files':files,'split_rows':split_counts}
+    if name == 'bbeh':
+        manifest['selection'], _ = bbeh_selection(native_ids, duplicate_questions)
     (root/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
     return manifest
 
@@ -103,9 +112,14 @@ def main():
     parser.add_argument('--dataset',required=True,choices=sorted(CATALOG))
     parser.add_argument('--root',type=Path)
     parser.add_argument('--local',action='append',default=[],metavar='SPLIT=PATH')
+    parser.add_argument('--duplicate-questions',choices=('error','exclude'),
+                        help='BBEH only: refuse duplicates (default), or explicitly exclude every repeated question group')
     args=parser.parse_args()
+    if args.duplicate_questions is not None and args.dataset != 'bbeh':
+        parser.error('--duplicate-questions is supported only for BBEH')
     root=args.root or Dataset(args.dataset).root
-    print(json.dumps(prepare(args.dataset,root,args.local),indent=2))
+    print(json.dumps(prepare(args.dataset,root,args.local,
+        duplicate_questions=args.duplicate_questions or 'error'),indent=2))
 
 
 if __name__=='__main__': main()

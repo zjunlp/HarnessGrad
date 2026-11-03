@@ -69,6 +69,7 @@ _FLAGS: dict[str, str] = {
     "from_run": "--from-run",
     "from_round": "--from-round",
     "no_sandbox": "--no-sandbox",
+    "fail_on_incomplete": "--fail-on-incomplete",
 }
 
 #: The keys, for the error message and for a caller that wants to document them.
@@ -235,10 +236,10 @@ def to_argv(config: dict) -> list[str]:
         value = config[key]
         if value is None:
             continue
-        if key == "no_sandbox":
+        if key in ("no_sandbox", "fail_on_incomplete"):
             if not isinstance(value, bool):
                 raise ExperimentError(
-                    f"no_sandbox must be true or false, got {value!r}")
+                    f"{key} must be true or false, got {value!r}")
             if value:
                 argv.append(flag)
             continue

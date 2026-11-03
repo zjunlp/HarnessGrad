@@ -8,18 +8,28 @@ driver flags, reviewed and diffed with the code. `driver.py --config <file>` exp
 flags before parsing; the spellings are `harnessgrad/experiments.py:_FLAGS` and a test
 re-reads `driver.py`'s argparse block, so a key with no flag is refused by name.
 
-## The two hand-written examples
+## Start offline, then choose a research workload
 
-* **`quickstart.json`** — one round of the reference `echo_base` method on five randomly
-  sampled `gsm8k` train tasks (`sampling: random_5`), `loop` harness, one job, one trial,
-  seed 0, run id `quickstart`. It needs nothing: `echo_base` is a reference method that
-  applies a fixed edit, so this is the file a first-time user can run as checked in. It is
-  the shape every `method-*.json` below copies.
-* **`eval-from-round.json`** — the eval-side measurement of round 1 of run `quickstart`:
-  `side: eval`, `sampling: all`, `from_run: quickstart`, `from_round: 1`. An eval run names
-  a train run to measure and has no `method`, because the candidate is already staged.
-  **Run `quickstart.json` first**; with no donor it exits 2 with `no run 'quickstart'
-  under <runs root>`.
+* **`quickstart.json`** uses the eight-task repository `demo`, the reference
+  `echo_base` scripted edit, `loop`, two maximum improvement rounds, one job and
+  one trial. No dataset download or model is needed with `HG_AGENT_BACKEND=mock`.
+  It is a plumbing control and is never a benchmark result.
+* **`eval-from-round.json`** measures round 2 of `quickstart` on demo's held-out
+  side. Run `quickstart.json` first, or override `from_run` with the actual study
+  run ID. It edits nothing on the exam side.
+* **`rsi-bbeh.json`** / **`rsi-bbeh-eval.json`** are the first real method recipe:
+  BBEH × DGM, five study tasks per round and five tasks in fixed-checkpoint eval.
+  They need pinned BBEH data, a frozen split, a live solver and an editor endpoint.
+* **`rsi-terminal-bench2*`**, **`rsi-deepsearchqa*`** and
+  **`rsi-swe-bench-pro-v2*`** cover terminal, research and code-repair agents.
+  They have additional service/image/runtime prerequisites. Read the exact
+  [preparation recipes](../docs/rsi-experiments.md) before launching.
+
+Recipe files set `fail_on_incomplete: true`: method errors or incomplete task
+measurements exit nonzero. A legitimate method stop remains successful and is
+reported as `early_stop`. The summary distinguishes completion from the last
+valid H0 score. Ordinary runs retain their legacy exit behavior when the flag
+is absent. Use fresh run IDs when repeating a recipe.
 
 ## Change one leaf, do not copy the file
 
@@ -44,9 +54,10 @@ python3 driver.py --config experiments/method-ahe.json --prepare-only  # writes 
 
 `--check-only` prints one row per prerequisite and exits 0 only when every required one is
 ok (2 otherwise); `--show-config` prints the effective platform configuration. None of them
-starts a task or a model call. They do not prove that the method endpoint is reachable —
-that is learned at round 1 — so `--check-only --check-net` exists for the one check that
-leaves the machine.
+starts a task or a model call. Local checks validate known method/editor prerequisites before H0. Add
+`--check-net` to probe the required live agent and editor channels with GET requests;
+an explicitly requested necessary endpoint failure is fatal. These probes never
+generate tokens or prove a model can execute an entire experiment.
 
 ## The method presets
 
@@ -55,7 +66,7 @@ leaves the machine.
 `rounds: 1`, `jobs: 1`, seed 0, run id `<name>-quickstart`, `loop` as the harness and one
 trial -- except where the method's own `method.json:requires` says otherwise (the ten
 upstream ports below: six need a prompt-carrying harness, one needs two trials). These are
-one-line smoke tests of the method's propose/measure loop, not a benchmark protocol: five
+legacy small QA smoke configurations of the method's propose/measure loop, not a benchmark protocol: five
 tasks and one trial cannot resolve a difference between two methods.
 
 **Every one of them needs an improver, and none can complete a round without one.**
@@ -65,8 +76,9 @@ is a separate budget (`HG_METHOD_BASE_URL / HG_METHOD_API_KEY / HG_METHOD_MODEL`
 
     entrypoint failed ... a method needs HG_METHOD_BASE_URL / HG_METHOD_API_KEY / HG_METHOD_MODEL
 
-the curve stops at H0, and the driver still exits 0. `--check-only` does not test the
-improver, so it is not a substitute for configuring one. The cheapest honest configurations
+the curve stops at H0, and the legacy driver exit remains 0 without `--fail-on-incomplete`. Known method
+prerequisites are now checked before H0, and strict runs distinguish failures from
+a valid early stop. This is not a substitute for configuring a reachable editor. The cheapest honest configurations
 are a CLI improver (`--improver codex` or `dsh`, which needs that tool logged in) or an
 endpoint (`--improver local` against a local server, or `HG_METHOD_*` set directly).
 `tests/quality/test_method_presets_run.py` skips exactly the endpoint-only files with that

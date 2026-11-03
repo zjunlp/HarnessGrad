@@ -4,6 +4,31 @@ You have a directory with an `agent.py` in it (or a `run.sh`, or a wrapper aroun
 else's agent CLI). You want it on a curve this platform measured. This page is the sequence
 you run.
 
+## Five-minute entry
+
+Choose the closest existing template; keep your agent code outside the platform:
+
+```bash
+# Python + shell tools, or a Bash/CLI implementation behind a Python wrapper:
+cp -R examples/python-react-harness /tmp/my-harness
+# Alternative: cp -R examples/bash-harness /tmp/my-harness
+HG_AGENT_BACKEND=mock python3 tools/validate_harness.py /tmp/my-harness --smoke
+HG_AGENT_BACKEND=mock harnessgrad run --dataset demo --sampling all \
+  --harness-path /tmp/my-harness --rounds 0 --improver none \
+  --run-id my-harness-smoke --fail-on-incomplete
+python3 tools/run_summary.py runs/my-harness-smoke
+```
+
+Replace the template's solver with yours. The manifest's `entrypoint` is a Python
+file, invoked as `python entrypoint --task TASK --workdir WORK`; for Bash, Node or
+another CLI, use the existing `examples/bash-harness/run.py` wrapper and change
+the subprocess command. Do not point `entrypoint` directly at a shell script.
+Write the final submission to `WORK/answer.txt` and trace/usage to `WORK/trace.jsonl`.
+The smoke verifies the interface; a fixed mock response need not solve demo tasks.
+Use fresh output paths/run IDs when repeating the example. Then select a
+[research recipe](rsi-experiments.md), provision its data and replace mock with
+the complete live agent/model configuration shown in README.
+
 The contract itself is written down twice already, and neither document is duplicated here:
 
 * [`docs/writing_a_harness.md`](writing_a_harness.md) — what a harness **is**: the manifest,
@@ -16,7 +41,7 @@ Those are the reference. This page is the on-ramp: every command below was execu
 Output is pasted as printed and trimmed only where a block says so; exit codes are the real
 ones. Two things the reader should hold on to, because both cost an afternoon:
 
-* **The driver's exit code is a verdict on the run, not on your harness.** A run in which
+* **Without `--fail-on-incomplete`, the driver's legacy exit code is a verdict on the run, not on your harness.** A run in which
   every task scored zero — including a run in which the harness never started — exits `0`.
   What happened is in `curve.jsonl`, and §4 is how to read it.
 * **This platform invokes your entrypoint as `<python> <entrypoint>`**, whatever language it

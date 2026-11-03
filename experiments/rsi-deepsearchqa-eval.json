@@ -1,0 +1,15 @@
+{
+  "dataset": "deepsearchqa",
+  "harness": "loop",
+  "split": "splits/deepsearchqa.json",
+  "side": "eval",
+  "sampling": "random_5",
+  "from_run": "deepsearchqa-dgm-study",
+  "from_round": 1,
+  "rounds": 0,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 42,
+  "run_id": "deepsearchqa-dgm-heldout",
+  "fail_on_incomplete": true
+}

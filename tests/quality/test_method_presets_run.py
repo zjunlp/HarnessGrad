@@ -52,6 +52,12 @@ PRESETS = sorted(EXPERIMENTS.glob("method-*.json")) + [EXPERIMENTS / "quickstart
 #: Named rather than pattern-matched loosely: it is one of the two legitimate reasons for a
 #: preset to stop at H0 in this probe, so anything else must fail the test.
 NEEDS_ENDPOINT = "a method needs HG_METHOD_BASE_URL"
+#: The same requirement as the driver's pre-H0 readiness row words it. Both spellings are
+#: accepted because the driver may report either: the method's own model_settings() error
+#: (during a round) or the readiness row (`method  yes  FAIL  method editor needs ...`).
+NEEDS_ENDPOINT_ROW = "method editor needs HG_METHOD_BASE_URL"
+#: The policy that needs a module map; the readiness row names it the same way.
+NEEDS_MODULES_ROW = "needs explicit HG_POLICY_CONFIG modules"
 
 #: The other one: a method whose *policy* needs an operator decision no experiment field can
 #: carry. `modular_rsi` partitions the harness into modules and refuses to propose without the
@@ -82,14 +88,19 @@ def _model_free_env() -> dict[str, str]:
 
 
 def _probe(tmp_path: Path, config: Path, *,
-           run_id: str | None = None) -> tuple[subprocess.CompletedProcess, list[dict]]:
-    """Run one preset as checked in, redirected to the demo fixture for one round."""
+           run_id: str | None = None, rounds: int | None = 1) -> tuple[subprocess.CompletedProcess, list[dict]]:
+    """Run one preset as checked in, redirected to the demo fixture.
+
+    `rounds=1` bounds the probe; `rounds=None` keeps whatever the file declares, which is what
+    the donor build in `test_eval_from_round_measures_a_donor_run` needs.
+    """
     ident = run_id or f"{config.stem}-probe"
     runs_root = tmp_path / "runs"
     argv = [
         sys.executable, "driver.py", "--config", str(config),
         "--set", "dataset=demo", "--set", "sampling=all",
-        "--set", "rounds=1", "--set", "jobs=1", "--set", "trials=1",
+        *([] if rounds is None else ["--set", f"rounds={rounds}"]),
+        "--set", "jobs=1", "--set", "trials=1",
         "--set", f"run_id={ident}",
         "--runs-root", str(runs_root), "--work-root", str(tmp_path / "work"),
         "--no-sandbox",
@@ -204,6 +215,16 @@ def test_preset_reaches_a_measured_round(tmp_path: Path, config: Path) -> None:
 
     proc, points = _probe(tmp_path, config)
     tail = (proc.stdout + proc.stderr)[-2500:]
+    if proc.returncode == 2 and not points:
+        # The driver now refuses a known model/method misconfiguration *before* H0 instead of
+        # spending a measurement and stalling at round 1. Same requirement, reported earlier;
+        # the skip has to move with it, or the check turns a fail-fast into a test failure.
+        output = proc.stdout + proc.stderr
+        if any(token in output for token in (NEEDS_ENDPOINT, NEEDS_ENDPOINT_ROW,
+                                             NEEDS_MODULES_ROW)):
+            pytest.skip(f"{config.name} names a method whose configured requirement is named "
+                        "above (an editor endpoint, or a module map); the driver now refuses "
+                        "before H0 instead of stalling at round 1")
     assert proc.returncode == 0, f"{config.name} exited {proc.returncode}:\n{tail}"
     rounds = [point.get("round") for point in points]
     assert 0 in rounds, f"{config.name} wrote no H0 point:\n{tail}"
@@ -252,10 +273,13 @@ def test_eval_from_round_measures_a_donor_run(tmp_path: Path) -> None:
     names, which is what a user following the README would have on disk.
     """
     donor, donor_points = _probe(tmp_path, EXPERIMENTS / "quickstart.json",
-                                 run_id="quickstart")
+                                 run_id="quickstart", rounds=None)
     donor_tail = (donor.stdout + donor.stderr)[-2500:]
     assert donor.returncode == 0, f"donor run failed:\n{donor_tail}"
-    assert [point.get("round") for point in donor_points] == [0, 1], donor_tail
+    # The donor is built exactly as the file declares it: `eval-from-round.json` names one of
+    # *its* rounds, and hard-coding a round count here is how the two files drift apart.
+    wanted = int(json.loads((EXPERIMENTS / "eval-from-round.json").read_text(encoding="utf-8"))["from_round"])
+    assert wanted in [point.get("round") for point in donor_points], donor_tail
 
     proc, points = _probe(tmp_path, EXPERIMENTS / "eval-from-round.json",
                           run_id="eval-from-round-probe")
@@ -268,5 +292,5 @@ def test_eval_from_round_measures_a_donor_run(tmp_path: Path) -> None:
     # is attached to no reproducible source.
     evaluated = point.get("evaluated_from") or {}
     assert evaluated.get("run_id") == "quickstart", evaluated
-    assert evaluated.get("round") == 1, evaluated
+    assert evaluated.get("round") == wanted, evaluated
     assert point.get("n_scored"), point.get("n_scored")

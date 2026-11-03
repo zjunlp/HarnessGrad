@@ -1,0 +1,15 @@
+{
+  "dataset": "swe_bench_pro",
+  "harness": "loop",
+  "split": "splits/swe-bench-pro-v2.json",
+  "side": "eval",
+  "sampling": "random_5",
+  "from_run": "swe-bench-pro-v2-dgm-study",
+  "from_round": 1,
+  "rounds": 0,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 42,
+  "run_id": "swe-bench-pro-v2-dgm-heldout",
+  "fail_on_incomplete": true
+}

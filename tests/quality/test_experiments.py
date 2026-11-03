@@ -42,7 +42,7 @@ def _by_flag(argv: list[str]) -> dict[str, str | bool]:
         flag = argv[index]
         assert flag.startswith("--"), f"argv item {flag!r} is not a flag"
         assert flag not in by_flag, f"{flag} appears twice"
-        if flag == "--no-sandbox":
+        if flag in ("--no-sandbox", "--fail-on-incomplete"):
             by_flag[flag] = True
             index += 1
             continue
@@ -75,11 +75,11 @@ def _driver_flags() -> set[str]:
 def test_quickstart_argv_is_the_explicit_command() -> None:
     """Test 1: the checked-in example renders to exactly the flags a human would type."""
     expected = [
-        "--dataset", "gsm8k",
+        "--dataset", "demo",
         "--harness", "loop",
         "--side", "train",
-        "--sampling", "random_5",
-        "--rounds", "1",
+        "--sampling", "all",
+        "--rounds", "2",
         "--jobs", "1",
         "--trials", "1",
         "--seed", "0",
@@ -195,7 +195,7 @@ def test_eval_from_round_targets_a_train_run() -> None:
     flags = _by_flag(from_cli(EVAL_FROM_ROUND, []))
     assert flags["--side"] == "eval"
     assert flags["--from-run"] == "quickstart"
-    assert flags["--from-round"] == "1"
+    assert flags["--from-round"] == "2"
     assert "--method-entrypoint" not in flags, "eval measures a run, it does not run a method"
 
 

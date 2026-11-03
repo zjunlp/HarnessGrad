@@ -1,0 +1,33 @@
+{
+  "schema": "harnessgrad.release-source-check.v1",
+  "benchmark": "bbeh",
+  "source": "BBEH/bbeh",
+  "revision": "08e07a803851822c04399782ece3c4a07ce419f9",
+  "acquisition": "Pinned Hugging Face preparation using explicit HF_ENDPOINT=https://hf-mirror.com because the direct host was unreachable on this machine.",
+  "source_files": [
+    {
+      "path": "rows/00-test.jsonl",
+      "split": "test",
+      "sha256": "82001d7dc83aa0c6d58a0426cc84ddb143b1b60e776734bbe463750a0721245b",
+      "rows": 4520
+    }
+  ],
+  "selection": {
+    "duplicate_questions": "exclude",
+    "source_row_count": 4520,
+    "excluded_duplicate_rows": 9,
+    "excluded_question_ids": [
+      "35e30459a7b9e9059a94baa4aad624ed4d3724aea97a5bcbccda545d65dbd288",
+      "f1efb33207b7818365d8219609f3a5537cf6d70cd839a96dbee0cb7730ab2073"
+    ],
+    "retained_row_count": 4511
+  },
+  "custom_partition": {
+    "train": 902,
+    "eval": 3609,
+    "seed": 42,
+    "source": "official-eval"
+  },
+  "preflight": "Exact rsi-bbeh recipe with explicit external split passed local configuration-only checks. No network model probe/generation was requested.",
+  "model_or_benchmark_score_claim": false
+}

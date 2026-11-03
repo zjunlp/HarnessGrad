@@ -26,26 +26,35 @@ HarnessGrad measures harness self-improvement round by round instead of a single
 
 The unit is a **plasticity/stability pair** — what a round gains, and what it silently breaks — written as a curve another method can be compared against. We do not propose improvement methods; we build the instrument that decides whether one worked.
 
-## 📦 Install
+## 🚀 Start here
 
-`bubblewrap`, `git`, `python3 >= 3.10`; the platform itself has **no third-party Python dependencies**.
+| What you want to do | Start with |
+| --- | --- |
+| Run an RSI baseline on a harder reasoning benchmark | **BBEH × DGM**, the small real experiment below |
+| Improve a terminal or coding harness | **Terminal-Bench 2** or **SWE-bench Pro V2** [recipes](docs/rsi-experiments.md) |
+| Improve a research/search agent | **DeepSearchQA** [recipe](docs/rsi-experiments.md), with explicit search and judge services |
+| Measure your own Python, Bash or agent CLI | [Five-minute harness entry](docs/bring-your-own-harness.md#five-minute-entry) |
+| Run your own optimizer against the same tasks and harness | [Minimal external method](docs/bring-your-own-method.md) |
+
+The platform uses Python's standard library. A solver harness, benchmark scorer,
+search provider or Docker task can have additional dependencies; each recipe names
+those prerequisites. Registered adapters are not a claim that all datasets are
+installed or ready on your machine.
+
+### 1. Install and check an empty machine
+
+Use **Linux**, Python 3.10+, Git and a working `bubblewrap` namespace. Put the
+virtual environment outside the checkout and `/tmp`, so the sandbox can mount its
+runtime without exposing private platform or task files.
 
 ```bash
-./install.sh --check      # verify only, change nothing
-./install.sh              # install what is missing, then verify
-```
-
-`bwrap` being installed is not the same as a working sandbox, so `install.sh` builds a real namespace and looks for itself inside it, and refuses to call the machine ready if that fails.
-
-## 🚀 Run it
-
-Three steps, no model calls until step 3.
-
-### 1. Is this machine ready? (creates nothing, spends nothing)
-
-```bash
-python3 -m pip install -e .          # or: ./install.sh    (bubblewrap + git + python3)
-harnessgrad run --config experiments/quickstart.json --check-only
+git clone https://github.com/zjunlp/HarnessGrad.git
+cd HarnessGrad
+python3 -m venv ~/.venvs/harnessgrad
+source ~/.venvs/harnessgrad/bin/activate
+python3 -m pip install -e .
+./install.sh --check
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --check-only
 ```
 
 ```
@@ -60,58 +69,128 @@ disk      no   ok      .: 93.1 GB free (a run needs about 5 GB)
 ready: every required check passed
 ```
 
-*(trimmed: the `harness` row names your checkout's absolute path, and the free-space figure is
-this machine's; a detail longer than the table's 96-column cell is cut with `...`.)*
+*(trimmed: the `harness` row names your checkout's absolute path and the free-space figure is
+this machine's. `--prepare-only` instead creates the run directory and its redacted
+`run_meta.json` and launches nothing; both flags read the same arguments the real run will read,
+so the answer is about that invocation.)*
 
-`--prepare-only` instead creates the run directory and its redacted `run_meta.json` and
-launches nothing. Both flags read the same arguments the real run will read, so the answer
-is about *that* invocation.
+If system prerequisites are missing, `./install.sh` installs them and verifies the
+boundary. The first check uses the repository's eight-task **demo fixture**; it
+needs no downloaded benchmark, model, API key or Docker image. A failed required
+check exits nonzero. Use WSL2 or a Linux host for other operating systems; native
+macOS/Windows do not provide bubblewrap.
 
-### 2. Zero network, zero cost: two rounds end to end
-
-`--rounds 2` is an upper bound: the no-op method stops as soon as it has nothing to
-submit, while `echo_base` submits a changed candidate and reaches round 2.
-
-```bash
-export HG_AGENT_BACKEND=mock
-python3 driver.py --dataset demo --sampling all --harness loop --rounds 2 --run-id control \
-    --method-entrypoint "python $PWD/methods/noop/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --rounds 2 --run-id treat-A \
-    --method-entrypoint "python $PWD/methods/echo_base/run.py"
-python3 tools/run_summary.py runs/treat-A          # one page per run
-python3 tools/plot_curve.py runs/control runs/treat-A
-```
-
-`--sampling all` is the ordinary demo path; the CLI default is the staged `diagnostic`, which requires `--policy-evidence`, one task, one trial and zero improvement rounds. The demo grants no production authorization.
-
-### 3. A real experiment
-
-A checked-in experiment file is the reviewable form of a command line:
+### 2. See a complete run without a model
 
 ```bash
-export HG_AGENT_BASE_URL=http://127.0.0.1:8001/v1 HG_AGENT_MODEL=qwen3.5-9b-local
-harnessgrad run --config experiments/quickstart.json --set rounds=3 --set run_id=first-study
-python3 tools/run_summary.py runs/first-study
-python3 tools/results_matrix.py --runs runs --md results.md   # method × dataset → score
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
+  --set run_id=demo-edit --improver none --fail-on-incomplete
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
+  --set method=noop --set run_id=demo-control --improver none --fail-on-incomplete
+python3 tools/run_summary.py runs/demo-edit
+python3 tools/plot_curve.py runs/demo-control runs/demo-edit
 ```
 
-`--set a.b=c` accepts any field the file supports; an explicit flag after `--config` wins
-over the file, so `--config experiments/quickstart.json --dataset alfworld` is the same
-experiment on another dataset.
+`echo_base` makes a fixed, scripted edit; `noop` deliberately stops with no edit.
+These are interface controls, **not RSI benchmark results**. `HG_AGENT_BACKEND=mock`
+is scoped to each command, so it does not leave your next real experiment in mock
+mode. Repeat with fresh run IDs.
 
-The checked-in example is deliberately small: `gsm8k` on the train side with
-`"sampling": "random_5"`, which measures **five** tasks per round (a recorded seed picks them
-once, before round 0), one round, one trial. Measured here on 2026-11-02: 12 s end to end on
-the mock backend, 24 s against one local `qwen3.5-9b` endpoint, `0.000` at both rounds —
-`loop` is a deliberately bare harness, and moving that flat line is exactly what a method is
-for. `--set sampling=all` or `--set sampling=below_0.3` are the interesting regimes, and they
-cost what their names say: a score-based policy has to measure the whole side once in order to
-choose from it. `--set method=dgm --set rounds=10` is where the platform stops being a demo;
-`experiments/method-*.json` has one file per published method.
+![Actual offline demo curves: mock solver and scripted edit, not a benchmark result](.github/assets/demo-curve.svg)
 
-Which datasets are usable here, what their grade is, and whether that grade is the
-benchmark's own metric: [`DATASETS.md`](DATASETS.md) (generated — `python3
-tools/datasets_doc.py --check` fails when it drifts).
+The [source receipt](.github/assets/demo-curve.json) and
+[renderer](tools/render_demo_figure.py) reproduce this figure from recorded runs. Figure regeneration optionally needs
+`matplotlib`; the experiment runner does not.
+
+### 3. A real RSI smoke: BBEH × DGM
+
+BBEH is a harder reasoning suite released in 2025. It is the light first experiment:
+no task images, search service or judge model. DGM edits the harness's code using
+study traces; HarnessGrad measures each candidate. This is the documented DGM
+**port**, with its [fidelity differences](methods/dgm/method.json).
+
+Prepare the complete pinned source, then freeze a custom study/held-out partition:
+
+```bash
+python3 -m pip install -r base_harness/loop/requirements.txt huggingface_hub
+export HG_DATA_BBEH="$HOME/.local/share/harnessgrad/datasets/bbeh"
+python3 -m data.scaffolds.native_qa.prepare --dataset bbeh --root "$HG_DATA_BBEH" --duplicate-questions exclude
+harnessgrad split create --dataset bbeh --source official-eval \
+  --train-ratio 0.2 --seed 42 --output splits/bbeh.json
+```
+
+The pinned file has 4520 source rows. Explicit `exclude` removes all 9 rows in
+two repeated-question groups (including contradictory labels), leaving 4511
+experiment tasks. The complete source hashes and exclusion counts/IDs remain in the
+source manifest; this filtered custom pool is not the full benchmark.
+
+Configure the two model roles explicitly. Replace the model names with ones your
+servers actually serve. Local servers use a nonempty placeholder key; hosted
+credentials belong in your environment and never in experiment JSON.
+
+```bash
+export HG_AGENT_BACKEND=openai
+export HG_AGENT_BASE_URL=http://127.0.0.1:8001/v1
+export HG_AGENT_MODEL=your-served-solver-model
+export HG_AGENT_API_KEY=local
+export HG_METHOD_BASE_URL=http://127.0.0.1:8001/v1
+export HG_METHOD_MODEL=your-served-editor-model
+export HG_METHOD_API_KEY=local
+
+harnessgrad run --config experiments/rsi-bbeh.json --improver none --check-only --check-net
+harnessgrad run --config experiments/rsi-bbeh.json --improver none
+harnessgrad run --config experiments/rsi-bbeh-eval.json --improver none
+python3 tools/run_summary.py runs/bbeh-dgm-study
+python3 tools/run_summary.py runs/bbeh-dgm-heldout
+python3 tools/results_matrix.py --runs runs/bbeh-dgm-heldout \
+  --side eval --md bbeh-results.md --json bbeh-results.json
+```
+
+The recipe measures **five study tasks per round**, one improvement round and one
+fixed checkpoint on **five held-out tasks**. This is a bounded smoke, not a full
+BBEH score or evidence from enough tasks/trials for a paper. All methods should
+reuse the same frozen split and measured task IDs. The split seed fixes partition
+membership; the recorded sampling policy and concrete task IDs define each run's
+measurement subset. BBEH's official evaluation material is being repartitioned
+explicitly, so outputs identify the result as **custom held-out**.
+
+A completion summary distinguishes `COMPLETE`, a valid `EARLY_STOP`, and
+`INCOMPLETE`. The strict recipe exits nonzero on method or measurement failure;
+an H0-only failure is not a completed RSI experiment. `--check-only` checks local
+model/method prerequisites before H0; `--check-net` additionally checks required
+model endpoints with GET requests, without generating tokens. Selected ordinary
+judge/environment channels are checked too when the benchmark declares them.
+
+For a larger study, choose the task count and trials deliberately, freeze the
+protocol across baselines, and use all held-out tasks when reporting the full
+custom partition. A higher score is not promised.
+
+### Choose a research workload
+
+| Benchmark | Why it is interesting for RSI/harness work | Preparation boundary |
+| --- | --- | --- |
+| **BBEH (2025)** | Hard reasoning; prompt/control/code changes with a local deterministic scorer | Pinned small source; solver and editor models |
+| **Terminal-Bench 2** | Persistent terminal tasks; tools, long-context control and recovery | Docker and task images; prepare only selected tasks first |
+| **SWE-bench Pro V2** | Recent long-horizon repository repair; V2 release on 2026-09-22 | Per-task images, trusted patch export and independent native regrade |
+| **DeepSearchQA** | Multi-step web research and answer coverage | Search/fetch service plus an independent declared judge |
+
+The [research recipes](docs/rsi-experiments.md) give source references, preparation,
+train/checkpoint-eval commands and known limits. The full adapter catalogue is
+[DATASETS.md](DATASETS.md); official metrics and protocol deviations are recorded
+there. Existing GSM8K support remains available as a legacy small QA option.
+
+### What you get
+
+Each run keeps `curve.jsonl`, `run_meta.json`, saved harness states, per-task traces
+and verdicts, diffs and `end-summary.md/json`. The summary shows completion,
+baseline/final scores, cost coverage and invalid/unmeasured tasks. The matrix
+exports a Markdown/JSON table and lists incomplete runs separately instead of
+presenting their H0 as final results. [Result-reading walkthrough](docs/rsi-experiments.md#6-from-a-smoke-pair-to-a-research-result).
+
+You can [supply your own split](docs/custom-dataset-splits.md),
+[bring a harness](docs/bring-your-own-harness.md) or
+[bring a method](docs/bring-your-own-method.md). Each uses the same driver and
+measurement record.
 
 Want your own study/held-out partition, including one carved from an official
 validation or test pool? Run `harnessgrad split create --dataset math500
@@ -139,6 +218,7 @@ python3 tools/run_tests.py --dataset gsm8k  # that dataset plus the core platfor
 | 🛠️ [`docs/writing_a_harness.md`](docs/writing_a_harness.md) · [`docs/dataset-onboarding.md`](docs/dataset-onboarding.md) | contributing a harness, adding a dataset |
 | 🚪 [`docs/bring-your-own-harness.md`](docs/bring-your-own-harness.md) | the on-ramp for an outside harness: a directory with an `agent.py` → a point on a measured curve, every command verified |
 | 🧪 [`docs/test-suite.md`](docs/test-suite.md) | test lanes and the `--basetemp` rule |
+| 🧭 [`docs/rsi-experiments.md`](docs/rsi-experiments.md) | runnable RSI recipes beyond arithmetic QA: BBEH, Terminal-Bench 2, DeepSearchQA and SWE-bench Pro V2 |
 | 🤖 [`AGENTS.md`](AGENTS.md) | operating rules, including the staged-pilot policy |
 
 ## ⚠️ Status and limits

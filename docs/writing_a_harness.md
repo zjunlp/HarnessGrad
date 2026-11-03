@@ -64,11 +64,17 @@ your harness is allowed to rewrite any of it — including the entrypoint.
 
 ## 3. The task contract
 
-The platform calls:
+The platform invokes a Python wrapper:
 
 ```
-<entrypoint> --task <task.json> --workdir <dir>
+<python> <entrypoint> --task <task.json> --workdir <dir>
 ```
+
+For a Bash, Node or other CLI harness, `entrypoint` names a Python wrapper that
+forwards these arguments to your program. Copy `examples/bash-harness/run.py` for
+that wrapper, or start with `examples/python-react-harness` for Python. The
+[five-minute entry](bring-your-own-harness.md#five-minute-entry) shows validation
+and a sandboxed run before you configure any model.
 
 ### 3.1 What you are given
 

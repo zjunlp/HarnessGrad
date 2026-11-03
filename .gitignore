@@ -481,6 +481,9 @@ data/candidates/
 # publishing it is what makes those two pointers resolve in a clone; `docs/writing_a_harness.md`
 # stays the contract and `docs/adapter-spec.md` the adapter rules, and this page only runs them.
 !/docs/bring-your-own-harness.md
+!/docs/bring-your-own-method.md
+!/docs/rsi-experiments.md
+!/docs/release-validation.md
 
 # The upstream comparison page: the release date depends on a reader being able to check
 # "why not just use their repo" against sourced cells rather than a claim, so it is public --
