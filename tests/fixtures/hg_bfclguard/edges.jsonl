@@ -4566,13 +4566,13 @@
 {"destinations": [], "kind": "import", "line": 32, "outside_scope": [], "source": 615, "statement": "import json", "targets": ["json"]}
 {"destinations": [], "kind": "import", "line": 33, "outside_scope": [], "source": 615, "statement": "import sys", "targets": ["sys"]}
 {"destinations": [], "kind": "from", "line": 34, "outside_scope": [], "source": 615, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "import", "line": 68, "outside_scope": [], "source": 615, "statement": "import matplotlib", "targets": ["matplotlib"]}
-{"destinations": [], "kind": "import", "line": 71, "outside_scope": [], "source": 615, "statement": "import matplotlib.pyplot as plt", "targets": ["matplotlib.pyplot"]}
-{"destinations": [], "kind": "from", "line": 76, "outside_scope": [], "source": 615, "statement": "from matplotlib.lines import Line2D", "targets": ["matplotlib.lines", "matplotlib.lines.Line2D"]}
-{"destinations": [], "kind": "import", "line": 127, "outside_scope": [], "source": 615, "statement": "import matplotlib", "targets": ["matplotlib"]}
-{"destinations": [], "kind": "import", "line": 130, "outside_scope": [], "source": 615, "statement": "import matplotlib.pyplot as plt", "targets": ["matplotlib.pyplot"]}
-{"destinations": [], "kind": "import", "line": 147, "outside_scope": [], "source": 615, "statement": "import io", "targets": ["io"]}
-{"destinations": [], "kind": "import", "line": 148, "outside_scope": [], "source": 615, "statement": "import re", "targets": ["re"]}
+{"destinations": [], "kind": "import", "line": 69, "outside_scope": [], "source": 615, "statement": "import matplotlib", "targets": ["matplotlib"]}
+{"destinations": [], "kind": "import", "line": 72, "outside_scope": [], "source": 615, "statement": "import matplotlib.pyplot as plt", "targets": ["matplotlib.pyplot"]}
+{"destinations": [], "kind": "from", "line": 73, "outside_scope": [], "source": 615, "statement": "from matplotlib.lines import Line2D", "targets": ["matplotlib.lines", "matplotlib.lines.Line2D"]}
+{"destinations": [], "kind": "import", "line": 144, "outside_scope": [], "source": 615, "statement": "import matplotlib", "targets": ["matplotlib"]}
+{"destinations": [], "kind": "import", "line": 147, "outside_scope": [], "source": 615, "statement": "import matplotlib.pyplot as plt", "targets": ["matplotlib.pyplot"]}
+{"destinations": [], "kind": "import", "line": 164, "outside_scope": [], "source": 615, "statement": "import io", "targets": ["io"]}
+{"destinations": [], "kind": "import", "line": 165, "outside_scope": [], "source": 615, "statement": "import re", "targets": ["re"]}
 {"destinations": [], "kind": "from", "line": 11, "outside_scope": [], "source": 616, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 13, "outside_scope": [], "source": 616, "statement": "import argparse", "targets": ["argparse"]}
 {"destinations": [], "kind": "import", "line": 14, "outside_scope": [], "source": 616, "statement": "import json", "targets": ["json"]}
