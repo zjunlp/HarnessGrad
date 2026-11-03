@@ -26,7 +26,7 @@ harness — so an experiment is one command and a curve.
 | --- | --- | --- |
 | **harnesses** | 8: `loop`, `codex`, `opencode`, `deepseek-harness`, `openclaw`, `miniagent`, `miniswe`, `oracle` | `base_harness/<name>/` |
 | **RSI methods** | 19: `dgm`, `rrsi`, `adas`, `ahe`, `ace`, `skillopt`, `evoprompt`, `evo_harness`, `opro`, `tthe`, `dream_rsi`, `sica_ci`, `gepa`, `darwinx`, `arbor`, `hyperagents`, `meta_harness`, `harnessx`, `modular_rsi` | `experiments/method-<name>.json` |
-| **benchmarks** | 59 declared, **55 runnable today** and 4 refused with a named missing piece | `data/datasets/`, list in [`DATASETS.md`](DATASETS.md) |
+| **benchmarks** | 59 declared, **55 runnable**, 4 refused (†) — every one listed: `agentdojo`, `aime`, `alfworld`, `api_bank` †, `appworld`, `authored_example_fix_bug`, `bbeh`, `bfcl_v3`, `bird_minidev`, `browsecomp`, `chessbench_puzzles`, `cooperbench`, `costbench`, `costbench_dynamic`, `deepsearchqa`, `deepswe`, `ds1000`, `fever`, `gaia`, `gsm8k`, `harvey_lab`, `hle`, `hotpotqa`, `jericho`, `jobbench`, `kumo`, `livecodebench`, `livemathbench`, `locomo`, `math`, `math500`, `memoryagentbench`, `musique`, `nestful` †, `nq`, `officeqa_pro`, `personamem_v2`, `physicsquestions`, `reasoning_gym`, `scienceworld`, `searchqa`, `sotuqa` †, `sportsunderstanding`, `spreadsheetbench`, `spreadsheetbench2`, `strategyqa`, `strongreject`, `supergpqa`, `swe_bench`, `swe_bench_pro`, `tau2_bench` †, `tau3_bench`, `tau_bench`, `terminal_bench`, `travelplanner`, `triviaqa`, `twowikimultihopqa`, `widesearch`, `workbench` | `data/datasets/`, detail in [`DATASETS.md`](DATASETS.md) |
 
 Shipped experiments, each with a documented cost and prerequisites:
 
@@ -37,6 +37,15 @@ Shipped experiments, each with a documented cost and prerequisites:
 | terminal work | `miniswe` / `codex` | any | Terminal-Bench 2 | per-task container images |
 | repository edits | `loop` | any | SWE-bench Pro V2 | per-task container images |
 | research/search | `loop` | any | DeepSearchQA | search + judge services |
+
+### Where to start, if you already have something
+
+| you have | what we ask for | start here |
+| --- | --- | --- |
+| a harness (any language, any framework) | a directory with `harness.json` and an entrypoint that answers `--task` / `--workdir` | [bring-your-own-harness.md](docs/bring-your-own-harness.md) |
+| an optimizer that edits files | a program that reads a trajectory and writes a candidate tree | [bring-your-own-method.md](docs/bring-your-own-method.md) |
+| a benchmark and its official scorer | an adapter that materialises a task and runs *your* scorer | [dataset onboarding](docs/dataset-onboarding.md) |
+| a paper you want to reproduce | nothing yet: pick the recipe and read its cost | [rsi-experiments.md](docs/rsi-experiments.md) |
 
 **59 benchmarks** are declared, and the registry knows how to obtain each one. These four are
 declared and *refused* rather than approximated, because the thing they need does not exist
@@ -122,6 +131,19 @@ ready: every required check passed
 answer is about that invocation. `--prepare-only` goes one step further and writes the run
 directory without starting a round.
 
+### What each task environment needs
+
+A dataset declares one `env_kind`, and that decides what the machine must provide.
+
+| `env_kind` | what runs the task | what you need | typical datasets |
+| --- | --- | --- | --- |
+| `files` | `bubblewrap` namespace: the task's files plus a read-only runtime | Linux + `bubblewrap` (WSL2 works; native macOS/Windows do not) | gsm8k, bbeh, hotpotqa, most QA |
+| `exec` | Docker container built from the task's image | a running Docker daemon and the images | appworld, alfworld, terminal-bench, swe-bench, tau-bench |
+
+A harness declares which kinds it supports in `harness.json`; the platform refuses a pairing
+the harness cannot run instead of silently degrading it. Nothing here pulls an image or a
+dataset on its own: `tools/datasets.py --fetch` and the dataset's own prepare step are explicit.
+
 ## Quick start: one real experiment
 
 The fastest genuinely measured run is **gsm8k × `loop` × `dgm`**: 5 tasks, no container image,
@@ -190,64 +212,85 @@ exists enters through a minimal external method
 
 ## Contribution boards
 
-Four boards, one record: [`registry/leaderboards.json`](registry/leaderboards.json). Contribute
-a harness, a method, a benchmark or a measured result by adding a row in a pull request — then
-`python3 tools/leaderboards.py --write` renders the tables below, and `--check` keeps them from
-drifting from the record. Every row names the contributor, so a question about one entry has
-someone to @ rather than an issue queue.
+Four boards, one record: [`registry/leaderboards.json`](registry/leaderboards.json), rendered by
+`python3 tools/leaderboards.py --write`. The three support boards rank **contributors** by how
+many harnesses, methods or benchmarks they contributed, because a list with one name repeated
+on every row ranks nothing; the count links to
+[the details page](docs/leaderboard-details.md), which names each entry, and the
+[full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) also carry the contact
+each contributor chose to publish. A question about one entry therefore has someone to @.
+
+### How to get on a board
+
+Three steps, and the bar is deliberately low: we would rather review a contribution than turn
+one away, and the requirements tighten only once there are enough of them to be worth writing
+down.
+
+```bash
+# 1. add yourself -- the command checks the thing actually exists and can run
+python3 tools/contribute.py harness --name my-harness --path base_harness/my-harness \
+    --contributor your-handle --contact you@example.com
+
+# 2. re-render the tables
+python3 tools/leaderboards.py --write
+
+# 3. open a pull request with the two changed files and one sentence about how you ran it
+```
+
+`--contact` is optional and never appears in this README: it goes into the record so the
+website's board can show a way to reach you, and the table here shows your handle. A results
+entry additionally names a benchmark and metric, a receipt committed in this repository, and
+the tree hash the score was measured on — `tools/contribute.py result` asks for exactly those.
+Nothing is checked against a target score: a contribution is admitted because it *ran*, and a
+reviewer can see that from the receipt.
+
+The [skill](docs/skills/configure-harness-method-benchmark.md) is how we configure a harness,
+a method and a benchmark ourselves, written for an agent to follow end to end.
 
 <!-- BEGIN boards (generated by tools/leaderboards.py --write) -->
-<!-- Four boards, one record: registry/leaderboards.json. Add yourself by adding a row there and running tools/leaderboards.py --write. -->
 
-Ranked by independent reproductions reported in the pull request that added the entry, ties by name. A row's contributor is the person to @ in an issue.
+Ranked by **how many entries a contributor has on the board**, ties by handle. The count links to the [details page](docs/leaderboard-details.md), which names every entry, and the [full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) carry the same record with contact details.
 
 ### Harnesses
 
-| # | harness | contributor | since | adopted | what it is |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `codex` | [@zjunlp](https://github.com/zjunlp) | 2026-10-12 | 1 | OpenAI Codex CLI as the solver |
-| 2 | `deepseek-harness` | [@zjunlp](https://github.com/zjunlp) | 2026-10-20 | 1 | DeepSeek open harness |
-| 3 | `loop` | [@zjunlp](https://github.com/zjunlp) | 2026-10-01 | 1 | reference CLI harness: one agent loop, no framework |
-| 4 | `miniagent` | [@zjunlp](https://github.com/zjunlp) | 2026-10-22 | 1 | small teaching harness, easy to edit |
-| 5 | `miniswe` | [@zjunlp](https://github.com/zjunlp) | 2026-10-24 | 1 | minimal SWE-style harness |
-| 6 | `openclaw` | [@zjunlp](https://github.com/zjunlp) | 2026-10-20 | 1 | OpenClaw agent runtime |
-| 7 | `opencode` | [@zjunlp](https://github.com/zjunlp) | 2026-10-12 | 1 | opencode CLI, measured through the recording relay |
-| 8 | `oracle` | [@zjunlp](https://github.com/zjunlp) | 2026-10-24 | 1 | control harness that always answers correctly |
+| # | contributor | contributed |
+| --- | --- | --- |
+| 1 | [@zjunlp](https://github.com/zjunlp) | [8](docs/leaderboard-details.md#harness-zjunlp) |
 
 ### RSI methods
 
-| # | method | contributor | since | adopted | what it is |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `ace` | [@zjunlp](https://github.com/zjunlp) | 2026-10-26 | 1 | playbook grows from the run's own traces |
-| 2 | `adas` | [@zjunlp](https://github.com/zjunlp) | 2026-10-25 | 1 | meta-agent search over harness designs |
-| 3 | `ahe` | [@zjunlp](https://github.com/zjunlp) | 2026-10-25 | 1 | agentic harness engineering |
-| 4 | `arbor` | [@zjunlp](https://github.com/zjunlp) | 2026-10-31 | 1 | tree-structured research agent |
-| 5 | `darwinx` | [@zjunlp](https://github.com/zjunlp) | 2026-10-30 | 1 | Darwinian tree search over harness variants |
-| 6 | `dgm` | [@zjunlp](https://github.com/zjunlp) | 2026-10-24 | 1 | Darwin Godel Machine: edit the harness, keep what scores |
-| 7 | `dream_rsi` | [@zjunlp](https://github.com/zjunlp) | 2026-10-29 | 1 | dream-then-refine RSI |
-| 8 | `evo_harness` | [@zjunlp](https://github.com/zjunlp) | 2026-10-27 | 1 | evolutionary search over the harness itself |
-| 9 | `evoprompt` | [@zjunlp](https://github.com/zjunlp) | 2026-10-27 | 1 | evolutionary prompt search |
-| 10 | `gepa` | [@zjunlp](https://github.com/zjunlp) | 2026-10-30 | 1 | reflective prompt evolution |
-
-*9 more on the [full board](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) — top ten only here.*
+| # | contributor | contributed |
+| --- | --- | --- |
+| 1 | [@zjunlp](https://github.com/zjunlp) | [19](docs/leaderboard-details.md#method-zjunlp) |
 
 ### Benchmarks
 
-| # | benchmark | contributor | since | adopted | what it is |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `appworld` | [@zjunlp](https://github.com/zjunlp) | 2026-10-29 | 1 | stateful API tasks; TGC verified |
-| 2 | `bbeh` | [@zjunlp](https://github.com/zjunlp) | 2026-10-24 | 1 | hard reasoning; the light first real experiment |
-| 3 | `deepsearchqa` | [@zjunlp](https://github.com/zjunlp) | 2026-10-28 | 1 | search and judge services must be provisioned |
-| 4 | `gsm8k` | [@zjunlp](https://github.com/zjunlp) | 2026-10-24 | 1 | gold answers, cheap to score |
-| 5 | `swe_bench_pro` | [@zjunlp](https://github.com/zjunlp) | 2026-10-27 | 1 | repository-level patches, per-task images |
-| 6 | `terminal_bench` | [@zjunlp](https://github.com/zjunlp) | 2026-10-26 | 1 | container tasks; official scorer in the image |
+| # | contributor | contributed |
+| --- | --- | --- |
+| 1 | [@zjunlp](https://github.com/zjunlp) | [6](docs/leaderboard-details.md#benchmark-zjunlp) |
 
 ### Measured results
 
 *No comparable result has been contributed yet. The admission rule is in [docs/leaderboards.md](docs/leaderboards.md): a benchmark+metric group, a receipt in this repository, and the tree hash the score was measured on.*
 
-[Full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) keep every entry; this table keeps the top ten.
+[Full boards](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) keep every contributor; this table keeps the top 10.
 <!-- END boards -->
+
+## What the curves look like
+
+![Recorded rounds on AppWorld and ALFWorld: one line per method, no axis numbers](.github/assets/trends.svg)
+
+Two benchmarks we run ourselves, one line per method, from the recorded rounds in
+[`.github/assets/trends.json`](.github/assets/trends.json). **The vertical axis carries no
+ticks on purpose.** The figure answers one question — did the curve move while the method
+edited the harness — and a number read off it would be quoted without the harness tree hash,
+the task set and the scorer identity that make a score comparable. The receipt carries those
+identifiers for every line, and `python3 tools/render_trends.py --check` keeps the drawing
+equal to the receipt.
+
+Held-out scores, per-benchmark tables and every recorded run are on the
+[website](https://zjunlp.github.io/HarnessGrad-Hub/), which is also where the full
+leaderboards live.
 
 The admission rule for the results board is in [`docs/leaderboards.md`](docs/leaderboards.md):
 a benchmark+metric group, a receipt committed in this repository, and the tree hash the score
@@ -284,6 +327,24 @@ Version 0.1 — the interface may still change, and every change that touches a 
 called out in the release notes. The platform is the instrument, not a method: it contains no
 new RSI algorithm, and the recipes are bounded integration smokes, not full benchmark
 evaluations. A score produced here is only as comparable as the receipt that accompanies it.
+
+## Citation
+
+If the platform, the measurement protocol or a curve produced here is useful in your work:
+
+```bibtex
+@misc{xu2026harnessgrad,
+  title  = {HarnessGrad: Harness As a Continual Learner},
+  author = {Buqiang Xu and Yenan Wang and Yutong Yu and Rongyao Li and
+            Jintian Zhang and Shuofei Qiao and Xuehai Wang and Zirui Xue and
+            Yijun Chen and Ningyu Zhang},
+  year   = {2026},
+}
+```
+
+A result that depends on a specific recorded run should cite the run id as well: the receipt
+names the harness tree hash the score was measured on, which is what makes the citation
+re-derivable.
 
 ## License
 

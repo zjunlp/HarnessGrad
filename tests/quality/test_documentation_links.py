@@ -132,6 +132,12 @@ def _slug(heading: str) -> str:
     return re.sub(r"[^\w\- ]", "", lowered).replace(" ", "-")
 
 
+#: An explicit anchor. A generated page groups rows by contributor and the heading carries a
+#: count ("@zjunlp — 8 entries"), so the stable anchor is written rather than derived: a slug
+#: that changes when the count changes is not an anchor a link can point at.
+EXPLICIT_ANCHOR = re.compile(r'<a\s+id="([^"]+)"')
+
+
 def _headings(path: Path) -> list[str] | None:
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -146,6 +152,8 @@ def _headings(path: Path) -> list[str] | None:
             continue
         if fenced:
             continue
+        for anchor in EXPLICIT_ANCHOR.finditer(line):
+            found.append(anchor.group(1))
         match = HEADING.match(line)
         if not match:
             continue

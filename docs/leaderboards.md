@@ -28,14 +28,23 @@ Every entry, on any board:
 | `since` | the date the entry was first included |
 | `adoption` | independent reproductions reported in the pull request that added or updated the row; a declared number, not a scraped metric |
 | `note` | one line: what the thing is, not what it scores |
+| `contact` | optional: an address the website can show, so a reader can ask you about the entry. It is stored in the record and **never rendered into the README** — the table on GitHub shows the handle, and a public repository should not be where an email address is harvested from |
 
 `tools/leaderboards.py` refuses a row whose `path`, `preset` or `adapter` does not exist, whose
 handle is not a handle, whose adoption is not an integer ≥ 1, or that appears twice on a board.
 
 ## Ranking
 
-The three support boards rank by `adoption`, ties by name. The order is therefore a declared
-number rather than an impression, and a reader can see why a row is where it is.
+The three support boards rank **contributors**, not entries: each row is one org or person, and
+the number beside it is how many harnesses, methods or benchmarks they contributed. A board
+listing one row per item with the same name on every row ranks nothing — a reader cannot see
+what is being compared — and a column of 1s is not a ranking.
+
+The README shows the top ten contributors and a count. The count links to
+[the details page](leaderboard-details.md), which names every entry, and the
+[website board](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) shows the same record
+plus the contact each contributor chose to publish. `adoption` stays in the record as the
+per-entry number of independent reproductions; the board's count is the number of entries.
 
 ## The results board: what counts as a result
 
