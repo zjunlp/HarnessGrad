@@ -70,7 +70,7 @@ curl -x http://127.0.0.1:17891 -LsS -o /dev/null -w '%{http_code}\n' https://ast
 docker run --rm --network bridge alexgshaw/cancel-async-tasks:20251031 \
   bash -lc 'apt-get update -qq && apt-get install -y -qq curl >/dev/null &&
             curl -x http://172.17.0.1:17890 -LsS -o /dev/null -w "%{http_code}\n" https://astral.sh/uv/0.9.5/install.sh'
-HG_EGRESS_PROXY=http://172.17.0.1:17890 python3 driver.py --harness loop_plain ... \
+HG_EGRESS_PROXY=http://172.17.0.1:17890 python3 driver.py --harness loop ... \
   --dataset terminal_bench --tasks cancel-async-tasks --rounds 0
 # the verdict should carry `check_report /logs/verifier/ctrf.json (N failed)` and the
 # failing test names, instead of "the check wrote no ctrf.json"

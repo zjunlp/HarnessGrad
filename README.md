@@ -39,17 +39,75 @@ The unit is a **plasticity/stability pair** — what a round gains, and what it 
 
 ## 🚀 Run it
 
-Zero network, zero cost: two rounds, the curve, the checkpoints and the cost accounting, end to end.
+Three steps, no model calls until step 3.
+
+### 1. Is this machine ready? (creates nothing, spends nothing)
+
+```bash
+python3 -m pip install -e .          # or: ./install.sh    (bubblewrap + git + python3)
+harnessgrad run --config experiments/quickstart.json --check-only
+```
+
+```
+check     req  result  detail
+python    yes  ok      python 3.12.4
+git       yes  ok      git version 2.34.1
+bwrap     yes  ok      /usr/bin/bwrap builds a namespace
+dataset   yes  ok      gsm8k: 8792 tasks
+harness   yes  ok      base_harness/loop (cli, entrypoint agent.py)
+writable  yes  ok      runs root and work root can be created
+disk      no   ok      119.5 GB free (a run needs about 5 GB)
+```
+
+`--prepare-only` instead creates the run directory and its redacted `run_meta.json` and
+launches nothing. Both flags read the same arguments the real run will read, so the answer
+is about *that* invocation.
+
+### 2. Zero network, zero cost: two rounds end to end
+
+`--rounds 2` is an upper bound: the no-op method stops as soon as it has nothing to
+submit, while `echo_base` submits a changed candidate and reaches round 2.
 
 ```bash
 export HG_AGENT_BACKEND=mock
-M="python $PWD/methods/echo_base/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id control --method-entrypoint "python $PWD/methods/noop/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id treat-A --method-entrypoint "$M"
+python3 driver.py --dataset demo --sampling all --harness loop --rounds 2 --run-id control \
+    --method-entrypoint "python $PWD/methods/noop/run.py"
+python3 driver.py --dataset demo --sampling all --harness loop --rounds 2 --run-id treat-A \
+    --method-entrypoint "python $PWD/methods/echo_base/run.py"
+python3 tools/run_summary.py runs/treat-A          # one page per run
 python3 tools/plot_curve.py runs/control runs/treat-A
 ```
 
 `--sampling all` is the ordinary demo path; the CLI default is the staged `diagnostic`, which requires `--policy-evidence`, one task, one trial and zero improvement rounds. The demo grants no production authorization.
+
+### 3. A real experiment
+
+A checked-in experiment file is the reviewable form of a command line:
+
+```bash
+export HG_AGENT_BASE_URL=http://127.0.0.1:8001/v1 HG_AGENT_MODEL=qwen3.5-9b-local
+harnessgrad run --config experiments/quickstart.json --set rounds=3 --set run_id=first-study
+python3 tools/run_summary.py runs/first-study
+python3 tools/results_matrix.py --runs runs --md results.md   # method × dataset → score
+```
+
+`--set a.b=c` accepts any field the file supports; an explicit flag after `--config` wins
+over the file, so `--config experiments/quickstart.json --dataset alfworld` is the same
+experiment on another dataset.
+
+The checked-in example is deliberately small: `gsm8k` on the train side with
+`"sampling": "random_5"`, which measures **five** tasks per round (a recorded seed picks them
+once, before round 0), one round, one trial. Measured here on 2026-11-02: 12 s end to end on
+the mock backend, 24 s against one local `qwen3.5-9b` endpoint, `0.000` at both rounds —
+`loop` is a deliberately bare harness, and moving that flat line is exactly what a method is
+for. `--set sampling=all` or `--set sampling=below_0.3` are the interesting regimes, and they
+cost what their names say: a score-based policy has to measure the whole side once in order to
+choose from it. `--set method=dgm --set rounds=10` is where the platform stops being a demo;
+`experiments/method-*.json` has one file per published method.
+
+Which datasets are usable here, what their grade is, and whether that grade is the
+benchmark's own metric: [`DATASETS.md`](DATASETS.md) (generated — `python3
+tools/datasets_doc.py --check` fails when it drifts).
 
 ## 🧪 Test
 
@@ -68,7 +126,9 @@ python3 tools/run_tests.py --dataset gsm8k  # that dataset plus the core platfor
 | 🗺️ [`docs/architecture.md`](docs/architecture.md) | repository map and dependency direction |
 | 🧭 [`docs/design-notes.md`](docs/design-notes.md) | why it is shaped this way, and what building it caught |
 | 🛠️ [`docs/writing_a_harness.md`](docs/writing_a_harness.md) · [`docs/dataset-onboarding.md`](docs/dataset-onboarding.md) | contributing a harness, adding a dataset |
+| 🚪 [`docs/bring-your-own-harness.md`](docs/bring-your-own-harness.md) | the on-ramp for an outside harness: a directory with an `agent.py` → a point on a measured curve, every command verified |
 | 🧪 [`docs/test-suite.md`](docs/test-suite.md) | test lanes and the `--basetemp` rule |
+| 🆚 [`docs/comparison-flashrsi.md`](docs/comparison-flashrsi.md) | FlashRSI and HarnessGrad side by side: what each measures, what we should borrow |
 | 🤖 [`AGENTS.md`](AGENTS.md) | operating rules, including the staged-pilot policy |
 
 ## ⚠️ Status and limits

@@ -173,8 +173,14 @@ depends on what a previous run left behind.
 
 Stated so that their absence is not read as an oversight:
 
-* **Language and runtime.** The platform invokes a command. Python, Node, a shell
-  script and a compiled binary are all acceptable.
+* **Language and runtime.** Any language, one invocation. The platform runs
+  `<python> <entrypoint> --task … --workdir …` (`eval/run/runner.py`), so Python is
+  started directly and anything else — a shell script, a Node program, a compiled
+  binary — needs a Python shim as its `entrypoint` that re-executes the real thing.
+  Measured 2026-11-02: a manifest naming `run.sh` produced `SyntaxError: unmatched ')'`
+  from the smoke, because the interpreter was handed the shell script.
+  `examples/bash-harness/run.py` is the worked shim, and
+  [`docs/bring-your-own-harness.md`](bring-your-own-harness.md) §1.4 is the measurement.
 * **Tools, prompts, control flow, memory, number of model calls.** This is the
   substance of a harness and precisely what a method is supposed to improve.
 * **Whether you call a model at all.** A harness with no model is legal and
@@ -198,6 +204,10 @@ python tools/validate_harness.py path/to/your/harness
 It checks the required fields, that the entrypoint exists, and — with `--smoke` —
 that the harness runs a trivial task and writes an answer. Getting this to pass is
 the whole contribution requirement.
+
+The whole path, from a directory that already has an entrypoint to a point on a
+measured curve, with every command and its real output, is
+[`docs/bring-your-own-harness.md`](bring-your-own-harness.md).
 
 ---
 

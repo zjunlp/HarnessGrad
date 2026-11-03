@@ -199,10 +199,16 @@ already contains 88 flat curves and 8 false positives; one more of either adds n
 
 ## 5. What is still weak
 
-* **Attribution is close to meaningless on the base harness.** `base_harness/loop` is a single
-  `agent.py`, so a `components` map would claim that one file as context *and* control *and*
-  verification. The reading works and is tested, but a claim like "context handling improved"
-  needs a harness whose files separate along the components first.
+* **Attribution is close to meaningless on the base harness.** `base_harness/loop` is one
+  `agent.py` and a manifest, and its declaration therefore claims both as `control` and
+  nothing else — `context`, `tools`, `verification`, `memory`, `cost` and `safety` are
+  deliberately unclaimed rather than split by guess. The widest declarations among the seven
+  are `miniagent` (seven components) and `openclaw` (five); the rest name two or three. The
+  reading works and is tested; a claim like "context handling improved" needs a harness whose
+  files separate along the components first.
+  [`reports/component-attribution-2026-11-02.md`](component-attribution-2026-11-02.md) derives
+  why the archive's 0-of-1008 is a property of the records -- every archived run predates the
+  declarations -- and records the first attributed point.
 * **A clean decline is still a round with no child.** The `_ask_cli` fix makes a *crashed*
   improver an outage instead of a fabricated `no_change`; a round where the improver genuinely
   declines stays a no-child round, which is a fact about the method rather than about the
