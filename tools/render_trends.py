@@ -64,65 +64,82 @@ def _method_colours(panels: list[dict]) -> dict[str, str]:
     return {name: PALETTE[index % len(PALETTE)] for index, name in enumerate(sorted(names))}
 
 
-def render(data: dict) -> str:
+def render(data: dict, *, numbers: bool = False) -> str:
+    """The two panels. `numbers` draws the version the website uses."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
 
     # A constant salt: matplotlib derives element ids from it and from the process, so
     # without it two renders of the same data differ in the ids and `--check` can never pass.
     matplotlib.rcParams["svg.hashsalt"] = "harnessgrad-trends"
-    from matplotlib.lines import Line2D
 
     panels = data["panels"]
     colours = _method_colours(panels)
     figure, axes = plt.subplots(
-        1, len(panels), figsize=(9.6, 3.5), dpi=100,
-        gridspec_kw={"wspace": 0.12})
+        1, len(panels), figsize=(10.4, 3.6), dpi=100, gridspec_kw={"wspace": 0.16})
     if len(panels) == 1:
         axes = [axes]
 
     for axis, panel in zip(axes, panels):
+        baseline = panel["runs"][0]["scores"][0]
         for run in panel["runs"]:
             scores = run["scores"]
             colour = colours[run["label"]]
-            axis.plot(range(len(scores)), scores, color=colour, linewidth=1.35,
-                      alpha=0.85, solid_capstyle="round")
-            axis.scatter([0], [scores[0]], s=9, color=colour, zorder=3)
-        axis.set_xlabel("round", color=MUTED, fontsize=9)
+            axis.plot(range(len(scores)), scores, color=colour, linewidth=1.4, alpha=0.9,
+                      marker="o", markersize=3.0, markeredgewidth=0, solid_capstyle="round")
+        # The round-0 score is the harness the method was given; drawing it as a rule makes
+        # "moved" a comparison against a line instead of an impression.
+        label = f"H0 (round 0) {baseline:.3f}" if numbers else "H0 (round 0)"
+        axis.axhline(baseline, color=MUTED, linewidth=1.0, linestyle=(0, (4, 3)), zorder=1)
+        axis.annotate(label, xy=(1.0, baseline), xycoords=("axes fraction", "data"),
+                      xytext=(-4, 5), textcoords="offset points", ha="right",
+                      color=MUTED, fontsize=7.5)
+        axis.set_xlabel("checkpoint round", color=MUTED, fontsize=9)
         axis.set_title(panel["title"], color=INK, fontsize=10.5, loc="left", pad=8)
-        axis.grid(axis="x", color=GRID, linewidth=0.8)
+        axis.grid(axis="y", color=GRID, linewidth=0.8)
         axis.set_axisbelow(True)
         for side in ("top", "right"):
             axis.spines[side].set_visible(False)
         for side in ("left", "bottom"):
             axis.spines[side].set_color(GRID)
-        # The point of the figure: a shape, not a value.
-        axis.set_yticks([])
-        axis.tick_params(axis="x", colors=MUTED, labelsize=8, length=3)
-        axis.set_xticks(list(range(0, max(len(run["scores"]) for run in panel["runs"]), 5)))
+        rounds = max(len(run["scores"]) for run in panel["runs"])
+        # Every round up to a dozen; every other one beyond that, so the labels stay legible.
+        step = 1 if rounds <= 12 else 2
+        ticks = list(range(0, rounds, step))
+        axis.set_xticks(ticks)
+        axis.set_xticklabels([f"r{i}" for i in ticks])
+        axis.tick_params(axis="x", colors=MUTED, labelsize=7.5, length=3)
         low = min(min(run["scores"]) for run in panel["runs"])
         high = max(max(run["scores"]) for run in panel["runs"])
         span = max(high - low, 0.05)
-        axis.set_ylim(low - 0.08 * span, high + 0.10 * span)
+        axis.set_ylim(low - 0.12 * span, high + 0.10 * span)
+        if numbers:
+            axis.tick_params(axis="y", colors=MUTED, labelsize=8, length=3)
+        else:
+            # The point of the README figure: a shape, not a value.
+            axis.set_yticks([])
+    if not numbers:
+        axes[0].set_ylabel("score (unlabelled on purpose)", color=MUTED, fontsize=9)
 
-    axes[0].set_ylabel("score (unlabelled on purpose)", color=MUTED, fontsize=9)
-
-    handles = [Line2D([0], [0], color=colours[name], linewidth=1.6, label=name)
+    handles = [Line2D([0], [0], color=colours[name], linewidth=1.6, marker="o",
+                      markersize=3.4, markeredgewidth=0, label=name)
                for name in sorted(colours)]
-    figure.legend(handles=handles, loc="lower center", ncol=min(len(handles), 7),
-                  frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 0.005),
-                  handlelength=1.8, columnspacing=1.4)
+    figure.legend(handles=handles, loc="center left", ncol=1, frameon=False, fontsize=8.5,
+                  bbox_to_anchor=(0.842, 0.5), handlelength=1.8, labelspacing=0.7)
     figure.suptitle(
-        "Recorded rounds, one line per method. No held-out score, no axis numbers: "
-        "the shape is the claim, not the value.",
-        color=MUTED, fontsize=8.5, x=0.012, ha="left", y=0.985)
-    figure.subplots_adjust(left=0.06, right=0.985, top=0.84, bottom=0.24)
+        "Recorded rounds, one line per method. "
+        + ("Held-out scores are not drawn; the dashed rule is the harness each method started from."
+           if numbers else
+           "No axis numbers: the shape is the claim, not the value."),
+        color=MUTED, fontsize=8.5, x=0.012, ha="left", y=0.975)
+    figure.subplots_adjust(left=0.055, right=0.82, top=0.845, bottom=0.16)
     return _svg(figure)
 
 
-def _write_png(data: dict, target: Path) -> None:
+def _write_png(data: dict, target: Path, *, numbers: bool = False) -> None:
     """A raster copy for review; not the committed artifact, because it does not scale."""
     import matplotlib
 
@@ -133,7 +150,7 @@ def _write_png(data: dict, target: Path) -> None:
     figure = plt.gcf()
     if figure.axes:
         plt.close(figure)
-    render(data)
+    render(data, numbers=numbers)
     plt.gcf().savefig(target, format="png", dpi=140)
     plt.close("all")
 
@@ -159,14 +176,17 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true",
                         help="fail if the committed SVG differs from a fresh render")
+    parser.add_argument("--numbers", action="store_true",
+                        help="draw the numeric version the website uses (the README keeps the "
+                             "unlabelled one)")
     parser.add_argument("--png", default="",
                         help="also write a PNG (for a review or a slide; the SVG is the "
                              "committed artifact)")
     args = parser.parse_args()
 
-    svg = render(receipt())
+    svg = render(receipt(), numbers=args.numbers)
     if args.png:
-        _write_png(receipt(), Path(args.png))
+        _write_png(receipt(), Path(args.png), numbers=args.numbers)
     if args.check:
         committed = FIGURE.read_text(encoding="utf-8") if FIGURE.is_file() else ""
         if committed != svg:

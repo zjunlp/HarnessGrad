@@ -58,17 +58,19 @@ def test_the_readme_boards_are_the_record_rendered() -> None:
         "the README boards are stale; run python3 tools/leaderboards.py --write")
 
 
-def test_the_readme_catalogue_is_every_declared_adapter() -> None:
-    """'59 declared' is a number a reader can count, so the list is generated and guarded."""
+def test_the_benchmarks_row_lists_every_declared_adapter() -> None:
+    """The row is the catalogue: a reader counts names instead of trusting a number."""
     text = README.read_text(encoding="utf-8")
-    block = leaderboards._block(text, leaderboards.C_BEGIN, leaderboards.C_END)
-    assert block is not None, "README has no generated catalogue block"
-    assert block == leaderboards.render_catalogue(), (
-        "the README catalogue is stale; run python3 tools/leaderboards.py --write")
+    rows = [line for line in text.splitlines() if line.startswith("| **benchmarks** |")]
+    assert len(rows) == 1, "the README has no single benchmarks row"
+    row = rows[0]
+    assert row == leaderboards.benchmark_row(), (
+        "the benchmarks row is stale; run python3 tools/leaderboards.py --write")
     for name in leaderboards.declared_benchmarks():
-        assert f"`{name}`" in block, f"{name} is declared but not listed"
+        assert f"`{name}`" in row, f"{name} is declared but missing from the row"
     for name in leaderboards.refused_benchmarks():
-        assert f"`{name}` †" in block, f"the refused {name} is not marked"
+        assert f"`{name}` †" in row, f"the refused {name} is not marked"
+    assert f"{len(leaderboards.declared_benchmarks())} declared" in row
 
 
 def test_a_board_ranks_contributors_once_each() -> None:
