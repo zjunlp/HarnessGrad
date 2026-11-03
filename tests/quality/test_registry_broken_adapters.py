@@ -1,20 +1,15 @@
-"""A catalogue that drops an adapter must say which one and why.
+"""Omitted source declarations are reported without requiring runtime installation.
 
-`registry.published()` imports every adapter and omits the ones that raise, because a name a
-reader cannot load is not a dataset they can pick. Dropping silently is the problem: on a fresh
-clone without the optional `chess`/`numpy`, or in an install that did not ship an adapter's
-asset, the catalogue is simply shorter and nothing says so. `broken_adapters()` keeps the
-reason, and `tools/datasets.py --list` prints it.
-
-Measured 2026-11-03 in a venv with no extras: a wheel install published 54 of 59, dropping
-`chessbench_puzzles` (`No module named 'chess'`), `livecodebench` (`numpy`), `strongreject` and
-`tau_bench` (assets the wheel did not ship) and `authored_example_fix_bug` (excluded by
-`pyproject.toml`), with no diagnostic anywhere.
+The source catalog retains metadata for unprovisioned adapters. Unreadable declarations
+are omitted with a reason, while data/dependency failures remain load-time diagnostics.
+The download CLI keeps its JSON payload separate from diagnostic text on stderr.
 """
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -24,39 +19,49 @@ sys.path.insert(0, str(ROOT))
 from data.scaffolds import registry  # noqa: E402
 
 
-def test_a_broken_adapter_is_dropped_from_published_and_named():
-    """Falsification: an adapter that raises ImportError is absent *and* reported."""
-    original = registry.kind_of
+def test_a_broken_declaration_is_dropped_from_published_and_named(monkeypatch):
+    original = Path.read_bytes
 
-    def kind_of(name):
-        if name == "gsm8k":
-            raise ImportError("No module named 'chess'")
-        return original(name)
+    def read_bytes(path):
+        if path == ROOT / "data/datasets/gsm8k.py":
+            return b'KIND = "dataset"\ninvalid syntax !\n'
+        return original(path)
 
-    registry.kind_of = kind_of
-    try:
-        names = registry.published()
-        broken = registry.broken_adapters()
-    finally:
-        registry.kind_of = original
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+    names = registry.published()
+    broken = registry.broken_adapters()
 
-    assert "gsm8k" not in names, "a name that cannot import must not be offered"
-    assert broken.get("gsm8k", "").startswith("ImportError"), broken
-    assert "chess" in broken["gsm8k"], broken["gsm8k"]
+    assert "gsm8k" not in names
+    assert broken.get("gsm8k", "").startswith("SyntaxError"), broken
     # The rest of the catalogue is unaffected, so this is one row, not an empty list.
     assert "agentdojo" in names, names
 
 
-def test_the_host_this_runs_on_has_no_unimportable_adapter():
-    """On a provisioned checkout every published adapter imports.
-
-    A failure here is information, not necessarily a bug: it names the missing module or
-    asset. It is asserted rather than skipped because a silently short catalogue is exactly
-    the defect the rest of this module is about.
-    """
+def test_checkout_has_all_reviewed_adapter_declarations():
     published = registry.published()
     broken = registry.broken_adapters()
     assert not broken, (
-        "these adapters cannot be imported on this machine, so the catalogue is missing them: "
+        "these adapter declarations cannot be read, so the catalogue is missing them: "
         + "; ".join(f"{name} ({reason})" for name, reason in sorted(broken.items())))
     assert len(published) == 59, f"expected 59 published datasets, got {len(published)}"
+
+
+def test_missing_runtime_is_reported_at_load_without_shortening_catalog(monkeypatch):
+    def unavailable(name):
+        raise ModuleNotFoundError("synthetic unavailable runtime")
+
+    monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=unavailable))
+    assert len(registry.published()) == 59
+    assert registry.broken_adapters() == {}
+    with pytest.raises(ModuleNotFoundError, match="synthetic unavailable runtime"):
+        registry.load("gsm8k")
+
+
+def test_download_json_keeps_catalog_diagnostics_on_stderr(monkeypatch, capsys):
+    from tools import datasets
+    monkeypatch.setattr(datasets, "datasets_with_downloads", lambda **kwargs: [("example", [])])
+    monkeypatch.setattr(registry, "broken_adapters", lambda: {"broken": "SyntaxError: invalid declaration"})
+    assert datasets.main(["--list", "--json"]) == 0
+    output = capsys.readouterr()
+    assert json.loads(output.out) == [{"dataset": "example", "downloads": []}]
+    assert "broken: SyntaxError" in output.err

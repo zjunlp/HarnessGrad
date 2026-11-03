@@ -6345,3 +6345,14 @@ replacing the obsolete bootstrap that imported the staged scaffold before isolat
 All original test assertions are preserved, including decimal-aware scoring, wrong
 and absent answers, gold re-materialization after tampering, and unmeasured evidence
 when gold is absent. The dataset contract's 17 tests and 47 scorer tests pass.
+
+
+### Synchronize current-main diagnostics and tests (2026-11-03)
+
+Rebased the portable-storage work onto `d9233ca7`, retaining main's experiment
+configuration tests and integrity classification. Adapter diagnostics now report
+unreadable source declarations while source catalogs remain independent of local
+storage and optional dependencies; actual runtime errors are reported by `load()`.
+Download JSON remains a list, with catalog diagnostics on stderr. Reachability
+evidence is regenerated against the integrated source tree, retaining the BFCL
+source inventory, sink reviews and independent native admission pins.
