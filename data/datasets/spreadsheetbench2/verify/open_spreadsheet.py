@@ -96,7 +96,6 @@ except:
             [_lo_python(), temp_path],
             capture_output=True,
             text=True,
-            errors="replace",
             env=_env_for_lo_python(),
             timeout=10
         )
@@ -255,11 +254,7 @@ except Exception as e:
             stderr=subprocess.PIPE,
             env=env,
             bufsize=1,
-            universal_newlines=True,
-            # LibreOffice's conversion output is read line by line while it runs; one
-            # non-UTF-8 byte in a locale message would otherwise kill the reader thread and
-            # turn a scored workbook into an unmeasured task.
-            errors="replace"
+            universal_newlines=True
         )
 
         # Read output in real-time and update progress

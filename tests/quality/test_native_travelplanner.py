@@ -12,7 +12,7 @@ from data.scaffolds.native_research.adapter import Adapter
 from tools.prepare_native_research import prepare
 
 activate()
-from upstream.integrations._travelplanner_grade import check_database, score as official
+from flashrsi.integrations._travelplanner_grade import check_database, score as official
 
 
 @pytest.fixture

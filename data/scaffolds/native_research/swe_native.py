@@ -22,7 +22,7 @@ from harnessgrad.config.areas import ConfigMissing
 from eval.containers.observed import Runtime, checked
 
 ASSETS = Path(__file__).resolve().parent
-HELPER = ASSETS / 'vendor/upstream/integrations/_swe_grade.py'
+HELPER = ASSETS / 'vendor/flashrsi/integrations/_swe_grade.py'
 REVISION = '02e7a74ffd0b707aab73d203fe87bdc7c76afc8e'
 IMAGE = re.compile(r'sha256:[a-f0-9]{64}')
 

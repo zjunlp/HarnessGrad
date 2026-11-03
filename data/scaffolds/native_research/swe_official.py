@@ -61,7 +61,7 @@ def main():
     args = p.parse_args()
     try:
         inventory = activate()
-        helper = HERE / 'vendor/upstream/integrations/_swe_grade.py'
+        helper = HERE / 'vendor/flashrsi/integrations/_swe_grade.py'
         spec = importlib.util.spec_from_file_location('hg_swe_official_helper', helper)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)

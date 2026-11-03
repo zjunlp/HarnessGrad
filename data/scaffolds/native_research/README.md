@@ -98,5 +98,5 @@ Missing dependencies/data or failed native lifecycle are refused conditionally;
 native `grade()` functions that merely consume an actor-authored `*Verifier`
 event remain unacceptable substitutes.
 
-See `docs/dataset-reviews/native-transfer.md` for all 20 new entries, aliases,
+See `docs/dataset-reviews/transfer-review.md` for all 20 new entries, aliases,
 runtime gaps and the complete control/readiness distinction.

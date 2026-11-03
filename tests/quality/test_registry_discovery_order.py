@@ -36,7 +36,7 @@ EXPECTED_DATASETS = (
     # 做一次评审再加入，而不是回头去过滤。
     "authored_example_fix_bug",
     # **The upstream transfer (2026-11-02) added twenty reviewed adapters.** Each has a
-    # section in `docs/dataset-reviews/native-transfer.md` (source pin, metric, what is
+    # section in `docs/dataset-reviews/transfer-review.md` (source pin, metric, what is
     # honest missing) and a `KIND = "dataset"` declaration, so the reviewed-membership
     # rule above is satisfied; they are listed in sorted order like every other entry.
     "bbeh", "bfcl_v3", "bird_minidev",

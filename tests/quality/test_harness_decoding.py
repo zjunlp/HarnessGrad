@@ -62,6 +62,17 @@ EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 #: property instead of excused from it. The residual difference is only which error surfaces if the
 #: probe ever emits a bad byte: a JSON parse error instead of `UnicodeDecodeError`.
 EXCEPTIONS = {
+    # The official SpreadsheetBench-v2 conversion scorer is a custody artefact: its bytes are
+    # pinned by `data/datasets/spreadsheetbench2/PROVENANCE.json` and asserted equal to the
+    # upstream release, so this repository may not add `errors=` to it. The two sites read
+    # LibreOffice's own output; a bad byte there aborts the conversion, which the adapter
+    # records as an unmeasured task rather than a score, so the lossy-decode rule buys nothing
+    # here and editing the file would cost the provenance pin.
+    "data/datasets/spreadsheetbench2/verify/open_spreadsheet.py:95": (
+        "pinned upstream scorer bytes; a decode failure is reported as an unmeasured task"),
+    "data/datasets/spreadsheetbench2/verify/open_spreadsheet.py:251": (
+        "pinned upstream scorer bytes; the reader thread fails the task, never a score"),
+
     "eval/containers/harness_runtime.py:173": (
         "the host interpreter version probe: stdout is the platform-authored ASCII X.Y expression, "
         "not task/tool output. Keep a malformed version out of the overlay cache; _cached_version "

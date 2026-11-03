@@ -20,7 +20,7 @@ class Session:
             dest = root / 'data' / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(Path(source) / 'data' / name, dest)
-        script = Path(__file__).resolve().parent / 'vendor/upstream/integrations/_workbench_process.py'
+        script = Path(__file__).resolve().parent / 'vendor/flashrsi/integrations/_workbench_process.py'
         env = {k: v for k, v in os.environ.items() if k in ('PATH', 'LANG', 'SYSTEMROOT')}
         self.proc = subprocess.Popen([sys.executable, '-I', '-B', str(script)],
             cwd=root, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

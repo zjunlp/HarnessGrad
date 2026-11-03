@@ -53,7 +53,7 @@ def prepare(name, output, config, *, fetch=False, judge_model=None):
     # Validate supplemental worlds once and record their bytes before publishing.
     extra = {}
     if name == 'travelplanner':
-        from upstream.integrations._travelplanner_grade import check_database
+        from flashrsi.integrations._travelplanner_grade import check_database
         database = Path(config.get('database_path', ''))
         if not config.get('database_path') or not database.is_dir():
             raise ValueError('TravelPlanner requires database_path with all six native database files')
@@ -102,7 +102,7 @@ def prepare(name, output, config, *, fetch=False, judge_model=None):
         files[rel] = hashlib.sha256(raw).hexdigest()
         rows.append({'task_id': tid, 'case': rel, 'source_split': task.metadata.get('source_split', 'unassigned')})
     if name == 'travelplanner':
-        from upstream.integrations._travelplanner_grade import DATABASE_FILES
+        from flashrsi.integrations._travelplanner_grade import DATABASE_FILES
         for relative in DATABASE_FILES:
             dest = output / 'database' / relative
             dest.parent.mkdir(parents=True, exist_ok=True)

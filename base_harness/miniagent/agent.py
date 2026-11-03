@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Adapt the candidate-owned upstream MiniAgent runtime to HarnessGrad.
+"""Adapt the candidate-owned FlashRSI MiniAgent runtime to HarnessGrad.
 
 Native source/resources are pinned in PROVENANCE.json and remain editable. The
 bridge records actual SDK requests and native actions; the platform owns scoring.
@@ -146,7 +146,7 @@ def run(task: dict, work: Path) -> int:
         key=len, reverse=True)
     _record(trace, {'harness_identity': {
         'harness': 'miniagent', 'harness_version': '0.1.0', 'agent_model': model,
-        'agent_backend': backend, 'upstream_commit': SOURCE_COMMIT,
+        'agent_backend': backend, 'flashrsi_commit': SOURCE_COMMIT,
         'config': {'base_url': base, 'step_limit': turns, 'max_tokens': tokens,
                    'context_window': context, 'runtime': 'candidate-owned Python'}},
         'task_id': task.get('task_id')}, secrets)

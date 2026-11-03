@@ -133,7 +133,7 @@ def prepare_resources(native, task, output, files):
     documents = Path(documents).resolve()
     from .native import activate
     activate()
-    from upstream.benchmarks.harvey_lab import _files
+    from flashrsi.benchmarks.harvey_lab import _files
     checksum = native._rows_by_id[task.task_id]['documents_checksum']
     if not isinstance(checksum,str) or re.fullmatch(r'[0-9a-f]{64}',checksum) is None:
         raise ValueError('native Harvey public document checksum is malformed')

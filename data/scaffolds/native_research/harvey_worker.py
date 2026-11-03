@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from native import activate
 activate()
-from upstream.integrations import _harvey_lab_grade
+from flashrsi.integrations import _harvey_lab_grade
 
 
 @contextlib.contextmanager

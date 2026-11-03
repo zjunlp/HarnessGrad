@@ -125,9 +125,9 @@ def test_prepare_csv_preserves_native_float_nan_and_integer_differential(precise
     import pandas as pd
     from data.scaffolds.native_research.native import activate, benchmark
     activate()
-    from upstream.benchmarks.widesearch import METRICS
-    from upstream.benchmarks.widesearch._vendor import evaluation
-    from upstream.benchmarks.widesearch._vendor.data_loader import WideSearchResponse
+    from flashrsi.benchmarks.widesearch import METRICS
+    from flashrsi.benchmarks.widesearch._vendor import evaluation
+    from flashrsi.benchmarks.widesearch._vendor.data_loader import WideSearchResponse
 
     native_row = {'instance_id': 'numeric_control', 'query': 'Return the numeric table.',
         'language': 'en', 'evaluation': {'required': ['entity', 'whole', 'precise', 'missing'],
@@ -195,7 +195,7 @@ def test_explicit_fetch_captures_original_csv_without_second_download(tmp_path, 
     import huggingface_hub
     from data.scaffolds.native_research.native import activate
     activate()
-    from upstream.benchmarks.widesearch import DATA_REVISION
+    from flashrsi.benchmarks.widesearch import DATA_REVISION
     source = tmp_path / 'cached-authored-control'
     (source / 'widesearch_gold').mkdir(parents=True)
     (source / 'widesearch.jsonl').write_text(json.dumps(row()) + '\n')

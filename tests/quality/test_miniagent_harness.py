@@ -52,7 +52,7 @@ def test_pinned_native_sources_are_unmodified():
     assert len(provenance['source_files_sha256']) == 19
     for path, expected in provenance['source_files_sha256'].items():
         assert hashlib.sha256((HARNESS / path).read_bytes()).hexdigest() == expected
-    assert 'Apache License' in (HARNESS / 'UPSTREAM-LICENSE.txt').read_text()
+    assert 'Apache License' in (HARNESS / 'LICENSE.upstream').read_text()
 
 
 @pytest.mark.parametrize('model', ['miniagent-mock', 'gpt-5-mini'])

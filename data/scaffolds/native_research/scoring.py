@@ -37,7 +37,7 @@ def score(name, case, prediction, complete):
         finally:
             session.close()
     elif name == 'browsecomp':
-        from upstream.benchmarks.browsecomp._official import GRADER_TEMPLATE, decrypt
+        from flashrsi.benchmarks.browsecomp._official import GRADER_TEMPLATE, decrypt
         answer = decrypt(row['answer'], row['canary'])
         question = decrypt(row['problem'], row['canary'])
         text = complete([{'role': 'user', 'content': GRADER_TEMPLATE.format(
@@ -48,12 +48,12 @@ def score(name, case, prediction, complete):
         value = float(bool(match and match.group(1) == 'yes'))
         metrics = {'accuracy': value}
     elif name == 'deepsearchqa':
-        from upstream.benchmarks.deepsearchqa._official import counts, metrics as rate, prompt
+        from flashrsi.benchmarks.deepsearchqa._official import counts, metrics as rate, prompt
         text = complete([{'role': 'user', 'content': prompt(row, prediction)}])
         metrics = rate(counts(text))
         value = metrics['f1_score']
     elif name == 'hle':
-        from upstream.integrations._hle_judge import JUDGE_PROMPT
+        from flashrsi.integrations._hle_judge import JUDGE_PROMPT
         text = complete([{'role': 'user', 'content': JUDGE_PROMPT.format(
             question=row['question'], correct_answer=row['answer'], response=prediction)}])
         verdict = json.loads(text)
@@ -65,9 +65,9 @@ def score(name, case, prediction, complete):
         value = float(verdict['correct'] == 'yes')
         metrics = {'accuracy': value, 'confidence': verdict['confidence']}
     elif name == 'livemathbench':
-        from upstream.benchmarks.livemathbench._prompts import JUDGE_PROMPT_CN, JUDGE_PROMPT_EN
-        from upstream.benchmarks.livemathbench._extract import math_postprocess_v2
-        from upstream.benchmarks.livemathbench._label import extract_judge_label
+        from flashrsi.benchmarks.livemathbench._prompts import JUDGE_PROMPT_CN, JUDGE_PROMPT_EN
+        from flashrsi.benchmarks.livemathbench._extract import math_postprocess_v2
+        from flashrsi.benchmarks.livemathbench._label import extract_judge_label
         language = case['metadata'].get('language', 'en')
         template = JUDGE_PROMPT_CN if language == 'cn' else JUDGE_PROMPT_EN
         # Keys retain the native record's spelling; preparation validates them.
@@ -81,8 +81,8 @@ def score(name, case, prediction, complete):
         metrics = {'accuracy': value}
     elif name == 'travelplanner':
         from pathlib import Path
-        from upstream.integrations._travelplanner_grade import check_database, score as native_score
-        from upstream.benchmarks.travelplanner._prompts import CONVERSION_PREFIX
+        from flashrsi.integrations._travelplanner_grade import check_database, score as native_score
+        from flashrsi.benchmarks.travelplanner._prompts import CONVERSION_PREFIX
         database = Path('travelplanner_database')
         if check_database(database) != case['database_checksum']:
             raise ValueError('native TravelPlanner database identity changed')
@@ -106,11 +106,11 @@ def score(name, case, prediction, complete):
         import hashlib
         import io
         import pandas as pd
-        from upstream.benchmarks.widesearch._vendor._llm import completion
-        from upstream.benchmarks.widesearch._vendor.data_loader import WideSearchQuery, WideSearchResponse
-        from upstream.benchmarks.widesearch._vendor.evaluation import evaluate_single_query
-        from upstream.benchmarks.widesearch._vendor.utils import norm_column
-        from upstream.benchmarks.widesearch import METRICS, _scores
+        from flashrsi.benchmarks.widesearch._vendor._llm import completion
+        from flashrsi.benchmarks.widesearch._vendor.data_loader import WideSearchQuery, WideSearchResponse
+        from flashrsi.benchmarks.widesearch._vendor.evaluation import evaluate_single_query
+        from flashrsi.benchmarks.widesearch._vendor.utils import norm_column
+        from flashrsi.benchmarks.widesearch import METRICS, _scores
         q = case['wide_query']
         if q.get('schema') != 'harnessgrad.widesearch-query.csv.v1':
             raise ValueError('WideSearch requires original gold CSV v1; re-prepare legacy JSON cases')
@@ -130,7 +130,7 @@ def score(name, case, prediction, complete):
         def call(messages):
             try:
                 content = complete([{'role': 'user', 'content': messages}])
-                from upstream.benchmarks.widesearch._vendor.metric_utils import parse_markdown_json
+                from flashrsi.benchmarks.widesearch._vendor.metric_utils import parse_markdown_json
                 parsed = parse_markdown_json(content)
                 if not isinstance(parsed, dict):
                     raise ValueError('WideSearch judge returned malformed native JSON')

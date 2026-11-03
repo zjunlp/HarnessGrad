@@ -7,7 +7,7 @@ VENDOR = Path(__file__).resolve().parent / 'vendor'
 
 
 def activate():
-    existing = sys.modules.get('upstream')
+    existing = sys.modules.get('flashrsi')
     if existing is not None and not Path(existing.__file__).resolve().is_relative_to(VENDOR):
         raise RuntimeError('another upstream package is loaded; use a separate preparation process')
     if str(VENDOR) not in sys.path:
@@ -17,5 +17,5 @@ def activate():
 def benchmark(name, config):
     from .profiles import PROFILES
     activate()
-    module = importlib.import_module('upstream.benchmarks.' + name)
+    module = importlib.import_module('flashrsi.benchmarks.' + name)
     return getattr(module, PROFILES[name]['class'])(config)

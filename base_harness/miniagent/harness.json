@@ -45,7 +45,7 @@
     ],
     "unattributed": [
       "components.yaml",
-      "UPSTREAM-LICENSE.txt",
+      "LICENSE.upstream",
       "PROVENANCE.json",
       "README.md",
       "requirements.txt",
