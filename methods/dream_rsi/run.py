@@ -57,8 +57,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import editor                                              # noqa: E402
-import protocol                                            # noqa: E402
+import _siblings
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
 
 ACCEPTANCE_RULE = (
     "Dream-RSI (paper p.6, §3) selects the highest average replay score on a fixed history "

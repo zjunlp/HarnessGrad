@@ -121,11 +121,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import _siblings
 # Called through the module, never `from editor import ask`: a method that binds
 # the editor's functions at import time cannot be tested with the model stubbed
 # out, and the stub is the only way to check what the method actually asked for.
-import editor                                                  # noqa: E402
-import protocol                                                # noqa: E402
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
 
 
 # ------------------------------------------------- TTHE 的分支角色表 ---

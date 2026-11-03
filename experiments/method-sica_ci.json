@@ -1,0 +1,12 @@
+{
+  "dataset": "gsm8k",
+  "harness": "loop",
+  "side": "train",
+  "sampling": "random_5",
+  "method": "sica_ci",
+  "rounds": 1,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 0,
+  "run_id": "sica_ci-quickstart"
+}

@@ -1,0 +1,9 @@
+{
+  "dataset": "gsm8k",
+  "harness": "loop",
+  "side": "eval",
+  "sampling": "all",
+  "from_run": "quickstart",
+  "from_round": 1,
+  "run_id": "quickstart-eval"
+}

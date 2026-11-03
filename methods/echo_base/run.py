@@ -16,7 +16,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from protocol import emit, read_request, require_api  # noqa: E402
+import _siblings
+protocol = _siblings.load("protocol")
+emit, read_request, require_api = (protocol.emit, protocol.read_request,
+                                 protocol.require_api)
 
 
 def _one_step(base: Path, dest: Path) -> bool:

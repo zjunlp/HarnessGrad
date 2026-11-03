@@ -162,11 +162,12 @@ from pathlib import Path
 from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import _siblings
 # Called through the module, never `from editor import ask`: the tests monkeypatch
 # `editor.ask`, and a method that bound the function at import time could not be
 # tested without a network call -- the stub is the only way to check what it asked.
-import editor                                                  # noqa: E402
-import protocol                                                # noqa: E402
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
 
 
 # ------------------------------------------------- RRSI 的组件词表与信号 ---

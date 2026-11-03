@@ -1,0 +1,47 @@
+{
+  "kind": "published",
+  "title": "modular_rsi: FlashRSI policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "source": {
+    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+    "path": "flashrsi/algorithms/modular_rsi"
+  },
+  "fidelity_profile": {
+    "preserved": [
+      "Explicit disjoint module file ownership, independent branches starting from the root, repeated platform-trial contrast and integration proposals restricted to the union of module files.",
+      "Out-of-scope and over-budget findings/edits are rejected before returning candidates."
+    ],
+    "adapted": [
+      "Platform measures candidates between external-method calls; only adaptation-visible study channel is read.",
+      "Candidate trees are staged artifacts; historical parents are restored from platform states."
+    ],
+    "missing_until_runtime_support": [
+      "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
+      "Contrast is drawn from existing platform per_task_trials and current/historical staged traces; no on-demand new rollouts or question-augmented target retries.",
+      "Native execution gates before integration, repair epochs, and final fallback are deferred to platform candidate evaluations; no synchronous within-call execution gate exists.",
+      "Module epochs are approximated by one fixed-set proposal per branch invocation, not native mini-batches."
+    ]
+  },
+  "deviations": [
+    {
+      "what": "Method evaluation callbacks are replaced by delayed platform measurements.",
+      "why": "INTERFACE.md §4 prohibits a method from evaluating benchmark tasks. The bridge reads only staged study records and returns whole candidates; it never invents a dev fitness or evaluates a held-out task.",
+      "direction": "unknown"
+    },
+    {
+      "what": "Contrast is drawn from existing platform per_task_trials and current/historical staged traces; no on-demand new rollouts or question-augmented target retries.; Native execution gates before integration, repair epochs, and final fallback are deferred to platform candidate evaluations; no synchronous within-call execution gate exists.; Module epochs are approximated by one fixed-set proposal per branch invocation, not native mini-batches.",
+      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "direction": "weaker"
+    }
+  ],
+  "source_role_prompt_hashes": {
+    "path": "flashrsi/algorithms/modular_rsi/_prompts.py",
+    "sha256": "a1f72f141db2c64b553d51a9be9d9a38f6b5a971b441e802e3cc8359878cb03c"
+  },
+  "requires": {
+    "editor_model": true,
+    "min_trials": 2,
+    "modules": true
+  }
+}

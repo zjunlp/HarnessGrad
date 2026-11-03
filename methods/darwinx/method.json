@@ -1,0 +1,44 @@
+{
+  "kind": "published",
+  "title": "darwinx: FlashRSI policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "source": {
+    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+    "path": "flashrsi/algorithms/darwinx"
+  },
+  "fidelity_profile": {
+    "preserved": [
+      "Paired per-task preserving-extension criterion, regression mass and cumulative solved-task invariant.",
+      "Accepted-only mutation parents, exploration/exploitation, complementary rejected branch donors and evidence-labelled merge attempts."
+    ],
+    "adapted": [
+      "Platform measures candidates between external-method calls; only adaptation-visible study channel is read.",
+      "Candidate trees are staged artifacts; historical parents are restored from platform states."
+    ],
+    "missing_until_runtime_support": [
+      "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
+      "No fresh stochastic mini-screen or repeated parent/candidate confirmation is run inside the method; paired platform full-set means are a declared approximation.",
+      "Candidate assessments operate on existing matched per-task scores; they are not statistically fresh confirmation."
+    ]
+  },
+  "deviations": [
+    {
+      "what": "Method evaluation callbacks are replaced by delayed platform measurements.",
+      "why": "INTERFACE.md §4 prohibits a method from evaluating benchmark tasks. The bridge reads only staged study records and returns whole candidates; it never invents a dev fitness or evaluates a held-out task.",
+      "direction": "unknown"
+    },
+    {
+      "what": "No fresh stochastic mini-screen or repeated parent/candidate confirmation is run inside the method; paired platform full-set means are a declared approximation.; Candidate assessments operate on existing matched per-task scores; they are not statistically fresh confirmation.",
+      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "direction": "weaker"
+    }
+  ],
+  "source_role_prompt_hashes": {
+    "path": "flashrsi/algorithms/darwinx/_prompts.py",
+    "sha256": "f7dc7723030e25901a62e16ad5c0e5ffcd69ddf796c9a8d83a1f57a35ba6638b"
+  },
+  "requires": {
+    "editor_model": true
+  }
+}

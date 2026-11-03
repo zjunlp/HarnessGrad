@@ -88,8 +88,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import editor                                                  # noqa: E402
-import protocol                                                # noqa: E402
+import _siblings
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
 
 
 def _load_component(filename: str, module_name: str):

@@ -164,3 +164,19 @@ def studied_per_task(point: dict) -> dict:
 def studied_task_ids(point: dict) -> list[str]:
     """The task ids behind `studied_per_task`, in the order the record carries them."""
     return sorted(studied_per_task(point))
+
+
+def studied_per_task_trials(point: dict) -> dict:
+    """The repeated-trial scores behind `studied_per_task`, on the same side.
+
+    `per_task_trials` is the per-trial breakdown of `per_task` (`harnessgrad/records.py`
+    writes both from the same measurement), so it belongs to the same side and needs the
+    same gate: reading it on an exam point would leak exactly what reading `per_task`
+    leaks. A method that needs trial contrast therefore asks for it here rather than
+    reaching into the point, so the side rule has one implementation instead of two.
+    """
+    if not studied_per_task(point):
+        return {}
+    return {task: list(values)
+            for task, values in (point.get("per_task_trials") or {}).items()
+            if isinstance(values, list)}

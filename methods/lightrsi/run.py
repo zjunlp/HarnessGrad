@@ -48,8 +48,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import editor  # noqa: E402  (the shared editor: the failure path is the platform's)
-from protocol import emit, read_request, require_api  # noqa: E402
+import _siblings
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
+emit, read_request, require_api = (protocol.emit, protocol.read_request,
+                                 protocol.require_api)
 
 #: The platform stages the method's evidence here, inside the harness tree it hands over.
 #: It is the *method's* input, not part of the artifact being measured -- `mode_a` deletes

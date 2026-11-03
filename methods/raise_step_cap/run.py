@@ -33,7 +33,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from protocol import emit, read_request, require_api  # noqa: E402
+import _siblings
+protocol = _siblings.load("protocol")
+emit, read_request, require_api = (protocol.emit, protocol.read_request,
+                                 protocol.require_api)
 
 #: The exact line in `base_harness/loop/agent.py`. Absent means this is not that harness, and
 #: the method reports `changed: false` rather than claiming an edit it did not make -- the same

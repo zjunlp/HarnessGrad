@@ -139,8 +139,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import editor                                              # noqa: E402
-import protocol                                            # noqa: E402
+import _siblings
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
 
 #: AHE passes a task when `reward >= 1.0` (`evolve.py:634`). HarnessGrad's
 #: per-task scores are 0.0/1.0 (`eval/runner.py:168-172`), so this is an identity,

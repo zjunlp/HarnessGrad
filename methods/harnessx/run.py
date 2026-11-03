@@ -59,7 +59,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import editor                                              # noqa: E402
+import _siblings
+editor = _siblings.load("editor")
 
 
 #: The four levers HarnessX allows (`harnessx/meta_harness/journal.py:57`,

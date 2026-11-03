@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+  "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "archive_sha256": "ed078ae51c9d042d6f69f8ba5a5c4b0f504bfed38d285cca561eb61da9010c7b",
+  "license": "Apache-2.0",
+  "files": {
+    "ace/_prompts.py": "c49760fa439130ab746e7b8ed121e9d21e12ade671e163f8ea709788c2e2364b",
+    "ace/_playbook.py": "2f898e41e3f1bff85441afa1b542052a9321c409419d75f95e8f9fac697158f3",
+    "ace/strategy.py.reference": "8144d363085b272fdd5c493df3a2a6ddc12075f2010c637d7f827933f909af3f",
+    "adas/_prompts.py": "74c47a0dbe9c7238633c97cf25799c4c7026f16df31b06bb71f817d5f376c525",
+    "adas/strategy.py.reference": "4a6643293ebf0167bffe4e0041350edd8966bc7c5a8221b9c6ae22471adb4516",
+    "arbor/_prompts.py": "bed801f07f412978797484055fa4ff15655e5db25862c3369a37e87d2adf8d54",
+    "arbor/strategy.py.reference": "80904a754718b7079eb58ef94cd223ec0f6d8d17c1c354532f533b013e525852",
+    "darwinx/_prompts.py": "f7dc7723030e25901a62e16ad5c0e5ffcd69ddf796c9a8d83a1f57a35ba6638b",
+    "darwinx/strategy.py.reference": "dd95bbe1f7de8fd1d70262e3986259d2fd094c3a811f0b9dc0d87e76fff2f783",
+    "evo_harness/_prompts.py": "9aa7f940b2b9f9e8bc33d568d04d144c20c1034194444c8bbe4ef0b351c17d70",
+    "evo_harness/strategy.py.reference": "53a72979bf0a4b6ad6a66e11ed244d89750eee25887a5a21f9626c5249e6d3dc",
+    "evoprompt/_prompts.py": "43b5d518803e2d4c2c1ff1d0eb81fad585e88dad23bea9c417112ef905cb9cd4",
+    "evoprompt/strategy.py.reference": "968ab724ddd53d7474b80384c6ec3d7f04f8aecbf2f611125496a3dec06cbd49",
+    "gepa/_prompts.py": "17a17850f802e55ef1521b476817413b2bc3d88edbfeca3594814531eb0c9ecd",
+    "gepa/strategy.py.reference": "a3218511cd37b34cad82a10036c7000ba2716ac6af55c9f8326297b02f84f3d5",
+    "modular_rsi/_prompts.py": "a1f72f141db2c64b553d51a9be9d9a38f6b5a971b441e802e3cc8359878cb03c",
+    "modular_rsi/strategy.py.reference": "3b1d88b42a3a83b6389e5f1d7697f97db17c975d2f7eb7e45d79fea3206e8230",
+    "opro/_prompts.py": "44824908887b41437dd068a8287bc4bc09d2b8106b3892e28fe6f58ff2fc3598",
+    "opro/strategy.py.reference": "258d16e89a3bb0ae814def78c3562ece8a737a16495228955c6b79da3f8f4b95",
+    "skillopt/_prompts.py": "508dc3918e26efea24bcfac43c2841d89c212430600915650e02b7e9a5f04b7c",
+    "skillopt/strategy.py.reference": "199aa3114253d6c7ed2909e923da4752e7b6ec93353cd969e3a74eca17f989cd",
+    "gepa/_population.py.reference": "810124247ce6e912146001afa6b17be0dab8d891b293dfd17ecc2df0868e0f02"
+  },
+  "native_sources_modified": false
+}

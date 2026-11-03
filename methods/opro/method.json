@@ -1,0 +1,43 @@
+{
+  "kind": "published",
+  "title": "opro: FlashRSI policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "source": {
+    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+    "path": "flashrsi/algorithms/opro"
+  },
+  "fidelity_profile": {
+    "preserved": [
+      "Accumulate every platform-measured instruction; stable global-best selection; ascending thresholded history, novelty filtering and multiple candidate proposals."
+    ],
+    "adapted": [
+      "Platform measures candidates between external-method calls; only adaptation-visible study channel is read.",
+      "Candidate trees are staged artifacts; historical parents are restored from platform states."
+    ],
+    "missing_until_runtime_support": [
+      "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
+      "Optimizer JSON instruction protocol replaces native INS tags; evidence contains no reference answers."
+    ]
+  },
+  "deviations": [
+    {
+      "what": "Method evaluation callbacks are replaced by delayed platform measurements.",
+      "why": "INTERFACE.md §4 prohibits a method from evaluating benchmark tasks. The bridge reads only staged study records and returns whole candidates; it never invents a dev fitness or evaluates a held-out task.",
+      "direction": "unknown"
+    },
+    {
+      "what": "Optimizer JSON instruction protocol replaces native INS tags; evidence contains no reference answers.",
+      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "direction": "weaker"
+    }
+  ],
+  "source_role_prompt_hashes": {
+    "path": "flashrsi/algorithms/opro/_prompts.py",
+    "sha256": "44824908887b41437dd068a8287bc4bc09d2b8106b3892e28fe6f58ff2fc3598"
+  },
+  "requires": {
+    "editor_model": true,
+    "instruction_file": true
+  }
+}

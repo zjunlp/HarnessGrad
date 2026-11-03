@@ -40,14 +40,20 @@ import time
 from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _siblings  # noqa: E402
 
-import protocol                                             # noqa: E402
-from protocol import emit, read_request, require_api        # noqa: E402,F401
+# 兄弟模块一律按路径加载（`methods/_siblings.py`）：顶层名字 `protocol` / `editor` / `apply`
+# 都太普通，`sys.modules` 又先于 `sys.path` 命中，别人先注册一个同名模块就会串味。
+
+protocol = _siblings.load("protocol")                        # noqa: E402
+emit = protocol.emit                                         # noqa: E402
+read_request = protocol.read_request                         # noqa: E402
+require_api = protocol.require_api                           # noqa: E402
 # `methods/apply.py`, not `eval/candidate.py`: a method's sandbox hides the platform, so
 # an `import eval.*` here fails inside a run (`ModuleNotFoundError: No module named
 # 'eval'`) while passing every test that calls the editor directly. Measured, in a real
 # run. The platform keeps its own copy in `eval/candidate.py`, and that one is the judge.
-import apply as candidate                                    # noqa: E402
+candidate = _siblings.load("apply")
 
 #: The framework<->method channel. Gitignored, so committing it cannot mint a sha.
 CHANNEL = "_harnessgrad"

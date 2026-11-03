@@ -1,0 +1,46 @@
+{
+  "kind": "published",
+  "title": "ace: FlashRSI policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "source": {
+    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+    "path": "flashrsi/algorithms/ace"
+  },
+  "fidelity_profile": {
+    "preserved": [
+      "Native ADD-only playbook patch parser, system-numbered bullets, helpful/harmful tags, deduplication and approximate playbook token bound.",
+      "Online keeps the current additive playbook despite regressions; offline final selection restores the measured study-best state."
+    ],
+    "adapted": [
+      "Platform measures candidates between external-method calls; only adaptation-visible study channel is read.",
+      "Candidate trees are staged artifacts; historical parents are restored from platform states."
+    ],
+    "missing_until_runtime_support": [
+      "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
+      "Default native offline mode is retained, but offline winner uses study scores because a dev capability is absent.",
+      "Native target retries between reflections cannot run in a method call: max_reflection_rounds=1 is enforced, vs native default 3.",
+      "Training-batch/epoch order and periodic fresh dev evaluations are delegated to the platform fixed task set; no gold labels are exposed."
+    ]
+  },
+  "deviations": [
+    {
+      "what": "Method evaluation callbacks are replaced by delayed platform measurements.",
+      "why": "INTERFACE.md §4 prohibits a method from evaluating benchmark tasks. The bridge reads only staged study records and returns whole candidates; it never invents a dev fitness or evaluates a held-out task.",
+      "direction": "unknown"
+    },
+    {
+      "what": "Default native offline mode is retained, but offline winner uses study scores because a dev capability is absent.; Native target retries between reflections cannot run in a method call: max_reflection_rounds=1 is enforced, vs native default 3.; Training-batch/epoch order and periodic fresh dev evaluations are delegated to the platform fixed task set; no gold labels are exposed.",
+      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "direction": "weaker"
+    }
+  ],
+  "source_role_prompt_hashes": {
+    "path": "flashrsi/algorithms/ace/_prompts.py",
+    "sha256": "c49760fa439130ab746e7b8ed121e9d21e12ade671e163f8ea709788c2e2364b"
+  },
+  "requires": {
+    "editor_model": true,
+    "instruction_file": true
+  }
+}

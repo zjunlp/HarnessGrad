@@ -1,0 +1,44 @@
+{
+  "kind": "published",
+  "title": "arbor: FlashRSI policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "source": {
+    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+    "path": "flashrsi/algorithms/arbor"
+  },
+  "fidelity_profile": {
+    "preserved": [
+      "Bounded Coordinator expand/run/prune/stop actions, minimum leaf depth, conceptual hypothesis ancestry distinct from trunk code ancestry.",
+      "Post-measurement reflection, bottom-up ancestor synthesis and strict trunk adoption on study score."
+    ],
+    "adapted": [
+      "Platform measures candidates between external-method calls; only adaptation-visible study channel is read.",
+      "Candidate trees are staged artifacts; historical parents are restored from platform states."
+    ],
+    "missing_until_runtime_support": [
+      "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
+      "Native train pre-screen and dev adoption are collapsed to one platform study measurement, never a fabricated dev score.",
+      "Coordinator/executor/reflector text is adapted to shared-editor JSON; native tags and Agent tool loop are not copied."
+    ]
+  },
+  "deviations": [
+    {
+      "what": "Method evaluation callbacks are replaced by delayed platform measurements.",
+      "why": "INTERFACE.md §4 prohibits a method from evaluating benchmark tasks. The bridge reads only staged study records and returns whole candidates; it never invents a dev fitness or evaluates a held-out task.",
+      "direction": "unknown"
+    },
+    {
+      "what": "Native train pre-screen and dev adoption are collapsed to one platform study measurement, never a fabricated dev score.; Coordinator/executor/reflector text is adapted to shared-editor JSON; native tags and Agent tool loop are not copied.",
+      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "direction": "weaker"
+    }
+  ],
+  "source_role_prompt_hashes": {
+    "path": "flashrsi/algorithms/arbor/_prompts.py",
+    "sha256": "bed801f07f412978797484055fa4ff15655e5db25862c3369a37e87d2adf8d54"
+  },
+  "requires": {
+    "editor_model": true
+  }
+}

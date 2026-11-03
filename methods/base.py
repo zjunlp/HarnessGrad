@@ -50,9 +50,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _siblings  # noqa: E402
 
-import editor                                                  # noqa: E402
-import protocol                                                # noqa: E402
+
+editor = _siblings.load("editor")                            # noqa: E402
+protocol = _siblings.load("protocol")                        # noqa: E402
 
 #: How many times one proposal is asked for before the round reports nothing.
 #: Two is the first ask plus **one repair**: a sequence that does not apply is

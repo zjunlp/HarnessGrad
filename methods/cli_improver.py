@@ -50,9 +50,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _siblings
 from source_tree import copy_harness
 from bun_workspace import stage_candidate
-import editor                                              # noqa: E402
+editor = _siblings.load("editor")
 
 ROOT = Path(__file__).resolve().parents[1]
 

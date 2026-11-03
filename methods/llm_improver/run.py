@@ -52,10 +52,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _siblings
 # Called through the module, never `from editor import ask`. A method that binds
 # the editor's functions at import time cannot be tested with the model stubbed
 # out, and the stub is the only way to check what the method actually asked for.
-import editor                                                  # noqa: E402
+editor = _siblings.load("editor")
 
 
 def failure_digest(base: Path) -> str:

@@ -87,8 +87,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import editor                                              # noqa: E402
-import protocol                                            # noqa: E402
+import _siblings
+editor = _siblings.load("editor")
+protocol = _siblings.load("protocol")
 
 #: What this method's acceptance is. Meta-Harness keeps a frontier and does not gate on it;
 #: the platform accepts unconditionally in mode A, so this file records what the frontier

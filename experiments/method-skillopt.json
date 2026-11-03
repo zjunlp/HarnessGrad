@@ -1,0 +1,12 @@
+{
+  "dataset": "gsm8k",
+  "harness": "miniagent",
+  "side": "train",
+  "sampling": "random_5",
+  "method": "skillopt",
+  "rounds": 1,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 0,
+  "run_id": "skillopt-quickstart"
+}
