@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "skillopt: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "skillopt: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/skillopt"
+    "path": "upstream/algorithms/skillopt"
   },
   "fidelity_profile": {
     "preserved": [
@@ -31,12 +31,12 @@
     },
     {
       "what": "Strict selection uses full-set study fitness rather than separate dev score; fixed platform measurements replace fresh training minibatches and adjacent-epoch resampling.; Port epoch_batches schedules slow updates between method invocations; it is not a reproduction of native task-stream epochs.; Prompt JSON protocol is adapted while exact edit semantics and protected sections are implemented locally.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/skillopt/_prompts.py",
+    "path": "upstream/algorithms/skillopt/_prompts.py",
     "sha256": "508dc3918e26efea24bcfac43c2841d89c212430600915650e02b7e9a5f04b7c"
   },
   "requires": {

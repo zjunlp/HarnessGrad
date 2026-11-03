@@ -1,6 +1,6 @@
-"""FlashRSI adas/__init__.py:111-151: reflect twice before platform measurement."""
+"""upstream adas/__init__.py:111-151: reflect twice before platform measurement."""
 
-from flashrsi_helpers import runtime, fixture, capture
+from native_helpers import runtime, fixture, capture
 
 
 def test_adas_reflects_on_the_already_modified_design(tmp_path, monkeypatch):

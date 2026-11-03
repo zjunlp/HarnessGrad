@@ -1,6 +1,6 @@
-"""FlashRSI evo_harness/__init__.py:135-211: memory provenance and level gate."""
+"""upstream evo_harness/__init__.py:135-211: memory provenance and level gate."""
 
-from flashrsi_helpers import runtime, fixture, capture
+from native_helpers import runtime, fixture, capture
 
 
 def test_topic_skill_uses_current_failed_memory_and_is_native_discoverable(

@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "arbor: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "arbor: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/arbor"
+    "path": "upstream/algorithms/arbor"
   },
   "fidelity_profile": {
     "preserved": [
@@ -30,12 +30,12 @@
     },
     {
       "what": "Native train pre-screen and dev adoption are collapsed to one platform study measurement, never a fabricated dev score.; Coordinator/executor/reflector text is adapted to shared-editor JSON; native tags and Agent tool loop are not copied.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/arbor/_prompts.py",
+    "path": "upstream/algorithms/arbor/_prompts.py",
     "sha256": "bed801f07f412978797484055fa4ff15655e5db25862c3369a37e87d2adf8d54"
   },
   "requires": {

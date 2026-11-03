@@ -1,7 +1,7 @@
 # OpenClaw harness
 
-This is a wrapper around **OpenClaw 2026.3.13 (`61d171a`)**, not a FlashRSI
-OpenClaw port. FlashRSI's inspected `main` registers MiniAgent, Claude Code,
+This is a wrapper around **OpenClaw 2026.3.13 (`61d171a`)**, not a upstream
+OpenClaw port. upstream's inspected `main` registers MiniAgent, Claude Code,
 Codex, Pi and Hermes; it does not contain an OpenClaw adapter.
 
 `agent.py --task task.json --workdir <dir>` runs the real installed CLI via

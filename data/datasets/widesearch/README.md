@@ -1,6 +1,6 @@
 # WideSearch native evaluation and explicit trusted runtime
 
-This adapter uses FlashRSI's fixed native WideSearch evaluator projection at
+This adapter uses upstream's fixed native WideSearch evaluator projection at
 `e9c7667945f959d62da27204649a82f94d1b6705`, upstream evaluator revision
 `9825ba7b140b71d81b364793f86dabe4cfed6749`, data revision
 `6531a7e5b497d44c8912407e0cb3dc95bd98cc09`.
@@ -52,7 +52,7 @@ original hosted judge identity or public-web task completion.
 
 ## Instrument controls
 
-`tests/quality/test_flashrsi_widesearch.py` constructs a native query and a private
+`tests/quality/test_upstream_widesearch.py` constructs a native query and a private
 one-row CSV as authored protocol controls. It runs the real vendored evaluator and
 HG sandbox/verifier broker against localhost scripted HTTP responses: positive
 one, completed wrong-answer zero, provider HTTP failure unmeasured, malformed

@@ -147,7 +147,7 @@ UNCOVERED_DEMANDS: dict[str, tuple[str, ...]] = {}
 from harnessgrad.components import COMPONENTS as FUNCTIONS  # noqa: E402
 
 EXERCISES: dict[str, tuple[str, ...]] = {
-    # Pinned FlashRSI transfer declarations; provisioning is a separate axis.
+    # Pinned upstream transfer declarations; provisioning is a separate axis.
     'bbeh': ('context', 'verification'),
     'browsecomp': ('context', 'tools', 'control'),
     'deepsearchqa': ('context', 'tools', 'control'),
@@ -261,7 +261,7 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
 #: than two so the levels cannot drift apart: there is no way to add a dataset to a demand and
 #: forget its surface, which a second dict keyed by the same names would allow.
 CAPABILITY: dict[str, tuple[str, str]] = {
-    # Pinned FlashRSI transfer declarations; provisioning is a separate axis.
+    # Pinned upstream transfer declarations; provisioning is a separate axis.
     'bbeh': ('reasoning', 'reasoning'),
     'browsecomp': ('evidence', 'information_seeking'),
     'deepsearchqa': ('evidence', 'information_seeking'),
@@ -360,7 +360,7 @@ ACT_VERBS = ("do", "call", "send_message", "ack")
 #: edits this map, the tool stops and someone looks. A single source would have hidden the
 #: `agentdojo` mistake above; the derived side is what caught it.
 EXPECTED_INTERACTION = {
-    # Pinned FlashRSI transfer declarations; provisioning is a separate axis.
+    # Pinned upstream transfer declarations; provisioning is a separate axis.
     'bbeh': 'single_shot',
     'browsecomp': 'closed_loop',
     'deepsearchqa': 'closed_loop',

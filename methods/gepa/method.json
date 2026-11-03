@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "gepa: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "gepa: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/gepa"
+    "path": "upstream/algorithms/gepa"
   },
   "fidelity_profile": {
     "preserved": [
@@ -20,7 +20,7 @@
       "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
       "Native fresh parent/minibatch screen followed by separate dev evaluation is replaced by delayed full study-set paired acceptance.",
       "Metric-call-budget allocation and shuffled/padded epoch minibatches are not reproduced; the platform controls measured-state budget.",
-      "System-aware merge is refused, matching the pinned FlashRSI implementation."
+      "System-aware merge is refused, matching the pinned upstream implementation."
     ]
   },
   "deviations": [
@@ -30,13 +30,13 @@
       "direction": "unknown"
     },
     {
-      "what": "Native fresh parent/minibatch screen followed by separate dev evaluation is replaced by delayed full study-set paired acceptance.; Metric-call-budget allocation and shuffled/padded epoch minibatches are not reproduced; the platform controls measured-state budget.; System-aware merge is refused, matching the pinned FlashRSI implementation.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "what": "Native fresh parent/minibatch screen followed by separate dev evaluation is replaced by delayed full study-set paired acceptance.; Metric-call-budget allocation and shuffled/padded epoch minibatches are not reproduced; the platform controls measured-state budget.; System-aware merge is refused, matching the pinned upstream implementation.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/gepa/_prompts.py",
+    "path": "upstream/algorithms/gepa/_prompts.py",
     "sha256": "17a17850f802e55ef1521b476817413b2bc3d88edbfeca3594814531eb0c9ecd"
   },
   "requires": {

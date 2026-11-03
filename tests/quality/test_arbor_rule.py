@@ -1,6 +1,6 @@
-"""FlashRSI arbor/__init__.py:138-238: bounded hypothesis tree and trunk origin."""
+"""upstream arbor/__init__.py:138-238: bounded hypothesis tree and trunk origin."""
 
-from flashrsi_helpers import runtime, fixture, capture
+from native_helpers import runtime, fixture, capture
 
 
 def test_coordinator_expands_twice_then_runs_leaf_from_trunk(tmp_path, monkeypatch):
@@ -22,7 +22,7 @@ def test_coordinator_expands_twice_then_runs_leaf_from_trunk(tmp_path, monkeypat
     monkeypatch.setattr(runtime.editor, "ask", lambda *a, **k: next(answers))
     runtime.run("arbor", req)
     assert "failure" not in out, out
-    info = out["steps"][0]["method_reported"]["flashrsi_port"]
+    info = out["steps"][0]["method_reported"]["policy_port"]
     assert (
         info["node_id"] == "1.1"
         and info["parent_round"] == 0
@@ -74,7 +74,7 @@ def test_measured_regression_reflects_and_stop_restores_trunk(tmp_path, monkeypa
             "score": 0.5,
             "per_task": {"t1": 1, "t2": 0},
             "method_reported": {
-                "flashrsi_port": {"node_id": "1.1", "state": state, "invocation": 1}
+                "policy_port": {"node_id": "1.1", "state": state, "invocation": 1}
             },
         },
     ]
@@ -91,7 +91,7 @@ def test_measured_regression_reflects_and_stop_restores_trunk(tmp_path, monkeypa
     monkeypatch.setattr(runtime.editor, "ask", ask)
     runtime.run("arbor", req)
     assert "failure" not in out, out
-    info = out["steps"][0]["method_reported"]["flashrsi_port"]
+    info = out["steps"][0]["method_reported"]["policy_port"]
     assert info["parent_round"] == 0 and out["stop"] is True
     assert info["state"]["nodes"]["1.1"]["status"] == "done"
     assert "regression" in info["state"]["nodes"]["ROOT"]["insight"]

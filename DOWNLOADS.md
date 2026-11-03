@@ -233,7 +233,7 @@ dataset does not read as prepared.
 - **Destination:** `browse_comp_test_set.csv`
 - **sha256:** `7b24471cd5b3eb2a46830a14802b5c029ea62f488ff75a0f88af7923d1454abf`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `chessbench_puzzles`
 
@@ -311,7 +311,7 @@ dataset does not read as prepared.
 - **File:** `DSQA-full.csv`
 - **Destination:** `DSQA-full.csv`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `deepswe`
 
@@ -431,7 +431,7 @@ dataset does not read as prepared.
 - **URL:** https://codeload.github.com/harveyai/harvey-labs/tar.gz/f93ae2ac2831e65892fea83094cfb50149bc2e59
 - **Destination:** `native-source.tar.gz`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `hle`
 
@@ -442,7 +442,7 @@ dataset does not read as prepared.
 - **Repo:** `cais/hle`
 - **Destination:** `native-source`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `hotpotqa`
 
@@ -582,7 +582,7 @@ dataset does not read as prepared.
 - **Repo:** `opencompass/LiveMathBench`
 - **Destination:** `native-source`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `locomo`
 
@@ -2480,7 +2480,7 @@ dataset does not read as prepared.
 - **Repo:** `SWE-bench/SWE-bench_Verified`
 - **Destination:** `native-source`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `swe_bench_pro`
 
@@ -2548,7 +2548,7 @@ dataset does not read as prepared.
 - **Repo:** `osunlp/TravelPlanner`
 - **Destination:** `native-source`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `triviaqa`
 
@@ -2614,7 +2614,7 @@ dataset does not read as prepared.
 - **Repo:** `ByteDance-Seed/WideSearch`
 - **Destination:** `native-source`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
 
 ## `workbench`
 
@@ -2625,4 +2625,4 @@ dataset does not read as prepared.
 - **URL:** https://codeload.github.com/olly-styles/WorkBench/tar.gz/49c7dfd00c03d384ec59ea57374f50b766aa5613
 - **Destination:** `native-source.tar.gz`
 
-> Pinned native source; use prepare_flashrsi_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+> Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.

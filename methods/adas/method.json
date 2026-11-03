@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "adas: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "adas: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/adas"
+    "path": "upstream/algorithms/adas"
   },
   "fidelity_profile": {
     "preserved": [
@@ -18,7 +18,7 @@
     "missing_until_runtime_support": [
       "Native within-call evaluator callbacks and separate dev capability; no held-out score or gold exposure.",
       "The separate dev split is unavailable to methods; study scores replace dev fitness, so published validation behavior is not reproduced.",
-      "Archive descriptions and model-generated edits use HarnessGrad shared editor rather than FlashRSI native Agent.edit."
+      "Archive descriptions and model-generated edits use HarnessGrad shared editor rather than upstream native Agent.edit."
     ]
   },
   "deviations": [
@@ -28,13 +28,13 @@
       "direction": "unknown"
     },
     {
-      "what": "The separate dev split is unavailable to methods; study scores replace dev fitness, so published validation behavior is not reproduced.; Archive descriptions and model-generated edits use HarnessGrad shared editor rather than FlashRSI native Agent.edit.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "what": "The separate dev split is unavailable to methods; study scores replace dev fitness, so published validation behavior is not reproduced.; Archive descriptions and model-generated edits use HarnessGrad shared editor rather than upstream native Agent.edit.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/adas/_prompts.py",
+    "path": "upstream/algorithms/adas/_prompts.py",
     "sha256": "74c47a0dbe9c7238633c97cf25799c4c7026f16df31b06bb71f817d5f376c525"
   },
   "requires": {

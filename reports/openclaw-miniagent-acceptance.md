@@ -2,8 +2,8 @@
 
 This worktree adds two launchable task harnesses:
 
-- `base_harness/miniagent`: the native Python MiniAgent workspace from FlashRSI, pinned to commit `dea1b1d0285e3328234a1e344562bb9e54ce14f7`, with the HarnessGrad task/answer/trace bridge.
-- `base_harness/openclaw`: a HarnessGrad wrapper around the installed OpenClaw CLI `2026.3.13 (61d171a)`, upstream build commit `61d171a`. FlashRSI main was checked and does not contain an OpenClaw adapter; its registered harnesses include MiniAgent, Claude Code, Codex, Pi and Hermes.
+- `base_harness/miniagent`: the native Python MiniAgent workspace from upstream, pinned to commit `dea1b1d0285e3328234a1e344562bb9e54ce14f7`, with the HarnessGrad task/answer/trace bridge.
+- `base_harness/openclaw`: a HarnessGrad wrapper around the installed OpenClaw CLI `2026.3.13 (61d171a)`, upstream build commit `61d171a`. upstream main was checked and does not contain an OpenClaw adapter; its registered harnesses include MiniAgent, Claude Code, Codex, Pi and Hermes.
 
 Both manifests declare `files` only. MiniAgent's runtime is candidate-owned and editable. OpenClaw's Node executable and installed package are read-only `runtime_paths`; the candidate-owned editable surface is the wrapper, prompt, config and mock fixture. Neither manifest claims container/`exec` support without separately prepared dependencies.
 

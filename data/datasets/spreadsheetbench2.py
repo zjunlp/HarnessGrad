@@ -17,7 +17,7 @@ from data.scaffolds import roots
 import re
 import shutil
 
-from data.scaffolds.flashrsi_harbor import safe_file
+from data.scaffolds.native_harbor import safe_file
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 KIND = 'dataset'

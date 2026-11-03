@@ -31,7 +31,7 @@ def aggregate(point, *, n=48, ks=(16,)):
               'complete': not problems, 'problems': problems, 'metrics': None, 'per_task': None}
     if problems:
         return result
-    source = Path(__file__).resolve().parents[1] / 'data/scaffolds/flashrsi_research/vendor/flashrsi/benchmarks/livemathbench/_metrics.py'
+    source = Path(__file__).resolve().parents[1] / 'data/scaffolds/native_research/vendor/upstream/benchmarks/livemathbench/_metrics.py'
     spec = importlib.util.spec_from_file_location('_hg_native_gpass', source)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

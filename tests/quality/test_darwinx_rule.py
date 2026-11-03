@@ -1,7 +1,7 @@
-"""FlashRSI darwinx/__init__.py:163-232: preserving extension invariant."""
+"""upstream darwinx/__init__.py:163-232: preserving extension invariant."""
 
 import random
-from flashrsi_helpers import P, member
+from native_helpers import P, member
 
 
 def test_gain_cannot_pay_for_lost_solved_task():

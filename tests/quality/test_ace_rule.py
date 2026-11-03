@@ -1,8 +1,8 @@
-"""FlashRSI ace/_playbook.py:56-157: ADD-only curation and usage tags."""
+"""upstream ace/_playbook.py:56-157: ADD-only curation and usage tags."""
 
 import json
 import pytest
-from flashrsi_helpers import runtime, fixture, capture
+from native_helpers import runtime, fixture, capture
 
 
 def test_ace_add_cannot_delete_or_rewrite_old_playbook(tmp_path, monkeypatch):

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from data.scaffolds import roots
 import os
-from data.scaffolds import flashrsi_harbor as native
+from data.scaffolds import native_harbor as native
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'

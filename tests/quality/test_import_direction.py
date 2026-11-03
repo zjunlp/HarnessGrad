@@ -32,27 +32,27 @@ ALLOWED_EVAL_CONFIG_EDGES = {
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
-    ("data-eval", "data/scaffolds/flashrsi_research/swe_relay.py", "eval.run.native_supervisor"):
+    ("data-eval", "data/scaffolds/native_research/swe_relay.py", "eval.run.native_supervisor"):
         "Fixed native relay cleanup is supervised independently of blocked startup, calls and patch sealing.",
-    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/relay.py", "eval.run.native_supervisor"):
+    ("data-eval", "data/scaffolds/native_harbor_runtime/relay.py", "eval.run.native_supervisor"):
         "Harbor worlds use the same bounded parent cleanup and exact owned-container inventory as SWE.",
-    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/session.py", "eval.run.native_supervisor"):
+    ("data-eval", "data/scaffolds/native_harbor_runtime/session.py", "eval.run.native_supervisor"):
         "A trusted runtime publishes exact owned Docker names before any create/start operation.",
-    ("data-eval", "data/scaffolds/flashrsi_research/swe_native.py", "eval.containers.observed"):
+    ("data-eval", "data/scaffolds/native_research/swe_native.py", "eval.containers.observed"):
         "Fixed native SWE execution reuses kernel-observed offline containers and private patch export.",
-    ("data-eval", "data/scaffolds/flashrsi_research/swe_relay.py", "eval.service.tool_transport"):
+    ("data-eval", "data/scaffolds/native_research/swe_relay.py", "eval.service.tool_transport"):
         "Selected native repository is exposed only through the existing private UNIX capability.",
-    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/relay.py", "eval.service.tool_transport"):
+    ("data-eval", "data/scaffolds/native_harbor_runtime/relay.py", "eval.service.tool_transport"):
         "Fixed native Harbor worlds use the existing private UNIX capability and sealed records.",
-    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/session.py", "eval.containers.observed"):
+    ("data-eval", "data/scaffolds/native_harbor_runtime/session.py", "eval.containers.observed"):
         "Native actor worlds reuse the admitted container executor rather than opening a Docker socket to the actor.",
-    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/public_runtime.py", "eval.containers.observed"):
+    ("data-eval", "data/scaffolds/native_harbor_runtime/public_runtime.py", "eval.containers.observed"):
         "Explicit native public-network profile reuses bounded Docker transport; it does not claim observed-offline admission.",
-    ("data-eval", "data/scaffolds/flashrsi_harbor_runtime/verify.py", "eval.service.modelgate"):
+    ("data-eval", "data/scaffolds/native_harbor_runtime/verify.py", "eval.service.modelgate"):
         "Native independent rubric judges resolve only trusted host model declarations, never actor-selected endpoints.",
-    ("data-eval", "data/scaffolds/flashrsi_research/workbench_relay.py", "eval.service.tool_transport"):
+    ("data-eval", "data/scaffolds/native_research/workbench_relay.py", "eval.service.tool_transport"):
         "Selected native workplace state uses the existing private relay; no actor scoring operation.",
-    ("data-eval", "data/scaffolds/flashrsi_research/web_relay.py", "eval.service.tool_transport"):
+    ("data-eval", "data/scaffolds/native_research/web_relay.py", "eval.service.tool_transport"):
         "Files/network=none actors access selected host web providers over the existing UNIX capability.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.runner"):
         "Dynamic protocol control validates real sandbox execution and sealed scoring.",
@@ -332,7 +332,7 @@ class ImportDirectionTests(unittest.TestCase):
 
     def test_publication_preserves_the_reviewed_adapter_inventory(self):
         from data.scaffolds import registry
-        # Reviewed FlashRSI source/alias inventory; runtime readiness is separate.
+        # Reviewed upstream source/alias inventory; runtime readiness is separate.
         expected = (
             'agentdojo',
             'aime',

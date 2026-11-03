@@ -1,7 +1,7 @@
-"""FlashRSI skillopt/_patch.py:84-141: exact fast edits preserve slow guidance."""
+"""upstream skillopt/_patch.py:84-141: exact fast edits preserve slow guidance."""
 
 import pytest
-from flashrsi_helpers import runtime, fixture, capture
+from native_helpers import runtime, fixture, capture
 
 
 def test_fast_edits_cannot_replace_protected_epoch_guidance():
@@ -73,7 +73,7 @@ def test_slow_phase_replaces_protected_guidance_and_records_optimizer_memory(
             "score_kind": "training",
             "score": 0.5,
             "per_task": {"t1": 1, "t2": 0},
-            "method_reported": {"flashrsi_port": {"invocation": 1}},
+            "method_reported": {"policy_port": {"invocation": 1}},
         }
     ]
     base, req = fixture(tmp_path, points)
@@ -94,7 +94,7 @@ def test_slow_phase_replaces_protected_guidance_and_records_optimizer_memory(
     monkeypatch.setattr(runtime.editor, "ask", lambda *a, **k: next(replies))
     runtime.run("skillopt", req)
     assert "failure" not in out, out
-    info = out["steps"][0]["method_reported"]["flashrsi_port"]
+    info = out["steps"][0]["method_reported"]["policy_port"]
     assert info["phase"] == "slow" and "evidence" in info["meta_skill"]
     text = (out["steps"][0]["harness_dir"] / "skills/main.md").read_text()
     assert "Keep" in text and "Old" not in text and "New evidence-backed policy" in text

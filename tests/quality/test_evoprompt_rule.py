@@ -1,8 +1,8 @@
-"""FlashRSI evoprompt/__init__.py:132-214: GA survivors and pairwise DE."""
+"""upstream evoprompt/__init__.py:132-214: GA survivors and pairwise DE."""
 
 import random
 import pytest
-from flashrsi_helpers import P, member
+from native_helpers import P, member
 
 
 def test_ga_standard_and_elitist_make_different_measured_survivors():
@@ -33,7 +33,7 @@ def test_de_requires_four_positions_and_replaces_only_its_target():
 def test_final_deployment_restores_global_best_even_if_latest_generation_lost_it(
     tmp_path, monkeypatch
 ):
-    from flashrsi_helpers import runtime, fixture, capture
+    from native_helpers import runtime, fixture, capture
 
     points = [
         {
@@ -47,7 +47,7 @@ def test_final_deployment_restores_global_best_even_if_latest_generation_lost_it
             "score_kind": "training",
             "score": 0,
             "per_task": {"t1": 0, "t2": 0},
-            "method_reported": {"flashrsi_port": {"generation": 1, "invocation": 1}},
+            "method_reported": {"policy_port": {"generation": 1, "invocation": 1}},
         },
     ]
     base, req = fixture(tmp_path, points)

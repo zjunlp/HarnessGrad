@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "evo_harness: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "evo_harness: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/evo_harness"
+    "path": "upstream/algorithms/evo_harness"
   },
   "fidelity_profile": {
     "preserved": [
@@ -31,12 +31,12 @@
     },
     {
       "what": "The platform supplies a fixed task-set trace after each round, not native one-pass disjoint training batches.; Managed frontmatter is emitted as JSON (valid YAML); existing non-JSON managed YAML is refused for mutation instead of silently reparsed.; Compiler returns structured skill objects; directory operations and native YAML formatting are translated by this adapter.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/evo_harness/_prompts.py",
+    "path": "upstream/algorithms/evo_harness/_prompts.py",
     "sha256": "9aa7f940b2b9f9e8bc33d568d04d144c20c1034194444c8bbe4ef0b351c17d70"
   },
   "requires": {

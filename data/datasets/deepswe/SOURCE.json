@@ -3,7 +3,7 @@
   "revision": "0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea",
   "native_split": "test",
   "metric": "reward",
-  "flashrsi_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-  "flashrsi_adapter": "flashrsi/benchmarks/deepswe",
+  "upstream_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "upstream_adapter": "upstream/benchmarks/deepswe",
   "runtime_status": "native-source loader ready; execution not admitted until required native verifier/network/replay capabilities are implemented"
 }

@@ -1,14 +1,14 @@
-"""FlashRSI modular_rsi/__init__.py:77-166: isolated module branches and scopes."""
+"""upstream modular_rsi/__init__.py:77-166: isolated module branches and scopes."""
 
 import json
-from flashrsi_helpers import runtime, fixture, capture
+from native_helpers import runtime, fixture, capture
 
 
 def test_missing_real_trial_contrast_is_refused(tmp_path, monkeypatch):
     base, req = fixture(tmp_path)
     out = capture(monkeypatch)
     monkeypatch.setenv(
-        "HG_FLASHRSI_CONFIG",
+        "HG_POLICY_CONFIG",
         json.dumps({"modules": {"runtime": ["agent.py"]}, "num_rollouts": 2}),
     )
     runtime.run("modular_rsi", req)
@@ -28,7 +28,7 @@ def test_module_scope_cannot_modify_an_unowned_file(tmp_path, monkeypatch):
     base, req = fixture(tmp_path, points)
     out = capture(monkeypatch)
     monkeypatch.setenv(
-        "HG_FLASHRSI_CONFIG",
+        "HG_POLICY_CONFIG",
         json.dumps({"modules": {"runtime": ["agent.py"]}, "num_rollouts": 2}),
     )
     answers = iter(

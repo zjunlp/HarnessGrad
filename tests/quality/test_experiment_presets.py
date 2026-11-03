@@ -128,7 +128,7 @@ def test_a_preset_parses_and_names_a_shipped_published_method(path: Path) -> Non
     # original presets use, so a method that declares nothing is still held to `loop`.
     requires = meta.get("requires") if isinstance(meta.get("requires"), dict) else {}
     if requires.get("instruction_file"):
-        # One of the four files `flashrsi_ports.runtime.instruction_path` can find. `loop`
+        # One of the four files `policy_ports.runtime.instruction_path` can find. `loop`
         # ships none, which is why its preset would refuse before any model call.
         assert config["harness"] != "loop", path.name
         tree = ROOT / "base_harness" / config["harness"]

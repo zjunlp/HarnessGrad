@@ -52,7 +52,7 @@ def _published_in(state: str) -> tuple[str, ...]:
     """Every published dataset the tool classifies as `state`, derived -- never listed.
 
     These used to be three hand-written tuples (`DECLARED`, `UNDECLARED`, `REFUSED`) and
-    they rotted exactly as fast as the registry grows: the FlashRSI delivery added three
+    they rotted exactly as fast as the registry grows: the upstream delivery added three
     declared datasets and PR 31 moved `strongreject` from `undeclared` to `none`, and each
     time this module failed for a reason that had nothing to do with the property it
     tests. `row_for` reads declarations only (no payload), so deriving the groups costs a

@@ -1,13 +1,13 @@
 # MiniAgent for HarnessGrad
 
-This is FlashRSI's own workspace-driven Python MiniAgent, **not** mini-SWE-agent.
+This is upstream's own workspace-driven Python MiniAgent, **not** mini-SWE-agent.
 The 19 native files and their SHA-256 hashes are pinned in `PROVENANCE.json` to
-[RUC-NLPIR/FlashRSI](https://github.com/RUC-NLPIR/FlashRSI/tree/dea1b1d0285e3328234a1e344562bb9e54ce14f7/flashrsi/agents/miniagent).
+[RUC-NLPIR/upstream](PROVENANCE.json).
 The native runtime/resources are copied without modifications and remain part
 of the candidate tree, so a method can change code, prompts, tools, middleware,
 sub-agents and skills. The upstream framework adapter and process entrypoint are
 excluded; `agent.py` and `bridge.py` implement the HarnessGrad boundary instead.
-The Apache 2.0 upstream license is included as `FLASHRSI-LICENSE.txt`.
+The Apache 2.0 upstream license is included as `UPSTREAM-LICENSE.txt`.
 
 `agent.py --task task.json --workdir work` starts an independent process with a
 fresh HOME/config/cache/temp directory. It calls the candidate's `runtime.agent.run`

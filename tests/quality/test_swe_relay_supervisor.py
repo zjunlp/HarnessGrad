@@ -13,8 +13,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from data.scaffolds.flashrsi_research import swe_relay as relay
-from data.scaffolds.flashrsi_research import swe_native as native
+from data.scaffolds.native_research import swe_relay as relay
+from data.scaffolds.native_research import swe_native as native
 
 
 @pytest.mark.parametrize('ignore_signal', [False, True])

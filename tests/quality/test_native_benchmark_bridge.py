@@ -22,8 +22,8 @@ def request(tmp_path, name='harvey_lab'):
     sha = hashlib.sha256(case.read_bytes()).hexdigest()
     spec = {'kind': 'command', 'argv': ['harnessgrad-native', name],
         'native_benchmark': {'dataset': name, 'case_sha256': sha},
-        'scorer_input': {'task_id': 'task-1', 'path': 'flashrsi_case.json', 'sha256': sha},
-        'inputs': [{'path': 'flashrsi_case.json', 'from': str(case)}],
+        'scorer_input': {'task_id': 'task-1', 'path': 'upstream_case.json', 'sha256': sha},
+        'inputs': [{'path': 'upstream_case.json', 'from': str(case)}],
         'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
     return actor, case, spec
 
@@ -41,7 +41,7 @@ def test_private_export_and_native_dispatch(tmp_path, monkeypatch):
     def run(selected, artifact_root, **options):
         assert artifact_root != actor and not artifact_root.is_relative_to(actor)
         assert not (artifact_root / 'fake_score.py').exists()
-        assert json.loads((artifact_root / 'flashrsi_case.json').read_text())['row']['gold'] == 'PRIVATE'
+        assert json.loads((artifact_root / 'upstream_case.json').read_text())['row']['gold'] == 'PRIVATE'
         assert (artifact_root / 'output/memo.txt').read_text() == 'public deliverable'
         assert options['task_id'] == 'task-1'
         return {'score': 0.75, 'passed': False, 'outcome': 'measured',

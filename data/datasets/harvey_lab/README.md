@@ -1,7 +1,7 @@
 # Harvey LAB: native file deliverables and official dual judges
 
 This adapter transports the complete native Harvey LAB file/rubric protocol from
-FlashRSI `e9c7667945f959d62da27204649a82f94d1b6705`; its official evaluator is
+upstream `e9c7667945f959d62da27204649a82f94d1b6705`; its official evaluator is
 `lab-core==1.2.0`, wheel SHA-256
 `5bfd70664a99c16a97a35bf61a3845a9890477168d11978d58864f986c9f53ba`, from Harvey
 LAB revision `f93ae2ac2831e65892fea83094cfb50149bc2e59`.
@@ -26,14 +26,14 @@ No actor-supplied `correct`/rubric/verifier event is accepted.
 
 ## Explicit prerequisites
 
-Prepare native data through `tools/prepare_flashrsi_research.py`. Preparation
+Prepare native data through `tools/prepare_native_research.py`. Preparation
 copies only public documents separately from private cases and records each file
 digest. The original task/documents layout is preserved. A local data override is
 recorded as local custody, not authenticated acquisition of the upstream release.
 
 Provision an independent Python 3.12/3.13 runtime containing the pinned official
 wheel, `anthropic==0.88.0`, OpenAI SDK, Google SDK and native document dependencies.
-A startup probe checks the evaluator/provider-helper bytes against FlashRSI's
+A startup probe checks the evaluator/provider-helper bytes against upstream's
 pinned wheel inventory. Provision `pandoc>=3.5`; DOCX conversion stays native.
 Neither imports nor actor runs install dependencies or download models.
 
@@ -63,7 +63,7 @@ is not proof that the underlying model is identical to a named hosted model.
 
 ## Validation limits
 
-`tests/quality/test_flashrsi_harvey.py` uses the real pinned official evaluator,
+`tests/quality/test_upstream_harvey.py` uses the real pinned official evaluator,
 real native provider SDKs and local scripted HTTP/SSE responses. It verifies
 pass/pass -> 1, pass/fail -> 0.5, fail/fail -> 0, and the complete actor-file export
 and post-exit verification path. These are authored protocol controls, not measured

@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "modular_rsi: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "modular_rsi: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/modular_rsi"
+    "path": "upstream/algorithms/modular_rsi"
   },
   "fidelity_profile": {
     "preserved": [
@@ -31,12 +31,12 @@
     },
     {
       "what": "Contrast is drawn from existing platform per_task_trials and current/historical staged traces; no on-demand new rollouts or question-augmented target retries.; Native execution gates before integration, repair epochs, and final fallback are deferred to platform candidate evaluations; no synchronous within-call execution gate exists.; Module epochs are approximated by one fixed-set proposal per branch invocation, not native mini-batches.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/modular_rsi/_prompts.py",
+    "path": "upstream/algorithms/modular_rsi/_prompts.py",
     "sha256": "a1f72f141db2c64b553d51a9be9d9a38f6b5a971b441e802e3cc8359878cb03c"
   },
   "requires": {

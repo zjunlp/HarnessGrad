@@ -10,7 +10,7 @@
   ],
   "runtime_paths": [],
   "role": "harness",
-  "notes": "Native MiniAgent runtime vendored from RUC-NLPIR/FlashRSI main at dea1b1d0285e3328234a1e344562bb9e54ce14f7. Only files environments are declared; exec requires a separately provisioned dependency overlay with the same Python ABI. The runtime and resource files are part of this candidate and may be edited by a method.",
+  "notes": "Native MiniAgent runtime vendored from RUC-NLPIR/upstream main at dea1b1d0285e3328234a1e344562bb9e54ce14f7. Only files environments are declared; exec requires a separately provisioned dependency overlay with the same Python ABI. The runtime and resource files are part of this candidate and may be edited by a method.",
   "components": {
     "context": [
       "agent.yaml",
@@ -45,7 +45,7 @@
     ],
     "unattributed": [
       "components.yaml",
-      "FLASHRSI-LICENSE.txt",
+      "UPSTREAM-LICENSE.txt",
       "PROVENANCE.json",
       "README.md",
       "requirements.txt",

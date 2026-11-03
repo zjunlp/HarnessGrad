@@ -21,8 +21,8 @@ SCAFFOLDS = DATA / "scaffolds"
 EXPECTED_DATASETS = (
     # `authored_example_fix_bug` 是控制台「起草」发布的示例场景：它是一个公开的适配器，
     # 所以这份独立评审过的清单里也要有它（成员变化照样要评审，不从发现里派生）。
-    # The twenty FlashRSI ports (2026-11-02) join for the same reason: each has a
-    # reviewed section in `docs/dataset-reviews/flashrsi-transfer.md` and declares
+    # The twenty upstream ports (2026-11-02) join for the same reason: each has a
+    # reviewed section in `docs/dataset-reviews/native-transfer.md` and declares
     # `KIND = "dataset"`. Membership is still reviewed, never derived.
     "agentdojo", "aime", "alfworld", "api_bank",
     "appworld", "authored_example_fix_bug", "bbeh", "bfcl_v3",

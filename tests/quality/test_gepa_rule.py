@@ -1,7 +1,7 @@
-"""FlashRSI gepa/_population.py:36-73 and gepa/__init__.py:216-226."""
+"""upstream gepa/_population.py:36-73 and gepa/__init__.py:216-226."""
 
 import random
-from flashrsi_helpers import P, member
+from native_helpers import P, member
 
 
 def test_frontier_keeps_complementary_specialists_and_prunes_redundant_ties():

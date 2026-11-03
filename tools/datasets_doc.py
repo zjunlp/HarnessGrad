@@ -69,17 +69,17 @@ CONTROLS = ROOT / "tests" / "quality" / "test_dataset_controls.py"
 #: the reading that supports it, which is why it is a literal dict and not a grep at
 #: render time.
 DEVIATIONS: dict[str, str] = {
-    'nq': 'FlashRSI short-answer-text EM/F1 on the any-short-answer-or-yes-no subset; not the full official NQ long/short-answer leaderboard metric',
-    'supergpqa': 'FlashRSI final_letter_v1 sample-mean accuracy; not official discipline-macro/freeform evaluation',
-    'browsecomp': 'FlashRSI corrects simple-evals regex group(0) to group(1); judge model profile is explicit and not universally comparable',
+    'nq': 'upstream short-answer-text EM/F1 on the any-short-answer-or-yes-no subset; not the full official NQ long/short-answer leaderboard metric',
+    'supergpqa': 'upstream final_letter_v1 sample-mean accuracy; not official discipline-macro/freeform evaluation',
+    'browsecomp': 'upstream corrects simple-evals regex group(0) to group(1); judge model profile is explicit and not universally comparable',
     'deepsearchqa': 'native set-answer F1 prompt/counts; configured OpenAI-compatible judge differs from the official Gemini route unless explicitly reproduced',
     'livemathbench': 'curve is single-sample-label accuracy; native hypergeometric G-Pass/mG-Pass is a separate complete-trial report',
-    # `data/scaffolds/flashrsi_qa/scoring.py` normalizes with NFKC + casefold before
-    # EM/F1, which is FlashRSI's normalizer rather than the SearchQA release's own exact
-    # match. The review record calls this out ("text_em_f1 with FlashRSI NFKC/casefold
+    # `data/scaffolds/native_qa/scoring.py` normalizes with NFKC + casefold before
+    # EM/F1, which is upstream's normalizer rather than the SearchQA release's own exact
+    # match. The review record calls this out ("text_em_f1 with upstream NFKC/casefold
     # normalization") and the cell said `no`; the reading is a deviation from the
     # benchmark's string comparison, not a proxy metric under its name.
-    'searchqa': 'EM/F1 after FlashRSI NFKC + casefold normalization, not the SearchQA release exact string match; tokenization is the platform scorer, not the paper implementation',
+    'searchqa': 'EM/F1 after upstream NFKC + casefold normalization, not the SearchQA release exact string match; tokenization is the platform scorer, not the paper implementation',
 
     # `score()` returns function-name set equality while the docstring says, in the
     # adapter's own words, "This is not the official BFCL score": BFCL compares the full

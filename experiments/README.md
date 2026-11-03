@@ -54,7 +54,7 @@ leaves the machine.
 "published"` in `methods/<name>/method.json`). Each one is `gsm8k`, train side, `random_5`,
 `rounds: 1`, `jobs: 1`, seed 0, run id `<name>-quickstart`, `loop` as the harness and one
 trial -- except where the method's own `method.json:requires` says otherwise (the ten
-FlashRSI ports below: six need a prompt-carrying harness, one needs two trials). These are
+upstream ports below: six need a prompt-carrying harness, one needs two trials). These are
 one-line smoke tests of the method's propose/measure loop, not a benchmark protocol: five
 tasks and one trial cannot resolve a difference between two methods.
 
@@ -84,15 +84,15 @@ reason and fails on every other cause.
 | `sica_ci` | `method-sica_ci.json` | an improver |
 | `tthe` | `method-tthe.json` | an improver |
 
-The ten FlashRSI policy ports (`methods/flashrsi_ports/`) declare what they need in
+The ten upstream policy ports (`methods/policy_ports/`) declare what they need in
 `method.json:requires`, and the file shape follows that declaration rather than one universal
 value:
 
 | method | file | harness | what it needs |
 | --- | --- | --- | --- |
 | `arbor`, `darwinx`, `evo_harness` | `method-<name>.json` | `loop` | an improver |
-| `ace`, `adas`, `evoprompt`, `gepa`, `opro`, `skillopt` | `method-<name>.json` | `miniagent` | an improver **and** an instruction file: these six rewrite the harness's prompt/skill text, and `loop` ships no prompt, so the method refuses before any model call with "declare instruction_path in `HG_FLASHRSI_CONFIG`". `miniagent` has exactly one of the four files the port looks for (`prompts/system.md`); any harness with one of `prompts/system.md`, `prompt.md`, `CLAUDE.md`, `AGENTS.md` works. |
-| `modular_rsi` | `method-modular_rsi.json` | `loop` | an improver **and** a module map: `HG_FLASHRSI_CONFIG='{"modules": {"core": ["agent.py"]}}'` (plus `--trials >= 2`). The map is a judgement about the harness being improved, so no preset can carry it; the method refuses with a named error instead of guessing one. |
+| `ace`, `adas`, `evoprompt`, `gepa`, `opro`, `skillopt` | `method-<name>.json` | `miniagent` | an improver **and** an instruction file: these six rewrite the harness's prompt/skill text, and `loop` ships no prompt, so the method refuses before any model call with "declare instruction_path in `HG_POLICY_CONFIG`". `miniagent` has exactly one of the four files the port looks for (`prompts/system.md`); any harness with one of `prompts/system.md`, `prompt.md`, `CLAUDE.md`, `AGENTS.md` works. |
+| `modular_rsi` | `method-modular_rsi.json` | `loop` | an improver **and** a module map: `HG_POLICY_CONFIG='{"modules": {"core": ["agent.py"]}}'` (plus `--trials >= 2`). The map is a judgement about the harness being improved, so no preset can carry it; the method refuses with a named error instead of guessing one. |
 
 `HG_AGENT_BACKEND=mock` mocks the harness's agent model and nothing else, so **none of the
 ten reaches round 1 model-free**: nine stop at H0 with the endpoint message above,

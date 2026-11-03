@@ -1,11 +1,11 @@
 {
   "kind": "published",
-  "title": "darwinx: FlashRSI policy port",
-  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/flashrsi_ports/README.md for per-method mechanisms and differences.",
+  "title": "darwinx: upstream policy port",
+  "note": "Delayed platform-measured study-feedback port; not native reproduction. See methods/policy_ports/README.md for per-method mechanisms and differences.",
   "source": {
-    "repository": "https://github.com/RUC-NLPIR/FlashRSI",
+    "repository": "PROVENANCE.json",
     "commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-    "path": "flashrsi/algorithms/darwinx"
+    "path": "upstream/algorithms/darwinx"
   },
   "fidelity_profile": {
     "preserved": [
@@ -30,12 +30,12 @@
     },
     {
       "what": "No fresh stochastic mini-screen or repeated parent/candidate confirmation is run inside the method; paired platform full-set means are a declared approximation.; Candidate assessments operate on existing matched per-task scores; they are not statistically fresh confirmation.",
-      "why": "The source strategy and prompts are pinned under methods/flashrsi_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
+      "why": "The source strategy and prompts are pinned under methods/policy_ports/vendor; README maps each source stage to this runtime and declares every unavailable stage.",
       "direction": "weaker"
     }
   ],
   "source_role_prompt_hashes": {
-    "path": "flashrsi/algorithms/darwinx/_prompts.py",
+    "path": "upstream/algorithms/darwinx/_prompts.py",
     "sha256": "f7dc7723030e25901a62e16ad5c0e5ffcd69ddf796c9a8d83a1f57a35ba6638b"
   },
   "requires": {

@@ -1,0 +1,493 @@
+{
+  "schema": "harnessgrad.upstream.dataset-audit.v1",
+  "upstream_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "harnessgrad_base": "a100139",
+  "new_dataset_count": 19,
+  "datasets": [
+    {
+      "name": "bbeh",
+      "family": "qa-local",
+      "source": "BBEH/bbeh",
+      "source_revision": "08e07a803851822c04399782ece3c4a07ce419f9",
+      "metric": "official evaluate_correctness at 80d12ca916b7158f22293fcf3144f4d3d854d4be",
+      "requirements": [
+        "bbeh_data.json",
+        "stdlib scorer"
+      ],
+      "recommendation": "direct QA scaffold with unchanged evaluator",
+      "pitfalls": [
+        "detect duplicate category+question groups; default refuse; exclusion must remove whole groups",
+        "Flash sample-mean protocol"
+      ],
+      "split": "test only",
+      "evidence": [
+        "upstream/benchmarks/bbeh/__init__.py"
+      ]
+    },
+    {
+      "name": "supergpqa",
+      "family": "qa-local",
+      "source": "m-a-p/SuperGPQA",
+      "source_revision": "4430d4458112c7d4497fdcf94d7cc223313d6acf",
+      "metric": "Flash final_letter_v1 samplemean accuracy",
+      "requirements": [
+        "SuperGPQA-all.jsonl"
+      ],
+      "recommendation": "direct QA scaffold final-letter scorer",
+      "pitfalls": [
+        "NOT official freeform parser or discipline-macro leaderboard",
+        "only last nonempty line eligible",
+        "verify letter/content agreement"
+      ],
+      "split": "test only",
+      "evidence": [
+        "upstream/benchmarks/supergpqa/__init__.py"
+      ]
+    },
+    {
+      "name": "searchqa",
+      "family": "qa-local",
+      "source": "kyunghyuncho/search_qa",
+      "source_revision": "06907e45883b7cae435453b65d598447039fde79",
+      "metric": "Flash NFKC/casefold/Unicode punctuation/articles EM/F1",
+      "requirements": [
+        "data/train_test_val/train.zip",
+        "data/train_test_val/val.zip",
+        "data/train_test_val/test.zip"
+      ],
+      "recommendation": "QA scaffold native search snippets context",
+      "pitfalls": [
+        "not live websearch",
+        "skip JSON null snippets; do not stringify",
+        "aliases private"
+      ],
+      "split": "native train/validation/test",
+      "evidence": [
+        "upstream/benchmarks/searchqa/__init__.py"
+      ]
+    },
+    {
+      "name": "nq",
+      "family": "qa-local",
+      "source": "google-research-datasets/natural_questions",
+      "source_revision": "e8103d566bef4154c2c12b17c6095ec5275840cc",
+      "metric": "Flash short_answer_text EM/F1",
+      "requirements": [
+        "native question/document tokens/shortanswer spans/yesno rows"
+      ],
+      "recommendation": "QA scaffold native subset",
+      "pitfalls": [
+        "NOT full official NQ longanswer/confidence metrics",
+        "multiple annotation spans concatenate in document order",
+        "full page excluding HTML; do not expose answer windows"
+      ],
+      "split": "native train/validation",
+      "evidence": [
+        "upstream/benchmarks/nq/__init__.py"
+      ]
+    },
+    {
+      "name": "math",
+      "family": "qa-symbolic",
+      "source": "EleutherAI/hendrycks_math",
+      "source_revision": "21a5633873b6a120296cce3e2df9d5550074f4a3",
+      "metric": "Math-Verify0.9.0 expression equivalence; last boxed",
+      "requirements": [
+        "math-verify==0.9.0",
+        "latex parser",
+        "seven subject configs"
+      ],
+      "recommendation": "QA plus bounded verifier subprocess",
+      "pitfalls": [
+        "cannot replace with EM",
+        "malformed finalbox must not revive priorbox",
+        "scorer failure/timeout unmeasured"
+      ],
+      "split": "native train/test; math500 variant testonly sourceHuggingFaceH4/MATH-500 rev6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be",
+      "evidence": [
+        "upstream/benchmarks/math/__init__.py"
+      ]
+    },
+    {
+      "name": "officeqa_pro",
+      "family": "corpus-local",
+      "source": "databricks/officeqa",
+      "source_revision": "763a8366abf2a3605c381d53586d844dc60fa756",
+      "metric": "official reward score_answer rev7b9a3c154ef9fb40215bb67934afc43e6799de16",
+      "requirements": [
+        "officeqa_pro.csv",
+        "public corpus txt/md/pdf/json"
+      ],
+      "recommendation": "files corpus setup+unchanged reward",
+      "pitfalls": [
+        "source_files/source_docs oracle references remain private",
+        "not QA without corpus",
+        "tolerance0 default"
+      ],
+      "split": "unassigned collection",
+      "evidence": [
+        "upstream/benchmarks/officeqa_pro/__init__.py"
+      ]
+    },
+    {
+      "name": "browsecomp",
+      "family": "web-judge",
+      "source": "https://openaipublic.blob.core.windows.net/simple-evals/browse_comp_test_set.csv",
+      "source_revision": null,
+      "metric": "official-style answer-judge accuracy",
+      "requirements": [
+        "web tools",
+        "independent judge",
+        "data sha7b24471cd5b3eb2a46830a14802b5c029ea62f488ff75a0f88af7923d1454abf"
+      ],
+      "recommendation": "trusted judge+nativeweb",
+      "pitfalls": [
+        "decrypt canary data",
+        "Flash fixes regex group0->group1; record correction",
+        "no EM proxy"
+      ],
+      "split": "test only",
+      "evidence": [
+        "upstream/benchmarks/browsecomp/__init__.py"
+      ]
+    },
+    {
+      "name": "deepsearchqa",
+      "family": "web-judge",
+      "source": "google/deepsearchqa",
+      "source_revision": "b2623f8653065c2672de6d941fc5434cd652376c",
+      "metric": "official Gemini2.5flash autorating f1_score",
+      "requirements": [
+        "DSQA-full.csv",
+        "web tools",
+        "google-genai",
+        "private independent judge gemini-2.5-flash"
+      ],
+      "recommendation": "native judge+count formulas",
+      "pitfalls": [
+        "answer_type forbidden inference",
+        "literal CSV strings notnan",
+        "custom OpenAI judge notofficial"
+      ],
+      "split": "native eval",
+      "evidence": [
+        "upstream/benchmarks/deepsearchqa/__init__.py"
+      ]
+    },
+    {
+      "name": "hle",
+      "family": "judge",
+      "source": "cais/hle",
+      "source_revision": "5a81a4c7271a2a2a312b9a690f0c2fde837e4c29",
+      "metric": "official structured judge accuracy",
+      "requirements": [
+        "text-only subset",
+        "independent judge",
+        "Pydantic schema"
+      ],
+      "recommendation": "private judge + declared text subset",
+      "pitfalls": [
+        "image tasks excluded",
+        "strict=true confidence0..100",
+        "no EM substitute"
+      ],
+      "split": "native test",
+      "evidence": [
+        "upstream/benchmarks/hle/__init__.py"
+      ]
+    },
+    {
+      "name": "livemathbench",
+      "family": "repeated-judge",
+      "source": "opencompass/LiveMathBench",
+      "source_revision": "ea05b95ab431f3ef3900ce86f864451cf5bcd699",
+      "metric": "mG-Pass@k and native GPassK formulas",
+      "requirements": [
+        "gated HF data",
+        "judge defaultQwen2.5-72B-Instruct",
+        "n independent samples default48 k16"
+      ],
+      "recommendation": "native repeated trials+judge",
+      "pitfalls": [
+        "single sample is proxy",
+        "judgefailure invalidates whole task",
+        "labelset completeness required"
+      ],
+      "split": "native collection; explicit experiment partitions",
+      "evidence": [
+        "upstream/benchmarks/livemathbench/__init__.py"
+      ]
+    },
+    {
+      "name": "harvey_lab",
+      "family": "files-dual-judge",
+      "source": "https://github.com/harveyai/harvey-labs.git",
+      "source_revision": "f93ae2ac2831e65892fea83094cfb50149bc2e59",
+      "metric": "v1.2.0 official dual all_pass_rate",
+      "requirements": [
+        "lab_core wheelsha5bfd70664a99c16a97a35bf61a3845a9890477168d11978d58864f986c9f53ba",
+        "pandoc>=3.5",
+        "docs+criteria",
+        "two independent judges"
+      ],
+      "recommendation": "artifactonly export+official dualjudge",
+      "pitfalls": [
+        "not weightedmean",
+        "criteria/keys refereeonly",
+        "regularfiles"
+      ],
+      "split": "native collection; explicit experiment partitions",
+      "evidence": [
+        "upstream/benchmarks/harvey_lab/__init__.py"
+      ]
+    },
+    {
+      "name": "travelplanner",
+      "family": "planning-db-converter",
+      "source": "osunlp/TravelPlanner",
+      "source_revision": "8736504ecfc31b7f8b7e40122873c337e83fff7c",
+      "metric": "official constraints per-task final_pass_rate macro",
+      "requirements": [
+        "environment dbspace revf2183898e2b9547ed2a6f5356ae4cbc3f3431bf4",
+        "native convertermodel",
+        "pandas/numpy/requests"
+      ],
+      "recommendation": "soleplanning prompt+converter+private constraints",
+      "pitfalls": [
+        "officialtest unlabeled submissiononly",
+        "converter separate actor and accounted",
+        "no JSONvalidity proxy"
+      ],
+      "split": "labeled train/validation; test notlocalgradable",
+      "evidence": [
+        "upstream/benchmarks/travelplanner/__init__.py"
+      ]
+    },
+    {
+      "name": "widesearch",
+      "family": "web-table-judge",
+      "source": "ByteDance-Seed/WideSearch",
+      "source_revision": "6531a7e5b497d44c8912407e0cb3dc95bd98cc09",
+      "metric": "official table score/P/R/F1",
+      "requirements": [
+        "webtools",
+        "private goldtable schema",
+        "judge defaultgpt4.1-2025-04-14",
+        "pandas"
+      ],
+      "recommendation": "nativewebruntime+private evaluator",
+      "pitfalls": [
+        "scores may exceed1 do notclip",
+        "privategold/evaluatorlogs"
+      ],
+      "split": "native collection; explicit experiment partitions",
+      "evidence": [
+        "upstream/benchmarks/widesearch/__init__.py"
+      ]
+    },
+    {
+      "name": "workbench",
+      "family": "stateful-tools",
+      "source": "https://github.com/olly-styles/WorkBench",
+      "source_revision": "49c7dfd00c03d384ec59ea57374f50b766aa5613",
+      "metric": "native correct/exact_match/unwanted_side_effects",
+      "requirements": [
+        "Python>=3.12",
+        "pandas/numpy",
+        "sixdomains CSV",
+        "fresh threadlocal db",
+        "trustedrelay"
+      ],
+      "recommendation": "HG tool_relay+nativehoststate grader",
+      "pitfalls": [
+        "chat answer notscore",
+        "private referenceactions hidden",
+        "actions/state authentic"
+      ],
+      "split": "unassigned collection",
+      "evidence": [
+        "upstream/benchmarks/workbench/__init__.py"
+      ]
+    },
+    {
+      "name": "jobbench",
+      "family": "harbor-files-judge",
+      "source": "JobBench/job-bench",
+      "source_revision": "d43a66575635da0d3f6cb9a20976dc1a60f3ffc9",
+      "metric": "official weightedrubric reward",
+      "requirements": [
+        "renderer660b33a86ed032559df0b2fdc1ad38cf7ceb83f3",
+        "Harbor Python>=3.12",
+        "separateverifier",
+        "judge credentials"
+      ],
+      "recommendation": "preserve native renderer+separateverifier",
+      "pitfalls": [
+        "private rubrics",
+        "grade consumes hostevent notscorer",
+        "main/easy/all"
+      ],
+      "split": "native collection; explicit experiment partitions",
+      "evidence": [
+        "upstream/benchmarks/jobbench/__init__.py"
+      ]
+    },
+    {
+      "name": "deepswe",
+      "family": "harbor-separate-tests",
+      "source": "https://github.com/datacurve-ai/deep-swe.git",
+      "source_revision": "0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea",
+      "metric": "v1.1 native separateverifier reward",
+      "requirements": [
+        "Harbor Python>=3.12",
+        "verifier.environment_mode=separate",
+        "native collect hooks",
+        "both networks no-network",
+        "images"
+      ],
+      "recommendation": "native separateverifier mapping",
+      "pitfalls": [
+        "terminalsnapshot not equivalent",
+        "modelonly connectivity"
+      ],
+      "split": "native test",
+      "evidence": [
+        "upstream/benchmarks/deepswe/__init__.py"
+      ]
+    },
+    {
+      "name": "swe_bench",
+      "family": "repo-official-tests",
+      "source": "SWE-bench/SWE-bench_Verified",
+      "source_revision": "78f471bf655a3137b2e8a75af1501690ec009ec3",
+      "metric": "official resolved",
+      "requirements": [
+        "test.parquet",
+        "Docker",
+        "official evaluator",
+        "basecommit reset pristine replay"
+      ],
+      "recommendation": "collect patch+fresh official grading",
+      "pitfalls": [
+        "goldpatch/testpatch private",
+        "remove future git/setup leaks",
+        "local test.parquet2.1MB exists"
+      ],
+      "split": "native test500",
+      "evidence": [
+        "upstream/benchmarks/swe_bench/__init__.py"
+      ]
+    },
+    {
+      "name": "swe_bench_pro",
+      "family": "harbor-pristine-replay",
+      "source": "https://github.com/scaleapi/SWE-bench_Pro-os.git",
+      "source_revision": "66f92766bba642462d4bbe5479e83f91f9211862",
+      "metric": "V2 official resolved freshcontainer regrade",
+      "requirements": [
+        "Harbor Python>=3.12",
+        "v2 tooling patch_replay+locked_claude_code",
+        "images",
+        "modelhost allowlist"
+      ],
+      "recommendation": "native patch export+officialreplay",
+      "pitfalls": [
+        "hard51 subset separate",
+        "timeout<=3000",
+        "grade partialpatch even deadline"
+      ],
+      "split": "native testall/hard",
+      "evidence": [
+        "upstream/benchmarks/swe_bench_pro/__init__.py"
+      ]
+    },
+    {
+      "name": "spreadsheetbench2",
+      "family": "workbook-official",
+      "source": "KAKA22/SpreadsheetBench-v2",
+      "source_revision": "5a2215ed4121945ab09d8723df2995602090b042",
+      "metric": "official recalculatedworkbook accuracy",
+      "requirements": [
+        "spreadsheetbench-v2-09-10.zip",
+        "evaluator a7bdc2d358e052d35a94768e1f487c0d9e9c0011",
+        "LibreOffice",
+        "openpyxl"
+      ],
+      "recommendation": "nativeworkbook setup+pristine scorer",
+      "pitfalls": [
+        "new v2 not HGv1 verified400",
+        "Debugging/Financial_Model/Template only, Visualizationexcluded",
+        "goldcases private"
+      ],
+      "split": "native collection; explicit experiment partitions",
+      "evidence": [
+        "upstream/benchmarks/spreadsheetbench2/__init__.py"
+      ]
+    }
+  ],
+  "already_present_or_alias": {
+    "aime": "aime",
+    "alfworld": "alfworld",
+    "appworld": "appworld",
+    "bfcl": "bfcl_v3",
+    "hotpotqa": "hotpotqa",
+    "musique": "musique",
+    "tau2": "tau2_bench",
+    "terminal_bench": "terminal_bench",
+    "triviaqa": "triviaqa",
+    "twowiki_multihopqa": "twowikimultihopqa"
+  },
+  "covered_subset_variant": [
+    {
+      "upstream": "tau3_banking",
+      "harnessgrad": "tau3_bench",
+      "revision": "fc0055dc4e0a316c3f83133267fbd6faaa770992",
+      "reason": "HG375tasks already includes banking_knowledge97; Flash subset+19retrievalvariants not newdataset"
+    }
+  ],
+  "network_probe": [
+    {
+      "dataset": "bbeh",
+      "error": "URLError: <urlopen error [Errno 101] Network is unreachable>"
+    },
+    {
+      "dataset": "supergpqa",
+      "error": "URLError: <urlopen error [Errno 101] Network is unreachable>"
+    },
+    {
+      "dataset": "math500",
+      "error": "URLError: <urlopen error [Errno 101] Network is unreachable>"
+    },
+    {
+      "dataset": "math",
+      "error": "URLError: <urlopen error [Errno 101] Network is unreachable>"
+    },
+    {
+      "dataset": "officeqa_pro",
+      "error": "URLError: <urlopen error [Errno 101] Network is unreachable>"
+    },
+    {
+      "dataset": "searchqa",
+      "error": "URLError: <urlopen error [Errno 101] Network is unreachable>"
+    }
+  ],
+  "notes": [
+    "No live model or benchmark run for audit.",
+    "NativeBenchmark.grade generally consumes trusted hostverifier events; copying only grade makes invalid adapter."
+  ],
+  "new_adapter_count": 20,
+  "variant_entries": [
+    {
+      "name": "math500",
+      "variant_of": "math",
+      "upstream_class": "MATH",
+      "upstream_config": {
+        "variant": "math500"
+      },
+      "source": "HuggingFaceH4/MATH-500",
+      "source_revision": "6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be",
+      "evidence": "upstream/benchmarks/math/__init__.py:43-52",
+      "counting": "additional adapter entry, not an independent benchmark family"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
-"""FlashRSI opro/__init__.py:93-150: stable best and ascending scored history."""
+"""upstream opro/__init__.py:93-150: stable best and ascending scored history."""
 
 import json
-from flashrsi_helpers import runtime, P, fixture, capture, member
+from native_helpers import runtime, P, fixture, capture, member
 
 
 def test_opro_stable_best_keeps_earlier_equal_score():
@@ -52,6 +52,6 @@ def test_exam_only_point_is_never_a_parent(tmp_path, monkeypatch):
 def test_unknown_native_knob_is_rejected_instead_of_ignored(monkeypatch):
     import pytest
 
-    monkeypatch.setenv("HG_FLASHRSI_CONFIG", '{"secret_native_evaluator":true}')
+    monkeypatch.setenv("HG_POLICY_CONFIG", '{"secret_native_evaluator":true}')
     with pytest.raises(ValueError, match="unsupported"):
         runtime.settings("opro")

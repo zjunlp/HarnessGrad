@@ -5,21 +5,21 @@
 
 ## 来源核实
 
-核查的 FlashRSI 版本是
-[`dea1b1d0285e3328234a1e344562bb9e54ce14f7`](https://github.com/RUC-NLPIR/FlashRSI/tree/dea1b1d0285e3328234a1e344562bb9e54ce14f7)。
+核查的 upstream 版本是
+[`dea1b1d0285e3328234a1e344562bb9e54ce14f7`](PROVENANCE.json)。
 这个版本公开注册 MiniAgent、Claude Code、Codex、Pi 和 Hermes，没有 OpenClaw 适配器。
-其 Pi 参考文档提到 OpenClaw 使用 Pi，不代表 FlashRSI 已经接入 OpenClaw。
+其 Pi 参考文档提到 OpenClaw 使用 Pi，不代表 upstream 已经接入 OpenClaw。
 
-- **MiniAgent**：FlashRSI 自带的 Python ReAct runtime，包含 prompts、skills、工具描述、工具代码与
+- **MiniAgent**：upstream 自带的 Python ReAct runtime，包含 prompts、skills、工具描述、工具代码与
   `agent.yaml`，不是 `mini-swe-agent`。本分支保留已有 `base_harness/miniswe`，另加
   `base_harness/miniagent`。固定来源、文件摘要与 Apache-2.0 许可随候选保存。
 - **OpenClaw**：适配本机已安装的官方 CLI，版本 `2026.3.13 (61d171a)`，使用
   `agent --local --json` 本地运行，不启动 gateway、不投递消息。Node 与 OpenClaw 安装包通过
   `runtime_paths` 只读提供；任务状态与配置独立生成。
 
-## 与 FlashRSI 接入逻辑的差异
+## 与 upstream 接入逻辑的差异
 
-| 关注点 | FlashRSI MiniAgent | 本分支 HarnessGrad 适配 |
+| 关注点 | upstream MiniAgent | 本分支 HarnessGrad 适配 |
 | --- | --- | --- |
 | 调用入口 | Python `Agent._run()`，返回 `Trajectory` | `agent.py --task <task.json> --workdir <dir>` |
 | 可修改状态 | `Snapshot` 和资源角色，check-out 后运行 | 完整候选目录，平台 staging、哈希与逐轮保存 |
@@ -35,7 +35,7 @@ MiniAgent 的原生循环可复用，主要工作在两侧接口翻译。OpenCla
 ## 可编辑范围
 
 MiniAgent 的原生 runtime 和资源都属于候选目录。Method 对这些文件的修改会进入候选状态与哈希，
-下一轮运行加载该候选，不从外部 FlashRSI 安装重新取默认源码。
+下一轮运行加载该候选，不从外部 upstream 安装重新取默认源码。
 
 OpenClaw 接入的是 CLI wrapper。候选内的适配器、prompt 与配置构造代码可修改；外部安装的
 OpenClaw/Node 是只读运行依赖。此版本不能表述为“OpenClaw 整个原生源码可被 Method 改写”。

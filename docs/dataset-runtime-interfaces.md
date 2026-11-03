@@ -590,7 +590,7 @@ H0 查找、`--h0-from`、训练及评测 `--resume` 要求记录与当前身份
 
 运行方式见 [测试说明](test-suite.md)。
 
-## FlashRSI structured verifier judgement
+## upstream structured verifier judgement
 
 The optional `VERIFY.judge.response_format` accepts a named, strict `json_schema`
 request object. `VERIFY.judge.token_parameter` selects `max_tokens` (legacy default)

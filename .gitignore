@@ -481,8 +481,8 @@ data/candidates/
 # stays the contract and `docs/adapter-spec.md` the adapter rules, and this page only runs them.
 !/docs/bring-your-own-harness.md
 
-# The FlashRSI comparison page: the release date depends on a reader being able to check
+# The upstream comparison page: the release date depends on a reader being able to check
 # "why not just use their repo" against sourced cells rather than a claim, so it is public --
-# every FlashRSI cell names a URL and a date, and every cell about this repository names a
+# every upstream cell names a URL and a date, and every cell about this repository names a
 # path a reader can open.
-!/docs/comparison-flashrsi.md
+!/docs/comparison-upstream.md

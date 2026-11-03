@@ -1,7 +1,7 @@
 # swe_bench_pro: native source and execution contract
 
 This port inventories the original task tree pinned in `SOURCE.json`, without
-importing FlashRSI or Harbor into the measurement runtime. It does not pretend
+importing upstream or Harbor into the measurement runtime. It does not pretend
 that terminal snapshot verification is the native separate/replay protocol.
 
 ```sh
@@ -18,7 +18,7 @@ resource/network policies and separate environment declarations remains intact.
 `inventory()` returns all selected source tasks and their declarations/digests;
 public actor tasks only contain the native instruction and a namespaced ID.
 
-`load()` inventories public tasks without requiring unselected runtimes. Selected `SETUP` / `VERIFY` access validates the task/source-bound native runtime manifest before actor/model work. It uses a private native-world relay and fresh Harbor verifier replay, with missing dependencies/images reported as ConfigMissing rather than scored zero. See [shared runtime preparation](../../scaffolds/flashrsi_harbor_runtime/README.md).
+`load()` inventories public tasks without requiring unselected runtimes. Selected `SETUP` / `VERIFY` access validates the task/source-bound native runtime manifest before actor/model work. It uses a private native-world relay and fresh Harbor verifier replay, with missing dependencies/images reported as ConfigMissing rather than scored zero. See [shared runtime preparation](../../scaffolds/native_harbor_runtime/README.md).
 
 Native execution requirements preserved by the route:
 - V2's official patch capture, fresh sandbox patch replay and official regrade

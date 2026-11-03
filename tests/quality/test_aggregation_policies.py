@@ -144,7 +144,7 @@ def test_before_after_all_numbers_and_verdicts_are_identical(adapters):
     # Keep the original migration receipt immutable. Later registrations have no
     # pre-migration result, but still participate in the same declared run mean.
     added_since_baseline = {
-        # New FlashRSI registrations have no pre-migration numeric receipt.
+        # New upstream registrations have no pre-migration numeric receipt.
         'bbeh', 'browsecomp', 'deepsearchqa', 'deepswe', 'harvey_lab', 'hle', 'jobbench', 'livemathbench', 'math', 'math500', 'nq', 'officeqa_pro', 'searchqa', 'spreadsheetbench2', 'supergpqa', 'swe_bench', 'swe_bench_pro', 'travelplanner', 'widesearch', 'workbench',
         "aime", "cooperbench", "costbench", "costbench_dynamic",
                             "kumo", "locomo", "tau3_bench",

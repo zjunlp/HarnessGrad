@@ -1,6 +1,6 @@
 # SWE-bench Verified native patch route
 
-The source reader and scoring helper are pinned to FlashRSI
+The source reader and scoring helper are pinned to upstream
 `e9c7667945f959d62da27204649a82f94d1b6705`. The official SWE evaluator revision is
 `02e7a74ffd0b707aab73d203fe87bdc7c76afc8e`.
 
@@ -17,21 +17,21 @@ applied patch with no parseable native test execution remain unmeasured.
 ## Provisioning
 
 1. Prepare the complete native source using
-   `tools/prepare_flashrsi_research.py swe_bench --config CONFIG --output ROOT`
+   `tools/prepare_native_research.py swe_bench --config CONFIG --output ROOT`
    and set `HG_SWE_BENCH_DATA=ROOT`. Native rows must retain `image`, `eval_script`,
    `log_parser`, baseline and private test/patch fields; this does not invent
-   missing deployment metadata. Image assets are refused, matching FlashRSI.
+   missing deployment metadata. Image assets are refused, matching upstream.
 2. In an isolated interpreter install `swebench` from the exact evaluator revision
    and its dependencies, then set `HG_SWE_PYTHON=/absolute/venv/bin/python`.
    Alternatively set `HG_SWE_SOURCE=/absolute/upstream-tree`: the bridge checks
    the complete package file set against
-   `data/scaffolds/flashrsi_research/SWE_EVALUATOR_SOURCE.json`. This authenticated
+   `data/scaffolds/native_research/SWE_EVALUATOR_SOURCE.json`. This authenticated
    archive route changes acquisition checking only; scoring code is unchanged.
 3. Explicitly acquire the required instance images outside measurement. No adapter
    import, load, preparation command below or trial silently pulls an image.
-4. Run `python3 tools/prepare_flashrsi_swe.py --output /absolute/native-runtime.json`.
+4. Run `python3 tools/prepare_upstream_swe.py --output /absolute/native-runtime.json`.
    This produces a new actor image for each selected case, pruning future Git
-   refs/objects and FlashRSI's specified setup/evaluation files. Use `--task-id`
+   refs/objects and upstream's specified setup/evaluation files. Use `--task-id`
    with native instance IDs to prepare selected cases. Set
    `HG_SWE_BENCH_RUNTIME=/absolute/native-runtime.json`.
 
@@ -55,7 +55,7 @@ still checks the complete prepared pool.
 HG_SWE_PYTHON=/tmp/hg-swebench-venv/bin/python \
 HG_SWE_SOURCE=/tmp/hg-swebench-official-02e7a74f \
 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \
-  tests/quality/test_flashrsi_swe_native.py \
+  tests/quality/test_upstream_swe_native.py \
   --basetemp=/tmp/hg-swe-native-controls-fresh
 ```
 

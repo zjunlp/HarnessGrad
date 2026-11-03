@@ -35,8 +35,8 @@ EXPECTED_DATASETS = (
     # 真的适配器（KIND = dataset），所以它出现在目录里是对的。成员变化照这个元组的规矩
     # 做一次评审再加入，而不是回头去过滤。
     "authored_example_fix_bug",
-    # **The FlashRSI transfer (2026-11-02) added twenty reviewed adapters.** Each has a
-    # section in `docs/dataset-reviews/flashrsi-transfer.md` (source pin, metric, what is
+    # **The upstream transfer (2026-11-02) added twenty reviewed adapters.** Each has a
+    # section in `docs/dataset-reviews/native-transfer.md` (source pin, metric, what is
     # honest missing) and a `KIND = "dataset"` declaration, so the reviewed-membership
     # rule above is satisfied; they are listed in sorted order like every other entry.
     "bbeh", "bfcl_v3", "bird_minidev",

@@ -19,7 +19,7 @@ written into this file.
 | --- | --- |
 | `declared` | `SPLIT_SOURCE` is `"declared"`: the benchmark publishes both sides and the adapter says which is which. A run's `--split declared` and `--split official` are then the same division, and `OFFICIAL_EVAL` is the scored side's ids. |
 | `none` | the adapter declares no division: `SPLIT_SOURCE` is `"none"`, or a prose source (the authored bundle), or absent with no `SPLIT` at all (`locomo`). A run covers every task, and `--split default` (the platform's hash rule) or `--split <file.json>` is how a division is supplied. |
-| `undeclared` | the adapter answers no `SPLIT_SOURCE` and builds `SPLIT` from its payload, so whether it divides its pool is not a fact this file can state and it says so instead of guessing (`--host` prints what the payload resolves to). The nine FlashRSI research adapters are here (`browsecomp`, `deepsearchqa`, `harvey_lab`, `hle`, `livemathbench`, `swe_bench`, `travelplanner`, `workbench`, `widesearch`): their split membership is read from a prepared manifest, so declaring `SPLIT_SOURCE` would be a claim about a payload. The marker is not evidence that the dataset is undivided. |
+| `undeclared` | the adapter answers no `SPLIT_SOURCE` and builds `SPLIT` from its payload, so whether it divides its pool is not a fact this file can state and it says so instead of guessing (`--host` prints what the payload resolves to). The nine upstream research adapters are here (`browsecomp`, `deepsearchqa`, `harvey_lab`, `hle`, `livemathbench`, `swe_bench`, `travelplanner`, `workbench`, `widesearch`): their split membership is read from a prepared manifest, so declaring `SPLIT_SOURCE` would be a claim about a payload. The marker is not evidence that the dataset is undivided. |
 | `refused` | `REFUSED` is set: this benchmark cannot be measured as released, so its adapter refuses it and `load()` raises. There is no division to report -- `docs/refusal-policy.md` says why for each one. |
 
 ## What is not in this file
@@ -200,7 +200,7 @@ declaring them literally, which is why their sizes are `unknown (computed)` in t
 printed by `--host`; `tau_bench`'s pool is committed to the repository (see above).
 
 Four adapters are refused (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`). The 9 `undeclared`
-are the FlashRSI research adapters, whose split membership is read from a prepared manifest --
+are the upstream research adapters, whose split membership is read from a prepared manifest --
 `strongreject` used to be one of them and now declares no division at all plus `SPLIT_GROUPS`
 (see the section above). `alfworld` and `scienceworld` declare a division **only when** a study
 file or pool is supplied (`HG_ALFWORLD_STUDY_IDS`, `HG_SCIENCEWORLD_POOL`); without it they are

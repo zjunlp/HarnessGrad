@@ -20,11 +20,11 @@ import time
 from eval.verification.isolation import record_class
 
 ROUTES = {
-    'swe_bench': ('data.scaffolds.flashrsi_research.swe_native', 'swe_episode'),
-    'harvey_lab': ('data.scaffolds.flashrsi_research.harvey_native', None),
-    'deepswe': ('data.scaffolds.flashrsi_harbor_runtime.verify', 'native_episode'),
-    'jobbench': ('data.scaffolds.flashrsi_harbor_runtime.verify', 'native_episode'),
-    'swe_bench_pro': ('data.scaffolds.flashrsi_harbor_runtime.verify', 'native_episode'),
+    'swe_bench': ('data.scaffolds.native_research.swe_native', 'swe_episode'),
+    'harvey_lab': ('data.scaffolds.native_research.harvey_native', None),
+    'deepswe': ('data.scaffolds.native_harbor_runtime.verify', 'native_episode'),
+    'jobbench': ('data.scaffolds.native_harbor_runtime.verify', 'native_episode'),
+    'swe_bench_pro': ('data.scaffolds.native_harbor_runtime.verify', 'native_episode'),
 }
 MAX_BYTES, MAX_FILES = 64 << 20, 10000
 MAX_RECORD_BYTES = 128 << 20  # Native artifacts are base64 inside sealed JSON.

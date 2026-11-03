@@ -143,14 +143,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## bbeh"
             }
           ],
@@ -234,14 +234,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## browsecomp"
             }
           ],
@@ -401,14 +401,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## deepsearchqa"
             }
           ],
@@ -429,14 +429,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-native-runtime",
+          "id": "native-adapted-runtime",
           "family": "trusted-verifier-runtime",
           "status": "runtime",
           "observed": "Native actor capabilities, artifact-only sealing, fixed Harbor replay and independent native verifier routes are implemented. Real local protocol controls exercise positive/negative paths; Pro uses the pinned original PatchReplayAgent and JobBench the original weighted rubric judge. Production source/image closure and full official oracle controls remain unprovisioned; native-public profiles are not HG quota/egress attestations, and timeout partial scoring is not admitted.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## deepswe"
             }
           ],
@@ -565,14 +565,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-native-runtime",
+          "id": "native-adapted-runtime",
           "family": "trusted-verifier-runtime",
           "status": "runtime",
           "observed": "The native execution and independent scorer bridge is implemented and exercised by explicitly declared local controls. Default production sources, images/dependencies, complete upstream oracle controls and scorer/runtime closure have not been provisioned or authorized; no production score was produced.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## harvey_lab"
             }
           ],
@@ -592,14 +592,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## hle"
             }
           ],
@@ -666,14 +666,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-native-runtime",
+          "id": "native-adapted-runtime",
           "family": "trusted-verifier-runtime",
           "status": "runtime",
           "observed": "Native actor capabilities, artifact-only sealing, fixed Harbor replay and independent native verifier routes are implemented. Real local protocol controls exercise positive/negative paths; Pro uses the pinned original PatchReplayAgent and JobBench the original weighted rubric judge. Production source/image closure and full official oracle controls remain unprovisioned; native-public profiles are not HG quota/egress attestations, and timeout partial scoring is not admitted.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## jobbench"
             }
           ],
@@ -734,14 +734,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## livemathbench"
             }
           ],
@@ -797,14 +797,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## math"
             }
           ],
@@ -824,14 +824,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## math500"
             }
           ],
@@ -919,14 +919,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## nq"
             }
           ],
@@ -946,14 +946,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## officeqa_pro"
             }
           ],
@@ -1053,14 +1053,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## searchqa"
             }
           ],
@@ -1133,14 +1133,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## spreadsheetbench2"
             }
           ],
@@ -1203,14 +1203,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## supergpqa"
             }
           ],
@@ -1231,14 +1231,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-native-runtime",
+          "id": "native-adapted-runtime",
           "family": "trusted-verifier-runtime",
           "status": "runtime",
           "observed": "The native execution and independent scorer bridge is implemented and exercised by explicitly declared local controls. Default production sources, images/dependencies, complete upstream oracle controls and scorer/runtime closure have not been provisioned or authorized; no production score was produced.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## swe_bench"
             }
           ],
@@ -1259,14 +1259,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-native-runtime",
+          "id": "native-adapted-runtime",
           "family": "trusted-verifier-runtime",
           "status": "runtime",
           "observed": "Native actor capabilities, artifact-only sealing, fixed Harbor replay and independent native verifier routes are implemented. Real local protocol controls exercise positive/negative paths; Pro uses the pinned original PatchReplayAgent and JobBench the original weighted rubric judge. Production source/image closure and full official oracle controls remain unprovisioned; native-public profiles are not HG quota/egress attestations, and timeout partial scoring is not admitted.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## swe_bench_pro"
             }
           ],
@@ -1373,14 +1373,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## travelplanner"
             }
           ],
@@ -1438,14 +1438,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## widesearch"
             }
           ],
@@ -1466,14 +1466,14 @@
       "shared_blockers": [],
       "blockers": [
         {
-          "id": "flashrsi-production-measurement",
+          "id": "native-production-measurement",
           "family": "measurement-coverage",
           "status": "measurement",
           "observed": "Pinned native task/scorer transport and authored protocol controls are implemented. Real source acquisition, independent official controls and a reviewed task/trial receipt remain dataset-specific gates. No production H0 was run.",
           "evidence": [
             {
               "kind": "repository",
-              "path": "docs/dataset-reviews/flashrsi-transfer.md",
+              "path": "docs/dataset-reviews/native-transfer.md",
               "locator": "## workbench"
             }
           ],

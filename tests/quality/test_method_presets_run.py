@@ -226,7 +226,7 @@ def test_preset_reaches_a_measured_round(tmp_path: Path, config: Path) -> None:
         if NEEDS_CONFIG in tail or NEEDS_CONFIG in recorded:
             pytest.skip(
                 f"{config.name} names a method whose policy needs a configured module map "
-                "(HG_FLASHRSI_CONFIG='{\"modules\": {...}}', declared in "
+                "(HG_POLICY_CONFIG='{\"modules\": {...}}', declared in "
                 "methods/modular_rsi/method.json:requires); it refuses with a named error "
                 "rather than guessing one.")
         pytest.fail(f"{config.name} stopped at H0 for a reason that is not the "

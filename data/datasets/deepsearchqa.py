@@ -1,17 +1,17 @@
 """deepsearchqa native source, tasks and platform-owned post-exit scoring.
 
-Pinned FlashRSI adaptation; see data/scaffolds/flashrsi_research/PROVENANCE.json.
+Pinned upstream adaptation; see data/scaffolds/native_research/PROVENANCE.json.
 Raw native data stays outside the repository. Importing this declaration performs no
 acquisition and makes no claim that its external runtime is provisioned.
 """
 from data.scaffolds import roots
-from data.scaffolds.flashrsi_research.adapter import Adapter, TaskMapping, downloads as source_downloads
+from data.scaffolds.native_research.adapter import Adapter, TaskMapping, downloads as source_downloads
 
 KIND = 'dataset'
 ORACLE_SOURCE = 'released'
-DATASET_ROOT = roots.dataset_root('deepsearchqa', legacy='/mnt/20t/xubuqiang/datasets/deepsearchqa/flashrsi-prepared')
+DATASET_ROOT = roots.dataset_root('deepsearchqa', legacy='/mnt/20t/xubuqiang/datasets/deepsearchqa/native-prepared')
 ADAPTER = Adapter('deepsearchqa', root=DATASET_ROOT)
-METRIC = 'deepsearchqa.flashrsi-native'
+METRIC = 'deepsearchqa.native-adapted'
 load = ADAPTER.load
 provision_status = ADAPTER.provision_status
 SETUP = TaskMapping(ADAPTER, ADAPTER.setup)

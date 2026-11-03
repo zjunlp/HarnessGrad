@@ -3,7 +3,7 @@
   "revision": "d43a66575635da0d3f6cb9a20976dc1a60f3ffc9",
   "native_split": "unassigned",
   "metric": "reward",
-  "flashrsi_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
-  "flashrsi_adapter": "flashrsi/benchmarks/jobbench",
+  "upstream_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+  "upstream_adapter": "upstream/benchmarks/jobbench",
   "runtime_status": "native-source loader ready; execution not admitted until required native verifier/network/replay capabilities are implemented"
 }

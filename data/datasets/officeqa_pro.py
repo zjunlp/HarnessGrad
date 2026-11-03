@@ -1,10 +1,10 @@
-"""officeqa_pro: pinned native FlashRSI QA protocol through the HarnessGrad verifier.
+"""officeqa_pro: pinned native upstream QA protocol through the HarnessGrad verifier.
 
-See data/scaffolds/flashrsi_qa/README.md for source, split and fidelity boundaries.
+See data/scaffolds/native_qa/README.md for source, split and fidelity boundaries.
 Imports never fetch data. Prepare the external data root explicitly before load().
 """
 from data.scaffolds import roots
-from data.scaffolds.flashrsi_qa import Dataset
+from data.scaffolds.native_qa import Dataset
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -20,7 +20,7 @@ def downloads():
     return _spec.downloads()
 
 def score(prediction, gold):
-    from data.scaffolds.flashrsi_qa.scoring import score as native_score
+    from data.scaffolds.native_qa.scoring import score as native_score
     return native_score("officeqa_pro", prediction, gold)
 
 def provision_status():

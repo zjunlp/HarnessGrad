@@ -128,7 +128,7 @@ python3 tools/run_tests.py --dataset gsm8k  # that dataset plus the core platfor
 | 🛠️ [`docs/writing_a_harness.md`](docs/writing_a_harness.md) · [`docs/dataset-onboarding.md`](docs/dataset-onboarding.md) | contributing a harness, adding a dataset |
 | 🚪 [`docs/bring-your-own-harness.md`](docs/bring-your-own-harness.md) | the on-ramp for an outside harness: a directory with an `agent.py` → a point on a measured curve, every command verified |
 | 🧪 [`docs/test-suite.md`](docs/test-suite.md) | test lanes and the `--basetemp` rule |
-| 🆚 [`docs/comparison-flashrsi.md`](docs/comparison-flashrsi.md) | FlashRSI and HarnessGrad side by side: what each measures, what we should borrow |
+| 🆚 [`docs/comparison-upstream.md`](docs/comparison-upstream.md) | upstream and HarnessGrad side by side: what each measures, what we should borrow |
 | 🤖 [`AGENTS.md`](AGENTS.md) | operating rules, including the staged-pilot policy |
 
 ## ⚠️ Status and limits

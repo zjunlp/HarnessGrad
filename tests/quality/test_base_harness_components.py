@@ -58,9 +58,9 @@ someone who disagrees:
   (it is the editable-surface permission boundary). `openclaw/runtime-identity.json` ->
   `reliability`, because `agent.py` refuses the run when the pinned version or path drifted.
 * *Mocks, licences, provenance and pure data are `unattributed`.* `mock_model.py` (miniswe,
-  openclaw), `README.md`, `requirements.txt`, `FLASHRSI-LICENSE.txt`, `PROVENANCE.json`,
+  openclaw), `README.md`, `requirements.txt`, `UPSTREAM-LICENSE.txt`, `PROVENANCE.json`,
   `dsh_farm.tsv`, `runtime/__init__.py` (empty package marker) and miniagent's
-  `components.yaml` -- a vendored **FlashRSI** taxonomy (`code/skill/prompt/tool/config`) that
+  `components.yaml` -- a vendored **upstream** taxonomy (`code/skill/prompt/tool/config`) that
   matches neither this platform's ten names nor its files, and that no code here reads.
 * *`verification` and `recovery` are claimed by no shipped file, and that is the honest count.*
   Answer/artifact checking exists, but inside adapters whose dominant job is delegation; no
