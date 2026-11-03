@@ -481,7 +481,7 @@ DRIVER = PLATFORM / "driver.py"
 
 
 def python_supported() -> bool:
-    return sys.version_info >= (3, 10)
+    return sys.version_info >= (3, 12)
 
 
 def adapters() -> list[dict]:
@@ -829,7 +829,7 @@ def guard_launch(form: dict) -> tuple[int, dict]:
     if not python_supported():
         return 400, {"error": "unsupported-python",
                      "detail": (f"当前 Python 是 {sys.version_info.major}.{sys.version_info.minor}，"
-                                "HarnessGrad 需要 Python 3.10+")}
+                                "HarnessGrad 需要 Python 3.12+")}
     if not DRIVER.is_file():
         return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{DRIVER}"}
     method = str(form.get("method") or "").strip()

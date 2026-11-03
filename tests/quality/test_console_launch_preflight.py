@@ -138,7 +138,7 @@ def test_preview_reports_an_unsupported_python_before_launch(tmp_path, monkeypat
 
     assert payload["preflight"]["ok"] is False
     assert payload["preflight"]["error"] == "unsupported-python"
-    assert "Python 3.10+" in payload["preflight"]["detail"]
+    assert "Python 3.12+" in payload["preflight"]["detail"]
 
 
 # ------------------------------------------- 设置：两个 endpoint，key 不出服务端 ---

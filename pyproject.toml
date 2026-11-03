@@ -6,7 +6,7 @@
 # `harnessgrad/cli.py`) and installs `driver.py` as a module instead of moving it.
 #
 # There are no runtime dependencies and there must not be any: the platform is pure
-# Python standard library, 3.10+, and that is a property users rely on when they install
+# Python standard library, 3.12+, and that is a property users rely on when they install
 # it into a machine that has no network. `dependencies = []` is therefore a claim the
 # quality test asserts, not a default.
 [build-system]
@@ -22,7 +22,7 @@ description = "Measure agent-harness self-improvement round by round: tasks, san
 # form is what setuptools accepts offline here, and it still ships `LICENSE` as the
 # wheel's `License-File`.
 license = {text = "MIT"}
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]

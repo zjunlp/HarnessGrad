@@ -115,7 +115,7 @@ def test_a_broken_bwrap_is_caught_by_the_self_check(tmp_path):
 
 
 def test_a_too_old_python_is_refused(tmp_path):
-    """The platform uses `X | None` annotations, so 3.10 is a real floor.
+    """The platform needs 3.12, so an older interpreter is a real floor.
 
     PATH keeps the real directories so `bash` and `git` still work; only `python3` is
     shadowed, by a stub that reports an old version and fails a version check.

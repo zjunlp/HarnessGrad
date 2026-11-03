@@ -50,7 +50,7 @@ def test_pyproject_is_the_installable_contract():
     project = config["project"]
     assert project["name"] == "harnessgrad"
     assert project["version"] == "0.1.0"
-    assert project["requires-python"] == ">=3.10"
+    assert project["requires-python"] == ">=3.12"
     # The selling point, as an assertion: installing adds nothing to resolve.
     assert project["dependencies"] == []
     assert project["scripts"]["harnessgrad"] == "harnessgrad.cli:main"

@@ -115,7 +115,7 @@ python3 server.py --port 4460
 }
 ```
 
-前端仅在 `preflight.ok=true` 时启用“确认启动”。服务端预检查 driver 占用、Python 3.10+、
+前端仅在 `preflight.ok=true` 时启用“确认启动”。服务端预检查 driver 占用、Python 3.12+、
 `driver.py`、可写 runs 根目录、GPU 预算目录和参数合法性；数字参数也会在浏览器中即时检查：
 轮数 `1..20`、并发 `1..64`、trials `1..3`。
 

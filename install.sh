@@ -66,7 +66,7 @@ FIRST_PY3=""
 for candidate in python3 python; do
     command -v "$candidate" >/dev/null 2>&1 || continue
     [ -n "$FIRST_PY3" ] || FIRST_PY3="$(command -v "$candidate")"
-    if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+    if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else 1)' 2>/dev/null; then
         PY="$(command -v "$candidate")"
         break
     fi

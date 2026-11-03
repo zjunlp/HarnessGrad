@@ -1,0 +1,50 @@
+{
+  "schema": "harnessgrad.leaderboards.v1",
+  "updated": "2026-11-03",
+  "comment": "One entry per contributed harness, method, benchmark or result. `adoption` counts independent reproductions reported to us (a run id or a link in the pull request that adds the entry); it is a declared number, not a scraped metric. The results board admits an entry only with a comparable (benchmark, metric) group and a receipt in this repository -- see docs/leaderboards.md for the admission rule.",
+  "boards": {
+    "harness": [
+      {"name": "loop", "path": "base_harness/loop", "contributor": "zjunlp", "since": "2026-10-01", "adoption": 1, "note": "reference CLI harness: one agent loop, no framework"},
+      {"name": "codex", "path": "base_harness/codex", "contributor": "zjunlp", "since": "2026-10-12", "adoption": 1, "note": "OpenAI Codex CLI as the solver"},
+      {"name": "opencode", "path": "base_harness/opencode", "contributor": "zjunlp", "since": "2026-10-12", "adoption": 1, "note": "opencode CLI, measured through the recording relay"},
+      {"name": "deepseek-harness", "path": "base_harness/deepseek-harness", "contributor": "zjunlp", "since": "2026-10-20", "adoption": 1, "note": "DeepSeek open harness"},
+      {"name": "openclaw", "path": "base_harness/openclaw", "contributor": "zjunlp", "since": "2026-10-20", "adoption": 1, "note": "OpenClaw agent runtime"},
+      {"name": "miniagent", "path": "base_harness/miniagent", "contributor": "zjunlp", "since": "2026-10-22", "adoption": 1, "note": "small teaching harness, easy to edit"},
+      {"name": "miniswe", "path": "base_harness/miniswe", "contributor": "zjunlp", "since": "2026-10-24", "adoption": 1, "note": "minimal SWE-style harness"},
+      {"name": "oracle", "path": "base_harness/oracle", "contributor": "zjunlp", "since": "2026-10-24", "adoption": 1, "note": "control harness that always answers correctly"}
+    ],
+    "method": [
+      {"name": "dgm", "preset": "experiments/method-dgm.json", "contributor": "zjunlp", "since": "2026-10-24", "adoption": 1, "note": "Darwin Godel Machine: edit the harness, keep what scores"},
+      {"name": "rrsi", "preset": "experiments/method-rrsi.json", "contributor": "zjunlp", "since": "2026-10-24", "adoption": 1, "note": "reflective RSI loop"},
+      {"name": "adas", "preset": "experiments/method-adas.json", "contributor": "zjunlp", "since": "2026-10-25", "adoption": 1, "note": "meta-agent search over harness designs"},
+      {"name": "ahe", "preset": "experiments/method-ahe.json", "contributor": "zjunlp", "since": "2026-10-25", "adoption": 1, "note": "agentic harness engineering"},
+      {"name": "ace", "preset": "experiments/method-ace.json", "contributor": "zjunlp", "since": "2026-10-26", "adoption": 1, "note": "playbook grows from the run's own traces"},
+      {"name": "skillopt", "preset": "experiments/method-skillopt.json", "contributor": "zjunlp", "since": "2026-10-26", "adoption": 1, "note": "skills as the editable surface"},
+      {"name": "evoprompt", "preset": "experiments/method-evoprompt.json", "contributor": "zjunlp", "since": "2026-10-27", "adoption": 1, "note": "evolutionary prompt search"},
+      {"name": "evo_harness", "preset": "experiments/method-evo_harness.json", "contributor": "zjunlp", "since": "2026-10-27", "adoption": 1, "note": "evolutionary search over the harness itself"},
+      {"name": "opro", "preset": "experiments/method-opro.json", "contributor": "zjunlp", "since": "2026-10-28", "adoption": 1, "note": "optimization by prompting"},
+      {"name": "tthe", "preset": "experiments/method-tthe.json", "contributor": "zjunlp", "since": "2026-10-28", "adoption": 1, "note": "test-time harness evolution"},
+      {"name": "dream_rsi", "preset": "experiments/method-dream_rsi.json", "contributor": "zjunlp", "since": "2026-10-29", "adoption": 1, "note": "dream-then-refine RSI"},
+      {"name": "sica_ci", "preset": "experiments/method-sica_ci.json", "contributor": "zjunlp", "since": "2026-10-29", "adoption": 1, "note": "self-improving coding agent"},
+      {"name": "gepa", "preset": "experiments/method-gepa.json", "contributor": "zjunlp", "since": "2026-10-30", "adoption": 1, "note": "reflective prompt evolution"},
+      {"name": "darwinx", "preset": "experiments/method-darwinx.json", "contributor": "zjunlp", "since": "2026-10-30", "adoption": 1, "note": "Darwinian tree search over harness variants"},
+      {"name": "arbor", "preset": "experiments/method-arbor.json", "contributor": "zjunlp", "since": "2026-10-31", "adoption": 1, "note": "tree-structured research agent"},
+      {"name": "hyperagents", "preset": "experiments/method-hyperagents.json", "contributor": "zjunlp", "since": "2026-10-31", "adoption": 1, "note": "hyperagent edit proposals"},
+      {"name": "meta_harness", "preset": "experiments/method-meta_harness.json", "contributor": "zjunlp", "since": "2026-11-01", "adoption": 1, "note": "a harness that edits harnesses"},
+      {"name": "harnessx", "preset": "experiments/method-harnessx.json", "contributor": "zjunlp", "since": "2026-11-01", "adoption": 1, "note": "harness crossover from the search frontier"},
+      {"name": "modular_rsi", "preset": "experiments/method-modular_rsi.json", "contributor": "zjunlp", "since": "2026-11-02", "adoption": 1, "note": "modular blocks are edited one at a time"}
+    ],
+    "benchmark": [
+      {"name": "bbeh", "adapter": "data/datasets/bbeh.py", "contributor": "zjunlp", "since": "2026-10-24", "adoption": 1, "note": "hard reasoning; the light first real experiment"},
+      {"name": "gsm8k", "adapter": "data/datasets/gsm8k.py", "contributor": "zjunlp", "since": "2026-10-24", "adoption": 1, "note": "gold answers, cheap to score"},
+      {"name": "terminal_bench", "adapter": "data/datasets/terminal_bench.py", "contributor": "zjunlp", "since": "2026-10-26", "adoption": 1, "note": "container tasks; official scorer in the image"},
+      {"name": "swe_bench_pro", "adapter": "data/datasets/swe_bench_pro.py", "contributor": "zjunlp", "since": "2026-10-27", "adoption": 1, "note": "repository-level patches, per-task images"},
+      {"name": "deepsearchqa", "adapter": "data/datasets/deepsearchqa.py", "contributor": "zjunlp", "since": "2026-10-28", "adoption": 1, "note": "search and judge services must be provisioned"},
+      {"name": "appworld", "adapter": "data/datasets/appworld.py", "contributor": "zjunlp", "since": "2026-10-29", "adoption": 1, "note": "stateful API tasks; TGC verified"}
+    ]
+  },
+  "results": {
+    "admission": "An entry needs a benchmark+metric group, a receipt committed in this repository, the harness tree hash the score was measured on, and the contributor who can be asked about it. Scores are ranked only inside one group; there is no cross-benchmark number.",
+    "entries": []
+  }
+}

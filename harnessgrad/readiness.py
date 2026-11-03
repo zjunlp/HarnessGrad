@@ -49,7 +49,7 @@ from harnessgrad import PLATFORM_ROOT
 from harnessgrad.config import current
 
 #: The interpreter floor the platform declares (README, `pyproject`-free by design).
-MIN_PYTHON = (3, 10)
+MIN_PYTHON = (3, 12)
 #: A task set materialises working trees and, for some datasets, a runtime venv; under
 #: this much free space a run is more likely to die at task N than to finish. Optional
 #: because "how much is enough" is a property of the dataset, not of the platform.
