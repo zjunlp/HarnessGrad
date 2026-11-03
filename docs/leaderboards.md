@@ -35,8 +35,16 @@ handle is not a handle, whose adoption is not an integer ≥ 1, or that appears 
 
 ## Ranking
 
-The three support boards rank by `adoption`, ties by name. The order is therefore a declared
-number rather than an impression, and a reader can see why a row is where it is.
+The three support boards rank **contributors**, not entries: each row is one org or person, and
+the number beside it is how many harnesses, methods or benchmarks they contributed. A board
+listing one row per item with the same name on every row ranks nothing — a reader cannot see
+what is being compared — and a column of 1s is not a ranking.
+
+The README shows the top ten contributors and a count. The count links to
+[the details page](leaderboard-details.md), which names every entry, and the
+[website board](https://zjunlp.github.io/HarnessGrad-Hub/leaderboards/) shows the same record
+plus the contact each contributor chose to publish. `adoption` stays in the record as the
+per-entry number of independent reproductions; the board's count is the number of entries.
 
 ## The results board: what counts as a result
 

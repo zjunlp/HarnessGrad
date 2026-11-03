@@ -601,7 +601,7 @@
 {"bytes": 38700, "id": 600, "module": "tools.improver", "path": "tools/improver.py", "sha256": "188b962fb08db9365193d4ca89a4f1da1aa56728748e37e05841d52ec33f029a"}
 {"bytes": 5978, "id": 601, "module": "tools.launch_lcb740_candidate", "path": "tools/launch_lcb740_candidate.py", "sha256": "4f84c414b18a35d92130be33c5e6183339aa4fed0695f3ff8e16686267021785"}
 {"bytes": 5011, "id": 602, "module": "tools.lcb740_identity", "path": "tools/lcb740_identity.py", "sha256": "9889f73e8519e4de1a4747b08c41d6065f307cd53a634d41e22e8ea223012925"}
-{"bytes": 11214, "id": 603, "module": "tools.leaderboards", "path": "tools/leaderboards.py", "sha256": "9edfffa6aa560ec603a29509fc558254b645520e38f5dd6513a974e12067167f"}
+{"bytes": 15575, "id": 603, "module": "tools.leaderboards", "path": "tools/leaderboards.py", "sha256": "3d83cb9542233a638793147034706badba9842f7c2026524c4b1a16bcd22a6d5"}
 {"bytes": 5938, "id": 604, "module": "tools.merge_blocker_registry", "path": "tools/merge_blocker_registry.py", "sha256": "6d7612bd27046fc889094932d190966e7dbf444b564525ecb0229e95bcaccbd1"}
 {"bytes": 12327, "id": 605, "module": "tools.method_lint", "path": "tools/method_lint.py", "sha256": "9d10049584b9e12868c002e1a1172d00beef601940f810cb174bd769e802db7b"}
 {"bytes": 8402, "id": 606, "module": "tools.network_preflight", "path": "tools/network_preflight.py", "sha256": "1b862fec01317df049d8b859c09ca13a575fb3cef8e5a21a7989a15ae630d059"}

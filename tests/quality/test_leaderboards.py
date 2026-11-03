@@ -52,10 +52,57 @@ def test_the_record_is_valid() -> None:
 
 def test_the_readme_boards_are_the_record_rendered() -> None:
     text = README.read_text(encoding="utf-8")
-    block = leaderboards.current_block(text)
+    block = leaderboards._block(text, leaderboards.BEGIN, leaderboards.END)
     assert block is not None, "README has no generated board block"
     assert block == leaderboards.render(_record()), (
         "the README boards are stale; run python3 tools/leaderboards.py --write")
+
+
+def test_the_readme_catalogue_is_every_declared_adapter() -> None:
+    """'59 declared' is a number a reader can count, so the list is generated and guarded."""
+    text = README.read_text(encoding="utf-8")
+    block = leaderboards._block(text, leaderboards.C_BEGIN, leaderboards.C_END)
+    assert block is not None, "README has no generated catalogue block"
+    assert block == leaderboards.render_catalogue(), (
+        "the README catalogue is stale; run python3 tools/leaderboards.py --write")
+    for name in leaderboards.declared_benchmarks():
+        assert f"`{name}`" in block, f"{name} is declared but not listed"
+    for name in leaderboards.refused_benchmarks():
+        assert f"`{name}` †" in block, f"the refused {name} is not marked"
+
+
+def test_a_board_ranks_contributors_once_each() -> None:
+    """One row per contributor: a board that repeats one name eight times ranks nothing."""
+    record = _record()
+    rendered = leaderboards.render(record)
+    for board, title in (("harness", "### Harnesses"),
+                         ("method", "### RSI methods"),
+                         ("benchmark", "### Benchmarks")):
+        section = rendered.split(title, 1)[1].split("###", 1)[0]
+        handles = [line.split("github.com/")[1].split(")")[0]
+                   for line in section.splitlines()
+                   if line.startswith("| ") and "github.com/" in line]
+        assert len(handles) == len(set(handles)), f"{board}: a contributor is listed twice"
+        # The number in the row is that contributor's entry count, not 1 per row.
+        for handle, entries in leaderboards.contributors(record["boards"][board]):
+            if handle not in handles:
+                continue
+            assert f"[{len(entries)}]({leaderboards.DETAILS_LINK}" in section, (
+                f"{board}/{handle}: the count is not the number of entries")
+
+
+def test_the_details_page_names_every_entry() -> None:
+    details = leaderboards.DETAILS
+    assert details.is_file(), "the details page is missing"
+    text = details.read_text(encoding="utf-8")
+    assert text == leaderboards.render_details(_record()), (
+        "the details page is stale; run python3 tools/leaderboards.py --write")
+    record = _record()
+    for board in ("harness", "method", "benchmark"):
+        for entry in record["boards"][board]:
+            assert f"`{entry['name']}`" in text, f"{board}/{entry['name']} is not on the details page"
+            assert f'id="{board}-{entry["contributor"].lower()}"' in text, (
+                f"{board}: no anchor for @{entry['contributor']}")
 
 
 def test_the_board_block_is_replaced_not_duplicated() -> None:
@@ -79,13 +126,12 @@ def test_the_block_is_capped_and_points_at_the_full_board() -> None:
     for heading in ("### Harnesses", "### RSI methods", "### Benchmarks",
                     "### Measured results"):
         assert heading in rendered, f"the block has no {heading!r} section"
-    rows = [line for line in rendered.splitlines()
-            if line.startswith("| ") and line.count("|") >= 6]
-    # Three support boards, each capped at TOP rows plus its header and separator.
-    assert len(rows) <= 3 * (leaderboards.TOP + 2), len(rows)
+    contributor_rows = [line for line in rendered.splitlines()
+                        if line.startswith("| ") and "github.com/" in line]
+    assert len(contributor_rows) <= 3 * (leaderboards.TOP + 2), len(contributor_rows)
 
 
-def test_the_readme_counts_match_the_registry() -> None:
+def test_the_readme_counts_match_the_tree() -> None:
     # Declared, not published: `published()` is a fact about what this interpreter can
     # import, and the README is a claim about the repository. Counting imports here would
     # make the guard fail on a clone without the optional extras -- the same defect it is

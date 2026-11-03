@@ -4488,12 +4488,12 @@
 {"destinations": [], "kind": "import", "line": 8, "outside_scope": [], "source": 602, "statement": "import hashlib", "targets": ["hashlib"]}
 {"destinations": [], "kind": "import", "line": 9, "outside_scope": [], "source": 602, "statement": "import json", "targets": ["json"]}
 {"destinations": [], "kind": "import", "line": 10, "outside_scope": [], "source": 602, "statement": "import re", "targets": ["re"]}
-{"destinations": [], "kind": "from", "line": 36, "outside_scope": [], "source": 603, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 38, "outside_scope": [], "source": 603, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 39, "outside_scope": [], "source": 603, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "import", "line": 40, "outside_scope": [], "source": 603, "statement": "import re", "targets": ["re"]}
-{"destinations": [], "kind": "import", "line": 41, "outside_scope": [], "source": 603, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 603, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [], "kind": "from", "line": 32, "outside_scope": [], "source": 603, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 34, "outside_scope": [], "source": 603, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 35, "outside_scope": [], "source": 603, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 36, "outside_scope": [], "source": 603, "statement": "import re", "targets": ["re"]}
+{"destinations": [], "kind": "import", "line": 37, "outside_scope": [], "source": 603, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [], "kind": "from", "line": 38, "outside_scope": [], "source": 603, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
 {"destinations": [], "kind": "from", "line": 19, "outside_scope": [], "source": 604, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
 {"destinations": [], "kind": "import", "line": 21, "outside_scope": [], "source": 604, "statement": "import json", "targets": ["json"]}
 {"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 604, "statement": "import subprocess", "targets": ["subprocess"]}
