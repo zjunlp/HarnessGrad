@@ -1306,7 +1306,7 @@ Scorer isolation is declared per bundle, not imposed globally. A verifier's
 a pinned pristine image, `network=none` and exactly two read-only platform
 projections. `snapshot-service` retains actor snapshots and/or the task service
 network and recording mounts; Terminal-Bench and AppWorld declare this class.
-The [scorer contract](docs/scorer-admission-contract.md#per-bundle-isolation-option-b)
+The scorer contract
 defines the opt-in pristine execution fields and the remaining trust obligations.
 
 Every new verdict and curve point carries `scorer_isolation_class` for the class
@@ -1454,7 +1454,7 @@ spread, `jobs` buys wall clock.
   spend **100 of 203 minutes** with the endpoint idle, because all nine enter their improver
   phase together and all nine leave it together; the same nine under a work-conserving global
   budget of 40 finish in **2.21 h against 3.36 h** (rate model fitted to two measured points:
-  21 s/task at `jobs=3`, 78 s/task at `jobs=40`). See `docs/measurement-budget.md`.*
+  21 s/task at `jobs=3`, 78 s/task at `jobs=40`).*
 
 Four more fields exist so that two runs can be told apart at all -- and one of them, the
 last, is not about telling runs apart but about telling *candidates* apart:

@@ -82,11 +82,11 @@ into every other dataset's selection too.
 Files that are about one dataset without being named after it are listed explicitly
 in `EXTRA`; each entry is a decision, not a guess.
 
-**2026-10-27:** the *test* of the scoping helper (`tests/quality/test_test_scope.py`) was
+**2026-10-27:** the *test* of the scoping helper (`test_test_scope.py`) was
 deleted with the audit-round tests it selected; the helper itself (`tools/test_scope.py`) is
 still what `tools/run_tests.py` uses to build its lanes.
 
-`tests/quality/test_test_scope.py` guarded the rule: it failed if a dataset was added
+`test_test_scope.py` guarded the rule: it failed if a dataset was added
 with no test file, if an `EXTRA` entry points at a file that no longer exists, or if
 a registry-wide file starts being scoped to individual datasets. It also pins a real
 coverage gap it found: **8 of 29 datasets have no dedicated adapter test file** and

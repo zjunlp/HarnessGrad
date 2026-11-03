@@ -7,7 +7,7 @@ supersedes its open disposition. Shared scorer/export gates and publication limi
 Original source-only review: no image was pulled, no container was started, no benchmark
 task was executed and no model was called by that review. Its claims cite source files.
 
-The blocker this answers (`docs/dataset-blockers.json`, `terminal_bench` →
+The blocker this answers (`registry/dataset-blockers.json`, `terminal_bench` →
 `cached-runtime-admission`, family `trusted-verifier-runtime`, status `runtime`):
 
 > observed: The journal reports hardened synthetic admission for six cached train images,

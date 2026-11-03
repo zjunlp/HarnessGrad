@@ -125,7 +125,7 @@ Rewrite: `data.qa` → `data.scaffolds.qa`, `data.registry` → `data.scaffolds.
 | `tools/check_dataset_blockers.py` | same AST inventory, and `published_declarations()` globs `data/*.py` |
 | `data/dataset.schema.json` | any `module`/path field that names an adapter |
 | `tests/quality/test_dataset_controls.py` | `ROWS` keys and `registry.importlib.import_module(f"data.{name}")` |
-| `tests/quality/test_test_scope.py` | scopes test files by dataset name; unaffected, but the guard must still pass |
+| `test_test_scope.py` | scopes test files by dataset name; unaffected, but the guard must still pass |
 | `docs/dataset-onboarding.md`, `docs/architecture.md` | both describe the current layout |
 | `tests/quality/test_import_direction.py` | records `data → eval` edges by module path |
 | every adapter's own imports | 22 adapter→scaffold edges |

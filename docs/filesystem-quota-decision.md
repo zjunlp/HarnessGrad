@@ -2,7 +2,7 @@
 
 **Decision (operator, 2026-10-15):** hard byte/inode enforcement is **not** a precondition
 for running a dataset, and the shared blocker `paired-filesystem-quotas` has been withdrawn
-from `docs/dataset-blockers.json` accordingly.
+from `registry/dataset-blockers.json` accordingly.
 
 This document exists so the withdrawal is a recorded decision rather than a deletion. The
 registry's own rule is that a blocker must not be removed to make a count look better; this
@@ -38,12 +38,12 @@ enforcement established before changing admission.
 - **Enforcement does not exist.** Nothing here establishes, or claims, that any byte or
   inode limit is in force. Removing the blocker removes the *requirement*, not the *gap*.
 - **The supporting reviews remain checked in and unedited**:
-  `docs/filesystem-quota-backends.md`, `reports/filesystem-quota-codex168-report.md`,
-  `docs/task-233-quota-readback-authentication.md`. The last of these is still a proposal
+  the filesystem-quota backend checklist, `reports/filesystem-quota-codex168-report.md`,
+  and the task-233 quota readback proposal. The last of these is still a proposal
   with no host inspection behind it.
 - **The historical audit documents that describe the blocker as open are deliberately left
-  as written** — `docs/task-240-blocker-registry-audit.md` and
-  `docs/task-236-diagnostic-readiness.md` state the position as of their date. They are
+  as written** — the task-240 blocker-registry audit and
+  the task-236 diagnostic-readiness note state the position as of their date. They are
   records of a review, not current guidance, and rewriting them to match today's decision
   would destroy the record of why the requirement was ever raised.
 - **If the threat model changes**, the blocker can be re-raised. The evidence it needs is
@@ -54,7 +54,7 @@ enforcement established before changing admission.
 - the `paired-filesystem-quotas` entry was removed from `shared_blockers`;
 - it was removed from every dataset's `shared_blockers` list, because the checker requires
   that list to be a subset of the shared set;
-- `tests/quality/test_dataset_blockers.py` pinned the exact shared-blocker set and was
+- `test_dataset_blockers.py` pinned the exact shared-blocker set and was
   updated in the same change, so the removal is visible in the diff rather than achieved by
   loosening an assertion.
 

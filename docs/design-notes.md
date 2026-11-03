@@ -169,14 +169,14 @@ decision, never an automatic fallback, and retains an `exec` task's container
 boundary. Source review and mocked tests establish neither effective sandbox/quota
 enforcement nor production readiness.
 
-The [ordinary-run receipt proposal](task-237-ordinary-run-receipt.md) defines how local
+The [ordinary-run receipt proposal](task-237-ordinary-run-receipt.schema.json) defines how local
 results can record missing or unknown filesystem quotas without quota administration,
 while retaining sandbox facts, metric identity and explicit non-production labels. It is
 a docs/test contract; runtime integration is pending.
 
 **Optional infrastructure.** Project quotas and a dedicated storage volume are not
 prerequisites for ordinary local execution. The
-[quota/backend checklist](filesystem-quota-backends.md) describes an optional enhancement
+quota/backend checklist describes an optional enhancement
 for formal deployments that need verified per-run byte/inode bounds. Local runs without
 that evidence cannot claim those guarantees; existing gated diagnostic/pilot requirements
 still apply.

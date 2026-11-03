@@ -44,7 +44,7 @@ Two different things, and only one of them is engineering:
   *with evidence*, and their scores mean what they say.
 * **B — relax the refusal.** A policy decision for the operator, not a task. The decision
   record `docs/enforcement-proof-decision.md:45-46` deliberately kept this contract out of the
-  2026-10-15 withdrawals, and the audit in `docs/paper-fidelity-audit-handoff.md:404` frames it
+  2026-10-15 withdrawals, and the audit in the paper-fidelity handoff (`:404`) frames it
   as "(a) intended; or (b) the gate needs relaxing". Doing B as well as A would remove the
   property the platform exists to provide: a number nobody can look behind.
 
@@ -215,7 +215,7 @@ unmodified, so this is a shape to extend, not a component to reuse as-is.
 A workdir that is an ordinary bind mount also cannot be admitted: each declared surface must
 report `backend` in `("tmpfs", "project-quota")` with matching `bytes`/`inodes` and a unique
 `scope_id`. `tmpfs` gives both trivially; `project-quota` needs the host provisioning named in
-`docs/filesystem-quota-backends.md`.
+the filesystem-quota backend checklist.
 
 ## Prerequisite: decide this on the machine that will run the dataset
 
@@ -239,7 +239,7 @@ rmdir /sys/fs/cgroup/hg-probe-$$
 * If the writes succeed, A is implementable on that host.
 * If they are denied, the host needs administrator provisioning before any code matters. The
   two roles and what each owes are already written down in
-  `docs/filesystem-quota-backends.md` ("Host operator (external)" and "Backend implementer
+  the filesystem-quota backend checklist ("Host operator (external)" and "Backend implementer
   (pending code + runtime)").
 
 On a shared machine this is the likely blocker: `/` is shared with other users, and cgroup
@@ -300,5 +300,5 @@ place to add these.
 * [ ] `admit_runtime` accepts it for a correctly limited container;
 * [ ] every refusal code above has a test that triggers it;
 * [ ] a curve point from such a run carries the admitted limits, so a reader can see the basis;
-* [ ] `docs/paper-fidelity-audit-handoff.md:404` can be closed as answered by measurement
+* [ ] the paper-fidelity handoff's `:404` question can be closed as answered by measurement
       rather than by relaxing the gate.

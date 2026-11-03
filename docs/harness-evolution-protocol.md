@@ -206,7 +206,7 @@ already contains 88 flat curves and 8 false positives; one more of either adds n
   are `miniagent` (seven components) and `openclaw` (five); the rest name two or three. The
   reading works and is tested; a claim like "context handling improved" needs a harness whose
   files separate along the components first.
-  [`reports/component-attribution-2026-11-02.md`](component-attribution-2026-11-02.md) derives
+  [`reports/component-attribution-2026-11-02.md`](../reports/component-attribution-2026-11-02.md) derives
   why the archive's 0-of-1008 is a property of the records -- every archived run predates the
   declarations -- and records the first attributed point.
 * **A clean decline is still a round with no child.** The `_ask_cli` fix makes a *crashed*

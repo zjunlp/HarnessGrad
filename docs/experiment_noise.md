@@ -2,7 +2,7 @@
 
 Six modules cite this file (`data/datasets/alfworld.py`, `data/datasets/reasoning_gym.py`,
 `harnessgrad/records.py`, `harnessgrad/loops/mode_a.py`,
-`harnessgrad/store/schema.py`, `tests/quality/test_identity_and_verdicts.py`) and it was never
+`harnessgrad/store/schema.py`, and `test_identity_and_verdicts.py`) and it was never
 committed: the citations pointed at a note that lived in the working conversation. It is
 written down here because a rule that only exists in one person's memory is not a rule the
 next reader can apply.

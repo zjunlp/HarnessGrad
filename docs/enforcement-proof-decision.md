@@ -69,6 +69,6 @@ statement from "verified", and it must not be upgraded in later summaries. If a 
 ever observed to fail, the failure is the evidence that was missing, and the requirement can
 be re-raised with something behind it.
 
-The supporting reviews stay checked in and unedited, including
-`docs/filesystem-quota-backends.md`, `reports/scorer-closure-codex170-report.md` and the
-lifecycle material in `docs/task-233-quota-readback-authentication.md`.
+The supporting reviews stay unedited where they are held, including
+`reports/scorer-closure-codex170-report.md` and the lifecycle material from the task-233
+quota readback proposal.

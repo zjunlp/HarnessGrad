@@ -39,7 +39,7 @@ with an automated guard in `tests/quality/test_import_direction.py`.
 | [eval/ckpt/](../eval/ckpt/) | [git_state.py](../eval/ckpt/git_state.py) stages, commits, restores and materializes harness states and manifests. | Low-level helper leaf, inside the runtime since 2026-10-27 (it was a top-level `ckpt/`). | Driver, orchestration and execution -> `eval.ckpt` -> standard library/external Git. No reverse imports into runtime or orchestration. |
 | [tools/](../tools/) | Operator CLIs/services for validation, datasets, model services, setup, reporting and inspection. [serve_ui.py](../tools/serve_ui.py) is the retained operations service; the UI is [`console/`](../console/). | Mostly consumers, with shared runtime helpers mixed in. Not a leaf area. | Tools -> platform APIs/contracts and artifacts; services may launch driver subprocesses. Runtime reuse of selected helpers already exists, so do not assume a strict one-way `tools -> eval` boundary. |
 | [harnessgrad/improvers/](../harnessgrad/improvers/) | [improvers.json](../harnessgrad/improvers/improvers.json) catalogs improver configuration; [skill.md](../harnessgrad/improvers/skill.md) is the default method-facing guidance. | Configuration/reference leaves, not Python implementations. | Resolver/channel code -> these data files; these files do not import platform code. |
-| [adapters/](../adapters/) | Historical external-method replay/compilation route, with a separate RRSI measurement integration in [harnessgrad_domain/](../adapters/harnessgrad_domain/). These are **not dataset adapters**. | Historical consumers; domain integration is a runtime consumer. | Replay/compiler scripts -> external artifacts and their own helpers. Domain integration -> driver setup, dataset registry and `eval.run.runner`; core execution must not depend on this route. See [its status](../adapters/README.md). |
+| `adapters/` (absent) | Historical external-method replay/compilation route, with a separate RRSI measurement integration in `harnessgrad_domain/`. These are **not dataset adapters**. | Historical consumers; domain integration is a runtime consumer. | Replay/compiler scripts -> external artifacts and their own helpers. Domain integration -> driver setup, dataset registry and `eval.run.runner`; core execution must not depend on this route. The directory is not in this checkout. |
 | ~~`web/`~~ | **Deleted 2026-10-19** (commit `99163538`, 22,807 lines): the SPA and its read API were replaced by [`console/`](../console/), which reads the registry and `runs/` directly. The rows below that still name `web/server/launch.py` describe the deleted tree. | -- | Execution code never depended on the frontend; nothing in `eval/` or `harnessgrad/` imports it. |
 | [site-redirect/](../site-redirect/) | Two static pages that keep the old project-page URL working: `index.html` sends `zjunlp.github.io/HarnessGrad/` to the new site, `404.html` maps a deep link onto the same path there. The site itself is **not in this repository** -- it is [`zjunlp/HarnessGrad-Hub`](https://github.com/zjunlp/HarnessGrad-Hub) since 2026-10-27, history included. | Leaf artifacts, no build step, no imports. | Nothing depends on them; nothing here changes a measurement. |
 | [tests/](../tests/) | [quality/](../tests/quality/) covers platform boundaries/integrations; [runtime/](../tests/runtime/) covers event/budget APIs; [blockers/](../tests/blockers/) and [fixtures/](../tests/fixtures/) hold focused checks and test material. Web also has colocated tests. | Test consumers. | Tests -> subjects under test and fixtures. Production code should not import test helpers; one existing tooling exception is listed below. |
@@ -98,7 +98,7 @@ artifact path. GAIA's source-identity-v1 required-path set keeps its historical
 paths: those shim files still exist, and full tree manifests include both shims
 and implementations without changing historical-manifest validation.
 
-The separate [eight-stage runtime guide](eight_stage_runtime.md) describes the
+The separate eight-stage runtime guide describes the
 event protocol implemented by `harnessgrad/runtime/`. That contract layer is
 distinct from the execution engine in `eval/`.
 
@@ -109,7 +109,7 @@ The count **29** comes from `data/datasets/*.py` modules declaring
 is an adapter. It includes refused/unavailable integrations; it is not a claim
 that 29 datasets are ready to run. [registry.published()](../data/scaffolds/registry.py)
 discovers declarations through imports, while the web read API's
-[launch-option scanner](../web/server/launch.py) parses each module's AST for a
+`web/server/launch.py` launch-option scanner parses each module's AST for a
 `KIND = "dataset"` assignment instead. `docs/dataset-onboarding.md` §2 names
 `registry.published()` as the one answer to "which datasets exist", and the AST
 scanner exists only because the Launch form must not import a module to describe
@@ -173,7 +173,7 @@ single directory-level dependency DAG would be misleading:
   [tools/check_triviaqa_provenance.py](../tools/check_triviaqa_provenance.py)
   imports a test helper, an existing exception to the test-consumer direction.
 - **Web boundary:** `web/server/readapi.py -> harnessgrad.store.schema`;
-  [launch.py](../web/server/launch.py) reads catalog/config files and invokes
+  `web/server/launch.py` reads catalog/config files and invokes
   `driver.py --help` rather than importing the driver. The SPA consumes the
   resulting HTTP records or fixture records.
 

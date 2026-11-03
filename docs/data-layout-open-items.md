@@ -61,13 +61,14 @@ plan (`docs/data-split-plan.md:23`, `:189`, `:216`). In particular:
   top-level Python modules and their declarations (`data/registry.py:43`);
   the blocker inventory uses the same top-level literal-declaration boundary
   (`tools/check_dataset_blockers.py:72`). An inventory directory is not an adapter.
-* No match occurs in `docs/dataset-blockers.json`, `docs/dataset-blockers.md`,
+* No match occurs in `registry/dataset-blockers.json`,
+  `tests/fixtures/hg_migration_site/dataset-blockers.md`,
   `docs/adapter-integration-journal.md`, `data/registry.py`, or
   `data/dataset.schema.json`. The schema specifies a generic module contract,
   including `KIND`, `load`, and `downloads` (`data/dataset.schema.json:14`);
   its silence is not a list of rejected datasets.
 * No match occurs in `DOWNLOADS.md` or the checked-in receipts/evidence under
-  `reports/`, `docs/evidence/`, and `tests/fixtures/`. The downloads manifest is
+  `reports/` and `tests/fixtures/`. The downloads manifest is
   rendered from adapter `downloads()` functions (`DOWNLOADS.md:5`), so its absence
   is consistent with the absence of an adapter. The inventory's own archive
   digests are the only located download-related PinchBench evidence.
@@ -114,7 +115,7 @@ Paths in this table are relative to `data/tau_bench/` unless prefixed otherwise.
 | `lib/tau_bench/envs/tool.py` — **vendored-upstream**, headerless case | Its entire 12-line body is a `Tool` ABC, with no copyright/URL/revision header (`data/tau_bench/lib/tau_bench/envs/tool.py:1`). Origin is nevertheless explicit: builder copies upstream `tau_bench/envs/tool.py` (`tools/build_tau_bench_gt.py:212`), manifest pins the checkout and matching output digest (`data/tau_bench/PROVENANCE.json:4`, `:210`). Missing inline attribution does not make this file unclassified. |
 | `gt/airline_000.json` — **generated**, upstream task derivative | JSON has `domain`, `index`, `instruction`, and `task_id` (`data/tau_bench/gt/airline_000.json:44`), with no source header. The builder serializes exactly these fields (`tools/build_tau_bench_gt.py:264`); its domain mapping selects airline `tasks_test.TASKS` (`tools/build_tau_bench_gt.py:78`, `:167`). Manifest records that source file (`data/tau_bench/PROVENANCE.json:220`), upstream pin (`:4`), and matching output digest (`:8`). |
 | `lib/tau_bench/envs/hash.py` — **generated**, upstream code extraction | The header explicitly says extracted rather than rewritten, names upstream `tau_bench/envs/base.py`, and gives its SHA-256 (`data/tau_bench/lib/tau_bench/envs/hash.py:1`). Builder extracts the region from `ToHashable =` to `class Env` and adds the header/imports (`tools/build_tau_bench_gt.py:141`). Original-source digest matches `data/tau_bench/PROVENANCE.json:2`; generated-output digest matches `:191`. Its generated classification does not erase third-party ownership. |
-| `lib/tau_bench/__init__.py` — **generated**, packaging stub | Independently confirmed zero bytes: it has no content/header or line 1 to cite. Builder writes empty package initializers (`tools/build_tau_bench_gt.py:208`); its recorded digest is the SHA-256 of empty bytes (`data/tau_bench/PROVENANCE.json:173`). The analogous domain `tools/__init__.py` files are copied registries, not these stubs. |
+| `lib/tau_bench/__init__.py` — **generated**, packaging stub | Independently confirmed zero bytes: it has no content/header or line 1 to cite. Builder writes empty package initializers (`tools/build_tau_bench_gt.py:208`); its recorded digest is the SHA-256 of empty bytes (`data/tau_bench/PROVENANCE.json:173`). The analogous `tools` package initializers inside a dataset domain are copied registries, not these stubs. |
 | `policy/retail.txt` — **generated**, upstream policy derivative | Trailer explicitly names upstream `rules.py` and `wiki.md` (`data/tau_bench/policy/retail.txt:93`). Builder assembles those sources (`tools/build_tau_bench_gt.py:187`); matching output digest is at `data/tau_bench/PROVENANCE.json:212`, with revision at `:4`. |
 | `PROVENANCE.json` — **generated**, platform metadata | `generated_by` names the builder (`data/tau_bench/PROVENANCE.json:214`); its write operation is explicit (`tools/build_tau_bench_gt.py:289`). It is not copied upstream code and does not hash itself. |
 

@@ -32,7 +32,7 @@ official provenance/execution and class-specific live lifecycle evidence.
 ownership, quiescence/trial binding, equivalence and live lifecycle/cleanup.
 This review supplies neither kind of dataset evidence. Both objects and their
 dataset references remain unchanged. Their full current observations and next
-actions remain in `docs/dataset-blockers.json`.
+actions remain in `registry/dataset-blockers.json`.
 
 ## OPEN: runtime-observations - unknown-only aggregation is allowed
 
@@ -76,9 +76,9 @@ The channel is substantive:
   before opening a curve history for writing.
   [isolation.py:27](../eval/verification/isolation.py#L27) additionally refuses
   unknown comparisons. The actual UI comparator independently checks the point
-  and task classes at [web/src/logic/compare.ts:148](../web/src/logic/compare.ts#L148),
-  invalidates mixed/unknown comparisons and suppresses score/test-rate deltas at
-  [line 117](../web/src/logic/compare.ts#L117).
+  and task classes at `web/src/logic/compare.ts:148` (the web tree was deleted
+  2026-10-19), invalidates mixed/unknown comparisons and suppresses score/test-rate
+  deltas at `:117` of that file.
 
 The exact remaining gap is `common_class(["unknown", "unknown"]) == "unknown"`
 at `eval/verification/isolation.py:20-24`. That permits a homogeneous unknown set
@@ -169,7 +169,7 @@ admission controls reject changed projection/closure bytes, writable/substituted
 mounts, actor interpreter/scorer/environment/cwd and already-started observations:
 [option-B tests:129](../tests/quality/test_scorer_isolation_option_b.py#L129),
 [artifact tests:219](../tests/quality/test_terminal_artifact_admission.py#L219),
-[admission tests:277](../tests/quality/test_scorer_admission_codex173.py#L277).
+the scorer-admission tests at `:277`.
 
 Trusted pins, ownership of the external closure/contract paths, quiescence and
 preservation of checked bytes through use remain caller obligations. This is not
@@ -185,7 +185,7 @@ shared blockers and dataset-specific gates remain open.
 The registry is active-only: remove only the reviewed `pristine-verifier` object
 and its 23 references. Keep the other three shared objects byte-for-byte equivalent,
 all dataset-own blockers/history/taxonomy and `production_authorized=false`.
-`tests/quality/test_dataset_blockers.py` pins the remaining shared set for 2Wiki;
+`test_dataset_blockers.py` pins the remaining shared set for 2Wiki;
 remove precisely `pristine-verifier` from that expected set and record this reason
 in the same commit. The validator is unchanged. The separate
 [23-dataset topology survey](../reports/w-shared-topology-survey.md) is report-only.

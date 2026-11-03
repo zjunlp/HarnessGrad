@@ -8,7 +8,7 @@
 
 新增入口不等于已经下载/运行完整真实benchmark。20个入口均已有条件可用的执行与评分路线；原生QA、文件/工具世界、双provider文件评分、SWE独立补丁重放、三个Harbor系路线的证据与协议差异见各节。协议control使用明确声明的本地控制素材，不是正式H0。固定来源、合成control、真实source acquisition、运行时ready与production授权是不同证据。
 
-完整对照见 [source audit](native-source-audit.json)。未更改任何历史run、旧blocker状态或production授权。
+完整对照见 [source audit](transfer-source-audit.json)。未更改任何历史run、旧blocker状态或production授权。
 
 ## 准备与检查
 
@@ -149,7 +149,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \
 
 WorkBench固定source inventory：`tests/fixtures/upstream_workbench/source.json`，绑定上游`49c7dfd00c03d384ec59ea57374f50b766aa5613`原生src、6个初始数据库及完整calendar pool。原生session和真实HG oracle/noop通过，不构成其他domains的完整能力测量。
 
-所有旧registry39个对象、review元数据、shared blockers、11历史记录保持不变，39旧adapter文件逐字相等；见[库存审计](native-inventory-validation.md)。两个分支从`a100139`建立，不合并、不重写操作者main。
+所有旧registry39个对象、review元数据、shared blockers、11历史记录保持不变，39旧adapter文件逐字相等；见[库存审计](transfer-inventory.md)。两个分支从`a100139`建立，不合并、不重写操作者main。
 
 原样vendoring的上游scorer保留行尾空白及Python正则转义警告，供字节摘要核验。新编写代码scoped`git diff --check`通过；source inventory验证原始字节。未运行付费模型或大规模benchmark pilot，生产数据/镜像、官方oracle/noop及闭包审查仍需按每项文档完成。
 

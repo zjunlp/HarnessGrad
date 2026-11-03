@@ -46,7 +46,7 @@ a `/tmp` string used as test *data*); those are called out per file below.
 1. **Static derivation.** For every file under `tests/`, the signals above were
    extracted with grep-grade regexes over the file's lines plus one small AST pass
    (for the registry and checkout-write rules). The extraction never reads a test
-   body; it is the `signals_of()` function in `tests/quality/test_test_lanes.py`,
+   body; it is the `signals_of()` function in `test_test_lanes.py`,
    and the guard runs it over the specific files it needs, not the whole tree.
 2. **Judgement.** Each current `EXCLUSIVE` entry was checked against its signals.
    An entry with none, or whose only signal was a false positive, became a

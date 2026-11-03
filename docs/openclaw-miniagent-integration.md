@@ -6,7 +6,7 @@
 ## 来源核实
 
 核查的 upstream 版本是
-[`dea1b1d0285e3328234a1e344562bb9e54ce14f7`](PROVENANCE.json)。
+[`dea1b1d0285e3328234a1e344562bb9e54ce14f7`](../base_harness/miniagent/PROVENANCE.json)。
 这个版本公开注册 MiniAgent、Claude Code、Codex、Pi 和 Hermes，没有 OpenClaw 适配器。
 其 Pi 参考文档提到 OpenClaw 使用 Pi，不代表 upstream 已经接入 OpenClaw。
 

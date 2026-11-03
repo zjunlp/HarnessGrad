@@ -38,7 +38,7 @@ traces are the same traces too -- which matters for methods that read the traces
 score.
 
 **This page is the procedure. `docs/adapter-integration-journal.md` is the in-repository onboarding log and evidence index.**
-Every adapter entry must also update `docs/platform-improvement-log.md` when it teaches the shared platform a reusable capability.
+Every adapter entry must also update `docs/adapter-integration-journal.md` when it teaches the shared platform a reusable capability.
 If the dataset is new to you, read `docs/dataset-first-day.md` first: it is the
 reconnaissance — three measurements that decide whether this dataset is runnable, refused, or
 runnable with a measured exclusion — and its whole point is that **no adapter is written until
@@ -127,7 +127,7 @@ onboarded without a way to show its grade is reachable.
 | the classification: derived axes plus the one judged axis, as a `(demand, surface)` pair | `tools/dataset_classes.py` |
 | current blocker families, work status, evidence and next actions; preserved historical incompletes | `registry/dataset-blockers.json`; validate with `python3 tools/check_dataset_blockers.py` without importing adapters. **The registry moved here from `docs/dataset-blockers.json`**, which no longer exists; citations of the old path elsewhere in this repository are historical records and are deliberately left alone |
 | declared coverage gaps (demands the vocabulary names with no adapter yet) | `tools/dataset_classes.py::UNCOVERED_DEMANDS`; currently empty because all six demands have adapters |
-| which Harness function a dataset makes score-relevant, and which functions no dataset covers | `tools/dataset_classes.py::EXERCISES` / `FUNCTIONS` / `UNCOVERED_FUNCTIONS`; the reasoning is in `docs/harness-functional-coverage.md` |
+| which Harness function a dataset makes score-relevant, and which functions no dataset covers | `tools/dataset_classes.py::EXERCISES` / `FUNCTIONS` / `UNCOVERED_FUNCTIONS` |
 | the shared control for `command` datasets | `data/scaffolds/command_control.py` + `data/scaffolds/command_oracle_harness/` |
 | the download index (generated) | `DOWNLOADS.md` — written by `tools/datasets.py --write`; **never edit by hand** |
 | "which datasets exist" | `data/scaffolds/registry.py::published()` — a module appears iff `KIND == "dataset"` |
