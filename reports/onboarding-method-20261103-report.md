@@ -131,3 +131,22 @@ step. Temporary method directories were automatically removed.
 - Native Windows console GBK cannot print the validator's pre-existing Unicode
   status glyphs without an output-encoding override. The documented execution
   surface is Linux/WSL; UI glyph changes are outside this scoped repair.
+
+## Integration documentation correction
+
+After parent integration of the main patch (`91d81b34`), the documentation link
+test identified `base_harness/_harnessgrad/` as an incorrect repository-path
+claim. Changed only that page's inline location to the runtime placeholder
+`<base_harness>/_harnessgrad/`. Left this correction uncommitted for the parent.
+
+Reran documentation checks only in WSL with the same bytecode/plugin-disabled
+environment and pytest import path recorded above:
+
+```bash
+python3 -m pytest tests/quality/test_documentation_links.py \
+  tests/quality/test_documentation_commands.py -q
+git diff --check -- docs/bring-your-own-method.md
+```
+
+Results: **15 passed in 9.35s**; diff check **exit 0** (Git emitted its existing
+LF-to-CRLF working-copy notice). No additional implementation changes or runs.
