@@ -140,6 +140,60 @@ def write_run(root: Path, run_id: str, curve, *, meta: dict | None = None,
     return run_dir
 
 
+def test_partial_eval_summary_exposes_planned_and_scored_coverage(tmp_path):
+    from tools import run_summary
+    entry = point("partial", 0, .5, {"a": .5}, side="eval", n_invalid=1)
+    entry["sampling"]["task_ids"] = ["a", "b", "c"]
+    summary = run_summary.summarise(write_run(tmp_path, "partial", [entry]))
+    coverage = summary["per_round"][0]
+    assert coverage["planned"] == 3 and coverage["scored"] == 1
+    assert coverage["unmeasured"] == 2 and coverage["invalid"] == 1
+    rendered = run_summary.render_markdown(summary)
+    assert "planned | scored" in rendered
+    assert "may overlap" in rendered
+
+
+def test_rejected_numeric_zero_keeps_summary_coverage_without_false_decline(tmp_path):
+    from tools import run_summary
+    rejected = point("rejected", 1, 0.0, {}, n_scored=0)
+    rejected.update(measured_by_platform=False,
+                    unmeasured={"reason": "candidate rejected", "problems": ["missing agent.py"]})
+    rejected["sampling"]["task_ids"] = ["a", "b"]
+    summary = run_summary.summarise(write_run(tmp_path, "rejected", [
+        point("rejected", 0, .8, {"a": .8, "b": .8}), rejected]))
+    assert summary["score"] == {"r0": .8, "last": None, "best": .8, "best_round": 0}
+    assert summary["delta_total"] is None
+    failure = summary["per_round"][-1]
+    assert failure["score"] is None and failure["delta"] is None
+    assert failure["scored"] == 0 and failure["planned"] == 2 and failure["unmeasured"] == 2
+    assert failure["unmeasured_reason"] == rejected["unmeasured"]
+    assert "candidate rejected" in run_summary.render_markdown(summary)
+
+
+@pytest.mark.parametrize("marker", [{"measured_by_platform": False}, {"n_scored": 0},
+    {"unmeasured_reason": "candidate rejected"}])
+def test_summary_skips_explicitly_unmeasured_points_between_measurements(tmp_path, marker):
+    from tools import run_summary
+    rejected = point("gap", 1, 0.0)
+    rejected.update(marker)
+    summary = run_summary.summarise(write_run(tmp_path, "gap", [
+        point("gap", 0, .8, {"a": .8}), rejected,
+        point("gap", 2, .9, {"a": .9})]))
+    assert summary["per_round"][1]["score"] is None
+    assert summary["per_round"][2]["delta"] == pytest.approx(.1)
+    assert summary["delta_total"] == pytest.approx(.1)
+
+
+def test_summary_measured_zero_and_legacy_numeric_score_remain_results(tmp_path):
+    from tools import run_summary
+    legacy = point("zero", 0, .8)
+    measured = point("zero", 1, 0.0, {"a": 0.0})
+    measured["measured_by_platform"] = True
+    summary = run_summary.summarise(write_run(tmp_path, "zero", [legacy, measured]))
+    assert summary["score"]["r0"] == .8 and summary["score"]["last"] == 0.0
+    assert summary["delta_total"] == pytest.approx(-.8)
+
+
 def three_round_run(root: Path) -> Path:
     run_id = "synthetic-train"
     curve = [
@@ -199,7 +253,7 @@ def test_three_rounds_report_the_expected_numbers(tmp_path):
     page = read_page(out)
     assert page.startswith("# Run summary: synthetic-train")
     assert "r0 0.250 → r2 0.750 over 3 rounds, 4 tasks, 2 gained / 0 lost / 2 unchanged" in page
-    assert "| 2 | 0.750 | +0.250 | 0 | 0 | — |" in page
+    assert "| 2 | 0.750 | +0.250 | 4 | 4 | 0 | 0 | — |" in page
     assert "`agent.py` +15 −3 = 18" in page
     assert "## What is missing" in page
     # --out must not have touched the run directory.
@@ -234,7 +288,7 @@ def test_missing_fields_are_named_absences_not_zeros(tmp_path):
     assert '"best": null' in payload and '"invalid": null' in payload
 
     page = read_page(run_dir)
-    assert "| 0 | — | — | — | — | — |" in page
+    assert "| 0 | — | — | 2 | — | — | — | — |" in page
     assert "0.000" not in page
     named = "\n".join(summary["notes"])
     assert "invalid" in named and "—" in named
@@ -375,6 +429,6 @@ def test_eval_single_point_does_not_invent_rounds(tmp_path):
     assert "single exam point r0 0.386, 3 tasks" in page
     assert "synthetic-train @ round 20" in page
     assert "over 1 rounds" not in page
-    assert "| 0 | 0.386 | — | 0 | 0 | — |" in page
+    assert "| 0 | 0.386 | — | 3 | 3 | 0 | 0 | — |" in page
     assert "diffs:" in page  # named absence, not "0 changed files"
     assert not (run_dir / "diffs").exists()

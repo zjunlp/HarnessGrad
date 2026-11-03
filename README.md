@@ -62,7 +62,7 @@ check     req  result  detail
 python    yes  ok      python 3.12.4
 git       yes  ok      git version 2.34.1
 bwrap     yes  ok      /usr/bin/bwrap: namespace builds (bubblewrap 0.6.1)
-dataset   yes  ok      gsm8k: 8792 tasks
+dataset   yes  ok      demo: 8 tasks (test fixture, not a published dataset)
 harness   yes  ok      <checkout>/base_harness/loop (cli, entrypoint agent.py, env_kinds files, exec)
 writable  yes  ok      runs root: runs can be created; work root: ../harnessgrad_work exists and is writable
 disk      no   ok      .: 93.1 GB free (a run needs about 5 GB)

@@ -396,13 +396,18 @@ def provenance(point: dict, run_dir: Path, result: Recovered) -> str:
     state = "measured by the platform" if point.get("measured_by_platform") else \
             "NOT measured by the platform"
     sp = point.get("split") or {}
+    side = point.get("side")
+    kind = point.get("score_kind")
+    score_side = ("training" if side == "train" else "eval" if side == "eval" else
+                  "training" if kind == "training" else "eval" if kind == "exam" else "unknown side")
     train = point.get("train_score")
     # The train side is a diagnostic, not a result -- and it is written here
     # because an exported harness leaves this run directory. A checkpoint that
     # carries one score and no indication of which side produced it is exactly
     # the ambiguity the split exists to remove.
-    train_row = (f"| train score | `{train:.3f}` — diagnostics only; the method "
-                 f"was shown these traces |" if isinstance(train, (int, float))
+    train_row = (f"| train score | `{train:.3f}` — training-side diagnostic; "
+                 "tasks are eligible for method feedback; "
+                 "score does not establish held-out performance |" if isinstance(train, (int, float))
                  else "| train score | `(not recorded — no split, or not measured)` |")
     lines = [
         f"# {run_dir.name} — round {point.get('round')}",
@@ -419,7 +424,7 @@ def provenance(point: dict, run_dir: Path, result: Recovered) -> str:
         f"| source | `{result.source}` — {result.detail} |",
         f"| harness model | `{i.get('agent_model') or '(not recorded)'}` via `{i.get('agent_backend') or '?'}` |",
         f"| method model | `{i.get('method_model') or '(not declared)'}` |",
-        f"| score (eval) | `{point.get('score'):.3f}` — {state} |",
+        f"| score ({score_side}) | `{point.get('score'):.3f}` — {state} |",
         train_row,
         f"| split | train `{len(sp.get('train') or [])}` / eval `{len(sp.get('eval') or [])}` |",
         f"| edit kind | `{point.get('edit_kind') or '(not declared)'}` |",
@@ -438,12 +443,10 @@ def provenance(point: dict, run_dir: Path, result: Recovered) -> str:
             "the stronger artifact.",
             "",
         ]
-    if not sp.get("train"):
+    if score_side == "training":
         lines += [
-            "This run's dataset declared no train/eval split, so the eval and train",
-            "sides are the same tasks and the method was shown the traces of every task",
-            "it was scored on. The score is still a measurement; it is not evidence",
-            "about generalisation.",
+            "This is a training-side diagnostic. Its tasks are eligible for method feedback.",
+            "The score does not establish held-out performance.",
             "",
         ]
     mr = point.get("method_reported") or {}

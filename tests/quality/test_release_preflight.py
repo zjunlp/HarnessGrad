@@ -1,9 +1,11 @@
 """Release entrypoints fail before H0; a surviving H0 is not run completion."""
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import importlib.util
 import json
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 import threading
@@ -25,6 +27,10 @@ def isolated_configuration(monkeypatch):
         if name.startswith(('HG_METHOD_', 'HG_IMPROVER', 'HG_AGENT_', 'HG_JUDGE_', 'HG_ENV_')) or name == 'DEEPSEEK_API_KEY':
             monkeypatch.delenv(name)
     monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    # These tests isolate configuration; missing SDK admission has its own regression.
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, 'find_spec', lambda name, *a, **kw:
+        object() if name == 'openai' else original_find_spec(name, *a, **kw))
     config.reset()
     yield
     config.reset()
@@ -33,7 +39,7 @@ def isolated_configuration(monkeypatch):
 def args(name='noop', **changes):
     values = dict(side='train', rounds=1, sampling='all', trials=1, harness='loop',
         harness_dir=str(ROOT/'base_harness/loop'), improver=None, improver_model=None,
-        method_entrypoint=f'{sys.executable} {ROOT}/methods/{name}/run.py')
+        method_entrypoint=shlex.join([sys.executable, str(ROOT/'methods'/name/'run.py')]))
     values.update(changes)
     return SimpleNamespace(**values)
 
@@ -71,7 +77,7 @@ def test_local_configuration_check_never_connects(monkeypatch):
 def test_model_free_and_external_methods_are_not_assumed_to_need_editor(name,tmp_path):
     assert readiness.configuration_checks(args(name))==[]
     script=tmp_path/'own.py';script.write_text('pass\n')
-    assert readiness.configuration_checks(args(method_entrypoint=f'{sys.executable} {script}'))==[]
+    assert readiness.configuration_checks(args(method_entrypoint=shlex.join([sys.executable, str(script)])))==[]
     assert readiness.configuration_checks(args('dgm',side='eval'))==[]
     assert readiness.configuration_checks(args('dgm',rounds=0))==[]
 
@@ -243,7 +249,7 @@ def clean_env():
 def driver(tmp_path,method='noop',run_id='control',extra=(),env=None,rounds=2):
     method_path=ROOT/'methods'/method/'run.py' if isinstance(method,str) else method
     return subprocess.run([sys.executable,'driver.py','--dataset','demo','--harness','loop',
-        '--sampling','all','--rounds',str(rounds),'--method-entrypoint',f'{sys.executable} {method_path}',
+        '--sampling','all','--rounds',str(rounds),'--method-entrypoint',shlex.join([sys.executable, str(method_path)]),
         '--improver','none','--runs-root',str(tmp_path/'runs'),'--work-root',str(tmp_path/'work'),
         '--run-id',run_id,*extra],cwd=ROOT,env=env or clean_env(),capture_output=True,text=True,timeout=90)
 

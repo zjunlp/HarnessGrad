@@ -8,13 +8,32 @@ evaluator or use the held-out results to select edits.
 ## Start with a working process boundary
 
 ```bash
-python3 tools/validate_method.py examples/method-template --harness base_harness/loop
-cp -R examples/method-template /tmp/my-rsi-method
+method_dir=$(mktemp -d "/tmp/my-rsi-method.XXXXXXXX")
+cp -R examples/method-template/. "$method_dir/"
+python3 tools/validate_method.py "$method_dir" --harness base_harness/loop
+method_entrypoint=$(python3 - "$method_dir/run.py" <<'PY'
+import shlex
+import sys
+print(shlex.join([sys.executable, sys.argv[1]]))
+PY
+)
+run_id="my-method-$(python3 -c 'import uuid; print(uuid.uuid4().hex[:12])')"
 HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
-  --method-entrypoint "python3 /tmp/my-rsi-method/run.py" \
-  --run-id my-method-smoke --fail-on-incomplete
-python3 tools/run_summary.py runs/my-method-smoke
+  --method-entrypoint "$method_entrypoint" \
+  --work-root "/tmp/hg-method-work-$run_id" \
+  --run-id "$run_id" --fail-on-incomplete
+python3 tools/run_summary.py "runs/$run_id"
 ```
+
+Run this from the repository root on Linux or WSL with Python 3.10+. The copied
+template is validated outside the repository. Its absolute entrypoint is quoted
+with `shlex.join` so interpreter and script paths containing spaces remain valid
+when the engine starts it from a temporary workspace.
+
+The validator invokes the method with a temporary request and checks stdout,
+trajectory structure, and candidate manifest presence. `--no-call` checks only
+entrypoint structure; `--smoke` runs the platform and can call models. A passing
+validator is not a sandbox, candidate-correctness, or dataset-readiness certificate.
 
 The unchanged template is a zero-cost control, so it ends early with no edit.
 Replace `propose(candidate, study)` in `run.py` with your edit rule and return
@@ -34,15 +53,23 @@ The platform sends one JSON request on stdin. Important fields are:
 | `epochs_total`, `epochs_measured` | total and already measured improvement states; budget is their difference |
 | `improver` | optional resolved editor tool; you can also implement your own editor |
 
-Read the study channel the platform stages beside the candidate (the `base_harness` entry in
-the request names the tree): `_harnessgrad/round.json`, `traces/`, `tasks/`, `history/` and
+Read the study channel under `<base_harness>/_harnessgrad/` (the `base_harness`
+entry in the request names the read-only input tree): `round.json`, `traces/`, `tasks/`, `history/` and
 `states/` hold the evidence available to the method. The candidate's own task
 execution does not receive that optimizer channel. Custom-split held-out task IDs
 and the private manifest are not included in method feedback.
 
-Write a trajectory with one or more `steps`, each naming an absolute
-`harness_dir`, and emit only one JSON response on stdout. Send diagnostics to
-stderr or the method log files in the writable workspace. An error is an error;
+Write a JSON object at `trajectory_out` with a nonempty `steps` array, each
+naming an absolute `harness_dir` containing a complete harness. Emit only one
+JSON response on stdout. Even `changed: false` requires a valid trajectory and
+complete harness step, as the unchanged template demonstrates. A single-step
+submission stops by default when `changed` is false; a batch stops by default
+after its submitted steps. An explicit `stop: false` allows another call within
+the remaining budget; `stop: true` asks to stop after this submission.
+
+Send diagnostics to stderr or `workspace/*.log`, which the platform preserves
+before deleting the workspace. Missing or empty trajectories and steps declaring
+`error` or `method_reported.error` are failures, not no-change results. An error is an error;
 do not return the unchanged base as a successful optimized candidate when your
 provider or optimizer crashed. Report your actual generation cost; the template's
 zero is correct only while it calls no model.
@@ -52,6 +79,8 @@ history on subsequent calls. It owns scoring, held-out evaluation and receipts.
 Use `--fail-on-incomplete` in batch scripts so optimizer failures cannot turn an
 H0-only curve into a successful job. A method that deliberately finishes early
 with a valid no-change response is reported as `early_stop`.
+Keep the method directory while developing it, then remove it and the temporary
+work root when you no longer need them; keep the run receipts for review.
 
 ## From a smoke to an experiment
 

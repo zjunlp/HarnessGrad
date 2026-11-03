@@ -25,7 +25,8 @@ def _args(tmp_path: pathlib.Path, ids: list[str] | None = None, **over):
         ids_file = tmp_path / "ids.txt"
         ids_file.write_text("\n".join(ids) + "\n")
     base = {"dataset": "appworld", "side": "train", "study_ids": ids_file,
-            "model": "qwen3.5-9b-local", "endpoint": "http://127.0.0.1:8100/v1", "trials": 1}
+            "model": "qwen3.5-9b-local", "endpoint": "http://127.0.0.1:8100/v1", "trials": 1,
+            "sampling": "all"}
     base.update(over)
     return type("Args", (), base)
 
@@ -52,7 +53,17 @@ def _write_run(root: pathlib.Path, name: str, *, per_task: dict, invalid=None, s
         "h0_sha": sha,
         "base": {"per_task": per_task, "invalid": invalid or {}, "score": 0.5,
                  "harness_failed": None}}))
-    (run / "run_meta.json").write_text(json.dumps({"h0_configuration": config}))
+    metadata = {"h0_configuration": config}
+    if config and "agent_backend" in config:
+        metadata["sampling_policy"] = config.get("sampling", "all")
+        metadata["config"] = {"agent": {"model": config["agent_model"],
+                                         "backend": config["agent_backend"],
+                                         "base_url": config["endpoint"]},
+                              "run": {"sampling": config.get("sampling", "all")}}
+        (run / "curve.jsonl").write_text(json.dumps({"measured_by_platform": True,
+            "sampling": {"policy": config.get("sampling", "all")}, "identity": {
+            "agent_model": config["agent_model"], "agent_backend": config["agent_backend"]}}))
+    (run / "run_meta.json").write_text(json.dumps(metadata))
     return run
 
 
@@ -190,3 +201,160 @@ def test_missing_split_file_is_refused_before_launch(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match="no such split file"):
         prepare_h0.main(["--dataset", "demo", "--split", str(tmp_path / "missing.json"),
                          "--runs-root", str(tmp_path / "runs")])
+
+
+def test_model_override_reaches_the_child_environment(tmp_path, monkeypatch):
+    captured = {}
+    monkeypatch.setenv("HG_AGENT_MODEL", "inherited-model")
+    def launch(command, **kwargs):
+        captured.update(kwargs["env"])
+        return prepare_h0.subprocess.CompletedProcess(command, 2)
+    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    with pytest.raises(SystemExit, match="H0 run failed"):
+        prepare_h0.main(["--dataset", "demo", "--model", "requested-model",
+                         "--runs-root", str(tmp_path / "runs")])
+    assert captured["HG_AGENT_MODEL"] == "requested-model"
+
+
+def test_configuration_resolves_dotenv_then_environment_then_cli(tmp_path, monkeypatch):
+    monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    for name in ("HG_AGENT_MODEL", "HG_AGENT_BACKEND", "HG_AGENT_BASE_URL"):
+        monkeypatch.delenv(name, raising=False)
+    (tmp_path / ".env").write_text("HG_AGENT_MODEL=file-model\nHG_AGENT_BACKEND=openai\n"
+                                   "HG_AGENT_BASE_URL=http://file/v1\n")
+    args = _args(tmp_path, model=None, endpoint=None)
+    initial = prepare_h0.configuration(args)
+    assert (initial["agent_model"], initial["agent_backend"], initial["endpoint"]) == (
+        "file-model", "openai", "http://file/v1")
+    monkeypatch.setenv("HG_AGENT_MODEL", "environment-model")
+    monkeypatch.setenv("HG_AGENT_BASE_URL", "http://environment/v1")
+    changed = prepare_h0.configuration(args)
+    assert changed != initial
+    assert changed["agent_model"] == "environment-model"
+    assert changed["endpoint"] == "http://environment/v1"
+    explicit = prepare_h0.configuration(_args(tmp_path, model="cli-model", endpoint="http://cli/v1"))
+    assert explicit["agent_model"] == "cli-model" and explicit["endpoint"] == "http://cli/v1"
+    monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    assert prepare_h0.configuration(args)["agent_backend"] == "mock"
+
+
+@pytest.mark.parametrize("field,value", [("agent_model", "wrong-model"),
+                                         ("agent_backend", "wrong-backend"),
+                                         ("endpoint", "http://wrong/v1")])
+def test_recorded_configuration_cannot_override_measured_identity(tmp_path, field, value):
+    config = prepare_h0.configuration(_args(tmp_path, ["t1"]))
+    run = _write_run(tmp_path, "h0-appworld-identity", per_task={"t1": .5}, config=config)
+    actual = {**config, field: value}
+    meta = json.loads((run / "run_meta.json").read_text())
+    meta["config"] = {"agent": {"model": actual["agent_model"],
+                                  "backend": actual.get("agent_backend", "mock"),
+                                  "base_url": actual["endpoint"]}}
+    (run / "run_meta.json").write_text(json.dumps(meta))
+    (run / "curve.jsonl").write_text(json.dumps({"measured_by_platform": True, "identity": {
+        "agent_model": actual["agent_model"], "agent_backend": actual.get("agent_backend", "mock")}}))
+    assert prepare_h0.find_existing(config, tmp_path) is None
+    with pytest.raises(SystemExit, match="identity"):
+        prepare_h0.verify(run, None, 1, configuration=config)
+
+
+def test_reuse_hint_includes_the_run_store(tmp_path, capsys, monkeypatch):
+    config = prepare_h0.configuration(_args(tmp_path, ["t1"]))
+    run = _write_run(tmp_path, "h0-appworld-hint", per_task={"t1": .5}, config=config)
+    def forbidden_launch(*args, **kwargs):
+        pytest.fail("a reusable H0 must not launch a new measurement")
+    monkeypatch.setattr(prepare_h0.subprocess, "run", forbidden_launch)
+    assert prepare_h0.main(["--dataset", "appworld", "--study-ids", str(tmp_path / "ids.txt"),
+                            "--model", config["agent_model"], "--endpoint", config["endpoint"],
+                            "--runs-root", str(tmp_path)]) == 0
+    assert f'--runs-root "{tmp_path}" --h0-from {run.name}' in capsys.readouterr().out
+
+
+def test_curve_identity_must_match_even_when_environment_metadata_matches(tmp_path):
+    config = prepare_h0.configuration(_args(tmp_path, ["t1"]))
+    run = _write_run(tmp_path, "h0-appworld-harness-declaration", per_task={"t1": .5}, config=config)
+    (run / "curve.jsonl").write_text(json.dumps({"measured_by_platform": True, "identity": {
+        "agent_model": "harness-used-another-model", "agent_backend": config["agent_backend"]}}))
+    assert prepare_h0.find_existing(config, tmp_path) is None
+    with pytest.raises(SystemExit, match="curve identity agent_model"):
+        prepare_h0.verify(run, None, 1, configuration=config)
+
+
+@pytest.mark.parametrize("measured", [False, None])
+def test_unverified_curve_cannot_publish_or_reuse_h0(tmp_path, measured):
+    config = prepare_h0.configuration(_args(tmp_path, ["t1"]))
+    run = _write_run(tmp_path, "h0-appworld-unverified", per_task={"t1": .5}, config=config)
+    point = json.loads((run / "curve.jsonl").read_text())
+    point["measured_by_platform"] = measured
+    (run / "curve.jsonl").write_text(json.dumps(point))
+    assert prepare_h0.find_existing(config, tmp_path) is None
+    with pytest.raises(SystemExit, match="platform measurement"):
+        prepare_h0.verify(run, None, 1, configuration=config)
+
+
+@pytest.mark.parametrize("inherited", [None, "environment-judge"])
+def test_opted_scoring_provider_keeps_dotenv_judge_precedence(tmp_path, monkeypatch, inherited):
+    monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    monkeypatch.delenv("HG_JUDGE_MODEL", raising=False)
+    if inherited is not None:
+        monkeypatch.setenv("HG_JUDGE_MODEL", inherited)
+    (tmp_path / ".env").write_text("HG_JUDGE_MODEL=file-judge\n", encoding="utf-8")
+    provider = tmp_path / "scoring_profile.py"
+    provider.touch()
+    monkeypatch.setattr(prepare_h0.scoring_identity, "provider_path", lambda _: provider)
+    observed = []
+    def resolve(_):
+        import os
+        observed.append(os.environ["HG_JUDGE_MODEL"])
+        return None
+    monkeypatch.setattr(prepare_h0.scoring_identity, "resolve", resolve)
+    assert prepare_h0.main(["--dataset", "synthetic", "--runs-root", str(tmp_path / "runs"),
+                            "--dry-run"]) == 0
+    assert observed == [inherited or "file-judge"]
+
+
+def test_sampling_changes_h0_identity_without_an_explicit_study_set(tmp_path):
+    all_tasks = prepare_h0.configuration(_args(tmp_path, sampling="all"))
+    one_task = prepare_h0.configuration(_args(tmp_path, sampling="random_1"))
+    assert all_tasks != one_task
+    assert all_tasks["sampling"] == "all" and one_task["sampling"] == "random_1"
+    _write_run(tmp_path, "h0-appworld-random", per_task={"t1": .5}, config=one_task)
+    assert prepare_h0.find_existing(all_tasks, tmp_path) is None
+
+
+@pytest.mark.parametrize("source", ["curve", "sampling_policy", "run_config", "missing"])
+def test_h0_verify_checks_the_measured_sampling_policy(tmp_path, source):
+    config = prepare_h0.configuration(_args(tmp_path))
+    run = _write_run(tmp_path, "h0-appworld-sampling", per_task={"t1": .5}, config=config)
+    point = json.loads((run / "curve.jsonl").read_text())
+    meta = json.loads((run / "run_meta.json").read_text())
+    if source == "curve":
+        point["sampling"]["policy"] = "random_1"
+    elif source == "sampling_policy":
+        meta["sampling_policy"] = "random_1"
+    elif source == "run_config":
+        meta["config"]["run"]["sampling"] = "random_1"
+    else:
+        point.pop("sampling")
+        meta.pop("sampling_policy")
+        meta["config"].pop("run")
+    (run / "curve.jsonl").write_text(json.dumps(point))
+    (run / "run_meta.json").write_text(json.dumps(meta))
+    with pytest.raises(SystemExit, match="sampling"):
+        prepare_h0.verify(run, None, 0, configuration=config)
+    assert prepare_h0.find_existing(config, tmp_path) is None
+
+
+def test_relative_runs_root_is_resolved_before_launching_in_another_cwd(tmp_path, monkeypatch):
+    caller = tmp_path / "caller"
+    caller.mkdir()
+    monkeypatch.chdir(caller)
+    captured = {}
+    def launch(command, **kwargs):
+        captured.update(command=command, cwd=kwargs["cwd"])
+        return prepare_h0.subprocess.CompletedProcess(command, 2)
+    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    with pytest.raises(SystemExit, match="H0 run failed"):
+        prepare_h0.main(["--dataset", "demo", "--runs-root", "runs"])
+    command = captured["command"]
+    assert command[command.index("--runs-root") + 1] == str((caller / "runs").resolve())
+    assert pathlib.Path(captured["cwd"]) == ROOT

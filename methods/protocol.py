@@ -28,7 +28,7 @@ Platform -> method (stdin, one JSON object):
     }
 
     The evidence the platform staged for this round is at
-    `<workspace>/_harnessgrad/` -- `round.json`, `traces/`, `tasks/`, `history/`,
+    `<base_harness>/_harnessgrad/` -- `round.json`, `traces/`, `tasks/`, `history/`,
     `states/`, and the default `SKILL.md`. A method reads it from there rather than
     from the platform tree, which its sandbox hides.
 
@@ -45,7 +45,8 @@ question normally asked after a run -- "why did the improver change nothing?" --
 answer in the record. The workspace is otherwise temporary: anything not written to
 `trajectory_out`, and not a `*.log`, is gone when the round ends.
 
-The method writes its trajectory to `trajectory_out`. Each step names a
+The method must write a JSON object with a nonempty `steps` array to
+`trajectory_out`, including when stdout declares `changed: false`. Each step names a
 **directory holding a complete harness**, not a diff and not a commit:
 
     {"harness_dir": "/abs/path/...", "label": "...", "edit_kind": "...",
@@ -54,6 +55,12 @@ The method writes its trajectory to `trajectory_out`. Each step names a
 `harness_dir` must satisfy `docs/writing_a_harness.md` — the same contract the
 base harness satisfies. That is the whole point: a method's output is measured by
 the same rules as the base it started from.
+
+A no-change response still supplies a complete harness step (for example, an
+unchanged copy of `base_harness`). `changed: false` defaults to stopping after
+that submission; an explicit `stop: false` allows another call. Missing or empty
+trajectories and steps declaring an error are failed submissions, not no-change
+results. The unified engine reads these same fields for both legacy modes.
 """
 from __future__ import annotations
 

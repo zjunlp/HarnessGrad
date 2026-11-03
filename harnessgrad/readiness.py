@@ -33,6 +33,7 @@ is launched, not in one front end's form validation.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shlex
@@ -157,7 +158,8 @@ def _method_plan(args):
     if method is None:
         return {'custom': True}  # A self-contained external method may need no editor.
     manifest = json.loads((method / 'method.json').read_text())
-    if manifest.get('kind') not in ('published', 'improver'):
+    if (manifest.get('kind') not in ('published', 'improver')
+            and not (manifest.get('requires') or {}).get('editor')):
         return {'custom': True}
     return {'name': method.name, 'requires': manifest.get('requires') or {},
             'endpoint_only': bool(manifest.get('requires', {}).get('editor_model'))
@@ -168,6 +170,13 @@ def _editor_plan(args, method):
     cfg = current()
     direct = {'kind': 'openai-compatible', 'base_url': cfg.method.base_url,
               'model': cfg.method.model, 'key': cfg.method.api_key}
+    if cfg.improver.selection:
+        # The editor gives this command priority over the registry and --improver.
+        command = shlex.split(cfg.improver.selection)
+        if not command or shutil.which(command[0]) is None:
+            executable = command[0] if command else '<empty>'
+            return {'error': f'CLI improver is not executable: {executable}'}
+        return {'kind': 'cli', 'path': command[0]}
     requested = getattr(args, 'improver', None)
     if requested in ('none', 'noop', 'null'):
         return direct
@@ -234,6 +243,9 @@ def configuration_checks(args):
             missing = [label for label in ('base_url','model','key') if not editor.get(label)]
             if missing:
                 error = 'method editor needs HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY (or an explicitly configured improver)'
+        needs_sdk = editor.get('kind') != 'cli' or method['endpoint_only']
+        if not error and needs_sdk and importlib.util.find_spec('openai') is None:
+            error = 'the method endpoint needs the openai package; install its Python dependencies'
         requires = method['requires']
         minimum = requires.get('min_trials', 1)
         if getattr(args, 'trials', 1) < minimum:

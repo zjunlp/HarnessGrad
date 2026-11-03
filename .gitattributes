@@ -1,2 +1,3 @@
-# This entry is executed directly by WSL as well as native Linux.
+# These entries are executed directly by WSL as well as native Linux.
+install.sh text eol=lf
 methods/dsh-improver text eol=lf

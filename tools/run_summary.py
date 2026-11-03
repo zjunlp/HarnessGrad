@@ -194,6 +194,15 @@ def _timeout(point: dict):
 
 def _round_entry(point: dict, prev_score, notes: list[str]) -> tuple[dict, float | None]:
     score = _num(point.get("score"))
+    refusal = point.get("unmeasured")
+    reason = (refusal if isinstance(refusal, dict) and refusal.get("reason")
+              else point.get("unmeasured_reason"))
+    if point.get("measured_by_platform") is False or point.get("n_scored") == 0 or reason:
+        score = None
+        detail = (json.dumps(reason, ensure_ascii=False) if reason
+                  else "not measured by the platform" if point.get("measured_by_platform") is False
+                  else "zero scored tasks")
+        notes.append(f"score: round {point.get('round')} excluded from arithmetic: {detail}")
     delta = None if (score is None or prev_score is None) else score - prev_score
 
     task_scores = per_task_scores(point)
@@ -215,11 +224,15 @@ def _round_entry(point: dict, prev_score, notes: list[str]) -> tuple[dict, float
         "round": _int(point.get("round")),
         "score": score,
         "delta": delta,
+        "planned": expected,
+        "scored": n_scored,
         "invalid": _invalid(point),
         "unmeasured": unmeasured,
         "timeout": _timeout(point),
+        "measured_by_platform": point.get("measured_by_platform"),
+        "unmeasured_reason": reason,
     }
-    return entry, score
+    return entry, score if score is not None else prev_score
 
 
 # --------------------------------------------------------------------- cost and time
@@ -655,8 +668,14 @@ def render_markdown(summary: dict) -> str:
                   + str(completion.get('reason') or ''), '']
     if summary.get('split_protocol'):
         protocol = summary['split_protocol']
-        lines += ['Custom held-out partition; not an official benchmark/leaderboard score. '
-                  f"Official evaluation tasks reused for study: {_fmt_human(protocol.get('official_eval_reused_for_train'))}.", '']
+        if protocol.get('kind') == 'custom-heldout':
+            lines += ['Custom held-out partition; not an official benchmark/leaderboard score. '
+                      f"Official evaluation tasks reused for study: {_fmt_human(protocol.get('official_eval_reused_for_train'))}.", '']
+        else:
+            label = f"Split protocol: {protocol.get('kind') or 'unknown'}."
+            if protocol.get('official_score_comparable') is False:
+                label += ' Not comparable to the official benchmark/leaderboard score.'
+            lines += [label, '']
     lines.append(_verdict_line(summary))
     lines.append("")
 
@@ -665,16 +684,17 @@ def render_markdown(summary: dict) -> str:
     if len(rows) > MAX_TABLE_ROWS:
         shown = rows[:TRUNCATED_HEAD] + [None] + rows[-TRUNCATED_TAIL:]
         truncated = True
-    lines.append("| round | score | Δ | invalid | unmeasured | timeout |")
-    lines.append("| --- | --- | --- | --- | --- | --- |")
+    lines.append("| round | score | Δ | planned | scored | invalid | unmeasured | timeout |")
+    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
     for entry in shown:
         if entry is None:
-            lines.append(f"| … | … | … | … | … | … |")
+            lines.append(f"| … | … | … | … | … | … | … | … |")
             continue
         lines.append(f"| {_fmt_round(entry['round'])} | {_fmt_score(entry['score'])} | "
-                     f"{_fmt_delta(entry['delta'])} | {_fmt_count(entry['invalid'])} | "
+                     f"{_fmt_delta(entry['delta'])} | {_fmt_count(entry['planned'])} | "
+                     f"{_fmt_count(entry['scored'])} | {_fmt_count(entry['invalid'])} | "
                      f"{_fmt_count(entry['unmeasured'])} | {_fmt_count(entry['timeout'])} |")
-    lines.append("")
+    lines.append("Unmeasured is planned minus scored; invalid and unmeasured may overlap.")
 
     lines.append("Top changed files by churn (added+removed):")
     if summary["changed_files"]:

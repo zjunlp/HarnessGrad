@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tools import results_matrix, run_summary
 
 
@@ -57,3 +59,79 @@ def test_legacy_absence_is_not_a_fabricated_complete_status(tmp_path):
     result = run_summary.summarise(run)
     assert result['completion'] is None
     assert '**COMPLETE**' not in run_summary.render_markdown(result)
+
+
+def test_incomplete_skip_retains_measurement_context_and_coverage(tmp_path):
+    run = record(tmp_path, 'incomplete-context', 'incomplete')
+    point = json.loads((run / 'curve.jsonl').read_text())
+    point['sampling']['task_ids'].append('task-b')
+    point['baseline'] = {'comparable': False, 'problems': ['fixture endpoint mismatch']}
+    point['measured_by_platform'] = True
+    (run / 'curve.jsonl').write_text(json.dumps(point) + '\n')
+
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    assert payload['rows'] == []
+    skipped, = payload['skipped']
+    assert skipped['reason'] == 'incomplete' and 'provider failed' in skipped['detail']
+    assert 'score' not in skipped
+    context, = skipped['measurement_context']
+    assert context['planned_tasks'] == 2 and context['n_tasks'] == 1 and context['unmeasured'] == 1
+    assert context['baseline'] == point['baseline']
+    assert context['split_sha'] == 'a' * 64
+    assert context['split_protocol']['kind'] == 'custom-heldout'
+    summary = run_summary.summarise(run)
+    assert summary['completion']['status'] == 'incomplete'
+    assert summary['per_round'][0]['planned'] == 2
+    assert '**INCOMPLETE**' in run_summary.render_markdown(summary)
+
+
+def test_recorded_early_stop_keeps_status_but_rejected_placeholder_is_not_a_score(tmp_path):
+    run = record(tmp_path, 'early-stop-rejection', 'early_stop')
+    first = json.loads((run / 'curve.jsonl').read_text())
+    first['measured_by_platform'] = True
+    # The actual rejected-candidate shape written by mode_a: numeric placeholder,
+    # empty measurement coverage, false measurement flag, and structured refusal.
+    rejected = {**first, 'round': 1, 'score': 0.0, 'per_task': {}, 'n_scored': 0,
+        'measured_by_platform': False, 'unmeasured': {
+            'reason': 'the candidate harness is not one the platform can measure, so there is no measurement to report',
+            'problems': ['missing agent.py'], 'harness_dir': '/fixture/rejected'}}
+    (run / 'curve.jsonl').write_text(json.dumps(first) + '\n' + json.dumps(rejected) + '\n')
+
+    payload, _ = results_matrix.build_matrix([str(tmp_path)])
+    assert payload['skipped'] == []
+    row, = payload['rows']
+    assert row['completion']['status'] == 'early_stop'
+    assert row['partition'] == 'custom-heldout' and row['split_sha'] == 'a' * 64
+    assert row['rounds'] == 1 and row['r0'] == row['last'] == row['best'] == .25
+    assert row['last_delta'] is None
+    assert row['measurement_context'][-1]['unmeasured_reason'] == rejected['unmeasured']
+    markdown = results_matrix.render_markdown(payload)
+    assert 'early_stop' in markdown and 'partial' in markdown and 'missing agent.py' in markdown
+    summary = run_summary.summarise(run)
+    assert summary['completion']['status'] == 'early_stop'
+    assert summary['score']['last'] is None and summary['score']['best'] == .25
+    assert summary['per_round'][-1]['scored'] == 0
+    assert '**EARLY_STOP**' in run_summary.render_markdown(summary)
+
+
+@pytest.mark.parametrize('surface', ['matrix', 'summary'])
+def test_unknown_metadata_protocol_does_not_invent_custom_partition(tmp_path, surface):
+    run = record(tmp_path, 'unknown-meta-protocol', 'early_stop')
+    path = run / 'run_meta.json'
+    metadata = json.loads(path.read_text())
+    metadata['split_protocol'] = {'official_score_comparable': False}
+    path.write_text(json.dumps(metadata))
+    if surface == 'matrix':
+        payload, _ = results_matrix.build_matrix([str(tmp_path)])
+        row, = payload['rows']
+        assert row['partition'] is None
+        line = next(line for line in results_matrix.render_markdown(payload).splitlines()
+                    if line.startswith('| unknown-meta-protocol'))
+        assert 'custom-heldout' not in line
+        assert 'unknown split protocol' in line and 'noncomparable to official score' in line
+    else:
+        summary = run_summary.summarise(run)
+        page = run_summary.render_markdown(summary)
+        assert 'Custom held-out partition' not in page
+        assert 'Split protocol: unknown' in page
+        assert 'not comparable to the official benchmark/leaderboard score' in page.lower()

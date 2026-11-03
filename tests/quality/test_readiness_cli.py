@@ -41,8 +41,7 @@ sys.path.insert(0, str(ROOT))
 import data.scaffolds.registry as datasets   # noqa: E402
 import harnessgrad.readiness as readiness    # noqa: E402
 
-#: The seven checks every run plans, in the order a run meets them. `endpoint` is the
-#: eighth and only exists when `--check-net` asks for it, so it is asserted separately.
+#: Additional model/method rows depend on the selected run's requirements.
 CHECKS = ["python", "git", "bwrap", "dataset", "harness", "writable", "disk"]
 
 #: The key the `--prepare-only` test plants. A value nothing else on this machine can
@@ -254,7 +253,7 @@ def test_check_only_creates_no_run_directory(tmp_path):
     proc = _driver(
         "--check-only", "--dataset", "demo", "--harness", "loop", "--run-id",
         "readiness-probe", "--runs-root", str(runs), "--work-root", str(work),
-        "--no-sandbox")
+        "--rounds", "0", "--no-sandbox")
 
     assert proc.returncode == 0, f"{proc.returncode}\n{proc.stdout[-1200:]}\n{proc.stderr[-800:]}"
     assert "check" in proc.stdout, "the table is what --check-only prints"

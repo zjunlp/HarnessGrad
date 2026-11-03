@@ -41,12 +41,12 @@ from harnessgrad.config.areas import (
     MethodConfig, RunConfig, RuntimeConfig, SandboxConfig, StorageConfig,
 )
 from harnessgrad.config.loader import (
-    ENV_NAMES, current, describe, dump, load, reset, run_config,
+    ENV_NAMES, current, describe, dump, load, read_env_file, reset, run_config,
 )
 
 __all__ = [
-    # the four entry points
-    "load", "current", "dump", "describe",
+    # public entry points
+    "load", "current", "dump", "describe", "read_env_file",
     # test hooks and the run's argv-derived half
     "reset", "run_config", "ENV_NAMES",
     # the declaration

@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -13,7 +14,7 @@ def test_external_method_template_completes_a_real_sandbox_exchange(tmp_path):
     source = tmp_path / 'my-method'
     shutil.copytree(ROOT / 'examples/method-template', source)
     result = subprocess.run([sys.executable, '-m', 'harnessgrad.cli', 'run', '--config',
-        'experiments/quickstart.json', '--method-entrypoint', f'{sys.executable} {source}/run.py',
+        'experiments/quickstart.json', '--method-entrypoint', shlex.join([sys.executable, str(source/'run.py')]),
         '--run-id', 'external-method-smoke', '--runs-root', str(tmp_path/'runs'),
         '--work-root', str(tmp_path/'work'), '--improver', 'none', '--fail-on-incomplete'],
         cwd=ROOT, env={**os.environ, 'HG_AGENT_BACKEND': 'mock', 'PYTHONDONTWRITEBYTECODE': '1'},
