@@ -5,6 +5,7 @@ With no URL Playwright fulfills local build requests, including Pagefind assets.
 import argparse
 import json
 import mimetypes
+import re
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from playwright.sync_api import sync_playwright
@@ -16,12 +17,18 @@ args = parser.parse_args()
 root = Path(__file__).resolve().parents[1] / 'dist'
 out = Path(args.output)
 out.mkdir(parents=True, exist_ok=True)
-base = (args.url or 'https://preview.invalid').rstrip('/') + '/HarnessGrad-Hub/'
+canonical = re.search(r'<link rel="canonical" href="([^"]+)"', (root / 'index.html').read_text())
+assert canonical, 'Build first: dist/index.html needs a canonical URL'
+base_path = urlparse(canonical[1]).path.rstrip('/') + '/'
+assert base_path == '/HarnessGrad/', base_path
+base = (args.url or 'https://preview.invalid').rstrip('/') + base_path
 routes = ['', 'getting-started/', 'news/', 'blog/', 'news/2026-10-16-introducing-harnessgrad/', 'benchmarks/alfworld/']
 errors, results = [], []
 
 def local_route(route):
-    path = unquote(urlparse(route.request.url).path).removeprefix('/HarnessGrad-Hub/')
+    request_path = unquote(urlparse(route.request.url).path)
+    assert request_path.startswith(base_path), request_path
+    path = request_path.removeprefix(base_path)
     target = root / path
     if target.is_dir():
         target /= 'index.html'
@@ -48,7 +55,13 @@ with sync_playwright() as p:
                 assert not page.evaluate('document.documentElement.scrollWidth > innerWidth'), (width, theme, route, 'overflow')
                 assert page.evaluate("getComputedStyle(document.querySelector('h1')).fontFamily.includes('Chakra Petch')"), route
                 assert page.evaluate("document.fonts.check('600 24px \"Chakra Petch\"') && document.fonts.check('400 22px \"EB Garamond\"')"), route
+                assert page.locator('link[rel="canonical"]').get_attribute('href') == 'https://zjunlp.github.io' + base_path + route
                 if route:
+                    edit_links = page.locator('a[href*="/edit/"]')
+                    if route not in ('news/', 'blog/'):
+                        assert edit_links.count() > 0, (route, 'missing edit link')
+                    for link in edit_links.all():
+                        assert link.get_attribute('href').startswith('https://github.com/zjunlp/HarnessGrad/edit/website/'), route
                     skip = page.locator('.sl-skip-link')
                     skip.focus()
                     page.keyboard.press('Enter')

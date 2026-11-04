@@ -3,18 +3,25 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 import json
 import mimetypes
+import re
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1] / 'dist'
-OUT = Path('/tmp/hg-hub-polish-v3-browser')
+OUT = Path('/tmp/hg-website-migration-polish-browser')
 OUT.mkdir(exist_ok=True)
-BASE = 'https://preview.invalid/HarnessGrad-Hub/'
+canonical = re.search(r'<link rel="canonical" href="([^"]+)"', (ROOT / 'index.html').read_text())
+assert canonical, 'Build first: dist/index.html needs a canonical URL'
+BASE_PATH = urlparse(canonical[1]).path.rstrip('/') + '/'
+assert BASE_PATH == '/HarnessGrad/', BASE_PATH
+BASE = 'https://preview.invalid' + BASE_PATH
 errors = []
 results = []
 
 
 def route(request):
-    path = unquote(urlparse(request.request.url).path).removeprefix('/HarnessGrad-Hub/')
+    request_path = unquote(urlparse(request.request.url).path)
+    assert request_path.startswith(BASE_PATH), request_path
+    path = request_path.removeprefix(BASE_PATH)
     target = ROOT / path
     if target.is_dir():
         target /= 'index.html'

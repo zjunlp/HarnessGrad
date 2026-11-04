@@ -43,7 +43,8 @@ receipts.
 An export is reproducible only if it reproduces the committed files byte for byte:
 
 ```bash
-cp -r . /tmp/hg-hub-check && cd /tmp/hg-hub-check
+# Run from a clean, registered review worktree based on website, not platform main.
+git status --short   # confirm clean before exporting
 HG_RUNS=<receipts> HG_PLATFORM=<platform> HG_GENERATED_AT=<the stamp in the page> \
   python3 scripts/export/export-site.py
 HG_RUNS=<receipts> HG_GENERATED_AT=<the stamp in the page> \

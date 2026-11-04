@@ -10,7 +10,7 @@ import starlightBlog from 'starlight-blog';
  */
 export default defineConfig({
 	site: 'https://zjunlp.github.io',
-	base: '/HarnessGrad-Hub',
+	base: '/HarnessGrad',
 	integrations: [
 		starlight({
 			title: 'HarnessGrad: Harness as A Continual Learner',
@@ -77,7 +77,7 @@ export default defineConfig({
 				},
 			],
 			editLink: {
-				baseUrl: 'https://github.com/zjunlp/HarnessGrad-Hub/edit/main/',
+				baseUrl: 'https://github.com/zjunlp/HarnessGrad/edit/website/',
 			},
 			// Two independent sections, as the plugin's multiple-instances guide
 			// describes: posts for each live in `src/content/docs/<prefix>/`.

@@ -1,9 +1,9 @@
 /* Content companion to the approved homepage. Homepage imports neither this
    file nor Starlight, so its content, layout and interaction remain independent.
    Old hg-grid / hg-curve / hg-links landing furniture had no remaining callers. */
-@font-face { font-family:'Chakra Petch'; font-style:normal; font-weight:500; font-display:swap; src:url('/HarnessGrad-Hub/fonts/chakra-petch-500.ttf') format('truetype'); }
-@font-face { font-family:'Chakra Petch'; font-style:normal; font-weight:600; font-display:swap; src:url('/HarnessGrad-Hub/fonts/chakra-petch-600.ttf') format('truetype'); }
-@font-face { font-family:'EB Garamond'; font-style:normal; font-weight:400; font-display:swap; src:url('/HarnessGrad-Hub/fonts/eb-garamond-400.ttf') format('truetype'); }
+@font-face { font-family:'Chakra Petch'; font-style:normal; font-weight:500; font-display:swap; src:url('/HarnessGrad/fonts/chakra-petch-500.ttf') format('truetype'); }
+@font-face { font-family:'Chakra Petch'; font-style:normal; font-weight:600; font-display:swap; src:url('/HarnessGrad/fonts/chakra-petch-600.ttf') format('truetype'); }
+@font-face { font-family:'EB Garamond'; font-style:normal; font-weight:400; font-display:swap; src:url('/HarnessGrad/fonts/eb-garamond-400.ttf') format('truetype'); }
 :root {
   --hg-display:'Chakra Petch',sans-serif;
   --hg-prose:'EB Garamond',Georgia,serif;

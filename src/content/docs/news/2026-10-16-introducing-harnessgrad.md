@@ -39,4 +39,4 @@ set and pairable". Contamination — whether the agent model has seen the benchm
 is not detectable from inside the framework, and is the largest known threat to the
 validity of any curve.
 
-[Getting started](/HarnessGrad-Hub/getting-started/) runs the demo.
+[Getting started](/HarnessGrad/getting-started/) runs the demo.

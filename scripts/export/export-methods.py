@@ -9,9 +9,8 @@ carries the rows -- so a hand-written page would drift from both the first time 
 The rule paragraph comes from the module docstring: it is the only place the rule is written
 down next to the code that implements it.
 
-Writes:
-    website/src/content/docs/methods/<slug>.mdx
-    website/src/content/docs/methods/index.md
+Writes (relative to the website branch checkout root):
+    src/content/docs/methods/<slug>.mdx
 """
 from __future__ import annotations
 

@@ -1,18 +1,11 @@
-# Build the site at the repository root and publish it to GitHub Pages.
-#
-# This repository **is** the site: `pnpm build` here produces `dist/`, and this workflow
-# publishes it. The platform that the numbers come from lives in `zjunlp/HarnessGrad`; this
-# repository never runs an experiment and cannot change what one measures.
-#
-# The site is a *project* page, so its URLs live under /HarnessGrad-Hub/. That prefix is
-# configured once, as `base` in `astro.config.mjs`; `scripts/check-links.mjs` reads it back
-# out of the built canonical URL and fails the build on a root-absolute link that would
-# 404, so the two cannot drift silently.
+# Website source lives on website; main remains the Python platform.
+# The default-branch workflow with this same filename exposes manual dispatch.
+# A website push builds the triggering commit, never a moving branch checkout.
 name: Deploy site
 
 on:
   push:
-    branches: [main]
+    branches: [website]
   workflow_dispatch:
 
 permissions:
@@ -20,7 +13,6 @@ permissions:
   pages: write
   id-token: write
 
-# One deployment at a time, and never cancel one that is already publishing.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -30,6 +22,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Read legacy platform contributors record
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: platform-record
+          sparse-checkout: docs/contributors.html
+          sparse-checkout-cone-mode: false
 
       - uses: pnpm/action-setup@v4
         with:
@@ -37,7 +39,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.1
           cache: pnpm
 
       - name: Install
@@ -46,11 +48,15 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # The Pages site itself is a one-time repository setting -- Settings -> Pages ->
-      # Source: GitHub Actions. This step only reads that configuration. Do not add
-      # `enablement: true` to paper over a missing setting: creating a Pages site requires
-      # repository admin, and the workflow's GITHUB_TOKEN never has it, so it fails with
-      # "Resource not accessible by integration" instead of saying what is actually wrong.
+      - name: Preserve legacy platform contributors record
+        run: |
+          git -C platform-record rev-parse HEAD
+          cp platform-record/docs/contributors.html dist/contributors.html
+          pnpm check:links
+
+      # One-time admin setting: Settings -> Pages -> Source: GitHub Actions.
+      # Authorize website (and main for its dispatcher) in github-pages environment.
+      # Never request enablement/admin permissions from the workflow token.
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

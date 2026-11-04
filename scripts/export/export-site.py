@@ -6,7 +6,7 @@ The rule this exists to enforce: **a number on the site must be traceable to
 the exporter writes a snapshot that goes into the repository, and the site build reads only
 that snapshot, so CI never needs this machine's paths.
 
-What it writes (all under `website/`):
+What it writes (all under the website branch checkout root):
 
     src/data/results/<slug>.json                     the snapshot, machine-readable
     src/content/docs/benchmarks/<slug>.mdx           the page, tables generated from the snapshot
