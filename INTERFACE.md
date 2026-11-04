@@ -82,6 +82,8 @@ care about its internal structure. There is exactly one interface point:
 For `files`, runtimes are mounted read-only at their physical host paths, with the
 links used by every declared path restored. Parent and child declarations remain
 accessible in any order. Platform and temporary trees stay hidden through aliases.
+Intermediate directories needed to traverse relative links are created empty;
+their host contents are not exposed.
 Explicit runtimes must not overlap writable task directories, extra writable paths,
 or scratch state directories; conflicting layouts are refused before launch.
 

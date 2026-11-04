@@ -258,6 +258,60 @@ def test_runtime_alias_cannot_project_hidden_storage_elsewhere(tmp_path, placeme
         assert json.loads(result.stdout) == [False, False, False]
 
 
+@pytest.mark.parametrize('mounted_parent', [False, True])
+@pytest.mark.parametrize('linked_detour', [False, True])
+@pytest.mark.parametrize('absolute_target', [False, True])
+@pytest.mark.parametrize('file_runtime', [False, True])
+def test_runtime_links_preserve_parent_traversal_without_exposing_detour(
+        tmp_path, mounted_parent, linked_detour, absolute_target, file_runtime):
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not provisioned')
+    with tempfile.TemporaryDirectory(prefix='hg-runtime-traversal-', dir=Path.home()) as directory:
+        root = Path(directory)
+        links = root / 'links'; links.mkdir()
+        outside = root / 'outside'; outside.mkdir()
+        detour = outside / 'detour'
+        if linked_detour:
+            entered = root / 'other/entered'; entered.mkdir(parents=True)
+            detour.symlink_to(entered, target_is_directory=True)
+        else:
+            detour.mkdir()
+        secret = detour.resolve() / 'secret.txt'; secret.write_text('private detour contents')
+        runtime = detour.resolve().parent / 'real'
+        if file_runtime:
+            marker = runtime
+        else:
+            runtime.mkdir()
+            marker = runtime / 'marker.txt'
+        marker.write_text('declared runtime')
+        alias = links / 'alias'
+        target = (str(detour) if absolute_target else os.path.relpath(detour, links)) + '/../real'
+        alias.symlink_to(target, target_is_directory=not file_runtime)
+        declared = (links, alias) if mounted_parent else (alias,)
+        task = tmp_path / 'task'; task.mkdir()
+        work = tmp_path / 'work'; work.mkdir()
+        code = '''import errno, json, sys
+from pathlib import Path
+marker, secret = map(Path, sys.argv[1:])
+data = marker.read_text()
+try:
+    marker.write_text('changed')
+except OSError as exc:
+    readonly = exc.errno == errno.EROFS
+else:
+    readonly = False
+print(json.dumps({'data': data, 'readonly': readonly, 'secret_visible': secret.exists()}))
+'''
+        result = sandbox.run([sys.executable, '-I', '-c', code,
+                              str(alias if file_runtime else alias / marker.name), str(secret)],
+            platform=ROOT, work_root=work, task_dir=task, repo=task, env={},
+            runtime_paths=declared, timeout_s=20, cwd=task, network='none')
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout) == {
+            'data': 'declared runtime', 'readonly': True, 'secret_visible': False}
+        assert marker.read_text() == 'declared runtime'
+
+
 @pytest.mark.parametrize('storage', ['task', 'writable', 'state'])
 @pytest.mark.parametrize('placement', ['inside', 'same', 'parent'])
 @pytest.mark.parametrize('aliased', [False, True])
@@ -406,3 +460,11 @@ def test_private_mount_checks_skip_symlink_arguments(tmp_path, target):
     reject_visible(plan, (private,))
     with pytest.raises(ValueError, match='visible through sandbox mount'):
         reject_visible([*plan, '--ro-bind', str(private), str(tmp_path / 'exposed')], (private,))
+
+
+def test_empty_traversal_directory_does_not_hide_a_private_bind(tmp_path):
+    from eval.containers.private_mounts import reject_visible
+    private = tmp_path / 'private'; private.mkdir()
+    exposed = tmp_path / 'exposed'
+    with pytest.raises(ValueError, match='visible through sandbox mount'):
+        reject_visible(['--ro-bind', str(private), str(exposed), '--dir', str(exposed)], (private,))

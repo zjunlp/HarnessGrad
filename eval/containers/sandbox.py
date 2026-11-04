@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 11  # 11 refuses declared runtimes overlapping writable task/state storage;
+PLAN_VERSION = 12  # 12 preserves empty traversal directories needed by relative runtime links;
+                   # 11 refuses declared runtimes overlapping writable task/state storage;
                    # 10 mounts declared runtimes at physical paths and restores all declared link chains;
                    # 9 restores interpreter symlinks without exposing parent directories;
                    # 8 excludes method runtime trees exposing shared temporary roots;
@@ -193,8 +194,9 @@ def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writabl
 
 
 def _runtime_symlinks(paths, mounted):
-    """Collect exact links used by declared paths, without exposing parent trees."""
+    """Collect links and empty traversal directories, without exposing parent trees."""
     links = {}
+    directories = set()
     for path in paths:
         remaining = list(Path(path).absolute().parts[1:])
         current = Path('/')
@@ -202,6 +204,10 @@ def _runtime_symlinks(paths, mounted):
         while remaining:
             part = remaining.pop(0)
             if part == '..':
+                # The kernel must enter this directory before following '..'. Its
+                # contents need not be mounted, but the directory itself must exist.
+                if not any(current.is_relative_to(root) for root in mounted):
+                    directories.add(current)
                 current = current.parent
                 continue
             current = current / part
@@ -216,13 +222,13 @@ def _runtime_symlinks(paths, mounted):
             target = Path(target)
             remaining = list(target.parts[1:] if target.is_absolute() else target.parts) + remaining
             current = Path('/') if target.is_absolute() else current.parent
-    return tuple(links.items())
+    return tuple(links.items()), directories
 
 
 def _interpreter_symlinks(prefixes, *, platform, work_root, task_dir,
                          writable_paths, state_dirs, private_paths):
     """Validate the interpreter chain before restoring its missing links."""
-    links = _runtime_symlinks((sys.executable,), (*map(Path, RUNTIME), *prefixes))
+    links, directories = _runtime_symlinks((sys.executable,), (*map(Path, RUNTIME), *prefixes))
     protected = tuple(Path(path).resolve() for path in (
         *hidden_trees(work_root, platform), work_root, task_dir,
         *writable_paths, *state_dirs, *private_paths))
@@ -231,7 +237,7 @@ def _interpreter_symlinks(prefixes, *, platform, work_root, task_dir,
             raise SandboxUnavailable(
                 f'Python executable link {link} is in hidden, writable, or private storage; '
                 'create the venv with an interpreter outside that storage')
-    return links
+    return links, directories
 
 
 def hidden_trees(work_root: Path, platform: Path) -> list[Path]:
@@ -333,9 +339,10 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
                           if Path(path).exists())
     for path in runtime_roots:
         plan += ["--ro-bind", str(path), str(path)]
-    runtime_links = dict(_interpreter_symlinks(
+    links, runtime_directories = _interpreter_symlinks(
         prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
-        writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths))
+        writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths)
+    runtime_links = dict(links)
 
     # Trees the harness declares it needs, bound read-only.
     #
@@ -362,7 +369,12 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     for path in physical:
         plan += ["--ro-bind", str(path), str(path)]
     mounted = (*runtime_roots, *physical)
-    runtime_links.update(_runtime_symlinks(declared, mounted))
+    links, directories = _runtime_symlinks(declared, mounted)
+    runtime_links.update(links)
+    runtime_directories.update(directories)
+    for directory in sorted(runtime_directories, key=lambda path: (len(path.parts), str(path))):
+        if not any(directory.is_relative_to(root) for root in mounted):
+            plan += ["--dir", str(directory)]
     for link, target in runtime_links.items():
         if not any(link.is_relative_to(root) for root in mounted):
             plan += ["--symlink", target, str(link)]

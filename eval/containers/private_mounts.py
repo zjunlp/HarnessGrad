@@ -24,6 +24,9 @@ def reject_visible(plan, private_paths):
             i += 2
         elif flag == '--symlink':
             i += 3
+        elif flag == '--dir':
+            # Creating a directory does not cover an earlier bind or hide its contents.
+            i += 2
         else:
             i += 1
     for private in private_paths:
