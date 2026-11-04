@@ -27,7 +27,7 @@ def digest(value):
                                      allow_nan=False).encode()).hexdigest()
 
 
-RUNTIME_FILESYSTEM_SCHEMA = 'harnessgrad-runtime-source-filesystem-v1'
+RUNTIME_FILESYSTEM_SCHEMA = 'harnessgrad-runtime-source-filesystem-v2'
 FILESYSTEM_SCHEMA = 'harnessgrad-owned-source-filesystem-v1'
 
 
@@ -38,36 +38,93 @@ def valid_filesystem(value):
             and type(value['entries']) is int and value['entries'] > 0)
 
 
+def canonical_path(value):
+    return (isinstance(value, str) and value.startswith('/') and not value.startswith('//')
+            and str(Path(value)) == value and str(Path(value).resolve()) == value)
+
+
+def valid_source_binding(value):
+    return (isinstance(value, dict) and set(value) == {'path', 'submission_sha256', 'manifest_sha256'}
+            and canonical_path(value['path'])
+            and all(isinstance(value[key], str) and re.fullmatch(r'[0-9a-f]{64}', value[key])
+                    for key in ('submission_sha256', 'manifest_sha256')))
+
+
+def valid_launch_entry(value):
+    return (isinstance(value, dict) and set(value) == {'python','python_sha256','driver','driver_sha256'}
+            and canonical_path(value['python']) and canonical_path(value['driver'])
+            and Path(value['driver']).name == 'driver.py'
+            and all(isinstance(value[key],str) and re.fullmatch(r'[0-9a-f]{64}',value[key])
+                    for key in ('python_sha256','driver_sha256')))
+
+
 def valid_runtime_commitment(value):
-    return (isinstance(value, dict) and set(value) == {'schema', 'base_runtime_sha256', 'filesystem'}
+    return (isinstance(value, dict) and set(value) == {'schema', 'base_runtime_sha256', 'filesystem', 'source', 'entry'}
             and value['schema'] == RUNTIME_FILESYSTEM_SCHEMA
             and isinstance(value['base_runtime_sha256'], str)
             and re.fullmatch(r'[0-9a-f]{64}', value['base_runtime_sha256']) is not None
-            and valid_filesystem(value['filesystem']))
+            and valid_filesystem(value['filesystem']) and valid_source_binding(value['source']) and valid_launch_entry(value['entry']))
 
 
 def runtime_commitment(runtime):
     """Public layered binding; private runtime environment values never leave here."""
     filesystem = runtime.get('harness_filesystem')
-    if not valid_filesystem(filesystem):
-        raise RecoveryError('runtime requires a normalized source filesystem identity')
+    source = runtime.get('harness_source')
+    entry = runtime.get('launch_entry')
+    if not valid_filesystem(filesystem) or not valid_source_binding(source) or not valid_launch_entry(entry):
+        raise RecoveryError('runtime requires canonical source and normalized filesystem identities')
     return {'schema': RUNTIME_FILESYSTEM_SCHEMA,
-            'base_runtime_sha256': digest({k: v for k, v in runtime.items() if k != 'harness_filesystem'}),
-            'filesystem': dict(filesystem)}
+            'base_runtime_sha256': digest({k: v for k, v in runtime.items() if k not in {'harness_filesystem', 'harness_source','launch_entry'}}),
+            'filesystem': dict(filesystem), 'source': dict(source), 'entry': dict(entry)}
 
 
-def _command_identity(command, flag):
-    if not isinstance(command, list) or any(not isinstance(value, str) for value in command):
-        return None
-    values = []
-    for index, value in enumerate(command):
-        if value == flag:
-            values.append(command[index + 1] if index + 1 < len(command) else None)
-        elif value.startswith(flag + '='):
-            values.append(value.split('=', 1)[1])
-    if len(values) != 1 or not isinstance(values[0], str) or not re.fullmatch(r'[0-9a-f]{64}', values[0]):
-        return None
-    return values[0]
+LAUNCH_VALUE_FLAGS = frozenset({'--dataset', '--harness-path', '--expected-harness-sha256',
+    '--expected-harness-filesystem-sha256', '--side', '--sampling', '--tasks', '--rounds',
+    '--trials', '--seed', '--jobs', '--improver', '--run-id', '--runs-root', '--work-root'})
+
+
+def launch_command_values(command):
+    """Exact formal-v2 CLI grammar: no abbreviations, duplicates or extra switches."""
+    if (not isinstance(command, list) or len(command) < 2
+            or any(not isinstance(value, str) for value in command)
+            or not canonical_path(command[0]) or not canonical_path(command[1])
+            or Path(command[1]).name != 'driver.py'):
+        raise RecoveryError('invalid strict launch command prefix')
+    values = {}
+    index = 2
+    while index < len(command):
+        option, equals, value = command[index].partition('=')
+        if option in values:
+            raise RecoveryError('duplicate strict launch option')
+        if option == '--fail-on-incomplete' and not equals:
+            values[option] = True
+        elif option in LAUNCH_VALUE_FLAGS:
+            if not equals:
+                index += 1
+                if index >= len(command):
+                    raise RecoveryError('missing strict launch option value')
+                value = command[index]
+            if not value or (value.startswith('-') and not (option == '--seed' and re.fullmatch(r'-[0-9]+',value))):
+                raise RecoveryError('invalid strict launch option value')
+            values[option] = value
+        else:
+            raise RecoveryError('unknown or abbreviated strict launch option')
+        index += 1
+    if set(values) != LAUNCH_VALUE_FLAGS | {'--fail-on-incomplete'}:
+        raise RecoveryError('incomplete strict launch command')
+    return values
+
+
+def expected_launch_values(expected, selected, run_id, receipt, commitment):
+    budget = expected['budget']
+    return {'--dataset': 'appworld', '--harness-path': commitment['source']['path'],
+            '--expected-harness-sha256': expected['harness_sha256'],
+            '--expected-harness-filesystem-sha256': commitment['filesystem']['sha256'],
+            '--side': expected['side'], '--sampling': 'all', '--tasks': ','.join(selected),
+            '--rounds': '0', '--trials': str(budget['trials']), '--seed': str(budget['seed']),
+            '--jobs': str(budget['jobs']), '--improver': 'none', '--fail-on-incomplete': True,
+            '--run-id': run_id, '--runs-root': str(receipt / 'runs'),
+            '--work-root': str(Path('/tmp') / ('hg-' + run_id + '-work'))}
 
 
 def file_hash(path):
@@ -242,15 +299,24 @@ def read_attempt(pointer, expected, cohort, selection_sha256):
         filesystem = None
     else:
         filesystem = commitment['filesystem']
-    if (_command_identity(launch.get('command'), '--expected-harness-sha256') != expected['harness_sha256']
-            or filesystem is None
-            or _command_identity(launch.get('command'), '--expected-harness-filesystem-sha256') != filesystem['sha256']):
-        result['issues'].append('command_filesystem_identity_missing_or_mismatched')
     selected = launch.get('selected')
     if not isinstance(selected, list) or not selected or len(selected) != len(set(selected)) or set(selected) - set(cohort):
         result['issues'].append('selected_tasks_missing_or_outside_cohort')
         selected = []
     result['selected'] = selected
+    if filesystem is not None:
+        if (commitment['source']['submission_sha256'] != expected['harness_sha256']
+                or commitment['source']['manifest_sha256'] != expected['manifest_sha256']):
+            result['issues'].append('committed_source_identity_mismatched')
+    try:
+        command = launch_command_values(launch.get('command'))
+        if filesystem is None or launch['command'][:2] != [commitment['entry']['python'], commitment['entry']['driver']]:
+            raise RecoveryError('launch interpreter/driver differs from reviewed commitment')
+        if (filesystem is None or not isinstance(launch.get('run_id'), str)
+                or command != expected_launch_values(expected, selected, launch['run_id'], receipt, commitment)):
+            raise RecoveryError('strict launch command does not match reviewed contract')
+    except (RecoveryError, OSError, ValueError):
+        result['issues'].append('strict_command_identity_missing_or_mismatched')
     run = _run_dir(receipt)
     if run is None:
         result['issues'].append('run_directory_missing')
@@ -264,7 +330,23 @@ def read_attempt(pointer, expected, cohort, selection_sha256):
         if (filesystem is None or not valid_filesystem(recorded_filesystem)
                 or recorded_filesystem != filesystem):
             result['issues'].append('runtime_filesystem_identity_missing_or_mismatched')
+        source_record = meta.get('harness_source') or {}
+        if filesystem is None or source_record.get('path') != commitment['source']['path']:
+            result['issues'].append('runtime_source_path_missing_or_mismatched')
         cfg = meta.get('config') or {}
+        run_cfg = cfg.get('run') or {}
+        required_run = {'sandbox': True, 'sampling': 'all', 'dataset': 'appworld',
+                        'harness': expected['harness'], 'run_id': launch.get('run_id'),
+                        'trials': expected['budget']['trials'], 'jobs': expected['budget']['jobs'],
+                        'runs_root': str(receipt/'runs'),
+                        'work_root': str(Path('/tmp')/('hg-'+str(launch.get('run_id'))+'-work'))}
+        if (any(run_cfg.get(key) != value for key,value in required_run.items())
+                or run_cfg.get('sandbox') is not True
+                or 'improver' not in meta or meta['improver'] is not None
+                or run_cfg.get('seed') != str(expected['budget']['seed'])
+                or any(type(run_cfg.get(key)) is not int for key in ('rounds','trials','jobs'))
+                or any(type(meta.get(key)) is not int for key in ('trials','jobs'))):
+            result['issues'].append('runtime_execution_contract_missing_or_mismatched')
         actual = {'model': {k: (cfg.get('agent') or {}).get(k) for k in ('backend', 'model', 'base_url')},
                   'seed': str((cfg.get('run') or {}).get('seed')), 'trials': meta.get('trials'),
                   'jobs': meta.get('jobs'), 'rounds': (cfg.get('run') or {}).get('rounds'),

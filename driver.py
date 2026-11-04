@@ -1195,6 +1195,24 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # `--config` / `--set` are expanded into the flags they name before the parser sees
     # them (`_expand_experiment_argv`); nothing else about the parse changes.
     expanded = _expand_experiment_argv(sys.argv[1:])
+    expanded = sys.argv[1:] if expanded is None else expanded
+    reviewed_flags = ('--expected-harness-sha256', '--expected-harness-filesystem-sha256')
+    strict_reviewed = any(value.startswith('--') and any(
+        option.startswith(value.split('=', 1)[0]) for option in reviewed_flags) for value in expanded)
+    if strict_reviewed:
+        # Legacy CLI retains argparse abbreviations/last-value behavior. A reviewed
+        # invocation cannot have hidden abbreviated or duplicate effective options.
+        ap.allow_abbrev = False
+        seen = set()
+        for value in expanded:
+            option = value.split('=', 1)[0]
+            action = ap._option_string_actions.get(option)
+            if action is not None:
+                if action.dest in seen:
+                    ap.error('reviewed source forbids duplicate argument: ' + option)
+                seen.add(action.dest)
+        if '--no-sandbox' in expanded:
+            ap.error('reviewed source requires the sandbox request; --no-sandbox is unsupported')
     args = ap.parse_args(expanded)
     explicit = set(vars(args)) & _SCENARIO_ARG_DEFAULTS.keys()
     for field, default in _SCENARIO_ARG_DEFAULTS.items():

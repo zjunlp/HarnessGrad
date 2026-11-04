@@ -89,13 +89,16 @@ def harness_inputs(name, bindings):
         raise RecoveryError('harness manifest name/role differs from selected harness')
     manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
     runtime = copy.deepcopy(runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(name)))
+    runtime['launch_entry'] = {'python': str(Path(sys.executable).resolve()),
+                             'python_sha256': runtime['python']['sha256'] if isinstance(runtime.get('python'), dict) else file_hash(Path(sys.executable)),
+                             'driver': str((ROOT/'driver.py').resolve()),
+                             'driver_sha256': file_hash(ROOT/'driver.py')}
     runtime['harness_filesystem'] = filesystem
     if source_identity(path) != before or filesystem_identity(path) != filesystem:
         raise RecoveryError('harness source changed while binding its identity')
-    if name in bindings.get('harness_sources', {}):
-        runtime['harness_source'] = {'path': str(path),
-                                     'submission_sha256': before['submission_sha256'],
-                                     'manifest_sha256': manifest_sha}
+    runtime['harness_source'] = {'path': str(path.resolve()),
+                                 'submission_sha256': before['submission_sha256'],
+                                 'manifest_sha256': manifest_sha}
     return path, manifest, before, manifest_sha, runtime
 
 
@@ -301,7 +304,7 @@ def command_for(identity, selected, receipt, bindings=None):
         filesystem_flags = ['--expected-harness-filesystem-sha256', runtime['harness_filesystem']['sha256']]
     else:
         path = harness_source(identity['harness'], {})
-    return [sys.executable, str(ROOT/'driver.py'), '--dataset', 'appworld',
+    return [str(Path(sys.executable).resolve()), str((ROOT/'driver.py').resolve()), '--dataset', 'appworld',
             '--harness-path', str(path),
             '--expected-harness-sha256', identity['harness_sha256'], *filesystem_flags,
             '--side', identity['side'], '--sampling', 'all', '--tasks', ','.join(selected),

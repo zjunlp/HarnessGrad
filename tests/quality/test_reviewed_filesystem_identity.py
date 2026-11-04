@@ -215,3 +215,29 @@ def test_strict_driver_uses_normalized_snapshot_and_records_filesystem(source,tm
     assert v.filesystem_identity(source)==filesystem
     assert (source/'__pycache__/ignored.pyc').read_bytes()==b'synthetic-cache'
     assert not (tmp_path/'work/synthetic-review/workspace/__pycache__').exists()
+
+
+@pytest.mark.parametrize('extra',[
+    ['--expected-harness-filesystem-sha='+'8'*64],
+    ['--expected-harness-sha='+'8'*64], ['--harness-p=/synthetic/other'],
+    ['--expected-harness-filesystem-sha256='+'8'*64], ['--harness-path=/synthetic/other'],
+    ['--dataset=demo'], ['--sampling=all'], ['--rounds=0'], ['--trials=1'],
+    ['--jobs=1'], ['--run-id=other'], ['--runs-root=/synthetic/runs'],
+    ['--work-root=/synthetic/work'], ['--no-sandbox'], ['--job=1'],
+])
+def test_actual_reviewed_driver_parser_rejects_abbreviations_and_duplicates(source,tmp_path,monkeypatch,extra):
+    monkeypatch.setattr(driver,'describe_model',lambda:pytest.fail('ambiguous argv reached model'))
+    monkeypatch.setattr(driver.datasets,'load_split',lambda *a,**k:pytest.fail('ambiguous argv reached tasks'))
+    arguments=argv(tmp_path,source,v.source_identity(source)['submission_sha256'],v.filesystem_identity(source)['sha256'])
+    monkeypatch.setattr(sys,'argv',arguments+extra)
+    with pytest.raises(SystemExit) as exc: driver._main({})
+    assert exc.value.code==2
+
+
+def test_actual_legacy_parser_preserves_abbreviation_behavior(tmp_path,monkeypatch):
+    marker=RuntimeError('legacy parser reached model')
+    monkeypatch.setattr(driver,'describe_model',lambda: (_ for _ in ()).throw(marker))
+    monkeypatch.setenv('HG_AGENT_BACKEND','mock')
+    monkeypatch.setattr(sys,'argv',['driver.py','--harness','loop','--datase','demo','--sampl','all',
+        '--rounds','0','--jobs','1','--runs-root',str(tmp_path/'runs'),'--work-root',str(tmp_path/'work')])
+    with pytest.raises(RuntimeError,match='legacy parser reached model'): driver._main({})

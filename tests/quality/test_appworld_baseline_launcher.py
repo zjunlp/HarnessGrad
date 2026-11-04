@@ -20,11 +20,14 @@ def write(path, value):
 
 SYNTHETIC_FILESYSTEM = {'schema': state.FILESYSTEM_SCHEMA, 'sha256': '9'*64, 'entries': 2}
 SYNTHETIC_RUNTIME = {'scope': 'synthetic fixture, no external execution', 'environment': {},
-                     'files': [], 'harness_filesystem': SYNTHETIC_FILESYSTEM}
+                     'files': [], 'harness_filesystem': SYNTHETIC_FILESYSTEM,
+                     'harness_source': {'path':'/synthetic/prepared','submission_sha256':'e'*64,'manifest_sha256':'f'*64},
+                     'launch_entry':{'python':str(Path(sys.executable).resolve()),'python_sha256':'6'*64,
+                                     'driver':str((launcher.ROOT/'driver.py').resolve()),'driver_sha256':'7'*64}}
 
 
 def mock_reviewed_inputs(identity):
-    return (launcher.ROOT/'base_harness'/identity['harness'], {},
+    return (Path(SYNTHETIC_RUNTIME['harness_source']['path']), {},
             {'submission_sha256': identity['harness_sha256']}, identity['manifest_sha256'],
             copy.deepcopy(SYNTHETIC_RUNTIME))
 
@@ -49,13 +52,20 @@ def selection(identity):
             'identities': {'miniagent:train': identity}}
 
 
-def metadata(identity, run_id):
+def metadata(identity, run_id, receipt=None):
+    receipt = receipt or Path('/synthetic/receipt')
     m, b = identity['model'], identity['budget']
     return {'run_id': run_id, 'dataset': 'appworld', 'trials': b['trials'], 'jobs': b['jobs'],
             'harness_source': {'submission_sha256': identity['harness_sha256'],
-                               'filesystem':copy.deepcopy(SYNTHETIC_FILESYSTEM)},
+                               'filesystem':copy.deepcopy(SYNTHETIC_FILESYSTEM),
+                               'path':SYNTHETIC_RUNTIME['harness_source']['path']},
+            'improver':None,
             'config': {'agent': {'backend': m['backend'], 'model': m['name'], 'base_url': m['endpoint']},
-                       'run': {'seed': str(b['seed']), 'rounds': 0, 'side': identity['side']}}}
+                       'run': {'seed': str(b['seed']), 'rounds': 0, 'side': identity['side'],
+                               'sandbox':True,'sampling':'all','dataset':'appworld','harness':identity['harness'],
+                               'trials':b['trials'],'jobs':b['jobs'],'run_id':run_id,
+                               'runs_root':str(receipt/'runs'),
+                               'work_root':str(Path('/tmp')/('hg-'+run_id+'-work'))}}}
 
 
 def task_files(run, tid, score=0.0, *, official=True, invalid=None, exit_code=0):
@@ -70,6 +80,16 @@ def task_files(run, tid, score=0.0, *, official=True, invalid=None, exit_code=0)
                          'source_split': 'train', 'metric': 'appworld.task_goal_completion'}})
 
 
+def fixture_command(identity, selected, receipt):
+    values=state.expected_launch_values(identity,selected,receipt.name,receipt,
+                                       state.runtime_commitment(SYNTHETIC_RUNTIME))
+    command=[str(Path(sys.executable).resolve()),str((launcher.ROOT/'driver.py').resolve())]
+    for key,value in values.items():
+        command.append(key)
+        if value is not True: command.append(value)
+    return command
+
+
 def attempt(tmp_path, identity, name, tids, *, selected=None):
     receipt = tmp_path/name
     run = receipt/'runs'/name
@@ -77,9 +97,8 @@ def attempt(tmp_path, identity, name, tids, *, selected=None):
     write(receipt/'launch.json', {'schema':'harnessgrad.appworld-launch.v2', 'selection_sha256':state.digest(frozen), 'run_id': name, 'selected': selected or ['a','b','c'],
                                  'measurement_identity': identity, 'measurement_identity_sha256': state.digest(identity),
                                  'runtime_commitment':state.runtime_commitment(SYNTHETIC_RUNTIME),
-                                 'command':['driver.py','--expected-harness-sha256',identity['harness_sha256'],
-                                            '--expected-harness-filesystem-sha256',SYNTHETIC_FILESYSTEM['sha256']]})
-    write(run/'run_meta.json', metadata(identity, name))
+                                 'command':fixture_command(identity,selected or ['a','b','c'],receipt)})
+    write(run/'run_meta.json', metadata(identity, name, receipt))
     for tid, score in tids.items(): task_files(run, tid, score)
     return {'harness': 'miniagent', 'pool': 'train', 'receipt': str(receipt)}, run
 
@@ -274,7 +293,7 @@ def test_two_interruptions_then_complete_through_campaign_launcher(tmp_path,monk
     def simulated_driver(cmd,actual,bindings,log,lock_fd):
         selected=cmd[cmd.index('--tasks')+1].split(','); starts.append(selected)
         run_id=cmd[cmd.index('--run-id')+1];run=Path(cmd[cmd.index('--runs-root')+1])/run_id
-        write(run/'run_meta.json',metadata(actual,run_id))
+        write(run/'run_meta.json',metadata(actual,run_id,run.parent.parent))
         # Actual evaluate/start/verdict/progress chain, no end-of-round verdicts.
         runner.evaluate(repo,[{'task_id':tid} for tid in selected],{},sandbox=False,
                         progress_dir=run,run_id=run_id)
@@ -321,7 +340,14 @@ def test_bound_native_settings_replace_stale_inherited_settings(monkeypatch,iden
     monkeypatch.setenv('HG_MINISWE_STEP_LIMIT','10')
     monkeypatch.setenv('HG_AGENT_BASE_URL','http://wrong')
     monkeypatch.setattr(launcher,'dataset_environment',lambda: {'HG_DATA_APPWORLD':'/synthetic/data'})
-    runtime={'environment':{}, 'harness_filesystem':launcher.filesystem_identity(launcher.ROOT/'base_harness'/identity['harness'])}; identity['runtime_sha256']=state.digest(state.runtime_commitment(runtime))
+    source=launcher.ROOT/'base_harness'/identity['harness']
+    runtime={'environment':{}, 'harness_filesystem':launcher.filesystem_identity(source),
+             'harness_source':{'path':str(source.resolve()),
+                               'submission_sha256':launcher.source_identity(source)['submission_sha256'],
+                               'manifest_sha256':state.file_hash(source/'harness.json')},
+             'launch_entry':{'python':str(Path(sys.executable).resolve()),'python_sha256':state.file_hash(Path(sys.executable)),
+                             'driver':str((launcher.ROOT/'driver.py').resolve()),'driver_sha256':state.file_hash(launcher.ROOT/'driver.py')}}
+    identity['runtime_sha256']=state.digest(state.runtime_commitment(runtime))
     monkeypatch.setattr(launcher,'runtime_binding',lambda *a:runtime)
     monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
     monkeypatch.setenv('HG_APPWORLD_STUDY_IDS','/host/study.csv')
@@ -379,6 +405,7 @@ def test_driver_inherits_attempt_lock(monkeypatch,identity,tmp_path):
 
 def test_current_identity_reads_actual_code_data_and_scorer_files(tmp_path,monkeypatch,identity):
     code=tmp_path/'code'; h=code/'base_harness/miniagent';h.mkdir(parents=True)
+    (code/'driver.py').write_text('# synthetic driver')
     write(h/'harness.json', {'name':'miniagent','version':'1','entrypoint':'agent.py','backend':'cli','env_kinds':['exec']})
     (h/'agent.py').write_text('print("synthetic")\n')
     verify=code/'data/datasets/appworld/verify';verify.mkdir(parents=True)
@@ -619,16 +646,18 @@ def test_recovery_requires_reviewed_filesystem_contract(tmp_path,identity,select
         launch['measurement_identity_sha256']=state.digest(launch['measurement_identity'])
     elif tamper=='commitment-hash': launch['runtime_commitment']['base_runtime_sha256']='8'*64
     elif tamper=='commitment-shape': launch['runtime_commitment']['unreviewed']='extra'
-    elif tamper=='no-fs-flag': del launch['command'][-2:]
+    elif tamper=='no-fs-flag':
+        index=launch['command'].index('--expected-harness-filesystem-sha256');del launch['command'][index:index+2]
     elif tamper=='duplicate-fs-flag': launch['command'].append('--expected-harness-filesystem-sha256='+'9'*64)
-    elif tamper=='different-fs-flag': launch['command'][-1]='8'*64
-    elif tamper=='no-source-flag': del launch['command'][1:3]
+    elif tamper=='different-fs-flag': launch['command'][launch['command'].index('--expected-harness-filesystem-sha256')+1]='8'*64
+    elif tamper=='no-source-flag':
+        index=launch['command'].index('--expected-harness-sha256');del launch['command'][index:index+2]
     elif tamper=='no-meta-fs': meta['harness_source'].pop('filesystem')
     elif tamper=='meta-fs-hash': meta['harness_source']['filesystem']['sha256']='8'*64
     elif tamper=='meta-fs-count': meta['harness_source']['filesystem']['entries']=True
     elif tamper=='meta-fs-shape': meta['harness_source']['filesystem']['extra']='not reviewed'
     else:
-        launch['command'][-1]='8'*64
+        launch['command'][launch['command'].index('--expected-harness-filesystem-sha256')+1]='8'*64
         launch['runtime_commitment']['filesystem']['sha256']='8'*64
         meta['harness_source']['filesystem']['sha256']='8'*64
     write(launch_path,launch);write(meta_path,meta)
@@ -648,3 +677,54 @@ def test_incomplete_old_attempt_without_runtime_or_run_is_unverified(tmp_path,id
     result=state.read_attempt(pointer,identity,['a','b','c'],state.digest(selection))
     assert result['identity_status']=='unverified'
     assert 'run_directory_missing' in result['issues']
+
+
+@pytest.mark.parametrize('tamper',['sandbox-false','sampling-other','harness-path-replaced',
+    'duplicate-harness-path','no-sandbox-argv','abbrev-fs','abbrev-source','abbrev-harness',
+    'duplicate-seed','different-tasks','different-side','different-runs-root','different-work-root',
+    'different-improver','unknown-config','committed-source-path','meta-source-relative','wrong-python','wrong-driver','entry-hash'])
+def test_strict_recovery_rejects_effective_command_or_metadata_drift(tmp_path,identity,selection,tamper):
+    pointer,run=attempt(tmp_path,identity,'appworld-strict-contract',{'a':1})
+    lp=Path(pointer['receipt'])/'launch.json';launch=state.read(lp)
+    mp=run/'run_meta.json';meta=state.read(mp)
+    if tamper=='wrong-python': launch['command'][0]='/synthetic/unreviewed-python'
+    elif tamper=='wrong-driver': launch['command'][1]='/synthetic/evil/driver.py'
+    elif tamper=='entry-hash': launch['runtime_commitment']['entry']['python_sha256']='8'*64
+    elif tamper=='sandbox-false': meta['config']['run']['sandbox']=False
+    elif tamper=='sampling-other': meta['config']['run']['sampling']='pilot_10pct'
+    elif tamper=='harness-path-replaced': meta['harness_source']['path']='/synthetic/other'
+    elif tamper=='duplicate-harness-path': launch['command']+=['--harness-path','/synthetic/other']
+    elif tamper=='no-sandbox-argv':
+        launch['command']+=['--no-sandbox'];meta['config']['run']['sandbox']=False
+    elif tamper.startswith('abbrev-'):
+        option={'abbrev-fs':'--expected-harness-filesystem-sha','abbrev-source':'--expected-harness-sha',
+                'abbrev-harness':'--harness-p'}[tamper]
+        launch['command']+=[option+'='+'8'*64]
+    elif tamper=='duplicate-seed': launch['command']+=['--seed=42']
+    elif tamper.startswith('different-'):
+        key,value={'different-tasks':('--tasks','a,b'), 'different-side':('--side','eval'),
+            'different-runs-root':('--runs-root','/synthetic/other-runs'),
+            'different-work-root':('--work-root','/synthetic/other-work'),
+            'different-improver':('--improver','other')}[tamper]
+        launch['command'][launch['command'].index(key)+1]=value
+    elif tamper=='unknown-config': launch['command']+=['--config','/synthetic/override.json']
+    elif tamper=='committed-source-path':
+        launch['runtime_commitment']['source']['path']='/synthetic/other'
+        launch['command'][launch['command'].index('--harness-path')+1]='/synthetic/other'
+        meta['harness_source']['path']='/synthetic/other'
+    else: meta['harness_source']['path']='relative/source'
+    write(lp,launch);write(mp,meta)
+    result=state.recover(selection,old_state(selection,[pointer]))
+    assert not result['execution_allowed']
+    assert result['attempt_evidence'][0]['identity_status']=='unverified'
+    assert result['coverage']['miniagent:train']['measured']==0
+
+
+def test_negative_reviewed_seed_roundtrips_strict_command_and_recovery(tmp_path,identity,selection):
+    identity['budget']['seed']=-7
+    state.validate_identity(identity)
+    pointer,run=attempt(tmp_path,identity,'appworld-negative-seed',{'a':1})
+    result=state.recover(selection,old_state(selection,[pointer]))
+    assert result['execution_allowed']
+    assert result['attempt_evidence'][0]['identity_status']=='matched'
+    assert result['coverage']['miniagent:train']['per_task']=={'a':1}

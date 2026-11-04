@@ -15,7 +15,7 @@ from tools import launch_appworld_harness_baselines as launcher
 
 @pytest.fixture
 def prepared(tmp_path, monkeypatch):
-    platform = tmp_path/'platform'; platform.mkdir()
+    platform = tmp_path/'platform'; platform.mkdir(); (platform/'driver.py').write_text('# synthetic never executed driver')
     source = tmp_path/'prepared'; source.mkdir()
     runtime = tmp_path/'runtime'; runtime.mkdir()
     cli = runtime/'cli.js'; cli.write_text('// synthetic runtime entry')
@@ -49,7 +49,7 @@ def test_prepared_candidate_binds_exact_path_source_manifest_and_runtime(prepare
     assert runtime['harness_source'] == {'path':str(source),
         'submission_sha256':source_id['submission_sha256'],'manifest_sha256':manifest_sha}
     assert manifest['runtime_paths'] == [str(source.parent/'runtime')]
-    assert not list(platform.iterdir()), 'preparation modified frozen platform'
+    assert [p.name for p in platform.iterdir()]==['driver.py'], 'preparation modified frozen platform'
     assert runtime['scope'].endswith('transitive closure not asserted')
 
 
@@ -123,7 +123,7 @@ def test_default_source_and_runtime_contract_remain_supported(prepared):
     target=platform/'base_harness/deepseek-harness';target.parent.mkdir();shutil.copytree(source,target)
     bindings.pop('harness_sources')
     path,_,_,_,runtime=launcher.harness_inputs('deepseek-harness',bindings)
-    assert path==target and 'harness_source' not in runtime
+    assert path==target and runtime['harness_source']['path']==str(target)
 
 
 def test_current_identity_uses_prepared_candidate_not_portable_platform_manifest(prepared,monkeypatch):
@@ -210,5 +210,5 @@ def test_launch_records_only_public_layered_commitment_not_runtime_secrets(prepa
     proof=plan['runtime_commitment']
     assert state.valid_runtime_commitment(proof)
     assert state.digest(proof)==identity['runtime_sha256']
-    assert set(proof)=={'schema','base_runtime_sha256','filesystem'}
+    assert set(proof)=={'schema','base_runtime_sha256','filesystem','source','entry'}
     assert set(plan)-{'runtime_commitment'} and 'runtime_binding' not in plan
