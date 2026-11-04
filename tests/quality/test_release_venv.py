@@ -35,14 +35,21 @@ def fresh_venv(request):
         assert python.is_symlink(), 'control must exercise normal symlink venv creation'
         store = directory / 'runtime-store'; store.mkdir()
         (store / 'private-other-runtime').write_text('not part of the Python runtime')
+        relative = request.param == 'relative-alias'
+        bridge = directory / 'aliases/deep/store-link'; bridge.parent.mkdir(parents=True)
+        bridge.symlink_to(os.path.relpath(store, bridge.parent) if relative else store,
+                          target_is_directory=True)
+        alias = directory / 'uv'
+        alias.symlink_to(os.path.relpath(bridge, alias.parent) if relative else bridge,
+                         target_is_directory=True)
+        version = store / 'python-selected'
+        base = Path(sys.base_prefix).resolve()
+        version.symlink_to(os.path.relpath(base, store) if relative else base,
+                           target_is_directory=True)
+        extra = directory / 'extra-runtime'; extra.mkdir()
+        (extra / 'marker.txt').write_text('explicit extra runtime')
+        (store / 'extra-alias').symlink_to(extra, target_is_directory=True)
         if request.param != 'direct':
-            relative = request.param == 'relative-alias'
-            alias = directory / 'uv'
-            alias.symlink_to(store.name if relative else store, target_is_directory=True)
-            version = store / 'python-selected'
-            base = Path(sys.base_prefix).resolve()
-            version.symlink_to(os.path.relpath(base, store) if relative else base,
-                               target_is_directory=True)
             executable = alias / version.name / Path(sys.executable).resolve().relative_to(base)
             python.unlink()
             python.symlink_to(executable)
@@ -72,7 +79,10 @@ def from_venv(python, script, *args):
         env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'})
 
 
-def test_fresh_venv_executes_with_own_dependency_and_readonly_runtime(fresh_venv, tmp_path):
+@pytest.mark.parametrize('mount', ['none', 'version-alias', 'physical-version-alias',
+                                  'store-alias', 'store', 'alias-bin', 'links-parent', 'extra-alias',
+                                  'version-and-store', 'store-and-version'])
+def test_fresh_venv_executes_with_own_dependency_and_readonly_runtime(fresh_venv, tmp_path, mount):
     python, prefix = fresh_venv
     if shutil.which('bwrap') is None:
         pytest.skip('bubblewrap is not provisioned')
@@ -81,7 +91,16 @@ def test_fresh_venv_executes_with_own_dependency_and_readonly_runtime(fresh_venv
     script = '''import json,sys
 from pathlib import Path
 from eval.containers import sandbox
-root,task,work=map(Path,sys.argv[1:])
+root,task,work=map(Path,sys.argv[1:4])
+placement=sys.argv[4]
+directory=Path(sys.prefix).parent
+paths={'none':(), 'version-alias':(directory/'uv/python-selected',),
+       'physical-version-alias':(directory/'runtime-store/python-selected',),
+       'store-alias':(directory/'uv',), 'store':(directory/'runtime-store',),
+       'alias-bin':(directory/'uv/python-selected/bin',), 'links-parent':(directory,),
+       'extra-alias':(directory/'uv/extra-alias',),
+       'version-and-store':(directory/'uv/python-selected',directory/'uv'),
+       'store-and-version':(directory/'uv',directory/'uv/python-selected')}
 code="""import json,os,pathlib,sys,hg_venv_marker
 p=pathlib.Path(hg_venv_marker.__file__)
 try:p.write_text('changed')
@@ -93,24 +112,96 @@ print(json.dumps({'prefix':sys.prefix,'base_prefix':sys.base_prefix,
                  'platform_visible':pathlib.Path(PLATFORM + '/driver.py').exists(),
                  'foreign_tmp_visible':pathlib.Path(FOREIGN).exists(),
                  'foreign_runtime_visible':pathlib.Path(SIBLING).exists(),
-                 'aliased_foreign_runtime_visible':pathlib.Path(ALIAS_SIBLING).exists()}))
+                 'aliased_foreign_runtime_visible':pathlib.Path(ALIAS_SIBLING).exists(),
+                 'extra_runtime_visible':pathlib.Path(EXTRA).is_file(),
+                 'declared_readonly':all(os.statvfs(p).f_flag & os.ST_RDONLY for p in DECLARED)}))
 """.replace('PLATFORM',repr(str(root))).replace('FOREIGN',repr(str(work.parent/'secret-other-run')))
 code=code.replace('ALIAS_SIBLING',repr(str(Path(sys.prefix).parent/'uv/private-other-runtime')))
 code=code.replace('SIBLING',repr(str(Path(sys.prefix).parent/'runtime-store/private-other-runtime')))
+code=code.replace('EXTRA',repr(str(directory/'uv/extra-alias/marker.txt')))
+code=code.replace('DECLARED',repr([str(p) for p in paths[placement]]))
 (work.parent/'secret-other-run').write_text('private other run')
 result=sandbox.run([sys.executable,'-I','-c',code],platform=root,work_root=work,
-    task_dir=task,repo=task,env={},timeout_s=20,cwd=task,network='none')
-print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':result.stderr}))
+    task_dir=task,repo=task,env={},timeout_s=20,cwd=task,network='none',runtime_paths=paths[placement])
+print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':result.stderr,
+                 'aliased':str(directory/'uv') in str(Path(sys.executable).readlink())}))
 '''
-    result = from_venv(python, script, ROOT, task, work)
+    result = from_venv(python, script, ROOT, task, work, mount)
     assert result.returncode == 0, result.stderr
     wrapped = json.loads(result.stdout)
     assert wrapped['code'] == 0, wrapped
     observed = json.loads(wrapped['stdout'])
+    aliased = wrapped['aliased']
+    store_alias = mount in ('store-alias', 'version-and-store', 'store-and-version')
     assert observed == {'prefix': str(prefix), 'base_prefix': sys.base_prefix,
         'marker': 'installed-only-in-fresh-venv', 'readonly': True, 'base_readonly': True,
         'platform_visible': False, 'foreign_tmp_visible': False,
-        'foreign_runtime_visible': False, 'aliased_foreign_runtime_visible': False}
+        'foreign_runtime_visible': mount in ('store', 'links-parent') or (aliased and store_alias),
+        'aliased_foreign_runtime_visible': store_alias or mount == 'links-parent' or (aliased and mount == 'store'),
+        'extra_runtime_visible': mount in ('links-parent', 'extra-alias'), 'declared_readonly': True}
+
+
+def test_explicit_runtime_alias_preserves_platform_hides_and_private_checks(fresh_venv, tmp_path):
+    python, prefix = fresh_venv
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not provisioned')
+    task = tmp_path / 'task'; task.mkdir()
+    work = tmp_path / 'work'; work.mkdir()
+    platform = prefix.parent / 'runtime-store/platform'; platform.mkdir()
+    (platform / 'driver.py').write_text('# hidden platform sentinel\n')
+    script = '''import json,sys
+from pathlib import Path
+from eval.containers import sandbox
+platform,task,work=map(Path,sys.argv[1:])
+directory=Path(sys.prefix).parent
+aliased=str(directory/'uv') in str(Path(sys.executable).readlink())
+runtime=directory/('uv' if aliased else 'runtime-store')
+code="import json; from pathlib import Path; print(json.dumps([Path(p).exists() for p in " + repr(
+    [str(platform/'driver.py'),str(directory/'uv/platform/driver.py')]) + "]))"
+options=dict(platform=platform,work_root=work,task_dir=task,repo=task,env={},runtime_paths=(runtime,))
+result=sandbox.run([sys.executable,'-I','-c',code],timeout_s=20,cwd=task,**options)
+try:
+    sandbox.command(['/bin/true'],private_paths=(directory/'runtime-store/private-other-runtime',),**options)
+except ValueError as exc:
+    private_rejected='visible through sandbox mount' in str(exc)
+else:
+    private_rejected=False
+print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':result.stderr,
+                 'private_rejected':private_rejected}))
+'''
+    try:
+        result = from_venv(python, script, platform, task, work)
+        assert result.returncode == 0, result.stderr
+        observed = json.loads(result.stdout)
+        assert observed['code'] == 0, observed
+        assert json.loads(observed['stdout']) == [False, False]
+        assert observed['private_rejected'] is True
+    finally:
+        (platform / 'driver.py').unlink()
+        platform.rmdir()
+
+
+@pytest.mark.parametrize('placement', ['child', 'parent'])
+def test_runtime_alias_cannot_project_hidden_storage_elsewhere(tmp_path, placement):
+    with tempfile.TemporaryDirectory(prefix='hg-runtime-private-alias-', dir=Path.home()) as directory:
+        root = Path(directory)
+        store = root / 'store'; store.mkdir()
+        platform = (root if placement == 'child' else store) / 'platform'; platform.mkdir()
+        (platform / 'driver.py').write_text('# private platform sentinel\n')
+        alias = root / 'deep/nested/alias'; alias.parent.mkdir(parents=True)
+        alias.symlink_to(store, target_is_directory=True)
+        # A parent bind turns the alias into a real directory. Its relative child
+        # link would then name a different namespace path than it names on the host.
+        if placement == 'child':
+            (store / 'child').symlink_to('../platform', target_is_directory=True)
+            paths = (alias, alias / 'child')
+        else:
+            paths = (alias,)
+        work = tmp_path / 'work'; work.mkdir()
+        task = tmp_path / 'task'; task.mkdir()
+        with pytest.raises(sandbox.SandboxUnavailable, match='would expose hidden storage'):
+            sandbox.command(['/bin/true'], platform=platform, work_root=work,
+                            task_dir=task, repo=task, env={}, runtime_paths=paths)
 
 
 def test_fresh_venv_passes_actual_driver_boundary_self_check(fresh_venv, tmp_path):

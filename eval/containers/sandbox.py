@@ -231,6 +231,42 @@ def _interpreter_symlinks(prefixes, *, platform, work_root, task_dir,
     return tuple(links.items())
 
 
+def _runtime_mount_target(path: Path, interpreter_links, mounts) -> Path:
+    """Follow projected interpreter links without changing other declared aliases.
+
+    A directory bind cannot target a symlink created earlier in the namespace.
+    Place that bind at the destination reached through our links instead; the
+    declared spelling stays accessible through the same links. Do not resolve
+    unrelated host aliases that the mount plan does not recreate. Earlier parent
+    binds also supply links, read from their sources at the projected location.
+    """
+    remaining = list(path.absolute().parts[1:])
+    current = Path('/')
+    followed = 0
+    while remaining:
+        part = remaining.pop(0)
+        if part == '..':
+            current = current.parent
+            continue
+        current = current / part
+        target = interpreter_links.get(current)
+        for source, destination in reversed(mounts):
+            if current.is_relative_to(destination):
+                entry = source / current.relative_to(destination)
+                target = (os.readlink(entry) if current != destination and entry.is_symlink()
+                          else None)
+                break
+        if target is None:
+            continue
+        followed += 1
+        if followed > 40:
+            raise SandboxUnavailable('runtime mount target has too many symbolic links')
+        target = Path(target)
+        remaining = list(target.parts[1:] if target.is_absolute() else target.parts) + remaining
+        current = Path('/') if target.is_absolute() else current.parent
+    return current
+
+
 def hidden_trees(work_root: Path, platform: Path) -> list[Path]:
     """Exactly which directories get covered by an empty tmpfs.
 
@@ -325,20 +361,14 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     if network == "none":
         plan += ["--unshare-net"]
 
-    for path in RUNTIME:
-        if Path(path).exists():
-            plan += ["--ro-bind", path, path]
-    for path in DNS:
-        if Path(path).exists():
-            plan += ["--ro-bind", path, path]
-
     prefixes = _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
-    for prefix in prefixes:
-        plan += ["--ro-bind", str(prefix), str(prefix)]
-    for link, target in _interpreter_symlinks(
-            prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
-            writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths):
-        plan += ["--symlink", target, str(link)]
+    runtime_mounts = [(Path(path), Path(path)) for path in (*RUNTIME, *DNS, *prefixes)
+                      if Path(path).exists()]
+    for source, target in runtime_mounts:
+        plan += ["--ro-bind", str(source), str(target)]
+    interpreter_links = dict(_interpreter_symlinks(
+        prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
+        writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths))
 
     # Trees the harness declares it needs, bound read-only.
     #
@@ -351,9 +381,24 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     # Bound **before** the hides, so a declaration cannot re-materialise something the
     # hides remove: the platform stays hidden even if a harness declares its path.
     for path in runtime_paths:
-        target = Path(path)
-        if target.exists():
-            plan += ["--ro-bind", str(target), str(target)]
+        source = Path(path)
+        if source.exists():
+            target = _runtime_mount_target(source, interpreter_links, runtime_mounts)
+            physical = source.resolve()
+            if target != physical and any(
+                    physical.is_relative_to(tree) or tree.is_relative_to(physical)
+                    for tree in hidden_trees(work_root, platform)):
+                raise SandboxUnavailable(
+                    f'runtime mount {source} would expose hidden storage through an alias at {target}')
+            plan += ["--ro-bind", str(source), str(target)]
+            runtime_mounts.append((source, target))
+
+    # An explicit parent bind already supplies its child symlinks. Recreating
+    # them would fail on the read-only tree; binding a directory onto an alias
+    # would also fail, so bind destinations above follow only the known links.
+    for link, target in interpreter_links.items():
+        if not any(link.is_relative_to(root) for _, root in runtime_mounts):
+            plan += ["--symlink", target, str(link)]
 
     # Paths that must survive the hides below. Bound twice, exactly like `repo`: once
     # here so the mount target exists, and again after the hides, because **a tmpfs
