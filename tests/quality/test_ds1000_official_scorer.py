@@ -27,7 +27,9 @@ from pathlib import Path
 
 import pytest
 
-import data.datasets.ds1000 as dataset
+from conftest import optional_storage_import
+with optional_storage_import():
+    import data.datasets.ds1000 as dataset
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = dataset.SOURCE_DIR / "test_ds1000.py"

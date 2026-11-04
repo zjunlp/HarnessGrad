@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Execute a validated CI plan in one of three explicit states.
 
-selected: run only the named files with --fast; an empty selection runs nothing.
+selected: run exactly the named quality files, including slow files; empty runs nothing.
 deferred: a conservative full fallback, left for schedule/manual execution.
 full: run the entire suite, without --fast or --file filters.
 
@@ -50,9 +50,9 @@ def main() -> int:
 
     command = [sys.executable, str(RUNNER), "--jobs", str(args.jobs)]
     if state == "selected":
-        command.append("--fast")
+        # --fast is a discovery convenience, not permission to prune an explicit plan.
         for name in suite:
-            command += ["--file", name]
+            command += ["--file", f"tests/quality/{name}"]
     print(f"state={state}; running:", " ".join(command), flush=True)
     if args.dry_run:
         return 0

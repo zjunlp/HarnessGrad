@@ -70,8 +70,9 @@ def test_the_suite_job_goes_through_the_lane_runner() -> None:
     text = _text()
     assert "tools/run_tests.py" in text, (
         "the suite must run through tools/run_tests.py")
-    assert "--fast" in text and "--jobs" in text, (
-        "the suite job must state both the depth and the concurrency it runs at")
+    assert "tools/run_selected.py --plan plan.json --jobs" in text, (
+        "the suite job must execute the validated plan with explicit concurrency")
+    assert "--fast" not in text, "CI must not silently prune explicitly planned slow tests"
 
 
 def test_actions_are_pinned_to_a_major_version() -> None:

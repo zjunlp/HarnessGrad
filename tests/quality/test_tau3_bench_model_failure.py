@@ -15,7 +15,10 @@ from test_shared_dataset_runtime import ROOT, harness
 
 @pytest.fixture
 def policy():
-    if not (dataset.DATASET_ROOT/'manifest.json').exists():
+    from conftest import optional_storage_import
+    with optional_storage_import():
+        payload_present = (dataset.DATASET_ROOT/'manifest.json').exists()
+    if not payload_present:
         pytest.skip('prepared tau3 payload required')
     return dataset.VERIFY['tau3_bench/airline/8']['model_failure_policy']
 
@@ -53,11 +56,10 @@ def test_recovered_service_fault_preserves_raw_success_and_archive(tmp_path, mon
     recovered_success_archive(tmp_path, monkeypatch, endpoint, policy=policy, status=status)
 
 
-@pytest.mark.skipif(not (dataset.DATASET_ROOT/'manifest.json').exists(), reason='prepared tau3 payload required')
 @pytest.mark.parametrize('status,handling,enabled', [
     (503, handling, enabled) for handling in ('sdk', 'wrapped', 'swallowed') for enabled in (False, True)
 ] + [(status, 'loop', True) for status in (429, 500, 503)])
-def test_agent_http_fault_with_healthy_official_environment(tmp_path, monkeypatch, endpoint, status, handling, enabled):
+def test_agent_http_fault_with_healthy_official_environment(tmp_path, monkeypatch, endpoint, policy, status, handling, enabled):
     url, statuses, requests = endpoint
     statuses[:] = [status]
     for role in ('AGENT', 'ENV', 'JUDGE'):

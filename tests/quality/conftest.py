@@ -26,6 +26,28 @@ os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def optional_storage_import():
+    """Explicit import/probe scope for tests requiring external dataset storage.
+
+    Never install a global collector catch: mixed source/synthetic test modules,
+    pytest plugin imports and collection hooks must keep normal failure semantics.
+    Call only around a known external-data import or existing payload skip probe.
+    """
+    from contextlib import contextmanager
+    from harnessgrad.paths import DataRootNotConfigured
+
+    @contextmanager
+    def scope():
+        try:
+            yield
+        except DataRootNotConfigured as exc:
+            if type(exc) is not DataRootNotConfigured:
+                raise
+            pytest.skip(str(exc), allow_module_level=True)
+
+    return scope()
+
+
 #: A well-formed blocker that is **not** a live registry entry. It exists so the blocker-tooling
 #: tests can exercise a real blocker without depending on how many the live registry happens to
 #: carry. That dependency kept breaking: the mutation tests were pinned to `jericho`, then to

@@ -10,7 +10,8 @@
 #
 #   report  advisory. The catalogue documents (DATASETS.md, the refusal declarations) and the
 #           part of the suite this change can reach, through `tools/ci_select.py` and
-#           `tools/run_tests.py --fast`. These depend on what the machine has -- optional
+#           `tools/run_tests.py` with exactly the selected files, including slow ones. These
+#           depend on what the machine has -- optional
 #           extras, provisioned datasets, a relay or a container runtime -- so a failure can
 #           mean "this runner is bare" rather than "this change is wrong". The job still runs
 #           them and still shows red; it may not fail the workflow, and it may not be quiet
@@ -152,7 +153,7 @@ jobs:
           - No provisioned dataset bytes: files that load a corpus without a fixture skip.
           - No agent or judge endpoint: model-facing smoke tests skip.
           - No docker image cache: container tasks that pull an image are slow or skip.
-          - Selected runs use `--fast`, dropping measured-slow files; nightly/manual full runs do not.
+          - Selected runs execute every planned file, including slow files; nightly/manual runs are full.
           The provisioned gate is the four-shard run in docs/release-validation.md.
           EOF
 

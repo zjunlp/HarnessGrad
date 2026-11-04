@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -33,15 +32,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "data" / "datasets" / "alfworld" / "lib"))
 
-DATA_ROOT = Path(os.environ.get("HG_DATA_ALFWORLD",
-                                "/mnt/20t/xubuqiang/datasets/alfworld"))
+from harnessgrad.paths import DataRootNotConfigured, dataset_root  # noqa: E402
+
+DATA_ROOT = dataset_root("alfworld")
 UPSTREAM = (DATA_ROOT / "_src" / "repo" / "alfworld" / "agents" / "eval"
             / "evaluate_dagger.py")
 LIB = ROOT / "data" / "datasets" / "alfworld" / "lib"
 CHECK = ROOT / "data" / "datasets" / "alfworld" / "verify" / "check.py"
-
-pytest.importorskip("textworld", reason="ALFWorld needs textworld")
-pytest.importorskip("alfworld", reason="ALFWorld needs the alfworld package")
 
 
 def official_game_points(won_per_step) -> float:
@@ -79,19 +76,23 @@ def _check_module():
     return module
 
 
-def _data_available() -> bool:
+def _require_storage():
     try:
-        import data.datasets.alfworld as alfworld  # noqa: F401
-        return bool(alfworld._RECORDS)
-    except Exception:  # noqa: BLE001
-        return False
+        DATA_ROOT.resolve()
+    except DataRootNotConfigured as exc:
+        pytest.skip(str(exc))
 
 
 @pytest.fixture(scope="module")
 def alfworld():
-    if not _data_available():
-        pytest.skip(f"no extracted ALFWorld data under {DATA_ROOT}")
+    _require_storage()
+    # Missing runtime dependencies apply only to real episodes, not reduction tests.
+    # Ordinary imports intentionally report unavailable/broken configured runtimes.
+    import textworld  # noqa: F401
+    import alfworld  # noqa: F401
     import data.datasets.alfworld as module
+    if not module._RECORDS:
+        pytest.skip(f"no extracted ALFWorld data under {DATA_ROOT}")
     return module
 
 
@@ -213,6 +214,7 @@ def test_the_copied_lines_are_still_verbatim_upstream():
     Skipped when the pinned checkout is absent -- this is a provenance check, and a
     machine without the checkout cannot make a claim about it either way.
     """
+    _require_storage()
     if not UPSTREAM.is_file():
         pytest.skip(f"no upstream checkout at {UPSTREAM}")
     source = UPSTREAM.read_text()

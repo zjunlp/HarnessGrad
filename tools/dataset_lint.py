@@ -361,9 +361,17 @@ def lint_oracle(module, schema: dict, result: Result) -> None:
 
 
 def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Result:
+    """Lint one adapter; explicit missing data/configuration is not a defect.
+
+    `require_data` remains accepted for caller compatibility. Neither mode may turn
+    an unexpected adapter exception into an unprovisioned result.
+    """
     result = Result(name)
     try:
         module = importlib.import_module(registry.module_name(name))
+    except DataRootNotConfigured as exc:
+        result.unprovisioned = str(exc)
+        return result
     except Exception as exc:  # noqa: BLE001 - a module that will not import is a finding
         result.error(f"will not import: {type(exc).__name__}: {exc}")
         return result
@@ -427,15 +435,32 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
     status = getattr(module, "provision_status", None)
     if callable(status):
         try:
-            if not status().get("present"):
-                result.unprovisioned = f"no data at {status().get('split_dir') or status().get('root')}"
+            # Readiness can validate all dataset/runtime digests. Use one snapshot,
+            # both to avoid repeating that work and to keep its diagnosis consistent.
+            snapshot = status()
+            if not isinstance(snapshot, dict) or not isinstance(snapshot.get("present"), bool):
+                result.error("provision_status() must return a dict with boolean `present`")
                 return result
+            if not snapshot["present"]:
+                location = snapshot.get("split_dir") or snapshot.get("root")
+                detail = snapshot.get("detail")
+                result.unprovisioned = (
+                    f"no data at {location}" if location else "data not provisioned")
+                if detail:
+                    result.unprovisioned += f": {detail}"
+                return result
+        except DataRootNotConfigured as exc:
+            result.unprovisioned = str(exc)
+            return result
         except Exception as exc:  # noqa: BLE001
             result.error(f"provision_status() raised {type(exc).__name__}: {exc}")
             return result
 
     try:
         tasks, scorable = registry.load(name)
+    except DataRootNotConfigured as exc:
+        result.unprovisioned = str(exc)
+        return result
     except ConfigMissing as exc:
         # **"还没配"不是"做错了"。** 一个 adapter 在构建 VERIFY 时要解析 judge 模型
         # （tau3_bench 就是这样），而 judge 是平台配置、不是数据集的一部分：没配时
@@ -443,10 +468,9 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
         result.unprovisioned = f"needs platform configuration: {exc}"
         return result
     except Exception as exc:  # noqa: BLE001
-        if require_data:
-            result.error(f"load() raised {type(exc).__name__}: {exc}")
-        else:
-            result.unprovisioned = f"{type(exc).__name__}: {exc}"
+        # Allowing absent data must not hide adapter defects (including ValueError,
+        # the base class of DataRootNotConfigured, which is handled explicitly above).
+        result.error(f"load() raised {type(exc).__name__}: {exc}")
         return result
 
     task_ids = lint_tasks(tasks, scorable, schema, result)
@@ -511,16 +535,19 @@ def main(argv=None) -> int:
         print(json.dumps([r.as_dict() for r in results], indent=1, sort_keys=True))
     else:
         for result in results:
-            if result.unprovisioned:
-                print(f"SKIP {result.name}: not provisioned ({result.unprovisioned})")
-            elif result.refused:
-                print(f"REFUSED {result.name}: {result.refused}")
-            elif result.ok:
-                print(f"ok   {result.name}")
-            else:
+            # Missing bytes never hide a source/contract defect already found above.
+            if not result.ok:
                 print(f"FAIL {result.name}")
                 for error in result.errors:
                     print(f"     - {error}")
+                if result.unprovisioned:
+                    print(f"     - not provisioned: {result.unprovisioned}")
+            elif result.unprovisioned:
+                print(f"SKIP {result.name}: not provisioned ({result.unprovisioned})")
+            elif result.refused:
+                print(f"REFUSED {result.name}: {result.refused}")
+            else:
+                print(f"ok   {result.name}")
     return 1 if any(not r.ok for r in results) else 0
 
 

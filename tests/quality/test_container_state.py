@@ -27,17 +27,21 @@ import pytest
 
 import eval.containers.container as container
 from data.scaffolds import registry
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 from policy_assertions import EXEC_POLICY_FIELDS, assert_policy_refusal
 
 ROOT = Path(__file__).resolve().parents[2]
-TB_ROOT = Path(os.environ.get("HG_DATA_TERMINAL_BENCH",
-                              "/mnt/20t/xubuqiang/datasets/terminal-bench"))
+TB_ROOT = dataset_root("terminal-bench")
 
 
 def _require_tb() -> None:
+    try:
+        available = TB_ROOT.is_dir()
+    except DataRootNotConfigured as exc:
+        pytest.skip(str(exc))
     if container.available() is None:
         pytest.skip("no docker daemon")
-    if not TB_ROOT.is_dir():
+    if not available:
         pytest.skip(f"no Terminal-Bench checkout at {TB_ROOT}")
 
 
@@ -189,7 +193,31 @@ def test_the_importer_attempts_a_mirror_and_reports_what_it_tried(tmp_path):
     assert "127.0.0.1:1" in said, f"the mirror that was tried is not named: {said}"
 
 
-def test_both_checkout_layouts_are_found(tmp_path):
+@pytest.fixture
+def synthetic_tb(tmp_path, monkeypatch):
+    """Import the eager adapter against a private task, never the host checkout."""
+    import importlib.util
+    from harnessgrad import paths
+
+    root = tmp_path / "synthetic-terminal-bench"
+    task = root / "seed-task"
+    task.mkdir(parents=True)
+    (task / "task.toml").write_text(
+        'schema_version = "1.1"\n[environment]\ndocker_image = "example/img:1"\n')
+    (task / "instruction.md").write_text("synthetic import seed\n")
+    (task / "tests").mkdir()
+    (task / "tests/test.sh").write_text("#!/bin/bash\n")
+    spec = importlib.util.spec_from_file_location(
+        "synthetic_terminal_bench", ROOT / "data/datasets/terminal_bench.py")
+    module = importlib.util.module_from_spec(spec)
+    with monkeypatch.context() as patch:
+        patch.setattr(paths, "dataset_root", lambda directory: root)
+        patch.setenv("HG_TB_TASKS", "")
+        spec.loader.exec_module(module)
+    return module
+
+
+def test_both_checkout_layouts_are_found(tmp_path, synthetic_tb):
     """Terminal-Bench 2 puts tasks at the repository root; **2.1** puts them under
     `tasks/`. Both are found, so `HG_DATA_TERMINAL_BENCH` can point at either.
 
@@ -197,9 +225,7 @@ def test_both_checkout_layouts_are_found(tmp_path):
     the property is "the adapter looks in both places", and that is testable with two
     directories and a `task.toml`.
     """
-    import importlib
-    import tomllib
-    tb = importlib.import_module("data.datasets.terminal_bench")
+    tb = synthetic_tb
 
     for layout, sub in (("root", ""), ("tasks/", "tasks")):
         root = tmp_path / layout.replace("/", "_")
@@ -230,11 +256,10 @@ def test_both_checkout_layouts_are_found(tmp_path):
             tb.ROOT = old
 
 
-def test_a_checkout_with_no_tasks_says_where_it_looked(tmp_path):
+def test_a_checkout_with_no_tasks_says_where_it_looked(tmp_path, synthetic_tb):
     """A wrong path is the most likely way to use this adapter, so the error has to name
     both places rather than only the one that was assumed."""
-    import importlib
-    tb = importlib.import_module("data.datasets.terminal_bench")
+    tb = synthetic_tb
     old = tb.ROOT
     try:
         tb.ROOT = tmp_path / "empty"

@@ -39,13 +39,17 @@ def test_lint_accepts_every_published_dataset(schema):
     checked, skipped = [], []
     for name in registry.published():
         result = dataset_lint.lint_dataset(name, schema)
+        # Missing bytes must not conceal a declaration defect found before the
+        # readiness gate; inspect errors first, exactly as the CLI does.
+        assert result.ok, f"{name}: " + "; ".join(result.errors)
         if result.unprovisioned:
             skipped.append(f"{name} ({result.unprovisioned})")
             continue
-        assert result.ok, f"{name}: " + "; ".join(result.errors)
         checked.append(name)
     assert checked, f"nothing was linted; skipped: {skipped}"
-    assert "alfworld" in checked
+    # This committed authored fixture is available without external storage.
+    # ALFWorld's presence is a machine fact, not a catalogue requirement.
+    assert "authored_example_fix_bug" in checked
 
 
 #: A module that breaks one rule per line, so a failure names its own cause. It is
