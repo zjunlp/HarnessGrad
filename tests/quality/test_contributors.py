@@ -1,19 +1,19 @@
 """Every credit names a real artefact, and the drawing is the record's own render.
 
-Two claims are guarded, because the reference page makes both.
+Two claims are guarded, because the README makes both.
 
 **The record.** `registry/leaderboards.json` credits one person with one artefact; the graph,
-the details page and the reference page block are all derived from it. A credit for a handle that is not
+the details page and the README block are all derived from it. A credit for a handle that is not
 in `people`, an artefact path that does not exist, a declared adapter with nobody credited, or a
 month that is not a month is refused here rather than drawn. The benchmark check is the strict
 one: `data/datasets/*.py` is the catalogue, so every declared adapter must be credited --
 a catalogue of 59 that credits 6 is a claim nobody can act on.
 
-**The drawings.** The SVG, `docs/contributors.md` and the reference page block are compared with a fresh
+**The drawings.** The SVG, `docs/contributors.md` and the README block are compared with a fresh
 render, so a record edited without re-rendering fails the build. This is the same discipline as
 `tools/datasets_doc.py --check`: a page derived from data is never typed beside it.
 
-The axis-table guard is separate: the reference page's benchmarks row lists every declared adapter by
+The axis-table guard is separate: the README's benchmarks row lists every declared adapter by
 name, and it is hand-written prose around one generated row of names, so a test reads it back.
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT))
 
 from tools import contributors  # noqa: E402
 
-REFERENCE = ROOT / "docs" / "readme-reference.md"
+README = ROOT / "README.md"
 RECORD = ROOT / "registry" / "leaderboards.json"
 
 
@@ -56,22 +56,12 @@ def test_three_people_and_every_one_has_a_credit() -> None:
     assert credited == people, "a person is listed with no credit or a credit has no person"
 
 
-def test_the_reference_block_is_the_record_rendered() -> None:
-    text = REFERENCE.read_text(encoding="utf-8")
+def test_the_readme_block_is_the_record_rendered() -> None:
+    text = README.read_text(encoding="utf-8")
     block = contributors._block(text, contributors.BEGIN, contributors.END)
-    assert block is not None, "the reference page has no contributor block"
+    assert block is not None, "the README has no contributor block"
     assert block == contributors.render_block(_record()), (
         "stale: run python3 tools/contributors.py --write")
-
-
-def test_reference_generation_and_refresh_workflow_target_the_same_page() -> None:
-    assert contributors.REFERENCE == REFERENCE
-    workflow = (ROOT / ".github/workflows/contributors.yml").read_text(encoding="utf-8")
-    assert workflow.count("docs/contributors.html docs/readme-reference.md") == 2
-    assert "docs/contributors.html README.md" not in workflow
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "docs/readme-reference.md" in readme
-    assert contributors.BEGIN not in readme
 
 
 def test_each_board_has_its_own_growth_curve() -> None:
@@ -134,7 +124,7 @@ def test_the_interactive_page_carries_the_record_and_the_controls() -> None:
 
 
 def test_avatars_are_cached_and_embedded_rather_than_linked() -> None:
-    """A reference page shows an SVG through an `<img>`, which may not load a remote resource.
+    """A README shows an SVG through an `<img>`, which may not load a remote resource.
 
     So the avatar has to be part of the file: the drawing embeds a data URI from
     `.github/assets/avatars/`, and every contributor has a cached image. The initial is drawn
@@ -166,9 +156,9 @@ def test_the_details_page_lists_every_entry_per_person() -> None:
 
 def test_the_benchmarks_row_lists_every_declared_adapter() -> None:
     """The axis table's benchmarks cell is the catalogue a reader can count."""
-    text = REFERENCE.read_text(encoding="utf-8")
+    text = README.read_text(encoding="utf-8")
     rows = [line for line in text.splitlines() if line.startswith("| **benchmarks** |")]
-    assert len(rows) == 1, "the reference page has no single benchmarks row"
+    assert len(rows) == 1, "the README has no single benchmarks row"
     row = rows[0]
     names = contributors.declared_benchmarks()
     for name in names:
