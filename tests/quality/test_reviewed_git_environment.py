@@ -27,11 +27,14 @@ def reviewed_env(home,system,monkeypatch):
     monkeypatch.setenv('GIT_TEMPLATE_DIR','/unreviewed/template')
     monkeypatch.setenv('GIT_CONFIG_COUNT','1');monkeypatch.setenv('GIT_CONFIG_KEY_0','core.hooksPath')
     monkeypatch.setenv('GIT_CONFIG_VALUE_0','/unreviewed/hooks')
-    runtime={'environment':{}}
-    monkeypatch.setattr(launcher,'runtime_binding',lambda *a:runtime)
+    runtime={'environment':{}, 'harness_filesystem':{
+        'schema':'harnessgrad-owned-source-filesystem-v1','sha256':'1'*64,'entries':1}}
+    monkeypatch.setattr(launcher,'harness_inputs',lambda *a:(ROOT/'base_harness/miniagent',{},
+                                                            {'submission_sha256':'2'*64},'3'*64,runtime))
     monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
     monkeypatch.setattr(launcher,'dataset_environment',lambda:{'HG_DATA_APPWORLD':'/synthetic/unused'})
-    identity={'harness':'miniagent','pool':'train','runtime_sha256':launcher.digest(runtime),
+    identity={'harness':'miniagent','pool':'train',
+              'runtime_sha256':launcher.digest(launcher.runtime_commitment(runtime)),
               'model':{'backend':'openai','name':'synthetic','endpoint':'http://127.0.0.1:1/v1'},
               'budget':{'output_tokens':10,'deadline_s':60,'request_timeout_s':10,'native_settings':{}}}
     env=launcher.execution_environment(identity,{'harness_runtimes':{'miniagent':{}}})
