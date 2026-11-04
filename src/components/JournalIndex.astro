@@ -1,0 +1,25 @@
+---
+import { getCollection } from 'astro:content';
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+const { section } = Astro.props as { section: 'news' | 'blog' };
+const title = section === 'news' ? 'News' : 'Blog';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const posts = (await getCollection('docs', ({ id, data }) => id.startsWith(`${section}/`) && !data.draft)).sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+const description = section === 'news' ? 'Announcements and milestones from HarnessGrad.' : 'Notes on harnesses, experiments, and learning how to work.';
+---
+<StarlightPage hasSidebar={false} frontmatter={{title, description, tableOfContents: false, editUrl: false, lastUpdated: false, pagination: false}}>
+  <div class="hg-journal not-content">
+    <p class="hg-journal-intro">{description}</p>
+    {posts.length ? <ol class="hg-post-list">{posts.map(post => <li>
+      <time datetime={new Date(post.data.date).toISOString()}>{new Date(post.data.date).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric', timeZone:'UTC'})}</time>
+      <div><h2><a href={`${base}/${post.id}/`}>{post.data.title}</a></h2>
+      <p>{post.data.description || post.body?.split(/\n\s*\n/)[0]?.replace(/\n/g, ' ')}</p>
+      <a class="hg-read" href={`${base}/${post.id}/`}>Read {section === 'news' ? 'announcement' : 'article'} <span aria-hidden="true">→</span></a></div>
+    </li>)}</ol> : <section class="hg-empty" aria-labelledby="empty-title">
+      <svg class="hg-notebook" width="164" height="134" viewBox="0 0 164 134" fill="none" aria-hidden="true"><path d="M22 110h124" stroke="var(--sl-color-gray-5)"/><rect x="38" y="18" width="84" height="92" rx="8" fill="var(--sl-color-accent-low)" stroke="currentColor" stroke-width="1.5"/><path d="M52 18v92M65 40h39M65 50h29M65 60h34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><g fill="var(--sl-color-accent-high)"><rect x="68" y="89" width="7" height="7" rx="2"/><rect x="78" y="82" width="7" height="14" rx="2"/><rect x="88" y="72" width="7" height="24" rx="2"/><rect x="98" y="57" width="7" height="39" rx="2"/></g><path d="m127 27 7-7m-4 16h10" stroke="var(--sl-color-accent-high)" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div><h2 id="empty-title">A notebook, ready for its first entry.</h2><p>No {section === 'blog' ? 'blog posts' : 'news announcements'} have been published yet. In the meantime, explore the documentation or catch up on project news.</p>
+      <div class="hg-empty-links"><a href={`${base}/getting-started/`}>Explore the docs <span aria-hidden="true">→</span></a><a href={`${base}/news/`}>Read the news <span aria-hidden="true">→</span></a></div></div>
+    </section>}
+    <footer class="hg-journal-footer"><span>HarnessGrad</span><a href={`${base}/${section}/rss.xml`}>{title} RSS <span aria-hidden="true">↗</span></a><a href={`${base}/contributing/`}>Contribute <span aria-hidden="true">→</span></a></footer>
+  </div>
+</StarlightPage>

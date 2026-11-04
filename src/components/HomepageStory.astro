@@ -1,158 +1,91 @@
 ---
+import LearningCycle from './LearningCycle.astro';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const docs = 'https://github.com/zjunlp/HarnessGrad/blob/main/docs';
 const modes = [
-  { name: 'Context', scope: 'Current interaction', changes: 'Working context' },
-  { name: 'Memory', scope: 'Across tasks', changes: 'Saved experience' },
-  { name: 'Skills', scope: 'Distilled reuse', changes: 'Reusable procedures' },
-  { name: 'Weights', scope: 'Training updates', changes: 'Model parameters' },
-  { name: 'Harness', scope: 'Across experiment rounds', changes: 'Tools & control flow' },
+  { name: 'Context', cadence: 'Within an interaction', detail: 'A few words change the next step.' },
+  { name: 'Memory', cadence: 'Across tasks', detail: 'Experience leaves a persistent trace.' },
+  { name: 'Skills', cadence: 'As experience accumulates', detail: 'Useful procedures become reusable.' },
+  { name: 'Weights', cadence: 'During training updates', detail: 'Learning changes model parameters.' },
+  { name: 'Harness', cadence: 'Between experiment rounds', detail: 'Feedback reshapes how the agent works.' },
 ];
 ---
+<section class="hero split" aria-labelledby="brand-heading">
+  <div>
+    <h1 id="brand-heading"><span class="brand-line">HarnessGrad:</span> Harness as A Continual Learner</h1>
+    <p class="lead">Keep the model fixed. Let the harness evolve.</p>
+    <p>Tools, context, and control flow shape what an agent can do. HarnessGrad turns environment feedback into experiments on that editable code.</p>
+    <a class="button" href={`${base}/getting-started/`}>Start an experiment <span aria-hidden="true">↗</span></a>
+  </div>
+  <figure class="agent-scene">
+    <svg viewBox="0 0 500 410" role="img" aria-labelledby="scene-title scene-desc">
+      <title id="scene-title">An agent is a harness plus a model, working within an environment.</title>
+      <desc id="scene-desc">An original little agent sits inside a teal adjustable scaffold. The model stays fixed while tools, context and control flow can change. Actions go to the environment and feedback returns.</desc>
+      <g class="scene-lines">
+        <path class="environment" d="M48 96 Q39 55 90 52 L415 49 Q459 52 454 99 L455 311 Q456 346 416 349 L82 352 Q43 352 46 310 Z"/>
+        <path class="ground" d="M21 365 Q139 355 239 365 T480 363"/>
+        <path class="soft-fill" d="M122 305 Q115 197 143 138 Q251 116 355 139 Q380 220 366 305 Q244 320 122 305 Z"/>
+        <path class="teal" d="M120 306 L126 143 Q125 130 142 130 L355 127 Q371 128 371 145 L376 306 M111 307 L139 307 M362 308 L389 308 M129 188 Q244 181 370 188"/>
+        <path class="teal" stroke-dasharray="5 7" d="M138 111 Q237 88 352 109 M337 99 L354 109 L338 117"/>
+        <g class="paper"><path d="M80 154 L145 151 L148 203 L129 200 L117 214 L116 201 L81 204 Z"/><path d="M93 168 L130 166 M94 180 L119 179"/></g>
+        <g class="paper"><path d="M352 214 Q369 206 393 211 L400 258 Q378 253 359 263 Z M359 223 L385 220 M363 234 L389 231 M366 246 L382 244"/></g>
+        <g class="little-agent">
+          <path class="white-fill" d="M201 196 Q197 184 213 182 L282 181 Q296 182 296 198 L299 247 Q298 261 283 262 L212 263 Q198 261 199 246 Z"/>
+          <path d="M213 210 Q230 201 283 208 L283 241 Q246 249 214 242 Z"/>
+          <path d="M246 181 L246 168"/><circle class="teal-fill" cx="246" cy="164" r="5"/>
+          <path d="M227 221 L227 227 M269 221 L269 227 M242 232 Q248 237 255 231 M219 265 L213 290 L233 291 M277 265 L283 290 L263 291 M197 229 Q175 228 170 211 M299 228 Q322 235 336 221"/>
+          <path d="M165 212 L172 202 L179 211"/>
+        </g>
+        <path d="M81 284 Q90 265 101 276 Q112 261 119 281 M399 315 Q404 294 419 291 Q422 304 404 309 M402 329 L404 307 M402 321 Q385 316 389 305 Q401 307 402 321"/>
+        <path class="teal" d="M180 329 Q242 347 310 328 M299 323 L311 328 L304 338"/>
+      </g>
+      <g class="svg-label"><text x="55" y="34">Environment</text><text x="151" y="82">tools · context · control flow</text><text x="226" y="313">model</text><text x="67" y="337">actions</text><text x="333" y="337">feedback</text></g>
+    </svg>
+    <figcaption><span>Agent = <strong>Harness</strong> + Model</span><span>A fixed model. A changeable way of working.</span></figcaption>
+  </figure>
+</section>
 
-<div class="home-story">
-  <section class="story-section opening" aria-labelledby="beyond-model">
-    <p class="eyebrow">Harness as a Continual Learner</p>
-    <h2 id="beyond-model">A capable model. A way to get things done.</h2>
-    <p>A model brings knowledge and reasoning. But an agent also needs code that chooses tools, builds context and turns decisions into actions. That code is its <strong>harness</strong>.</p>
-    <p>When an agent struggles, a different model is not the only thing to try. The way it works can change, too.</p>
+<section class="split learning" aria-labelledby="learning-heading">
+  <div class="section-copy">
+    <h2 id="learning-heading">Five ways to learn.<br />One overlooked learner.</h2>
+    <p>An agent can learn in its context, memories, skills, or weights. It can also change the harness that puts them to work.</p>
+    <p>HarnessGrad focuses on this last path: improving how an agent organizes tools, builds context, and acts in its environment.</p>
+    <p class="aside">These paths can work together. Their cadences overlap; this is a map of what changes, not a speed ranking.</p>
+  </div>
+  <figure class="pathways">
+    <ol>
+      {modes.map((mode, i) => <li class:list={{ selected: i === 4 }}>
+        <div class="lane-label"><h3>{mode.name}</h3><span>{mode.cadence}</span></div>
+        <svg viewBox="0 0 240 64" aria-hidden="true" class="lane-art">
+          <g class="scene-lines">
+            {i === 0 && <><path class="faint" d="M8 37 Q117 28 231 36"/><path class="white-fill" d="M21 15 L76 12 L78 42 L62 41 L51 51 L52 41 L22 43 Z M94 21 L145 23 L143 50 L95 48 Z M165 13 L211 15 L213 42 L198 42 L190 51 L189 42 L166 40 Z"/><path d="M32 25 L63 24 M33 33 L51 33 M105 33 L132 34 M176 25 L200 26"/></>}
+            {i === 1 && <><path class="faint" d="M10 40 Q42 13 73 33 T139 33 T227 33"/><path class="white-fill" d="M83 15 Q104 9 121 17 Q138 10 156 16 L158 53 Q138 47 121 54 Q102 47 84 53 Z M121 17 L121 54"/><path d="M92 25 L112 26 M92 34 L111 35 M131 25 L148 24 M131 34 L148 33"/><circle cx="26" cy="31" r="3"/><circle cx="206" cy="29" r="3"/></>}
+            {i === 2 && <><path class="faint" d="M14 39 L223 39"/><path class="white-fill" d="M26 27 L65 24 L69 50 L29 53 Z M88 19 L129 20 L129 49 L88 47 Z M157 13 L198 17 L194 46 L154 43 Z"/><path d="M39 33 L47 32 L48 43 L40 44 M100 28 L115 28 M107 28 L107 39 M166 28 L173 35 L187 23"/></>}
+            {i === 3 && <><path class="faint" d="M42 16 L102 17 L166 15 M42 16 L102 48 L166 15 M42 48 L102 17 L166 48 M42 48 L102 48 L166 48 M102 17 L205 32 M102 48 L205 32"/>{[[42,16],[42,48],[102,17],[102,48],[166,15],[166,48],[205,32]].map(([x,y])=><circle class="white-fill" cx={x} cy={y} r="5"/>)}</>}
+            {i === 4 && <><path d="M12 44 L17 18 L72 19 L76 46 M93 33 Q110 28 123 32 M115 25 L124 32 L116 39 M145 48 L142 11 L213 10 L217 48 M146 23 L213 23"/><path class="white-fill" d="M31 27 Q45 22 59 28 L59 44 L31 44 Z M164 29 Q178 24 192 30 L192 46 L164 46 Z"/><path d="M39 33 L39 36 M51 33 L51 36 M173 35 L173 38 M184 35 L184 38 M221 17 L229 12 M221 24 L232 24"/><circle class="teal-fill" cx="143" cy="11" r="3"/><circle class="teal-fill" cx="213" cy="10" r="3"/></>}
+          </g>
+        </svg>
+        <p class="sr-only">{mode.detail}</p>
+      </li>)}
+    </ol>
+    <figcaption>Different learning surfaces. The harness is ours to explore.</figcaption>
+  </figure>
+</section>
 
-    <figure class="learning-modes">
-      <figcaption>Five places an agent can change</figcaption>
-      <ul>
-        {modes.map(({ name, scope, changes }) => (
-          <li class:list={{ 'harness-mode': name === 'Harness' }}>
-            <strong>{name}</strong><span>{scope}</span><span class="mode-example">{changes}</span>
-          </li>
-        ))}
-      </ul>
-      <p class="note">These learning paths can be combined; their update cadences overlap. HarnessGrad focuses on changes between experiment rounds.</p>
-    </figure>
-  </section>
+<section class="integration" id="how-it-learns" aria-labelledby="integration-heading">
+  <div class="section-copy">
+    <h2 id="integration-heading">Your harness.<br />Its next experiment.</h2>
+    <p>Keep your harness’s execution logic. Connect it through an adapter, choose a supported environment, and declare what can change.</p>
+    <p>An improvement method proposes an edit. HarnessGrad runs the candidate, gathers feedback, and evaluates what happened.</p>
+    <a class="text-link" href="https://github.com/zjunlp/HarnessGrad/blob/main/docs/bring-your-own-harness.md">Read the integration guide <span aria-hidden="true">↗</span></a>
+  </div>
+  <LearningCycle />
+</section>
 
-  <section class="story-section" aria-labelledby="learn-in-environment">
-    <p class="eyebrow">The idea</p>
-    <h2 id="learn-in-environment">Keep the model fixed.<br />Improve how the agent works.</h2>
-    <p>HarnessGrad supports experiments that optimize an editable harness using feedback from an environment. The learning happens through that interaction—not in the model’s weights.</p>
-
-    <figure class="agent-diagram">
-      <div class="environment-heading"><strong>Environment</strong><span>Tasks · feedback · search boundaries</span></div>
-      <p class="equation">Agent = <span>Harness</span> + Model</p>
-      <div class="agent-parts">
-        <div class="harness-part"><h3>Harness</h3><p>Organizes behavior and search: tools, context and actions.</p><span class="part-label">Editable surface</span></div>
-        <div><h3>Model</h3><p>Provides priors: knowledge and reasoning for each decision.</p><span class="part-label">Fixed in these experiments</span></div>
-      </div>
-      <figcaption>The environment defines the problem and the feedback. The harness organizes the work. The model helps choose what to do.</figcaption>
-    </figure>
-  </section>
-
-  <section class="story-section" aria-labelledby="loop-heading">
-    <p class="eyebrow">How it works</p>
-    <h2 id="loop-heading">Experience. An edit. Another test.</h2>
-    <p>An improvement method proposes changes to the declared editable surface. HarnessGrad runs the candidates and records what happened.</p>
-    <figure class="loop-figure">
-      <ol class="experiment-loop">
-        <li><span class="step">01</span><h3>Run</h3><p>Try the harness on environment tasks.</p></li>
-        <li><span class="step">02</span><h3>Feedback</h3><p>Collect outcomes and permitted traces.</p></li>
-        <li><span class="step">03</span><h3>Edit</h3><p>Propose a candidate harness change.</p></li>
-        <li><span class="step">04</span><h3>Re-evaluate</h3><p>Measure the candidate, then repeat.</p></li>
-      </ol>
-      <figcaption><span aria-hidden="true">↳ </span>Back to the next run. Illustrative process—not a measured gain or a guarantee of improvement.</figcaption>
-    </figure>
-    <div class="adapter-note">
-      <h3>Bring the harness, not a rewrite.</h3>
-      <p>Keep your harness’s own execution logic. An adapter connects it through an entrypoint, a model/environment bridge and a declared editable surface. Choose a supported harness–environment pairing and validate the interface before running an experiment.</p>
-      <a href={`${docs}/bring-your-own-harness.md`}>Read the bring-your-own guide <span aria-hidden="true">↗</span></a>
-    </div>
-  </section>
-
-  <section class="story-section" aria-labelledby="evidence-heading">
-    <p class="eyebrow">Evidence before promises</p>
-    <h2 id="evidence-heading">A learning loop is a question.<br />The results are the answer.</h2>
-    <p>Continual harness learning is the research ambition. Today, HarnessGrad provides the machinery to run and measure harness-improvement experiments. Whether a change helps, transfers or preserves earlier capabilities must be tested—not assumed.</p>
-    <div class="evidence-links">
-      <a href={`${base}/benchmarks/appworld/`}><strong>AppWorld results <span aria-hidden="true">→</span></strong><span>Inspect measured runs and their conditions.</span></a>
-      <a href={`${base}/benchmarks/alfworld/`}><strong>ALFWorld results <span aria-hidden="true">→</span></strong><span>Follow the evidence, split by split.</span></a>
-    </div>
-    <p class="note">Model and harness identities, splits and comparison details live with the results. A result speaks for its recorded setup, not every agent or task.</p>
-  </section>
-
-  <section class="story-section closing" aria-labelledby="start-heading">
-    <p class="eyebrow">Start small</p>
-    <h2 id="start-heading">Give your harness a next experiment.</h2>
-    <p>Start with the local walkthrough. Bring a harness, explore an improvement method, or help make the measurements better.</p>
-    <nav class="story-actions" aria-label="Explore HarnessGrad">
-      <a class="primary-action" href={`${base}/getting-started/`}>Get started <span aria-hidden="true">→</span></a>
-      <a href="https://github.com/zjunlp/HarnessGrad">GitHub <span aria-hidden="true">↗</span></a>
-      <a href={`${base}/contributing/`}>Contribute <span aria-hidden="true">→</span></a>
-    </nav>
-  </section>
-</div>
-
-<style>
-  /* Scoped to this component: documentation and benchmark layouts stay untouched. */
-  .home-story { color: var(--sl-color-text); }
-  .home-story :is(p, h2, h3, figure, ul, ol, li, nav, div, a, span) { margin-block: 0; }
-  .story-section { padding-block: clamp(2.8rem, 6vw, 5rem); border-top: 1px solid var(--sl-color-hairline); }
-  .home-story .eyebrow { margin-bottom: 1rem; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sl-color-gray-2); }
-  .home-story h2 { padding: 0; margin-bottom: 1.3rem; font-family: var(--hg-font-display); font-size: clamp(1.9rem, 4vw, 2.75rem); font-weight: 500; letter-spacing: -0.025em; line-height: 1.14; text-wrap: balance; }
-  .home-story p { max-width: 42rem; line-height: 1.75; }
-  .home-story p + p { margin-top: 0.85rem; }
-  .home-story h3 { font-family: var(--sl-font); font-size: 1rem; font-weight: 600; line-height: 1.4; }
-  .home-story a { text-underline-offset: 0.22em; }
-  .home-story a:focus-visible { outline: 2px solid var(--sl-color-accent-high); outline-offset: 5px; }
-  .home-story .note, .home-story figcaption { color: var(--sl-color-gray-2); font-size: 0.8rem; line-height: 1.6; }
-  .learning-modes { margin-top: 2.2rem !important; }
-  .learning-modes figcaption { margin-bottom: 0.8rem; font-weight: 600; }
-  .learning-modes ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.7rem; }
-  .learning-modes li { padding-block: 0.75rem; border-top: 2px solid var(--sl-color-hairline); color: var(--sl-color-gray-2); }
-  .learning-modes strong, .learning-modes span { display: block; }
-  .learning-modes strong { font-size: 0.86rem; }
-  .learning-modes span { font-size: 0.72rem; line-height: 1.5; margin-top: 0.3rem; }
-  .learning-modes .harness-mode { color: var(--sl-color-accent-high); border-color: var(--sl-color-accent); }
-  .home-story .learning-modes .note { margin-top: 0.7rem; font-size: 0.73rem; }
-  .agent-diagram { margin-top: 2.2rem !important; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--sl-color-hairline); border-radius: 0.35rem; }
-  .environment-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem 1rem; font-size: 0.8rem; }
-  .environment-heading span { color: var(--sl-color-gray-2); }
-  .home-story .equation { margin: 1.8rem auto; text-align: center; font-family: var(--hg-font-display); font-size: clamp(1.4rem, 4vw, 2rem); line-height: 1.3; }
-  .equation span { color: var(--sl-color-accent-high); }
-  .agent-parts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-  .agent-parts > div { padding: 1.2rem; border: 1px solid var(--sl-color-hairline); border-radius: 0.2rem; }
-  .agent-parts .harness-part { border-color: var(--sl-color-accent); }
-  .harness-part h3 { color: var(--sl-color-accent-high); }
-  .agent-parts p { font-size: 0.86rem; margin-top: 0.5rem; }
-  .part-label { display: block; font-size: 0.7rem; color: var(--sl-color-gray-2); margin-top: 1rem !important; }
-  .agent-diagram figcaption { margin-top: 1.2rem; }
-  .loop-figure { margin-top: 2.2rem !important; }
-  .experiment-loop { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; padding: 0; border-block: 1px solid var(--sl-color-hairline); }
-  .experiment-loop li { padding: 1.25rem 1rem; position: relative; }
-  .experiment-loop li:first-child { padding-left: 0; }
-  .experiment-loop li + li { border-left: 1px solid var(--sl-color-hairline); }
-  .experiment-loop li:not(:last-child)::after { content: '→'; position: absolute; right: 0.65rem; top: 1.25rem; color: var(--sl-color-gray-2); }
-  .step { display: block; font-family: var(--sl-font-mono); font-size: 0.7rem; color: var(--sl-color-gray-2); margin-bottom: 1rem !important; }
-  .experiment-loop p { margin-top: 0.6rem; font-size: 0.8rem; line-height: 1.6; }
-  .loop-figure figcaption { margin-top: 0.8rem; }
-  .adapter-note { margin-top: 2.2rem !important; max-width: 42rem; }
-  .adapter-note p { margin-block: 0.6rem 0.7rem; font-size: 0.9rem; }
-  .adapter-note a { font-size: 0.85rem; }
-  .evidence-links { margin-block: 1.8rem 1rem !important; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-  .evidence-links a { display: block; padding-block: 1rem; border-block: 1px solid var(--sl-color-hairline); text-decoration: none; }
-  .evidence-links a:hover strong { text-decoration: underline; text-underline-offset: 0.22em; }
-  .evidence-links strong { display: block; color: var(--sl-color-text); font-size: 0.95rem; }
-  .evidence-links strong span { float: right; }
-  .evidence-links a > span { display: block; margin-top: 0.45rem; color: var(--sl-color-gray-2); font-size: 0.8rem; }
-  .story-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.3rem 1.7rem; margin-top: 1.8rem !important; font-size: 0.9rem; }
-  .story-actions .primary-action { background: var(--sl-color-text); color: var(--sl-color-bg); border: 1px solid var(--sl-color-text); border-radius: 0.25rem; padding: 0.7rem 1.1rem; text-decoration: none; }
-  .story-actions .primary-action:hover { background: var(--sl-color-bg); color: var(--sl-color-text); }
-  .closing { padding-bottom: 2rem; }
-  @media (max-width: 36rem) {
-    .learning-modes ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem 1rem; }
-    .learning-modes .harness-mode { grid-column: 1 / -1; }
-    .agent-parts, .evidence-links { grid-template-columns: 1fr; }
-    .experiment-loop { grid-template-columns: 1fr; }
-    .experiment-loop li:first-child { padding-left: 1rem; }
-    .experiment-loop li + li { border-left: 0; border-top: 1px solid var(--sl-color-hairline); }
-    .experiment-loop li:not(:last-child)::after { content: '↓'; right: 1rem; }
-    .evidence-links { gap: 0.8rem; }
-  }
-</style>
+<section class="evidence" aria-labelledby="evidence-heading">
+  <div><h2 id="evidence-heading">Let the evidence speak.</h2><p>Explore recorded runs and their conditions, or start a small experiment of your own.</p></div>
+  <nav aria-label="Results and next steps" class="evidence-actions">
+    <a href={`${base}/benchmarks/appworld/`}>AppWorld results <span aria-hidden="true">↗</span></a>
+    <a href={`${base}/benchmarks/alfworld/`}>ALFWorld results <span aria-hidden="true">↗</span></a>
+    <a class="button" href={`${base}/getting-started/`}>Get started <span aria-hidden="true">↗</span></a>
+  </nav>
+</section>

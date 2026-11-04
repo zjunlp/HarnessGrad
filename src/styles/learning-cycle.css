@@ -1,0 +1,43 @@
+/* A small workbench, not a scroll corridor. All four text beats remain visible. */
+.integration > .section-copy { max-width:760px; }
+.integration > .section-copy p { max-width:690px; }
+.learning-cycle { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); gap:80px; align-items:start; margin-top:48px; }
+.cycle-illustration { padding:20px 14px 24px; background:var(--tint); border-radius:10px; }
+.cycle-illustration svg { width:100%; }
+.cycle-controls:not([hidden]) { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; margin-bottom:18px; }
+.cycle-controls button { min-height:52px; padding:8px 3px; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--muted); font-size:12px; cursor:pointer; line-height:1.4; }
+.cycle-controls button span { display:block; font-family:'Chakra Petch',sans-serif; font-size:14px; }
+.cycle-controls button[aria-pressed='true'] { color:var(--accent); border-color:var(--accent); background:var(--paper); }
+.cycle-controls button:hover { color:var(--ink); background:var(--paper); }
+.cycle-labels { font-size:14px; }
+.cycle-scene { opacity:0; }
+[data-state='0'] .cycle-run,[data-state='1'] .cycle-feedback,[data-state='2'] .cycle-edit,[data-state='3'] .cycle-evaluate { opacity:1; }
+.cycle-illustration figcaption { display:grid; gap:10px; padding:15px 8px 0; text-align:center; }
+.cycle-illustration figcaption strong { font-family:'Chakra Petch',sans-serif; font-weight:500; font-size:16px; }
+.cycle-illustration figcaption > span { font-size:12px; line-height:1.6; color:var(--muted); }
+.cycle-steps { list-style:none; padding:0; }
+.cycle-steps li { padding:0 0 30px 22px; margin-bottom:28px; border-left:2px solid var(--line); scroll-margin-top:36px; }
+.cycle-steps li:last-child { margin-bottom:0; padding-bottom:0; }
+.cycle-steps li.current { border-color:var(--accent); }
+.beat-name { color:var(--accent); font-family:'Chakra Petch',sans-serif; font-size:14px; }
+.cycle-steps h3 { font-family:'Chakra Petch',sans-serif; font-size:25px; font-weight:500; line-height:1.25; margin-top:10px; text-wrap:balance; }
+.cycle-steps p { font-family:'EB Garamond',serif; font-size:21px; line-height:1.45; color:var(--muted); margin-top:12px; }
+.cycle-steps .beat-note { font-family:var(--sans); font-size:12px; line-height:1.6; margin-top:14px; }
+@media(min-width:900px) and (min-height:700px) and (prefers-reduced-motion:no-preference) {
+  .cycle-illustration { position:sticky; top:28px; }
+  .cycle-scene { transition:opacity 180ms ease-out; }
+}
+@media(max-width:1050px) { .learning-cycle { gap:40px; } }
+@media(max-width:899px) {
+  .learning-cycle { grid-template-columns:1fr; gap:36px; }
+  .cycle-illustration { width:min(480px,100%); justify-self:center; }
+  .cycle-steps { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+  .cycle-steps li { margin:0; padding-bottom:0; }
+}
+@media(max-width:600px) {
+  .cycle-steps { grid-template-columns:1fr; }
+  .learning-cycle { margin-top:32px; }
+  .cycle-illustration { padding:16px 8px 20px; }
+  .cycle-steps h3 { font-size:25px; }
+  .cycle-labels { font-size:18px; }
+}

@@ -1,0 +1,6 @@
+---
+// Native SkipLink points at this id. Make its heading programmatically
+// focusable without adding a tab stop, so keyboard readers land in the article.
+const { title } = Astro.locals.starlightRoute.entry.data;
+---
+<h1 id="_top" tabindex="-1">{title}</h1>

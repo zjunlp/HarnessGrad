@@ -13,7 +13,12 @@ export default defineConfig({
 	base: '/HarnessGrad-Hub',
 	integrations: [
 		starlight({
-			title: 'HarnessGrad: Harness as a Continual Learner',
+			title: 'HarnessGrad: Harness as A Continual Learner',
+			components: {
+				Header: './src/components/ContentHeader.astro',
+				PageTitle: './src/components/ContentTitle.astro',
+			},
+			routeMiddleware: './src/contentRoute.ts',
 			// Describe current capabilities plainly; continual learning is a research ambition.
 			description:
 				'Optimize the code around a fixed model using environment feedback. HarnessGrad runs and measures harness-improvement experiments.',
@@ -34,6 +39,7 @@ export default defineConfig({
   };
   try { if (localStorage.getItem(KEY) === '1') apply(true); } catch {}
   const mount = () => {
+    if (!root.hasAttribute('data-has-sidebar')) { apply(false); return; }
     const toggle = document.createElement('button');
     toggle.className = 'hg-sidebar-toggle';
     toggle.type = 'button';
@@ -43,6 +49,7 @@ export default defineConfig({
       const off = root.classList.contains('hg-sidebar-off');
       toggle.textContent = off ? '\\u203a' : '\\u2039';
       toggle.setAttribute('aria-expanded', String(!off));
+      toggle.setAttribute('aria-label', off ? 'Expand the sidebar' : 'Collapse the sidebar');
     };
     toggle.addEventListener('click', () => {
       const off = !root.classList.contains('hg-sidebar-off');
@@ -76,8 +83,8 @@ export default defineConfig({
 			// describes: posts for each live in `src/content/docs/<prefix>/`.
 			plugins: [
 				starlightBlog([
-					{ prefix: 'news', title: 'News', navigation: 'header-start' },
-					{ prefix: 'blog', title: 'Blog', navigation: 'header-end' },
+					{ prefix: 'news', title: 'News', navigation: 'none' },
+					{ prefix: 'blog', title: 'Blog', navigation: 'none' },
 				]),
 			],
 			sidebar: [

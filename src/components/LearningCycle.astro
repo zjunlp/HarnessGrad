@@ -1,0 +1,112 @@
+---
+const beats = [
+  { name: 'Run', title: 'Give the agent a task.', detail: 'Your entrypoint starts a run. A model and environment bridge connects reasoning to actions, using the tools and context your harness provides.' },
+  { name: 'Feedback', title: 'Bring the experience back.', detail: 'Collect environment feedback and the run trace. An improvement method examines this experience to decide what to try next.', note: 'A trace is material for the next experiment.' },
+  { name: 'Edit harness', title: 'Change the scaffold, not the model.', detail: 'The method proposes an edit within your declared editable surface: tools, context construction, or control flow. The model stays fixed.', note: 'Only the allowed code is up for revision.' },
+  { name: 'Evaluate', title: 'Test the change, then decide.', detail: 'Run the candidate under declared evaluation conditions. Compare the original and candidate evidence, then use what you learn to plan another round.', note: 'Keep the model fixed. Test the change, not the promise.' },
+];
+---
+<div class="learning-cycle" data-learning-cycle>
+  <figure class="cycle-illustration" data-state="3" id="cycle-illustration">
+    <div class="cycle-controls" role="group" aria-label="Choose an illustrated experiment step" hidden>
+      {beats.map((beat, i) => <button type="button" data-cycle-button={i} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls="cycle-illustration"><span aria-hidden="true">0{i + 1}</span>{beat.name}</button>)}
+    </div>
+    <svg viewBox="0 0 460 350" role="img" aria-labelledby="cycle-art-title cycle-art-desc">
+      <title id="cycle-art-title">One little agent, an evolving harness</title>
+      <desc id="cycle-art-desc">Illustrative experiment, not measured results. The same robot and model remain fixed. A run sends an action, feedback returns as a trace, the harness gains an edited tool shelf, and evaluation compares the original with the candidate.</desc>
+      <g class="scene-lines">
+        <path class="environment" d="M35 63 Q30 49 52 47 L409 49 Q430 48 425 70 L427 288 Q428 306 406 306 L51 308 Q32 308 34 287 Z"/>
+        <path class="ground" d="M15 313 Q113 305 231 314 T446 311"/>
+        <path class="soft-fill" d="M118 277 L120 109 Q232 90 340 109 L347 277 Q237 295 118 277 Z"/>
+        <path class="teal" d="M112 282 L119 112 Q118 100 132 101 L329 99 Q344 99 343 114 L349 282 M104 283 L130 283 M337 283 L360 283 M120 145 Q231 140 343 145"/>
+        <g class="cycle-scene cycle-run">
+          <path class="paper" d="M55 157 L116 153 L119 199 L100 198 L89 210 L88 199 L57 201 Z"/>
+          <path d="M67 168 L101 166 M68 179 L93 178"/>
+          <path class="teal" d="M299 214 Q356 216 393 184 M381 184 L395 181 L392 195"/>
+        </g>
+        <g class="cycle-scene cycle-feedback">
+          <path class="paper" d="M345 166 L399 162 L405 235 L351 241 Z"/>
+          <path d="M357 178 L386 175 M359 189 L390 186 M361 201 L379 199 M364 218 L390 214"/>
+          <path class="teal" d="M348 252 Q319 281 283 269 M291 261 L280 268 L288 277"/>
+          <path class="teal" stroke-dasharray="3 5" d="M123 171 Q139 157 161 164"/>
+        </g>
+        <g class="cycle-scene cycle-edit cycle-evaluate">
+          <path class="teal" d="M119 159 L151 157 L155 261 M120 243 L155 242 M302 159 L342 158 M301 159 L300 262 M302 242 L346 243"/>
+          <path class="paper" d="M96 168 L157 166 L158 203 L97 205 Z M305 168 L368 166 L369 202 L306 205 Z"/>
+          <path class="teal" d="M106 180 L120 179 M107 191 L145 189 M316 179 L328 187 L347 175 M317 195 L357 192"/>
+          <circle class="teal-fill" cx="119" cy="145" r="4"/><circle class="teal-fill" cx="343" cy="145" r="4"/>
+        </g>
+        <g class="cycle-scene cycle-edit">
+          <path class="paper" d="M338 251 L362 227 L373 238 L348 262 L336 265 Z M356 233 L367 244"/>
+          <path class="teal" d="M366 115 L375 105 M374 126 L388 125"/>
+        </g>
+        <g class="cycle-scene cycle-evaluate">
+          <path class="paper" d="M65 252 L145 250 L148 294 L67 296 Z M316 252 L396 250 L399 294 L318 296 Z"/>
+          <path d="M78 265 L131 264 M79 277 L119 276 M329 265 L381 264 M330 277 L369 276"/>
+          <path class="teal" d="M153 280 Q231 300 310 279 M300 274 L311 279 L302 287"/>
+        </g>
+        <!-- The robot is intentionally identical in every beat: only its harness changes. -->
+        <g class="little-agent" transform="translate(-17 -8)">
+          <path class="white-fill" d="M201 196 Q197 184 213 182 L282 181 Q296 182 296 198 L299 247 Q298 261 283 262 L212 263 Q198 261 199 246 Z"/>
+          <path d="M213 210 Q230 201 283 208 L283 241 Q246 249 214 242 Z M246 181 L246 168"/><circle class="teal-fill" cx="246" cy="164" r="5"/>
+          <path d="M227 221 L227 227 M269 221 L269 227 M242 232 Q248 237 255 231 M219 265 L213 290 L233 291 M277 265 L283 290 L263 291 M197 229 Q175 228 170 211 M299 228 Q322 235 336 221 M165 212 L172 202 L179 211"/>
+        </g>
+      </g>
+      <g class="svg-label cycle-labels">
+        <text x="36" y="31">Environment</text><text x="142" y="85">tools · context · control flow</text>
+        <text x="184" y="337">model stays fixed</text>
+        <g class="cycle-scene cycle-run"><text x="355" y="155">action</text></g>
+        <g class="cycle-scene cycle-feedback"><text x="350" y="149">run trace</text></g>
+        <g class="cycle-scene cycle-edit"><text x="57" y="227">context</text><text x="341" y="227">tools</text></g>
+        <g class="cycle-scene cycle-evaluate"><text x="70" y="239">original</text><text x="320" y="239">candidate</text></g>
+      </g>
+    </svg>
+    <figcaption><strong data-cycle-caption>Run → Feedback → Edit harness → Evaluate</strong><span>Illustrative cycle, not measured scores.<br />Same model throughout; no gain is assumed.</span></figcaption>
+  </figure>
+  <ol class="cycle-steps">
+    {beats.map((beat, i) => <li data-cycle-step={i} id={`experiment-step-${i + 1}`}>
+      <span class="beat-name"><span aria-hidden="true">0{i + 1} / </span>{beat.name}</span>
+      <h3>{beat.title}</h3><p>{beat.detail}</p>
+    </li>)}
+  </ol>
+</div>
+<script>
+  const cycle = document.querySelector<HTMLElement>('[data-learning-cycle]');
+  if (cycle) {
+    const figure = cycle.querySelector<HTMLElement>('.cycle-illustration')!;
+    const buttons = [...cycle.querySelectorAll<HTMLButtonElement>('[data-cycle-button]')];
+    const steps = [...cycle.querySelectorAll<HTMLElement>('[data-cycle-step]')];
+    const captions = ['01 / Run — give the agent a task.', '02 / Feedback — bring the experience back.', '03 / Edit harness — change the scaffold.', '04 / Evaluate — compare the evidence.'];
+    const select = (index: number) => {
+      figure.dataset.state = String(index);
+      buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
+      steps.forEach((step, i) => step.classList.toggle('current', i === index));
+      cycle.querySelector('[data-cycle-caption]')!.textContent = captions[index];
+    };
+    cycle.querySelector<HTMLElement>('.cycle-controls')!.hidden = false;
+    buttons.forEach((button, i) => button.addEventListener('click', () => select(i)));
+    select(0);
+    // Mobile and reduced-motion readers choose explicitly. No scroll listener or live region.
+    const desktop = window.matchMedia('(min-width: 900px) and (min-height: 700px)');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let observer: IntersectionObserver | undefined;
+    const visible = new Set<Element>();
+    const observe = () => {
+      observer?.disconnect();
+      visible.clear();
+      if (!desktop.matches || reduced.matches || !('IntersectionObserver' in window)) return;
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => entry.isIntersecting ? visible.add(entry.target) : visible.delete(entry.target));
+        const nearest = [...visible].sort((a, b) => Math.abs(a.getBoundingClientRect().top - innerHeight * .4) - Math.abs(b.getBoundingClientRect().top - innerHeight * .4))[0];
+        // Focusing a button can itself scroll the page. That must not undo a choice.
+        if (nearest && !cycle.querySelector('.cycle-controls')!.contains(document.activeElement)) {
+          select(Number((nearest as HTMLElement).dataset.cycleStep));
+        }
+      }, { rootMargin: '-20% 0px -45% 0px', threshold: 0 });
+      steps.forEach((step) => observer!.observe(step));
+    };
+    desktop.addEventListener('change', observe);
+    reduced.addEventListener('change', observe);
+    observe();
+  }
+</script>

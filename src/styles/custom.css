@@ -1,467 +1,143 @@
-/* ==========================================================================
-   HarnessGrad — design system
-
-   DIRECTION. A lab notebook, not a product launch. The platform is a measuring
-   instrument, so the page stays quiet and lets the numbers be the loud thing.
-   The concrete material this is drawn from: warm paper, dark ink, one clay
-   accent, hairline rules, wide margins.
-
-   THE DECISIONS, so they are not re-litigated in every component:
-     Type      a serif for display (editorial), the system sans for everything
-               else. No webfonts loaded: Google Fonts is not reliably reachable
-               from the networks this is read on, and a slow font swap costs
-               more than it buys.
-     Depth     hairlines instead of shadows, and no gradients anywhere. This is
-               the specific anti-pattern that makes generated UI look generated.
-     Colour    ONE accent, on well under 5% of the page. Everything else is the
-               warm neutral scale.
-     Space     the sections breathe; the text measure stays narrow.
-
-   Starlight declares its own tokens inside `@layer starlight.base`. These
-   overrides are deliberately UNLAYERED, because unlayered declarations beat
-   layered ones in the cascade -- so this file wins without needing to chase
-   Starlight's layer name or its selector specificity.
-   ========================================================================== */
-
-/* ---------------------------------------------------------------- type --- */
+/* Content companion to the approved homepage. Homepage imports neither this
+   file nor Starlight, so its content, layout and interaction remain independent.
+   Old hg-grid / hg-curve / hg-links landing furniture had no remaining callers. */
+@font-face { font-family:'Chakra Petch'; font-style:normal; font-weight:500; font-display:swap; src:url('/HarnessGrad-Hub/fonts/chakra-petch-500.ttf') format('truetype'); }
+@font-face { font-family:'Chakra Petch'; font-style:normal; font-weight:600; font-display:swap; src:url('/HarnessGrad-Hub/fonts/chakra-petch-600.ttf') format('truetype'); }
+@font-face { font-family:'EB Garamond'; font-style:normal; font-weight:400; font-display:swap; src:url('/HarnessGrad-Hub/fonts/eb-garamond-400.ttf') format('truetype'); }
 :root {
-  --hg-font-display: Charter, 'Bitstream Charter', 'Iowan Old Style', Georgia,
-    'Times New Roman', ui-serif, serif;
-  --sl-font: var(--sl-font-system);
-  --sl-font-mono: var(--sl-font-system-mono);
-  --sl-content-width: 46rem;
-  --sl-line-height: 1.7;
+  --hg-display:'Chakra Petch',sans-serif;
+  --hg-prose:'EB Garamond',Georgia,serif;
+  --sl-font:Arial,Helvetica,sans-serif;
+  --sl-font-mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+  --sl-content-width:47rem;
+  --sl-sidebar-width:17rem;
+  --sl-line-height:1.65;
+  --sl-nav-height:6rem;
+  --sl-color-white:#edf3ef;
+  --sl-color-gray-1:#e0e9e3;
+  --sl-color-gray-2:#b7c4bc;
+  --sl-color-gray-3:#a4b4aa;
+  --sl-color-gray-4:#708479;
+  --sl-color-gray-5:#3a4b42;
+  --sl-color-gray-6:#22302a;
+  --sl-color-black:#17201d;
+  --sl-color-accent-low:#22382e;
+  --sl-color-accent:#9dd0be;
+  --sl-color-accent-high:#9dd0be;
+  --sl-color-bg-nav:var(--sl-color-black);
+  --sl-color-bg-sidebar:var(--sl-color-black);
+  --sl-color-hairline:var(--sl-color-gray-5);
+  --sl-color-hairline-shade:var(--sl-color-gray-5);
 }
-
-/* ------------------------------------------------- warm scale, dark ------ */
-/* Starlight's default ramp is hsl(224, …) -- a cool blue-grey. Warming it is
-   most of what "premium" means here. */
-:root,
-::backdrop {
-  --sl-color-white: #fdfcf9;
-  --sl-color-gray-1: #f2f0e9;
-  --sl-color-gray-2: #a8a49b;
-  --sl-color-gray-3: #837f76;
-  --sl-color-gray-4: #58554f;
-  --sl-color-gray-5: #33312d;
-  --sl-color-gray-6: #1f1e1b;
-  --sl-color-black: #141412;
-
-  --sl-color-accent-low: #3a2419;
-  --sl-color-accent: #c4623d;
-  --sl-color-accent-high: #df8a68;
-
-  --sl-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --sl-shadow-md: 0 6px 18px rgb(0 0 0 / 0.35);
-  --sl-shadow-lg: 0 18px 40px rgb(0 0 0 / 0.45);
-  --sl-color-backdrop-overlay: rgb(20 20 18 / 0.72);
+:root[data-theme='light'] {
+  --sl-color-white:#252b29;
+  --sl-color-gray-1:#38423d;
+  --sl-color-gray-2:#59635e;
+  --sl-color-gray-3:#66726b;
+  --sl-color-gray-4:#8c9991;
+  --sl-color-gray-5:#dce3df;
+  --sl-color-gray-6:#edf5f1;
+  --sl-color-gray-7:#f7faf8;
+  --sl-color-black:#fff;
+  --sl-color-accent-low:#edf5f1;
+  --sl-color-accent:#2f6e62;
+  --sl-color-accent-high:#2f6e62;
 }
-
-/* ------------------------------------------------- warm scale, light ----- */
-:root[data-theme='light'],
-[data-theme='light'] ::backdrop {
-  --sl-color-white: #17170f;
-  --sl-color-gray-1: #26251f;
-  --sl-color-gray-2: #45433c;
-  --sl-color-gray-3: #6b6862;
-  --sl-color-gray-4: #8e8a82;
-  --sl-color-gray-5: #b5b1a7;
-  --sl-color-gray-6: #e6e3d9;
-  --sl-color-gray-7: #f4f2ea;
-  --sl-color-black: #faf9f5;
-
-  /* #a94e2e on #faf9f5 is 5.2:1 -- AA for body text, not just for large text. */
-  --sl-color-accent-high: #8c3e22;
-  --sl-color-accent: #a94e2e;
-  --sl-color-accent-low: #f0e2da;
-
-  --sl-shadow-sm: 0 1px 2px rgb(23 23 15 / 0.05);
-  --sl-shadow-md: 0 6px 16px rgb(23 23 15 / 0.06);
-  --sl-shadow-lg: 0 18px 36px rgb(23 23 15 / 0.09);
-  --sl-color-backdrop-overlay: rgb(70 68 60 / 0.5);
+::selection { background:var(--sl-color-accent-low); color:var(--sl-color-white); }
+a { text-underline-offset:.2em; }
+:focus-visible { outline:2px solid var(--sl-color-accent-high); outline-offset:4px; }
+/* Short wordmark, useful nav, and native search/theme. Menu remains owned by
+   PageFrame so Starlight's popover, keyboard and focus management stay intact. */
+.hg-header { height:100%; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:2rem; max-width:1440px; margin-inline:auto; }
+.hg-wordmark { display:inline-flex; align-items:center; gap:10px; font:600 21px var(--hg-display); letter-spacing:-.04em; text-decoration:none; color:var(--sl-color-white); white-space:nowrap; }
+.hg-wordmark svg { color:var(--sl-color-accent-high); flex-shrink:0; }
+.hg-nav { display:flex; justify-content:center; gap:1.7rem; font:13px var(--sl-font); }
+.hg-nav a { min-height:44px; display:inline-flex; align-items:center; text-decoration:none; color:var(--sl-color-gray-2); border-bottom:2px solid transparent; }
+.hg-nav a:hover, .hg-nav a[aria-current] { color:var(--sl-color-accent-high); border-bottom-color:var(--sl-color-accent-high); }
+.hg-tools { display:flex; align-items:center; gap:.75rem; }
+.hg-tools site-search button { width:8.5rem; border-radius:6px; background:transparent; box-shadow:none; }
+.hg-tools starlight-theme-select { font-size:12px; }
+.sidebar-content { font-size:14px; }
+.sidebar-content a[aria-current='page'], .sidebar-content a[aria-current='page']:hover { background:var(--sl-color-accent-low); color:var(--sl-color-accent-high); box-shadow:inset 2px 0 var(--sl-color-accent-high); }
+.sidebar-content .top-level > li { margin-block-end:1.15rem; }
+.right-sidebar { font-size:13px; }
+/* Display is technical, prose editorial. UI, data and code never inherit serif. */
+h1, h2, h3, h4, h5, h6, .sl-markdown-content :is(h1,h2,h3,h4,h5,h6) { font-family:var(--hg-display); font-weight:500; letter-spacing:-.025em; line-height:1.2; }
+h1#_top { font-size:clamp(2.25rem,4vw,3.4rem); font-weight:600; text-wrap:balance; max-width:22ch; }
+.content-panel:has(h1#_top) { padding-top:3.25rem; padding-bottom:2rem; border-bottom:1px solid var(--sl-color-hairline); }
+.sl-markdown-content { font-family:var(--hg-prose); font-size:22px; line-height:1.5; }
+.sl-markdown-content :is(h2,h3,h4) { margin-top:2.5rem; }
+.sl-markdown-content h2 { font-size:clamp(1.65rem,3vw,2rem); }
+.sl-markdown-content h3 { font-size:1.4rem; }
+.sl-markdown-content > :first-child { margin-top:0; }
+.sl-markdown-content :is(p,li) { overflow-wrap:anywhere; }
+.sl-markdown-content a { color:var(--sl-color-accent-high); }
+.sl-markdown-content :is(table, .expressive-code, pre, code, .not-content, .hg-console, .hg-splits, .hg-table, .hg-chart) { font-family:var(--sl-font); }
+.sl-markdown-content :is(table, .hg-console, .hg-splits) { font-size:14px; line-height:1.6; }
+.sl-markdown-content :is(pre, code) { font-family:var(--sl-font-mono); font-size:14px; }
+.sl-markdown-content table { display:block; max-width:100%; overflow-x:auto; }
+.sl-markdown-content blockquote { border-inline-start:3px solid var(--sl-color-accent-high); background:var(--sl-color-accent-low); padding:.7rem 1.2rem; }
+.expressive-code .frame.is-terminal:not(.has-title) .header { display:none; }
+.sl-blog-metadata { font-family:var(--sl-font); font-size:13px; color:var(--sl-color-gray-2); }
+.sl-blog-post-footer { font:14px var(--sl-font); }
+/* Journal index and article share the generous reading measure. */
+:root:not([data-has-sidebar]) { --sl-content-width:54rem; }
+.hg-journal { font-family:var(--sl-font); padding-bottom:1rem; }
+.hg-journal-intro { font:26px/1.4 var(--hg-prose); color:var(--sl-color-gray-2); max-width:32rem; margin:0 0 3rem; }
+.hg-post-list { list-style:none; padding:0; margin:0; }
+.hg-post-list > li { display:grid; grid-template-columns:9rem minmax(0,1fr); gap:2rem; padding-block:2rem 2.75rem; border-top:1px solid var(--sl-color-hairline); }
+.hg-post-list time { font-size:12px; color:var(--sl-color-gray-2); padding-top:.55rem; }
+.hg-post-list h2 { margin:0; font:500 clamp(1.7rem,3vw,2rem)/1.2 var(--hg-display); }
+.hg-post-list h2 a { color:var(--sl-color-white); text-decoration:none; }
+.hg-post-list h2 a:hover { color:var(--sl-color-accent-high); }
+.hg-post-list p { font:22px/1.5 var(--hg-prose); color:var(--sl-color-gray-2); margin:1rem 0 1.25rem; }
+.hg-read, .hg-empty-links a { font:14px/1.5 var(--sl-font); text-decoration:none; }
+.hg-read span, .hg-empty-links span { margin-left:.7rem; }
+.hg-read:hover, .hg-empty-links a:hover { text-decoration:underline; }
+.hg-empty { display:grid; grid-template-columns:164px minmax(0,1fr); gap:2rem; align-items:center; border-block:1px solid var(--sl-color-hairline); padding:2.75rem 0 3.25rem; }
+.hg-notebook { color:var(--sl-color-white); }
+.hg-empty h2 { margin:0; font:500 clamp(1.5rem,3vw,1.9rem)/1.25 var(--hg-display); }
+.hg-empty p { font:22px/1.5 var(--hg-prose); color:var(--sl-color-gray-2); margin:1rem 0 1.4rem; }
+.hg-empty-links { display:flex; flex-wrap:wrap; gap:1rem 2rem; }
+.hg-journal-footer { display:flex; flex-wrap:wrap; gap:1.5rem; border-top:1px solid var(--sl-color-hairline); padding-top:1.5rem; margin-top:3.5rem; font-size:12px; color:var(--sl-color-gray-2); }
+.hg-journal-footer span { margin-right:auto; font:500 16px var(--hg-display); color:var(--sl-color-white); }
+/* Optional docs-only sidebar handle. Preserve TOC width when collapsed. */
+.hg-sidebar-toggle { position:fixed; z-index:calc(var(--sl-z-index-menu) + 1); top:50%; left:calc(var(--sl-sidebar-width) - .8rem); width:1.6rem; height:2.75rem; padding:0; border:1px solid var(--sl-color-hairline); border-radius:6px; background:var(--sl-color-bg); color:var(--sl-color-accent-high); cursor:pointer; }
+html.hg-sidebar-off .hg-sidebar-toggle { left:0; }
+@media(min-width:50rem) {
+  html.hg-sidebar-off { --sl-sidebar-width:0rem; --sl-content-inline-start:0rem; }
+  html.hg-sidebar-off .sidebar-pane { display:none; }
+  html.hg-sidebar-off[data-has-sidebar] .main-pane { --sl-content-margin-inline:auto; }
+  html.hg-sidebar-off .main-pane .sl-container { margin-inline:auto; }
 }
-
-/* --------------------------------------------------- display headings --- */
-.hero h1,
-.sl-markdown-content h1,
-.sl-markdown-content h2 {
-  font-family: var(--hg-font-display);
-  font-weight: 600;
-  letter-spacing: -0.012em;
+@media(min-width:72rem) {
+  html.hg-sidebar-off { --__toc-width:17rem; }
+  html.hg-sidebar-off .right-sidebar-panel .sl-container { width:calc(var(--__toc-width) - 2 * var(--sl-sidebar-pad-x)); }
 }
-
-/* ------------------------------------------------------- whitespace ----- */
-/* One text column, then full-width objects. The hero is the only place the page
-   is narrow, and it should read as deliberately narrow -- so the title and the
-   tagline share one measure and there is no third, wider paragraph under them.
-   Measured before this change: the three text blocks ended at 667 / 692 / 756
-   while everything below ended at 1260, and the lead paragraph (18px) was
-   *smaller* than the tagline above it (21.6px), which inverted the reading order. */
-.hero {
-  padding-block: 4.5rem 2rem;
+@media(max-width:65rem) {
+  .hg-header { gap:1rem; }
+  .hg-nav { gap:1rem; }
+  .hg-tools site-search button { width:2.75rem; height:2.75rem; justify-content:center; }
+  .hg-tools site-search button > :is(span,kbd) { display:none; }
 }
-.hero h1 {
-  font-size: clamp(2.5rem, 6vw, 3.75rem);
-  line-height: 1.06;
+@media(max-width:49.999rem) {
+  :root { --sl-nav-height:8rem; }
+  .hg-header { grid-template-columns:minmax(0,1fr) auto; grid-template-rows:44px 44px; gap:.25rem .6rem; align-content:center; }
+  .hg-wordmark { font-size:19px; }
+  .hg-wordmark svg { width:24px; }
+  .hg-tools { gap:.25rem; }
+  .hg-tools starlight-theme-select { display:none; } /* native Sidebar supplies the accessible theme select on docs mobile */
+  :root:not([data-has-sidebar]) .hg-tools starlight-theme-select { display:block; }
+  .hg-nav { grid-row:2; grid-column:1/-1; justify-content:flex-start; gap:clamp(.8rem,3.5vw,1.7rem); font-size:12px; }
+  :root[data-has-sidebar] .hg-header { margin-inline-end:-2.5rem; }
+  :root[data-has-sidebar] .hg-tools { padding-right:2.75rem; }
+  .sl-menu-button { top:1rem; background:transparent; color:var(--sl-color-white); box-shadow:none; border:1px solid var(--sl-color-hairline); }
+  .hg-sidebar-toggle { display:none; }
+  .content-panel:has(h1#_top) { padding-top:2rem; padding-bottom:1.5rem; }
+  .sl-markdown-content { font-size:21px; }
+  .hg-journal-intro { font-size:24px; margin-bottom:2rem; }
+  .hg-post-list > li { grid-template-columns:1fr; gap:.7rem; padding-block:1.5rem 2rem; }
+  .hg-empty { grid-template-columns:1fr; gap:1.5rem; padding-block:1.75rem 2.5rem; }
+  .hg-notebook { width:125px; height:auto; }
 }
-.hero .tagline {
-  font-size: clamp(1.1rem, 1.7vw, 1.45rem);
-  line-height: 1.5;
-  color: var(--sl-color-gray-2);
-  max-width: 36rem;
-  /* Without this the lead broke into four lines ending on the single word
-     "trusted." -- a widow in the most prominent paragraph on the site. */
-  text-wrap: balance;
-}
-.sl-markdown-content h2 {
-  margin-top: 4.5rem;
-  padding-top: 0;
-}
-.sl-markdown-content > :first-child {
-  margin-top: 0;
-}
-
-/* Landscape phones and up: a little more air on the splash. */
-@media (min-width: 50em) {
-  .hero {
-    padding-block: 6rem 2.5rem;
-  }
-}
-
-/* ==========================================================================
-   Landing-page furniture
-
-   These are the only components the front page has. They exist so the page can
-   be a page rather than a wall of prose: a rule-separated grid, and one piece of
-   real output.
-   ========================================================================== */
-
-/* Hairlines are drawn with explicit borders, not with a grid `gap` over a
-   coloured container. The gap version depended on every cell stretching to the
-   row height, and when they did not (measured: tops 888 / 904 / 904) the
-   container colour showed through as a stray band. */
-.hg-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: stretch;
-  margin: 3.5rem 0;
-  border: 1px solid var(--sl-color-hairline);
-}
-@media (min-width: 50em) {
-  .hg-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-.hg-cell {
-  display: flex;
-  flex-direction: column;
-  background: var(--sl-color-bg);
-  padding: 1.9rem 1.75rem 2.1rem;
-}
-.hg-cell + .hg-cell {
-  border-top: 1px solid var(--sl-color-hairline);
-}
-@media (min-width: 50em) {
-  .hg-cell + .hg-cell {
-    border-top: 0;
-    border-left: 1px solid var(--sl-color-hairline);
-  }
-}
-.hg-cell h3 {
-  margin: 0 0 0.6rem;
-  font-size: var(--sl-text-h4);
-  font-family: var(--sl-font);
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--sl-color-white);
-}
-.hg-cell p {
-  margin: 0;
-  font-size: var(--sl-text-sm);
-  line-height: 1.65;
-  color: var(--sl-color-gray-2);
-}
-/* A small index number, so the three read as ordered rather than as a list. */
-.hg-cell .hg-num {
-  display: block;
-  margin-bottom: 1.1rem;
-  font-family: var(--sl-font-mono);
-  font-size: var(--sl-text-xs);
-  letter-spacing: 0.14em;
-  color: var(--sl-color-accent);
-}
-
-/* Starlight's markdown flow spacing gives every sibling after the first a
-   `margin-top` (`--sl-content-gap-y`), and it reaches into our own components.
-   Measured on the grid: cells 2 and 3 carried `margin-top: 16px` while cell 1
-   carried 0, and 16 + 188.25 = 204.25 filled the grid area exactly -- so
-   `align-items: stretch` was working the whole time, and the misalignment was
-   the margin. That margin was also what let the old container colour show
-   through as a band. Reset it inside anything we lay out ourselves. */
-.hg-grid > *,
-.hg-links > *,
-.hg-curve > * {
-  margin-top: 0;
-}
-
-/* The curve rows are the one place a narrow screen genuinely overflows, so the
-   track sizes step down rather than relying on horizontal scroll for the score. */
-.hg-curve-row {
-  grid-template-columns: 5.5rem 4.5rem 1fr;
-  gap: 0.75rem;
-  font-size: var(--sl-text-xs);
-}
-@media (min-width: 50em) {
-  .hg-curve-row {
-    grid-template-columns: 7.5rem 5.5rem 1fr;
-    gap: 1.25rem;
-    font-size: var(--sl-text-sm);
-  }
-}
-
-/* The one detail worth remembering: the platform's actual output, which is a
-   curve. This is the only place the accent is allowed to be loud. */
-.hg-curve {
-  margin: 3.5rem 0 0.75rem;
-  border: 1px solid var(--sl-color-hairline);
-  background: var(--sl-color-bg-nav);
-  padding: 1.6rem 1.75rem;
-  overflow-x: auto;
-}
-.hg-curve-row {
-  display: grid;
-  align-items: baseline;
-  padding: 0.5rem 0;
-  font-family: var(--sl-font-mono);
-  color: var(--sl-color-gray-2);
-  white-space: nowrap;
-}
-.hg-curve-row + .hg-curve-row {
-  border-top: 1px solid var(--sl-color-hairline);
-}
-.hg-curve-row--lift {
-  color: var(--sl-color-white);
-}
-.hg-curve-row--lift .hg-curve-glyph,
-.hg-curve-row--lift .hg-curve-score {
-  color: var(--sl-color-accent);
-}
-.hg-curve-glyph {
-  font-size: 1.05em;
-  letter-spacing: 0.08em;
-}
-.hg-caption {
-  margin: 0 0 3.5rem;
-  font-size: var(--sl-text-sm);
-  color: var(--sl-color-gray-3);
-}
-
-/* Closing links. Same hairline discipline as the grid above, and the same
-   anti-fragile borders. */
-.hg-links {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: stretch;
-  margin-top: 1.5rem;
-  border: 1px solid var(--sl-color-hairline);
-}
-@media (min-width: 50em) {
-  .hg-links {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-.hg-links a {
-  display: block;
-  background: var(--sl-color-bg);
-  padding: 1.1rem 1.25rem;
-  font-size: var(--sl-text-sm);
-  color: var(--sl-color-text);
-  text-decoration: none;
-}
-.hg-links a + a {
-  border-top: 1px solid var(--sl-color-hairline);
-}
-@media (min-width: 50em) {
-  .hg-links a + a {
-    border-top: 0;
-    border-left: 1px solid var(--sl-color-hairline);
-  }
-}
-.hg-links a:hover {
-  color: var(--sl-color-accent);
-}
-.hg-links a span {
-  display: block;
-  margin-top: 0.2rem;
-  color: var(--sl-color-gray-3);
-  font-size: var(--sl-text-xs);
-}
-
-/* ==========================================================================
-   Chrome we do not want
-
-   Expressive Code classifies `bash` as a terminal language and draws a window
-   frame with a title bar. Our blocks have no title, so the bar is an empty strip
-   with three dots -- decoration with no information in it. Hide the bar where
-   there is no title to show; a titled block keeps its header.
-   ========================================================================== */
-.expressive-code .frame.is-terminal:not(.has-title) .header {
-  display: none;
-}
-
-/* The search field is a documentation affordance sitting on a page that is
-   deliberately trying not to read as documentation. Measured at 352px, it was
-   the widest object in the header -- wider than the site title and both section
-   links together -- so the eye landed on the search box first. */
-site-search button {
-  width: 13rem;
-}
-
-/* Starlight paints the current sidebar entry as a solid accent block: the loudest
-   object on the page, spent on the least important information. A tint plus a
-   left rule says the same thing at a lower volume. The rule is an inset shadow so
-   the item does not shift when it becomes current. */
-.sidebar-content a[aria-current='page'],
-.sidebar-content a[aria-current='page']:hover {
-  background: var(--sl-color-accent-low);
-  color: var(--sl-color-accent-high);
-  box-shadow: inset 2px 0 0 var(--sl-color-accent);
-}
-
-/* The blog plugin's header entry point is a filled accent pill by default. Same
-   reasoning: keep it findable, drop it to a hairline. */
-.sl-blog-header-link {
-  background: transparent;
-  color: var(--sl-color-text);
-  border: 1px solid var(--sl-color-hairline);
-  border-radius: 999px;
-  padding: 0.1rem 0.7rem;
-  font-size: var(--sl-text-xs);
-  text-decoration: none;
-}
-.sl-blog-header-link:hover {
-  border-color: var(--sl-color-accent);
-  color: var(--sl-color-accent);
-}
-
-
-
-/* ---- collapsible left sidebar ------------------------------------------------
-   The page is laid out from three variables: `--sl-sidebar-width` reserves the left column,
-   `--sl-content-inline-start` is the padding the content skips, and `--__toc-width` sizes the
-   "On this page" column (it falls back to the sidebar width). All three are entangled, so the
-   collapse is written per breakpoint:
-
-     * below 72rem Starlight has no right-hand table-of-contents column -- it renders a pill in
-       the content header instead -- so nothing may reserve space on the right;
-     * from 72rem up the column exists and must keep its width, or the panel squeezes to one
-       character per line.
-
-   Hiding the pane and zeroing the widths without this split leaves the reading column off to
-   the left with a gap the size of the missing panel. */
-@media (min-width: 50rem) {
-  html.hg-sidebar-off {
-    --sl-sidebar-width: 0rem;
-    --sl-content-inline-start: 0rem;
-  }
-  html.hg-sidebar-off .sidebar-pane {
-    display: none;
-  }
-  /* Starlight sets `auto 0` through [data-has-sidebar][data-has-toc] .main-pane, so an
-     equally-ranked selector loses; matching those two attributes keeps this rule later and
-     therefore winning. */
-  html.hg-sidebar-off[data-has-sidebar] .main-pane {
-    --sl-content-margin-inline: auto;
-  }
-}
-
-@media (min-width: 50rem) and (max-width: 71.999rem) {
-  html.hg-sidebar-off[data-has-sidebar] .main-pane {
-    width: 100%;
-  }
-}
-
-@media (min-width: 72rem) {
-  html.hg-sidebar-off {
-    --__toc-width: 18.75rem;
-  }
-  html.hg-sidebar-off .right-sidebar-panel .sl-container {
-    width: calc(var(--__toc-width) - 2 * var(--sl-sidebar-pad-x));
-  }
-}
-
-.hg-sidebar-toggle {
-  position: fixed;
-  z-index: calc(var(--sl-z-index-menu) + 1);
-  top: 50%;
-  transform: translateY(-50%);
-  left: calc(var(--sl-sidebar-width) - 0.85rem);
-  width: 0.9rem;
-  height: 2.6rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid var(--sl-color-hairline);
-  border-left: none;
-  border-radius: 0 0.45rem 0.45rem 0;
-  background: var(--sl-color-gray-7, #1b1b1f);
-  color: var(--sl-color-gray-3);
-  font-size: 0.7rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.hg-sidebar-toggle:hover,
-.hg-sidebar-toggle:focus-visible {
-  color: var(--sl-color-white);
-  border-color: var(--sl-color-gray-4);
-  outline: none;
-}
-
-html.hg-sidebar-off .hg-sidebar-toggle {
-  left: 0;
-  border-left: 1px solid var(--sl-color-hairline);
-  border-radius: 0 0.45rem 0.45rem 0;
-}
-
-@media (max-width: 49.999rem) {
-  .hg-sidebar-toggle {
-    display: none;
-  }
-}
-
-/* A splash page has no sidebar to collapse, so it gets no handle. */
-html[data-has-hero] .hg-sidebar-toggle {
-  display: none;
-}
-
-
-/* The table-of-contents panel sizes its inner container from `--sl-sidebar-width` too, so a
-   zero-width sidebar would squeeze "On this page" into one character per line. Pinning it to the
-   width the panel already has keeps the column identical in both states. */
-@media (min-width: 50rem) {
-  html.hg-sidebar-off .right-sidebar-panel .sl-container {
-    width: calc(var(--__toc-width) - 2 * var(--sl-sidebar-pad-x));
-  }
-}
-
-/* With the sidebar gone the reading column should sit centred in the space that is left, not
-   hug the left edge. Starlight sets `auto 0` (left margin flexible, right fixed) for the
-   sidebar+toc layout, which is what pulls the text to the left once the sidebar is collapsed. */
-@media (min-width: 50rem) {
-  html.hg-sidebar-off .main-pane {
-    --sl-content-margin-inline: auto;
-  }
-}
-
-/* The variable above is only read by one rule; another rule on the inner container sets
-   `margin-inline: 0`, which is what keeps the text hugging the left edge below 72rem (where
-   Starlight drops the table-of-contents column). Centring the container itself is what makes the
-   reading column sit in the middle of the freed space at every width. */
-@media (min-width: 50rem) {
-  html.hg-sidebar-off .main-pane .sl-container {
-    margin-inline: auto !important;
-  }
-}
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; } }
