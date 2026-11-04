@@ -21,16 +21,16 @@
             "path": "",
             "launcher": "methods/dsh-improver",
             "interpreter": "node",
-            "home": "/mnt/20t/xubuqiang/hg-work/dsh-improver-home",
+            "home": "",
             "api_key_env": "DEEPSEEK_API_KEY",
             "runtime": [
-                "/mnt/20t/xubuqiang/deepseek-harness",
-                "/mnt/20t/xubuqiang/hg-work/dsh-improver-home"
+                "{root}",
+                "{home}"
             ],
             "build_command": [
                 "git",
                 "-C",
-                "/mnt/20t/xubuqiang/deepseek-harness",
+                "{root}",
                 "rev-parse",
                 "--short",
                 "HEAD"
@@ -39,7 +39,8 @@
             "provider": "deepseek-official",
             "profile": "headless",
             "modified": false,
-            "note": "The harness's own agent CLI as the improver: `dsh --profile headless` runs one agentic task in the candidate tree with read/edit/bash tools, on `deepseek-flash` -- the same model the `deepseek` endpoint improver calls, so the two differ in *agency*, not in model. This is what the endpoint layer cannot do: `methods/editor.py` is one chat completion, so evidence must be inlined and is capped (6 traces, worst-first), while this reads `_harnessgrad/` itself and decides what matters. `argv_style` and `launcher` are how an entry says its CLI is not codex; `runtime` is what the method sandbox must bind; `build_command` identifies the *checkout* rather than the 2 KB launcher, because that repository is live and its build output can change underneath a run. Recorded as `version` on every point, e.g. `0.1.5+cdb43ac4`.\n\n`home` is a dsh home built for this role and nothing else: one provider, one model, no sessions, no third-party providers. It exists because borrowing the operator's `~/.dsh` made \"which model edits the harness\" depend on an ambient `DSH_HOME` that this tool environment happens to export -- inherited by the driver and by every method -- and because that home carries `llm-pi-ai` providers nobody chose for the improver. `methods/cli_improver.py` copies it into the round's workspace (dsh writes sessions under its home and the sandbox binds these trees read-only) and hands the improver a *restricted* environment: `api_key_env` is the one credential it gets, and every other secret-shaped variable is dropped, so \"no forbidden models, no other endpoints\" is a property of what the process holds rather than of it not trying."
+            "note": "The harness's own agent CLI as the improver: `dsh --profile headless` runs one agentic task in the candidate tree with read/edit/bash tools, on `deepseek-flash` -- the same model the `deepseek` endpoint improver calls, so the two differ in *agency*, not in model. This is what the endpoint layer cannot do: `methods/editor.py` is one chat completion, so evidence must be inlined and is capped (6 traces, worst-first), while this reads `_harnessgrad/` itself and decides what matters. `argv_style` and `launcher` are how an entry says its CLI is not codex; `runtime` is what the method sandbox must bind; `build_command` identifies the *checkout* rather than the 2 KB launcher, because that repository is live and its build output can change underneath a run. Recorded as `version` on every point, e.g. `0.1.5+cdb43ac4`.\n\n`home` is a dsh home built for this role and nothing else: one provider, one model, no sessions, no third-party providers. It exists because borrowing the operator's `~/.dsh` made \"which model edits the harness\" depend on an ambient `DSH_HOME` that this tool environment happens to export -- inherited by the driver and by every method -- and because that home carries `llm-pi-ai` providers nobody chose for the improver. `methods/cli_improver.py` copies it into the round's workspace (dsh writes sessions under its home and the sandbox binds these trees read-only) and hands the improver a *restricted* environment: `api_key_env` is the one credential it gets, and every other secret-shaped variable is dropped, so \"no forbidden models, no other endpoints\" is a property of what the process holds rather than of it not trying. Configure root/home in a local registry or set HG_DSH_ROOT and HG_IMPROVER_DSH_HOME. HG_DSH_NODE pins Node (otherwise the declared interpreter is resolved once). The resolver expands {root}/{home}, records CLI and Node hashes, and passes the resolved installation to the method.",
+            "root": ""
         },
         "local": {
             "name": "local",

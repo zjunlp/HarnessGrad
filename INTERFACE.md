@@ -1934,6 +1934,43 @@ what the improver will call. The resolver reads that file and records what it fi
 (`tools/improver.py:declared_model`). A fact the platform cannot see any other way is still a
 fact the platform is responsible for recording.
 
+##### DSH installation paths
+
+For the bundled `dsh` CLI improver, configure the built checkout with `HG_DSH_ROOT`
+and a prepared profile home with `HG_IMPROVER_DSH_HOME`, or set `root` and `home`
+in a local `HG_IMPROVER_CONFIG` registry. `HG_DSH_NODE` overrides the registry's
+`interpreter`; otherwise that interpreter is resolved once from `PATH`. There is
+no per-user installation fallback. The checkout must contain `apps/cli/lib/bin.js`,
+and the source, profile home and Node installation directory must neither contain
+nor lie within the hidden platform checkout. This includes the parent directory
+used for a Node executable outside a `bin/` layout.
+Runtime directories must also not expose an entire shared temporary root (`/tmp`,
+`/var/tmp` or the active `TMPDIR`), directly or through an ancestor or symlink.
+Use a dedicated installation directory; the improver can bind an independent
+subdirectory such as `/tmp/node-vXX`, but rejects a standalone `/tmp/node` whose
+inferred installation directory would be all of `/tmp`.
+
+The resolver expands `{root}` and `{home}` in this entry's `runtime` and
+`build_command` fields. An environment override also relocates the corresponding
+literal paths in older registries that identify the checkout with `git -C`.
+The same canonical checkout and Node executable are used for the version probe,
+build identity, runtime bindings and CLI execution. `identity.improver.dsh_runtime`
+records these paths and the CLI/Node file hashes; the restricted subprocess restores
+only the resolved installation, preserving its credential allowlist. The prepared
+profile home is copied into writable round state as before. This configuration is
+independent of the task Harness's `HG_AGENT_DSH` / `HG_AGENT_NODE` settings.
+
+The task Harness has its own [DSH preparation procedure](base_harness/deepseek-harness/README.md).
+`tools/configure_dsh_harness.py` validates the root-relative plugin targets and
+records local read-only bindings in the candidate's manifest before measurement.
+It requires isolated DSH and Node installations outside `/tmp`, system trees and
+the platform checkout. A system Node prefix such as `/usr` or `/usr/local` would
+cover the task image's own tools; a `/tmp` runtime would be hidden by the native
+sandbox. Unsupported paths are refused before the manifest is changed.
+`HG_AGENT_DSH_ROOT` selects its standard CLI; explicit CLI and Node overrides
+require matching prepared bindings. Opaque command wrappers retain ownership of
+their interpreter and profile setup instead of inheriting a host installation.
+
 ##### The default skill, and why it is not the method
 
 `harnessgrad/improvers/skill.md` is the platform's default: it says what a harness is, where the evidence

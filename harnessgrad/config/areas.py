@@ -147,6 +147,18 @@ class ImproverConfig:
         "HG_IMPROVER_CONFIG", None,
         "Local improver registry JSON; an explicitly configured missing file is an error.",
         kind="opt_raw")
+    dsh_root: str | None = _var(
+        "HG_DSH_ROOT", None,
+        "Built DSH checkout for the CLI improver; overrides its registry root.",
+        kind="opt_raw")
+    dsh_node: str | None = _var(
+        "HG_DSH_NODE", None,
+        "Node executable for the DSH improver; resolved once and passed to execution.",
+        kind="opt_raw")
+    dsh_home: str | None = _var(
+        "HG_IMPROVER_DSH_HOME", None,
+        "Prepared DSH improver home to copy into each round; overrides its registry home.",
+        kind="opt_raw")
     selection: str | None = _var(
         "HG_IMPROVER", None,
         "Name or path of the improver a method should drive, as its subprocess sees it.",

@@ -112,7 +112,7 @@ def _skill_sha() -> str | None:
 #: point, it is also what tells two improvers sharing one model apart.
 IMPROVER_IDENTITY_FIELDS = ("name", "kind", "argv_style", "base_url", "version", "sha256",
                             "model", "requested", "modified", "path",
-                            "provider", "profile", "wire", "api_key_env")
+                            "provider", "profile", "wire", "api_key_env", "dsh_runtime")
 
 
 def _improver_identity(improver: dict | None) -> dict:

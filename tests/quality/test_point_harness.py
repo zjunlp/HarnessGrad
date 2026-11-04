@@ -88,7 +88,9 @@ def test_a_clean_harness_exits_zero(tmp_path, capsys):
     assert "all resolve" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("harness", ["codex", "opencode", "deepseek-harness", "openclaw"])
+# DSH records local bindings through configure_dsh_harness.py; its unprepared
+# template and relocated installation flow are covered by test_dsh_runtime_paths.
+@pytest.mark.parametrize("harness", ["codex", "opencode", "openclaw"])
 def test_the_node_harnesses_in_this_repository_resolve(harness):
     """The check that would have caught a stale pin, run over the real manifests."""
     rows = point_harness.check(ROOT / "base_harness" / harness / "harness.json")

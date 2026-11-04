@@ -101,15 +101,23 @@ def _method_sandbox_plan(work: Path, argv: list[str], scratch: Path,
         if candidate.is_absolute() and candidate.is_file():
             visible.append(candidate.parent)
     # **The improver's trees**, bound read-only like the method's own program. Two
-    # guards: never a tree the platform lives in (that would undo the hide), and never a
+    # guards: never a tree overlapping the platform or exposing a shared temporary root,
+    # which would reveal private files or other tasks after the hides, and never a
     # tree the namespace already binds (`/usr`, the Python prefix), because a duplicate
     # mount is noise in a plan that is read by people.
     tools = []
+    platform = PLATFORM_ROOT.resolve()
     for entry in runtime:
         tree = Path(entry)
         if not tree.is_dir() or tree == Path("/"):
             continue
-        if tree == PLATFORM_ROOT or PLATFORM_ROOT in tree.parents:
+        # Check both the mount destination and its actual source. An ancestor
+        # re-exposes the platform after the hide; a symlink can expose its files
+        # under a different name even when the original path stays hidden.
+        if any(path.is_relative_to(platform) or platform.is_relative_to(path)
+               for path in (tree.absolute(), tree.resolve())):
+            continue
+        if sandbox.shared_temporary_root(tree) is not None:
             continue
         if any(tree == Path(r) or Path(r) in tree.parents for r in sandbox.RUNTIME):
             continue
@@ -178,6 +186,10 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     # with `llm-pi-ai` providers nobody chose for it.
     if (improver or {}).get("home"):
         env["HG_IMPROVER_DSH_HOME"] = str(improver["home"])
+    dsh_runtime = (improver or {}).get("dsh_runtime") or {}
+    if dsh_runtime:
+        env["HG_DSH_ROOT"] = str(dsh_runtime["root"])
+        env["HG_DSH_NODE"] = str(dsh_runtime["node"])
     env["HARNESSGRAD_WORKSPACE"] = str(work.resolve())
     existing = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = (f"{work.resolve()}{os.pathsep}{existing}"
