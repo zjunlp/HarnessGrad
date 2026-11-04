@@ -1,0 +1,69 @@
+# Codex Harness installation preparation
+
+The checked-in Harness is a portable adapter template. Codex itself is an external,
+read-only installation. Copy the Harness, then prepare that copy before measurement:
+
+```sh
+cp -a base_harness/codex /path/to/codex-harness-copy
+python3 tools/configure_codex_harness.py /path/to/codex-harness-copy
+```
+
+With no override, preparation discovers `codex` on `PATH` once. To choose a particular
+installation, pass `--codex /path/to/codex`. The precedence is explicit `--command`
+or `--codex`, then `HG_AGENT_CODEX_COMMAND`, then `HG_AGENT_CODEX`, then `PATH`.
+The tool reads the shared main checkout `.env`, a worktree `.env` if present, and
+the process environment in that order. Explicit command-line choices win.
+
+Preparation resolves the command, derives the installation bindings, and runs
+`--version` with a fresh HOME on the host and in a network-isolated native sandbox.
+It requires bubblewrap and compatible host runtime dependencies. The probe environment
+excludes model credentials and personal Codex configuration. Both version probes must agree
+before one complete `harness.json` is atomically replaced. Preparation does not
+install or upgrade Codex and makes no model calls.
+
+The manifest's `runtime_paths` and adapter-owned `_codex_runtime` record are written
+together. The record contains the selected argv, version, file hashes and executable
+search directories. It is part of the candidate's source identity. Tasks use this
+same argv even if PATH changes, verify the recorded files, and report the runtime
+record in `trace.jsonl`. An unprepared template, missing executable, changed file,
+different override or inconsistent binding declaration fails with a preparation
+diagnostic; it does not select a different installation.
+
+Native Codex aliases resolve to their physical executable. Standalone releases with
+`codex-exec-server` / `codex-code-mode-host` bind their dedicated `bin/` directory;
+single executables bind only their files, including when placed directly in HOME.
+No entire user HOME or `.codex` configuration directory is inferred as a runtime.
+The adapter still creates a private per-task `CODEX_HOME` and obtains its model and
+credentials from `HG_AGENT_*`. Daily `OPENAI_*` / `CODEX_*` settings and credentials
+for other model roles are excluded from the CLI environment.
+
+An npm launcher is expanded into an explicit Node-and-script command. Its Codex
+package and any installed `@openai/codex-*` native packages are included, covering
+both nested and hoisted npm layouts. Select a dedicated Node distribution with
+`--node /path/to/node-prefix/bin/node` if the launcher's Node is not already on PATH.
+System Node prefixes are refused because binding `/usr` or `/usr/local` would cover
+the task image's own tools. Complete runtime installations must be outside `/tmp`,
+which the native sandbox hides, and must not overlap the platform or Harness copy.
+Shared temporary roots and broad system/user directory bindings are also refused.
+
+For a custom wrapper, use an argv-style command and declare additional dependencies:
+
+```sh
+python3 tools/configure_codex_harness.py /path/to/codex-harness-copy \
+  --command '/path/to/venv/bin/python /path/to/wrapper.py' \
+  --runtime /path/to/wrapper-dependencies
+```
+
+Arguments naming existing files are made absolute. Python virtualenv executable
+symlink spelling is preserved; the venv and its base interpreter are included.
+The wrapper must forward `--version` and the adapter's `exec` arguments. Matching
+`HG_AGENT_CODEX_COMMAND` / `HG_AGENT_CODEX` values can remain set, including relative
+or bare choices used during preparation. Changing the choice requires preparing
+matching bindings again. Additional `--runtime` entries are read-only; use them only
+for runtime dependencies, not personal credentials.
+
+Fingerprints cover selected executables, companion Codex binaries, wrapper files,
+relevant package metadata and venv configuration. They do not hash every transitive
+file in directory bindings. Native version admission also does not establish that
+an arbitrary task image provides compatible system libraries or that a model-backed
+task will succeed; validate the selected task environments separately.

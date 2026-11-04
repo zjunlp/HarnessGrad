@@ -1,58 +1,36 @@
 #!/usr/bin/env python3
 """Adapt Codex exec to HarnessGrad's task/answer/trace contract.
 
-HG_AGENT_CODEX_COMMAND may name a native executable or 'node /path/codex.js'.
-The deployment must provide that runtime inside the task sandbox. Credentials
-come from HG_AGENT_API_KEY; no improver credentials are passed to Codex.
+Prepare a copy with tools/configure_codex_harness.py before sandbox execution.
+HG_AGENT_CODEX_COMMAND / HG_AGENT_CODEX must match that prepared installation.
+Credentials come from HG_AGENT_API_KEY; no improver credentials reach Codex.
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
-import shlex
-import shutil
 import subprocess
 import tempfile
 
 
+def _runtime() -> dict:
+    """Load the helper from this candidate, including when the platform is hidden."""
+    root = Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("_task_codex_runtime", root / "codex_runtime.py")
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    return helper.resolve(root, dict(os.environ))
+
+
 def _codex_argv() -> list[str]:
-    """The Codex binary, resolved the way the *sandbox* needs it, not the way `PATH` does.
-
-    The platform binds a harness's declared `runtime_paths` read-only and does **not** put
-    them on `PATH` (`eval/containers/sandbox.py`), so a bare `codex` inside the sandbox
-    resolves only if some bound directory happens to be on `PATH` -- and it is not. Measured
-    2026-10-29: this harness exited 1 with an empty trace on every sandboxed task while the
-    same command worked outside the sandbox, and with `--no-sandbox` it ran.
-
-    So the manifest's own `runtime_paths` is consulted **first**: it names the tree the
-    platform bound for this harness, and the vendor directory it points at carries a real
-    `codex` executable. `HG_AGENT_CODEX` overrides everything (an operator or a test can pin
-    a binary), then `HG_AGENT_CODEX_COMMAND` for a wrapper, and `PATH` is the last resort.
-    """
-    configured = shlex.split(os.environ.get("HG_AGENT_CODEX_COMMAND", ""))
-    if configured:
-        return configured
-    explicit = os.environ.get("HG_AGENT_CODEX")
-    if explicit and Path(explicit).expanduser().exists():
-        return [str(Path(explicit).expanduser())]
-    try:
-        declared = json.loads(Path(__file__).with_name("harness.json").read_text())
-    except (OSError, ValueError):
-        declared = {}
-    for entry in declared.get("runtime_paths") or []:
-        candidate = Path(str(entry)).expanduser() / "codex"
-        if candidate.is_file():
-            return [str(candidate)]
-    found = shutil.which("codex")
-    if found:
-        return [found]
-    return ["codex"]
+    return _runtime()["argv"]
 
 
-def command(workdir: Path, answer: Path) -> list[str]:
-    argv = _codex_argv()
+def command(workdir: Path, answer: Path, *, argv: list[str] | None = None) -> list[str]:
+    argv = _codex_argv() if argv is None else argv
     return argv + ["exec", "--json", "--ephemeral", "--skip-git-repo-check",
                    "--dangerously-bypass-approvals-and-sandbox", "-C", str(workdir),
                    "-o", str(answer), "-"]
@@ -147,6 +125,7 @@ def _answer_stamp(path: Path):
 
 
 def run(task: dict, workdir: Path) -> int:
+    selected = _runtime()
     workdir = workdir.resolve()
     workdir.mkdir(parents=True, exist_ok=True)
     answer = workdir / "answer.txt"
@@ -176,7 +155,13 @@ def run(task: dict, workdir: Path) -> int:
               + goal)
     if task.get("inputs"):
         prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
-    env = {k: v for k, v in os.environ.items() if not k.startswith("HG_METHOD_")}
+    # Daily CLI defaults and other model roles must not select this task's
+    # provider, credentials or profile. CODEX_HOME is supplied privately below.
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("HG_METHOD_", "HG_ENV_", "HG_JUDGE_", "OPENAI_", "CODEX_"))
+           and k not in ("ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY")}
+    env["PATH"] = os.pathsep.join(dict.fromkeys([*selected["path"],
+                                               *env.get("PATH", os.defpath).split(os.pathsep)]))
     # **Stop before the environment kills the container.** `HG_AGENT_DEADLINE_S` is the
     # platform's own `agent_timeout_s`; the margin lets Codex be reaped and the trace be
     # written, so a run that ran out of time is recorded as a harness that stopped rather
@@ -212,13 +197,14 @@ def run(task: dict, workdir: Path) -> int:
             def record(value):
                 trace.write(json.dumps(value, ensure_ascii=False) + "\n")
             record({"harness_identity": {"harness": "codex-agent",
-                    "agent_backend": "codex", "agent_model": model}, "task_id": task.get("task_id")})
+                    "agent_backend": "codex", "agent_model": model,
+                    "codex_runtime": selected}, "task_id": task.get("task_id")})
             trace_events = CodexTrace(record)
             # `-o` writes Codex's final message, and it must not write it over the task's
             # own file: a scratch path inside the private home, copied in only if the agent
             # left no answer of its own.
             last_message = Path(home, "last-message.txt")
-            proc = subprocess.Popen(command(workdir, last_message), cwd=workdir, env=env,
+            proc = subprocess.Popen(command(workdir, last_message, argv=selected["argv"]), cwd=workdir, env=env,
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                     # NB: `errors` above is the caller's stream object, not this
                                     # kwarg; decoding must still not raise on agent output.

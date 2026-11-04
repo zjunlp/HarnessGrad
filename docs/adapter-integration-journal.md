@@ -6474,3 +6474,35 @@ platform-overlap guard cannot mask the issue. Independent diff review passed.
 Validation passed 158 tests and 38 subtests across improver resolution/readiness,
 sandbox/isolation, userspace recording and documentation/import guards. Temporary
 fixtures were cleaned; these controls used no model calls or benchmark measurements.
+
+### Codex task installations are prepared independently of user paths (2026-11-04)
+
+Codex Harness 0.2.0 removes the checked-in user-specific runtime directory.
+`tools/configure_codex_harness.py` selects a CLI once from PATH or an explicit
+binary/command, probes its version with private configuration on the host and in
+a network-isolated native sandbox, and atomically writes both runtime bindings
+and the adapter-owned `_codex_runtime` identity into one manifest. The task uses
+that fixed argv and checks recorded files; changing PATH, passing a different
+override, modifying a selected file or editing bindings cannot silently select
+another installation. The runtime record is included in the task trace.
+
+Native releases retain their companion executables, including external symlink
+targets, with dedicated-directory or precise file bindings. Node launchers retain
+their Node distribution, Codex package and nested/hoisted native packages; Python
+wrappers retain venv spelling and the base interpreter. Hidden `/tmp` installs,
+platform/candidate overlap, broad HOME/system/shared-temporary directories and
+paths unrepresentable as Docker mounts are refused before changing the manifest.
+Preparation imports only the trusted shipped helper; candidate code runs inside
+the task sandbox. Daily `OPENAI_*`/`CODEX_*` settings and other roles' credentials
+are removed before launching the task CLI, whose `CODEX_HOME` remains private.
+
+Validation passed 159 tests and 38 subtests covering Codex selection/relocation,
+identity/refusal, wrapper arguments, native and cached-image execution, read-only
+dependencies, hidden synthetic credentials/tasks, trace/answer behavior, DSH
+compatibility, component attribution, installed-wheel resources and documentation/
+import guards. Two existing local OpenCode/OpenClaw installation checks were not
+selected. The installed Codex CLI also reported `codex-cli 0.166.0` in isolated
+host/native version controls. No model calls or benchmark measurements were made;
+no images were pulled. Identity hashes cover selected files and metadata, not a
+full transitive directory closure; native admission does not prove arbitrary task
+image compatibility. Temporary validation environments and fixtures were cleaned.

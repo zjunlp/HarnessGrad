@@ -50,7 +50,13 @@ all rather than because the platform has opinions:
 | `install` | no (default `null`) | dependency file relative to the harness root — a `requirements.txt` (pip) or a `.sh` (shell). **Runs once, at import time**, baked into the environment the task declares: `python tools/import_env.py --image <base> --harness <this dir>`. It never runs during a measurement, because the harness tree is read-only then and the platform does not install into the host's interpreter. See INTERFACE.md §2.5.6. |
 | `env_kinds` | no (default `["files"]`) | which environments this harness can operate on. The platform refuses a run whose dataset needs a kind you do not declare, rather than scoring it zero on every task. Declaring `"exec"` means your harness can run inside a container — so it must be **self-contained except for `install`**: the image is not the host, and the host's interpreter, packages and paths are not there |
 | `install` (again, for `exec`) | — | if you declare `"exec"`, list your dependencies here. The image will not have them, your tree is read-only during a run, and a missing import fails with a traceback the platform records as an exit code — which reads like a weak harness. Measured: the platform's own base harness scored zero on every container task for `ModuleNotFoundError: No module named 'openai'` |
-| `runtime_paths` | no (default `[]`) | absolute trees the sandbox must bind read-only because you need them — a CLI installed outside `/usr`, a runtime you were built against. Applies to `files` **and** `exec`: a task image need not have any runtime at all — the real Terminal-Bench images ship no `python3` — so the platform mounts the interpreter it invokes your entrypoint with, and mounts whatever you list here read-only beside it. |
+| `runtime_paths` | no (default `[]`) | absolute files or dedicated directory trees the sandbox must bind read-only because you need them — a CLI installed outside `/usr`, a runtime you were built against. Applies to `files` **and** `exec`: a task image need not have any runtime at all — the real Terminal-Bench images ship no `python3` — so the platform mounts the interpreter it invokes your entrypoint with, and mounts whatever you list here read-only beside it. |
+
+External CLI templates can require local installation preparation before measurement.
+The [Codex preparation procedure](../base_harness/codex/README.md) fixes one CLI and
+its runtime bindings in a Harness copy; [DSH preparation](../base_harness/deepseek-harness/README.md)
+also validates its plugin link targets. Run preparation before recording the candidate
+identity, and repeat it when selecting another installation.
 
 **`name` and `version` are the harness's identity and a method may not change
 them.** Everything else in the directory is yours, and a method that improves
