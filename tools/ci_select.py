@@ -114,7 +114,13 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
         if path.startswith(("docs/", ".github/")) or path.endswith(".md"):
             reasons.append(f"{path}: documentation only")
         elif path.startswith("data/datasets/"):
-            wanted = _matching((f"test_{stem}_", "test_dataset_", "test_datasets_doc"))
+            # The dataset name, not the file name: an adapter's assets live in a directory of
+            # the same name (`data/datasets/tau2_bench/lib/runtime.py` is a change to
+            # `tau2_bench`), and keying on the file name would select `test_runtime_*`.
+            relative = path[len("data/datasets/"):]
+            wanted = _matching((f"test_{_stem(relative.split('/')[0])}_",
+                                f"test_{_stem(relative.split('/')[0])}.py",
+                                "test_dataset_", "test_datasets_doc"))
             picked.update(wanted)
             reasons.append(f"{path}: {len(wanted)} dataset tests")
         elif path.startswith("base_harness/"):
@@ -134,7 +140,13 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
                 picked.add(Path(path).name)
             reasons.append(f"{path}: itself")
         elif path.startswith("tests/fixtures/"):
-            picked.update({"test_bfclguard_reachability.py"})
+            # A fixture is only evidence through the test that drives it. `tau2_scorer_probe.py`
+            # is run by the official-scorer test because the adapter needs a 3.13 interpreter the
+            # test process does not have; `hg_bfclguard/` is the reachability fixture.
+            if path.startswith("tests/fixtures/tau2_"):
+                picked.add("test_tau2_bench_official_scorer.py")
+            else:
+                picked.update({"test_bfclguard_reachability.py"})
             reasons.append(f"{path}: fixture consumer")
         else:
             return [], [f"{path} is not mapped: running everything"]

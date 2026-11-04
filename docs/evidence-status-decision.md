@@ -128,6 +128,9 @@ registry.
   the repository; a pin, a split spec and an adapter remain) and its status moved from `external` to
   `code-solvable`, while `api_bank`, `nestful` and `sotuqa` stay refused for want of an artefact this
   repository cannot produce. All four adapters still return `REFUSED`. See `docs/refusal-policy.md`.
+  **Closed 2026-11-04:** the three were removed from the repository on 2026-11-03 and `tau2_bench`
+  was implemented (278 pinned tasks, the release's own user simulator and ALL scorer, control
+  measured 1.0/0.0 on three tasks), so no adapter refuses today.
 - **`hotpotqa` and the `journal-coverage` family** — still open elsewhere in the record; what they
   need is an operator-supplied selected manifest, an input rather than an impossibility.
 - **No dataset in the registry now carries a non-refusal blocker.** That is a state the checker

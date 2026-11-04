@@ -369,13 +369,18 @@ outcome is a **first-class refusal**, not a nearby metric:
 * `load()` raises that same sentence;
 * `tools/dataset_lint.py` prints `REFUSED <name>: …`, returns **rc 0**, and still checks
   `KIND`, the required callables, the data-root path and the `downloads()` entries;
-* `tests/quality/test_dataset_refusals.py` recognises **two kinds**:
+* `tests/quality/test_refusal_contract.py` recognises **two kinds**, tested against a synthetic
+  module because no adapter refuses today (2026-11-04: `tau2_bench`, the last one, was
+  implemented instead):
   * `contract_gap` — the metric needs a channel the contract does not have
-    (`fever`'s `strict_score` needs predicted evidence; `hotpotqa`'s `joint` needs
-    supporting facts; `sotuqa`'s headline is an unpinned LLM judge);
+    (`fever`'s `strict_score` needed predicted evidence; `hotpotqa`'s `joint` needed
+    supporting facts; `sotuqa`'s headline was an unpinned LLM judge);
   * `unreproducible` — the metric cannot be reproduced from the released samples at all
-    (`api_bank`'s gold call reproduces its own recorded result 262/508 = 51.6%;
-    `tau2_bench` is dual-control and 55/278 tasks carry `requestor: "user"` gold actions).
+    (`api_bank`'s gold call reproduced its own recorded result on only 262/508 = 51.6%).
+
+  τ² was the interesting case and it is instructive rather than hypothetical: it is dual-control
+  and 94 of its 278 tasks carry `requestor: "user"` gold actions, which read like a contract gap
+  until the platform owned the simulator. What lifted it was platform code, not a weaker claim.
 
 **A refusal must be reached by measurement, not by reading the README.** Run the gold
 through the official scorer and report the number you got. "It looked hard" is not a

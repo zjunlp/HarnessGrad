@@ -126,8 +126,9 @@ class**:
 * `load()` raises that same sentence;
 * `tools/dataset_lint.py` prints `REFUSED <name>: …` and returns **rc 0**, still checking
   `KIND`, the callables, the data root and the downloads;
-* `tests/quality/test_dataset_refusals.py` recognises the two kinds — `contract_gap` and
-  `unreproducible` — and the sentence must match one of them;
+* `tests/quality/test_refusal_contract.py` recognises the two kinds — `contract_gap` and
+  `unreproducible` — and the sentence must match one of them (it tests the mechanism against a
+  synthetic module, since 2026-11-04 the repository has no refusing adapter);
 * the transcribed upstream scorer stays in the tests, so the refusal is backed by code that
   runs rather than by prose.
 

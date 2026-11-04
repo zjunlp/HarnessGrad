@@ -1,91 +1,111 @@
-# τ²-bench v0.1.0 — telecom payload
+# τ²-bench v0.1.0 — all 278 tasks, the release's own simulator and scorer
 
-What this directory is: the **prepared payload** for the τ² v0.1.0 telecom domain, and the script
-that makes it. It is not a second copy of the benchmark; it is the split between what the actor may
-see (`cases/<i>/public.json`) and what only the trusted runtime and the verifier see
-(`cases/<i>/private.json`: the user's scenario, the ticket, and every evaluation criterion).
+What this directory is: the **prepared payload** for τ² v0.1.0 and the code that runs one task of
+it — a private half-duplex runtime, an actor CLI, a trusted verifier and the control. It is not a
+second copy of the benchmark. What it splits is what the actor may see
+(`cases/<domain>/<id>/public.json`: policy and tool schemas) from what only the trusted runtime and
+the verifier see (`cases/<domain>/<id>/private.json`: the user's scenario, the task row and every
+evaluation criterion).
 
 The pin
 -------
 `sierra-research/tau2-bench` **tag `v0.1.0`**, archive sha256
 `ddee4dc5655912c8a7c7306107714c1936c86a5c4884ff4c50f00d6c828c3377`. Only this tag publishes the
-paper's base split as `tasks.json` (airline 50 + retail 114 + telecom 114 = 278); later trees add
-`split_tasks.json` and move the base out of the obvious place, and the repository's own README says
-results below 1.0.1 are not comparable with results at or above it. τ³ is therefore a **separate**
-adapter on a separate revision — mixing the two would produce a number neither paper supports.
-
-Scope: **telecom only, 114 tasks.** airline and retail are not here on purpose. All 50 airline tasks
-carry `nl_assertions` (they need a judge), and 7 airline tasks plus 1 retail task have nothing
-actionable to assert — a patient do-nothing agent scores 1.0 on them. Telecom has 114/114 tasks with
-`env_assertions`, zero `nl_assertions`, and no vacuous task, which makes it the one domain this
-adapter can measure without a judge and without inheriting upstream's empty-result behaviour.
+paper's pool in the obvious place (`tasks.json` **is** the base split: airline 50 + retail 114 +
+telecom 114 = **278**); later trees add `split_tasks.json` and move the base out of it, which
+changes *which* 278 tasks those are. The repository's own README says results below 1.0.1 are not
+comparable with results at or above it, so τ³ is a **separate** adapter on a separate revision —
+mixing the two would produce a number neither paper supports. The metric therefore carries the
+release: `tau2.v0.1.0.ALL.binary`.
 
 The split does not exist
 ------------------------
-Every τ² tag from `v0.1.0` through `v0.2.0` publishes **no** train/test division: `tasks.json` is the
-whole 278-task base split, and `split_tasks.json` first appears in the **τ³** release (v1.0.0 /
-v1.0.1, and again in v2.0.0), which also is not comparable with v0.1.x. Checked by listing the git
-tree of every tag, not assumed.
+Every τ² tag publishes **no** train/test division: `tasks.json` is the whole 278-task pool. A hash
+cut of it would not be the benchmark's held-out exam, so this adapter declares none
+(`SPLIT_SOURCE = "none"`, `SPLIT = None`): a run covers all 278 tasks and `OFFICIAL_EVAL = None`
+says the pool *is* the scored set.
 
-So this payload declares no split either: **all 114 telecom tasks are study material**
-(`counts: {train: 114, dev: 0, eval: 0}`, `split_rule.kind: "none"`). An earlier version hash-cut
-them 68/12/34; a hash cut of a benchmark's evaluation set is not that benchmark's held-out exam, and
-inventing one is exactly what this directory is supposed to avoid. If the official 278-task number is
-ever wanted it is an explicit full-set evaluation, not a split made here.
+Where the second party runs
+---------------------------
+τ² is dual control, and some gold actions belong to the **customer**: measured, 94 of telecom's 114
+tasks carry `requestor: "user"` actions, none in airline or retail. Each task's `user_scenario` says
+what the customer reveals *when*, so it can neither be in the agent's goal nor be scripted by the
+agent.
+
+So the simulator lives outside the agent's workspace. `relay.py` runs under the pinned 3.13 runtime
+in a private trusted process, drives the release's own `UserSimulator` and the domain's tools, and
+exposes one socket with four operations — `start`, `say`, `call`, `status`. The agent gets
+`cli/tau2.py` and the public half. There is no batch operation: v0.1.0's step budget is one
+assistant action per turn, and accepting several calls in one request would spend fewer steps than
+the release counts.
+
+The verifier replays the sealed episode through `evaluate_simulation(..., EvaluationType.ALL)`.
+That evaluator runs **every** part — database or environment assertions, actions, communication and
+NL assertions — and then multiplies the parts its reward basis names. Two consequences are counted
+in `manifest.json` rather than assumed:
+
+* `needs_judge` is true for **58 of 278** tasks (all 50 airline, 8 retail). The NL evaluator is
+  called for any task with `nl_assertions`, even when the default basis `[DB, COMMUNICATE]` then
+  multiplies its verdict out; those rows declare `VERIFY[...]["judge"]`.
+* `user_actions` is true for **94 of 114** telecom tasks, and false everywhere else.
 
 Preparation
 -----------
-Stdlib only, on the platform's Python 3.12; it copies source and reads `tasks.json`, and never
-imports `tau2` (which needs 3.13 and the isolated runtime):
+`prepare.py` copies source and domain data and reads `tasks.json`; it needs the pinned tarball at
+`<root>/_src/tau2-bench-v0.1.0.tar.gz` and the extracted tree at `<root>/tau2-bench-0.1.0`. It
+imports `tau2` only under the isolated 3.13 runtime:
 
 ```bash
-python3 data/datasets/tau2_bench/prepare.py
+runtime/bin/python data/datasets/tau2_bench/prepare.py \
+    --source <root>/tau2-bench-0.1.0 --target <root> [--reuse-bundle]
 ```
 
-It needs the pinned tarball at `<root>/_src/tau2-bench-v0.1.0.tar.gz` and the extracted tree at
-`<root>/tau2-bench-0.1.0`, refuses a non-fresh root, and prints the task count, the side sizes and
-the manifest digest.
+What the payload contains:
 
-What the payload contains
--------------------------
-    manifest.json          schema, pin, per-file digests, split rule, counts, and one entry per task
-    cases/<i>/public.json  task id + domain — copied into the task workspace
-    cases/<i>/private.json the full upstream task row — never copied into the workspace
-    bundle/src             the pinned `tau2` package (the runtime and the verifier import it)
-    bundle/data            the telecom databases, policy and user-simulator guidelines, **without**
-                           `tasks*` or `results*`, so a private scenario cannot be read from it
+    manifest.json           schema, pin, per-file digests, per-task flags, counts (checked in)
+    cases/<domain>/<id>/public.json   policy + business-tool schemas + user-tool schemas
+    cases/<domain>/<id>/private.json  the full upstream task row — never copied into the workspace
+    bundle/src              the pinned `tau2` package (runtime and verifier import it)
+    bundle/data             the domain databases, policies and simulator guidelines, **without**
+                            `tasks*` or `results*`, so a private scenario cannot be read from it
+    runtime/                the Python 3.13 venv; `requirements.lock` pins what it holds
 
-Per-task counts (`n_actions`, `n_env_assertions`, `n_nl_assertions`, `n_communicate_info`,
-`reward_basis`) are recorded in the manifest, so a claim about what the metric needs is a field
-rather than a comment.
+The bundle's own manifest is digest-pinned by `lib/bootstrap.py`, and the case manifest by the
+adapter, so a hand-edited payload is refused rather than believed.
 
-Status
-------
-Payload: done and pinned. **Runtime: written and proven outside the platform** — the half-duplex
-relay (`start/say/call/calls/status` over the platform tool transport) and the trusted verifier that
-replays the sealed episode through the official `EvaluationType.ALL` scorer. Two smokes, run with the
-pinned 3.13 runtime and the platform's own `eval/service/tool_transport.py`:
+Controls
+--------
+Three released tasks, one per domain, both arms, with a deterministic transport fixture standing in
+for the model (it is never a model, so the numbers prove reachability, not behaviour):
 
-* one episode on `tau2_bench/telecom/4`: actor `say` twice, then `call get_customer_by_phone`; the
-  official user simulator answered through the platform model socket (2 model calls), the business
-  tool executed and returned the customer record, and the episode sealed with 6 messages in the
-  official order `assistant / user / assistant / user / assistant / tool`;
-* scoring that sealed episode: `measured: true`, official reward **0.0**, actionable basis
-  `['ENV_ASSERTION']`. The scripted actor never sent a stop signal, so the termination was
-  substituted by the official early-termination rule (`max_steps`) and the evidence records
-  `termination_substitution` instead of pretending the budget was hit.
+    python3 data/datasets/tau2_bench/control.py --oracle   # airline/8, retail/0, telecom escalation
+    python3 data/datasets/tau2_bench/control.py --noop
 
-Still to do, and the refusal stays until it is done: `data/datasets/tau2_bench.py` must grow
-`SETUP`/`VERIFY`/`SPLIT` around these pieces, then the registry row, `tools/dataset_classes.py`, the
-aggregation policy, and the refusal documents and tests move together (the four refusals become
-three). Then a driver-level single-task run, and the 114 tasks.
+The three defaults are chosen by property, and `tests/quality/test_tau2_bench_control.py` checks
+each one: assistant-only gold actions, a gold action set that changes state, no `communicate_info`,
+and no `NL_ASSERTION` in the basis (the fixture answers the NL judge with `{"results": []}`, which
+the release reads as "nothing to grade", so it may not carry part of a score). Measured on this
+machine, 2026-11-04:
+
+    oracle arm     1.0 / 1.0 / 1.0     24 s
+    no-op arm      0.0 / 0.0 / 0.0     21 s
+
+What the tests pin
+------------------
+* `tests/quality/test_tau2_bench_inventory.py` — the manifest is the pinned one, two halves per task,
+  the per-task flags, and a tampered manifest is refused.
+* `tests/quality/test_tau2_bench_runtime.py` — the four operations, the two task identities the
+  relay keeps apart, the judge declaration rule, the metric string, the 3.13 pin.
+* `tests/quality/test_tau2_bench_official_scorer.py` — the real scorer under the real runtime, one
+  gold episode and one empty episode per selected task; it skips where the payload is absent.
+* `tests/quality/test_tau2_bench_control.py` — the control's selection properties.
+* `tests/quality/test_dataset_controls.py` — runs both control arms.
 
 Two upstream behaviours the verifier carries, both measured here:
 
-* `DEFAULT_LLM_NL_ASSERTIONS` is a **module-level constant** bound at import
-  (`tau2/evaluator/evaluator_nl_assertions.py`), not a parameter; upstream's default is
-  `gpt-4o-mini`. The judge pin is bound before evaluation and must be recorded in the receipt.
-  Telecom needs no judge; a domain that later does must not silently skip it.
-* `evaluate_simulation` returns **1.0** when the reward basis yields nothing to check (`all([])`) —
-  that is how a do-nothing airline episode passed. The scorer refuses instead: a task whose basis has
-  no non-empty criterion is `unmeasured`, never a success.
+* `evaluate_simulation` returns **1.0** when a reward basis yields nothing to check (`all([])`).
+  `lib/scoring.py` refuses that instead: a task whose basis has no criterion is *unmeasured*, never
+  a success.
+* `DEFAULT_LLM_NL_ASSERTIONS` is a **module-level constant** bound at import, not a parameter, so
+  the judge pin is bound before evaluation and recorded in the receipt; nothing here assumes a
+  default.

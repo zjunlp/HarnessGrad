@@ -78,7 +78,7 @@ Buqiang Xu. platform core; every harness, method and benchmark adapter in this c
 - `spreadsheetbench2` — 2026-11-03 — declared adapter
 - `supergpqa` — 2026-11-03 — declared adapter
 - `swe_bench` — 2026-11-03 — declared adapter
-- `tau2_bench` — 2026-11-03 — declared adapter — refused by contract
+- `tau2_bench` — 2026-11-03 — dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer
 - `tau_bench` — 2026-11-03 — declared adapter
 - `travelplanner` — 2026-11-03 — declared adapter
 - `twowikimultihopqa` — 2026-11-03 — declared adapter

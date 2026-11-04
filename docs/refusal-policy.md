@@ -4,6 +4,26 @@ Operator decisions, 2026-10-22: *"tau2 的这个也解禁吧"* and then *"挪出
 `f4078220`, which lifted the `tau2_bench` exclusion and left the other three where they were; this
 document now covers all four, and the fifth name on the old list (`Matrix`).
 
+**Update, 2026-11-04: no dataset refuses today.** `tau2_bench` -- the last `REFUSED` adapter -- was
+implemented rather than kept as a refusal, using shape 2 below (a real simulator). The pin is
+v0.1.0's own `tasks.json`, the user simulator and the domain tools run in a private trusted
+process (`data/datasets/tau2_bench/relay.py`), and scoring is the release's `EvaluationType.ALL`
+evaluator. Measured acceptance, on three released tasks (one per domain, fixture transport, no
+model):
+
+    oracle arm      airline/8 1.0   retail/0 1.0   telecom escalation 1.0     (24 s)
+    do-nothing arm  airline/8 0.0   retail/0 0.0   telecom escalation 0.0     (21 s)
+
+Metric identity: `tau2.v0.1.0.ALL.binary`, declared **incomparable** with `tau3.*` by construction
+-- upstream says results below 1.0.1 are not comparable with results at or above it. One claim in
+this document was wrong and is corrected rather than deleted: it said the judge is only needed when
+`NL_ASSERTION` is in a task's reward basis. Measured, `EvaluationType.ALL` runs the NL evaluator for
+every task with `nl_assertions` and multiplies its verdict out afterwards, so **58 of 278 tasks**
+(all 50 airline, 8 retail) make a judge call; `needs_judge` in the prepared manifest now records
+that, and those rows declare `VERIFY[...]["judge"]`. The rows below stay as the record of what the
+refusal said while it was live, and `registry/dataset-blockers.json` now carries an empty blocker
+list for `tau2_bench`.
+
 The rule this replaces was one line among twelve in `AGENTS.md`, *Prohibited shortcuts*:
 
 > No method tuning, paid endpoints, heldout leakage, SOTUQA, API-Bank, NESTFUL, Tau2-bench, Matrix,
@@ -32,7 +52,7 @@ A prohibition is also the wrong shape for a conditional fact: it says "never" wh
 
 | name | what is actually missing | exit recorded in the adapter | state after 2026-10-22 |
 | --- | --- | --- | --- |
-| `tau2_bench` | a second party — an LLM user simulator — and a judge for `nl_assertions` | both facilities **now ship in this repository** (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`); what remains is a v0.1.0 pin, a split spec and an adapter | **exclusion lifted, conditionally** (`code-solvable`) |
+| `tau2_bench` | a second party — an LLM user simulator — and a judge for `nl_assertions` | both facilities **ship in this repository** (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`) | **implemented 2026-11-04** — v0.1.0 pin, 278 tasks, no division, oracle 1 / noop 0 measured |
 | `api_bank` | the dialogue state the recorded API replies depend on | an oracle that reaches 1, or a separately named repaired subset; the gold call reproduces its own recorded reply on **262 / 508** samples (51.6 %) | **removed from the repository 2026-11-03** — the reason cannot change |
 | `nestful` | reproducibility of the official execution Win Rate | a repaired upstream release, or a deterministically pinned run record; the pinned scorer returned **1857 true / 4 false**, then **1854 / 7** on the same 1861 gold sequences | **removed from the repository 2026-11-03** — the reason cannot change |
 | `sotuqa` | the pinned judge behind the headline `acc` | a judge model that can be named and re-run; `llm_accuracy_score` resolved to `text-davinci-003`, which is retired, so the headline cannot be reproduced at all | **removed from the repository 2026-11-03** — the reason cannot change |
@@ -45,7 +65,8 @@ because receipts from before that date still cite them and a reader has to be ab
 why. `api_bank`, `nestful` and `sotuqa` no longer resolve.
 
 `tau2_bench` is the one that moved, because it is the one whose missing facility turned out to be
-platform code rather than upstream data.
+platform code rather than upstream data -- and on 2026-11-04 it moved all the way: the adapter loads,
+the control measures, and nothing in the catalogue refuses.
 
 ## The `tau2_bench` case, in full
 
@@ -71,7 +92,8 @@ which already constructs **τ²** domain environments —
 the actor a half-duplex client with no reset, seed or scoring endpoint, and `eval/service/judge.py`
 supplies the judge under `VERIFY.judge` with no implicit default and no caller-selected model.
 
-What is still missing, and is the whole of the remaining work:
+What was still missing on 2026-10-22, and is the record of how the port was scoped (all of it
+landed; see the update at the top):
 
 * **A pin of its own.** τ³ reads `split_tasks.json` at `fc0055dc…`; τ²-bench v0.1.0's base split is
   `tasks.json` (airline 50 + retail 114 + telecom 114 = 278) over a different domains revision.
@@ -81,7 +103,8 @@ What is still missing, and is the whole of the remaining work:
   `initial_state` for all 114 telecom tasks and the domain `db.json` for airline/retail, plus τ³'s
   `db.toml`-and-policy-directory trap.
 
-Two shapes are recorded in the adapter, and neither is chosen:
+Two shapes were recorded, and **shape 2 was chosen on 2026-11-04** -- all 278 tasks, the release's
+own simulator, the judge channel declared per task:
 
 1. **A staged second party** — declare the user's side as data the platform re-materialises (a
    scripted action list, exactly as ALFWorld's walkthrough and Jericho's gold commands are staged),
@@ -110,14 +133,16 @@ These were never in the prohibition list and are now stated positively, per data
 
 | dataset | `next_action` | `status` |
 | --- | --- | --- |
-| `tau2_bench` | the two facilities plus the identity requirement (unchanged from `f4078220`) | `code-solvable` |
+| `tau2_bench` | met on 2026-11-04: v0.1.0 pin, simulator in a private trusted process, judge declared for the 58 tasks whose ALL evaluation calls one; control measured 1 / 0 on three released tasks | `code-solvable` → **cleared** |
 | `api_bank` | "refused by contract, not prohibited": the exit and the 262/508 measurement; no proxy | `external` (unchanged) |
 | `nestful` | same shape: the repaired-release / pinned-record exit and the 1857-vs-1854 measurement | `external` (unchanged) |
 | `sotuqa` | same shape: the pinned-judge exit, noting that the platform's judge channel now exists | `external` (unchanged) |
 
-All four keep `id: retain-contract-refusal`. `registry/blocker-closure-assessment.md` keeps all four
-rows and their `REFUSED` class — the adapter still refuses — and its dispositions now say "refused by
-contract" rather than "permanent".
+All four kept `id: retain-contract-refusal` while they were refusals. `tau2_bench` no longer does:
+its registry row has an empty blocker list, and its `REFUSED` sentence is gone from the adapter --
+the record of what it said is the section above, not a live string that would make the module
+unloadable again. `registry/blocker-closure-assessment.md` keeps all four rows; three remain
+`REFUSED` classes, and the τ² row records the closure.
 
 ## Provenance
 
@@ -125,9 +150,13 @@ contract" rather than "permanent".
   names each dataset's exit and this document.
 * `registry/dataset-blockers.json` — `next_action` rewritten for `api_bank`, `nestful`, `sotuqa` and
   `tau2_bench`; statuses as above; checker still `{"valid": true, "datasets": 35, …}`.
-* `data/datasets/tau2_bench.py` — docstring and `REFUSED` point here.
+* `data/datasets/tau2_bench.py` — the docstring points here for the refusal's history; the
+  `REFUSED` string itself was removed on 2026-11-04, when the adapter began to load.
 * `docs/evidence-status-decision.md` — the "four permanent refusals" section is superseded.
-* Tests: `tests/quality/test_dataset_refusals.py` and `test_apply_blocker_proposal.py`.
+* Tests: `tests/quality/test_apply_blocker_proposal.py`, plus (since 2026-11-04)
+  `tests/quality/test_refusal_contract.py`, which tests the refusal mechanism against a synthetic
+  module now that no adapter refuses -- replacing `test_dataset_refusals.py`, deleted with the
+  lift.
   The two prose-police tests this line used to name (`test_dataset_blockers.py`,
   `test_closure_assessment.py`) were deleted in the 2026-10-27 slim; what enforces the
   registry now is `tools/check_dataset_blockers.py`, which `test_apply_blocker_proposal.py`

@@ -44,7 +44,9 @@ def test_the_surface_has_exactly_the_declared_variables():
     # `HG_SANDBOX_CPUS`, `HG_SANDBOX_PIDS`), which bounds what a harness may consume
     # rather than what it may see.
     # HG_DATA_ROOT adds the shared external dataset directory.
-    assert len(hg_names) == 50, hg_names
+    # HG_TAU2_JUDGE_MODEL adds the second per-dataset judge override (τ²'s ALL evaluator
+    # calls a judge for the tasks with `nl_assertions`; τ³ already had one).
+    assert len(hg_names) == 51, hg_names
     assert len(config.ENV_NAMES) == len(set(config.ENV_NAMES))
     # The three credentials the repository's rule names. `DEEPSEEK_API_KEY` is the
     # default improver registry entry's `api_key_env`, so it is declared beside it.
@@ -283,3 +285,22 @@ def test_tau3_judge_model_precedence_and_empty_overrides():
     cfg = config.load({variable: ' invalid '})
     with pytest.raises(ValueError, match='model ID'):
         cfg.judge.resolve_model(override=cfg.judge.tau3_model)
+
+
+@pytest.mark.parametrize('attribute, variable', [('tau3_model', 'HG_TAU3_JUDGE_MODEL'),
+                                                ('tau2_model', 'HG_TAU2_JUDGE_MODEL')])
+def test_per_dataset_judge_overrides_share_one_precedence(attribute, variable):
+    """Two datasets, two overrides, one rule; and neither can leak into the other."""
+    for env, expected in [({}, 'official'), ({'HG_JUDGE_MODEL': 'global'}, 'global'),
+                          ({variable: 'specific'}, 'specific'),
+                          ({variable: 'specific', 'HG_JUDGE_MODEL': 'global'}, 'specific'),
+                          ({variable: '', 'HG_JUDGE_MODEL': 'global'}, 'global')]:
+        cfg = config.load(env)
+        assert cfg.judge.resolve_model(override=getattr(cfg.judge, attribute),
+                                       default='official') == expected
+    cfg = config.load({})
+    with pytest.raises(ValueError, match='configure a judge model'):
+        cfg.judge.resolve_model(override=getattr(cfg.judge, attribute))
+    cfg = config.load({variable: ' invalid '})
+    with pytest.raises(ValueError, match='model ID'):
+        cfg.judge.resolve_model(override=getattr(cfg.judge, attribute))

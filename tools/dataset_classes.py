@@ -241,7 +241,8 @@ UNCOVERED_FUNCTIONS: dict[str, str] = {
     "delegation": "no adapter requires the harness to split work across sub-agents or route "
                   "between models; CooperBench assigns fixed peer roles through the platform, "
                   "not dynamic harness delegation. tau2_bench needs an independent user simulator, which the "
-                  "platform supplies rather than the harness",
+                  "platform supplies rather than the harness -- and as of 2026-11-04 it supplies it, so the "
+                  "dataset runs; the exercise row is unchanged",
     "reliability": "one adapter (tau3_bench) reports complete-manifest pass^k; "
                    "a second independent demand is still below the coverage floor",
     "cost": "one benchmark family (CostBench static and dynamic protocols) scores "

@@ -37,6 +37,20 @@ def test_an_adapter_change_pulls_in_that_dataset_and_the_contract_tests() -> Non
     assert set(ci_select.GUARDS) <= set(picked)
 
 
+def test_a_dataset_asset_change_pulls_in_that_dataset_only() -> None:
+    """`data/datasets/<name>/...` is a change to `<name>`, not to a file called `runtime`."""
+    picked, _ = ci_select.select(["data/datasets/tau2_bench/lib/runtime.py"])
+    assert "test_tau2_bench_runtime.py" in picked
+    assert "test_tau2_bench_official_scorer.py" in picked
+    assert "test_dataset_controls.py" in picked
+    assert not any("test_tau3" in name for name in picked), picked
+
+
+def test_a_tau2_fixture_change_runs_the_test_that_drives_it() -> None:
+    picked, _ = ci_select.select(["tests/fixtures/tau2_scorer_probe.py"])
+    assert "test_tau2_bench_official_scorer.py" in picked
+
+
 def test_a_harness_or_method_change_pulls_in_its_own_tests() -> None:
     harness, _ = ci_select.select(["base_harness/loop/agent.py"])
     assert any(name.startswith("test_harness_") for name in harness), harness

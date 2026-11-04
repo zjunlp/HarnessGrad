@@ -1566,14 +1566,16 @@
 {"destinations": [], "kind": "from", "line": 42, "outside_scope": [], "source": 192, "statement": "from tau2.utils.llm_utils import to_tau2_messages", "targets": ["tau2.utils.llm_utils", "tau2.utils.llm_utils.to_tau2_messages"]}
 {"destinations": [], "kind": "from", "line": 43, "outside_scope": [], "source": 192, "statement": "from tau2.utils.utils import get_now", "targets": ["tau2.utils.utils", "tau2.utils.utils.get_now"]}
 {"destinations": [0, 9], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 193, "statement": "<implicit parent package initialization>", "targets": ["data", "data.datasets"]}
-{"destinations": [], "kind": "from", "line": 20, "outside_scope": [], "source": 193, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "import", "line": 22, "outside_scope": [], "source": 193, "statement": "import argparse", "targets": ["argparse"]}
-{"destinations": [], "kind": "import", "line": 23, "outside_scope": [], "source": 193, "statement": "import hashlib", "targets": ["hashlib"]}
-{"destinations": [], "kind": "import", "line": 24, "outside_scope": [], "source": 193, "statement": "import json", "targets": ["json"]}
-{"destinations": [], "kind": "from", "line": 25, "outside_scope": [], "source": 193, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [], "kind": "import", "line": 26, "outside_scope": [], "source": 193, "statement": "import shutil", "targets": ["shutil"]}
-{"destinations": [], "kind": "import", "line": 27, "outside_scope": [], "source": 193, "statement": "import sys", "targets": ["sys"]}
-{"destinations": [483, 503], "kind": "from", "line": 30, "outside_scope": [], "source": 193, "statement": "from harnessgrad.paths import dataset_root", "targets": ["harnessgrad.paths", "harnessgrad.paths.dataset_root"]}
+{"destinations": [], "kind": "from", "line": 23, "outside_scope": [], "source": 193, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
+{"destinations": [], "kind": "import", "line": 25, "outside_scope": [], "source": 193, "statement": "import argparse", "targets": ["argparse"]}
+{"destinations": [], "kind": "import", "line": 26, "outside_scope": [], "source": 193, "statement": "import hashlib", "targets": ["hashlib"]}
+{"destinations": [], "kind": "import", "line": 27, "outside_scope": [], "source": 193, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "import", "line": 28, "outside_scope": [], "source": 193, "statement": "import os", "targets": ["os"]}
+{"destinations": [], "kind": "import", "line": 29, "outside_scope": [], "source": 193, "statement": "import pathlib", "targets": ["pathlib"]}
+{"destinations": [], "kind": "import", "line": 30, "outside_scope": [], "source": 193, "statement": "import shutil", "targets": ["shutil"]}
+{"destinations": [], "kind": "import", "line": 31, "outside_scope": [], "source": 193, "statement": "import sys", "targets": ["sys"]}
+{"destinations": [0, 9, 196], "kind": "from", "line": 35, "outside_scope": [], "source": 193, "statement": "from data.datasets import tau2_bench as dataset", "targets": ["data.datasets", "data.datasets.tau2_bench"]}
+{"destinations": [], "kind": "from", "line": 89, "outside_scope": [], "source": 193, "statement": "from tau2.data_model.tasks import Task", "targets": ["tau2.data_model.tasks", "tau2.data_model.tasks.Task"]}
 {"destinations": [0, 9], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 194, "statement": "<implicit parent package initialization>", "targets": ["data", "data.datasets"]}
 {"destinations": [], "kind": "import", "line": 3, "outside_scope": [], "source": 194, "statement": "import argparse", "targets": ["argparse"]}
 {"destinations": [], "kind": "import", "line": 4, "outside_scope": [], "source": 194, "statement": "import hashlib", "targets": ["hashlib"]}
@@ -1598,8 +1600,11 @@
 {"destinations": [], "kind": "from", "line": 14, "outside_scope": [], "source": 195, "statement": "from scoring import score", "targets": ["scoring", "scoring.score"]}
 {"destinations": [0, 9], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 196, "statement": "<implicit parent package initialization>", "targets": ["data", "data.datasets"]}
 {"destinations": [], "kind": "from", "line": 82, "outside_scope": [], "source": 196, "statement": "from __future__ import annotations", "targets": ["__future__", "__future__.annotations"]}
-{"destinations": [], "kind": "from", "line": 84, "outside_scope": [], "source": 196, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
-{"destinations": [483, 503], "kind": "from", "line": 86, "outside_scope": [], "source": 196, "statement": "from harnessgrad.paths import dataset_root", "targets": ["harnessgrad.paths", "harnessgrad.paths.dataset_root"]}
+{"destinations": [], "kind": "from", "line": 84, "outside_scope": [], "source": 196, "statement": "from functools import lru_cache", "targets": ["functools", "functools.lru_cache"]}
+{"destinations": [], "kind": "import", "line": 85, "outside_scope": [], "source": 196, "statement": "import json", "targets": ["json"]}
+{"destinations": [], "kind": "from", "line": 86, "outside_scope": [], "source": 196, "statement": "from pathlib import Path", "targets": ["pathlib", "pathlib.Path"]}
+{"destinations": [483, 503], "kind": "from", "line": 88, "outside_scope": [], "source": 196, "statement": "from harnessgrad.paths import dataset_root", "targets": ["harnessgrad.paths", "harnessgrad.paths.dataset_root"]}
+{"destinations": [], "kind": "import", "line": 143, "outside_scope": [], "source": 196, "statement": "import hashlib", "targets": ["hashlib"]}
 {"destinations": [0, 9], "kind": "entry_initializers", "line": 1, "outside_scope": [], "source": 197, "statement": "<implicit parent package initialization>", "targets": ["data", "data.datasets"]}
 {"destinations": [], "kind": "import", "line": 3, "outside_scope": [], "source": 197, "statement": "import argparse", "targets": ["argparse"]}
 {"destinations": [], "kind": "import", "line": 4, "outside_scope": [], "source": 197, "statement": "import json", "targets": ["json"]}
