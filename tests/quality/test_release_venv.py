@@ -6,6 +6,7 @@ lives outside hidden /tmp; only this test's own directory is removed afterwards.
 from __future__ import annotations
 
 import json
+from itertools import permutations
 import os
 from pathlib import Path
 import shutil
@@ -48,6 +49,7 @@ def fresh_venv(request):
                            target_is_directory=True)
         extra = directory / 'extra-runtime'; extra.mkdir()
         (extra / 'marker.txt').write_text('explicit extra runtime')
+        (store / 'child').symlink_to('../extra-runtime', target_is_directory=True)
         (store / 'extra-alias').symlink_to(extra, target_is_directory=True)
         if request.param != 'direct':
             executable = alias / version.name / Path(sys.executable).resolve().relative_to(base)
@@ -136,9 +138,47 @@ print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':resul
     assert observed == {'prefix': str(prefix), 'base_prefix': sys.base_prefix,
         'marker': 'installed-only-in-fresh-venv', 'readonly': True, 'base_readonly': True,
         'platform_visible': False, 'foreign_tmp_visible': False,
-        'foreign_runtime_visible': mount in ('store', 'links-parent') or (aliased and store_alias),
+        'foreign_runtime_visible': mount in ('store', 'links-parent') or store_alias,
         'aliased_foreign_runtime_visible': store_alias or mount == 'links-parent' or (aliased and mount == 'store'),
         'extra_runtime_visible': mount in ('links-parent', 'extra-alias'), 'declared_readonly': True}
+
+
+@pytest.mark.parametrize('order', list(permutations(('version', 'child', 'store'))))
+def test_declared_runtime_paths_survive_parent_mounts(fresh_venv, tmp_path, order):
+    python, prefix = fresh_venv
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not provisioned')
+    task = tmp_path / 'task'; task.mkdir()
+    work = tmp_path / 'work'; work.mkdir()
+    script = '''import json,sys
+from pathlib import Path
+from eval.containers import sandbox
+platform,task,work=map(Path,sys.argv[1:4])
+directory=Path(sys.prefix).parent
+paths={'version':directory/'uv/python-selected','child':directory/'uv/child',
+       'store':directory/'runtime-store'}
+declared=tuple(paths[name] for name in sys.argv[4:])
+code="""import json,os,sys,hg_venv_marker
+from pathlib import Path
+data=[Path(p).read_text() for p in FILES]
+readonly=all(os.statvfs(p).f_flag & os.ST_RDONLY for p in DECLARED)
+print(json.dumps({'data':data,'readonly':readonly,'prefix':sys.prefix,
+                 'marker':hg_venv_marker.VALUE,'platform_visible':Path(PLATFORM).exists()}))
+""".replace('FILES',repr([str(directory/'uv/child/marker.txt'),
+                         str(directory/'runtime-store/child/marker.txt')]))
+code=code.replace('DECLARED',repr([str(p) for p in declared]))
+code=code.replace('PLATFORM',repr(str(platform/'driver.py')))
+result=sandbox.run([sys.executable,'-I','-c',code],platform=platform,work_root=work,
+    task_dir=task,repo=task,env={},runtime_paths=declared,timeout_s=20,cwd=task,network='none')
+print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':result.stderr}))
+'''
+    result = from_venv(python, script, ROOT, task, work, *order)
+    assert result.returncode == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert observed['code'] == 0, observed
+    assert json.loads(observed['stdout']) == {
+        'data': ['explicit extra runtime', 'explicit extra runtime'], 'readonly': True,
+        'prefix': str(prefix), 'marker': 'installed-only-in-fresh-venv', 'platform_visible': False}
 
 
 def test_explicit_runtime_alias_preserves_platform_hides_and_private_checks(fresh_venv, tmp_path):
@@ -181,8 +221,10 @@ print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':resul
         platform.rmdir()
 
 
-@pytest.mark.parametrize('placement', ['child', 'parent'])
+@pytest.mark.parametrize('placement', ['child', 'parent', 'tmp'])
 def test_runtime_alias_cannot_project_hidden_storage_elsewhere(tmp_path, placement):
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not provisioned')
     with tempfile.TemporaryDirectory(prefix='hg-runtime-private-alias-', dir=Path.home()) as directory:
         root = Path(directory)
         store = root / 'store'; store.mkdir()
@@ -190,18 +232,30 @@ def test_runtime_alias_cannot_project_hidden_storage_elsewhere(tmp_path, placeme
         (platform / 'driver.py').write_text('# private platform sentinel\n')
         alias = root / 'deep/nested/alias'; alias.parent.mkdir(parents=True)
         alias.symlink_to(store, target_is_directory=True)
-        # A parent bind turns the alias into a real directory. Its relative child
-        # link would then name a different namespace path than it names on the host.
+        hidden = platform
+        # Restoring the alias as a link must preserve the relative child's host
+        # meaning and keep the hidden target inaccessible through every spelling.
         if placement == 'child':
             (store / 'child').symlink_to('../platform', target_is_directory=True)
+            paths = (alias, alias / 'child')
+        elif placement == 'tmp':
+            hidden = tmp_path / 'private-runtime'; hidden.mkdir()
+            (hidden / 'driver.py').write_text('# private temporary data\n')
+            (store / 'child').symlink_to(hidden, target_is_directory=True)
             paths = (alias, alias / 'child')
         else:
             paths = (alias,)
         work = tmp_path / 'work'; work.mkdir()
         task = tmp_path / 'task'; task.mkdir()
-        with pytest.raises(sandbox.SandboxUnavailable, match='would expose hidden storage'):
-            sandbox.command(['/bin/true'], platform=platform, work_root=work,
-                            task_dir=task, repo=task, env={}, runtime_paths=paths)
+        probes = [hidden / 'driver.py', alias / ('platform' if placement == 'parent' else 'child') / 'driver.py',
+                  alias.parent / 'platform/driver.py']
+        code = ('import json; from pathlib import Path; '
+                f'print(json.dumps([Path(p).exists() for p in {[str(p) for p in probes]!r}]))')
+        result = sandbox.run([sys.executable, '-I', '-c', code], platform=platform,
+            work_root=work, task_dir=task, repo=task, env={}, runtime_paths=paths,
+            timeout_s=20, cwd=task, network='none')
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout) == [False, False, False]
 
 
 def test_fresh_venv_passes_actual_driver_boundary_self_check(fresh_venv, tmp_path):
