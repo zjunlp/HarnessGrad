@@ -35,7 +35,7 @@ def prepared(tmp_path, monkeypatch):
 def identity_for(source, bindings):
     path, manifest, source_id, manifest_sha, runtime = launcher.harness_inputs('deepseek-harness', bindings)
     return {'harness':'deepseek-harness','harness_sha256':source_id['submission_sha256'],
-            'manifest_sha256':manifest_sha,'runtime_sha256':state.digest(runtime),
+            'manifest_sha256':manifest_sha,'runtime_sha256':state.digest(launcher.runtime_commitment(runtime)),
             'pool':'train','side':'train',
             'model':{'backend':'openai','name':'synthetic','endpoint':'http://127.0.0.1:8002/v1'},
             'budget':{'output_tokens':123,'deadline_s':60,'request_timeout_s':10,
@@ -169,3 +169,46 @@ def test_four_pool_selection_prepares_external_candidate_with_real_identity_vali
         cmd=launcher.command_for(identity,['synthetic-task'],Path('/tmp/appworld-synthetic'),bindings)
         assert cmd[cmd.index('--harness-path')+1]==str(source)
         assert cmd[cmd.index('--expected-harness-sha256')+1]==identity['harness_sha256']
+
+
+@pytest.mark.parametrize('change',['mode','empty-directory'])
+def test_reviewed_filesystem_is_bound_into_runtime_and_command(prepared,monkeypatch,change):
+    source,bindings,_=prepared
+    identity=identity_for(source,bindings)
+    original=launcher.source_identity(source)
+    path,_,_,_,runtime=launcher.harness_inputs('deepseek-harness',bindings)
+    cmd=launcher.command_for(identity,['synthetic-task'],Path('/tmp/appworld-filesystem'),bindings)
+    assert cmd[cmd.index('--expected-harness-filesystem-sha256')+1]==runtime['harness_filesystem']['sha256']
+    if change=='mode': (source/'agent.py').chmod(0o755)
+    else: (source/'empty-feature').mkdir()
+    assert launcher.source_identity(source)==original
+    monkeypatch.setattr(launcher,'dataset_environment',lambda:{})
+    monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
+    with pytest.raises(state.RecoveryError,match='runtime changed'):
+        launcher.execution_environment(identity,bindings)
+    with pytest.raises(state.RecoveryError,match='filesystem/runtime changed'):
+        launcher.command_for(identity,['synthetic-task'],Path('/tmp/appworld-filesystem'),bindings)
+
+
+def test_launch_records_only_public_layered_commitment_not_runtime_secrets(prepared,monkeypatch,tmp_path,capsys):
+    source,bindings,_=prepared
+    secret='synthetic-private-proxy-credential'
+    bindings['harness_runtimes']['deepseek-harness']['environment']={
+        'HG_EGRESS_UPSTREAM':'https://user:'+secret+'@proxy.invalid'}
+    identity=identity_for(source,bindings)
+    selection={'pools':{'train':{'selected':['synthetic-task']}},'identities':{}}
+    selection_path=tmp_path/'selection.json';selection_path.write_text(json.dumps(selection))
+    bindings_path=tmp_path/'bindings.json';bindings_path.write_text(json.dumps(bindings))
+    monkeypatch.setattr(launcher,'selection_identity',lambda *a:identity)
+    monkeypatch.setattr(launcher,'current_identity',lambda *a:copy.deepcopy(identity))
+    monkeypatch.setattr(launcher,'observe_service',lambda *a:pytest.fail('plan contacted endpoint'))
+    assert launcher.main(['--selection',str(selection_path),'--bindings',str(bindings_path),
+        '--harness','deepseek-harness','--pool','train','--task-ids','synthetic-task',
+        '--receipt-dir',str(tmp_path/'appworld-secret-safe')])==0
+    text=capsys.readouterr().out;plan=json.loads(text)
+    assert secret not in text and 'https://user:' not in text and 'environment' not in plan
+    proof=plan['runtime_commitment']
+    assert state.valid_runtime_commitment(proof)
+    assert state.digest(proof)==identity['runtime_sha256']
+    assert set(proof)=={'schema','base_runtime_sha256','filesystem'}
+    assert set(plan)-{'runtime_commitment'} and 'runtime_binding' not in plan

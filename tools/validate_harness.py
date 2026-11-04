@@ -142,6 +142,87 @@ def source_identity(root: Path) -> dict:
     return {'submission_sha256': digest.hexdigest(), 'entries': len(files)}
 
 
+def filesystem_identity(root: Path, *, generated_root=()) -> dict:
+    """Complement path+content identity with the normalized owned source filesystem.
+
+    Includes root/empty directories, regular-file/link types and all rwx bits.
+    Links name their direct normalized root-relative target; chained links and
+    symlink components in a target are conservatively refused. Absolute in-tree
+    links compare equal to their relative owned-snapshot rewrite. Cache exclusions
+    match the strict snapshot: __pycache__ of any type and non-directory *.pyc.
+    generated_root projects out only newly created root staging artifacts; callers
+    must never exclude source-provided entries. No timestamps, ownership, ACL/xattrs
+    or external runtime closure are attested.
+    """
+    import os
+
+    original = Path(root)
+    if original.is_symlink():
+        raise ValueError('filesystem identity root must not be a symlink')
+    root = _resolve(original)
+    if not root.is_dir():
+        raise ValueError('filesystem identity root must be a directory')
+    # Check included logical aliases for cycles/escapes without reading content.
+    _tree_files(root, ignored=(_BYTECODE,))
+    entries = []
+
+    def visit(path):
+        relative = path.relative_to(root).as_posix()
+        if path.parent == root and path.name in generated_root:
+            return
+        relative.encode('utf-8')  # Refuse names without a deterministic UTF-8 representation.
+        info = path.lstat()
+        mode = stat.S_IMODE(info.st_mode)
+        link = stat.S_ISLNK(info.st_mode)
+        directory = stat.S_ISDIR(info.st_mode)
+        target = None
+        if link:
+            raw = Path(os.readlink(path))
+            lexical = Path(os.path.normpath(str(raw if raw.is_absolute() else path.parent / raw)))
+            if _resolve(path) != lexical:
+                raise ValueError('filesystem identity refuses links whose traversal differs from normalized target')
+            if not lexical.is_relative_to(root):
+                raise ValueError('unsafe filesystem link: target is outside the harness')
+            cursor = root
+            for part in lexical.relative_to(root).parts:
+                cursor = cursor / part
+                if cursor.is_symlink():
+                    raise ValueError('filesystem identity refuses chained or aliased link targets')
+            resolved = _resolve(lexical)
+            if resolved != lexical or not (resolved.is_file() or resolved.is_dir()):
+                raise ValueError('unsafe filesystem link target')
+            target = resolved.relative_to(root).as_posix()
+            directory = resolved.is_dir()
+        # Files/aliases ending .pyc are stripped; meaningful directories are retained.
+        if path != root and (path.name == _BYTECODE or
+                             (path.name.endswith('.pyc') and not directory)):
+            return
+        if mode & 0o7000:
+            raise ValueError('filesystem identity refuses special permission bits')
+        item = {'path': relative, 'mode': mode}
+        if link:
+            if _BYTECODE in Path(target).parts or (target.endswith('.pyc') and not directory):
+                raise ValueError('reviewed filesystem link targets stripped bytecode')
+            item.update(kind='link', target=target)
+        elif directory:
+            item['kind'] = 'directory'
+        elif stat.S_ISREG(info.st_mode):
+            item['kind'] = 'file'
+        else:
+            raise ValueError('filesystem identity requires regular files/directories or safe links')
+        entries.append(item)
+        if directory and not link:
+            for child in sorted(path.iterdir(), key=lambda p: p.name.encode('utf-8')):
+                visit(child)
+
+    visit(root)
+    entries.sort(key=lambda item: item['path'].encode('utf-8'))
+    payload = {'schema': 'harnessgrad-owned-source-filesystem-v1', 'entries': entries}
+    encoded = json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()
+    return {'schema': payload['schema'], 'sha256': hashlib.sha256(encoded).hexdigest(),
+            'entries': len(entries)}
+
+
 def _compile_problems(base: Path, ignored=_NOT_SOURCE, *, boundary: Path | None = None) -> list[str]:
     """Python in this harness that does not compile.
 

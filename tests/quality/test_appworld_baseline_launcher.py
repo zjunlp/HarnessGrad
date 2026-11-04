@@ -18,12 +18,23 @@ def write(path, value):
     path.write_text(json.dumps(value) + '\n')
 
 
+SYNTHETIC_FILESYSTEM = {'schema': state.FILESYSTEM_SCHEMA, 'sha256': '9'*64, 'entries': 2}
+SYNTHETIC_RUNTIME = {'scope': 'synthetic fixture, no external execution', 'environment': {},
+                     'files': [], 'harness_filesystem': SYNTHETIC_FILESYSTEM}
+
+
+def mock_reviewed_inputs(identity):
+    return (launcher.ROOT/'base_harness'/identity['harness'], {},
+            {'submission_sha256': identity['harness_sha256']}, identity['manifest_sha256'],
+            copy.deepcopy(SYNTHETIC_RUNTIME))
+
+
 @pytest.fixture
 def identity():
     return {'schema': state.IDENTITY_SCHEMA, 'dataset': 'appworld', 'harness': 'miniagent',
             'pool': 'train', 'side': 'train', 'source_sha256': 'a'*64,
             'pool_ids_sha256': 'b'*64, 'scorer_sha256': 'c'*64, 'platform_commit': 'd'*40,
-            'harness_sha256': 'e'*64, 'manifest_sha256': 'f'*64, 'runtime_sha256': '0'*64,
+            'harness_sha256': 'e'*64, 'manifest_sha256': 'f'*64, 'runtime_sha256': state.digest(state.runtime_commitment(SYNTHETIC_RUNTIME)),
             'policy': state.POLICY,
             'model': {'backend': 'openai', 'name': 'synthetic-model', 'endpoint': 'http://127.0.0.1:8001/v1',
                       'weights_sha256': '1'*64, 'tokenizer_sha256': '2'*64, 'deployment_sha256': '3'*64},
@@ -41,7 +52,8 @@ def selection(identity):
 def metadata(identity, run_id):
     m, b = identity['model'], identity['budget']
     return {'run_id': run_id, 'dataset': 'appworld', 'trials': b['trials'], 'jobs': b['jobs'],
-            'harness_source': {'submission_sha256': identity['harness_sha256']},
+            'harness_source': {'submission_sha256': identity['harness_sha256'],
+                               'filesystem':copy.deepcopy(SYNTHETIC_FILESYSTEM)},
             'config': {'agent': {'backend': m['backend'], 'model': m['name'], 'base_url': m['endpoint']},
                        'run': {'seed': str(b['seed']), 'rounds': 0, 'side': identity['side']}}}
 
@@ -63,7 +75,10 @@ def attempt(tmp_path, identity, name, tids, *, selected=None):
     run = receipt/'runs'/name
     frozen = {'schema': state.SELECTION_SCHEMA, 'pools': {p: {'eligible':30,'selected':['a','b','c']} for p in state.POOLS}, 'identities':{'miniagent:train':identity}}
     write(receipt/'launch.json', {'schema':'harnessgrad.appworld-launch.v2', 'selection_sha256':state.digest(frozen), 'run_id': name, 'selected': selected or ['a','b','c'],
-                                 'measurement_identity': identity, 'measurement_identity_sha256': state.digest(identity)})
+                                 'measurement_identity': identity, 'measurement_identity_sha256': state.digest(identity),
+                                 'runtime_commitment':state.runtime_commitment(SYNTHETIC_RUNTIME),
+                                 'command':['driver.py','--expected-harness-sha256',identity['harness_sha256'],
+                                            '--expected-harness-filesystem-sha256',SYNTHETIC_FILESYSTEM['sha256']]})
     write(run/'run_meta.json', metadata(identity, name))
     for tid, score in tids.items(): task_files(run, tid, score)
     return {'harness': 'miniagent', 'pool': 'train', 'receipt': str(receipt)}, run
@@ -226,6 +241,7 @@ def mock_current(monkeypatch, identity):
     monkeypatch.setattr(campaign,'validate_selection',lambda *a:None)
     monkeypatch.setattr(campaign,'current_identity',lambda expected,bindings:copy.deepcopy(expected))
     monkeypatch.setattr(launcher,'current_identity',lambda expected,bindings:copy.deepcopy(expected))
+    monkeypatch.setattr(launcher,'reviewed_harness_inputs',lambda identity,bindings:mock_reviewed_inputs(identity))
     monkeypatch.setattr(launcher,'ensure_frozen',lambda:None)
     monkeypatch.setattr(launcher,'observe_service',lambda _:None)
 
@@ -305,7 +321,7 @@ def test_bound_native_settings_replace_stale_inherited_settings(monkeypatch,iden
     monkeypatch.setenv('HG_MINISWE_STEP_LIMIT','10')
     monkeypatch.setenv('HG_AGENT_BASE_URL','http://wrong')
     monkeypatch.setattr(launcher,'dataset_environment',lambda: {'HG_DATA_APPWORLD':'/synthetic/data'})
-    runtime={'environment':{}}; identity['runtime_sha256']=state.digest(runtime)
+    runtime={'environment':{}, 'harness_filesystem':launcher.filesystem_identity(launcher.ROOT/'base_harness'/identity['harness'])}; identity['runtime_sha256']=state.digest(state.runtime_commitment(runtime))
     monkeypatch.setattr(launcher,'runtime_binding',lambda *a:runtime)
     monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
     monkeypatch.setenv('HG_APPWORLD_STUDY_IDS','/host/study.csv')
@@ -400,6 +416,7 @@ def test_launch_producer_checks_identity_before_creating_attempt(tmp_path,monkey
 
 
 def test_launcher_dry_run_never_probes_or_writes(tmp_path,monkeypatch,identity,selection,capsys):
+    monkeypatch.setattr(launcher,'reviewed_harness_inputs',lambda identity,bindings:mock_reviewed_inputs(identity))
     sp,bp=tmp_path/'selection.json',tmp_path/'bindings.json';write(sp,selection);write(bp,{})
     monkeypatch.setattr(launcher,'current_identity',lambda *a:copy.deepcopy(identity))
     monkeypatch.setattr(launcher,'observe_service',lambda *a:pytest.fail('no network in plan'))
@@ -587,3 +604,47 @@ def test_run_directory_must_match_launch_identity(tmp_path,identity,selection):
     recovered=state.recover(selection,old_state(selection,[pointer]))
     assert not recovered['execution_allowed']
     assert any('run_directory_identity_mismatch' in value for value in recovered['issues'])
+
+
+@pytest.mark.parametrize('tamper', ['no-commitment','old-runtime-algorithm','commitment-hash',
+    'commitment-shape','no-fs-flag','duplicate-fs-flag','different-fs-flag','no-source-flag',
+    'no-meta-fs','meta-fs-hash','meta-fs-count','meta-fs-shape','coordinated-meta-command'])
+def test_recovery_requires_reviewed_filesystem_contract(tmp_path,identity,selection,tamper):
+    pointer,run=attempt(tmp_path,identity,'appworld-filesystem',{'a':1})
+    launch_path=Path(pointer['receipt'])/'launch.json';launch=state.read(launch_path)
+    meta_path=run/'run_meta.json';meta=state.read(meta_path)
+    if tamper=='no-commitment': launch.pop('runtime_commitment')
+    elif tamper=='old-runtime-algorithm':
+        launch['measurement_identity']['runtime_sha256']=state.digest(SYNTHETIC_RUNTIME)
+        launch['measurement_identity_sha256']=state.digest(launch['measurement_identity'])
+    elif tamper=='commitment-hash': launch['runtime_commitment']['base_runtime_sha256']='8'*64
+    elif tamper=='commitment-shape': launch['runtime_commitment']['unreviewed']='extra'
+    elif tamper=='no-fs-flag': del launch['command'][-2:]
+    elif tamper=='duplicate-fs-flag': launch['command'].append('--expected-harness-filesystem-sha256='+'9'*64)
+    elif tamper=='different-fs-flag': launch['command'][-1]='8'*64
+    elif tamper=='no-source-flag': del launch['command'][1:3]
+    elif tamper=='no-meta-fs': meta['harness_source'].pop('filesystem')
+    elif tamper=='meta-fs-hash': meta['harness_source']['filesystem']['sha256']='8'*64
+    elif tamper=='meta-fs-count': meta['harness_source']['filesystem']['entries']=True
+    elif tamper=='meta-fs-shape': meta['harness_source']['filesystem']['extra']='not reviewed'
+    else:
+        launch['command'][-1]='8'*64
+        launch['runtime_commitment']['filesystem']['sha256']='8'*64
+        meta['harness_source']['filesystem']['sha256']='8'*64
+    write(launch_path,launch);write(meta_path,meta)
+    result=state.recover(selection,old_state(selection,[pointer]))
+    assert not result['execution_allowed']
+    assert result['attempt_evidence'][0]['identity_status']=='unverified'
+    coverage=result['coverage']['miniagent:train']
+    assert coverage['measured']==0 and coverage['per_task']=={}
+
+
+def test_incomplete_old_attempt_without_runtime_or_run_is_unverified(tmp_path,identity,selection):
+    pointer,run=attempt(tmp_path,identity,'appworld-incomplete',{})
+    launch_path=Path(pointer['receipt'])/'launch.json';launch=state.read(launch_path)
+    launch.pop('runtime_commitment');write(launch_path,launch)
+    import shutil
+    shutil.rmtree(run)
+    result=state.read_attempt(pointer,identity,['a','b','c'],state.digest(selection))
+    assert result['identity_status']=='unverified'
+    assert 'run_directory_missing' in result['issues']

@@ -27,6 +27,49 @@ def digest(value):
                                      allow_nan=False).encode()).hexdigest()
 
 
+RUNTIME_FILESYSTEM_SCHEMA = 'harnessgrad-runtime-source-filesystem-v1'
+FILESYSTEM_SCHEMA = 'harnessgrad-owned-source-filesystem-v1'
+
+
+def valid_filesystem(value):
+    return (isinstance(value, dict) and set(value) == {'schema', 'sha256', 'entries'}
+            and value['schema'] == FILESYSTEM_SCHEMA
+            and isinstance(value['sha256'], str) and re.fullmatch(r'[0-9a-f]{64}', value['sha256']) is not None
+            and type(value['entries']) is int and value['entries'] > 0)
+
+
+def valid_runtime_commitment(value):
+    return (isinstance(value, dict) and set(value) == {'schema', 'base_runtime_sha256', 'filesystem'}
+            and value['schema'] == RUNTIME_FILESYSTEM_SCHEMA
+            and isinstance(value['base_runtime_sha256'], str)
+            and re.fullmatch(r'[0-9a-f]{64}', value['base_runtime_sha256']) is not None
+            and valid_filesystem(value['filesystem']))
+
+
+def runtime_commitment(runtime):
+    """Public layered binding; private runtime environment values never leave here."""
+    filesystem = runtime.get('harness_filesystem')
+    if not valid_filesystem(filesystem):
+        raise RecoveryError('runtime requires a normalized source filesystem identity')
+    return {'schema': RUNTIME_FILESYSTEM_SCHEMA,
+            'base_runtime_sha256': digest({k: v for k, v in runtime.items() if k != 'harness_filesystem'}),
+            'filesystem': dict(filesystem)}
+
+
+def _command_identity(command, flag):
+    if not isinstance(command, list) or any(not isinstance(value, str) for value in command):
+        return None
+    values = []
+    for index, value in enumerate(command):
+        if value == flag:
+            values.append(command[index + 1] if index + 1 < len(command) else None)
+        elif value.startswith(flag + '='):
+            values.append(value.split('=', 1)[1])
+    if len(values) != 1 or not isinstance(values[0], str) or not re.fullmatch(r'[0-9a-f]{64}', values[0]):
+        return None
+    return values[0]
+
+
 def file_hash(path):
     h = hashlib.sha256()
     with Path(path).open('rb') as stream:
@@ -193,8 +236,16 @@ def read_attempt(pointer, expected, cohort, selection_sha256):
     else:
         if identity != expected or launch.get('measurement_identity_sha256') != digest(identity):
             result['issues'].append('measurement_identity_mismatch')
-        else:
-            result['identity_status'] = 'matched'
+    commitment = launch.get('runtime_commitment')
+    if not valid_runtime_commitment(commitment) or digest(commitment) != expected['runtime_sha256']:
+        result['issues'].append('runtime_filesystem_commitment_missing_or_invalid')
+        filesystem = None
+    else:
+        filesystem = commitment['filesystem']
+    if (_command_identity(launch.get('command'), '--expected-harness-sha256') != expected['harness_sha256']
+            or filesystem is None
+            or _command_identity(launch.get('command'), '--expected-harness-filesystem-sha256') != filesystem['sha256']):
+        result['issues'].append('command_filesystem_identity_missing_or_mismatched')
     selected = launch.get('selected')
     if not isinstance(selected, list) or not selected or len(selected) != len(set(selected)) or set(selected) - set(cohort):
         result['issues'].append('selected_tasks_missing_or_outside_cohort')
@@ -209,6 +260,10 @@ def read_attempt(pointer, expected, cohort, selection_sha256):
     meta_path = run / 'run_meta.json'
     if meta_path.exists():
         meta = read(meta_path)
+        recorded_filesystem = (meta.get('harness_source') or {}).get('filesystem')
+        if (filesystem is None or not valid_filesystem(recorded_filesystem)
+                or recorded_filesystem != filesystem):
+            result['issues'].append('runtime_filesystem_identity_missing_or_mismatched')
         cfg = meta.get('config') or {}
         actual = {'model': {k: (cfg.get('agent') or {}).get(k) for k in ('backend', 'model', 'base_url')},
                   'seed': str((cfg.get('run') or {}).get('seed')), 'trials': meta.get('trials'),
@@ -326,8 +381,7 @@ def read_attempt(pointer, expected, cohort, selection_sha256):
             if path: result['evidence'][str(path)] = file_hash(path)
     for path in (launch_path, meta_path, curve, events):
         if path.exists(): result['evidence'][str(path)] = file_hash(path)
-    if result['issues']:
-        result['identity_status'] = 'unverified'
+    result['identity_status'] = 'unverified' if result['issues'] else 'matched'
     return result
 
 

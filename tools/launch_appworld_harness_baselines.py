@@ -24,8 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.appworld_campaign_state import (IDENTITY_SCHEMA, POLICY, POOLS, RecoveryError,
-    digest, file_hash, read, selection_identity, validate_identity)
-from tools.validate_harness import check as check_harness, source_identity
+    digest, file_hash, read, selection_identity, validate_identity, runtime_commitment)
+from tools.validate_harness import check as check_harness, source_identity, filesystem_identity
 from harnessgrad.paths import main_checkout
 from harnessgrad.env_file import REVIEWED_ENVIRONMENT_ONLY
 
@@ -82,13 +82,15 @@ def harness_inputs(name, bindings):
     """Read a consistent candidate and bind external source selection into runtime."""
     path = harness_source(name, bindings)
     before = source_identity(path)
+    filesystem = filesystem_identity(path)
     manifest_bytes = (path / 'harness.json').read_bytes()
     manifest = json.loads(manifest_bytes)
     if manifest.get('name') != name or manifest.get('role') == 'control':
         raise RecoveryError('harness manifest name/role differs from selected harness')
     manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
-    runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(name))
-    if source_identity(path) != before:
+    runtime = copy.deepcopy(runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(name)))
+    runtime['harness_filesystem'] = filesystem
+    if source_identity(path) != before or filesystem_identity(path) != filesystem:
         raise RecoveryError('harness source changed while binding its identity')
     if name in bindings.get('harness_sources', {}):
         runtime['harness_source'] = {'path': str(path),
@@ -113,7 +115,7 @@ def current_identity(expected, bindings):
                   platform_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, encoding='ascii', errors='strict').strip(),
                   source_sha256=file_hash(BUNDLE), pool_ids_sha256=digest(split_ids(BUNDLE)[expected['pool']]),
                   harness_sha256=source['submission_sha256'],
-                  manifest_sha256=manifest_sha, runtime_sha256=digest(runtime))
+                  manifest_sha256=manifest_sha, runtime_sha256=digest(runtime_commitment(runtime)))
     verify = ROOT / 'data/datasets/appworld/verify'
     actual['scorer_sha256'] = digest({'files': {str(p.relative_to(verify)): file_hash(p)
         for p in sorted(verify.rglob('*')) if p.is_file() and '__pycache__' not in p.parts},
@@ -263,7 +265,7 @@ def execution_environment(identity, bindings):
             raise RecoveryError('prepared harness source changed after identity review')
     validate_appworld_overlay(harness, manifest, runtime,
                               env.get('HG_APPWORLD_IMAGE'))
-    if digest(runtime) != identity['runtime_sha256']:
+    if digest(runtime_commitment(runtime)) != identity['runtime_sha256']:
         raise RecoveryError('runtime changed after identity review')
     env.update(runtime['environment'])
     model, budget = identity['model'], identity['budget']
@@ -281,11 +283,27 @@ def execution_environment(identity, bindings):
     return env
 
 
+def reviewed_harness_inputs(identity, bindings):
+    inputs = harness_inputs(identity['harness'], bindings)
+    _, _, source, manifest_sha, runtime = inputs
+    if (source['submission_sha256'] != identity['harness_sha256']
+            or manifest_sha != identity['manifest_sha256']
+            or digest(runtime_commitment(runtime)) != identity['runtime_sha256']):
+        raise RecoveryError('harness source/filesystem/runtime changed after identity review')
+    return inputs
+
+
 def command_for(identity, selected, receipt, bindings=None):
     budget = identity['budget']
+    filesystem_flags = []
+    if bindings is not None:
+        path, _, _, _, runtime = reviewed_harness_inputs(identity, bindings)
+        filesystem_flags = ['--expected-harness-filesystem-sha256', runtime['harness_filesystem']['sha256']]
+    else:
+        path = harness_source(identity['harness'], {})
     return [sys.executable, str(ROOT/'driver.py'), '--dataset', 'appworld',
-            '--harness-path', str(harness_source(identity['harness'], bindings or {})),
-            '--expected-harness-sha256', identity['harness_sha256'],
+            '--harness-path', str(path),
+            '--expected-harness-sha256', identity['harness_sha256'], *filesystem_flags,
             '--side', identity['side'], '--sampling', 'all', '--tasks', ','.join(selected),
             '--rounds', '0', '--trials', str(budget['trials']), '--seed', str(budget['seed']),
             '--jobs', str(budget['jobs']), '--improver', 'none', '--fail-on-incomplete',
@@ -331,10 +349,12 @@ def main(argv=None):
         if not receipt.name.startswith('appworld-') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in receipt.name):
             raise RecoveryError('receipt basename must be a fresh safe appworld run ID')
         command = command_for(expected, selected, receipt, bindings)
+        _, _, _, _, reviewed_runtime = reviewed_harness_inputs(expected, bindings)
         plan = {'schema': 'harnessgrad.appworld-launch.v2', 'run_id': receipt.name,
                 'harness': args.harness, 'pool': args.pool, 'selected': selected,
                 'selection_sha256': digest(selection), 'measurement_identity': expected,
                 'measurement_identity_sha256': digest(expected), 'command': command,
+                'runtime_commitment': runtime_commitment(reviewed_runtime),
                 'bindings_sha256': file_hash(args.bindings),
                 'external_identity_evidence': 'operator-declared fingerprints; not live attestation'}
         if not args.execute:
