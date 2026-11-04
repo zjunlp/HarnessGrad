@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 170" role="img" aria-labelledby="title desc">
+  <title id="title">The harness learning loop</title>
+  <desc id="desc">Tasks lead to feedback, editing the harness and evaluation, which returns to tasks.</desc>
+  <rect width="720" height="170" rx="20" fill="#f6f8fa"/>
+  <g fill="none" stroke="#52677b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M130 70q25 -12 50 0m-8 -8 8 8-9 4M310 70q25 -12 50 0m-8 -8 8 8-9 4M490 70q25 -12 50 0m-8 -8 8 8-9 4"/>
+    <path d="M610 114q0 35-35 35H120q-30 0-30-35m-6 8 6-8 7 7"/>
+    <path d="M54 35h48v42H54zM62 46h30M62 54h25M62 62h20"/>
+    <path d="M226 35h44v42h-44zM233 45h29M233 54h24M233 63h27"/>
+    <path d="M390 45l-10 10 10 10m40-20 10 10-10 10M416 40l-12 30"/>
+    <path d="M583 65l8 8 18-21"/>
+  </g>
+  <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" text-anchor="middle" fill="#263849" font-size="16" font-weight="600">
+    <text x="80" y="105">Tasks</text><text x="250" y="105">Feedback</text>
+    <text x="410" y="105">Edit harness</text><text x="600" y="105">Evaluate</text>
+  </g>
+  <g transform="translate(457 19)" stroke="#52677b" stroke-width="2" fill="#bce4d5">
+    <path d="M18 12V5m-4 0h8" fill="none"/><rect x="3" y="12" width="30" height="24" rx="9"/>
+    <circle cx="12" cy="23" r="1.5" fill="#263849"/><circle cx="24" cy="23" r="1.5" fill="#263849"/>
+    <path d="M14 29q4 3 8 0" fill="none"/>
+  </g>
+</svg>

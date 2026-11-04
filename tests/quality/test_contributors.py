@@ -56,6 +56,27 @@ def test_three_people_and_every_one_has_a_credit() -> None:
     assert credited == people, "a person is listed with no credit or a credit has no person"
 
 
+def test_benchmark_summary_threshold_and_current_render() -> None:
+    for count, label in ((99, "99"), (100, "100+"), (123, "100+")):
+        assert f"**{label} registered benchmark adapters**" in contributors.render_benchmark_summary(count)
+    text = README.read_text(encoding="utf-8")
+    assert contributors._block(text, contributors.SUMMARY_BEGIN, contributors.SUMMARY_END) == (
+        contributors.render_benchmark_summary(len(contributors.declared_benchmarks())))
+
+
+def test_benchmark_summary_check_detects_staleness(tmp_path, monkeypatch, capsys) -> None:
+    import sys as _sys
+
+    copy = tmp_path / "README.md"
+    copy.write_text(README.read_text(encoding="utf-8").replace(
+        contributors.render_benchmark_summary(len(contributors.declared_benchmarks())),
+        contributors.render_benchmark_summary(99)), encoding="utf-8")
+    monkeypatch.setattr(contributors, "README", copy)
+    monkeypatch.setattr(_sys, "argv", ["contributors.py", "--check"])
+    assert contributors.main() == 1
+    assert "benchmark summary" in capsys.readouterr().err
+
+
 def test_the_readme_block_is_the_record_rendered() -> None:
     text = README.read_text(encoding="utf-8")
     block = contributors._block(text, contributors.BEGIN, contributors.END)
