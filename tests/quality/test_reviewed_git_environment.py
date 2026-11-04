@@ -35,10 +35,7 @@ def reviewed_env(home,system,monkeypatch):
               'model':{'backend':'openai','name':'synthetic','endpoint':'http://127.0.0.1:1/v1'},
               'budget':{'output_tokens':10,'deadline_s':60,'request_timeout_s':10,'native_settings':{}}}
     env=launcher.execution_environment(identity,{'harness_runtimes':{'miniagent':{}}})
-    assert env['GIT_CONFIG_GLOBAL']=='/dev/null'
-    assert env['GIT_CONFIG_SYSTEM']=='/dev/null' and env['GIT_CONFIG_NOSYSTEM']=='1'
-    assert env['GIT_TEMPLATE_DIR']==''
-    assert env['GIT_CONFIG_VALUE_0']=='/dev/null'
+    assert not any(key.startswith('GIT_') for key in env)
     return env
 
 
@@ -88,3 +85,30 @@ def test_reviewed_stage_disables_default_home_attributes(tmp_path,monkeypatch):
     env=reviewed_env(home,system,monkeypatch);work=tmp_path/'reviewed';stage(source,work,env)
     result=subprocess.run(['git','-C',str(work),'show','HEAD:payload.txt'],env=env,capture_output=True,check=True)
     assert result.stdout==b'a\r\nb\r\n'
+
+
+def test_framework_git_isolation_does_not_change_runner_native_git(tmp_path,monkeypatch):
+    from eval.ckpt.git_state import stage_workspace
+    from eval.run.runner import harness_env
+    home=tmp_path/'home';home.mkdir();sentinel=tmp_path/'native-hook'
+    hooks=tmp_path/'hooks';executable(hooks/'pre-commit','#!/bin/sh\nprintf NATIVE >> '+str(sentinel)+'\n')
+    (home/'.gitconfig').write_text('[core]\n hooksPath = '+json.dumps(str(hooks))+'\n')
+    source=tmp_path/'source';source.mkdir();(source/'payload').write_text('synthetic')
+    system=tmp_path/'system';system.write_text('')
+    env=reviewed_env(home,system,monkeypatch)
+    # Install exactly the reviewed parent env; marker remains opt-in for framework
+    # _git but runner.harness_env has no generated GIT_* isolation overrides.
+    for key in list(os.environ):monkeypatch.delenv(key,raising=False)
+    for key,value in env.items():monkeypatch.setenv(key,value)
+    stage_workspace(source,tmp_path/'framework')
+    assert not sentinel.exists()
+    native=harness_env()
+    assert not any(key.startswith('GIT_') for key in native)
+    assert os.environ==env
+    work=tmp_path/'native';work.mkdir();(work/'file').write_text('native')
+    # Test command disables system config via explicit test-only -c identity,
+    # not by adding framework isolation settings to the actual task environment.
+    for args in [('init','-q'),('add','-A'),('-c','user.email=synthetic@local','-c','user.name=Synthetic','commit','-qm','native')]:
+        ran=subprocess.run(['git','-C',str(work),*args],env=native,capture_output=True,text=True)
+        assert ran.returncode==0,ran.stderr
+    assert sentinel.read_text()=='NATIVE'
