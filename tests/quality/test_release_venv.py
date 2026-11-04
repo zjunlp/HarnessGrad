@@ -126,6 +126,7 @@ code=code.replace('DECLARED',repr([str(p) for p in paths[placement]]))
 result=sandbox.run([sys.executable,'-I','-c',code],platform=root,work_root=work,
     task_dir=task,repo=task,env={},timeout_s=20,cwd=task,network='none',runtime_paths=paths[placement])
 print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':result.stderr,
+                 'host_base_prefix': sys.base_prefix,
                  'aliased':str(directory/'uv') in str(Path(sys.executable).readlink())}))
 '''
     result = from_venv(python, script, ROOT, task, work, mount)
@@ -135,7 +136,10 @@ print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':resul
     observed = json.loads(wrapped['stdout'])
     aliased = wrapped['aliased']
     store_alias = mount in ('store-alias', 'version-and-store', 'store-and-version')
-    assert observed == {'prefix': str(prefix), 'base_prefix': sys.base_prefix,
+    # CPython 3.12 and later can preserve the venv's configured alias in
+    # sys.base_prefix; compare with the same venv outside the sandbox, not the
+    # parent pytest interpreter's unrelated physical spelling.
+    assert observed == {'prefix': str(prefix), 'base_prefix': wrapped['host_base_prefix'],
         'marker': 'installed-only-in-fresh-venv', 'readonly': True, 'base_readonly': True,
         'platform_visible': False, 'foreign_tmp_visible': False,
         'foreign_runtime_visible': mount in ('store', 'links-parent') or store_alias,

@@ -135,8 +135,8 @@ def interpreter_prefixes() -> tuple[Path, ...]:
     # The active virtualenv/conda prefix comes from the executable, because a normal venv's
     # `bin/python` is a symlink into the base interpreter while `pyvenv.cfg` and the packages
     # stay in `sys.prefix`: resolving the executable first would lose the environment. The
-    # venv path itself is then checked like any other prefix, so a symlinked *prefix* is still
-    # refused -- only the executable inside it may be a link.
+    # Resolve each discovered prefix to a physical bind source. Alias links needed by
+    # the executable are checked and restored separately without exposing their parents.
     candidates = []
     discovered = _venv_prefix()
     if discovered is not None:
@@ -148,9 +148,15 @@ def interpreter_prefixes() -> tuple[Path, ...]:
         if (not path.is_absolute() or path == Path('/') or '..' in path.parts
                 or not path.is_dir()):
             raise SandboxUnavailable(f'the Python runtime prefix is not an absolute directory: {value!r}')
-        if any(part.is_symlink() for part in (path, *path.parents)):
-            raise SandboxUnavailable(f'the Python runtime prefix contains a symlink: {path}; '
-                                     'use its physical directory when creating the environment')
+        # Prefixes are bind-mounted at their physical paths; the executable's
+        # alias chain is restored separately after hides. Never bind an alias's
+        # parent tree merely to make it traversable.
+        try:
+            path = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            raise SandboxUnavailable(f'cannot resolve the Python runtime prefix: {value!r}') from exc
+        if path == Path('/'):
+            raise SandboxUnavailable('the Python runtime prefix resolves to the filesystem root')
         if not any(path == parent or parent in path.parents for parent in map(Path, RUNTIME)):
             if path not in prefixes:
                 prefixes.append(path)
