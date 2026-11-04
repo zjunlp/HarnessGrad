@@ -59,7 +59,7 @@ exclude = ["data.authored*", "data.candidates*"]
 # Namespace discovery alone only includes Python modules, not these resources.
 [tool.setuptools.package-data]
 "base_harness" = ["launchable.json", "deepseek-harness/harness.json", "deepseek-harness/knobs.json", "deepseek-harness/surface.json", "deepseek-harness/dsh_farm.tsv", "deepseek-harness/README.md"]
-"base_harness.codex" = ["harness.json"]
+"base_harness.codex" = ["harness.json", "README.md"]
 "base_harness.loop" = ["harness.json", "requirements.txt"]
 "base_harness.miniagent" = ["harness.json", "requirements.txt", "LICENSE.upstream", "PROVENANCE.json", "README.md", "agent.yaml", "components.yaml"]
 "base_harness.miniagent.prompts" = ["extract.md", "system.md"]
