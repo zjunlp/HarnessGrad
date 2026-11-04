@@ -183,7 +183,8 @@
         </div>
         ${d.detail ? `<div class="detail">${esc(d.detail)}</div>` : ""}`;
 
-      $("#tl").innerHTML = d.events.map((ev, i) => renderEvent(ev, i)).join("");
+      $("#tl").innerHTML = (d.truncated ? `<div class="env">轨迹被截断${d.note ? `：${esc(d.note)}` : ""}</div>` : (d.note ? `<div class="env">${esc(d.note)}</div>` : "")) +
+        (d.events || []).map((ev, i) => renderEvent(ev, i)).join("");
       $("#tl").querySelectorAll("[data-expand]").forEach((b) => {
         b.onclick = () => {
           const pre = b.closest(".cmd")?.querySelector(".out");
@@ -196,8 +197,25 @@
     }
 
     function renderEvent(ev, i) {
+      // Generic JSONL records retain every field (including fields unknown to this UI).
+      // Raw records display their original line, not a lossy string coercion of an object.
+      if (ev.kind === "raw" || ev.kind === "structured") {
+        const has = (key) => Object.prototype.hasOwnProperty.call(ev, key);
+        const value = has("json") ? ev.json : has("value") ? ev.value : ev;
+        const text = ev.kind === "raw"
+          ? String(has("text") ? ev.text : has("raw") ? ev.raw : has("line") ? ev.line : "")
+          : JSON.stringify(value, null, 2);
+        const content = text === undefined ? String(value) : text;
+        const lines = content.split("\n").length;
+        const long = lines > 14;
+        return `<div class="step-card"><div class="step-head"><span class="step-no">${esc(ev.kind)}</span>
+          <span>${ev.kind === "raw" ? "原始行（无法解析）" : "JSON"}</span><span class="spacer"></span><span>${ev.line == null ? "" : `行 ${esc(ev.line)}`}</span></div>
+          <div class="cmd"><pre class="out" data-clamped="${long}">${esc(content)}</pre>
+          ${long ? `<div><button class="btn" data-expand>展开全部（${lines} 行）</button></div>` : ""}
+          ${ev.truncated ? `<div class="env">内容被截断${ev.note ? `：${esc(ev.note)}` : ""}</div>` : ""}</div></div>`;
+      }
       if (ev.kind === "identity") {
-        const c = (ev.config || {}).config || {};
+        const c = ev.config || {};
         return `<details class="step-card"><summary class="step-head"><span class="step-no">identity</span>
           <span>harness 配置（这一轮实测生效的那份）</span>
           <span class="spacer"></span><span>${esc((ev.config || {}).harness || "")}</span></summary>
@@ -214,19 +232,18 @@
         let pretty = ev.text, isCmd = false;
         try {
           const j = JSON.parse(ev.text);
-          if (j && (j.tool || j.command)) {
-            isCmd = true;
-            pretty = `模型 → ${j.tool || "bash"}: ${j.command || ""}${j.output ? `\n${j.output}` : ""}`;
-          }
+          isCmd = !!(j && (j.tool || j.command));
+          pretty = JSON.stringify(j, null, 2);
         } catch { /* 不是 JSON：就是模型的原话（含最终答案） */ }
         return `<div class="step-card"><div class="step-head"><span class="step-no">step ${esc(ev.step)}</span>
           <span>模型回复</span><span class="spacer"></span><span>${esc(ev.model_ms != null ? ev.model_ms + " ms" : "")}</span></div>
-          <div class="reply ${isCmd ? "cmd" : ""}">${esc(pretty)}</div></div>`;
+          <div class="reply ${isCmd ? "cmd" : ""}">${esc(pretty)}</div>
+          ${ev.truncated ? `<div class="env">回复被截断${ev.note ? `：${esc(ev.note)}` : ""}</div>` : ""}</div>`;
       }
       if (ev.kind === "command") {
         // 全文都渲染进 DOM，折叠只靠 CSS 的 max-height —— 否则"展开全部"只是把
         // 一个被截断的 pre 放开，剩下几十行根本不存在，按钮上的行数就成了谎话。
-        const raw = (ev.output || "").replace(/\s+$/, "");
+        const raw = ev.output == null ? "" : String(ev.output);
         const lines = raw.split("\n");
         const long = lines.length > 14;
         return `<div class="step-card"><div class="step-head"><span class="step-no">step ${esc(ev.step)}</span>
