@@ -173,18 +173,27 @@ def test_interpreter_links_in_protected_storage_are_refused(tmp_path, monkeypatc
                             task_dir=task, env={}, private_paths=(private,))
 
 
-def test_interpreter_link_loop_is_refused(tmp_path, monkeypatch):
+@pytest.mark.parametrize('failure', ['self-loop', 'two-link-loop', 'dangling'])
+def test_invalid_interpreter_link_is_refused(tmp_path, monkeypatch, failure):
     link = tmp_path / 'python'
-    link.symlink_to(link.name)
+    if failure == 'self-loop':
+        link.symlink_to(link.name)
+    elif failure == 'two-link-loop':
+        link.symlink_to('other-python')
+        (tmp_path / 'other-python').symlink_to(link.name)
+    else:
+        link.symlink_to('missing-python')
     monkeypatch.setattr(sys, 'executable', str(link))
     # Already-mounted links still need cycle detection when following the executable.
-    with pytest.raises(sandbox.SandboxUnavailable, match='too many symbolic links'):
-        sandbox._interpreter_symlinks((tmp_path,), platform=ROOT, work_root=tmp_path / 'work',
-            task_dir=tmp_path / 'task', writable_paths=(), state_dirs=(), private_paths=())
+    if failure != 'dangling':
+        with pytest.raises(sandbox.SandboxUnavailable, match='too many symbolic links'):
+            sandbox._interpreter_symlinks((tmp_path,), platform=ROOT, work_root=tmp_path / 'work',
+                task_dir=tmp_path / 'task', writable_paths=(), state_dirs=(), private_paths=())
     monkeypatch.setattr(sandbox, '_bwrap', lambda: '/usr/bin/bwrap')
-    with pytest.raises(sandbox.SandboxUnavailable, match='cannot resolve the Python executable'):
+    with pytest.raises(sandbox.SandboxUnavailable, match='cannot resolve the Python executable') as exc:
         sandbox.command(['/bin/true'], platform=ROOT, work_root=tmp_path / 'work',
                         task_dir=tmp_path / 'task', env={})
+    assert isinstance(exc.value.__cause__, (OSError, RuntimeError))
     report = sandbox.self_check(ROOT, tmp_path / 'work')
     assert report['ok'] is False
     assert 'cannot resolve the Python executable' in report['detail']

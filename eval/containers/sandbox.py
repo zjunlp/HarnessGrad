@@ -156,7 +156,7 @@ def interpreter_prefixes() -> tuple[Path, ...]:
 def _venv_prefix() -> Path | None:
     """The virtualenv or conda prefix that owns the running interpreter, if any."""
     try:
-        executables = (Path(sys.executable).absolute(), Path(sys.executable).resolve())
+        executables = (Path(sys.executable).absolute(), Path(sys.executable).resolve(strict=True))
     except (OSError, RuntimeError) as exc:
         raise SandboxUnavailable(f'cannot resolve the Python executable: {exc}') from exc
     for exe in executables:
