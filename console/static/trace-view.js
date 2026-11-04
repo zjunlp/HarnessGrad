@@ -24,6 +24,51 @@
   }
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  // Read shell words for display only. Never invoke a shell or evaluate substitutions.
+  // Operators/expansions and unterminated quotes are deliberately unsupported: in
+  // those cases the unmodified original is the only trustworthy representation.
+  function shellWords(input) {
+    const words = []; let word = "", mode = "plain", active = false;
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (mode === "single") {
+        if (ch === "'") mode = "plain"; else word += ch;
+      } else if (mode === "double") {
+        if (ch === '"') mode = "plain";
+        else if (ch === "\\") {
+          const next = input[++i];
+          if (next == null) return null;
+          word += '$`"\\\n'.includes(next) ? (next === "\n" ? "" : next) : "\\" + next;
+        } else if (ch === "$" || ch === "`") return null;
+        else word += ch;
+      } else if (/\s/.test(ch)) {
+        if (active) { words.push(word); word = ""; active = false; }
+      } else if (ch === "'" || ch === '"') {
+        mode = ch === "'" ? "single" : "double"; active = true;
+      } else if (ch === "\\") {
+        const next = input[++i];
+        if (next == null) return null;
+        if (next !== "\n") { word += next; active = true; }
+      } else if ("|;&<>()$`".includes(ch)) return null;
+      else { word += ch; active = true; }
+    }
+    if (mode !== "plain") return null;
+    if (active) words.push(word);
+    return words;
+  }
+
+  function commandView(command) {
+    const raw = String(command ?? "");
+    const args = shellWords(raw);
+    if (!args) return { raw, parsed: false };
+    const codeAt = args.findIndex((arg) => arg === "--code");
+    if (codeAt >= 0 && codeAt + 1 < args.length) {
+      return { raw, parsed: true, prefix: args.slice(0, codeAt + 1),
+               code: args[codeAt + 1], suffix: args.slice(codeAt + 2) };
+    }
+    return { raw, parsed: false };
+  }
+
   //: 唯一的标记。两个页面共用，改一处两边一起变。
   const MARKUP = `
     <div class="bar">
@@ -168,8 +213,14 @@
       renderTasks();
       $("#tl").innerHTML = '<div class="load">读轨迹…</div>';
       let d;
-      try { d = await api(`/api/runs/${encodeURIComponent(state.run)}/rounds/${state.round}/trace?name=${encodeURIComponent(name)}`); }
-      catch (e) { $("#tl").innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+      const requestedRun = state.run, requestedRound = state.round;
+      try { d = await api(`/api/runs/${encodeURIComponent(requestedRun)}/rounds/${requestedRound}/trace?name=${encodeURIComponent(name)}`); }
+      catch (e) {
+        if (state.current === name && state.run === requestedRun && state.round === requestedRound)
+          $("#tl").innerHTML = `<div class="err">${esc(e.message)}</div>`;
+        return;
+      }
+      if (state.current !== name || state.run !== requestedRun || state.round !== requestedRound) return;
 
       const score = d.score == null ? "—" : d.score.toFixed(3);
       const tone = d.score === 1 ? "ok" : d.score === 0 ? "fail" : "";
@@ -183,20 +234,43 @@
         </div>
         ${d.detail ? `<div class="detail">${esc(d.detail)}</div>` : ""}`;
 
-      $("#tl").innerHTML = (d.truncated ? `<div class="env">轨迹被截断${d.note ? `：${esc(d.note)}` : ""}</div>` : (d.note ? `<div class="env">${esc(d.note)}</div>` : "")) +
-        (d.events || []).map((ev, i) => renderEvent(ev, i)).join("");
-      $("#tl").querySelectorAll("[data-expand]").forEach((b) => {
-        b.onclick = () => {
-          const pre = b.closest(".cmd")?.querySelector(".out");
-          if (!pre) return;
-          pre.dataset.full = "true";
-          pre.style.maxHeight = "none";
-          b.remove();
-        };
+      const timeline = $("#tl");
+      const events = d.events || [];
+      timeline.innerHTML = (d.truncated ? `<div class="env">轨迹被截断${d.note ? `：${esc(d.note)}` : ""}</div>` : (d.note ? `<div class="env">${esc(d.note)}</div>` : "")) +
+        events.map((ev, i) => renderEvent(ev, i)).join("");
+      // Build large command/output content only when a user opens its step.
+      timeline.querySelectorAll("details[data-event]").forEach((item) => {
+        item.addEventListener("toggle", () => {
+          if (!item.open || item.dataset.loaded) return;
+          item.querySelector("[data-event-body]").innerHTML = renderEventBody(events[Number(item.dataset.event)]);
+          item.dataset.loaded = "true";
+        });
       });
+      timeline.onclick = (event) => {
+        const button = event.target.closest("[data-expand]");
+        if (!button || !timeline.contains(button)) return;
+        const pre = button.closest(".cmd")?.querySelector(".out");
+        if (!pre) return;
+        pre.dataset.full = "true";
+        pre.style.maxHeight = "none";
+        button.remove();
+      };
     }
 
     function renderEvent(ev, i) {
+      const value = ev.value && typeof ev.value === "object" && !Array.isArray(ev.value) ? ev.value : {};
+      const hint = value.type || value.event || value.tool || value.role || "";
+      const label = ev.kind === "command" ? "执行命令" : ev.kind === "reply" ? "模型回复" :
+        ev.kind === "identity" ? "运行配置" : ev.kind === "env" ? "环境状态" :
+        ev.kind === "meta" ? (ev.label || "运行信息") : ev.kind === "raw" ? "未识别的原始记录" : "其他记录";
+      const number = ev.step == null ? `记录 ${i + 1}` : `步骤 ${ev.step}`;
+      const outcome = ev.kind === "command" ? (ev.exit === 0 ? "成功" : ev.exit == null ? "退出状态未知" : `退出码 ${ev.exit}`) :
+        ev.kind === "env" && ev.solved === true ? "已完成" : hint;
+      return `<details class="trace-event" data-event="${i}"><summary class="trace-event__summary"><strong>${esc(number)}</strong>
+        <span>${esc(label)}</span>${outcome ? `<span>${esc(outcome)}</span>` : ""}</summary><div data-event-body></div></details>`;
+    }
+
+    function renderEventBody(ev, i) {
       // Generic JSONL records retain every field (including fields unknown to this UI).
       // Raw records display their original line, not a lossy string coercion of an object.
       if (ev.kind === "raw" || ev.kind === "structured") {
@@ -208,11 +282,15 @@
         const content = text === undefined ? String(value) : text;
         const lines = content.split("\n").length;
         const long = lines > 14;
-        return `<div class="step-card"><div class="step-head"><span class="step-no">${esc(ev.kind)}</span>
-          <span>${ev.kind === "raw" ? "原始行（无法解析）" : "JSON"}</span><span class="spacer"></span><span>${ev.line == null ? "" : `行 ${esc(ev.line)}`}</span></div>
-          <div class="cmd"><pre class="out" data-clamped="${long}">${esc(content)}</pre>
-          ${long ? `<div><button class="btn" data-expand>展开全部（${lines} 行）</button></div>` : ""}
-          ${ev.truncated ? `<div class="env">内容被截断${ev.note ? `：${esc(ev.note)}` : ""}</div>` : ""}</div></div>`;
+        const obj = ev.kind === "structured" && value && typeof value === "object" && !Array.isArray(value) ? value : null;
+        const important = obj ? ["type", "event", "role", "tool", "status", "message", "text", "error"]
+          .filter((key) => obj[key] != null && ["string", "number", "boolean"].includes(typeof obj[key]))
+          .map((key) => `<div><strong>${esc(key)}</strong>：${esc(obj[key])}</div>`).join("") : "";
+        return `<div class="cmd">${important || `<div class="env">${ev.kind === "raw" ? "这条记录不是有效 JSON，保留原文供排查。" : "这条记录没有可识别的常用字段，原始内容保留如下。"}</div>`}
+          <details${important ? "" : " open"}><summary>查看原始${ev.kind === "raw" ? "文本" : "数据"}${ev.line == null ? "" : ` · 第 ${esc(ev.line)} 行`}</summary>
+          <pre class="out" data-clamped="${long}">${esc(content)}</pre>
+          ${long ? `<div><button class="btn" data-expand>展开全部（${lines} 行）</button></div>` : ""}</details>
+          ${ev.truncated ? `<div class="env">内容被截断${ev.note ? `：${esc(ev.note)}` : ""}</div>` : ""}</div>`;
       }
       if (ev.kind === "identity") {
         const c = ev.config || {};
@@ -243,6 +321,7 @@
       if (ev.kind === "command") {
         // 全文都渲染进 DOM，折叠只靠 CSS 的 max-height —— 否则"展开全部"只是把
         // 一个被截断的 pre 放开，剩下几十行根本不存在，按钮上的行数就成了谎话。
+        const command = commandView(ev.command);
         const raw = ev.output == null ? "" : String(ev.output);
         const lines = raw.split("\n");
         const long = lines.length > 14;
@@ -251,7 +330,12 @@
           <span class="${ev.exit === 0 ? "ok" : "fail"}">exit ${esc(ev.exit)}</span>
           <span>${esc(ev.command_ms != null ? ev.command_ms + " ms" : "")}</span></div>
           <div class="cmd">
-            <div class="cmd-line"><span class="sig">$</span><span>${esc(ev.command)}</span></div>
+            ${command.parsed ? `<div class="cmd-line"><span class="sig">$</span><span>${esc(command.prefix.join(" "))}</span></div>
+              <div class="env">--code 参数（按 shell 引号解码，仅供阅读，不执行）</div>
+              <pre class="out trace-code">${esc(command.code)}</pre>
+              ${command.suffix.length ? `<div class="env">后续参数：${esc(JSON.stringify(command.suffix))}</div>` : ""}
+              <details><summary>查看原始命令（${command.raw.length} 字符）</summary><pre class="out">${esc(command.raw)}</pre></details>`
+              : `<div class="cmd-line"><span class="sig">$</span><span>${esc(command.raw)}</span></div>`}
             <pre class="out" data-clamped="${long}">${esc(raw)}</pre>
             ${long ? `<div><button class="btn" data-expand>展开全部（${lines.length} 行 / ${esc(ev.output_chars)} 字符）</button></div>` : ""}
             ${ev.truncated ? `<div class="env">输出被裁剪到 6000 字符（原文 ${esc(ev.output_chars)}）</div>` : ""}

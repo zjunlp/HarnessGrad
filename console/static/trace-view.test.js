@@ -9,7 +9,7 @@ function renderer() {
   // Expose the private renderer to exercise the same shared module both pages mount.
   const source = fs.readFileSync(path.join(__dirname, 'trace-view.js'), 'utf8')
     .replace('    /* ── 绑定 ─────────────────────────────────────────── */',
-      '    window.renderEventForTest = renderEvent;\n    /* ── 绑定 ─────────────────────────────────────────── */');
+      '    window.renderEventForTest = renderEventBody; window.renderSummaryForTest = renderEvent; window.commandViewForTest = commandView;\n    /* ── 绑定 ─────────────────────────────────────────── */');
   const element = () => ({ innerHTML: '', textContent: '', classList: { add() {} }, querySelectorAll: () => [], setAttribute() {} });
   const elements = new Map();
   const root = element();
@@ -18,13 +18,14 @@ function renderer() {
   const context = { window: {}, fetch: async () => ({ ok: true, json: async () => ({ rows: [] }) }) };
   vm.runInNewContext(source, context);
   context.window.HGTraceView.mount(root);
-  return context.window.renderEventForTest;
+  return { body: context.window.renderEventForTest, summary: context.window.renderSummaryForTest,
+           command: context.window.commandViewForTest };
 }
 
 test('structured JSON is pretty, complete and escaped including unknown fields', () => {
-  const render = renderer();
+  const render = renderer().body;
   const html = render({ kind: 'structured', line: 7, value: { custom: '<img src=x onerror="x">', nested: [1, null, false] } }, 0);
-  assert.match(html, /行 7/);
+  assert.match(html, /第 7 行/);
   assert.match(html, /&lt;img src=x onerror=\\&quot;x\\&quot;&gt;/);
   assert.match(html, /&quot;nested&quot;: \[/);
   assert.doesNotMatch(html, /<img/);
@@ -32,7 +33,7 @@ test('structured JSON is pretty, complete and escaped including unknown fields',
 });
 
 test('malformed raw lines and long JSON retain content and expansion', () => {
-  const render = renderer();
+  const render = renderer().body;
   const html = render({ kind: 'raw', text: '<script>bad &', line: 3 }, 0);
   assert.match(html, /&lt;script&gt;bad &amp;/);
   assert.doesNotMatch(html, /<script>/);
@@ -42,7 +43,7 @@ test('malformed raw lines and long JSON retain content and expansion', () => {
 });
 
 test('legacy reply retains all JSON fields and truncation notice; commands expand', () => {
-  const render = renderer();
+  const render = renderer().body;
   const reply = render({ kind: 'reply', step: 1, text: JSON.stringify({ tool: 'bash', command: 'ls', unknown: '<payload>' }), truncated: true }, 0);
   assert.match(reply, /&quot;unknown&quot;: &quot;&lt;payload&gt;&quot;/);
   assert.match(reply, /回复被截断/);

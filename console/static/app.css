@@ -562,6 +562,10 @@ table.grid tbody tr[data-scripted="true"]:hover {
 .trace-root .trace-list { border-right: 1px solid var(--hg-alias-border-l2); overflow: auto; }
 .trace-root .trace-main { overflow: auto; min-width: 0; }
 .trace-root .tl { max-width: 900px; margin: 0 auto; padding: 16px 18px 60px; display: flex; flex-direction: column; gap: 10px; }
+.trace-root .trace-event { border: 1px solid var(--hg-alias-border-l2); border-radius: 10px; background: var(--hg-alias-bg-layer-1); overflow: hidden; }
+.trace-root .trace-event__summary { display: flex; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; font-size: 12px; }
+.trace-root .trace-event__summary span:last-child { margin-left: auto; color: var(--hg-alias-label-secondary); }
+.trace-root .trace-event > [data-event-body] { padding: 0 8px 8px; }
 .trace-root .step-card { border: 1px solid var(--hg-alias-border-l2); border-radius: 10px; background: var(--hg-alias-bg-layer-1); overflow: hidden; }
 .trace-root .step-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0;
   padding: 7px 10px; border-bottom: 1px solid var(--hg-alias-border-l2);
