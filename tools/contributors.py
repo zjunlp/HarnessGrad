@@ -17,7 +17,7 @@ Layout
   implied by position.
 * **cell** -- one square per (contributor, month), coloured by the kind of work and labelled
   with its ``<title>``: the native tooltip lists the entries. That is the whole interaction;
-  nothing here needs JavaScript, which matters because GitHub strips it from a README.
+  nothing here needs JavaScript, which matters because GitHub strips it from Markdown.
 * **legend** -- one swatch per kind, so a colour never has to be guessed.
 
 The website carries the same record with a date-range picker; this file is the static drawing.
@@ -36,13 +36,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RECORD = ROOT / "registry" / "leaderboards.json"
-README = ROOT / "README.md"
+# Keep the onboarding README short; detailed generated credit lives in the reference.
+REFERENCE = ROOT / "docs" / "readme-reference.md"
 DETAILS = ROOT / "docs" / "contributors.md"
 #: Avatars are cached here as bytes, not fetched at render time. A GitHub README shows an SVG
 #: through an `<img>`, and an `<img>` may not load a remote resource from inside the SVG -- so
@@ -548,7 +550,10 @@ def render_block(record: dict) -> str:
         "",
         *rows,
     ])
-    return "\n".join([BEGIN, body, "", *render_results(record), END])
+    block = "\n".join([BEGIN, body, "", *render_results(record), END])
+    # Rendered paths originate at the repository root; the block now lives in docs/.
+    return re.sub(r"\]\((?![a-zA-Z][a-zA-Z0-9+.-]*:|/|#)([^)]+)\)",
+                  r"](../\1)", block)
 
 
 def render_details(record: dict) -> str:
@@ -645,7 +650,7 @@ def main() -> int:
     page = render_html(data)
 
     if args.check:
-        readme = README.read_text(encoding="utf-8")
+        readme = REFERENCE.read_text(encoding="utf-8")
         stale = []
         if _block(readme, BEGIN, END) != render_block(data):
             stale.append("the contributor block")
@@ -664,11 +669,11 @@ def main() -> int:
               f"{len(months(entries(data)))} months")
         return 0
 
-    readme = README.read_text(encoding="utf-8")
+    readme = REFERENCE.read_text(encoding="utf-8")
     existing = _block(readme, BEGIN, END)
     if existing is None:
-        raise SystemExit(f"error: the README has no block starting with {BEGIN!r}")
-    README.write_text(readme.replace(existing, block), encoding="utf-8")
+        raise SystemExit(f"error: the reference page has no block starting with {BEGIN!r}")
+    REFERENCE.write_text(readme.replace(existing, block), encoding="utf-8")
     for board, path in FIGURES.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(svgs[board], encoding="utf-8")
@@ -676,7 +681,7 @@ def main() -> int:
     PAGE.write_text(page, encoding="utf-8")
     print("wrote " + ", ".join(path.relative_to(ROOT).as_posix() for path in FIGURES.values())
           + f", {DETAILS.relative_to(ROOT).as_posix()}, {PAGE.relative_to(ROOT).as_posix()} "
-          f"and the README block")
+          f"and the reference contributor block")
     return 0
 
 

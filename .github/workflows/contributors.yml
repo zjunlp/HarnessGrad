@@ -1,6 +1,6 @@
 # Keep the contribution drawings equal to the record, without waiting for a human.
 #
-# The README's three curves are committed SVGs: GitHub does not run JavaScript in a README, so
+# The reference page's curves are committed SVGs: GitHub does not run JavaScript in Markdown, so
 # the only way "the picture is always current" can be true is if something regenerates the file
 # after the record changes. That is this job. It runs on a schedule and by hand, renders
 # `registry/leaderboards.json` through the same `--write` a contributor runs, and commits only
@@ -8,7 +8,7 @@
 # of empty commits.
 #
 # It is deliberately *not* a server: a badge service that renders on every request would need
-# hosting and a credential, and it would make the README depend on a third party staying up.
+# hosting and a credential, and would make the reference page depend on a third party staying up.
 # A scheduled commit is the same freshness with none of the availability risk, and the diff is
 # reviewable. The interactive page (`docs/contributors.html`) is regenerated in the same commit;
 # serving it needs Pages or the Hub, which is a separate decision.
@@ -48,13 +48,13 @@ jobs:
       - name: Commit only a real change
         run: |
           if git diff --quiet -- .github/assets/contributors-*.svg docs/contributors.md \
-               docs/contributors.html README.md ; then
+               docs/contributors.html docs/readme-reference.md ; then
             echo "no change: the drawings already match the record"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/assets/contributors-*.svg docs/contributors.md \
-                  docs/contributors.html README.md
+                  docs/contributors.html docs/readme-reference.md
           git commit -m "contributions: redraw from the record"
           git push
