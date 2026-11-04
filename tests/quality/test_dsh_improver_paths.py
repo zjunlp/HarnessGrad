@@ -364,6 +364,36 @@ def test_missing_installation_configuration_is_refused_before_probing(tmp_path, 
     assert values[missing][0] in selected['reason'], selected
 
 
+@pytest.mark.parametrize('layout', ['standalone', 'bin-prefix'])
+def test_node_installation_containing_platform_is_refused_before_probing(tmp_path, monkeypatch, layout):
+    root, home, _ = installation(tmp_path / 'installation')
+    shared = tmp_path / 'shared'
+    platform = shared / 'platform'
+    launcher = platform / 'methods/dsh-improver'
+    launcher.parent.mkdir(parents=True)
+    shutil.copy2(improver.ROOT / 'methods/dsh-improver', launcher)
+    node = shared / ('node' if layout == 'standalone' else 'bin/node')
+    node.parent.mkdir(exist_ok=True)
+    node.write_text('#!/bin/sh\nprintf "dsh 1.2.3\\n"\n')
+    node.chmod(0o755)
+    assert (improver._interpreter_prefix(node) or node.parent) == shared
+    monkeypatch.setattr(improver, 'ROOT', platform)
+    probed = []
+
+    def record_probe(path, **kwargs):
+        probed.append(path)
+        return True, '1.2.3', ''
+
+    monkeypatch.setattr(improver, '_run_version', record_probe)
+    entry = bundled_entry(root, home)
+    entry.update(interpreter=str(node), build_command=[])
+    selected = resolve(entry)
+    assert selected['ok'] is False, selected
+    assert 'must not contain or lie within the platform checkout' in selected['reason']
+    assert str(shared) in selected['reason']
+    assert probed == []
+
+
 def test_direct_launcher_has_no_personal_directory_fallback(tmp_path, monkeypatch):
     result = subprocess.run([str(improver.ROOT / 'methods/dsh-improver'), '--version'],
                             capture_output=True, text=True, timeout=5)

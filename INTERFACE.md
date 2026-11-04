@@ -1941,7 +1941,9 @@ and a prepared profile home with `HG_IMPROVER_DSH_HOME`, or set `root` and `home
 in a local `HG_IMPROVER_CONFIG` registry. `HG_DSH_NODE` overrides the registry's
 `interpreter`; otherwise that interpreter is resolved once from `PATH`. There is
 no per-user installation fallback. The checkout must contain `apps/cli/lib/bin.js`,
-and the source and profile home must be outside the hidden platform checkout.
+and the source, profile home and Node installation directory must neither contain
+nor lie within the hidden platform checkout. This includes the parent directory
+used for a Node executable outside a `bin/` layout.
 
 The resolver expands `{root}` and `{home}` in this entry's `runtime` and
 `build_command` fields. An environment override also relocates the corresponding

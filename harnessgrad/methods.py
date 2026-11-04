@@ -101,15 +101,20 @@ def _method_sandbox_plan(work: Path, argv: list[str], scratch: Path,
         if candidate.is_absolute() and candidate.is_file():
             visible.append(candidate.parent)
     # **The improver's trees**, bound read-only like the method's own program. Two
-    # guards: never a tree the platform lives in (that would undo the hide), and never a
+    # guards: never a tree overlapping the platform (that would undo the hide), and never a
     # tree the namespace already binds (`/usr`, the Python prefix), because a duplicate
     # mount is noise in a plan that is read by people.
     tools = []
+    platform = PLATFORM_ROOT.resolve()
     for entry in runtime:
         tree = Path(entry)
         if not tree.is_dir() or tree == Path("/"):
             continue
-        if tree == PLATFORM_ROOT or PLATFORM_ROOT in tree.parents:
+        # Check both the mount destination and its actual source. An ancestor
+        # re-exposes the platform after the hide; a symlink can expose its files
+        # under a different name even when the original path stays hidden.
+        if any(path.is_relative_to(platform) or platform.is_relative_to(path)
+               for path in (tree.absolute(), tree.resolve())):
             continue
         if any(tree == Path(r) or Path(r) in tree.parents for r in sandbox.RUNTIME):
             continue

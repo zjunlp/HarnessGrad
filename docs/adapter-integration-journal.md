@@ -6430,3 +6430,25 @@ before the fix and now pass, including checks that alias credentials and platfor
 code stay hidden. The focused DSH/improver/registry/prompt suite passed all 98
 tests, including the existing native and cached-image container runtime controls.
 These checks use fixtures and make no model calls.
+
+### Runtime mounts preserve platform isolation and wrapper environments (2026-11-04)
+
+The DSH improver rejects an inferred Node installation directory that contains
+the platform, including both standalone executables and `bin/` prefixes, before
+version probing. The method sandbox also excludes runtime mounts whose absolute
+destination or resolved source overlaps the platform in either direction. This
+blocks ancestor mounts and aliases of platform subtrees from exposing credentials
+or scorers after the platform hide. Mount plan version 7 records this change.
+
+Custom `HG_AGENT_DSH_COMMAND` executables keep their symlink spelling after being
+located and made absolute, preserving a Python venv's environment. Normal Node
+installation resolution continues to use canonical paths. A no-pip venv with a
+private module verifies absolute, PATH-selected and relative commands through both
+host and native-sandbox execution, including configuration inspection and `sys.prefix`.
+
+All 12 added regression cases failed before their respective fixes. Validation
+passed 195 tests and 38 subtests across improver resolution, method readiness,
+sandbox/integrity boundaries, DSH runtime/session behavior and documentation/import
+guards. Three separate existing Codex/OpenCode/OpenClaw path checks still fail on
+inaccessible old-user installation paths. Temporary work trees and fixture data
+were cleaned; these controls used no model calls or benchmark measurements.

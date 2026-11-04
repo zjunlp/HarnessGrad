@@ -395,7 +395,7 @@ def _dsh_installation(entry: dict, launcher: Path) -> tuple[dict, dict, dict]:
     home = Path(raw_home).expanduser().resolve()
     if not home.is_dir():
         raise ValueError(f'prepared DSH improver home does not exist: {home}')
-    for path in (root, home):
+    for path in (root, home, node_root):
         if path.is_relative_to(ROOT) or ROOT.is_relative_to(path):
             raise ValueError(f'DSH runtime must not contain or lie within the platform checkout: {path}')
 

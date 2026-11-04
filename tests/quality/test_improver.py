@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -256,6 +257,64 @@ def test_the_method_sandbox_binds_the_improver_but_never_the_platform(tmp_path):
     assert tool in plan["visible_paths"]
     assert ROOT / "tools" not in plan["visible_paths"]
     assert ROOT / "harnessgrad" not in plan["visible_paths"]
+
+
+@pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
+@pytest.mark.parametrize('binding', ['ancestor', 'ancestor-alias', 'platform-alias', 'child-alias'])
+def test_method_runtime_cannot_reopen_platform_through_parent_or_alias(tmp_path, monkeypatch, binding):
+    from harnessgrad import methods
+    from eval.containers import sandbox
+
+    shared = tmp_path / 'shared'
+    platform = shared / 'platform'
+    script = platform / 'methods/probe.py'
+    script.parent.mkdir(parents=True)
+    secret = platform / '.env'
+    secret.write_text('fixture-only-secret')
+    scorer = platform / 'eval/run/metrics.py'
+    scorer.parent.mkdir(parents=True)
+    scorer.write_text('fixture-only-scorer')
+    target = {'ancestor': shared, 'ancestor-alias': shared,
+              'platform-alias': platform, 'child-alias': platform / 'eval'}[binding]
+    exposed = target
+    if binding != 'ancestor':
+        exposed = tmp_path / 'runtime-alias'
+        exposed.symlink_to(target, target_is_directory=True)
+    probes = [secret, scorer]
+    probes += [exposed / path.relative_to(target) for path in (secret, scorer)
+               if path.is_relative_to(target)]
+    safe = tmp_path / 'safe-runtime'
+    safe.mkdir()
+    (safe / 'marker').write_text('runtime-ok')
+    script.write_text(f'''
+import json
+from pathlib import Path
+def readable(path):
+    try:
+        Path(path).read_text()
+        return True
+    except OSError:
+        return False
+print(json.dumps({{
+    'private_readable': [readable(path) for path in {[str(p) for p in probes]!r}],
+    'runtime': Path({str(safe / 'marker')!r}).read_text(),
+}}))
+''')
+    work_root = tmp_path / 'work'
+    workspace = work_root / 'round/workspace'
+    workspace.mkdir(parents=True)
+    parent = work_root / 'parent'
+    parent.mkdir()
+    monkeypatch.setattr(methods, 'PLATFORM_ROOT', platform)
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work_root))
+    argv = [sys.executable, str(script)]
+    plan = methods._method_sandbox_plan(workspace, argv, workspace.parent,
+                                        readonly=(parent,), runtime=(str(exposed), str(safe)))
+    ran = subprocess.run(sandbox.command(argv, env={'PATH': os.defpath}, **plan),
+                         cwd=workspace, capture_output=True, text=True, timeout=15)
+    assert ran.returncode == 0, ran.stderr
+    assert json.loads(ran.stdout) == {'private_readable': [False] * len(probes), 'runtime': 'runtime-ok'}
+    assert plan['runtime_paths'] == (safe,)
 
 
 def test_a_named_endpoint_improver_declares_its_own_url_model_and_key(monkeypatch):

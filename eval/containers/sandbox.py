@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 6  # 6 mounts the active venv and its base interpreter as distinct runtime trees;
+PLAN_VERSION = 7  # 7 excludes method runtime trees overlapping the platform, including aliases;
+                  # 6 mounts the active venv and its base interpreter as distinct runtime trees;
                   # 5 adds the read-only host-side tool socket (`eval/containers/tool_route.py`);
                   # 4 was the offline model socket and the trusted namespace-local HTTP bootstrap.
 
