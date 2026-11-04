@@ -524,3 +524,102 @@ def test_reviewed_source_runs_from_owned_copy_and_preserves_original_identity(tm
     assert meta['harness_source']['path'] == str(source)
     assert meta['harness_source']['submission_sha256'] == expected['submission_sha256']
     assert _digest(source) == expected
+
+
+@pytest.mark.parametrize('checked', [False, True])
+def test_reviewed_pep552_bytecode_cannot_execute_outside_submission_hash(tmp_path, checked):
+    import importlib.util
+    import py_compile
+    source = _harness(tmp_path)
+    (source/'agent.py').write_text(AGENT.replace('import argparse', 'import argparse\nimport payload\nassert payload.VALUE == "alpha"'))
+    payload = source/'payload.py';payload.write_text('VALUE = "alpha"\n')
+    expected = validator.source_identity(source)
+    cache = Path(importlib.util.cache_from_source(str(payload)));cache.parent.mkdir()
+    malicious = tmp_path/'unreviewed.py';malicious.write_text('raise RuntimeError("UNREVIEWED_BYTECODE_EXECUTED")\n')
+    py_compile.compile(str(malicious),cfile=str(cache),doraise=True,
+        invalidation_mode=(py_compile.PycInvalidationMode.CHECKED_HASH if checked
+                           else py_compile.PycInvalidationMode.UNCHECKED_HASH))
+    if checked:
+        raw=cache.read_bytes();cache.write_bytes(raw[:8]+importlib.util.source_hash(payload.read_bytes())+raw[16:])
+    assert validator.source_identity(source)==expected, 'cache unexpectedly bound by reviewed SHA'
+    # Prove the threat locally: -B still consumes both valid PEP552 cache modes.
+    control=subprocess.run([sys.executable,'-B','-c','import payload'],cwd=source,
+        capture_output=True,text=True,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'},timeout=20)
+    assert control.returncode != 0 and 'UNREVIEWED_BYTECODE_EXECUTED' in control.stderr
+    cached_before=cache.read_bytes()
+    proc=_run(tmp_path,'--harness-path',str(source),
+        '--expected-harness-sha256',expected['submission_sha256'])
+    assert proc.returncode==0, proc.stdout+proc.stderr
+    rows=[json.loads(p.read_text()) for p in (tmp_path/'runs/a1-test/progress/round-0').glob('*.json')]
+    assert len(rows)==4 and all(row['exit_code']==0 for row in rows), rows
+    assert cache.read_bytes()==cached_before and validator.source_identity(source)==expected
+
+
+def test_reviewed_bytecode_strip_covers_root_nested_files_and_owned_aliases(tmp_path):
+    import driver
+    source=_harness(tmp_path)
+    (source/'root.pyc').write_bytes(b'ignored bytecode')
+    (source/'pkg').mkdir();(source/'pkg/deep.pyc').write_bytes(b'ignored bytecode')
+    (source/'pkg/__pycache__').mkdir();(source/'pkg/__pycache__/payload.pyc').write_bytes(b'ignored bytecode')
+    (source/'alias.pyc').symlink_to('agent.py')
+    (source/'cache_target').mkdir();(source/'cache_target/owned.py').write_text('VALUE=1\n')
+    (source/'__pycache__').symlink_to('cache_target',target_is_directory=True)
+    # A directory ending in .pyc has hashed children and must not be dropped.
+    (source/'code.pyc').mkdir();(source/'code.pyc/owned.py').write_text('VALUE=2\n')
+    (source/'directory-alias.pyc').symlink_to('code.pyc',target_is_directory=True)
+    before=validator.source_identity(source)
+    snapshot=tmp_path/'snapshot';driver._external_source_snapshot(source,snapshot)
+    driver._strip_reviewed_bytecode(snapshot)
+    assert validator.source_identity(snapshot)==before
+    assert not (snapshot/'root.pyc').exists() and not (snapshot/'alias.pyc').is_symlink()
+    assert not (snapshot/'pkg/deep.pyc').exists() and not (snapshot/'pkg/__pycache__').exists()
+    assert not (snapshot/'__pycache__').is_symlink()
+    assert (snapshot/'cache_target/owned.py').read_text()=='VALUE=1\n'
+    assert (snapshot/'code.pyc/owned.py').is_file() and (snapshot/'directory-alias.pyc').is_symlink()
+    assert validator.source_identity(source)==before and (source/'root.pyc').is_file()
+
+
+@pytest.mark.parametrize('link_name', ['__pycache__','escape.pyc'])
+def test_reviewed_bytecode_escaping_links_refuse_before_model(tmp_path, monkeypatch, capsys, link_name):
+    import driver
+    source=_harness(tmp_path)
+    outside=tmp_path/'outside';outside.mkdir();private=outside/'private.pyc';private.write_bytes(b'do not touch')
+    (source/link_name).symlink_to(outside if link_name=='__pycache__' else private,
+                                 target_is_directory=link_name=='__pycache__')
+    # __pycache__ is ignored by identity; .pyc escaping links refuse even earlier.
+    expected=(validator.source_identity(source)['submission_sha256'] if link_name=='__pycache__' else 'a'*64)
+    monkeypatch.setattr(driver,'describe_model',lambda:pytest.fail('unsafe cache reached model'))
+    monkeypatch.setattr(sys,'argv',_argv(tmp_path,'--harness-path',str(source),
+        '--expected-harness-sha256',expected))
+    assert driver._main({})==2
+    assert 'outside the harness' in capsys.readouterr().err
+    assert private.read_bytes()==b'do not touch' and not (tmp_path/'runs').exists()
+
+
+def test_reviewed_alias_into_excluded_cache_refuses_before_model(tmp_path, monkeypatch, capsys):
+    import driver
+    source=_harness(tmp_path)
+    (source/'__pycache__').mkdir();(source/'__pycache__/owned.py').write_text('VALUE=1\n')
+    (source/'reviewed.py').symlink_to('__pycache__/owned.py')
+    expected=validator.source_identity(source)['submission_sha256']
+    monkeypatch.setattr(driver,'describe_model',lambda:pytest.fail('ambiguous cache alias reached model'))
+    monkeypatch.setattr(sys,'argv',_argv(tmp_path,'--harness-path',str(source),
+        '--expected-harness-sha256',expected))
+    assert driver._main({})==2
+    assert 'refusing --harness-path' in capsys.readouterr().err
+    assert (source/'reviewed.py').read_text()=='VALUE=1\n'
+    assert not (tmp_path/'runs').exists()
+
+
+@pytest.mark.parametrize('target', ['__pycache__', 'missing-cache'])
+def test_reviewed_broken_or_cyclic_cache_alias_refuses_cleanly(tmp_path, monkeypatch, capsys, target):
+    import driver
+    source=_harness(tmp_path)
+    (source/'__pycache__').symlink_to(target,target_is_directory=True)
+    expected=validator.source_identity(source)['submission_sha256']
+    monkeypatch.setattr(driver,'describe_model',lambda:pytest.fail('ambiguous cache reached model'))
+    monkeypatch.setattr(sys,'argv',_argv(tmp_path,'--harness-path',str(source),
+        '--expected-harness-sha256',expected))
+    assert driver._main({})==2
+    assert 'refusing --harness-path' in capsys.readouterr().err
+    assert (source/'__pycache__').is_symlink() and not (tmp_path/'runs').exists()

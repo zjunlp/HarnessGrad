@@ -633,6 +633,30 @@ def _external_source_snapshot(source: Path, target: Path) -> None:
                             target_is_directory=owned.is_dir())
 
 
+def _strip_reviewed_bytecode(root: Path) -> None:
+    """Exclude executable caches omitted by the reviewed submission identity.
+
+    -B only prevents cache writes; Python still reads existing bytecode. Validate
+    all links before deletion, never follow a cache alias while removing it, and
+    let the subsequent full source hash refuse any broken reviewed source alias.
+    """
+    if root.is_symlink():
+        raise ValueError('reviewed snapshot root must not be a symlink')
+    owned_root = root.resolve(strict=True)
+    paths = list(root.rglob('*'))
+    for path in paths:
+        if path.is_symlink() and not path.resolve(strict=True).is_relative_to(owned_root):
+            raise ValueError('unsafe reviewed snapshot link: target is outside the harness')
+    for path in sorted(paths, key=lambda value: len(value.parts), reverse=True):
+        if path.name == '__pycache__':
+            if path.is_symlink() or not path.is_dir():
+                path.unlink()
+            else:
+                shutil.rmtree(path)
+        elif path.name.endswith('.pyc') and not path.is_dir():
+            path.unlink()
+
+
 def _harness_roots() -> list[Path]:
     """The directories a `--harness <name>` is looked up in, in order.
 
@@ -1303,13 +1327,14 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 snapshot_root = Path(sources.enter_context(tempfile.TemporaryDirectory(prefix='hg-reviewed-source-')))
                 snapshot = snapshot_root / 'source'
                 _external_source_snapshot(harness_src, snapshot)
+                _strip_reviewed_bytecode(snapshot)
                 if source_identity(snapshot)['submission_sha256'] != args.expected_harness_sha256:
                     raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
                 if source_identity(harness_src) != source_receipt:
                     raise ValueError('harness source changed while taking reviewed snapshot')
                 harness_src = snapshot
                 args.harness = manifest(harness_src)['name']
-            except (OSError, ValueError) as exc:
+            except (OSError, ValueError, RuntimeError) as exc:
                 print(f'refusing --harness-path: {exc}', file=sys.stderr)
                 return 2
     elif args.side == "eval":
@@ -2060,6 +2085,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
                 snapshot = Path(staging) / 'source'
                 _external_source_snapshot(harness_src, snapshot)
+                if args.expected_harness_sha256 is not None:
+                    _strip_reviewed_bytecode(snapshot)
                 snapshot_identity = source_identity(snapshot)
                 if (args.expected_harness_sha256 is not None
                         and snapshot_identity['submission_sha256'] != args.expected_harness_sha256):

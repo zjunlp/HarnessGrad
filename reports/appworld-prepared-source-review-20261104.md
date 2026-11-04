@@ -93,3 +93,45 @@ transitive attestation or immutable storage proof; ordinary platform/runtime
 checks and separate experiment authorization still apply. New source bindings
 change identity and require freshly prepared selections; no historical receipt
 or selected cohort is rewritten.
+
+## Separate bytecode follow-up after 8f34064
+
+Independent review found a real hole in the first prepared-source commit:
+submission identity intentionally excludes `__pycache__` and leaf `*.pyc`, but
+owned snapshots copied them. Python -B prevents writing caches, **not reading
+them**. Thus matching reviewed source bytes did not constrain cached executable
+module code. The earlier 180-test result did not cover this threat and is not a
+claim that the first commit alone closed it.
+
+The expected-hash workflow now strips all ignored bytecode from its early private
+snapshot before identity/model checks and again from its late staging snapshot.
+All children named `__pycache__` (files, directories or owned aliases) and leaf
+`*.pyc` files/aliases are removed. Ordinary directories and directory aliases
+named `*.pyc` are retained because their child-file paths contribute to the
+existing source hash. The original submitted tree and source_identity semantics
+are unchanged. Legacy direct-source runs without the expected-hash flag retain
+their previous copying behavior.
+
+All snapshot links are checked for owned targets before stripping. Cache aliases
+are unlinked rather than followed; escaping, broken/cyclic cache aliases and
+reviewed aliases into removed caches fail closed before describe_model. Existing
+safe-copy helper and sandbox permission/mount policy remain unchanged. The early
+reviewed block now normalizes ignored-cache symlink-loop errors into a refusal.
+
+The new end-to-end synthetic regressions create valid PEP552 unchecked-hash and
+checked-hash caches (the latter with a forged matching source hash header). Their
+malicious code only raises an identifying RuntimeError. Controls prove Python -B
+executes these caches while the reviewed submission SHA remains unchanged. The
+actual reviewed driver workflow instead executes the reviewed source: all four
+synthetic files-task processes exit 0, and original caches/source remain untouched.
+Additional cases cover root/nested caches, owned aliases, meaningful directories
+ending in .pyc, external links, dangling/cyclic aliases and ambiguous reviewed
+source links, with failure guards proving describe_model is never reached for
+unsafe inputs.
+
+Final combined command is the five-file focused suite above with
+`--basetemp=/tmp/hg-reviewed-bytecode-final`: **188 passed in 57.58s**.
+Python compile and git diff --check pass. No real model, network, benchmark,
+AppWorld service/scorer, native DSH process or campaign ran. This closes the
+source-cache execution gap for the new expected-hash workflow; it does not attest
+external runtime dependency contents or full filesystem identity.
