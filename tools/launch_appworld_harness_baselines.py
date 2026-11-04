@@ -280,6 +280,15 @@ def execution_environment(identity, bindings):
     # Fixed tracked policy, never an inherited or operator-overridable option.
     # Set before the driver interpreter starts, including its import-time readers.
     env[REVIEWED_ENVIRONMENT_ONLY] = '1'
+    # Git is framework execution too: init/add/commit must not import executable
+    # hooks, filters or attributes from the operator's HOME/system configuration.
+    # Environment config overrides local defaults; empty template selection also
+    # prevents executable hooks from being copied out of Git's system templates.
+    env.update(GIT_CONFIG_GLOBAL='/dev/null', GIT_CONFIG_SYSTEM='/dev/null',
+               GIT_CONFIG_NOSYSTEM='1', GIT_ATTR_NOSYSTEM='1', GIT_TEMPLATE_DIR='',
+               GIT_CONFIG_COUNT='3', GIT_CONFIG_KEY_0='core.hooksPath', GIT_CONFIG_VALUE_0='/dev/null',
+               GIT_CONFIG_KEY_1='core.attributesFile', GIT_CONFIG_VALUE_1='/dev/null',
+               GIT_CONFIG_KEY_2='init.templateDir', GIT_CONFIG_VALUE_2='')
     return env
 
 
