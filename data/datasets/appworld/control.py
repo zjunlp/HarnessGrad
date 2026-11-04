@@ -11,7 +11,6 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-AW_PYTHON = Path("/mnt/20t/xubuqiang/venvs/appworld/bin/python")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 import data.datasets.appworld as dataset
@@ -24,7 +23,21 @@ def _task(task_id: str) -> dict:
     raise SystemExit(f"unknown task id: {task_id}")
 
 
+def _aw_python() -> str:
+    """Select only an explicitly configured AppWorld-compatible interpreter."""
+    configured = os.environ.get("AW_PYTHON", "")
+    executable = shutil.which(os.path.expanduser(configured)) if configured else None
+    if executable is None:
+        raise SystemExit(
+            "Set AW_PYTHON to an executable Python from an environment with "
+            "the prepared AppWorld version and its dependencies installed."
+        )
+    # Keep venv symlinks intact, but make relative overrides safe across cwd changes.
+    return os.path.abspath(executable)
+
+
 def _local(task: dict, oracle: bool, workdir: Path) -> int:
+    aw_python = _aw_python()
     os.environ.setdefault("APPWORLD_ROOT", str(dataset.UNPACKED))
     experiment = f"control-{task['task_id']}-{next(tempfile._get_candidate_names())}"
     code = dataset.oracle_files(task)["reference.py"] if oracle else "print('noop')"
@@ -39,14 +52,14 @@ def _local(task: dict, oracle: bool, workdir: Path) -> int:
         "    print(world.output_logs_directory)\n",
         encoding="utf-8",
     )
-    proc = subprocess.run([str(AW_PYTHON), str(probe)], cwd=workdir, text=True, errors="replace", capture_output=True)
+    proc = subprocess.run([aw_python, str(probe)], cwd=workdir, text=True, errors="replace", capture_output=True)
     if proc.returncode:
         print(proc.stdout + proc.stderr, file=sys.stderr)
         return 1
     log = Path(proc.stdout.strip().splitlines()[-1]) / "api_calls.jsonl"
     check = workdir / "check.py"
     check.write_text((ROOT / "data/datasets/appworld/verify/check.py").read_text(), encoding="utf-8")
-    cmd = [str(AW_PYTHON), str(check), "--task-id", task["task_id"], "--log", str(log),
+    cmd = [aw_python, str(check), "--task-id", task["task_id"], "--log", str(log),
            "--reward-file", str(workdir / "reward.txt"), "--evidence-file", str(workdir / "evidence.json")]
     checked = subprocess.run(cmd, cwd=workdir, text=True, errors="replace", capture_output=True)
     reward = (workdir / "reward.txt").read_text().strip() if (workdir / "reward.txt").is_file() else "missing"

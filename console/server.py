@@ -39,7 +39,11 @@
 数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
 会显示成 "—"；`traces: 0` 只在目录存在且确实为空时出现。
 
-    python3 hg-console/server.py [--port 4460]
+    python3 console/server.py [--port 4460]
+
+Paths: HG_CONSOLE_PLATFORM defaults to this module's checkout. HG_CONSOLE_RUNS
+selects an existing receipt directory (default: ~/.local/share/harnessgrad/runs).
+No receipt directory is created, migrated, or discovered automatically.
 """
 
 from __future__ import annotations
@@ -70,8 +74,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = pathlib.Path(__file__).resolve().parent
 STATIC = ROOT / "static"
-RUNS = pathlib.Path(os.environ.get("HG_CONSOLE_RUNS", "/mnt/20t/xubuqiang/hg-work/rsi10/runs"))
-PLATFORM = pathlib.Path(os.environ.get("HG_CONSOLE_PLATFORM", "/mnt/20t/xubuqiang/Study/HarnessGrad"))
+# The console is portable: its platform is the checkout containing this module.  Runs are
+# deliberately external state; operators can bind an existing receipt tree explicitly via
+# HG_CONSOLE_RUNS, while a fresh install gets a conventional per-user location (never
+# created or populated implicitly).
+DEFAULT_RUNS = pathlib.Path.home() / ".local" / "share" / "harnessgrad" / "runs"
+RUNS = pathlib.Path(os.environ.get("HG_CONSOLE_RUNS", str(DEFAULT_RUNS)))
+PLATFORM = pathlib.Path(os.environ.get("HG_CONSOLE_PLATFORM", str(ROOT.parent)))
 SKIP_DIRS = {"__pycache__", ".git", ".state"}
 MAX_FILE_BYTES = 400_000
 #: 方法文件读进浏览器时的上限。方法 run.py 通常 20–30 KB；超过这个数的文件
@@ -4350,7 +4359,10 @@ def main() -> int:
     if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT') and args.host != '127.0.0.1':
         raise SystemExit('submission service requires --host 127.0.0.1')
     if not RUNS.is_dir():
-        raise SystemExit(f"runs root not found: {RUNS}")
+        raise SystemExit(
+            f"runs root not found: {RUNS} (set HG_CONSOLE_RUNS or provide an existing "
+            "receipt directory; the default is not created automatically)"
+        )
     httpd = ConsoleServer((args.host, args.port), Handler)
     print(f"hg-console on http://{args.host}:{args.port}  (runs={RUNS})", flush=True)
     try:
