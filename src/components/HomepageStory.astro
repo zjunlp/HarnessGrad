@@ -1,0 +1,158 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const docs = 'https://github.com/zjunlp/HarnessGrad/blob/main/docs';
+const modes = [
+  { name: 'Context', scope: 'Current interaction', changes: 'Working context' },
+  { name: 'Memory', scope: 'Across tasks', changes: 'Saved experience' },
+  { name: 'Skills', scope: 'Distilled reuse', changes: 'Reusable procedures' },
+  { name: 'Weights', scope: 'Training updates', changes: 'Model parameters' },
+  { name: 'Harness', scope: 'Across experiment rounds', changes: 'Tools & control flow' },
+];
+---
+
+<div class="home-story">
+  <section class="story-section opening" aria-labelledby="beyond-model">
+    <p class="eyebrow">Harness as a Continual Learner</p>
+    <h2 id="beyond-model">A capable model. A way to get things done.</h2>
+    <p>A model brings knowledge and reasoning. But an agent also needs code that chooses tools, builds context and turns decisions into actions. That code is its <strong>harness</strong>.</p>
+    <p>When an agent struggles, a different model is not the only thing to try. The way it works can change, too.</p>
+
+    <figure class="learning-modes">
+      <figcaption>Five places an agent can change</figcaption>
+      <ul>
+        {modes.map(({ name, scope, changes }) => (
+          <li class:list={{ 'harness-mode': name === 'Harness' }}>
+            <strong>{name}</strong><span>{scope}</span><span class="mode-example">{changes}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="note">These learning paths can be combined; their update cadences overlap. HarnessGrad focuses on changes between experiment rounds.</p>
+    </figure>
+  </section>
+
+  <section class="story-section" aria-labelledby="learn-in-environment">
+    <p class="eyebrow">The idea</p>
+    <h2 id="learn-in-environment">Keep the model fixed.<br />Improve how the agent works.</h2>
+    <p>HarnessGrad supports experiments that optimize an editable harness using feedback from an environment. The learning happens through that interaction—not in the model’s weights.</p>
+
+    <figure class="agent-diagram">
+      <div class="environment-heading"><strong>Environment</strong><span>Tasks · feedback · search boundaries</span></div>
+      <p class="equation">Agent = <span>Harness</span> + Model</p>
+      <div class="agent-parts">
+        <div class="harness-part"><h3>Harness</h3><p>Organizes behavior and search: tools, context and actions.</p><span class="part-label">Editable surface</span></div>
+        <div><h3>Model</h3><p>Provides priors: knowledge and reasoning for each decision.</p><span class="part-label">Fixed in these experiments</span></div>
+      </div>
+      <figcaption>The environment defines the problem and the feedback. The harness organizes the work. The model helps choose what to do.</figcaption>
+    </figure>
+  </section>
+
+  <section class="story-section" aria-labelledby="loop-heading">
+    <p class="eyebrow">How it works</p>
+    <h2 id="loop-heading">Experience. An edit. Another test.</h2>
+    <p>An improvement method proposes changes to the declared editable surface. HarnessGrad runs the candidates and records what happened.</p>
+    <figure class="loop-figure">
+      <ol class="experiment-loop">
+        <li><span class="step">01</span><h3>Run</h3><p>Try the harness on environment tasks.</p></li>
+        <li><span class="step">02</span><h3>Feedback</h3><p>Collect outcomes and permitted traces.</p></li>
+        <li><span class="step">03</span><h3>Edit</h3><p>Propose a candidate harness change.</p></li>
+        <li><span class="step">04</span><h3>Re-evaluate</h3><p>Measure the candidate, then repeat.</p></li>
+      </ol>
+      <figcaption><span aria-hidden="true">↳ </span>Back to the next run. Illustrative process—not a measured gain or a guarantee of improvement.</figcaption>
+    </figure>
+    <div class="adapter-note">
+      <h3>Bring the harness, not a rewrite.</h3>
+      <p>Keep your harness’s own execution logic. An adapter connects it through an entrypoint, a model/environment bridge and a declared editable surface. Choose a supported harness–environment pairing and validate the interface before running an experiment.</p>
+      <a href={`${docs}/bring-your-own-harness.md`}>Read the bring-your-own guide <span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+
+  <section class="story-section" aria-labelledby="evidence-heading">
+    <p class="eyebrow">Evidence before promises</p>
+    <h2 id="evidence-heading">A learning loop is a question.<br />The results are the answer.</h2>
+    <p>Continual harness learning is the research ambition. Today, HarnessGrad provides the machinery to run and measure harness-improvement experiments. Whether a change helps, transfers or preserves earlier capabilities must be tested—not assumed.</p>
+    <div class="evidence-links">
+      <a href={`${base}/benchmarks/appworld/`}><strong>AppWorld results <span aria-hidden="true">→</span></strong><span>Inspect measured runs and their conditions.</span></a>
+      <a href={`${base}/benchmarks/alfworld/`}><strong>ALFWorld results <span aria-hidden="true">→</span></strong><span>Follow the evidence, split by split.</span></a>
+    </div>
+    <p class="note">Model and harness identities, splits and comparison details live with the results. A result speaks for its recorded setup, not every agent or task.</p>
+  </section>
+
+  <section class="story-section closing" aria-labelledby="start-heading">
+    <p class="eyebrow">Start small</p>
+    <h2 id="start-heading">Give your harness a next experiment.</h2>
+    <p>Start with the local walkthrough. Bring a harness, explore an improvement method, or help make the measurements better.</p>
+    <nav class="story-actions" aria-label="Explore HarnessGrad">
+      <a class="primary-action" href={`${base}/getting-started/`}>Get started <span aria-hidden="true">→</span></a>
+      <a href="https://github.com/zjunlp/HarnessGrad">GitHub <span aria-hidden="true">↗</span></a>
+      <a href={`${base}/contributing/`}>Contribute <span aria-hidden="true">→</span></a>
+    </nav>
+  </section>
+</div>
+
+<style>
+  /* Scoped to this component: documentation and benchmark layouts stay untouched. */
+  .home-story { color: var(--sl-color-text); }
+  .home-story :is(p, h2, h3, figure, ul, ol, li, nav, div, a, span) { margin-block: 0; }
+  .story-section { padding-block: clamp(2.8rem, 6vw, 5rem); border-top: 1px solid var(--sl-color-hairline); }
+  .home-story .eyebrow { margin-bottom: 1rem; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sl-color-gray-2); }
+  .home-story h2 { padding: 0; margin-bottom: 1.3rem; font-family: var(--hg-font-display); font-size: clamp(1.9rem, 4vw, 2.75rem); font-weight: 500; letter-spacing: -0.025em; line-height: 1.14; text-wrap: balance; }
+  .home-story p { max-width: 42rem; line-height: 1.75; }
+  .home-story p + p { margin-top: 0.85rem; }
+  .home-story h3 { font-family: var(--sl-font); font-size: 1rem; font-weight: 600; line-height: 1.4; }
+  .home-story a { text-underline-offset: 0.22em; }
+  .home-story a:focus-visible { outline: 2px solid var(--sl-color-accent-high); outline-offset: 5px; }
+  .home-story .note, .home-story figcaption { color: var(--sl-color-gray-2); font-size: 0.8rem; line-height: 1.6; }
+  .learning-modes { margin-top: 2.2rem !important; }
+  .learning-modes figcaption { margin-bottom: 0.8rem; font-weight: 600; }
+  .learning-modes ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.7rem; }
+  .learning-modes li { padding-block: 0.75rem; border-top: 2px solid var(--sl-color-hairline); color: var(--sl-color-gray-2); }
+  .learning-modes strong, .learning-modes span { display: block; }
+  .learning-modes strong { font-size: 0.86rem; }
+  .learning-modes span { font-size: 0.72rem; line-height: 1.5; margin-top: 0.3rem; }
+  .learning-modes .harness-mode { color: var(--sl-color-accent-high); border-color: var(--sl-color-accent); }
+  .home-story .learning-modes .note { margin-top: 0.7rem; font-size: 0.73rem; }
+  .agent-diagram { margin-top: 2.2rem !important; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--sl-color-hairline); border-radius: 0.35rem; }
+  .environment-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem 1rem; font-size: 0.8rem; }
+  .environment-heading span { color: var(--sl-color-gray-2); }
+  .home-story .equation { margin: 1.8rem auto; text-align: center; font-family: var(--hg-font-display); font-size: clamp(1.4rem, 4vw, 2rem); line-height: 1.3; }
+  .equation span { color: var(--sl-color-accent-high); }
+  .agent-parts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+  .agent-parts > div { padding: 1.2rem; border: 1px solid var(--sl-color-hairline); border-radius: 0.2rem; }
+  .agent-parts .harness-part { border-color: var(--sl-color-accent); }
+  .harness-part h3 { color: var(--sl-color-accent-high); }
+  .agent-parts p { font-size: 0.86rem; margin-top: 0.5rem; }
+  .part-label { display: block; font-size: 0.7rem; color: var(--sl-color-gray-2); margin-top: 1rem !important; }
+  .agent-diagram figcaption { margin-top: 1.2rem; }
+  .loop-figure { margin-top: 2.2rem !important; }
+  .experiment-loop { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; padding: 0; border-block: 1px solid var(--sl-color-hairline); }
+  .experiment-loop li { padding: 1.25rem 1rem; position: relative; }
+  .experiment-loop li:first-child { padding-left: 0; }
+  .experiment-loop li + li { border-left: 1px solid var(--sl-color-hairline); }
+  .experiment-loop li:not(:last-child)::after { content: '→'; position: absolute; right: 0.65rem; top: 1.25rem; color: var(--sl-color-gray-2); }
+  .step { display: block; font-family: var(--sl-font-mono); font-size: 0.7rem; color: var(--sl-color-gray-2); margin-bottom: 1rem !important; }
+  .experiment-loop p { margin-top: 0.6rem; font-size: 0.8rem; line-height: 1.6; }
+  .loop-figure figcaption { margin-top: 0.8rem; }
+  .adapter-note { margin-top: 2.2rem !important; max-width: 42rem; }
+  .adapter-note p { margin-block: 0.6rem 0.7rem; font-size: 0.9rem; }
+  .adapter-note a { font-size: 0.85rem; }
+  .evidence-links { margin-block: 1.8rem 1rem !important; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .evidence-links a { display: block; padding-block: 1rem; border-block: 1px solid var(--sl-color-hairline); text-decoration: none; }
+  .evidence-links a:hover strong { text-decoration: underline; text-underline-offset: 0.22em; }
+  .evidence-links strong { display: block; color: var(--sl-color-text); font-size: 0.95rem; }
+  .evidence-links strong span { float: right; }
+  .evidence-links a > span { display: block; margin-top: 0.45rem; color: var(--sl-color-gray-2); font-size: 0.8rem; }
+  .story-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.3rem 1.7rem; margin-top: 1.8rem !important; font-size: 0.9rem; }
+  .story-actions .primary-action { background: var(--sl-color-text); color: var(--sl-color-bg); border: 1px solid var(--sl-color-text); border-radius: 0.25rem; padding: 0.7rem 1.1rem; text-decoration: none; }
+  .story-actions .primary-action:hover { background: var(--sl-color-bg); color: var(--sl-color-text); }
+  .closing { padding-bottom: 2rem; }
+  @media (max-width: 36rem) {
+    .learning-modes ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.3rem 1rem; }
+    .learning-modes .harness-mode { grid-column: 1 / -1; }
+    .agent-parts, .evidence-links { grid-template-columns: 1fr; }
+    .experiment-loop { grid-template-columns: 1fr; }
+    .experiment-loop li:first-child { padding-left: 1rem; }
+    .experiment-loop li + li { border-left: 0; border-top: 1px solid var(--sl-color-hairline); }
+    .experiment-loop li:not(:last-child)::after { content: '↓'; right: 1rem; }
+    .evidence-links { gap: 0.8rem; }
+  }
+</style>

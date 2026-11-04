@@ -1,10 +1,10 @@
 ---
-title: "HarnessGrad: Harness as a Continual Learner"
-description: >-
-  Harness as a Continual Learner — self-evolution measured as a plasticity/stability trade, not assumed.
+title: "Harness as a Continual Learner"
+description: Optimize the code around a fixed model using environment feedback. HarnessGrad runs and measures harness-improvement experiments.
 template: splash
 hero:
-  tagline: A harness that improves is a learner, and a learner is judged by what it keeps as well as what it gains — plasticity against stability, measured round by round, not assumed.
+  title: "The model is not the whole agent."
+  tagline: "Let the harness learn, too. HarnessGrad explores how the code around a fixed model can improve through experience."
   actions:
     - text: Get started
       link: /HarnessGrad-Hub/getting-started/
@@ -15,41 +15,6 @@ hero:
       variant: minimal
 ---
 
-<div class="hg-curve">
-  <div class="hg-curve-row">
-    <span class="hg-curve-name">control</span>
-    <span class="hg-curve-glyph">▁▁</span>
-    <span class="hg-curve-score">0.00</span>
-  </div>
-  <div class="hg-curve-row hg-curve-row--lift">
-    <span class="hg-curve-name">treat-A</span>
-    <span class="hg-curve-glyph">▁██</span>
-    <span class="hg-curve-score">0.00 → 1.00</span>
-  </div>
-</div>
+import HomepageStory from '../../components/HomepageStory.astro';
 
-{/* Internal links are literal because the hero action above is YAML; `scripts/check-links.mjs` reads the base out of the built canonical URL and fails the build if any of them 404. */}
-<p class="hg-caption">The local demo, end to end. 4 tasks, no network, no cost.</p>
-
-<div class="hg-grid">
-  <div class="hg-cell">
-    <span class="hg-num">01</span>
-    <h3>Scoring is not delegable</h3>
-    <p>A subject that scores itself makes every comparison meaningless.</p>
-  </div>
-  <div class="hg-cell">
-    <span class="hg-num">02</span>
-    <h3>Methods live outside</h3>
-    <p>A method returns candidate harnesses. The platform measures those.</p>
-  </div>
-  <div class="hg-cell">
-    <span class="hg-num">03</span>
-    <h3>Isolation is recorded</h3>
-    <p>Runs made under different rules never share an axis.</p>
-  </div>
-</div>
-
-<div class="hg-links">
-  <a href="/HarnessGrad-Hub/getting-started/">Get started<span>install, then the demo</span></a>
-  <a href="/HarnessGrad-Hub/benchmarks/appworld/">Results<span>what the platform measured</span></a>
-</div>
+<HomepageStory />

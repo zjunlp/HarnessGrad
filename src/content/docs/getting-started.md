@@ -5,10 +5,17 @@ description: Install HarnessGrad and run the local demo end to end, with no netw
 
 ## Requirements
 
-`bubblewrap`, `git` and `python3 >= 3.10`. The platform itself has **no third-party
-Python packages** — everything it uses is in the standard library.
+Linux, `bubblewrap`, `git` and **Python 3.12+**. The platform itself has **no third-party
+Python runtime packages** — everything it uses is in the standard library.
+
+Clone the platform repository (not this documentation site), then check the machine:
 
 ```bash
+git clone https://github.com/zjunlp/HarnessGrad.git
+cd HarnessGrad
+python3 -m venv ~/.venvs/harnessgrad
+source ~/.venvs/harnessgrad/bin/activate
+python3 -m pip install -e .
 ./install.sh --check      # verify only; change nothing (also useful in CI)
 ./install.sh              # optionally install missing dependencies, then verify
 ```
@@ -27,8 +34,11 @@ claims; ordinary runs cannot claim those guarantees.
 
 ## Run the local demo
 
-Zero network, zero cost — the loop, the curve points, the checkpoints and the cost
-accounting exercised end to end.
+This is a **scripted mock fixture**, not a model-learning result or benchmark evidence.
+It exercises the loop, curve points, checkpoints and cost accounting with no network
+or model-service cost. For a real experiment and its prerequisites, follow the
+[platform README](https://github.com/zjunlp/HarnessGrad#run-one-real-experiment) and
+[research recipes](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md).
 
 ```bash
 export HG_AGENT_BACKEND=mock
