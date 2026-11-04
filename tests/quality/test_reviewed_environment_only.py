@@ -82,12 +82,18 @@ def test_mode_transition_invalidates_prior_dotenv_dataset_snapshot(checkouts,mon
 
 def test_launcher_marker_precedes_real_driver_import_and_all_file_loads(checkouts,tmp_path,monkeypatch):
     main,linked=checkouts
-    runtime={'environment':{'HG_OVERLAY_ROOT':str(tmp_path/'reviewed-overlay')}}
-    monkeypatch.setattr(launcher,'runtime_binding',lambda *a:runtime)
+    runtime={'environment':{'HG_OVERLAY_ROOT':str(tmp_path/'reviewed-overlay')},
+             'harness_filesystem':{'schema':'harnessgrad-owned-source-filesystem-v1',
+                                   'sha256':'1'*64,'entries':1}}
+    # This test isolates dotenv handling; source/runtime identity has its own
+    # integration regressions and is represented by a valid layered commitment.
+    monkeypatch.setattr(launcher,'harness_inputs',lambda *a:(ROOT/'base_harness/miniagent',{},
+                                                            {'submission_sha256':'2'*64},'3'*64,runtime))
     monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
     monkeypatch.setattr(launcher,'dataset_environment',lambda:{'HG_DATA_APPWORLD':str(tmp_path/'reviewed-data')})
     model={'backend':'openai','name':'synthetic-no-call','endpoint':'http://127.0.0.1:1/v1'}
-    identity={'harness':'miniagent','pool':'train','runtime_sha256':launcher.digest(runtime),'model':model,
+    identity={'harness':'miniagent','pool':'train',
+              'runtime_sha256':launcher.digest(launcher.runtime_commitment(runtime)),'model':model,
               'budget':{'output_tokens':10,'deadline_s':60,'request_timeout_s':10,'native_settings':{}}}
     for key,value in INJECTED.items():monkeypatch.setenv(key,value)
     monkeypatch.setenv(MARKER,'0')
