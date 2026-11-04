@@ -13,7 +13,7 @@ import os
 import re
 from pathlib import Path
 
-from harnessgrad.env_file import read_env_file
+from harnessgrad.env_file import read_env_file, reviewed_environment_only
 
 CHECKOUT = Path(__file__).resolve().parents[1]
 _SCORER_PATHS_ACTIVE = ContextVar("harnessgrad_scorer_paths", default=False)
@@ -60,6 +60,8 @@ def main_checkout(checkout: Path | None = None) -> Path:
 def _settings() -> dict[str, str]:
     if _SCORER_PATHS_ACTIVE.get():
         return {}
+    if reviewed_environment_only():
+        return dict(os.environ)
     primary = main_checkout()
     values = read_env_file(primary / ".env")
     if CHECKOUT.resolve() != primary:

@@ -27,6 +27,7 @@ from tools.appworld_campaign_state import (IDENTITY_SCHEMA, POLICY, POOLS, Recov
     digest, file_hash, read, selection_identity, validate_identity)
 from tools.validate_harness import check as check_harness, source_identity
 from harnessgrad.paths import main_checkout
+from harnessgrad.env_file import REVIEWED_ENVIRONMENT_ONLY
 
 _IMAGE_ABI_CACHE = {}
 
@@ -274,6 +275,9 @@ def execution_environment(identity, bindings):
                HG_AGENT_TIMEOUT_S=str(budget['request_timeout_s']),
                HG_APPWORLD_POOL='test' if identity['pool'] == 'train' else identity['pool'])
     env.update(budget['native_settings'])
+    # Fixed tracked policy, never an inherited or operator-overridable option.
+    # Set before the driver interpreter starts, including its import-time readers.
+    env[REVIEWED_ENVIRONMENT_ONLY] = '1'
     return env
 
 

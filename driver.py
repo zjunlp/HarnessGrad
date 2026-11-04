@@ -200,7 +200,12 @@ def load_env(path: Path) -> dict:
     Real environment variables win: an explicit `HG_AGENT_MODEL=... ./driver.py`
     must not be silently overridden by a file on disk.
     """
-    from harnessgrad.env_file import read_env_file
+    from harnessgrad.env_file import read_env_file, reviewed_environment_only
+    if reviewed_environment_only():
+        # The reviewed launcher has already constructed the complete child env.
+        # Reset even when skipping files: imported config may predate this mode.
+        platform_config.reset()
+        return {}
     loaded = read_env_file(path)
     for key, value in loaded.items():
         os.environ.setdefault(key, value)
