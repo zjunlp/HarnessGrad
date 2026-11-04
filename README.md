@@ -7,7 +7,7 @@
 <p align="center"><strong>A harness that improves is a learner, so what it <em>keeps</em> is measured as carefully as what it gains.</strong></p>
 
 <p align="center">
-  <a href="https://zjunlp.github.io/HarnessGrad-Hub/"><img src="https://img.shields.io/badge/website-live-brightgreen.svg" alt="Website"></a>
+  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/website-live-brightgreen.svg" alt="Website"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.12%2B-blue.svg" alt="Python 3.12 or newer">
   <img src="https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg" alt="No third-party runtime dependencies">
@@ -288,7 +288,7 @@ that add one.
 
 ![Benchmarks: who contributed, by day](.github/assets/contributors-benchmark.svg)
 
-One calendar per board: a column per day over a fixed 92-day window, a row per contributor, and a cell whose tooltip names what landed that day. A row of zeroes is information — this person has not contributed to this board yet — so every row is kept. The right-hand column repeats the total. [Every entry, per person](docs/contributors.md) is a list; [The interactive page](https://zjunlp.github.io/HarnessGrad/contributors.html) is the same record with a draggable window and hover tooltips — it is published from `docs/contributors.html`, and the [website](https://zjunlp.github.io/HarnessGrad-Hub/contributors/) carries the same record.
+One calendar per board: a column per day over a fixed 92-day window, a row per contributor, and a cell whose tooltip names what landed that day. A row of zeroes is information — this person has not contributed to this board yet — so every row is kept. The right-hand column repeats the total. [Every entry, per person](docs/contributors.md) is a list; [The interactive page](https://zjunlp.github.io/HarnessGrad/contributors.html) is the same record with a draggable window and hover tooltips — it is published from `docs/contributors.html`.
 
 | # | contributor | contributed |
 | --- | --- | --- |
@@ -341,7 +341,7 @@ run for — `ahe` is absent from the ALFWorld panel because its run there stops 
 it; dropping a method for scoring low would be selective reporting, which this is not.
 
 Held-out scores, per-benchmark tables and every recorded run are on the
-[website](https://zjunlp.github.io/HarnessGrad-Hub/), which is also where the full
+[website](https://zjunlp.github.io/HarnessGrad/), which is also where the full
 leaderboards live.
 
 The admission rule for the results board is in [`docs/leaderboards.md`](docs/leaderboards.md):
