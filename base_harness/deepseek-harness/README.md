@@ -40,12 +40,16 @@ root and CLI requires them to agree. Changes to an installation also require
 preparing matching `runtime_paths` before sandbox execution.
 
 `HG_AGENT_DSH_COMMAND` remains an argv-style wrapper override for invocation and
-configuration inspection. A direct `NODE bin.js` override uses that exact Node
+configuration inspection. Its executable is fixed to an absolute path while
+preserving symlinks, so `venv/bin/python` keeps that virtual environment's packages.
+A direct `NODE bin.js` override uses that exact Node
 for loader diagnostics, even if the prepared manifest names another interpreter.
 An opaque wrapper owns its interpreter; Node-specific diagnostics are skipped.
 Supplying a DSH CLI/root explicitly still enables the adapter's validated plugin
 farm; without one, the wrapper owns profile setup as well. Wrapper dependencies must be declared in `runtime_paths`
 when they live outside the sandbox's normal system directories.
+For a Python wrapper, this includes the venv and any base interpreter installation
+not already provided by the sandbox.
 
 The selected argv is shared by task execution and configuration inspection. The
 loader probe and plugin farm use that same selected installation. A scratch HOME

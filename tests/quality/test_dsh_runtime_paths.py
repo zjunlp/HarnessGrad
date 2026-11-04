@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import uuid
+import venv
 
 import pytest
 
@@ -320,6 +321,88 @@ def test_opaque_command_wrapper_owns_its_runtime_and_is_used_for_dump(agent, mon
     assert profile["links_created"] is None
     assert profile["probe_skipped"] == "custom command owns its runtime"
     assert not (tmp_path / "wrapper-home/.dsh/profiles/node_modules").exists()
+
+
+@pytest.fixture
+def wrapper_venv():
+    # Native runtime mounts must be outside private /tmp. A no-pip environment
+    # with one private module distinguishes its Python from the symlink target.
+    with tempfile.TemporaryDirectory(prefix="hg-dsh-wrapper-", dir="/var/tmp") as directory:
+        prefix = Path(directory) / "venv"
+        venv.EnvBuilder(with_pip=False, symlinks=True).create(prefix)
+        python = prefix / "bin/python"
+        assert python.is_symlink()
+        purelib = subprocess.check_output(
+            [str(python), "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
+            text=True).strip()
+        (Path(purelib) / "dsh_venv_only_fixture.py").write_text("TOKEN = 'venv-only'\n")
+        wrapper = prefix / "wrapper.py"
+        wrapper.write_text(
+            "import json, sys\n"
+            "from dsh_venv_only_fixture import TOKEN\n"
+            "if '--dump-config' in sys.argv:\n"
+            "    print('- id: venv-wrapper')\n"
+            "else:\n"
+            "    print(json.dumps({'token': TOKEN, 'prefix': sys.prefix, 'base_prefix': sys.base_prefix}))\n")
+        yield prefix, python, wrapper
+
+
+@pytest.mark.parametrize("spelling", ["absolute", "path", "relative"])
+@pytest.mark.parametrize("sandboxed", [False, True], ids=["host", "native"])
+def test_custom_command_preserves_venv_imports_during_dump_and_execution(
+        agent, monkeypatch, tmp_path, wrapper_venv, spelling, sandboxed):
+    if sandboxed and shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap is not installed")
+    prefix, python, wrapper = wrapper_venv
+    harness = tmp_path / "candidate"
+    shutil.copytree(SOURCE, harness)
+    manifest = json.loads((harness / "harness.json").read_text())
+    manifest["runtime_paths"] = [str(prefix), sys.base_prefix]
+    (harness / "harness.json").write_text(json.dumps(manifest))
+    _use_copy(agent, monkeypatch, harness)
+    work = tmp_path / "task"
+    work.mkdir()
+    work_root = tmp_path / "work"
+    work_root.mkdir()
+    executable = {"absolute": str(python), "path": "python", "relative": "venv/bin/python"}[spelling]
+    env = {"HG_AGENT_DSH_COMMAND": shlex.join([executable, str(wrapper)]),
+           "PATH": str(python.parent) + os.pathsep + os.defpath,
+           "HOME": str(work / "home"), "TMPDIR": str(work / "temp"),
+           "PYTHONDONTWRITEBYTECODE": "1"}
+    # Resolution occurs in a different directory from the wrapper subprocess.
+    # The relative interpreter must become absolute without losing its venv.
+    monkeypatch.chdir(prefix.parent)
+    if sandboxed:
+        from eval.containers import sandbox
+
+        script = f'''
+import importlib.util
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('fixture_agent', {str(harness / 'agent.py')!r})
+agent = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(agent)
+raise SystemExit(agent.run({{'goal': 'Use the venv wrapper.'}}, Path({str(work)!r})))
+'''
+        command = sandbox.command([sys.executable, "-c", script], platform=ROOT,
+                                  work_root=work_root, task_dir=work, repo=harness, env=env,
+                                  runtime_paths=tuple(Path(p) for p in manifest["runtime_paths"]))
+        ran = subprocess.run(command, cwd=prefix.parent, env=env,
+                             capture_output=True, text=True, timeout=20)
+        assert ran.returncode == 0, ran.stderr or (work / "trace.jsonl").read_text()
+    else:
+        for name, value in env.items():
+            monkeypatch.setenv(name, value)
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        assert agent.run({"goal": "Use the venv wrapper."}, work) == 0, (work / "trace.jsonl").read_text()
+    answer = json.loads((work / "answer.txt").read_text())
+    assert answer == {"token": "venv-only", "prefix": str(prefix), "base_prefix": sys.base_prefix}
+    trace = [json.loads(line) for line in (work / "trace.jsonl").read_text().splitlines()]
+    facts = next(row["harness_facts"] for row in trace if "harness_facts" in row)
+    assert facts["dump_ok"] is True
+    assert facts["row_ids"] == ["venv-wrapper"]
+    assert facts["runtime_node"] is None
+    profile = next(row["profile"] for row in trace if "profile" in row)
+    assert profile["probe_skipped"] == "custom command owns its runtime"
 
 
 def test_direct_node_command_uses_its_interpreter_for_launch_dump_and_loader(agent, monkeypatch, tmp_path, installation):

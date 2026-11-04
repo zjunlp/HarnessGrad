@@ -78,11 +78,12 @@ def _declared_paths() -> list[Path]:
     return [Path(value).expanduser() for value in manifest.get("runtime_paths", [])]
 
 
-def _executable(value: str, env: dict) -> str:
+def _executable(value: str, env: dict, *, preserve_symlinks: bool = False) -> str:
     found = shutil.which(value, path=env.get("PATH", ""))
     if not found:
         raise ValueError(f"DSH executable is unavailable: {value}")
-    return str(Path(found).resolve())
+    path = Path(found)
+    return str(path.absolute() if preserve_symlinks else path.resolve())
 
 
 def runtime(env: dict | None = None) -> dict:
@@ -118,7 +119,10 @@ def runtime(env: dict | None = None) -> dict:
                          "or set HG_AGENT_DSH and declare its runtime_paths")
     if wrapper:
         argv = list(wrapper)
-        argv[0] = _executable(argv[0], env)
+        # A venv's Python is commonly a symlink to the base interpreter. Its
+        # spelling selects pyvenv.cfg and site-packages, so keep that spelling
+        # while making relative/PATH commands independent of the task cwd.
+        argv[0] = _executable(argv[0], env, preserve_symlinks=True)
         # A direct interpreter + bin.js override names the interpreter that
         # actually runs. Prepared bindings or HG_AGENT_NODE must not substitute
         # another one for diagnostics. An opaque wrapper may choose internally;
