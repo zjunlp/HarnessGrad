@@ -8,6 +8,7 @@ kind, so a change to an adapter or a harness does pull in its own tests.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 
@@ -83,6 +84,21 @@ def test_an_unmapped_path_falls_back_to_the_full_suite() -> None:
     picked, reasons = ci_select.select(["site-redirect/index.html"])
     assert picked == [], picked
     assert any("not mapped" in reason for reason in reasons), reasons
+
+
+def test_an_unknown_base_is_not_the_same_fact_as_an_empty_diff() -> None:
+    """A depth-1 clone has no base commit; that is "everything changed", not "nothing did".
+
+    The two produced the same empty list and the same summary line once, and the CI notice then
+    read "no diff against the base" for a commit that had simply never been fetched.
+    """
+    picked, reasons = ci_select.select([])
+    assert picked == [], "a full fallback is a flag, not a list of every test file"
+    assert any("running everything" in reason for reason in reasons), reasons
+    assert not ci_select._rev_exists("0000000000000000000000000000000000000000")
+    assert ci_select._rev_exists("HEAD")
+    assert ci_select.changed("0000000000000000000000000000000000000000", "HEAD") is None
+    assert ci_select.changed("HEAD", "HEAD") == []
 
 
 def test_a_wide_change_falls_back_to_the_full_suite() -> None:
@@ -174,3 +190,19 @@ def test_a_change_to_any_test_file_selects_it() -> None:
     for name in ("test_dataset_classes.py", "test_trace_reader.py"):
         picked, _ = ci_select.select([f"tests/quality/{name}"])
         assert name in picked or set(picked) == set(ci_select.GUARDS), (name, picked)
+
+
+def test_a_full_plan_says_deferred_rather_than_listing_no_files(tmp_path, capsys, monkeypatch) -> None:
+    """The plan keeps `full` and an empty suite; the summary has to say which of the two
+    meanings that empty list carries. It read `files=0 suite=-` for a wide change once, which
+    looks exactly like a change that reaches nothing."""
+    plan = tmp_path / "plan.json"
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--base", "0" * 40, "--head", "HEAD",
+                                      "--plan", str(plan)])
+    assert ci_select.main() == 0
+    loaded = json.loads(plan.read_text())
+    assert loaded["full"] is True and loaded["suite"] == []
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--describe", str(plan)])
+    assert ci_select.main() == 0
+    printed = capsys.readouterr().out
+    assert "full=True" in printed and "suite=-" in printed
