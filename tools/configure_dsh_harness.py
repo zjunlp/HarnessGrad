@@ -16,6 +16,22 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _runtime_directory(path: Path, label: str) -> None:
+    """Require an isolated tree that survives both supported sandbox layouts."""
+    # A system Node's inferred prefix is usually /usr or /usr/local. Binding it
+    # into a task image would replace that image's Python, libraries and tools.
+    # Keep installations outside system trees, including their symlink aliases.
+    system = ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc", "/dev", "/proc", "/sys")
+    if len(path.parts) < 3 or any(path.is_relative_to(tree) for tree in system):
+        raise ValueError(f"{label} must use a dedicated installation directory outside system trees: {path}; "
+                         "select an isolated Node distribution with --node and a separate DSH checkout")
+    if path.is_relative_to("/tmp"):
+        raise ValueError(f"{label} is under /tmp, which the native sandbox hides: {path}; "
+                         "move the installation outside /tmp and prepare the Harness again")
+    if path.is_relative_to(ROOT) or ROOT.is_relative_to(path):
+        raise ValueError(f"{label} must not contain or lie within the hidden platform checkout: {path}")
+
+
 def configure(harness: Path, dsh_root: Path, node: str = "node") -> dict:
     harness = harness.expanduser().resolve()
     path = harness / "harness.json"
@@ -31,6 +47,8 @@ def configure(harness: Path, dsh_root: Path, node: str = "node") -> dict:
     entries = adapter.farm_targets(selected["root"], harness / "dsh_farm.tsv")
     executable = Path(selected["node"])
     node_root = executable.parent.parent if executable.parent.name == "bin" else executable.parent
+    _runtime_directory(selected["root"], "DSH root")
+    _runtime_directory(node_root, "Node installation")
     bindings = list(dict.fromkeys([str(selected["root"]), str(executable), str(node_root)]))
     manifest["runtime_paths"] = bindings
     # Validation finishes before writing; replace one complete manifest so a

@@ -3,14 +3,18 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shlex
 import shutil
+import subprocess
 import sys
+import tempfile
+import uuid
 
 import pytest
 
-from tools.configure_dsh_harness import configure
+from tools.configure_dsh_harness import configure, _runtime_directory
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "base_harness/deepseek-harness"
@@ -26,20 +30,38 @@ def agent(monkeypatch):
     return module
 
 
-def _installation(tmp_path, *, full_farm=False):
+@pytest.fixture
+def installation():
+    # Runtime dependencies must live outside private /tmp. Keep harness/task
+    # scratch on pytest's ordinary tmp_path so real sandbox tests exercise that
+    # separation, and clean up every installation when the test ends.
+    with tempfile.TemporaryDirectory(prefix="hg-dsh-runtime-", dir="/var/tmp") as directory:
+        count = 0
+
+        def create(tmp_path, *, full_farm=False):
+            nonlocal count
+            count += 1
+            return _installation(tmp_path, full_farm=full_farm,
+                                 runtime_base=Path(directory) / str(count))
+
+        yield create
+
+
+def _installation(tmp_path, *, full_farm=False, runtime_base=None):
+    runtime_base = runtime_base or tmp_path
     harness = tmp_path / "candidate"
     shutil.copytree(SOURCE, harness)
     if not full_farm:
         (harness / "dsh_farm.tsv").write_text(
             "@example/one\tapps/cli/node_modules/one\n"
             "two\tapps/cli/node_modules/nested/node_modules/two\n")
-    root = tmp_path / "another-user" / "relocated-dsh"
+    root = runtime_base / "another-user" / "relocated-dsh"
     cli = root / "apps/cli/lib/bin.js"
     cli.parent.mkdir(parents=True)
     cli.write_text("// fixture CLI; the fake Node owns execution\n")
     for line in (harness / "dsh_farm.tsv").read_text().splitlines():
         (root / line.split("\t")[1]).mkdir(parents=True, exist_ok=True)
-    node = tmp_path / "node-install" / "bin/node"
+    node = runtime_base / "node-install" / "bin/node"
     node.parent.mkdir(parents=True)
     node.write_text(
         f"#!{sys.executable}\n"
@@ -59,8 +81,8 @@ def _use_copy(agent, monkeypatch, harness):
     monkeypatch.setattr(agent, "FARM_MANIFEST", harness / "dsh_farm.tsv")
 
 
-def test_preparation_records_paths_used_by_the_sandbox_and_all_farm_links(agent, monkeypatch, tmp_path):
-    harness, root, cli, node = _installation(tmp_path, full_farm=True)
+def test_preparation_records_paths_used_by_the_sandbox_and_all_farm_links(agent, monkeypatch, tmp_path, installation):
+    harness, root, cli, node = installation(tmp_path, full_farm=True)
     receipt = configure(harness, root, str(node))
     assert receipt["farm_targets"] == 277
     manifest = json.loads((harness / "harness.json").read_text())
@@ -79,14 +101,14 @@ def test_preparation_records_paths_used_by_the_sandbox_and_all_farm_links(agent,
     assert agent._install_profile(home, root) == -2
 
 
-def test_explicit_cli_and_node_override_the_prepared_installation(agent, monkeypatch, tmp_path):
+def test_explicit_cli_and_node_override_the_prepared_installation(agent, monkeypatch, tmp_path, installation):
     first = tmp_path / "first"
     first.mkdir()
-    harness, _, _, node = _installation(first)
-    configure(harness, first / "another-user/relocated-dsh", str(node))
+    harness, first_root, _, node = installation(first)
+    configure(harness, first_root, str(node))
     second = tmp_path / "second"
     second.mkdir()
-    _, root, cli, other_node = _installation(second)
+    _, root, cli, other_node = installation(second)
     _use_copy(agent, monkeypatch, harness)
     selected = agent.runtime({"HG_AGENT_DSH": str(cli), "HG_AGENT_NODE": str(other_node)})
     assert selected["root"] == root
@@ -96,10 +118,10 @@ def test_explicit_cli_and_node_override_the_prepared_installation(agent, monkeyp
     assert (home / ".dsh/profiles/node_modules/@example/one").readlink().is_relative_to(root)
 
 
-def test_preparation_preserves_exact_node_after_symlink_resolution_and_in_sandbox_plan(agent, monkeypatch, tmp_path):
+def test_preparation_preserves_exact_node_after_symlink_resolution_and_in_sandbox_plan(agent, monkeypatch, tmp_path, installation):
     from eval.containers import sandbox
 
-    harness, root, cli, node = _installation(tmp_path)
+    harness, root, cli, node = installation(tmp_path)
     renamed = node.with_name("node-custom-version")
     node.rename(renamed)
     node.symlink_to(renamed)
@@ -122,8 +144,137 @@ def test_preparation_preserves_exact_node_after_symlink_resolution_and_in_sandbo
                    for index in range(len(plan) - 2))
 
 
-def test_one_runtime_drives_launch_configuration_dump_and_loader_probe(agent, monkeypatch, tmp_path):
-    harness, root, cli, node = _installation(tmp_path)
+@pytest.mark.parametrize("directory", ["/", "/usr", "/usr/local", "/usr/lib/nodejs", "/bin", "/lib64"])
+def test_system_runtime_trees_cannot_replace_the_image(directory):
+    with pytest.raises(ValueError, match="dedicated installation directory"):
+        _runtime_directory(Path(directory), "Node installation")
+
+
+@pytest.mark.parametrize("use_path", [False, True])
+def test_system_node_alias_is_rejected_before_manifest_changes(tmp_path, monkeypatch, installation, use_path):
+    harness, root, _, node = installation(tmp_path)
+    configure(harness, root, str(node))
+    original = (harness / "harness.json").read_bytes()
+    # A shell stands in for a system Node: preparation only resolves an executable,
+    # and the regression concerns its prefix, not which language it implements.
+    system_binary = Path(shutil.which("sh")).resolve()
+    alias = tmp_path / "bin/node"
+    alias.parent.mkdir()
+    alias.symlink_to(system_binary)
+    monkeypatch.setenv("PATH", str(alias.parent))
+    with pytest.raises(ValueError, match="Node installation.*outside system trees"):
+        configure(harness, root, "node" if use_path else str(alias))
+    assert (harness / "harness.json").read_bytes() == original
+    assert not list(harness.glob(".dsh-manifest-*"))
+
+
+@pytest.mark.parametrize("component", ["DSH root", "Node installation"])
+def test_tmp_installation_alias_is_rejected_before_manifest_changes(tmp_path, installation, component):
+    harness, root, _, node = installation(tmp_path)
+    configure(harness, root, str(node))
+    original = (harness / "harness.json").read_bytes()
+    # Use explicit /tmp even when pytest's --basetemp lives elsewhere. Alias from
+    # a supported directory to ensure the physical target is what gets checked.
+    with tempfile.TemporaryDirectory(prefix="hg-dsh-hidden-", dir="/tmp") as directory:
+        hidden = Path(directory)
+        if component == "DSH root":
+            shutil.copytree(root, hidden / "dsh")
+            alias = root.with_name("aliased-dsh")
+            alias.symlink_to(hidden / "dsh", target_is_directory=True)
+            root = alias
+        else:
+            shutil.copy2(node, hidden / "node")
+            alias = node.with_name("aliased-node")
+            alias.symlink_to(hidden / "node")
+            node = alias
+        with pytest.raises(ValueError, match=component + ".*under /tmp"):
+            configure(harness, root, str(node))
+    assert (harness / "harness.json").read_bytes() == original
+    assert not list(harness.glob(".dsh-manifest-*"))
+
+
+@pytest.mark.skipif(shutil.which("bwrap") is None, reason="bubblewrap is not installed")
+def test_prepared_runtime_executes_read_only_in_actual_native_sandbox(tmp_path, installation):
+    from eval.containers import sandbox
+
+    harness, root, cli, node = installation(tmp_path)
+    prepared = configure(harness, root, str(node))
+    work = tmp_path / "work"
+    work.mkdir()
+    task = tmp_path / "task"
+    task.mkdir()
+    private = tmp_path / "other-task-secret"
+    private.write_text("must remain hidden")
+    script = f'''
+import json, pathlib, subprocess
+cli, node = pathlib.Path({str(cli)!r}), pathlib.Path({str(node)!r})
+assert cli.is_file()
+assert subprocess.check_output([str(node), str(cli)], text=True).strip() == 'RELOCATED_DSH_ANSWER'
+for target in (cli, node):
+    try:
+        target.write_text('changed')
+    except OSError:
+        pass
+    else:
+        raise AssertionError('runtime is writable: ' + str(target))
+assert not pathlib.Path({str(ROOT / 'driver.py')!r}).exists()
+assert not pathlib.Path({str(private)!r}).exists()
+pathlib.Path({str(task / 'result')!r}).write_text('ok')
+print('runtime-visible-and-read-only')
+'''
+    command = sandbox.command([sys.executable, "-c", script], platform=ROOT,
+                              work_root=work, task_dir=task, repo=harness,
+                              env={"PATH": os.defpath},
+                              runtime_paths=tuple(Path(p) for p in prepared["runtime_paths"]))
+    ran = subprocess.run(command, capture_output=True, text=True, timeout=15)
+    assert ran.returncode == 0, ran.stderr
+    assert ran.stdout.strip() == "runtime-visible-and-read-only"
+    assert (task / "result").read_text() == "ok"
+
+
+@pytest.mark.skipif(shutil.which("docker") is None, reason="Docker is not installed")
+def test_prepared_runtime_preserves_image_python_and_executes_in_container(tmp_path, installation):
+    from eval.containers import container
+
+    image = "python:3.12-slim"
+    inspected = subprocess.run(["docker", "image", "inspect", image], capture_output=True, timeout=15)
+    if inspected.returncode:
+        pytest.skip(f"Docker unavailable or no cached {image}; this test never pulls images")
+    harness, root, cli, node = installation(tmp_path)
+    node.write_text('#!/bin/sh\ntest -r "$1" || exit 2\nprintf "DSH_FIXTURE_OK\\n"\n')
+    prepared = configure(harness, root, str(node))
+    task = tmp_path / "task"
+    task.mkdir()
+    script = f'''
+import pathlib, subprocess, sys
+assert sys.version_info[:2] == (3, 12)
+assert pathlib.Path({str(cli)!r}).is_file()
+assert subprocess.check_output([{str(node)!r}, {str(cli)!r}], text=True).strip() == 'DSH_FIXTURE_OK'
+for target in ({str(cli)!r}, {str(node)!r}):
+    try:
+        pathlib.Path(target).write_text('changed')
+    except OSError:
+        pass
+    else:
+        raise AssertionError('runtime is writable: ' + target)
+print('image-python-and-runtime-ok')
+'''
+    name = "hg-dsh-runtime-test-" + uuid.uuid4().hex[:12]
+    command = container.command(["/usr/local/bin/python", "-c", script], image=image,
+                                task_dir=task, task_mount="/task", harness_root=harness,
+                                readonly_paths=tuple(Path(p) for p in prepared["runtime_paths"]),
+                                limits={"memory": "128m", "cpus": 0.5, "pids": 64})
+    command[2:2] = ["--pull=never", "--name", name]
+    try:
+        ran = subprocess.run(command, capture_output=True, text=True, timeout=30)
+        assert ran.returncode == 0, ran.stderr
+        assert ran.stdout.strip() == "image-python-and-runtime-ok"
+    finally:
+        subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=15)
+
+
+def test_one_runtime_drives_launch_configuration_dump_and_loader_probe(agent, monkeypatch, tmp_path, installation):
+    harness, root, cli, node = installation(tmp_path)
     configure(harness, root, str(node))
     _use_copy(agent, monkeypatch, harness)
     monkeypatch.setenv("HOME", str(tmp_path / "task-home"))
@@ -171,8 +322,8 @@ def test_opaque_command_wrapper_owns_its_runtime_and_is_used_for_dump(agent, mon
     assert not (tmp_path / "wrapper-home/.dsh/profiles/node_modules").exists()
 
 
-def test_direct_node_command_uses_its_interpreter_for_launch_dump_and_loader(agent, monkeypatch, tmp_path):
-    harness, root, cli, node_b = _installation(tmp_path)
+def test_direct_node_command_uses_its_interpreter_for_launch_dump_and_loader(agent, monkeypatch, tmp_path, installation):
+    harness, root, cli, node_b = installation(tmp_path)
     configure(harness, root, str(node_b))
     _use_copy(agent, monkeypatch, harness)
     node_a = tmp_path / "different-node-install/bin/node-a"
@@ -206,8 +357,8 @@ def test_direct_node_command_uses_its_interpreter_for_launch_dump_and_loader(age
     assert profile["runtime_root"] == str(root)
 
 
-def test_opaque_wrapper_with_explicit_root_keeps_farm_but_does_not_guess_node(agent, monkeypatch, tmp_path):
-    harness, root, _, node_b = _installation(tmp_path)
+def test_opaque_wrapper_with_explicit_root_keeps_farm_but_does_not_guess_node(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node_b = installation(tmp_path)
     configure(harness, root, str(node_b))
     _use_copy(agent, monkeypatch, harness)
     wrapper = tmp_path / "opaque.py"
@@ -229,8 +380,8 @@ def test_opaque_wrapper_with_explicit_root_keeps_farm_but_does_not_guess_node(ag
     assert profile["probe_skipped"] == "custom command owns its runtime"
 
 
-def test_missing_target_refuses_before_profile_or_manifest_changes(agent, monkeypatch, tmp_path):
-    harness, root, _, node = _installation(tmp_path)
+def test_missing_target_refuses_before_profile_or_manifest_changes(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
     _use_copy(agent, monkeypatch, harness)
     (root / "apps/cli/node_modules/one").rmdir()
     old_manifest = (harness / "harness.json").read_bytes()

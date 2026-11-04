@@ -1956,6 +1956,10 @@ independent of the task Harness's `HG_AGENT_DSH` / `HG_AGENT_NODE` settings.
 The task Harness has its own [DSH preparation procedure](base_harness/deepseek-harness/README.md).
 `tools/configure_dsh_harness.py` validates the root-relative plugin targets and
 records local read-only bindings in the candidate's manifest before measurement.
+It requires isolated DSH and Node installations outside `/tmp`, system trees and
+the platform checkout. A system Node prefix such as `/usr` or `/usr/local` would
+cover the task image's own tools; a `/tmp` runtime would be hidden by the native
+sandbox. Unsupported paths are refused before the manifest is changed.
 `HG_AGENT_DSH_ROOT` selects its standard CLI; explicit CLI and Node overrides
 require matching prepared bindings. Opaque command wrappers retain ownership of
 their interpreter and profile setup instead of inheriting a host installation.

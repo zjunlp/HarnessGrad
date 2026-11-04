@@ -1,12 +1,12 @@
 # DSH Harness runtime preparation
 
 The shipped manifest contains no host installation paths. Prepare the Harness
-copy that will be measured with an existing, built DSH checkout and compatible
-Node executable:
+copy that will be measured with an existing, built DSH checkout and an isolated
+Node installation compatible with the task images:
 
 ```sh
 python3 tools/configure_dsh_harness.py /path/to/harness-copy \
-  --dsh-root /path/to/deepseek-harness --node /path/to/node
+  --dsh-root /path/to/deepseek-harness --node /path/to/node-prefix/bin/node
 ```
 
 Preparation validates `apps/cli/lib/bin.js`, Node, and every package target in
@@ -16,6 +16,18 @@ both native and container sandboxes. The exact executable binding keeps symlinke
 nonstandard Node names from falling back to another binary on PATH. Preparation changes the manifest and its
 candidate identity; perform it before creating an experiment record. It does not
 install dependencies or prove that the CLI can boot a profile.
+
+Both runtime installations must be outside `/tmp` and the platform checkout, and
+must not contain the platform. Native sandboxes hide those trees. System locations
+such as `/usr/bin/node` and `/usr/local/bin/node` are refused: binding their inferred
+prefix would replace the task image's own Python, libraries and tools. Use dedicated
+directories outside system trees, for example under `~/.local/opt/` or `/opt/node/`.
+The check follows symlinks and rejects unsupported paths before changing the manifest.
+If `--node` is omitted, the `node` found on `PATH` must satisfy the same requirements.
+Use a complete Node distribution with its dependencies; copying a system executable
+alone does not establish compatibility with a container's libraries. These restrictions
+apply to this task Harness preparation tool; the DSH improver has a separate runtime
+binding contract.
 
 The farm stores package names and targets relative to the selected DSH root.
 Each task gets real writable profile directories and links into that installation.

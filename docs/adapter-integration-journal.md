@@ -6392,3 +6392,28 @@ stale farms, missing packages and escaping targets fail before link creation.
 Relocation controls cover normal and custom-command execution, configuration facts,
 loader interpreter selection and profile isolation. These model-free controls do
 not establish that a real DSH profile can boot or complete benchmark tasks.
+
+### DSH runtime preparation respects sandbox boundaries (2026-11-04)
+
+Rebased `fix/portable-runtime-paths` onto `origin/main` at `9d429943`, preserving
+the new τ² judge configuration and journal entry. DSH Harness preparation now
+refuses system runtime trees (including `/usr` and `/usr/local`), `/tmp` installs
+and installations overlapping the hidden platform before changing the manifest.
+The supported setup uses dedicated DSH and Node installations outside those trees;
+canonical-path checks also cover symlink aliases. The native sandbox's hiding and
+mount ordering remain intact.
+
+External DSH improvers retain their launcher's package directory and shebang
+interpreter without borrowing the unrelated Codex credential home. Only the
+bundled launcher can rely on the already-visible `methods/` directory.
+
+Validation: 222 tests and 38 subtests passed across DSH paths/session logs,
+improver resolution/registry/cost/prompt, configuration, method readiness,
+sandbox, path migration and documentation/import guards. The sandbox suite's
+expected default work directory was created for its rerun and removed afterwards.
+Three pre-existing checks requiring other local Node Harness installations were
+deselected. Actual bubblewrap and cached-image Docker controls verify runtime
+execution, read-only bindings, hidden private files and preservation of the image's
+Python; rejection controls verify the old manifest survives unsupported paths.
+These are fixture-based integration checks, with no model calls or real DSH
+profile/benchmark execution.
