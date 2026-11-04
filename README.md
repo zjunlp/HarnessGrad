@@ -55,7 +55,8 @@ Each round records the candidate harness hash and its changes, alongside the run
 
 ## Installation
 
-Linux with Python **3.12+**, git, and a working `bubblewrap`. Keep the virtual environment
+Linux with Python **3.12+**, git, [uv](https://docs.astral.sh/uv/getting-started/installation/),
+and a working `bubblewrap`. Keep the virtual environment
 outside the checkout and outside `/tmp`, so the sandbox can mount its runtime without exposing
 your platform or task files. The base Python installation must also stay outside those
 directories. Interpreter links used by tools such as uv are preserved inside the sandbox;
@@ -64,9 +65,9 @@ only the required runtime directories are mounted, read-only.
 ```bash
 git clone https://github.com/zjunlp/HarnessGrad.git
 cd HarnessGrad
-python3 -m venv ~/.venvs/harnessgrad
+uv venv --python 3.12 ~/.venvs/harnessgrad
 source ~/.venvs/harnessgrad/bin/activate
-python3 -m pip install -e .
+uv pip install -e .
 ./install.sh --check
 ```
 
