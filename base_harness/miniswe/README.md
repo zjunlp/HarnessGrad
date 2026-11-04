@@ -13,9 +13,10 @@ python3 tools/configure_harness.py --harness base_harness/miniswe --python 3.12
 
 Exec also requires an overlay for the image's interpreter (Python 3.11 for the
 pinned actor below). Overlay provenance records transitive distributions. The
-existing configure verifier can mistake mini-SWE-agent's import banner for an
-error; the native runner control below checks actual imports/execution. This
-MiniSWE-only increment does not change that general verifier.
+container configure verifier reads a structured import result so mini-SWE-agent's
+startup banner is accepted while actual import errors or incomplete/failed probes
+refuse. This verifier correction is supplied as a separate dependency-fix commit;
+it does not change the native agent.
 
 The manifest declares files and ordinary exec. The focused exec regression uses
 actual `run_one` in actor
