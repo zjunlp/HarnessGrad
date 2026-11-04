@@ -18,7 +18,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.appworld_campaign_state import (POOLS, SELECTION_SCHEMA, RecoveryError,
     read, recover, selection_identity, legacy_audit)
-from tools.launch_appworld_harness_baselines import current_identity, check_identity, write
+from tools.launch_appworld_harness_baselines import (current_identity, check_identity,
+                                                     preflight_appworld_data, write)
 
 
 def validate_selection(selection, harnesses, pools):
@@ -28,6 +29,7 @@ def validate_selection(selection, harnesses, pools):
         raise RecoveryError('harnesses/pools must be unique')
     if set(selection.get('pools', {})) != set(POOLS):
         raise RecoveryError('selection must keep all four official pools separate')
+    preflight_appworld_data()
     from data.datasets.appworld import split_ids, BUNDLE
     from eval.run.metrics import pilot_task_set
     released = split_ids(BUNDLE)

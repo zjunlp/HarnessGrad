@@ -307,6 +307,7 @@ def test_bound_native_settings_replace_stale_inherited_settings(monkeypatch,iden
     monkeypatch.setattr(launcher,'dataset_environment',lambda: {'HG_DATA_APPWORLD':'/synthetic/data'})
     runtime={'environment':{}}; identity['runtime_sha256']=state.digest(runtime)
     monkeypatch.setattr(launcher,'runtime_binding',lambda *a:runtime)
+    monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
     monkeypatch.setenv('HG_APPWORLD_STUDY_IDS','/host/study.csv')
     monkeypatch.setenv('DSH_PERMISSION_MODE','danger-full-access')
     monkeypatch.setenv('OPENCLAW_CONFIG_PATH','/host/config')
@@ -371,6 +372,7 @@ def test_current_identity_reads_actual_code_data_and_scorer_files(tmp_path,monke
     dataset=SimpleNamespace(BUNDLE=bundle, split_ids=lambda _: {'train':['a','b','c']},
         IMAGE='sha256:'+'1'*64, SERVICE_IMAGE='sha256:'+'2'*64, VERIFIER_IMAGE='sha256:'+'3'*64)
     monkeypatch.setitem(sys.modules,'data.datasets.appworld',dataset)
+    monkeypatch.setattr(launcher,'preflight_appworld_data',lambda:None)
     monkeypatch.setattr(launcher.subprocess,'check_output',lambda *a,**k:'d'*40+'\n')
     bindings={'model':identity['model'],'harness_runtimes':{'miniagent':{'files':[],'environment':{}}}}
     baseline=launcher.current_identity(identity,bindings)

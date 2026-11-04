@@ -26,6 +26,8 @@ from tools.appworld_campaign_state import (IDENTITY_SCHEMA, POLICY, POOLS, Recov
     digest, file_hash, read, selection_identity, validate_identity)
 from tools.validate_harness import source_identity
 
+_IMAGE_ABI_CACHE = {}
+
 
 def write(path, value):
     path = Path(path)
@@ -48,21 +50,23 @@ def select_task_ids(cohort, requested):
 
 def current_identity(expected, bindings):
     """Recompute local code/data pins and require declared external identities."""
+    preflight_appworld_data()
     from data.datasets.appworld import BUNDLE, split_ids, SERVICE_IMAGE, VERIFIER_IMAGE, IMAGE
+    if any(not isinstance(image, str) or not re.fullmatch(r'(?:[^\s]+@)?sha256:[0-9a-f]{64}', image) for image in (IMAGE, SERVICE_IMAGE, VERIFIER_IMAGE)):
+        raise RecoveryError('AppWorld actor/service/verifier images must be immutable digests')
     actual = copy.deepcopy(expected)
     harness = ROOT / 'base_harness' / expected['harness']
     manifest = read(harness / 'harness.json')
     if bindings.get('model') != expected['model']:
         raise RecoveryError('model deployment binding differs from reviewed identity')
     runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(expected['harness']))
+    validate_appworld_overlay(harness, manifest, runtime, IMAGE)
     # These are explicit external provenance documents, not fetched service attestations.
     actual.update(schema=IDENTITY_SCHEMA, policy=POLICY,
                   platform_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, encoding='ascii', errors='strict').strip(),
                   source_sha256=file_hash(BUNDLE), pool_ids_sha256=digest(split_ids(BUNDLE)[expected['pool']]),
                   harness_sha256=source_identity(harness)['submission_sha256'],
                   manifest_sha256=file_hash(harness/'harness.json'), runtime_sha256=digest(runtime))
-    if any(not isinstance(image, str) or not re.fullmatch(r'(?:[^\s]+@)?sha256:[0-9a-f]{64}', image) for image in (IMAGE, SERVICE_IMAGE, VERIFIER_IMAGE)):
-        raise RecoveryError('AppWorld actor/service/verifier images must be immutable digests')
     verify = ROOT / 'data/datasets/appworld/verify'
     actual['scorer_sha256'] = digest({'files': {str(p.relative_to(verify)): file_hash(p)
         for p in sorted(verify.rglob('*')) if p.is_file() and '__pycache__' not in p.parts},
@@ -124,7 +128,70 @@ def runtime_binding(manifest, binding):
                        'sha256': file_hash(Path(sys.executable)), 'version': platform.python_version()}}
 
 
+def validate_appworld_overlay(harness, manifest, runtime, image):
+    """Bind the overlay actually selected for the pinned AppWorld actor ABI.
+
+    A random PROVENANCE.json is not evidence for the requirements hash or the
+    image's interpreter. Explicitly pin the overlay root so a host cache or .env
+    cannot silently select a different dependency tree after identity review.
+    """
+    if not manifest.get('install'):
+        return
+    from eval.containers import container, harness_runtime
+
+    root = runtime['environment'].get('HG_OVERLAY_ROOT')
+    if not root or not Path(root).expanduser().is_absolute():
+        raise RecoveryError('an absolute HG_OVERLAY_ROOT is required for AppWorld dependencies')
+    spec = harness_runtime.install_spec(harness)
+    if spec is None:
+        raise RecoveryError('AppWorld dependency install must resolve to a requirements file')
+    if not isinstance(image, str) or not re.fullmatch(r'(?:[^\s]+@)?sha256:[0-9a-f]{64}', image):
+        raise RecoveryError('the AppWorld actor image must be an immutable digest')
+    version = _IMAGE_ABI_CACHE.get(image)
+    if version is None:
+        # network=none applies inside the container; only --pull=never prevents
+        # the Docker daemon itself from fetching a missing image during a plan.
+        script = ("p=$(command -v python3 || command -v python) || exit 1; "
+                  "\"$p\" -c 'import json,sys;print(json.dumps({\"python\":sys.executable,"
+                  "\"version\":str(sys.version_info.major)+\".\"+str(sys.version_info.minor)}))'")
+        try:
+            probe = container.docker('run', '--rm', '--pull=never', '--network', 'none',
+                                     '--entrypoint', 'sh', image, '-c', script, timeout=180)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise RecoveryError('the pinned AppWorld actor Python probe could not run locally') from exc
+        if probe.returncode:
+            raise RecoveryError('the pinned AppWorld actor image or its Python is unavailable locally')
+        try:
+            result = json.loads(probe.stdout.strip().splitlines()[-1])
+            version = result['version']
+            if not isinstance(version, str) or not re.fullmatch(r'3\.[0-9]+', version) or not result['python']:
+                raise ValueError('invalid Python ABI probe')
+        except (ValueError, IndexError, KeyError, TypeError) as exc:
+            raise RecoveryError('the pinned AppWorld actor Python ABI could not be determined locally') from exc
+        _IMAGE_ABI_CACHE[image] = version
+    expected = (Path(root).expanduser() / spec[0][:16] / version / 'PROVENANCE.json').resolve()
+    inventory = {item['resolved_path'] for item in runtime['files']}
+    if str(expected) not in inventory:
+        raise RecoveryError(f'runtime inventory does not contain the actual AppWorld {version} overlay provenance: {expected}')
+    provenance = read(expected)
+    if provenance.get('install_sha256') != spec[0] or provenance.get('python') != version:
+        raise RecoveryError('AppWorld overlay provenance does not match requirements and Python ABI')
+
+
+def preflight_appworld_data():
+    """Refuse absent inputs before importing an adapter that can prepare them."""
+    from harnessgrad.paths import dataset_root
+    root = Path(dataset_root('appworld'))
+    missing = [str(path) for path in (root / 'pool.jsonl', root / '_src' / 'data-0.1.0.bundle')
+               if not path.is_file()]
+    if missing:
+        raise RecoveryError('AppWorld input files are missing; configure/prepare data separately: '
+                            + ', '.join(missing))
+    return root
+
+
 def dataset_environment():
+    preflight_appworld_data()
     from data.datasets import appworld
     return {'HG_DATA_APPWORLD': str(appworld.DATASET_ROOT.resolve()),
             'HG_APPWORLD_IMAGE': appworld.IMAGE, 'HG_APPWORLD_SERVICE_IMAGE': appworld.SERVICE_IMAGE,
@@ -145,6 +212,8 @@ def execution_environment(identity, bindings):
     env.update(dataset_environment())
     manifest = read(ROOT/'base_harness'/identity['harness']/'harness.json')
     runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(identity['harness']))
+    validate_appworld_overlay(ROOT/'base_harness'/identity['harness'], manifest, runtime,
+                              env.get('HG_APPWORLD_IMAGE'))
     if digest(runtime) != identity['runtime_sha256']:
         raise RecoveryError('runtime changed after identity review')
     env.update(runtime['environment'])
