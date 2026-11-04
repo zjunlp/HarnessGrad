@@ -131,6 +131,13 @@ Want to join? [Bring a harness](docs/bring-your-own-harness.md), [add a method](
 
 Explore experiments, inspect harness versions and trajectories, and edit a candidate in the Console.
 
+```bash
+export HG_CONSOLE_RUNS="$PWD/runs"  # existing run-record directory
+python3 console/server.py --port 4460
+```
+
+Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from the repository root after an experiment has created `runs/`, or point `HG_CONSOLE_RUNS` to another existing run-record directory. The Console binds to localhost by default.
+
 <details>
 <summary>🖥️ See the Console</summary>
 <br>
