@@ -70,6 +70,9 @@ exclude = ["data.authored*", "data.candidates*"]
 "base_harness.opencode" = ["harness.json"]
 "base_harness.oracle" = ["harness.json"]
 "data" = ["aggregation_policies.json", "dataset.schema.json"]
+# Exact shared QA resources required by GSM8K's SETUP and verifier; the CLI is
+# extensionless and is intentionally listed rather than matched by a wildcard.
+"data.scaffolds.qa" = ["prediction.schema.json", "cli/qa"]
 "harnessgrad.improvers" = ["improvers.json", "launchable.json", "skill.md"]
 "harnessgrad.runtime" = ["eight_stage_protocol.schema.json"]
 "methods" = ["dsh-improver"]
