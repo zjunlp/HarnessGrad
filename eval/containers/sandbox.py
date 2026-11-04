@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 8  # 8 excludes method runtime trees exposing shared temporary roots;
+PLAN_VERSION = 9  # 9 restores interpreter symlinks without exposing parent directories;
+                  # 8 excludes method runtime trees exposing shared temporary roots;
                   # 7 excludes method runtime trees overlapping the platform, including aliases;
                   # 6 mounts the active venv and its base interpreter as distinct runtime trees;
                   # 5 adds the read-only host-side tool socket (`eval/containers/tool_route.py`);
@@ -154,7 +155,11 @@ def interpreter_prefixes() -> tuple[Path, ...]:
 
 def _venv_prefix() -> Path | None:
     """The virtualenv or conda prefix that owns the running interpreter, if any."""
-    for exe in (Path(sys.executable).absolute(), Path(sys.executable).resolve()):
+    try:
+        executables = (Path(sys.executable).absolute(), Path(sys.executable).resolve())
+    except (OSError, RuntimeError) as exc:
+        raise SandboxUnavailable(f'cannot resolve the Python executable: {exc}') from exc
+    for exe in executables:
         for parent in exe.parents:
             if (parent / "pyvenv.cfg").exists() or (parent / "conda-meta").is_dir():
                 return parent
@@ -183,6 +188,47 @@ def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writabl
             raise SandboxUnavailable(f'Python environment {prefix} is inside writable task/work storage; '
                                      'create the venv separately (for example ~/.venvs/harnessgrad)')
     return prefixes
+
+
+def _interpreter_symlinks(prefixes, *, platform, work_root, task_dir,
+                         writable_paths, state_dirs, private_paths):
+    """Restore only links needed to reach the already-mounted Python runtime.
+
+    uv can link a venv executable through a version alias and a relocated Python
+    store. Binding sys.base_prefix alone leaves those intermediate paths absent.
+    Recreate links, not directory binds: aliases must reach the same mounted tree
+    so platform hides and private-path checks cannot be bypassed through a copy.
+    """
+    mounted = (*map(Path, RUNTIME), *prefixes)
+    protected = tuple(Path(path).resolve() for path in (
+        *hidden_trees(work_root, platform), work_root, task_dir,
+        *writable_paths, *state_dirs, *private_paths))
+    remaining = list(Path(sys.executable).absolute().parts[1:])
+    current = Path('/')
+    links = {}
+    followed = 0
+    while remaining:
+        part = remaining.pop(0)
+        if part == '..':
+            current = current.parent
+            continue
+        current = current / part
+        if not current.is_symlink():
+            continue
+        followed += 1
+        if followed > 40:
+            raise SandboxUnavailable('the Python executable has too many symbolic links')
+        target = os.readlink(current)
+        if not any(current.is_relative_to(root) for root in mounted):
+            if any(current.is_relative_to(root) for root in protected):
+                raise SandboxUnavailable(
+                    f'Python executable link {current} is in hidden, writable, or private storage; '
+                    'create the venv with an interpreter outside that storage')
+            links[current] = target
+        path = Path(target)
+        remaining = list(path.parts[1:] if path.is_absolute() else path.parts) + remaining
+        current = Path('/') if path.is_absolute() else current.parent
+    return tuple(links.items())
 
 
 def hidden_trees(work_root: Path, platform: Path) -> list[Path]:
@@ -286,8 +332,13 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
         if Path(path).exists():
             plan += ["--ro-bind", path, path]
 
-    for prefix in _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs):
+    prefixes = _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
+    for prefix in prefixes:
         plan += ["--ro-bind", str(prefix), str(prefix)]
+    for link, target in _interpreter_symlinks(
+            prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
+            writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths):
+        plan += ["--symlink", target, str(link)]
 
     # Trees the harness declares it needs, bound read-only.
     #

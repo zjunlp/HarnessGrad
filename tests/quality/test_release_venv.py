@@ -21,8 +21,8 @@ from eval.containers import sandbox
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.fixture(scope='module')
-def fresh_venv():
+@pytest.fixture(scope='module', params=['direct', 'absolute-alias', 'relative-alias'])
+def fresh_venv(request):
     cache = Path.home() / '.cache'
     cache.mkdir(exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix='hg-release-venv-', dir=cache))
@@ -33,6 +33,23 @@ def fresh_venv():
         assert created.returncode == 0, created.stderr
         python = venv / 'bin/python'
         assert python.is_symlink(), 'control must exercise normal symlink venv creation'
+        store = directory / 'runtime-store'; store.mkdir()
+        (store / 'private-other-runtime').write_text('not part of the Python runtime')
+        if request.param != 'direct':
+            relative = request.param == 'relative-alias'
+            alias = directory / 'uv'
+            alias.symlink_to(store.name if relative else store, target_is_directory=True)
+            version = store / 'python-selected'
+            base = Path(sys.base_prefix).resolve()
+            version.symlink_to(os.path.relpath(base, store) if relative else base,
+                               target_is_directory=True)
+            executable = alias / version.name / Path(sys.executable).resolve().relative_to(base)
+            python.unlink()
+            python.symlink_to(executable)
+            config = venv / 'pyvenv.cfg'
+            config.write_text('\n'.join(
+                f'home = {executable.parent}' if line.startswith('home = ') else line
+                for line in config.read_text().splitlines()) + '\n')
         wheel = directory / 'hg_venv_marker-0.0.1-py3-none-any.whl'
         with zipfile.ZipFile(wheel, 'w') as stream:
             stream.writestr('hg_venv_marker.py', 'VALUE = "installed-only-in-fresh-venv"\n')
@@ -65,15 +82,21 @@ def test_fresh_venv_executes_with_own_dependency_and_readonly_runtime(fresh_venv
 from pathlib import Path
 from eval.containers import sandbox
 root,task,work=map(Path,sys.argv[1:])
-code="""import json,pathlib,sys,hg_venv_marker
+code="""import json,os,pathlib,sys,hg_venv_marker
 p=pathlib.Path(hg_venv_marker.__file__)
 try:p.write_text('changed')
 except OSError:readonly=True
 else:readonly=False
-print(json.dumps({'prefix':sys.prefix,'marker':hg_venv_marker.VALUE,'readonly':readonly,
+print(json.dumps({'prefix':sys.prefix,'base_prefix':sys.base_prefix,
+                 'marker':hg_venv_marker.VALUE,'readonly':readonly,
+                 'base_readonly':bool(os.statvfs(sys.base_prefix).f_flag & os.ST_RDONLY),
                  'platform_visible':pathlib.Path(PLATFORM + '/driver.py').exists(),
-                 'foreign_tmp_visible':pathlib.Path(FOREIGN).exists()}))
+                 'foreign_tmp_visible':pathlib.Path(FOREIGN).exists(),
+                 'foreign_runtime_visible':pathlib.Path(SIBLING).exists(),
+                 'aliased_foreign_runtime_visible':pathlib.Path(ALIAS_SIBLING).exists()}))
 """.replace('PLATFORM',repr(str(root))).replace('FOREIGN',repr(str(work.parent/'secret-other-run')))
+code=code.replace('ALIAS_SIBLING',repr(str(Path(sys.prefix).parent/'uv/private-other-runtime')))
+code=code.replace('SIBLING',repr(str(Path(sys.prefix).parent/'runtime-store/private-other-runtime')))
 (work.parent/'secret-other-run').write_text('private other run')
 result=sandbox.run([sys.executable,'-I','-c',code],platform=root,work_root=work,
     task_dir=task,repo=task,env={},timeout_s=20,cwd=task,network='none')
@@ -84,8 +107,10 @@ print(json.dumps({'code':result.returncode,'stdout':result.stdout,'stderr':resul
     wrapped = json.loads(result.stdout)
     assert wrapped['code'] == 0, wrapped
     observed = json.loads(wrapped['stdout'])
-    assert observed == {'prefix': str(prefix), 'marker': 'installed-only-in-fresh-venv',
-        'readonly': True, 'platform_visible': False, 'foreign_tmp_visible': False}
+    assert observed == {'prefix': str(prefix), 'base_prefix': sys.base_prefix,
+        'marker': 'installed-only-in-fresh-venv', 'readonly': True, 'base_readonly': True,
+        'platform_visible': False, 'foreign_tmp_visible': False,
+        'foreign_runtime_visible': False, 'aliased_foreign_runtime_visible': False}
 
 
 def test_fresh_venv_passes_actual_driver_boundary_self_check(fresh_venv, tmp_path):
@@ -127,3 +152,49 @@ def test_interpreter_prefixes_never_broaden_to_entire_host(monkeypatch):
     monkeypatch.setattr(sys, 'prefix', '/')
     with pytest.raises(sandbox.SandboxUnavailable, match='not an absolute directory'):
         sandbox.interpreter_prefixes()
+
+
+@pytest.mark.parametrize('placement', ['tmp', 'platform', 'work', 'private'])
+def test_interpreter_links_in_protected_storage_are_refused(tmp_path, monkeypatch, placement):
+    with tempfile.TemporaryDirectory(prefix='hg-runtime-link-', dir=Path.home()) as root:
+        root = Path(root)
+        platform = root / 'platform'; platform.mkdir()
+        work = root / 'work'; work.mkdir()
+        task = tmp_path / 'task'; task.mkdir()
+        private = root / 'private'; private.mkdir()
+        parent = {'tmp': tmp_path, 'platform': platform, 'work': work, 'private': private}[placement]
+        link = parent / 'runtime'
+        base = Path(sys.base_prefix).resolve()
+        link.symlink_to(base, target_is_directory=True)
+        monkeypatch.setattr(sys, 'executable', str(link / Path(sys.executable).resolve().relative_to(base)))
+        monkeypatch.setattr(sandbox, '_bwrap', lambda: '/usr/bin/bwrap')
+        with pytest.raises(sandbox.SandboxUnavailable, match='Python executable link'):
+            sandbox.command(['/bin/true'], platform=platform, work_root=work,
+                            task_dir=task, env={}, private_paths=(private,))
+
+
+def test_interpreter_link_loop_is_refused(tmp_path, monkeypatch):
+    link = tmp_path / 'python'
+    link.symlink_to(link.name)
+    monkeypatch.setattr(sys, 'executable', str(link))
+    # Already-mounted links still need cycle detection when following the executable.
+    with pytest.raises(sandbox.SandboxUnavailable, match='too many symbolic links'):
+        sandbox._interpreter_symlinks((tmp_path,), platform=ROOT, work_root=tmp_path / 'work',
+            task_dir=tmp_path / 'task', writable_paths=(), state_dirs=(), private_paths=())
+    monkeypatch.setattr(sandbox, '_bwrap', lambda: '/usr/bin/bwrap')
+    with pytest.raises(sandbox.SandboxUnavailable, match='cannot resolve the Python executable'):
+        sandbox.command(['/bin/true'], platform=ROOT, work_root=tmp_path / 'work',
+                        task_dir=tmp_path / 'task', env={})
+    report = sandbox.self_check(ROOT, tmp_path / 'work')
+    assert report['ok'] is False
+    assert 'cannot resolve the Python executable' in report['detail']
+
+
+@pytest.mark.parametrize('target', ['--bind', '--tmpfs', '--symlink'])
+def test_private_mount_checks_skip_symlink_arguments(tmp_path, target):
+    from eval.containers.private_mounts import reject_visible
+    private = tmp_path / 'private'; private.mkdir()
+    plan = ['--symlink', target, str(tmp_path / 'alias')]
+    reject_visible(plan, (private,))
+    with pytest.raises(ValueError, match='visible through sandbox mount'):
+        reject_visible([*plan, '--ro-bind', str(private), str(tmp_path / 'exposed')], (private,))

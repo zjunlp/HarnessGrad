@@ -22,6 +22,8 @@ def reject_visible(plan, private_paths):
         elif flag in ('--tmpfs', '--proc', '--dev'):
             mounts.append((None, Path(os.path.abspath(plan[i + 1]))))
             i += 2
+        elif flag == '--symlink':
+            i += 3
         else:
             i += 1
     for private in private_paths:
