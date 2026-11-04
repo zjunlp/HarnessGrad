@@ -56,27 +56,6 @@ def test_three_people_and_every_one_has_a_credit() -> None:
     assert credited == people, "a person is listed with no credit or a credit has no person"
 
 
-def test_benchmark_summary_threshold_and_current_render() -> None:
-    for count, label in ((99, "99"), (100, "100+"), (123, "100+")):
-        assert f"**{label} registered benchmark adapters**" in contributors.render_benchmark_summary(count)
-    text = README.read_text(encoding="utf-8")
-    assert contributors._block(text, contributors.SUMMARY_BEGIN, contributors.SUMMARY_END) == (
-        contributors.render_benchmark_summary(len(contributors.declared_benchmarks())))
-
-
-def test_benchmark_summary_check_detects_staleness(tmp_path, monkeypatch, capsys) -> None:
-    import sys as _sys
-
-    copy = tmp_path / "README.md"
-    copy.write_text(README.read_text(encoding="utf-8").replace(
-        contributors.render_benchmark_summary(len(contributors.declared_benchmarks())),
-        contributors.render_benchmark_summary(99)), encoding="utf-8")
-    monkeypatch.setattr(contributors, "README", copy)
-    monkeypatch.setattr(_sys, "argv", ["contributors.py", "--check"])
-    assert contributors.main() == 1
-    assert "benchmark summary" in capsys.readouterr().err
-
-
 def test_the_readme_block_is_the_record_rendered() -> None:
     text = README.read_text(encoding="utf-8")
     block = contributors._block(text, contributors.BEGIN, contributors.END)
@@ -92,10 +71,12 @@ def test_each_board_has_its_own_growth_curve() -> None:
     assert set(contributors.FIGURES) == set(titles)
     for board, path in contributors.FIGURES.items():
         svg = path.read_text(encoding="utf-8")
-        assert svg == contributors.render_svg(record, board), (
+        assert contributors.snapshot_date(path) is not None
+        assert svg == contributors.render_svg(record, board, contributors.snapshot_date(path)), (
             f"{path.name} is stale; run python3 tools/contributors.py --write")
         assert titles[board] in svg, f"{path.name} has no title for its board"
-        entries = [entry for entry in contributors.entries(record) if entry["kind"] == board]
+        entries = [entry for entry in contributors.entries(record) if entry["kind"] == board
+                   and entry['since'] <= contributors.snapshot_date(path)]
         credited = {entry["contributor"] for entry in entries}
         for handle, count in contributors.totals(entries):
             assert handle in svg, f"{board}/{handle} has no line"
@@ -109,17 +90,121 @@ def test_the_curve_is_cumulative_and_monotone() -> None:
     """A star-history shape only says something if the line never goes down."""
     record = _record()
     for board in ("harness", "method", "benchmark"):
-        entries = [entry for entry in contributors.entries(record) if entry["kind"] == board]
+        items = [entry for entry in contributors.entries(record) if entry["kind"] == board]
         days = contributors._window(record)
-        for handle, _ in contributors.totals(entries):
-            running = 0
-            for day in days:
-                running += len([entry for entry in entries
-                                if entry["contributor"] == handle
-                                and entry["since"][:10] == day])
-                assert running >= 0
-            total = len([entry for entry in entries if entry["contributor"] == handle])
-            assert running <= total, "the curve cannot exceed the credited entries"
+        for handle, values in contributors.cumulative_series(items, days).items():
+            assert values == sorted(values)
+            assert values[-1] == sum(e['contributor'] == handle and e['since'] <= days[-1] for e in items)
+
+
+def test_window_and_cumulative_edges() -> None:
+    days = contributors._window({'updated': '2024-03-10'})
+    assert len(days) == 30 and days[0] == '2024-02-10' and days[-1] == '2024-03-10'
+    assert '2024-02-29' in days
+    def credit(date):
+        return {'contributor': 'alice', 'since': date, 'name': 'x', 'kind': 'harness'}
+    items = [credit('2024-02-09') for _ in range(10)] + [credit('2024-02-10') for _ in range(2)] + [credit('2024-02-11'), credit('2024-03-10'), credit('2024-03-11')]
+    points = contributors.cumulative_series(items, days)['alice']
+    assert points[0] == 12 and points[1] == 13 and points[-1] == 14
+    assert contributors.cumulative_series([credit('2024-02-09')] * 10, days)['alice'] == [10] * 30
+    assert contributors.cumulative_series([], days) == {}
+    assert contributors.cumulative_series([credit('2024-03-11')], days) == {}
+    record = {'updated': days[-1], 'boards': {'harness': items, 'method': [], 'benchmark': []}}
+    svg = contributors.render_svg(record, 'harness')
+    assert '2024-02-10 · @alice · cumulative 12 of 14' in svg
+    assert '2024-03-10 · @alice · cumulative 14 of 14' in svg
+    assert '14 entries' in svg and '15 entries' not in svg
+    empty = contributors.render_svg(record, 'method', '2024-03-10')
+    assert 'data-as-of="2024-03-10"' in empty and 'No entries as of 2024-03-10' in empty
+
+
+def test_interactive_cumulative_window_executes_in_node() -> None:
+    import shutil
+    import subprocess
+    import pytest
+
+    if not shutil.which('node'):
+        pytest.skip('node not installed')
+    days = contributors._window({'updated': '2024-03-10'})
+    items = [{'name': str(i), 'contributor': 'alice', 'since': date}
+             for i, date in enumerate(['2024-02-09'] * 10 + ['2024-02-10'] * 2 +
+                                      ['2024-02-11', '2024-03-10', '2024-03-11'])]
+    record = {'updated': days[-1], 'people': [{'handle': 'alice'}],
+              'boards': {'harness': items, 'method': [], 'benchmark': []}}
+    page = contributors.render_html(record)
+    data = re.search(r'<script id="data" type="application/json">(.*?)</script>', page, re.S).group(1)
+    script = page.split('<script>')[-1].split('</script>')[0]
+    harness = r'''
+const RealDate = Date;
+global.Date = class extends RealDate { constructor(...args) { super(...(args.length ? args : ['2024-03-10T12:00:00Z'])); } };
+const made = [];
+function element(tag) { return {tag, children: [], style: {}, value: '', textContent: '',
+  setAttribute(k,v) { this[k]=v; }, appendChild(x) { this.children.push(x); },
+  addEventListener(k,f) { this[k]=f; }}; }
+const nodes = Object.fromEntries(['data','sub','tip','win','end','board','panels'].map(x => [x,element(x)]));
+nodes.data.textContent = DATA_JSON; nodes.win.value = '30'; nodes.board.value = 'harness';
+global.document = {getElementById: x => nodes[x], createElement: element,
+  createElementNS: (_, tag) => { const n = element(tag); made.push(n); return n; }};
+'''.replace('DATA_JSON', json.dumps(data))
+    checks = r'''
+const labels = made.filter(n => n.tag === 'text').map(n => n.textContent);
+if (!labels.includes('14 entries') || labels.includes('15 entries')) throw Error(JSON.stringify(labels));
+const circles = made.filter(n => n.tag === 'circle' && n.mousemove);
+if (circles.length !== 3) throw Error('wrong point count ' + circles.length);
+circles[0].mousemove({clientX:0,clientY:0});
+if (!nodes.tip.innerHTML.includes('cumulative 12')) throw Error(nodes.tip.innerHTML);
+'''
+    subprocess.run(['node', '-e', harness + script + checks], check=True, capture_output=True, text=True)
+
+
+def test_invalid_dates_are_refused() -> None:
+    record = _record()
+    record['boards']['harness'][0]['since'] = '2024-02-30'
+    record['updated'] = '2024-13-01'
+    found = contributors.problems(record)
+    assert any('invalid since date' in error for error in found)
+    assert 'invalid updated date' in found
+
+
+def test_generated_block_is_only_figures() -> None:
+    block = contributors.render_block(_record())
+    assert block.count('![') == 3
+    assert 'Measured results' not in block and '| # |' not in block
+
+
+def test_isolated_write_and_check(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setattr(contributors, 'ROOT', tmp_path)
+    monkeypatch.setattr(contributors, 'README', tmp_path / 'README.md')
+    monkeypatch.setattr(contributors, 'DETAILS', tmp_path / 'docs/contributors.md')
+    monkeypatch.setattr(contributors, 'PAGE', tmp_path / 'docs/contributors.html')
+    monkeypatch.setattr(contributors, 'FIGURES', {b: tmp_path / f'.github/assets/contributors-{b}.svg' for b in contributors.BOARDS})
+    monkeypatch.setattr(contributors, 'declared_benchmarks', lambda: [e['name'] for e in _record()['boards']['benchmark']])
+    monkeypatch.setattr(contributors, 'problems', lambda record: [])
+    monkeypatch.setattr(contributors, 'utc_today', lambda: '2026-11-04')
+    (tmp_path / 'docs').mkdir()
+    contributors.README.write_text('before\n' + contributors.BEGIN + '\nstale\n' + contributors.END + '\nafter\n')
+    monkeypatch.setattr(sys, 'argv', ['contributors.py', '--write'])
+    assert contributors.main() == 0
+    assert contributors.README.read_text().endswith('\nafter\n')
+    assert {contributors.snapshot_date(path) for path in contributors.FIGURES.values()} == {'2026-11-04'}
+    monkeypatch.setattr(contributors, 'utc_today', lambda: '2026-11-05')
+    monkeypatch.setattr(sys, 'argv', ['contributors.py', '--check'])
+    assert contributors.main() == 0  # yesterday's snapshot remains reproducible
+    monkeypatch.setattr(sys, 'argv', ['contributors.py', '--check', '--as-of', '2026-11-05'])
+    assert contributors.main() == 1
+    monkeypatch.setattr(sys, 'argv', ['contributors.py', '--write', '--as-of', '2026-11-03'])
+    assert contributors.main() == 0
+    assert {contributors.snapshot_date(path) for path in contributors.FIGURES.values()} == {'2026-11-03'}
+    monkeypatch.setattr(sys, 'argv', ['contributors.py', '--check'])
+    assert contributors.main() == 0
+    path = contributors.FIGURES['harness']
+    original = path.read_text()
+    path.write_text(original.replace('data-as-of="2026-11-03"', 'data-as-of="2026-11-04"'))
+    assert contributors.main() == 1  # mixed snapshots
+    for path in contributors.FIGURES.values():
+        path.write_text(path.read_text().replace('data-as-of="2026-11-03"', 'data-as-of="2026-11-06"').replace('data-as-of="2026-11-04"', 'data-as-of="2026-11-06"'))
+    assert contributors.main() == 1  # future snapshot
+    assert 'snapshot date' in capsys.readouterr().err
 
 
 def test_the_interactive_page_carries_the_record_and_the_controls() -> None:

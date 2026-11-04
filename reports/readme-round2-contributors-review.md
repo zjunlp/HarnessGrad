@@ -1,0 +1,9 @@
+# README round-two contributor review
+
+The README introduction, inventory entry, install and quick-start text were simplified per request. The Workbench text and screenshots remain unchanged until the operator supplies new captures. The contributor section now thanks contributors and points to the harness, method and dataset onboarding guides; its generated block contains only the three charts.
+
+The charts show 30 inclusive days through the UTC snapshot date. Each point includes all credits prior to the window and credits on that day. Future credits are excluded from a past snapshot. `tools/contributors.py --write` defaults to the current UTC day, or accepts `--as-of YYYY-MM-DD`. The existing daily workflow runs `--write`; the date shown in each figure makes the snapshot explicit. `--check` reproduces the date embedded in all three SVGs and rejects inconsistent, missing or future dates, so a UTC midnight does not create a spurious CI failure. A stale but internally consistent snapshot can pass `--check` if the scheduled writer has not run; this is a freshness limitation rather than a content mismatch.
+
+The interactive contributor page uses the current UTC day and the same cumulative baseline. Existing result and credit data remain in the registry; only the README's generated ranking and results presentation was removed.
+
+Validation: independent synthetic example with ten pre-window credits and one final-day credit returned first=10 and last=11; window 2026-10-06 through 2026-11-04. Focused contributor, documentation, CI selection, site deployment and console navigation tests: 135 passed. `python3 tools/contributors.py --check` and `git diff --check` passed. No model calls, dataset downloads or experiment launches were made. Console screenshot service runs on loopback port 4485 against existing receipts.

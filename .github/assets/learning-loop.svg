@@ -1,14 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 170" role="img" aria-labelledby="title desc">
   <title id="title">The harness learning loop</title>
-  <desc id="desc">Tasks lead to feedback, editing the harness and evaluation, which returns to tasks.</desc>
+  <desc id="desc">Tasks produce feedback, which informs harness edits. The edited harness is evaluated on tasks, continuing the loop.</desc>
   <rect width="720" height="170" rx="20" fill="#f6f8fa"/>
   <g fill="none" stroke="#52677b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M130 70q25 -12 50 0m-8 -8 8 8-9 4M310 70q25 -12 50 0m-8 -8 8 8-9 4M490 70q25 -12 50 0m-8 -8 8 8-9 4"/>
     <path d="M610 114q0 35-35 35H120q-30 0-30-35m-6 8 6-8 7 7"/>
-    <path d="M54 35h48v42H54zM62 46h30M62 54h25M62 62h20"/>
-    <path d="M226 35h44v42h-44zM233 45h29M233 54h24M233 63h27"/>
+    <!-- Task sheet with a target -->
+    <path fill="#fff" d="M57 32q0-3 3-3h39q3 0 3 3v47q0 3-3 3H60q-3 0-3-3z"/>
+    <circle cx="79" cy="54" r="14" fill="#d9f0e9"/><circle cx="79" cy="54" r="7"/><circle cx="79" cy="54" r="1.5" fill="#52677b"/>
+    <!-- Feedback speech bubble -->
+    <path fill="#d9f0e9" d="M227 33q-6 0-6 7v23q0 7 7 7h9l-2 10 13-10h19q7 0 7-7V40q0-7-7-7z"/>
+    <path d="M232 45h30M232 53h23M232 61h17"/>
     <path d="M390 45l-10 10 10 10m40-20 10 10-10 10M416 40l-12 30"/>
-    <path d="M583 65l8 8 18-21"/>
+    <!-- Evaluation checklist and magnifying glass -->
+    <path fill="#fff" d="M579 28h31q3 0 3 3v39q0 3-3 3h-31q-3 0-3-3V31q0-3 3-3z"/>
+    <path d="m582 40 2 2 4-5m4 4h12m-22 9 2 2 4-5m4 4h12"/>
+    <circle cx="605" cy="65" r="11" fill="#d9f0e9"/><path d="m613 73 9 9m-21-17 3 3 5-6"/>
   </g>
   <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" text-anchor="middle" fill="#263849" font-size="16" font-weight="600">
     <text x="80" y="105">Tasks</text><text x="250" y="105">Feedback</text>
