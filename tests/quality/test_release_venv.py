@@ -258,6 +258,60 @@ def test_runtime_alias_cannot_project_hidden_storage_elsewhere(tmp_path, placeme
         assert json.loads(result.stdout) == [False, False, False]
 
 
+@pytest.mark.parametrize('storage', ['task', 'writable', 'state'])
+@pytest.mark.parametrize('placement', ['inside', 'same', 'parent'])
+@pytest.mark.parametrize('aliased', [False, True])
+def test_declared_runtime_cannot_overlap_writable_storage(tmp_path, monkeypatch,
+                                                        storage, placement, aliased):
+    work = tmp_path / 'work'; work.mkdir()
+    task = tmp_path / 'task'; task.mkdir()
+    writable = tmp_path / 'output'; writable.mkdir()
+    state = work / '.state'; state.mkdir()
+    storage_root = {'task': task, 'writable': writable, 'state': state}[storage]
+    runtime = (storage_root / 'runtime' if placement == 'inside' else storage_root
+               if placement == 'same' else storage_root.parent)
+    runtime.mkdir(exist_ok=True)
+    marker = runtime / 'marker.txt'; marker.write_text('original')
+    if aliased:
+        alias = tmp_path / 'alias'
+        alias.symlink_to(runtime, target_is_directory=True)
+        runtime = alias
+    monkeypatch.setattr(sandbox, '_bwrap', lambda: '/usr/bin/bwrap')
+    with pytest.raises(sandbox.SandboxUnavailable, match='overlaps writable task/state storage'):
+        sandbox.command(['/bin/true'], platform=ROOT, work_root=work, task_dir=task,
+            repo=task, env={}, runtime_paths=(runtime,),
+            writable_paths=(writable,), state_dirs=(state,))
+    assert marker.read_text() == 'original'
+
+
+def test_runtime_inside_readonly_task_remains_readonly(tmp_path):
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not provisioned')
+    with tempfile.TemporaryDirectory(prefix='hg-readonly-task-runtime-', dir=Path.home()) as directory:
+        root = Path(directory)
+        work = root / 'work'; work.mkdir()
+        task = root / 'task'; task.mkdir()
+        runtime = task / 'runtime'; runtime.mkdir()
+        marker = runtime / 'marker.txt'; marker.write_text('original')
+        alias = root / 'alias'; alias.symlink_to(runtime, target_is_directory=True)
+        code = '''import errno, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+assert path.read_text() == 'original'
+try:
+    path.write_text('changed')
+except OSError as exc:
+    assert exc.errno == errno.EROFS, exc
+else:
+    raise AssertionError('runtime became writable')
+'''
+        result = sandbox.run([sys.executable, '-I', '-c', code, str(alias / marker.name)],
+            platform=ROOT, work_root=work, task_dir=task, repo=task, env={},
+            task_dir_writable=False, runtime_paths=(alias,), timeout_s=20, cwd=task, network='none')
+        assert result.returncode == 0, result.stderr
+        assert marker.read_text() == 'original'
+
+
 def test_fresh_venv_passes_actual_driver_boundary_self_check(fresh_venv, tmp_path):
     python, _ = fresh_venv
     if shutil.which('bwrap') is None:

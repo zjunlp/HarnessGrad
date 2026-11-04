@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 10  # 10 mounts declared runtimes at physical paths and restores all declared link chains;
+PLAN_VERSION = 11  # 11 refuses declared runtimes overlapping writable task/state storage;
+                   # 10 mounts declared runtimes at physical paths and restores all declared link chains;
                    # 9 restores interpreter symlinks without exposing parent directories;
                    # 8 excludes method runtime trees exposing shared temporary roots;
                    # 7 excludes method runtime trees overlapping the platform, including aliases;
@@ -349,6 +350,13 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     declared = tuple(Path(path) for path in runtime_paths if Path(path).exists())
     physical = sorted({path.resolve(strict=True) for path in declared},
                       key=lambda path: (len(path.parts), str(path)))
+    writable = tuple(Path(path).resolve() for path in (
+        *((task_dir,) if task_dir_writable else ()), *writable_paths, *state_dirs))
+    for path in physical:
+        if any(path.is_relative_to(root) or root.is_relative_to(path) for root in writable):
+            raise SandboxUnavailable(
+                f'declared runtime {path} overlaps writable task/state storage; '
+                'keep runtime_paths separate from writable directories')
     # Every bind stays at its physical host path. A parent then supplies the same
     # tree as a child bind, while a child's external link target is bound separately.
     for path in physical:
