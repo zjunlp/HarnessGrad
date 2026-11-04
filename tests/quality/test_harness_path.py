@@ -454,3 +454,73 @@ def test_source_change_during_staging_is_refused(tmp_path, monkeypatch, capsys):
     assert driver._main({}) == 2
     assert 'changed' in capsys.readouterr().err.lower()
     assert not (tmp_path/'runs/a1-test/verdicts').exists()
+
+
+@pytest.mark.parametrize('value', ['', 'a'*63, 'A'*64, 'g'*64])
+def test_expected_source_hash_rejects_invalid_digest_before_model(tmp_path, monkeypatch, capsys, value):
+    import driver
+    source = _harness(tmp_path)
+    monkeypatch.setattr(driver, 'describe_model', lambda: pytest.fail('invalid hash reached model'))
+    monkeypatch.setattr(sys, 'argv', _argv(tmp_path, '--harness-path', str(source),
+                                        '--expected-harness-sha256', value))
+    assert driver._main({}) == 2
+    assert 'lowercase SHA256' in capsys.readouterr().err
+
+
+def test_expected_source_hash_requires_explicit_path(tmp_path, monkeypatch, capsys):
+    import driver
+    monkeypatch.setattr(driver, 'describe_model', lambda: pytest.fail('invalid source reached model'))
+    monkeypatch.setattr(sys, 'argv', _argv(tmp_path, '--harness', 'loop',
+                                        '--expected-harness-sha256', 'a'*64))
+    assert driver._main({}) == 2
+    assert 'requires --harness-path' in capsys.readouterr().err
+
+
+def test_reviewed_source_change_before_driver_refuses_before_model(tmp_path, monkeypatch, capsys):
+    import driver
+    source = _harness(tmp_path)
+    expected = _digest(source)['submission_sha256']
+    (source/'agent.py').write_text(AGENT+'\n# changed after launcher review\n')
+    monkeypatch.setattr(driver, 'describe_model', lambda: pytest.fail('changed source reached model'))
+    monkeypatch.setattr(sys, 'argv', _argv(tmp_path, '--harness-path', str(source),
+                                        '--expected-harness-sha256', expected))
+    assert driver._main({}) == 2
+    assert 'expected reviewed SHA256' in capsys.readouterr().err
+    assert not (tmp_path/'runs').exists()
+
+
+def test_reviewed_source_transient_change_during_snapshot_refuses_before_model(tmp_path, monkeypatch, capsys):
+    import driver
+    source = _harness(tmp_path)
+    expected = _digest(source)['submission_sha256']
+    original = driver._external_source_snapshot
+    original_bytes = (source/'agent.py').read_bytes()
+    snapshots = []
+    def change_and_restore(src, snapshot):
+        snapshots.append(snapshot)
+        (src/'agent.py').write_bytes(original_bytes+b'\n# transient tamper\n')
+        try:
+            original(src, snapshot)
+        finally:
+            (src/'agent.py').write_bytes(original_bytes)
+    monkeypatch.setattr(driver, '_external_source_snapshot', change_and_restore)
+    monkeypatch.setattr(driver, 'describe_model', lambda: pytest.fail('tampered snapshot reached model'))
+    monkeypatch.setattr(sys, 'argv', _argv(tmp_path, '--harness-path', str(source),
+                                        '--expected-harness-sha256', expected))
+    assert driver._main({}) == 2
+    assert 'owned harness snapshot differs' in capsys.readouterr().err
+    assert _digest(source)['submission_sha256'] == expected
+    assert snapshots and all(not path.exists() for path in snapshots)
+    assert not (tmp_path/'runs').exists()
+
+
+def test_reviewed_source_runs_from_owned_copy_and_preserves_original_identity(tmp_path):
+    source = _harness(tmp_path)
+    expected = _digest(source)
+    proc = _run(tmp_path, '--harness-path', str(source),
+                '--expected-harness-sha256', expected['submission_sha256'])
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    meta = json.loads((tmp_path/'runs/a1-test/run_meta.json').read_text())
+    assert meta['harness_source']['path'] == str(source)
+    assert meta['harness_source']['submission_sha256'] == expected['submission_sha256']
+    assert _digest(source) == expected

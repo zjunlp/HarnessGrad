@@ -17,6 +17,7 @@ into <workspace>/_harnessgrad/ before each call.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import json
 import os
 import secrets
@@ -934,6 +935,11 @@ def _write_end_summary(args, run_dir: Path, curve_path: Path) -> Path | None:
 
 
 def _main(attempt: dict) -> int:
+    with ExitStack() as sources:
+        return _main_with_sources(attempt, sources)
+
+
+def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     ap = argparse.ArgumentParser(
         description=(
             "Ordinary runs have no universal filesystem-quota or backend-observer\n"
@@ -951,6 +957,8 @@ def _main(attempt: dict) -> int:
     source_args.add_argument("--harness", default="loop")
     source_args.add_argument("--harness-path", metavar="DIR",
                              help="external harness directory (absolute path)")
+    ap.add_argument("--expected-harness-sha256", metavar="SHA256",
+                    help="require reviewed source bytes with --harness-path before any model/task")
     ap.add_argument("--scenario", metavar="NAME", help="reviewed JSON scenario from scenarios/")
     ap.add_argument("--dataset", default=argparse.SUPPRESS)
     ap.add_argument("--sampling", default=argparse.SUPPRESS,
@@ -1184,6 +1192,12 @@ def _main(attempt: dict) -> int:
         print(f'refusing --scenario: {exc}', file=sys.stderr)
         return 2
 
+    if args.expected_harness_sha256 is not None:
+        value = args.expected_harness_sha256
+        if args.harness_path is None or len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
+            print('--expected-harness-sha256 requires --harness-path and a lowercase SHA256', file=sys.stderr)
+            return 2
+
     # **Readiness is answered from the arguments a run would use, and answered first.**
     # Here rather than after the harness/dataset resolution above because `--check-only`
     # must still print its table when one of those would refuse: the table is how the user
@@ -1243,6 +1257,7 @@ def _main(attempt: dict) -> int:
     runs_root = Path(args.runs_root)
     eval_from = None
     harness_source = None
+    reviewed_original = None
     if args.harness_path is not None:
         harness_src = Path(args.harness_path)
         if not harness_src.is_absolute():
@@ -1256,6 +1271,9 @@ def _main(attempt: dict) -> int:
         try:
             harness_src = harness_src.resolve(strict=True)
             source_receipt = source_identity(harness_src)
+            if args.expected_harness_sha256 is not None:
+                if source_receipt['submission_sha256'] != args.expected_harness_sha256:
+                    raise ValueError('harness source differs from expected reviewed SHA256')
             # Two identities, named apart and never interchangeable: `submission_sha256` is
             # the digest of the directory that was handed in, `harness_sha` is the Git tree
             # hash of the staged copy that ran -- the same name and function the curve point
@@ -1278,6 +1296,21 @@ def _main(attempt: dict) -> int:
             if output.is_relative_to(harness_src) or harness_src.is_relative_to(output):
                 print('refusing --harness-path: input and run/work output directories overlap',
                       file=sys.stderr)
+                return 2
+        if args.expected_harness_sha256 is not None:
+            try:
+                reviewed_original = harness_src
+                snapshot_root = Path(sources.enter_context(tempfile.TemporaryDirectory(prefix='hg-reviewed-source-')))
+                snapshot = snapshot_root / 'source'
+                _external_source_snapshot(harness_src, snapshot)
+                if source_identity(snapshot)['submission_sha256'] != args.expected_harness_sha256:
+                    raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
+                if source_identity(harness_src) != source_receipt:
+                    raise ValueError('harness source changed while taking reviewed snapshot')
+                harness_src = snapshot
+                args.harness = manifest(harness_src)['name']
+            except (OSError, ValueError) as exc:
+                print(f'refusing --harness-path: {exc}', file=sys.stderr)
                 return 2
     elif args.side == "eval":
         # Checkpoint eval retains its original source and provenance helpers.
@@ -2028,10 +2061,14 @@ def _main(attempt: dict) -> int:
                 snapshot = Path(staging) / 'source'
                 _external_source_snapshot(harness_src, snapshot)
                 snapshot_identity = source_identity(snapshot)
+                if (args.expected_harness_sha256 is not None
+                        and snapshot_identity['submission_sha256'] != args.expected_harness_sha256):
+                    raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
                 stage_workspace(snapshot, work)
                 if source_identity(snapshot) != snapshot_identity:
                     raise ValueError('harness source snapshot changed during staging')
-            if source_identity(harness_src) != source_receipt:
+            if (source_identity(harness_src) != source_receipt
+                    or (reviewed_original is not None and source_identity(reviewed_original) != source_receipt)):
                 raise ValueError('harness source changed during staging; use a stable input directory')
             # What actually ran, in the name the curve point uses for the same function.
             harness_source['harness_sha'] = content_sha(work)

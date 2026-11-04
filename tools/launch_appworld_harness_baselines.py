@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import copy
 import fcntl
+import hashlib
 import json
 import os
 import platform
@@ -24,7 +25,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.appworld_campaign_state import (IDENTITY_SCHEMA, POLICY, POOLS, RecoveryError,
     digest, file_hash, read, selection_identity, validate_identity)
-from tools.validate_harness import source_identity
+from tools.validate_harness import check as check_harness, source_identity
+from harnessgrad.paths import main_checkout
 
 _IMAGE_ABI_CACHE = {}
 
@@ -48,6 +50,52 @@ def select_task_ids(cohort, requested):
     return [tid for tid in cohort if tid in set(requested)]
 
 
+def harness_source(name, bindings):
+    """Select a canonical prepared candidate without changing the frozen platform."""
+    if not isinstance(name, str) or not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', name):
+        raise RecoveryError('invalid harness name')
+    sources = bindings.get('harness_sources', {})
+    if not isinstance(sources, dict) or any(not isinstance(key, str) or not re.fullmatch(
+            r'[a-z0-9][a-z0-9_-]*', key) for key in sources):
+        raise RecoveryError('harness_sources must map harness names to prepared paths')
+    if name not in sources:
+        return ROOT / 'base_harness' / name
+    value = sources[name]
+    if not isinstance(value, str) or not value or not Path(value).is_absolute():
+        raise RecoveryError('prepared harness source must be an absolute canonical directory')
+    path = Path(value).resolve(strict=True)
+    if Path(value) != path or not path.is_dir():
+        raise RecoveryError('prepared harness source must be an absolute canonical directory')
+    for platform_root in {ROOT.resolve(), main_checkout(ROOT).resolve()}:
+        if path.is_relative_to(platform_root) or platform_root.is_relative_to(path):
+            raise RecoveryError('prepared harness source must be outside the platform checkouts')
+    if (path / '.git').exists() or (path / '.git').is_symlink():
+        raise RecoveryError('prepared harness source must not contain Git metadata')
+    problems = check_harness(path)
+    if problems:
+        raise RecoveryError('invalid prepared harness: ' + '; '.join(p['detail'] for p in problems))
+    return path
+
+
+def harness_inputs(name, bindings):
+    """Read a consistent candidate and bind external source selection into runtime."""
+    path = harness_source(name, bindings)
+    before = source_identity(path)
+    manifest_bytes = (path / 'harness.json').read_bytes()
+    manifest = json.loads(manifest_bytes)
+    if manifest.get('name') != name or manifest.get('role') == 'control':
+        raise RecoveryError('harness manifest name/role differs from selected harness')
+    manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
+    runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(name))
+    if source_identity(path) != before:
+        raise RecoveryError('harness source changed while binding its identity')
+    if name in bindings.get('harness_sources', {}):
+        runtime['harness_source'] = {'path': str(path),
+                                     'submission_sha256': before['submission_sha256'],
+                                     'manifest_sha256': manifest_sha}
+    return path, manifest, before, manifest_sha, runtime
+
+
 def current_identity(expected, bindings):
     """Recompute local code/data pins and require declared external identities."""
     preflight_appworld_data()
@@ -55,18 +103,16 @@ def current_identity(expected, bindings):
     if any(not isinstance(image, str) or not re.fullmatch(r'(?:[^\s]+@)?sha256:[0-9a-f]{64}', image) for image in (IMAGE, SERVICE_IMAGE, VERIFIER_IMAGE)):
         raise RecoveryError('AppWorld actor/service/verifier images must be immutable digests')
     actual = copy.deepcopy(expected)
-    harness = ROOT / 'base_harness' / expected['harness']
-    manifest = read(harness / 'harness.json')
+    harness, manifest, source, manifest_sha, runtime = harness_inputs(expected['harness'], bindings)
     if bindings.get('model') != expected['model']:
         raise RecoveryError('model deployment binding differs from reviewed identity')
-    runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(expected['harness']))
     validate_appworld_overlay(harness, manifest, runtime, IMAGE)
     # These are explicit external provenance documents, not fetched service attestations.
     actual.update(schema=IDENTITY_SCHEMA, policy=POLICY,
                   platform_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, encoding='ascii', errors='strict').strip(),
                   source_sha256=file_hash(BUNDLE), pool_ids_sha256=digest(split_ids(BUNDLE)[expected['pool']]),
-                  harness_sha256=source_identity(harness)['submission_sha256'],
-                  manifest_sha256=file_hash(harness/'harness.json'), runtime_sha256=digest(runtime))
+                  harness_sha256=source['submission_sha256'],
+                  manifest_sha256=manifest_sha, runtime_sha256=digest(runtime))
     verify = ROOT / 'data/datasets/appworld/verify'
     actual['scorer_sha256'] = digest({'files': {str(p.relative_to(verify)): file_hash(p)
         for p in sorted(verify.rglob('*')) if p.is_file() and '__pycache__' not in p.parts},
@@ -210,9 +256,11 @@ def execution_environment(identity, bindings):
     # a round can finish; scalar progress alone is never recoverable scoring.
     env['HG_TASK_VERDICT_JOURNAL'] = '1'
     env.update(dataset_environment())
-    manifest = read(ROOT/'base_harness'/identity['harness']/'harness.json')
-    runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(identity['harness']))
-    validate_appworld_overlay(ROOT/'base_harness'/identity['harness'], manifest, runtime,
+    harness, manifest, source, manifest_sha, runtime = harness_inputs(identity['harness'], bindings)
+    if identity['harness'] in bindings.get('harness_sources', {}):
+        if source['submission_sha256'] != identity['harness_sha256'] or manifest_sha != identity['manifest_sha256']:
+            raise RecoveryError('prepared harness source changed after identity review')
+    validate_appworld_overlay(harness, manifest, runtime,
                               env.get('HG_APPWORLD_IMAGE'))
     if digest(runtime) != identity['runtime_sha256']:
         raise RecoveryError('runtime changed after identity review')
@@ -229,10 +277,11 @@ def execution_environment(identity, bindings):
     return env
 
 
-def command_for(identity, selected, receipt):
+def command_for(identity, selected, receipt, bindings=None):
     budget = identity['budget']
     return [sys.executable, str(ROOT/'driver.py'), '--dataset', 'appworld',
-            '--harness-path', str(ROOT/'base_harness'/identity['harness']),
+            '--harness-path', str(harness_source(identity['harness'], bindings or {})),
+            '--expected-harness-sha256', identity['harness_sha256'],
             '--side', identity['side'], '--sampling', 'all', '--tasks', ','.join(selected),
             '--rounds', '0', '--trials', str(budget['trials']), '--seed', str(budget['seed']),
             '--jobs', str(budget['jobs']), '--improver', 'none', '--fail-on-incomplete',
@@ -277,7 +326,7 @@ def main(argv=None):
         receipt = args.receipt_dir.resolve()
         if not receipt.name.startswith('appworld-') or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in receipt.name):
             raise RecoveryError('receipt basename must be a fresh safe appworld run ID')
-        command = command_for(expected, selected, receipt)
+        command = command_for(expected, selected, receipt, bindings)
         plan = {'schema': 'harnessgrad.appworld-launch.v2', 'run_id': receipt.name,
                 'harness': args.harness, 'pool': args.pool, 'selected': selected,
                 'selection_sha256': digest(selection), 'measurement_identity': expected,
