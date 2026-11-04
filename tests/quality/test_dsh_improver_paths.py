@@ -228,6 +228,71 @@ else:
     }
 
 
+@pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
+@pytest.mark.parametrize('alias_kind', ['file', 'directory'])
+def test_bundled_launcher_alias_uses_visible_canonical_path(tmp_path, monkeypatch, alias_kind):
+    from eval.containers import sandbox
+
+    root, home, node = installation(tmp_path / 'installation')
+    bundled = (improver.ROOT / 'methods/dsh-improver').resolve()
+    aliases = tmp_path / 'aliases'
+    aliases.mkdir()
+    if alias_kind == 'file':
+        launcher = aliases / 'dsh'
+        launcher.symlink_to(bundled)
+    else:
+        (aliases / 'methods').symlink_to(bundled.parent, target_is_directory=True)
+        launcher = aliases / 'methods/dsh-improver'
+    credential = aliases / 'auth.json'
+    credential.write_text('fixture credential; must remain hidden')
+    monkeypatch.setattr(improver, 'config_home', lambda: aliases)
+    probed = []
+    run_version = improver._run_version
+
+    def record_probe(path, **kwargs):
+        probed.append(path)
+        return run_version(path, **kwargs)
+
+    monkeypatch.setattr(improver, '_run_version', record_probe)
+    entry = bundled_entry(root, home)
+    entry.update(launcher=str(launcher), interpreter=str(node), build_command=[])
+    selected = resolve(entry)
+    assert selected['ok'], selected
+    identity = _improver_identity(selected)
+
+    # The alias is outside every runtime/work tree. Execute the recorded path in
+    # the actual namespace, so host-side probing cannot mask a missing binding.
+    work_root = tmp_path / 'work'
+    workspace = work_root / 'round/workspace'
+    workspace.mkdir(parents=True)
+    parent = work_root / 'parent'
+    parent.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work_root))
+    plan = _method_sandbox_plan(
+        workspace, [sys.executable, str(improver.ROOT / 'methods/cli_improver.py')],
+        workspace.parent, readonly=(parent,), runtime=tuple(selected['runtime']))
+    script = f'''
+import pathlib, subprocess
+version = subprocess.check_output([{identity['path']!r}, '--version'], text=True).strip()
+assert version == '9.9.9', version
+assert not pathlib.Path({str(credential)!r}).exists()
+assert not pathlib.Path({str(aliases)!r}).exists()
+assert not pathlib.Path({str(improver.ROOT / 'driver.py')!r}).exists()
+print(version)
+'''
+    command = sandbox.command([sys.executable, '-c', script],
+                              env={'PATH': os.defpath, 'HG_DSH_ROOT': str(root),
+                                   'HG_DSH_NODE': str(node)}, **plan)
+    ran = subprocess.run(command, cwd=workspace, capture_output=True, text=True, timeout=15)
+    assert ran.returncode == 0, ran.stderr
+    assert ran.stdout.strip() == selected['version'] == '9.9.9'
+    assert selected['path'] == identity['path'] == str(bundled)
+    assert probed == [bundled]
+    assert selected['sha256'] == hashlib.sha256(bundled.read_bytes()).hexdigest()
+    assert str(aliases) not in selected['runtime']
+    assert str(launcher.parent) not in selected['runtime']
+
+
 @pytest.mark.parametrize('templates', [True, False])
 def test_relocation_below_previous_root_is_applied_once(tmp_path, monkeypatch, templates):
     old_root, old_home, _ = installation(tmp_path / 'old')

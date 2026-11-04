@@ -6417,3 +6417,16 @@ execution, read-only bindings, hidden private files and preservation of the imag
 Python; rejection controls verify the old manifest survives unsupported paths.
 These are fixture-based integration checks, with no model calls or real DSH
 profile/benchmark execution.
+
+### Bundled DSH launcher aliases use the mounted path (2026-11-04)
+
+An external symlink to `methods/dsh-improver` now selects the canonical bundled
+path before probing. Version probing, launcher hashing, recorded identity and
+execution use that same visible path, without exposing the alias directory or
+borrowing Codex credentials. Other external launchers retain their supplied paths.
+
+Both file-symlink and directory-symlink regression cases failed in real bubblewrap
+before the fix and now pass, including checks that alias credentials and platform
+code stay hidden. The focused DSH/improver/registry/prompt suite passed all 98
+tests, including the existing native and cached-image container runtime controls.
+These checks use fixtures and make no model calls.

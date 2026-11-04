@@ -542,6 +542,13 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                     "requested": requested or key,
                     "reason": f"the {key!r} improver's launcher is missing: {path}"}
         try:
+            bundled_launcher = (ROOT / 'methods/dsh-improver').resolve()
+            bundled = path.resolve() == bundled_launcher
+            if bundled:
+                # Only methods/ is visible for this launcher. Probe, record and
+                # execute that path even when the registry names an external
+                # symlink; the alias itself is not bound into the sandbox.
+                path = bundled_launcher
             entry, execution_env, dsh_runtime = _dsh_installation(entry, path)
         except (OSError, ValueError) as exc:
             return {"ok": False, "name": entry.get("name") or key, "kind": entry.get("kind"),
@@ -595,8 +602,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
         # external launcher still needs its package and shebang interpreter, but
         # neither DSH path should inherit the unrelated Codex credential home.
         if dsh_runtime:
-            implied_trees = (() if path.resolve() == (ROOT / 'methods/dsh-improver').resolve()
-                             else _program_runtime_trees(path))
+            implied_trees = () if bundled else _program_runtime_trees(path)
         else:
             implied_trees = runtime_trees(path)
         for implied in implied_trees:
