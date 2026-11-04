@@ -11,9 +11,18 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 sys.path.insert(0, str(Path('tau2_transport_runtime').resolve()))
 from bootstrap import bootstrap                       # noqa: E402
-from scoring import score                             # noqa: E402
+from scoring import score, validate_identity          # noqa: E402
 
 METRIC = 'tau2.v0.1.0.ALL.binary'
+
+
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate trusted JSON key: ' + key)
+        result[key] = value
+    return result
 
 
 def main() -> int:
@@ -31,8 +40,9 @@ def main() -> int:
         raw = Path('tau2_private.json').read_bytes()
         if hashlib.sha256(raw).hexdigest() != args.case_sha256:
             raise ValueError('private case hash mismatch')
-        private = json.loads(raw)
-        sealed = json.loads(Path('trusted_episode/episode.json').read_text())
+        private = json.loads(raw, object_pairs_hook=_unique_object)
+        sealed = json.loads(Path('trusted_episode/episode.json').read_text(),
+                            object_pairs_hook=_unique_object)
         if sealed.get('schema') != 'harnessgrad.interaction-record.v1':
             raise ValueError('trusted episode schema mismatch')
         payload = sealed['payload']
@@ -43,9 +53,10 @@ def main() -> int:
                 or payload.get('case_sha256') != args.case_sha256
                 or str(payload.get('seed')) != str(sealed['binding'].get('seed'))):
             raise ValueError('trusted episode identity mismatch')
-        config = {'task_id': payload['task_id'], 'domain': payload['domain'],
-                  'revision': payload['revision'], 'case_sha256': args.case_sha256,
-                  'task': private['task']}
+        if private['task_id'] != args.task_id:
+            raise ValueError('private task identity mismatch')
+        config = {**private, 'case_sha256': args.case_sha256}
+        validate_identity(config, payload)
         bootstrap(Path('tau2_bundle'))
         # `EvaluationType.ALL` makes one judge call for a task with `nl_assertions` even when the
         # verdict is multiplied out by the basis; the channel is only reachable when VERIFY
@@ -54,10 +65,10 @@ def main() -> int:
         from tool_transport import call
         install('judge', call)
         result = score(config, payload)
-        evidence.update(measured=True, official=result, revision=config['revision'],
+        coverage = result.pop('judge_coverage')
+        evidence.update(measured=True, official=result, revision=config['release'],
                         scorer_input={'task_id': args.task_id, 'sha256': args.case_sha256,
-                                      'verified': True},
-                        completion=result.get('termination_substitution'))
+                                      'verified': True}, judge_coverage=coverage)
         reward_file.write_text(str(result['reward']) + '\n')
         code = 0
     except Exception as exc:                          # noqa: BLE001 - the reason is the evidence

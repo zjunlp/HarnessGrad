@@ -3,7 +3,18 @@ import json
 import os
 
 
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate_nl_judge_json_key')
+        result[key] = value
+    return result
+
+
 def install(role, transport):
+    if role not in ('environment', 'judge'):
+        raise ValueError('unsupported model role')
     from tau2.data_model.message import AssistantMessage, ToolCall
     from tau2.utils.llm_utils import to_litellm_messages
 
@@ -15,7 +26,9 @@ def install(role, transport):
                              timeout_s=None, max_line_bytes=None)
         message = response['message']
         if role == 'judge':
-            parsed = json.loads(message.get('content'))
+            if message.get('tool_calls') or not isinstance(message.get('content'), str):
+                raise ValueError('malformed_nl_judge_message')
+            parsed = json.loads(message['content'], object_pairs_hook=_unique_object)
             results = parsed.get('results') if isinstance(parsed, dict) else None
             if not isinstance(results, list) or any(
                 not isinstance(item, dict) or type(item.get('metExpectation')) is not bool

@@ -10,7 +10,7 @@ from tau2_transport import call
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=['show', 'start', 'say', 'call', 'status'])
+    parser.add_argument('operation', choices=['show', 'start', 'say', 'call', 'calls', 'status'])
     parser.add_argument('payload', nargs='?')
     parser.add_argument('arguments', nargs='?', default='{}')
     args = parser.parse_args()
@@ -19,7 +19,8 @@ def main():
         return
     payload = ({'message': args.payload} if args.operation == 'say' else
                {'tool_name': args.payload, 'arguments': json.loads(args.arguments)}
-               if args.operation == 'call' else {})
+               if args.operation == 'call' else
+               {'calls': json.loads(args.payload)} if args.operation == 'calls' else {})
     print(json.dumps(call('/run/harnessgrad-tool/tool.sock', args.operation, payload,
                           timeout_s=None, max_line_bytes=None), ensure_ascii=False))
 

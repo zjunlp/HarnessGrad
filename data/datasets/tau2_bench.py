@@ -16,7 +16,7 @@ to create.
 
 So the simulator does not live in the agent's workspace. `relay.py` runs in a private trusted
 process outside the sandbox, drives the release's own `UserSimulator` and the domain's tools, and
-exposes one half-duplex socket with four operations (`start`, `say`, `call`, `status`). The agent's
+exposes a half-duplex socket (`start`, `say`, `call`, `calls`, `status`). The agent's
 workspace holds the domain policy and the business-tool schemas (`cases/<domain>/<id>/public.json`)
 plus a CLI that speaks to that socket. The verifier replays the sealed conversation through
 `evaluate_simulation(..., EvaluationType.ALL)`. The prepared case row keeps the user's scenario and
@@ -53,8 +53,8 @@ What the metric needs, as fields rather than prose
 * **The user simulator is the other model call**, and it is the actor's second party. Its identity
   is `model_spec("environment", ...)`, recorded per run, with `temperature: 0`.
 * Each evaluator returns **1.0 when its own criterion list is empty** (upstream's `all([])`), and the
-  basis then multiplies that in. 164 airline/retail tasks declare no `communicate_info`, so their
-  COMMUNICATE half is a free 1.0 and the database half decides; the 94 telecom tasks with
+  basis then multiplies that in. For airline/retail tasks without `communicate_info`, the
+  COMMUNICATE half contributes 1.0 and the database half decides; telecom tasks with
   user-performed gold actions need the simulator to reach theirs. That is the release's rule, and
   `lib/scoring.py` records it rather than patching it. What it means here: a task whose every named
   half is empty would be a number that cannot fail, which is why the control selects tasks with a
@@ -105,10 +105,15 @@ GOAL = """Help the customer complete their service request while following the d
 Read `python3 tau2.py show` for the policy and business-tool schemas. Start with
 `python3 tau2.py start`. Converse using `python3 tau2.py say 'MESSAGE'`; call a
 business tool using `python3 tau2.py call TOOL_NAME '{"argument":"value"}'`.
+For an official multi-tool assistant turn use
+`python3 tau2.py calls '[{"id":"a","name":"TOOL_NAME","arguments":{}}]'`.
 The simulated user has independent tools; their private scenario is not available.
 Use `python3 tau2.py status` to inspect the conversation's termination status.
 Finish by sending the user your final response and `###STOP###`, unless the user
-has already stopped. The service fixes 200 steps and 10 tool errors per episode.
+has already stopped. The service fixes 200 orchestrator steps per episode. Tool-call
+emission and environment execution consume separate steps. The release declares a
+10-error threshold but never increments its official error counter; observed tool errors
+are reported separately and do not silently change the pinned release's termination rule.
 Scoring replays the trusted conversation and applies the release's own reward basis.
 answer.txt is optional bookkeeping; it cannot replace conversation/tool actions.
 """
@@ -189,10 +194,15 @@ def _setup(tid: str, row: dict) -> dict:
     public = _case(tid, row).joinpath("public.json").read_bytes()
     if hashlib.sha256(public).hexdigest() != row["public_sha256"]:
         raise ValueError("public task digest mismatch")
-    model = model_spec("environment", json.loads(public).get("user_tools"))
+    prepared_public = json.loads(public)
+    model = model_spec("environment", prepared_public.get("user_tools"))
+    # The pinned preparation record also carries the simulator's tool schemas for the
+    # host model broker. They are not actor capabilities: project only the policy and
+    # assistant toolkit into the workspace, without changing the prepared bytes/digest.
+    actor_public = {key: value for key, value in prepared_public.items() if key != "user_tools"}
     return {"files": [{"path": "tau2.py", "from": str(ASSETS / "cli/tau2.py")},
                       {"path": "tau2_transport.py", "from": str(TRANSPORT.resolve())},
-                      {"path": "tau2_public.json", "content": public.decode()}],
+                      {"path": "tau2_public.json", "content": json.dumps(actor_public)}],
             "tool_relay": {"program": str(ASSETS / "relay.py"), "python": str(RUNTIME / "bin/python"),
                            "content_flag": "--case-spec", "filename": "case-spec.json",
                            "content": json.dumps({"case": str(_case(tid, row) / "private.json"),
@@ -216,7 +226,7 @@ def _python_runtime(runtime: str) -> tuple[str, tuple[str, ...]]:
              '"base_exec_prefix": sys.base_exec_prefix}))')
     try:
         # Startup inspection only, not an episode/model/verification budget.
-        proc = subprocess.run([str(python), "-I", "-c", probe], capture_output=True,
+        proc = subprocess.run([str(python), "-I", "-B", "-c", probe], capture_output=True,
                               text=True, errors="replace", check=True, timeout=10)
         info = json.loads(proc.stdout)
         if info["version"] != [3, 13]:
@@ -228,7 +238,21 @@ def _python_runtime(runtime: str) -> tuple[str, tuple[str, ...]]:
             raise ValueError("tau2 interpreter prefixes do not match the selected runtime")
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as exc:
         raise ValueError(f"cannot bind tau2 Python runtime {python}: {exc}") from exc
-    return str(python), tuple(dict.fromkeys([str(runtime), *prefixes]))
+    paths = []
+    for value in [str(runtime), *prefixes]:
+        path = Path(value)
+        # uv may report an unversioned symlink as base_prefix. The verifier admits only
+        # non-symlink mount roots, but Python still needs the original alias inside its
+        # trusted namespace. Bind the alias's parent plus the resolved interpreter tree;
+        # never broaden this to the filesystem root.
+        aliases = [part for part in (path, *path.parents) if part.is_symlink()]
+        for alias in aliases:
+            parent = alias.parent.resolve()
+            if parent == Path("/"):
+                raise ValueError("tau2 runtime alias would require a filesystem-root mount")
+            paths.append(str(parent))
+        paths.append(str(path.resolve()))
+    return str(python), tuple(dict.fromkeys(paths))
 
 
 def _verify(tid: str, row: dict) -> dict:
@@ -299,19 +323,34 @@ def downloads() -> list[dict]:
 
 
 def provision_status() -> dict:
-    """What is present locally. A pure filesystem answer apart from the manifest digest."""
-    tarball = DATASET_ROOT / "_src" / TARBALL_NAME
+    """Validate prepared bytes and runtime metadata, not model/endpoint health.
+
+    A directory and an executable are not execution readiness. Reuse the read-only
+    preparation gate in a child so provider/package imports and bytecode settings cannot
+    leak into catalogue callers. Do not cache this result: deleted/tampered bytes must be
+    visible on the next check.
+    """
+    import sys
+    root = None
     try:
-        tasks = len(roster())
-    except (OSError, ValueError, KeyError) as exc:
-        return {"root": str(DATASET_ROOT), "present": False, "detail": str(exc),
-                "tasks": 0}
-    return {"root": str(DATASET_ROOT), "tasks": tasks,
-            "present": (RUNTIME / "bin/python").is_file() and (DATASET_ROOT / "bundle").is_dir(),
-            "runtime": str(RUNTIME), "bundle": str(DATASET_ROOT / "bundle"),
-            "tarball": str(tarball) if tarball.is_file() else None,
-            "domains": sorted({row["domain"] for row in roster().values()}),
-            "user_action_tasks": inventory()["user_action_tasks"]}
+        root, runtime = str(DATASET_ROOT), str(RUNTIME)
+        proc = subprocess.run(
+            [sys.executable, "-B", str(ASSETS / "prepare.py"), "--check-only",
+             "--target", root, "--runtime", runtime],
+            capture_output=True, text=True, timeout=60)
+        if proc.returncode != 0:
+            raise ValueError(proc.stderr.strip() or "tau2 preparation check failed")
+        checked = json.loads(proc.stdout)
+        if checked.get("manifest_sha256") != MANIFEST_SHA256:
+            raise ValueError("tau2 readiness receipt manifest mismatch")
+        tarball = DATASET_ROOT / "_src" / TARBALL_NAME
+        return {"root": root, "present": True, "tasks": checked["tasks"],
+                "runtime": runtime, "bundle": str(DATASET_ROOT / "bundle"),
+                "tarball": str(tarball) if tarball.is_file() else None,
+                "domains": list(DOMAINS), "user_action_tasks": inventory()["user_action_tasks"],
+                "validation": "pinned-assets-and-runtime-metadata", "model_health_checked": False}
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+        return {"root": root, "present": False, "tasks": 0, "detail": str(exc)}
 
 
 __all__ = ["KIND", "DATASET_ROOT", "RUNTIME", "REPO_TAG", "METRIC", "GOAL", "SPLIT",

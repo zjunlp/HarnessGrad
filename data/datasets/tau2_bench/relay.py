@@ -8,16 +8,18 @@ from pathlib import Path
 import signal
 import sys
 import threading
+from copy import deepcopy
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from eval.service.tool_transport import Relay, call
 from bootstrap import bootstrap
+from runtime import validate_assistant_calls
 
 
 class Service:
     def __init__(self, config, state):
-        self.config = config
+        self.config = deepcopy(config)
         self.state = state
         self.failure = None
         self.lock = threading.Lock()
@@ -31,6 +33,7 @@ class Service:
                 'start': (self.state.start_conversation, set()),
                 'say': (self.state.submit_assistant_message, {'message'}),
                 'call': (self.state.call_assistant_tool, {'tool_name', 'arguments'}),
+                'calls': (lambda calls: self.state.call_assistant_tools(calls), {'calls'}),
                 'status': (self.state.get_runtime_status, set()),
             }
             if op not in operations or set(args) != operations[op][1]:
@@ -39,9 +42,14 @@ class Service:
                 return {'error': 'conversation_ended', 'termination_reason': self.state.termination_reason}
             if op == 'say' and (not isinstance(args['message'], str) or not args['message'].strip()):
                 return {'error': 'message_must_be_text'}
-            if op == 'call' and (not isinstance(args['tool_name'], str) or not isinstance(args['arguments'], dict)):
-                return {'error': 'invalid_tool_call'}
-            if op in ('say', 'call') and not self.state.bootstrap_complete:
+            if op in ('call', 'calls'):
+                calls = (args['calls'] if op == 'calls' else
+                         [{'id': 'single', 'name': args['tool_name'], 'arguments': args['arguments']}])
+                try:
+                    validate_assistant_calls(calls)
+                except ValueError:
+                    return {'error': 'invalid_tool_call'}
+            if op in ('say', 'call', 'calls') and not self.state.bootstrap_complete:
                 return {'error': 'start_conversation_first'}
             try:
                 return {'result': operations[op][0](**args)}
@@ -53,7 +61,12 @@ class Service:
     def episode(self):
         # `task_id` stays the released id the official scorer binds to; the platform id the
         # verdict is keyed by travels beside it, and `revision` is the release tag itself.
-        return {**self.state.episode(), 'case_task_id': self.config['task_id'],
+        episode = self.state.episode()
+        if (episode.get('task_id') != self.config['task']['id']
+                or episode.get('domain') != self.config['domain']
+                or episode.get('seed') != self.config['seed']):
+            raise ValueError('private runtime episode identity mismatch')
+        return {**episode, 'case_task_id': self.config['task_id'],
                 'failure': self.failure, 'revision': self.config['release'],
                 'case_sha256': self.config['case_sha256']}
 

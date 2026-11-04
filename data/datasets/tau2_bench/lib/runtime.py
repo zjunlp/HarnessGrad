@@ -48,6 +48,27 @@ def _get_tau2_domain_constructor(
         return _require_attr("tau2.domains.telecom.environment", "get_environment"), {}
     raise ValueError(f"Unsupported tau2 domain: {domain}")
 
+def validate_assistant_calls(calls: Any) -> None:
+    """Validate the complete actor envelope without changing runtime state.
+
+    Domain argument/schema failures remain official tool results, not protocol
+    errors. Requestor is deliberately not actor-configurable.
+    """
+    if not isinstance(calls, list) or not calls:
+        raise ValueError("calls must be a nonempty list")
+    ids = set()
+    for call in calls:
+        if not isinstance(call, dict) or set(call) != {"id", "name", "arguments"}:
+            raise ValueError("each call must contain only id, name and arguments")
+        if not isinstance(call["id"], str) or not call["id"].strip() or call["id"] in ids:
+            raise ValueError("call ids must be nonempty unique strings")
+        if not isinstance(call["name"], str) or not call["name"].strip():
+            raise ValueError("call names must be nonempty strings")
+        if not isinstance(call["arguments"], dict):
+            raise ValueError("call arguments must be objects")
+        ids.add(call["id"])
+
+
 class Tau2Runtime:
     def __init__(self, config_path: Path):
 
@@ -85,8 +106,11 @@ class Tau2Runtime:
         self.termination_reason: str | None = None
         self.step_count = 0
         self.num_errors = 0
-        self.max_steps = int(self.config.get("max_steps") or 200)
-        self.max_errors = int(self.config.get("max_errors") or 10)
+        # v0.1.0 checks limits after every orchestrator step, including a
+        # participant emitting tool calls (before the environment executes them).
+        self.max_steps = int(self.config.get("max_steps", 200))
+        self.max_errors = int(self.config.get("max_errors", 10))
+        self.tool_error_count = 0
         self.seed: int | None = self.config["seed"]
         self.bootstrap_complete = False
         self.last_agent_observation: str = ""
@@ -126,6 +150,7 @@ class Tau2Runtime:
         self._bootstrap_message: Any | None = None
         self._initialize_user_state(message_history)
         self._tool_call_counter = self._count_existing_tool_calls(self.messages)
+        self.environment.sync_tools()
 
     def _count_existing_tool_calls(self, messages: list[Any]) -> int:
         count = 0
@@ -197,6 +222,7 @@ class Tau2Runtime:
         return {"domain": self.domain, "task_id": self.task.id,
                 "termination_reason": self.termination_reason,
                 "step_count": self.step_count, "num_errors": self.num_errors,
+                "tool_error_count": self.tool_error_count,
                 "seed": self.seed,
                 "messages": [m.model_dump(mode="json") for m in self.messages]}
 
@@ -212,17 +238,19 @@ class Tau2Runtime:
         if self.num_errors >= self.max_errors:
             self.termination_reason = self.TerminationReason.TOO_MANY_ERRORS.value
 
-    def _finish_step(self, *, waiting_for_environment: bool = False) -> None:
+    def _finish_step(self) -> None:
         self.step_count += 1
         self.environment.sync_tools()
-        if not waiting_for_environment:
-            self._check_termination()
+        # Do not defer at a tool boundary: official run() checks after *each*
+        # step, and MAX_STEPS overrides STOP; TOO_MANY_ERRORS overrides both.
+        self._check_termination()
 
     def _execute_tool_calls(self, tool_calls: list[Any]) -> list[Any]:
         results = [self.environment.get_response(tool_call) for tool_call in tool_calls]
-        for result in results:
-            if getattr(result, "error", False):
-                self.num_errors += 1
+        # The pinned orchestrator defines _count_errors but never calls it or
+        # increments num_errors. Preserve that release behavior, not a guessed
+        # fix; expose observed tool errors separately for diagnostics.
+        self.tool_error_count += sum(bool(getattr(result, "error", False)) for result in results)
         self.messages.extend(results)
         return results
 
@@ -259,8 +287,9 @@ class Tau2Runtime:
                 return user_message
 
             if user_message.is_tool_call():
-                self._finish_step(waiting_for_environment=True)
-                self._require_active()
+                self._finish_step()
+                if self.termination_reason is not None:
+                    return user_message
                 tool_results = self._execute_environment_step(user_message.tool_calls)
                 current_message = self._wrap_tool_results(tool_results)
                 if self.termination_reason is not None:
@@ -276,6 +305,18 @@ class Tau2Runtime:
 
         mode = self._bootstrap_mode
         observation_message: Any
+        # initialize() in the pin recognizes STOP already present in history;
+        # no step or limit check runs for an initially terminated conversation.
+        initial = self._bootstrap_message
+        if (isinstance(initial, self.UserMessage) and self.UserSimulator.is_stop(initial)):
+            self.termination_reason = self.TerminationReason.USER_STOP.value
+        elif (isinstance(initial, self.AssistantMessage) and
+              "###STOP###" in (initial.content or "")):
+            self.termination_reason = self.TerminationReason.AGENT_STOP.value
+        if self.termination_reason is not None:
+            self.bootstrap_complete = True
+            self.last_agent_observation = self._format_observation(initial)
+            return self.last_agent_observation
 
         if mode == "fresh":
             first_message = deepcopy(self.DEFAULT_FIRST_AGENT_MESSAGE)
@@ -291,9 +332,9 @@ class Tau2Runtime:
             tool_results = self._execute_environment_step(
                 self._bootstrap_message.tool_calls
             )
-            observation_message = self._run_user_until_agent_observation(
-                self._wrap_tool_results(tool_results)
-            )
+            wrapped = self._wrap_tool_results(tool_results)
+            observation_message = (wrapped if self.termination_reason is not None else
+                                   self._run_user_until_agent_observation(wrapped))
         elif mode == "assistant_tool_call":
             tool_results = self._execute_environment_step(
                 self._bootstrap_message.tool_calls
@@ -320,6 +361,7 @@ class Tau2Runtime:
                 "num_errors": self.num_errors,
                 "max_steps": self.max_steps,
                 "max_errors": self.max_errors,
+                "tool_error_count": self.tool_error_count,
                 "seed": self.seed,
             },
             sort_keys=True,
@@ -380,24 +422,34 @@ class Tau2Runtime:
 
 
     def call_assistant_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
+        # Allocate only after validation; malformed requests consume no ids or steps.
+        used = {call.id for message in self.messages
+                for call in (getattr(message, "tool_calls", None) or [])}
+        counter = self._tool_call_counter + 1
+        while f"runtime_tool_{counter}" in used:
+            counter += 1
+        result = self.call_assistant_tools([
+            {"id": f"runtime_tool_{counter}", "name": tool_name, "arguments": arguments}
+        ])
+        self._tool_call_counter = counter
+        return result
+
+    def call_assistant_tools(self, calls: list[dict[str, Any]]) -> str:
+        validate_assistant_calls(calls)
         self._require_active()
         if not self.bootstrap_complete:
             raise RuntimeError("Call start_conversation before using domain tools.")
 
-        tool_call = self.ToolCall(
-            id=self._next_tool_call_id(),
-            name=tool_name,
-            arguments=arguments,
-            requestor="assistant",
-        )
+        tool_calls = [self.ToolCall(**call, requestor="assistant") for call in calls]
         assistant_message = self.AssistantMessage(
-            role="assistant", tool_calls=[tool_call], content=None
+            role="assistant", tool_calls=tool_calls, content=None
         )
         assistant_message.validate()
         self.messages.append(assistant_message)
-        self._finish_step(waiting_for_environment=True)
-        self._require_active()
-        tool_results = self._execute_environment_step([tool_call])
+        self._finish_step()
+        if self.termination_reason is not None:
+            return self.get_runtime_status()
+        tool_results = self._execute_environment_step(tool_calls)
         observation = self._format_observation(self._wrap_tool_results(tool_results))
         self.last_agent_observation = observation
         return observation

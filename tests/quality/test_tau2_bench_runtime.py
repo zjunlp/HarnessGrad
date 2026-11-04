@@ -23,20 +23,14 @@ def source(relative: str) -> str:
     return (ASSETS / relative).read_text(encoding="utf-8")
 
 
-def test_the_relay_exposes_exactly_the_four_half_duplex_operations():
-    """`show` is a file read in the CLI; the socket carries the conversation only.
-
-    There is no batch operation: v0.1.0's step budget is one assistant action per turn, so
-    accepting several tool calls in one request would let an actor spend fewer steps than the
-    release counts -- a different benchmark with a larger budget.
-    """
+def test_the_relay_exposes_official_batch_operations():
+    """show reads local policy; calls preserves official multi-tool assistant turns."""
     text = source("relay.py")
-    for operation in ("'start'", "'say'", "'call'", "'status'"):
+    for operation in ("'start'", "'say'", "'call'", "'calls'", "'status'"):
         assert operation in text, operation
-    assert "'calls'" not in text
     assert "unsupported_operation_or_fields" in text
     cli = source("cli/tau2.py")
-    assert "choices=['show', 'start', 'say', 'call', 'status']" in cli
+    assert "'calls'" in cli
 
 
 def test_the_relay_keeps_the_two_task_identities_apart():
@@ -51,7 +45,8 @@ def test_the_relay_keeps_the_two_task_identities_apart():
     assert "'revision': self.config['release']" in relay
     check = source("verify/check.py")
     assert "payload.get('case_task_id') != args.task_id" in check
-    assert "config = {'task_id': payload['task_id']" in check
+    assert "config = {**private, 'case_sha256': args.case_sha256}" in check
+    assert "validate_identity(config, payload)" in check
 
 
 def test_the_verifier_scores_the_selected_task_and_installs_the_judge_channel():

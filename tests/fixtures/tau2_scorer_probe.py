@@ -5,9 +5,9 @@ A probe, not a scorer: `tests/quality/test_tau2_bench_official_scorer.py` runs i
 dataset's own Python 3.13 runtime, which the platform's 3.12 test interpreter cannot import. It
 evaluates two episodes of the same task -- the released gold actions replayed, and an empty
 conversation -- so a task whose gold is unreachable and a task whose check cannot fail are
-distinguishable. The judge is answered in-process with `{"results": []}`, which the release reads
-as "nothing to grade"; every selected task's reward basis excludes `NL_ASSERTION`, so the answer
-is multiplied out rather than counted.
+distinguishable. Its deterministic judge fixture returns one explicitly false result per assertion.
+Before installing the fixture, the probe refuses any task whose reward basis uses NL_ASSERTION;
+these are transport/scorer controls, never model judgements or benchmark performance results.
 
     python3 tau2_scorer_probe.py <bundle> <lib-dir> <private.json> <domain> {gold,empty}
 """
@@ -36,15 +36,27 @@ def main():
     from tau2.registry import registry
     from tau2.utils.utils import get_now
 
-    def judge(model, messages, **kwargs):
-        # `evaluate_nl_assertions` reads `results` from the completion; an empty list is
-        # "nothing to grade", never a fabricated verdict.
-        return AssistantMessage(role='assistant', content=json.dumps({'results': []}))
-
-    evaluator_nl_assertions.generate = judge
-
     config = json.loads(Path(args.case).read_text())
     task = Task.model_validate(config['task'])
+    criteria = task.evaluation_criteria
+    if criteria is None or any(str(getattr(item, 'value', item)) == 'NL_ASSERTION'
+                               for item in criteria.reward_basis):
+        raise ValueError('probe fixture cannot grade a reward-bearing NL assertion')
+    expected_assertions = list(criteria.nl_assertions or [])
+    judge_calls = 0
+
+    def judge(model, messages, **kwargs):
+        nonlocal judge_calls
+        judge_calls += 1
+        # Deliberately false fixture answers, one per requested assertion. This is NOT a
+        # judgement; the precondition above proves NL cannot contribute to this reward.
+        # Full coverage avoids turning the release's all([]) into apparent judge success.
+        return AssistantMessage(role='assistant', content=json.dumps({'results': [
+            {'expectedOutcome': assertion, 'metExpectation': False,
+             'reasoning': 'Deterministic transport fixture, not evaluated.'}
+            for assertion in expected_assertions]}))
+
+    evaluator_nl_assertions.generate = judge
     messages = list(task.initial_state.message_history or []) if task.initial_state else []
     if args.arm == 'gold':
         environment = registry.get_env_constructor(args.domain)(solo_mode=False)
@@ -67,6 +79,11 @@ def main():
                                  domain=args.domain)
     print(json.dumps({'task_id': config['task_id'], 'release': config['release'],
                       'arm': args.arm, 'reward': reward.reward,
+                      'judge_calls': judge_calls,
+                      'judge_expected': len(expected_assertions),
+                      'judge_observed': len(reward.nl_assertions or []),
+                      'judge_fixture': 'complete_false_results_not_evaluated',
+                      'judge_met': [item.met for item in (reward.nl_assertions or [])],
                       'basis': reward.reward_basis,
                       'breakdown': reward.reward_breakdown,
                       'db_match': None if reward.db_check is None else reward.db_check.db_match,

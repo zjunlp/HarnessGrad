@@ -16,14 +16,20 @@ def main():
     from tau2_transport import call
     script = work / '.oracle/actions.json'
     sock = '/run/harnessgrad-tool/tool.sock'
-    call(sock, 'start', {}, timeout_s=None, max_line_bytes=None)
+    def checked(op, arguments):
+        result = call(sock, op, arguments, timeout_s=None, max_line_bytes=None)
+        if result.get('error'):
+            raise RuntimeError(f'{op}: {result["error"]}')
+        return result
+
+    checked('start', {})
     if script.exists():
         for action in json.loads(script.read_text())['actions']:
-            result = call(sock, 'call', {'tool_name': action['name'], 'arguments': action['arguments']},
-                          timeout_s=None, max_line_bytes=None)
-            if result.get('error'):
-                raise RuntimeError(result['error'])
-    call(sock, 'say', {'message': '###STOP###'}, timeout_s=None, max_line_bytes=None)
+            # USER actions belong to the official simulator, never the actor.
+            if action.get('requestor', 'assistant') != 'assistant':
+                raise ValueError('oracle actor cannot execute USER gold actions')
+            checked('call', {'tool_name': action['name'], 'arguments': action['arguments']})
+    checked('say', {'message': '###STOP###'})
     (work / 'trace.jsonl').write_text(json.dumps({
         'harness_identity': {'harness': 'tau2-control', 'agent_model': 'oracle'},
         'usage': {'input_tokens': 0, 'output_tokens': 0, 'calls': 0}}) + '\n')

@@ -11,8 +11,9 @@ distinguish an answer from nothing, and a suite that only runs the first arm can
 
 The judge channel is the release's own requirement, not a convenience: `EvaluationType.ALL` calls
 `NLAssertionsEvaluator` for any task with `nl_assertions`, then multiplies the verdict out when the
-basis is the default `[DB, COMMUNICATE]`. The probe answers it in-process with `{"results": []}`
-("nothing to grade") and records that the reward basis is what excludes it.
+basis is the default `[DB, COMMUNICATE]`. The probe supplies complete, explicitly false fixture
+results and refuses reward-bearing NL assertions before evaluation. Gold can therefore score one
+while these artificial NL results remain false: this tests the basis, not a judge's ability.
 """
 from __future__ import annotations
 
@@ -94,9 +95,14 @@ def test_the_telecom_basis_is_the_environment_assertion_and_the_gold_action(pyth
 
 
 def test_the_probe_never_counts_a_fabricated_judge_verdict(python):
-    """The probe's judge answer is `{"results": []}`; if a selected task's basis ever includes
-    `NL_ASSERTION`, that answer would become part of the reward and the control would be lying."""
+    """Require complete fixture coverage and prove the false NL results are not reward-bearing."""
     for tid in ("tau2_bench/airline/8", "tau2_bench/retail/0",
                 "tau2_bench/telecom/[service_issue]break_apn_settings|lock_sim_card_pin[PERSONA:None]"):
-        basis = _probe(python, tid, "empty")["basis"]
-        assert "NL_ASSERTION" not in basis, (tid, basis)
+        result = _probe(python, tid, "empty")
+        assert "NL_ASSERTION" not in result["basis"], (tid, result)
+        assert result["judge_calls"] == int(dataset.roster()[tid]["needs_judge"]), result
+        assert result["judge_expected"] == result["judge_observed"], result
+        assert result["judge_fixture"] == "complete_false_results_not_evaluated"
+        assert not any(result["judge_met"]), result
+        if tid == "tau2_bench/airline/8":
+            assert result["judge_expected"] > 0, result
