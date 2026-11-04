@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -167,6 +169,32 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
     return sorted(picked), reasons
 
 
+def load_plan(path: str) -> dict:
+    """Validate before interpreting emptiness or constructing runner arguments.
+
+    Legacy plans have only `full`: true means a deferred full fallback, never permission
+    to launch the whole suite on a push. New plans also name the execution state.
+    """
+    plan = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(plan, dict):
+        raise ValueError("plan must be an object")
+    if type(plan.get("full")) is not bool or not isinstance(plan.get("suite"), list):
+        raise ValueError("plan requires boolean full and list suite")
+    suite = plan["suite"]
+    if any(not isinstance(name, str) or not re.fullmatch(r"test_[A-Za-z0-9_]+\.py", name)
+           or not (TESTS / name).is_file() for name in suite):
+        raise ValueError("suite must contain existing quality test basenames")
+    if len(suite) != len(set(suite)):
+        raise ValueError("suite contains duplicate files")
+    state = plan.get("state", "deferred" if plan["full"] else "selected")
+    if state not in ("selected", "deferred", "full"):
+        raise ValueError("state must be selected, deferred or full")
+    if plan["full"] != (state != "selected") or (plan["full"] and suite):
+        raise ValueError("state, full and suite disagree")
+    plan["state"] = state
+    return plan
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -186,11 +214,13 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.describe:
-        import json
         import os
-        plan = json.loads(Path(args.describe).read_text(encoding="utf-8"))
-        suite = plan.get("suite") or []
-        summary = [f"base={plan.get('base')} full={plan.get('full')} "
+        try:
+            plan = load_plan(args.describe)
+        except (OSError, ValueError) as exc:
+            parser.error(f"invalid plan: {exc}")
+        suite = plan["suite"]
+        summary = [f"state={plan['state']} base={plan.get('base')} full={plan['full']} "
                    f"changed={plan.get('changed')} files={len(suite)}"]
         summary += [f"  {name}" for name in suite]
         print("\n".join(summary))
@@ -202,15 +232,17 @@ def main() -> int:
                 handle.write("### Suite for this change\n\n")
                 handle.write(f"base `{plan.get('base')}` · changed {plan.get('changed')} "
                              f"file(s)\n\n")
-                if plan.get("full"):
-                    handle.write("_this change selects everything: the full suite is the "
-                                 "nightly run, and a manual dispatch runs it too_\n")
+                if plan["state"] == "full":
+                    handle.write("_full suite explicitly requested (without `--fast`)_\n")
+                elif plan["state"] == "deferred":
+                    handle.write("_this change selects everything: deferred to the full suite "
+                                 "on the nightly run or a manual dispatch_\n")
                 elif suite:
                     for name in suite:
                         handle.write(f"- `{name}`\n")
                 else:
                     handle.write("_nothing outside the guards; they ran in the checks job_\n")
-        print(f"::notice::base={plan.get('base')} full={plan.get('full')} "
+        print(f"::notice::state={plan['state']} base={plan.get('base')} full={plan['full']} "
               f"files={len(suite)} suite={','.join(suite) or '-'}")
         return 0
 
@@ -234,13 +266,14 @@ def main() -> int:
     # `full` is a property of the *selection*, not of what is left after the guards are
     # subtracted: a documentation change selects the guards alone, which leaves an empty suite
     # and is not the same thing as "this change selects everything".
-    full = not picked and any("running everything" in reason for reason in reasons)
+    full = not picked
+    state = "full" if args.force_full else "deferred" if full else "selected"
     if args.without_guards:
         picked = [name for name in picked if name not in GUARDS]
     if args.plan:
-        import json
         Path(args.plan).write_text(json.dumps(
-            {"base": args.base or None, "changed": len(paths), "suite": picked, "full": full},
+            {"base": args.base or None, "changed": len(paths), "suite": picked,
+             "full": full, "state": state},
             indent=1) + "\n", encoding="utf-8")
         return 0
     if args.files:
@@ -250,7 +283,9 @@ def main() -> int:
     print(f"changed: {len(paths)} file(s)")
     for reason in reasons[:12]:
         print(f"  - {reason}")
-    if not picked and full:
+    if state == "full":
+        print("selection: the full suite (explicitly requested, without --fast)")
+    elif not picked and full:
         print("selection: the full suite (deferred to the nightly run; workflow_dispatch runs it)")
     elif not picked:
         print("selection: the guards only")

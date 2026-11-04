@@ -163,3 +163,13 @@ def test_a_manual_dispatch_runs_the_full_suite() -> None:
     text = _text()
     assert "schedule|workflow_dispatch" in text, "both events must request the full suite"
     assert "github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'" in text
+    plan = text.split("- name: Plan the tests this change can reach", 1)[1].split(
+        "- name: Suite", 1)[0]
+    assert "--force-full --plan plan.json" in plan
+    assert "printf" not in plan, "all plan states must be produced by the selector"
+    suite = text.split("- name: Suite", 1)[1].split(
+        "- name: Full suite deferred", 1)[0]
+    assert re.search(r"schedule\|workflow_dispatch\)\s*"
+                     r"python3 tools/run_selected.py --plan plan.json --jobs 4 --full ;;", suite)
+    assert re.search(r"\*\)\s*python3 tools/run_selected.py --plan plan.json --jobs 4 ;;", suite)
+    assert "--full-if-empty" not in suite, "empty push selections must never expand to full"
