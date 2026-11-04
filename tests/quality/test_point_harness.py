@@ -88,9 +88,9 @@ def test_a_clean_harness_exits_zero(tmp_path, capsys):
     assert "all resolve" in capsys.readouterr().out
 
 
-# DSH and Codex record local bindings during explicit preparation. Their portable
+# DSH, Codex and OpenClaw record local bindings during explicit preparation. Their portable
 # templates and relocation controls are covered by the respective runtime tests.
-@pytest.mark.parametrize("harness", ["opencode", "openclaw"])
+@pytest.mark.parametrize("harness", ["opencode"])
 def test_the_node_harnesses_in_this_repository_resolve(harness):
     """The check that would have caught a stale pin, run over the real manifests."""
     rows = point_harness.check(ROOT / "base_harness" / harness / "harness.json")

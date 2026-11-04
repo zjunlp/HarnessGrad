@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -17,13 +18,26 @@ ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "base_harness" / "openclaw"
 
 
-def _run(tmp_path: Path):
+@pytest.fixture(scope="module")
+def prepared_harness(tmp_path_factory):
+    from tools.configure_openclaw_harness import configure
+
+    selected = os.environ.get("HG_AGENT_OPENCLAW") or shutil.which("openclaw")
+    if selected is None:
+        pytest.skip("OpenClaw 2026.3.13 is not installed; synthetic runtime controls run separately")
+    harness = tmp_path_factory.mktemp("openclaw-real-install") / "harness"
+    shutil.copytree(HARNESS, harness)
+    configure(harness, selected, env=dict(os.environ))
+    return harness
+
+
+def _run(tmp_path: Path, harness: Path):
     task = tmp_path / "task.json"
     task.write_text(json.dumps({"task_id": "mock", "goal": "Write the mock answer."}), encoding="utf-8")
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(("OPENCLAW_", "CLAWDBOT_", "PI_"))}
     env["HG_AGENT_BACKEND"] = "mock"
-    return subprocess.run([sys.executable, str(HARNESS / "agent.py"), "--task", str(task),
+    return subprocess.run([sys.executable, str(harness / "agent.py"), "--task", str(task),
                            "--workdir", str(tmp_path)], cwd=tmp_path, env=env,
                           capture_output=True, text=True, errors="replace", timeout=90)
 
@@ -34,15 +48,13 @@ def test_manifest_is_admitted():
 
 
 def test_unprepared_runtime_has_actionable_failure():
-    agent = _agent()
-    with pytest.raises(agent.AdapterError, match='runtime is not configured'):
-        agent.runtime_identity()
+    with pytest.raises(ValueError, match="not prepared") as error:
+        _agent().runtime_identity()
+    assert "tools/configure_openclaw_harness.py" in str(error.value)
 
 
-def test_native_cli_mock_writes_answer_and_trace(tmp_path):
-    if not json.loads((HARNESS / 'runtime-identity.json').read_text()).get('node'):
-        pytest.skip('requires explicitly prepared OpenClaw candidate')
-    proc = _run(tmp_path)
+def test_native_cli_mock_writes_answer_and_trace(tmp_path, prepared_harness):
+    proc = _run(tmp_path, prepared_harness)
     assert proc.returncode == 0, proc.stderr[-4000:]
     assert (tmp_path / "answer.txt").read_text(encoding="utf-8").strip() == "OPENCLAW_MOCK"
     rows = [json.loads(line) for line in (tmp_path / "trace.jsonl").read_text().splitlines()]
@@ -61,15 +73,13 @@ def test_native_cli_mock_writes_answer_and_trace(tmp_path):
     assert "OK" in check.stdout
 
 
-def test_file_submission_is_kept_in_place(tmp_path):
-    if not json.loads((HARNESS / 'runtime-identity.json').read_text()).get('node'):
-        pytest.skip('requires explicitly prepared OpenClaw candidate')
+def test_file_submission_is_kept_in_place(tmp_path, prepared_harness):
     task = tmp_path / "task.json"
     task.write_text(json.dumps({"task_id": "mock-files", "goal": "Write the mock answer.",
                                 "submission": {"kind": "files", "paths": ["answer.txt"]}}))
     env = {k: v for k, v in os.environ.items() if not k.startswith(("OPENCLAW_", "CLAWDBOT_", "PI_"))}
     env["HG_AGENT_BACKEND"] = "mock"
-    proc = subprocess.run([sys.executable, str(HARNESS / "agent.py"), "--task", str(task),
+    proc = subprocess.run([sys.executable, str(prepared_harness / "agent.py"), "--task", str(task),
                            "--workdir", str(tmp_path)], cwd=tmp_path, env=env,
                           capture_output=True, text=True, errors="replace", timeout=90)
     assert proc.returncode == 0, proc.stderr[-2000:]
@@ -110,13 +120,16 @@ def test_environment_does_not_import_host_settings_or_improver_credentials(tmp_p
     agent = _agent()
     parent = {"OPENCLAW_CONFIG_PATH": "/host/private.json", "OPENCLAW_STATE_DIR": "/host/state",
               "HOME": "/host/home", "DEEPSEEK_API_KEY": "do-not-pass", "HG_METHOD_MODEL": "improver",
-              "HG_ENV_API_KEY": "environment", "HG_AGENT_API_KEY": "task-secret", "NODE_OPTIONS": "--require=/bad.js"}
+              "HG_ENV_API_KEY": "environment", "HG_AGENT_API_KEY": "task-secret", "NODE_OPTIONS": "--require=/bad.js",
+              "NODE_PATH": "/host/node_modules", "HG_JUDGE_API_KEY": "judge", "OPENAI_BASE_URL": "daily-provider",
+              "CODEX_HOME": "/host/codex"}
     child = agent.child_environment(parent, tmp_path, tmp_path / "cfg", tmp_path / "task")
     assert child["HOME"] == str(tmp_path / "home")
     assert child["OPENCLAW_STATE_DIR"] == str(tmp_path)
     assert child["HG_AGENT_API_KEY"] == "task-secret"
     assert "HG_ENV_API_KEY" not in child and "HG_METHOD_MODEL" not in child
     assert "DEEPSEEK_API_KEY" not in child and "NODE_OPTIONS" not in child
+    assert not {"NODE_PATH", "HG_JUDGE_API_KEY", "OPENAI_BASE_URL", "CODEX_HOME"} & child.keys()
 
 
 def test_instruction_only_task_is_valid():
