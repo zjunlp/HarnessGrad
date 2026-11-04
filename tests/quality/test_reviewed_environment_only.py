@@ -84,7 +84,11 @@ def test_launcher_marker_precedes_real_driver_import_and_all_file_loads(checkout
     main,linked=checkouts
     runtime={'environment':{'HG_OVERLAY_ROOT':str(tmp_path/'reviewed-overlay')},
              'harness_filesystem':{'schema':'harnessgrad-owned-source-filesystem-v1',
-                                   'sha256':'1'*64,'entries':1}}
+                                   'sha256':'1'*64,'entries':1},
+             'harness_source':{'path':str((ROOT/'base_harness/miniagent').resolve()),
+                               'submission_sha256':'2'*64,'manifest_sha256':'3'*64},
+             'launch_entry':{'python':str(Path(sys.executable).resolve()),'python_sha256':'4'*64,
+                             'driver':str((ROOT/'driver.py').resolve()),'driver_sha256':'5'*64}}
     # This test isolates dotenv handling; source/runtime identity has its own
     # integration regressions and is represented by a valid layered commitment.
     monkeypatch.setattr(launcher,'harness_inputs',lambda *a:(ROOT/'base_harness/miniagent',{},

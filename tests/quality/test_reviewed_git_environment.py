@@ -28,7 +28,11 @@ def reviewed_env(home,system,monkeypatch):
     monkeypatch.setenv('GIT_CONFIG_COUNT','1');monkeypatch.setenv('GIT_CONFIG_KEY_0','core.hooksPath')
     monkeypatch.setenv('GIT_CONFIG_VALUE_0','/unreviewed/hooks')
     runtime={'environment':{}, 'harness_filesystem':{
-        'schema':'harnessgrad-owned-source-filesystem-v1','sha256':'1'*64,'entries':1}}
+        'schema':'harnessgrad-owned-source-filesystem-v1','sha256':'1'*64,'entries':1},
+        'harness_source':{'path':str((ROOT/'base_harness/miniagent').resolve()),
+                          'submission_sha256':'2'*64,'manifest_sha256':'3'*64},
+        'launch_entry':{'python':str(Path(sys.executable).resolve()),'python_sha256':'4'*64,
+                        'driver':str((ROOT/'driver.py').resolve()),'driver_sha256':'5'*64}}
     monkeypatch.setattr(launcher,'harness_inputs',lambda *a:(ROOT/'base_harness/miniagent',{},
                                                             {'submission_sha256':'2'*64},'3'*64,runtime))
     monkeypatch.setattr(launcher,'validate_appworld_overlay',lambda *a:None)
