@@ -16,11 +16,10 @@ its own.
 Three things had to be translated, and each one is a place where a naive wrapper would
 have produced a believable wrong number:
 
-* **Dependencies.** mini is a `pip install --user` install, so `minisweagent` lives under
-  the operator's home. The sandbox replaces `HOME` with a per-task directory, so Python's
-  user-site lookup finds nothing and `import minisweagent` fails with a traceback that
-  reads like a broken harness. The manifest declares that tree in `runtime_paths` (the
-  platform binds it read-only) and this file puts it on the child's `PYTHONPATH`.
+* **Dependencies.** requirements.txt pins mini and LiteLLM. The platform provides
+  an overlay for the executing interpreter instead of mounting the operator's Python
+  3.12 packages into an image with another Python ABI. Older manifests can still
+  declare a package directory for `_site_for_child`.
 * **Its global config.** `mini` refuses to start without `$HOME/.config/mini-swe-agent`
   and, when it is missing, opens an interactive setup wizard that aborts without a TTY.
   `MSWEA_CONFIGURED`/`MSWEA_SILENT_STARTUP`/`MSWEA_GLOBAL_CONFIG_DIR` move that config into
