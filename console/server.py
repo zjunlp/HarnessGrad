@@ -771,7 +771,7 @@ def launch_form() -> dict:
         backend = agent.backend if agent.backend in ("mock", "openai") else "mock"
     except Exception:  # noqa: BLE001 - no configured platform model is not a default
         task_model, task_url, task_key_set, backend = task.get("model", ""), task.get("base_url", ""), bool(task.get("api_key")), "mock"
-    if task.get("model"):
+    if task.get("model") and task.get("model") != "mock":
         backend = "openai"
     return {"datasets": names, "harnesses": base_harnesses(),
             "task_models": task_models(),

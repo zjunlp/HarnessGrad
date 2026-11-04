@@ -55,6 +55,14 @@ def test_live_task_model_propagates_explicit_backend_and_key(setup):
     assert 'synthetic-secret' not in repr(setup.launch_preview(f))
 
 
+def test_saved_mock_never_defaults_to_live_backend(setup, monkeypatch):
+    from harnessgrad import config
+    monkeypatch.setattr(config, 'current', lambda: SimpleNamespace(agent=SimpleNamespace(
+        model=None, base_url='', api_key=None, backend='mock')))
+    setup.save_settings({'task': {'model': 'mock'}})
+    assert setup.launch_form()['defaults']['task_backend'] == 'mock'
+
+
 def test_mock_never_inherits_live_endpoint_and_backend_mismatch_is_rejected(setup):
     setup.save_settings({'task': {'model': 'live', 'base_url': 'https://example.invalid/v1', 'api_key': 'secret'}})
     env = setup.launch_env(form())
