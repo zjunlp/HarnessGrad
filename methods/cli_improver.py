@@ -561,6 +561,14 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     # restricting afterwards would delete the very variable that points at the seeded home.
     style = str((req.get("improver") or {}).get("argv_style") or "codex")
     withheld = _restrict_env(env, req.get("improver") or {})
+    # Restore only the installation the platform resolved and bound. Inheriting
+    # HG_DSH_ROOT here would let a changed shell select another checkout after
+    # the version probe; keeping every HG_* variable would also undo key isolation.
+    dsh_runtime = (req.get("improver") or {}).get("dsh_runtime") or {}
+    if style == "dsh" and dsh_runtime:
+        env["HG_DSH_ROOT"] = str(dsh_runtime["root"])
+        env["HG_DSH_NODE"] = str(dsh_runtime["node"])
+        withheld = [name for name in withheld if name not in {"HG_DSH_ROOT", "HG_DSH_NODE"}]
     # The CLI's own state, seeded into the workspace because the sandbox binds the
     # improver's trees read-only and nothing under `$HOME` is reachable from inside it.
     if style == "dsh":
