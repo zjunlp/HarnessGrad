@@ -39,6 +39,7 @@ from pathlib import Path, PurePosixPath
 
 from harnessgrad.config import ConfigMissing
 from harnessgrad.paths import DataRootNotConfigured
+from harnessgrad.provisioning import Readiness, normalize_provision_status
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "data" / "dataset.schema.json"
@@ -63,6 +64,8 @@ class Result:
         #: Set when the dataset declares `REFUSED`: a principled refusal of the official
         #: metric, which is an outcome rather than a defect.
         self.refused: str | None = None
+        self.readiness = Readiness("unchecked", "imported-adapter-declarations")
+        self.provision_snapshot: dict | None = None
 
     def error(self, message: str) -> None:
         self.errors.append(message)
@@ -71,9 +74,20 @@ class Result:
     def ok(self) -> bool:
         return not self.errors
 
+    @property
+    def status(self) -> str:
+        # A missing prerequisite never hides a defect already observed.
+        if self.errors:
+            return "invalid"
+        if self.refused:
+            return "refused"
+        return self.readiness.status
+
     def as_dict(self) -> dict:
         return {"dataset": self.name, "ok": self.ok, "errors": self.errors,
-                "unprovisioned": self.unprovisioned, "refused": self.refused}
+                "unprovisioned": self.unprovisioned, "refused": self.refused,
+                "status": self.status, "scope": self.readiness.scope,
+                "provision_status": self.provision_snapshot}
 
 
 def load_schema(path: Path = SCHEMA_PATH) -> dict:
@@ -312,7 +326,8 @@ def lint_paths(module, schema: dict, result: Result) -> None:
             continue
         try:
             path = Path(value)
-        except DataRootNotConfigured as exc:
+        except (DataRootNotConfigured, ConfigMissing) as exc:
+            result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
             result.unprovisioned = str(exc)
             continue
         except TypeError:
@@ -360,16 +375,21 @@ def lint_oracle(module, schema: dict, result: Result) -> None:
                 f"cannot claim more reachability than the oracle control demonstrated")
 
 
-def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Result:
+def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
+                 inspect_only: bool = False) -> Result:
     """Lint one adapter; explicit missing data/configuration is not a defect.
 
     `require_data` remains accepted for caller compatibility. Neither mode may turn
-    an unexpected adapter exception into an unprovisioned result.
+    an unexpected adapter exception into an unprovisioned result. ``inspect_only``
+    checks local declarations without calling downloads/provision_status/load. Adapter
+    imports still execute Python and are not promised to be free of adapter-owned I/O.
+    Default validation remains the full contract; inspection is not run admission.
     """
     result = Result(name)
     try:
         module = importlib.import_module(registry.module_name(name))
-    except DataRootNotConfigured as exc:
+    except (DataRootNotConfigured, ConfigMissing) as exc:
+        result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
         result.unprovisioned = str(exc)
         return result
     except Exception as exc:  # noqa: BLE001 - a module that will not import is a finding
@@ -400,7 +420,7 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
                 result.error(f"`{callable_name}()` is missing or not callable")
         lint_paths(module, schema, result)
         downloads = getattr(module, "downloads", None)
-        if callable(downloads):
+        if callable(downloads) and not inspect_only:
             try:
                 lint_downloads(downloads(), schema, result)
             except Exception as exc:  # noqa: BLE001
@@ -418,6 +438,12 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
 
     lint_paths(module, schema, result)
     lint_oracle(module, schema, result)
+    if inspect_only:
+        # Imports and local declarations only: downloads/status/load may hash data
+        # or enumerate runtimes. This is not the dynamic contract or a run gate.
+        if not result.unprovisioned:
+            result.readiness = Readiness("ready", "imported-adapter-declarations")
+        return result
 
     downloads = getattr(module, "downloads", None)
     if callable(downloads):
@@ -438,10 +464,15 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
             # Readiness can validate all dataset/runtime digests. Use one snapshot,
             # both to avoid repeating that work and to keep its diagnosis consistent.
             snapshot = status()
-            if not isinstance(snapshot, dict) or not isinstance(snapshot.get("present"), bool):
-                result.error("provision_status() must return a dict with boolean `present`")
+            try:
+                result.readiness = normalize_provision_status(snapshot)
+            except ValueError as exc:
+                result.error(str(exc))
                 return result
+            result.provision_snapshot = snapshot
             if not snapshot["present"]:
+                if result.readiness.status == "invalid":
+                    result.error(result.readiness.detail or "adapter reports invalid provisioning")
                 location = snapshot.get("split_dir") or snapshot.get("root")
                 detail = snapshot.get("detail")
                 result.unprovisioned = (
@@ -449,7 +480,8 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
                 if detail:
                     result.unprovisioned += f": {detail}"
                 return result
-        except DataRootNotConfigured as exc:
+        except (DataRootNotConfigured, ConfigMissing) as exc:
+            result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
             result.unprovisioned = str(exc)
             return result
         except Exception as exc:  # noqa: BLE001
@@ -459,12 +491,14 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
     try:
         tasks, scorable = registry.load(name)
     except DataRootNotConfigured as exc:
+        result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
         result.unprovisioned = str(exc)
         return result
     except ConfigMissing as exc:
         # **"还没配"不是"做错了"。** 一个 adapter 在构建 VERIFY 时要解析 judge 模型
         # （tau3_bench 就是这样），而 judge 是平台配置、不是数据集的一部分：没配时
         # lint 该说"这台机器上还没法校验它"，而不是给数据集记一条错误。
+        result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
         result.unprovisioned = f"needs platform configuration: {exc}"
         return result
     except Exception as exc:  # noqa: BLE001
@@ -488,6 +522,7 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
     try:
         _, setups, verifiers = registry.load_tasks(name)
     except ConfigMissing as exc:
+        result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
         result.unprovisioned = f"needs platform configuration: {exc}"
         return result
     except Exception as exc:  # noqa: BLE001
@@ -510,6 +545,7 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True) -> Resul
     if unknown_setup:
         result.error(f"SETUP names unknown task(s) {sorted(unknown_setup)}")
     lint_verify(verifiers, known, schema, result)
+    result.readiness = Readiness("ready", "full-adapter-contract")
     return result
 
 
@@ -522,6 +558,8 @@ def main(argv=None) -> int:
     parser.add_argument("--dataset", action="append",
                         help="lint only this dataset; repeatable")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
+    parser.add_argument("--inspect", action="store_true",
+                        help="inspect imported declarations; imports may touch data; skip downloads, provision status and task validation")
     parser.add_argument("--allow-unprovisioned", action="store_true",
                         help="a dataset whose data is absent is reported, not failed")
     args = parser.parse_args(argv)
@@ -529,7 +567,8 @@ def main(argv=None) -> int:
     names = args.dataset or published_datasets()
 
     results = [lint_dataset(name, schema,
-                            require_data=not args.allow_unprovisioned)
+                            require_data=not args.allow_unprovisioned,
+                            inspect_only=args.inspect)
                for name in names]
     if args.json:
         print(json.dumps([r.as_dict() for r in results], indent=1, sort_keys=True))
@@ -547,7 +586,7 @@ def main(argv=None) -> int:
             elif result.refused:
                 print(f"REFUSED {result.name}: {result.refused}")
             else:
-                print(f"ok   {result.name}")
+                print(f"ok   {result.name} ({result.readiness.scope})")
     return 1 if any(not r.ok for r in results) else 0
 
 
