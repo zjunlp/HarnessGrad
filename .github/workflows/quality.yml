@@ -48,7 +48,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: quality-${{ github.ref }}
+  # Push/PR supersession must not cancel the separately requested full-suite evidence.
+  group: quality-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -136,6 +137,12 @@ jobs:
     timeout-minutes: 120
     continue-on-error: true
     steps:
+      - name: Initialize fresh evidence directory
+        run: |
+          # A pre-existing directory is not evidence from this job. Fail rather than
+          # deleting or accidentally uploading a stale or attacker-created file.
+          mkdir -- "$RUNNER_TEMP/quality-evidence"
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -158,11 +165,15 @@ jobs:
           EOF
 
       - name: Catalogue documents
+        id: catalogue
+        continue-on-error: true
         run: |
           python3 tools/datasets_doc.py --check
           python3 tools/check_dataset_blockers.py
 
       - name: Adapters this machine can import
+        id: adapters
+        continue-on-error: true
         run: |
           python3 - <<'PY'
           import sys
@@ -199,21 +210,23 @@ jobs:
       # against the previous tip; a scheduled run has no base and measures the whole tree,
       # which is the point of running it nightly.
       - name: Plan the tests this change can reach
+        id: plan
         run: |
           base='${{ github.event.pull_request.base.sha || github.event.before }}'
           case '${{ github.event_name }}' in
             schedule|workflow_dispatch)
-              python3 tools/ci_select.py --force-full --plan plan.json ;;
+              python3 tools/ci_select.py --force-full --plan "$RUNNER_TEMP/quality-evidence/plan.json" ;;
             *)
               python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' \
-                --plan plan.json --without-guards ;;
+                --plan "$RUNNER_TEMP/quality-evidence/plan.json" --without-guards ;;
           esac
-          python3 tools/ci_select.py --describe plan.json
+          python3 tools/ci_select.py --describe "$RUNNER_TEMP/quality-evidence/plan.json"
 
       # The suite runs from the plan, and only that: the first version passed the selection
       # through a shell string, where an empty value silently means "no --file at all" and
       # therefore the whole suite. A file cannot lose its contents that way.
       - name: Suite
+        id: suite
         env:
           HG_TEST_TMPDIR: ${{ runner.temp }}/hg-pytest
           PYTHONDONTWRITEBYTECODE: '1'
@@ -222,9 +235,9 @@ jobs:
           # manual dispatch both ask for it explicitly. Every other event runs the selection.
           case '${{ github.event_name }}' in
             schedule|workflow_dispatch)
-              python3 tools/run_selected.py --plan plan.json --jobs 4 --full ;;
+              python3 tools/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --full --output-json "$RUNNER_TEMP/quality-evidence/suite.json" ;;
             *)
-              python3 tools/run_selected.py --plan plan.json --jobs 4 ;;
+              python3 tools/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --output-json "$RUNNER_TEMP/quality-evidence/suite.json" ;;
           esac
 
       # A change with no computable base (a force-push) or a core path selects everything.
@@ -233,7 +246,52 @@ jobs:
       - name: Full suite deferred to the nightly run
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         run: |
-          if python3 -c "import json,sys; sys.exit(0 if json.load(open('plan.json')).get('full') else 1)"; then
+          if python3 -c "import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get('full') else 1)" "$RUNNER_TEMP/quality-evidence/plan.json"; then
             echo "::notice::this change selects everything; the full suite runs nightly"
           fi
           true
+
+      - name: Upload selection evidence
+        id: evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-selection-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/quality-evidence/plan.json
+            ${{ runner.temp }}/quality-evidence/suite.json
+          if-no-files-found: warn
+
+      # Read raw outcomes: continue-on-error changes conclusions to success, not outcomes.
+      # Missing evidence is not a fabricated run; report it even if setup or planning failed.
+      - name: Advisory summary and status
+        if: always()
+        env:
+          CATALOGUE_OUTCOME: ${{ steps.catalogue.outcome }}
+          ADAPTERS_OUTCOME: ${{ steps.adapters.outcome }}
+          PLAN_OUTCOME: ${{ steps.plan.outcome }}
+          SUITE_OUTCOME: ${{ steps.suite.outcome }}
+          EVIDENCE_OUTCOME: ${{ steps.evidence.outcome }}
+        run: |
+          status=0
+          {
+            echo '## Advisory report (not the gating checks)'
+            for step in CATALOGUE ADAPTERS PLAN SUITE EVIDENCE; do
+              key="${step}_OUTCOME"
+              outcome="${!key:-not run}"
+              printf -- '- %s step outcome: %s\n' "$step" "$outcome"
+              if [ "$outcome" != success ]; then status=1; fi
+            done
+            for file in "$RUNNER_TEMP/quality-evidence/plan.json" "$RUNNER_TEMP/quality-evidence/suite.json"; do
+              if [ -f "$file" ]; then
+                printf -- '- Evidence present: %s\n' "$file"
+              else
+                printf -- '- Evidence missing: %s (execution not established)\n' "$file"
+                echo "::warning::missing quality evidence: $file" >&2
+                status=1
+              fi
+            done
+            echo 'Suite step success is not proof of executed tests: inspect the receipt for empty/deferred selection and skipped tests.'
+            echo 'Workflow success can coexist with advisory failure; neither authorizes a benchmark run.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"

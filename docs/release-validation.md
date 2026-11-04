@@ -122,15 +122,13 @@ measurement of the edit, not of the release: the integrity guard is doing its jo
 
 ## What the suite costs, and what CI runs instead
 
-The gate used to run the whole `tests/quality` tree on every push. Measured on the CI runner,
-the gating `checks` job takes **14 s** and the advisory full `--fast` suite about **23 minutes
-at two workers**; on this host the same suite is about **750 s** over two workers, so the
-runner is the slower machine by a factor of three. The shape of both numbers explains the
-redesign: one file, `test_appworld_official_scorer.py`, is **1274 s** of the measured total
-on its own and is already excluded by `--fast`; three dataset sweeps account for most of what
-remains (`test_dataset_classes.py` ≈ 170 s for 33 tests, `test_dataset_controls.py` ≈ 180 s
-for 7, `test_qa_dataset_contract.py` ≈ 140 s), and they are expensive for a real reason —
-each re-runs classification or an oracle/no-op control *per dataset*, under patched inputs.
+The gate used to run the whole `tests/quality` tree on every push. Historical measurements
+put the gating `checks` job at **14 s** and the then-fast advisory lane at about **23 minutes
+at two workers** (about **750 s** on this host). Those are not timings or coverage claims for
+the current workflow. The old fast lane excluded measured-slow files, including
+`test_appworld_official_scorer.py`; current selected runs do not prune slow files. Dataset
+sweeps are expensive for a real reason: each re-runs classification or an oracle/no-op
+control *per dataset*, under patched inputs.
 
 They are kept, not deleted: deleting a sweep because it is slow is how a "total and closed"
 classification stops being either. What changed is *when* they run. `tools/ci_select.py` maps
@@ -147,9 +145,12 @@ a changed path to the tests that can reach it —
 
 — always includes the guard set, and falls back to the full suite whenever it cannot reason
 about a change. The `report` job compares against the pull request's base and drops the guards
-because the `checks` job already ran them on that commit; a manual run has no base and still
-runs everything. So a documentation edit is seconds, an adapter edit is that adapter's tests
-plus the guards, and a core edit is the full suite — which is the only case that needs it.
+because the `checks` job already ran them on that commit. Pushes compare the previous tip;
+scheduled and manual runs explicitly request everything. A documentation-only report can
+therefore have an empty selection, an adapter edit selects related tests, and a core edit
+selects the full suite but **defers execution on push/PR** to a scheduled or manual run.
+An unavailable comparison base also selects full and defers on push/PR. Deferral does not
+trigger another workflow or prove that a later run occurred.
 
 Two of the slow files were also made cheaper without losing an assertion: `test_dataset_classes`
 now caches `classify_all()`, `registry.published()` and the CLI's JSON for the tests that ask
@@ -158,24 +159,42 @@ the tool directly, because a cache is exactly what they must not see.
 
 ## Continuous integration
 
-`.github/workflows/quality.yml` runs two jobs on every push to `main` and every
-pull request. The `checks` job is deterministic and installs nothing beyond the
-interpreter: documentation links and fenced commands, the lanes, the registry and
-its declared refusals, this workflow's own references, and the checkout's
-cleanliness afterwards (`git status --porcelain` must be empty, so a generator
-that writes into the tree cannot turn a green run into a diff nobody reviewed).
-It prints how many adapters it could publish instead of asserting the host's 59 —
-that count is a function of which optional extras are installed, and a fresh
-runner has none; only a *broken* adapter fails the job. The `suite` job runs the
-entry point a contributor runs, `tools/run_tests.py --fast --jobs 3`, which keeps
-CI from drifting into a second selection of tests.
+`.github/workflows/quality.yml` runs on pushes to `main`, pull requests, the nightly
+schedule and manual dispatch. It never automatically dispatches a second run.
+Concurrency is grouped by event and ref: a newer push can cancel an obsolete push,
+but cannot cancel a scheduled or manually requested full run on the same ref.
 
-What CI does not do is the reason to keep reading it carefully: no benchmark
-images, external checkouts, model endpoints or judge services are provisioned, so
-the files that need them skip, and `--fast` drops the seven measured-slow files.
-Those are covered by the four-shard run above, which remains a local gate. A green
-badge is evidence about the deterministic surface on a clean machine — not a claim
-that the platform was measured end to end.
+- **`checks` is gating.** It installs Python 3.12 and `pytest`, asserts that the
+  platform declares no runtime dependencies, checks documentation, lanes, registry,
+  CI references and entrypoints, and requires a clean checkout afterwards.
+- **`report` is advisory and needs passing checks.** It installs `pytest`, `numpy`
+  and `chess`; optional adapter discovery is not a fixed published-adapter count.
+  Catalogue and adapter checks have independent outcomes and continue after failure
+  so they cannot silently suppress test planning/execution. The final summary reads
+  their raw outcomes and fails the advisory job if any tracked step failed or did
+  not run. Job-level `continue-on-error` means that failure need not fail the workflow.
+- The report writes `plan.json`, then invokes `tools/run_selected.py --plan plan.json
+  --jobs 4 --output-json "$RUNNER_TEMP/quality-suite.json"`. Only schedule/manual
+  adds `--full`. The wrapper delegates execution to `tools/run_tests.py`; no fast
+  filtering removes planned slow files. A full push/PR plan is deferred, not run.
+- An always-run `actions/upload-artifact@v4` step uploads the plan and machine-readable
+  suite receipt as `quality-selection-<run_id>-<run_attempt>`. Missing files warn;
+  the final summary checks each file separately, since an upload can succeed with
+  only one present. Setup, cancellation or timeout can still leave incomplete or no
+  evidence. Missing evidence means execution is **not established**, not a new run
+  record invented by the workflow.
+
+Read these layers separately: **workflow success** establishes the gating checks,
+not advisory success; **report step outcomes** show failures or non-execution;
+the **plan and receipt** show selection and what the runner actually did. Receipt
+`status: completed` alone is not a pass: inspect `returncode`, `failed` and `unexecuted`
+as well as `planned` and `executed`. A successful suite step can mean an empty or
+deferred selection, not passing tests. Test-level
+skips are not passes, and a planned file is not evidence it executed. No benchmark
+images, external checkouts, model endpoints or judge services are provisioned;
+tests needing them may skip or fail. The historical four-shard run above is a
+separate local receipt at its named revision, not proof of current nightly coverage
+or end-to-end platform measurement.
 
 ## Practical limits
 
