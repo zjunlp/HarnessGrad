@@ -191,6 +191,24 @@ def _interpreter_prefix(exe: Path) -> Path | None:
     return None
 
 
+def _program_runtime_trees(path: Path) -> list[str]:
+    """The launcher's package and interpreter, without a tool's credential home."""
+    path = Path(path).expanduser()
+    trees: list[Path] = []
+    for parent in path.parents:
+        if parent.name == "node_modules":
+            trees.append(parent)
+            break
+    else:
+        trees.append(path.parent)
+    tool = _shebang_tool(path)
+    if tool is not None and tool.name not in ("sh", "bash", "env"):
+        prefix = _interpreter_prefix(tool)
+        if prefix is not None:
+            trees.append(prefix)
+    return list(dict.fromkeys(str(tree) for tree in trees if tree.is_dir()))
+
+
 def runtime_trees(path: Path) -> list[str]:
     """What a method must be able to read in order to *run* this improver.
 
@@ -218,27 +236,11 @@ def runtime_trees(path: Path) -> list[str]:
 
     Bound read-only by the caller: a tool the method runs is not state it may write.
     """
-    path = Path(path).expanduser()
-    trees: list[Path] = []
-    for parent in path.parents:
-        if parent.name == "node_modules":
-            trees.append(parent)
-            break
-    else:
-        trees.append(path.parent)
-    tool = _shebang_tool(path)
-    if tool is not None and tool.name not in ("sh", "bash", "env"):
-        prefix = _interpreter_prefix(tool)
-        if prefix is not None:
-            trees.append(prefix)
+    trees = _program_runtime_trees(path)
     home = config_home()
-    if home is not None:
-        trees.append(home)
-    out: list[str] = []
-    for tree in trees:
-        if tree.is_dir() and str(tree) not in out:
-            out.append(str(tree))
-    return out
+    if home is not None and home.is_dir() and str(home) not in trees:
+        trees.append(str(home))
+    return trees
 
 
 class Candidate:
@@ -589,9 +591,15 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                 prefix = _interpreter_prefix(Path(found))
                 if prefix is not None and str(prefix) not in trees:
                     trees.append(str(prefix))
-        # The bundled DSH launcher already lives under visible methods/. Its
-        # dependency set is explicit and must not borrow the Codex config home.
-        for implied in (() if dsh_runtime else runtime_trees(path)):
+        # Only the bundled DSH launcher is already visible under methods/. An
+        # external launcher still needs its package and shebang interpreter, but
+        # neither DSH path should inherit the unrelated Codex credential home.
+        if dsh_runtime:
+            implied_trees = (() if path.resolve() == (ROOT / 'methods/dsh-improver').resolve()
+                             else _program_runtime_trees(path))
+        else:
+            implied_trees = runtime_trees(path)
+        for implied in implied_trees:
             if implied not in trees:
                 trees.append(implied)
         return {"ok": bool(ok), "path": str(path), "version": version,

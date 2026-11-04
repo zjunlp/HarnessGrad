@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -165,6 +166,66 @@ def test_non_bin_node_layout_is_included_in_runtime_bindings(tmp_path, monkeypat
     assert selected['ok'], selected
     assert str(standalone.parent) in selected['runtime']
     assert selected['dsh_runtime']['node'] == str(standalone)
+
+
+@pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
+def test_external_dsh_launcher_runs_with_its_program_dependencies_in_sandbox(tmp_path, monkeypatch):
+    from eval.containers import sandbox
+
+    root, home, node = installation(tmp_path / 'installation')
+    codex_home = tmp_path / 'unrelated-codex-home'
+    codex_home.mkdir()
+    credential = codex_home / 'auth.json'
+    credential.write_text('fixture credential; must stay hidden')
+    monkeypatch.setattr(improver, 'config_home', lambda: codex_home)
+
+    # Neither the launcher nor its shebang interpreter is inside a declared DSH
+    # tree or the work root. A parent bind must not accidentally make them visible.
+    interpreter = tmp_path / 'launcher-interpreter/bin/fixture-python'
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text('#!/bin/sh\nexec ' + shlex.quote(str(Path(sys.executable).resolve()))
+                           + ' "$@"\n')
+    interpreter.chmod(0o755)
+    launcher = tmp_path / 'external-launcher/dsh'
+    launcher.parent.mkdir()
+    payload = launcher.with_name('payload.txt')
+    payload.write_text('external launcher payload')
+    launcher.write_text(f'''#!{interpreter}
+import json, sys
+from pathlib import Path
+if sys.argv[1:] == ['--version']:
+    print('dsh 1.2.3')
+else:
+    print(json.dumps({{
+        'payload': Path(__file__).with_name('payload.txt').read_text(),
+        'cli': Path({str(root / 'apps/cli/lib/bin.js')!r}).read_text(),
+        'credential_visible': Path({str(credential)!r}).exists(),
+    }}))
+''')
+    launcher.chmod(0o755)
+    entry = bundled_entry(root, home)
+    entry.update(launcher=str(launcher), interpreter=str(node), build_command=[])
+    selected = resolve(entry)
+    assert selected['ok'], selected
+    assert str(codex_home) not in selected['runtime']
+
+    work_root = tmp_path / 'work'
+    workspace = work_root / 'round/workspace'
+    workspace.mkdir(parents=True)
+    parent = work_root / 'parent'
+    parent.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work_root))
+    plan = _method_sandbox_plan(
+        workspace, [sys.executable, str(improver.ROOT / 'methods/cli_improver.py')],
+        workspace.parent, readonly=(parent,), runtime=tuple(selected['runtime']))
+    command = sandbox.command([selected['path'], '--fixture-probe'],
+                              env={'PATH': os.defpath}, **plan)
+    ran = subprocess.run(command, cwd=workspace, capture_output=True, text=True, timeout=15)
+    assert ran.returncode == 0, ran.stderr
+    assert json.loads(ran.stdout) == {
+        'payload': 'external launcher payload', 'cli': '9.9.9',
+        'credential_visible': False,
+    }
 
 
 @pytest.mark.parametrize('templates', [True, False])
