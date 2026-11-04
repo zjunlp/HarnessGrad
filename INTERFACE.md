@@ -1944,6 +1944,11 @@ no per-user installation fallback. The checkout must contain `apps/cli/lib/bin.j
 and the source, profile home and Node installation directory must neither contain
 nor lie within the hidden platform checkout. This includes the parent directory
 used for a Node executable outside a `bin/` layout.
+Runtime directories must also not expose an entire shared temporary root (`/tmp`,
+`/var/tmp` or the active `TMPDIR`), directly or through an ancestor or symlink.
+Use a dedicated installation directory; the improver can bind an independent
+subdirectory such as `/tmp/node-vXX`, but rejects a standalone `/tmp/node` whose
+inferred installation directory would be all of `/tmp`.
 
 The resolver expands `{root}` and `{home}` in this entry's `runtime` and
 `build_command` fields. An environment override also relocates the corresponding

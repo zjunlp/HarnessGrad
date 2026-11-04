@@ -6452,3 +6452,25 @@ sandbox/integrity boundaries, DSH runtime/session behavior and documentation/imp
 guards. Three separate existing Codex/OpenCode/OpenClaw path checks still fail on
 inaccessible old-user installation paths. Temporary work trees and fixture data
 were cleaned; these controls used no model calls or benchmark measurements.
+
+### Improver runtime mounts exclude shared temporary roots (2026-11-04)
+
+Confirmed that a standalone Node executable directly under `/tmp` could infer
+the entire shared directory as its runtime. With the platform elsewhere, the
+method's visible-path rebind exposed other tasks after the private `/tmp` mount.
+DSH installation resolution now refuses directories exposing `/tmp`, `/var/tmp`
+or the active tempfile allocation root before version probing, with a diagnostic
+requiring a dedicated installation directory. The method plan applies the same
+guard to all improver runtime trees, checking both mount destination and resolved
+source, including ancestors and aliases of configured temporary roots. Independent
+installation subdirectories remain usable. Mount plan version 8 records the change.
+
+All 13 new regression cases failed before the fix and pass afterwards: five
+resolution cases cover standard/configured roots, symlinks and a `bin/` prefix;
+eight real bubblewrap cases verify synthetic sibling-task files stay unreadable
+through direct and aliased mounts while a dedicated runtime remains executable.
+The platform fixture is outside the shared temporary roots so the earlier
+platform-overlap guard cannot mask the issue. Independent diff review passed.
+Validation passed 158 tests and 38 subtests across improver resolution/readiness,
+sandbox/isolation, userspace recording and documentation/import guards. Temporary
+fixtures were cleaned; these controls used no model calls or benchmark measurements.

@@ -18,6 +18,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -315,6 +316,80 @@ print(json.dumps({{
     assert ran.returncode == 0, ran.stderr
     assert json.loads(ran.stdout) == {'private_readable': [False] * len(probes), 'runtime': 'runtime-ok'}
     assert plan['runtime_paths'] == (safe,)
+
+
+@pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
+@pytest.mark.parametrize('location', ['tmp', 'var-tmp', 'configured', 'configured-ancestor'])
+@pytest.mark.parametrize('alias', [False, True])
+def test_method_runtime_cannot_expose_shared_temporary_root(tmp_path, monkeypatch, location, alias):
+    from harnessgrad import methods
+    from eval.containers import sandbox
+
+    if location in ('tmp', 'var-tmp'):
+        shared = Path('/tmp' if location == 'tmp' else '/var/tmp')
+    else:
+        shared = tmp_path / 'shared-parent/temporary-root'
+        shared.mkdir(parents=True)
+        configured = tmp_path / 'configured-tmp-alias'
+        configured.symlink_to(shared, target_is_directory=True)
+        monkeypatch.setenv('TMPDIR', str(configured))
+        monkeypatch.setattr(tempfile, 'tempdir', None)
+
+    # Only these synthetic files are probed; no existing task data is accessed.
+    with tempfile.TemporaryDirectory(prefix='hg-method-temp-platform-', dir=Path.home()) as outer, \
+            tempfile.TemporaryDirectory(prefix='hg-other-task-', dir=shared) as other:
+        platform = Path(outer)
+        script = platform / 'methods/probe.py'
+        script.parent.mkdir()
+        secret = Path(other) / 'answer.txt'
+        secret.write_text('synthetic other-task answer')
+        target = shared.parent if location == 'configured-ancestor' else shared
+        exposed = target
+        if alias:
+            exposed = tmp_path / 'runtime-alias'
+            exposed.symlink_to(target, target_is_directory=True)
+        probes = [secret, exposed / secret.relative_to(target)]
+        # An independent installation below the same temporary root must remain
+        # runnable, while siblings remain hidden even through a runtime alias.
+        safe = Path(other).with_name(Path(other).name + '-runtime')
+        safe.mkdir()
+        node = safe / 'node'
+        node.write_text('#!/bin/sh\nprintf "runtime-ok\\n"\n')
+        node.chmod(0o755)
+        try:
+            script.write_text(f'''
+import json, subprocess
+from pathlib import Path
+def readable(path):
+    try:
+        Path(path).read_text()
+        return True
+    except OSError:
+        return False
+print(json.dumps({{
+    'private_readable': [readable(path) for path in {[str(p) for p in probes]!r}],
+    'runtime': subprocess.check_output([{str(node)!r}], text=True).strip(),
+}}))
+''')
+            work_root = tmp_path / 'work'
+            workspace = work_root / 'round/workspace'
+            workspace.mkdir(parents=True)
+            parent = work_root / 'parent'
+            parent.mkdir()
+            monkeypatch.setattr(methods, 'PLATFORM_ROOT', platform)
+            monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work_root))
+            argv = [sys.executable, str(script)]
+            plan = methods._method_sandbox_plan(workspace, argv, workspace.parent,
+                                                readonly=(parent,), runtime=(str(exposed), str(safe)))
+            ran = subprocess.run(sandbox.command(argv, env={'PATH': os.defpath}, **plan),
+                                 cwd=workspace, capture_output=True, text=True, timeout=15)
+            assert ran.returncode == 0, ran.stderr
+            assert json.loads(ran.stdout) == {'private_readable': [False] * len(probes),
+                                            'runtime': 'runtime-ok'}
+            assert plan['runtime_paths'] == (safe,)
+            assert exposed not in plan['visible_paths']
+        finally:
+            shutil.rmtree(safe)
 
 
 def test_a_named_endpoint_improver_declares_its_own_url_model_and_key(monkeypatch):

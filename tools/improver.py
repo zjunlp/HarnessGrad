@@ -65,6 +65,7 @@ DEFAULT_CONFIG = ROOT / "harnessgrad" / "improvers" / "improvers.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from harnessgrad.config import current as current_config      # noqa: E402
+from eval.containers.sandbox import shared_temporary_root      # noqa: E402
 
 #: Where a native codex binary may live if the npm wrapper is unusable. Ordered so the
 #: common global install is tried before the version-manager trees; order only decides
@@ -398,6 +399,10 @@ def _dsh_installation(entry: dict, launcher: Path) -> tuple[dict, dict, dict]:
     for path in (root, home, node_root):
         if path.is_relative_to(ROOT) or ROOT.is_relative_to(path):
             raise ValueError(f'DSH runtime must not contain or lie within the platform checkout: {path}')
+        shared = shared_temporary_root(path)
+        if shared is not None:
+            raise ValueError(f'DSH runtime directory {path} would expose shared temporary root {shared}; '
+                             'use a dedicated installation directory')
 
     replacements = []
     for old, new in ((declared_root, root), (str(entry.get('home') or ''), home)):

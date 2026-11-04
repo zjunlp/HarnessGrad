@@ -1,5 +1,6 @@
 """A relocated DSH installation must survive resolution and the restricted CLI hop."""
 import hashlib
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
@@ -7,6 +8,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -392,6 +394,58 @@ def test_node_installation_containing_platform_is_refused_before_probing(tmp_pat
     assert 'must not contain or lie within the platform checkout' in selected['reason']
     assert str(shared) in selected['reason']
     assert probed == []
+
+
+@pytest.mark.parametrize('location', ['tmp', 'var-tmp', 'configured', 'configured-alias',
+                                      'configured-bin-prefix'])
+def test_node_in_shared_temporary_root_is_refused_before_probing(tmp_path, monkeypatch, location):
+    root, home, _ = installation(tmp_path / 'installation')
+    with ExitStack() as cleanup:
+        # Keep the platform outside both standard temporary roots: the existing
+        # platform-overlap guard must not accidentally satisfy this regression.
+        platform = Path(cleanup.enter_context(tempfile.TemporaryDirectory(
+            prefix='hg-dsh-temp-platform-', dir=Path.home())))
+        launcher = platform / 'methods/dsh-improver'
+        launcher.parent.mkdir()
+        shutil.copy2(improver.ROOT / 'methods/dsh-improver', launcher)
+        monkeypatch.setattr(improver, 'ROOT', platform)
+        if location in ('tmp', 'var-tmp'):
+            shared = Path('/tmp' if location == 'tmp' else '/var/tmp')
+        else:
+            shared = tmp_path / 'shared-temporary-root'
+            shared.mkdir()
+            configured = shared
+            if location == 'configured-alias':
+                configured = tmp_path / 'tmp-alias'
+                configured.symlink_to(shared, target_is_directory=True)
+            monkeypatch.setenv('TMPDIR', str(configured))
+            monkeypatch.setattr(tempfile, 'tempdir', None)
+        bindir = shared / 'bin' if location == 'configured-bin-prefix' else shared
+        if bindir != shared:
+            bindir.mkdir()
+        fd, filename = tempfile.mkstemp(prefix='hg-dsh-temp-node-', dir=bindir)
+        os.close(fd)
+        node = Path(filename)
+        cleanup.callback(node.unlink)
+        node.write_text('#!/bin/sh\nprintf "dsh 1.2.3\\n"\n')
+        node.chmod(0o755)
+        assert (improver._interpreter_prefix(node) or node.parent) == shared.resolve()
+        probed = []
+
+        def record_probe(path, **kwargs):
+            probed.append(path)
+            return True, '1.2.3', ''
+
+        monkeypatch.setattr(improver, '_run_version', record_probe)
+        monkeypatch.setenv('HG_DSH_NODE', str(node))
+        entry = bundled_entry(root, home)
+        entry['build_command'] = []
+        selected = resolve(entry)
+        assert selected['ok'] is False, selected
+        assert 'shared temporary root' in selected['reason']
+        assert str(shared.resolve()) in selected['reason']
+        assert 'dedicated installation directory' in selected['reason']
+        assert probed == []
 
 
 def test_direct_launcher_has_no_personal_directory_fallback(tmp_path, monkeypatch):
