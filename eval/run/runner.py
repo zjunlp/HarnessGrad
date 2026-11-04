@@ -1696,6 +1696,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                                                                if row['task_id'] == tid]}
             trial_marker = repeated_trials.start_task(
                 trial_evidence.ordinary_root(progress_dir, round_no, harness_sha), ordinary_task_plan)
+        if progress_dir is not None and os.environ.get('HG_TASK_VERDICT_JOURNAL') == '1':
+            from eval.observe import task_verdicts
+            task_verdicts.start(progress_dir, round_no, tid)
         for trial in range(trials):
             with progress_mod.task_progress(tid, round_no=round_no, index=task_index,
                                             total=len(tasks)) as held:
