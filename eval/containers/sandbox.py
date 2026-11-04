@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 12  # 12 preserves empty traversal directories needed by relative runtime links;
+PLAN_VERSION = 13  # 13 restores required traversal structure after platform/temporary hides;
+                   # 12 preserves empty traversal directories needed by relative runtime links;
                    # 11 refuses declared runtimes overlapping writable task/state storage;
                    # 10 mounts declared runtimes at physical paths and restores all declared link chains;
                    # 9 restores interpreter symlinks without exposing parent directories;
@@ -193,7 +194,7 @@ def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writabl
     return prefixes
 
 
-def _runtime_symlinks(paths, mounted):
+def _runtime_symlinks(paths, mounted, *, hidden=()):
     """Collect links and empty traversal directories, without exposing parent trees."""
     links = {}
     directories = set()
@@ -206,8 +207,7 @@ def _runtime_symlinks(paths, mounted):
             if part == '..':
                 # The kernel must enter this directory before following '..'. Its
                 # contents need not be mounted, but the directory itself must exist.
-                if not any(current.is_relative_to(root) for root in mounted):
-                    directories.add(current)
+                directories.add(current)
                 current = current.parent
                 continue
             current = current / part
@@ -217,7 +217,8 @@ def _runtime_symlinks(paths, mounted):
             if followed > 40:
                 raise SandboxUnavailable('runtime path has too many symbolic links')
             target = os.readlink(current)
-            if not any(current.is_relative_to(root) for root in mounted):
+            if (not any(current.is_relative_to(root) for root in mounted)
+                    or any(current.is_relative_to(root) for root in hidden)):
                 links[current] = target
             target = Path(target)
             remaining = list(target.parts[1:] if target.is_absolute() else target.parts) + remaining
@@ -228,9 +229,11 @@ def _runtime_symlinks(paths, mounted):
 def _interpreter_symlinks(prefixes, *, platform, work_root, task_dir,
                          writable_paths, state_dirs, private_paths):
     """Validate the interpreter chain before restoring its missing links."""
-    links, directories = _runtime_symlinks((sys.executable,), (*map(Path, RUNTIME), *prefixes))
+    hidden = hidden_trees(work_root, platform)
+    links, directories = _runtime_symlinks((sys.executable,), (*map(Path, RUNTIME), *prefixes),
+                                          hidden=hidden)
     protected = tuple(Path(path).resolve() for path in (
-        *hidden_trees(work_root, platform), work_root, task_dir,
+        *hidden, work_root, task_dir,
         *writable_paths, *state_dirs, *private_paths))
     for link, _ in links:
         if any(link.is_relative_to(root) for root in protected):
@@ -369,7 +372,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     for path in physical:
         plan += ["--ro-bind", str(path), str(path)]
     mounted = (*runtime_roots, *physical)
-    links, directories = _runtime_symlinks(declared, mounted)
+    hidden = hidden_trees(work_root, platform)
+    links, directories = _runtime_symlinks(declared, mounted, hidden=hidden)
     runtime_links.update(links)
     runtime_directories.update(directories)
     for directory in sorted(runtime_directories, key=lambda path: (len(path.parts), str(path))):
@@ -416,11 +420,22 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     # as an empty mount point, which is the deliberate stopping point -- nothing
     # readable remains, and erasing the name too would mean covering the whole branch
     # the work root lives on.
-    for tree in hidden_trees(work_root, platform):
+    for tree in hidden:
         plan += ["--tmpfs", str(tree)]
     if private_tmp:
         # A private /tmp, so two runs cannot read each other's task directories.
         plan += ["--tmpfs", "/tmp"]
+
+    # A link may enter a hidden tree only to leave it again through '..'. Restore
+    # the required empty directories and exact links after every hide, without
+    # binding any hidden host contents. Later task mounts and freezes keep their
+    # existing precedence.
+    for directory in sorted(runtime_directories, key=lambda path: (len(path.parts), str(path))):
+        if any(directory.is_relative_to(tree) for tree in hidden):
+            plan += ["--dir", str(directory)]
+    for link, target in runtime_links.items():
+        if any(link.is_relative_to(tree) for tree in hidden):
+            plan += ["--symlink", target, str(link)]
 
     # --- Re-assert everything, in order ----------------------------------------
     #

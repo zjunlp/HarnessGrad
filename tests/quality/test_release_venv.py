@@ -312,6 +312,67 @@ print(json.dumps({'data': data, 'readonly': readonly, 'secret_visible': secret.e
         assert marker.read_text() == 'declared runtime'
 
 
+@pytest.mark.parametrize('hidden_storage', ['platform', 'tmp'])
+@pytest.mark.parametrize('mounted_parent', ['none', 'alias', 'hidden'])
+@pytest.mark.parametrize('detour_kind', ['directory', 'internal-link', 'external-link'])
+@pytest.mark.parametrize('writable_task', [False, True])
+def test_runtime_traversal_survives_hides_without_exposing_host_contents(
+        tmp_path, hidden_storage, mounted_parent, detour_kind, writable_task):
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not provisioned')
+    with tempfile.TemporaryDirectory(prefix='hg-hidden-traversal-', dir=Path.home()) as directory, \
+            tempfile.TemporaryDirectory(prefix='hg-hidden-detour-', dir='/tmp') as hidden_tmp:
+        root = Path(directory)
+        platform = root / 'platform'; platform.mkdir()
+        (platform / 'driver.py').write_text('private platform code')
+        (platform / '.env').write_text('synthetic private configuration')
+        hidden = platform if hidden_storage == 'platform' else Path(hidden_tmp)
+        detour = hidden / 'detour'
+        if detour_kind == 'directory':
+            detour.mkdir()
+        else:
+            entered = ((hidden / 'nested/entered') if detour_kind == 'internal-link'
+                       else root / 'outside/entered')
+            entered.mkdir(parents=True)
+            detour.symlink_to(os.path.relpath(entered, hidden), target_is_directory=True)
+        secret = detour.resolve() / 'secret.txt'; secret.write_text('private detour contents')
+        runtime = root / 'runtime'; runtime.mkdir()
+        marker = runtime / 'marker.txt'; marker.write_text('declared runtime')
+        links = root / 'links'; links.mkdir()
+        alias = links / 'alias'
+        alias.symlink_to(os.path.relpath(detour, links) + '/' +
+                         os.path.relpath(runtime, detour.resolve()), target_is_directory=True)
+        declared = {'none': (alias,), 'alias': (links, alias), 'hidden': (hidden, alias)}[mounted_parent]
+        task = tmp_path / 'task'; task.mkdir()
+        work = tmp_path / 'work'; work.mkdir()
+        private = (platform / 'driver.py', platform / '.env', secret)
+        probes = (*private, detour / secret.name,
+                  *(alias / os.path.relpath(path, runtime) for path in private))
+        code = '''import errno, json, sys
+from pathlib import Path
+marker = Path(sys.argv[1])
+data = marker.read_text()
+try:
+    marker.write_text('changed')
+except OSError as exc:
+    readonly = exc.errno == errno.EROFS
+else:
+    readonly = False
+print(json.dumps({'data': data, 'readonly': readonly,
+                  'private_visible': [Path(path).exists() for path in sys.argv[2:]]}))
+'''
+        result = sandbox.run([sys.executable, '-I', '-c', code, str(alias / marker.name),
+                              *map(str, probes)], platform=platform, work_root=work,
+            task_dir=task, repo=task, env={}, runtime_paths=declared,
+            task_dir_writable=writable_task, private_paths=private,
+            timeout_s=20, cwd=task, network='none')
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout) == {
+            'data': 'declared runtime', 'readonly': True, 'private_visible': [False] * len(probes)}
+        assert marker.read_text() == 'declared runtime'
+        assert secret.read_text() == 'private detour contents'
+
+
 @pytest.mark.parametrize('storage', ['task', 'writable', 'state'])
 @pytest.mark.parametrize('placement', ['inside', 'same', 'parent'])
 @pytest.mark.parametrize('aliased', [False, True])
