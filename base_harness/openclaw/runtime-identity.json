@@ -2,9 +2,9 @@
   "source": "openclaw",
   "version": "2026.3.13",
   "upstream_commit": "61d171a",
-  "entrypoint": "/home/xubuqiang/.nvm/versions/node/v22.16.0/lib/node_modules/openclaw/openclaw.mjs",
-  "package_root": "/home/xubuqiang/.nvm/versions/node/v22.16.0/lib/node_modules/openclaw",
-  "node": "/home/xubuqiang/.nvm/versions/node/v22.16.0/bin/node",
+  "entrypoint": null,
+  "package_root": null,
+  "node": null,
   "editable": [
     "agent.py",
     "prompt.md",

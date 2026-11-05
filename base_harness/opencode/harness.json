@@ -9,17 +9,14 @@
     "files",
     "exec"
   ],
-  "runtime_paths": [
-    "/mnt/20t/xubuqiang/prior-art-v1",
-    "/home/xubuqiang/.nvm/versions/node/v22.19.0/bin"
-  ],
+  "runtime_paths": [],
   "runtime": {
     "kind": "bun",
     "source": "opencode",
     "entrypoint": "packages/opencode/src/index.ts",
     "package": "opencode"
   },
-  "notes": "Requires a prepared opencode/ source tree (v1 line) and Bun in the execution environment. The source is declared in `runtime_paths` rather than copied into the candidate: the monorepo is 174 MB and 3,586 packages, and every `state_after_round<N>/` would carry a copy of it. Each candidate must own its workspace links. External source override is for explicit interface diagnostics only; it is refused by default. Container runtime still requires platform-specific provisioning.",
+  "notes": "Public template: prepare an opencode/ source tree and Bun runtime for a separate candidate, then declare the exact read-only runtime_paths before running. External source overrides must still satisfy the declared runtime ownership boundary. Container execution requires separate target-image provisioning.",
   "components": {
     "control": [
       "harness.json"

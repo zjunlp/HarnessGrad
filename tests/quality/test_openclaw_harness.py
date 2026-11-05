@@ -33,7 +33,15 @@ def test_manifest_is_admitted():
     assert validate_harness.validate(HARNESS, smoke=False) == []
 
 
+def test_unprepared_runtime_has_actionable_failure():
+    agent = _agent()
+    with pytest.raises(agent.AdapterError, match='runtime is not configured'):
+        agent.runtime_identity()
+
+
 def test_native_cli_mock_writes_answer_and_trace(tmp_path):
+    if not json.loads((HARNESS / 'runtime-identity.json').read_text()).get('node'):
+        pytest.skip('requires explicitly prepared OpenClaw candidate')
     proc = _run(tmp_path)
     assert proc.returncode == 0, proc.stderr[-4000:]
     assert (tmp_path / "answer.txt").read_text(encoding="utf-8").strip() == "OPENCLAW_MOCK"
@@ -54,6 +62,8 @@ def test_native_cli_mock_writes_answer_and_trace(tmp_path):
 
 
 def test_file_submission_is_kept_in_place(tmp_path):
+    if not json.loads((HARNESS / 'runtime-identity.json').read_text()).get('node'):
+        pytest.skip('requires explicitly prepared OpenClaw candidate')
     task = tmp_path / "task.json"
     task.write_text(json.dumps({"task_id": "mock-files", "goal": "Write the mock answer.",
                                 "submission": {"kind": "files", "paths": ["answer.txt"]}}))
