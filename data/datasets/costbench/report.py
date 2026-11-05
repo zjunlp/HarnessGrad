@@ -12,9 +12,14 @@ are not approximated by averaging per-task statistics.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from bootstrap import bootstrap
 from scoring import METRIC, REVISION, aggregate
@@ -152,8 +157,9 @@ def collect(trials, expected, *, include_splits=False, mode=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bundle', type=Path, required=True)
-    parser.add_argument('--runtime', type=Path, required=True)
+    parser.add_argument('--runtime', type=Path, help='optional assertion of the selected managed artifact path')
     parser.add_argument('--expected-cells', type=Path, required=True)
+    parser.add_argument('--runtime-binding', type=Path, help=argparse.SUPPRESS)
     parser.add_argument('--mode', choices=MODES,
                         help='Explicitly select one dynamic mode; omit for static evidence')
     parser.add_argument('archives', nargs='+', type=Path,
@@ -162,12 +168,33 @@ def main():
     queries, splits = collect((load_trial(p) for p in args.archives),
                              json.loads(args.expected_cells.read_text()), include_splits=True,
                              mode=args.mode)
-    bootstrap(args.bundle, args.runtime)
+    from execution import binding, observation
+    from harnessgrad.dataset_runtime import admit_binding
+    selected = (json.loads(args.runtime_binding.read_text()) if args.runtime_binding is not None
+                else binding('verifier'))
+    if args.runtime is not None and args.runtime.resolve() != Path(selected['path']):
+        raise ValueError('--runtime must name the selected managed CostBench execution artifact')
+    admit_binding(selected, 'verifier', python=selected['python'])
+    if (Path(sys.prefix).resolve() != Path(selected['path'])
+            or not sys.flags.isolated or not sys.dont_write_bytecode):
+        with tempfile.TemporaryDirectory(prefix='hg-costbench-report-') as private:
+            binding_path = Path(private) / 'python-runtime.json'
+            binding_path.write_text(json.dumps(selected))
+            binding_path.chmod(0o600)
+            environment = {'PATH': os.defpath, 'HOME': private, 'TMPDIR': private,
+                           'XDG_CACHE_HOME': private, 'PYTHONDONTWRITEBYTECODE': '1',
+                           'HG_REVIEWED_ENVIRONMENT_ONLY': '1',
+                           'HG_DATASET_RUNTIME_ROOT': str(Path(selected['manifest_path']).parents[3])}
+            return subprocess.call([selected['python'], '-I', '-B', str(Path(__file__).resolve()),
+                                    *sys.argv[1:], '--runtime-binding', str(binding_path)], env=environment)
+    bootstrap(args.bundle)
     result = (aggregate(queries, splits=splits) if args.mode is None else
               dynamic_aggregate(queries, mode=args.mode, splits=splits))
-    result.update(complete=True, revision=REVISION)
+    result.update(complete=True, revision=REVISION,
+                  python_runtime={**observation(), 'runtime_id': selected['runtime_id']})
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

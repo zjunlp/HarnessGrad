@@ -85,3 +85,156 @@ with and without `--allow-unprovisioned`. The focused suite passed 172 tests;
 18 of the new regression cases failed before the fix. Commands, logs and JUnit
 reports are retained at `/tmp/hg-provider-client-fix-20261105-zh3md5wy`; temporary
 fixtures were cleaned. These controls installed no dependencies and used no model.
+
+### CostBench services and scorers bind managed Python artifacts (2026-11-05)
+
+CostBench static/dynamic now share a prepared Python 3.12 execution artifact,
+separate from the platform interpreter. The stdlib-only runtime manager reuses
+fixed-path construction, explicit installation, atomic publication and content
+verification for both provider and execution profiles. The new
+[execution declaration](../data/datasets/costbench/execution-runtime.json) retains
+the existing exact requirements lock. Existing GSM8K declarations and published
+provider artifacts keep their v1 API and manifest compatibility.
+
+`python tools/prepare_dataset.py --dataset costbench --runtime execution` prepares
+only dependencies; adding `--check` installs nothing and does not start a service,
+load a task or claim a successful score. Existing prepared CostBench data needs
+no regeneration. Full `prepare.py --install` now delegates to this manager before
+running its unchanged data-generation protocol under the selected Python.
+
+Selected SETUP/VERIFY declarations bind a specific manifest, runtime ID,
+interpreter, physical prefixes and role. Launch admission rechecks those exact
+bytes without selecting a new publication. The service uses isolated Python,
+read-only explicit code/input/runtime mounts and private HOME/temp/cache/cwd.
+Only handles created by the current record/model setup are forwarded; ambient
+credentials and model sockets are excluded. The scorer uses the same dependency
+artifact in its existing read-only verifier sandbox. Actual interpreter and
+package origins are recorded. Actor task files remain separate from the private
+case, service configuration, sealed episode and scoring inputs.
+
+Bound-service shutdown signals the actual bubblewrap child first, allowing its
+episode and receipt to finish before group cleanup; the existing bounded stop
+and forced cleanup remain. A delayed-write regression caught the earlier wrapper
+shutdown race. Direct controls also use canonical verifier admission/sandboxing.
+The aggregate report validates archives before restarting under the selected
+Python; a private binding file preserves that exact selection across restart,
+including when the discovery index is no longer available. The report CLI is a
+trusted aggregation process, not a claim of actor sandbox execution.
+
+Evidence is indexed in the retained
+[validation summary](/home/wangyenan/.cache/hg-execution-acceptance-20261105-6pvstx5z/validation-summary.json).
+Core validation passed 377 tests and 38 subtests. CostBench passed 257 distinct
+cases across the initial and focused regression runs, covering static/dynamic
+protocols, all dynamic modes, training compatibility, cost metrics, actor
+forgery/private-input checks, preparation dispatch and report validity. Seven
+negative-input fixtures now explicitly grant only their replacement private
+file or database shard directory; their corruption assertions remain unchanged.
+Eighteen source-dependent cases initially skipped because their fixture defaulted
+to a different data root, then all passed with the actual root configured.
+
+A fresh Python 3.13 platform without numpy, PyYAML, pydantic or openai completed
+eight real CostBench static/dynamic train/test oracle/noop controls through the
+same Python 3.12 service/scorer artifact. The actor could not see that runtime or
+those packages. Every arm matched its expected score, with zero invalid or
+unmeasured outcomes and zero Harness model calls. Service/scorer observations
+confirmed isolated startup, read-only mounts and package origins in the selected
+venv; cleanup completed. Two simultaneous real CostBench services also retained
+independent episode state while sharing dependencies. The fresh 3.13 platform
+successfully ran report aggregation under the same bound 3.12 interpreter.
+
+Compatibility validation passed 91 tau3/verifier-runtime tests using a separately
+prepared 3.12 runtime and local fixed-response model-transport fixtures. Tau3
+itself is not migrated to execution bindings here. Three installed-wheel tests
+passed, including exact CostBench recipe resources and metadata/helper imports;
+full CostBench wheel execution is still outside that contract. One Terminal-Bench
+case was deselected after reproducing its missing task checkout on clean
+`656e4c8b`. No full-suite success, regenerated whole-pool gold audit, real model
+inference or benchmark performance result is claimed.
+
+Validation commands, raw failures/retries, JUnit, runtime inventories and control
+receipts remain outside the repository. Temporary fixtures, validation venvs and
+the comparison worktree were cleaned. Venv/base-executable identity does not seal
+all host libraries or the complete standard library. H0/cache/resume identity
+comparison, Harness candidate preparation and other dataset migrations remain
+later work. Changes stay on `fix/environment-isolation`; no main merge was made.
+
+### Bound services receive only invocation-owned recording handles (2026-11-05)
+
+The review of `b93592c5` found that a bound service declaring a model but no
+recording could inherit ambient `HG_RELAY_CONTEXT_PATH` and
+`HG_RELAY_RECORD_PATH`. The model branch copied the platform environment, and
+the bound launcher treated those copied values as handles owned by this trial.
+Bound launches now receive recording handles directly from the current recording
+branch. The model socket continues to come from the current broker object.
+Unbound relays retain their existing environment handling.
+
+Real bubblewrap controls cover all four model/recording combinations with stale
+recording paths in the platform environment. The synthetic stale context is
+explicitly mounted read-only, so the controls check that the service ignores it
+even when it is readable. Recorded services use their current trial context;
+unrecorded services receive neither recording variable and create no episode.
+Model access, delayed record finalization and cleanup remain covered.
+
+Before the fix, the model-without-recording control failed and the other three
+combinations passed. After the fix, all 42 launch, diagnostic and import-direction
+tests passed, together with 38 subtests. One intermediate verifier launch was
+refused because the test driver venv was under `/tmp`; recreating that venv under
+the user cache satisfied the existing sandbox policy. Commands, raw failures and
+JUnit are retained at `/tmp/hg-relay-handle-fix-20261105-gik3gt9i`; temporary test
+environments and workspaces were cleaned. No model inference or main merge was
+performed.
+
+### Managed dataset artifacts bind H0, cache and resume (2026-11-05)
+
+`dataset_runtime_identity` now records the provider that actually loaded the
+data and selected task-to-service/verifier artifact associations. A normalized
+artifact table avoids repeating a shared CostBench binding for every task. A
+bounded registry provider session selects once, then checks that exact artifact
+for subsequent requests, including after its publication index changes. Ordinary
+registry callers retain their previous provider behavior.
+
+Run metadata, H0 and curve points carry the optional identity. Cache keys,
+entries and completed progress records carry task projections. Batched projection
+keeps this linear in task count. Live admission precedes cache, whole-point and
+H0 reuse, including paths that launch no scorer. Train curves retain the complete
+run-plan identity when later rounds measure only a subset. Resume checks metadata,
+all prior points and completed eval progress before metadata writes or checkpoint
+restaging; the platform-crossing flag does not bypass these checks. Frozen
+references with changed/missing identities retain their score but cannot support
+paired improvement or capability-floor claims. Source checkpoint formats are
+unchanged. Unmanaged adapters keep their old record shape.
+
+H0 preparation preflights opted-in providers and adapters declaring the static
+`MANAGED_EXECUTION_RUNTIME` discovery reference under the effective child
+environment and selected split/tasks. It installs nothing. Configuration,
+payload, nested evaluation result, metadata and first point must agree before
+publication/reuse. Curve-only donor reconstruction preserves identity. The helper
+also derives the mean from per-task results when a raw evaluation omits `score`;
+the actual creation/reuse CLI now prints a numeric score for that existing payload
+shape. Artifact identity is exact, including physical paths; rebuilding the same
+lock into a new instance does not silently reuse the old environment's score.
+
+Validation retained at `/tmp/hg-runtime-lifecycle-20261105-ix_aotx5` covers 521
+distinct passing cases across the broad and focused runs, including 89 new
+controls, 38 passing subtests and three installed-wheel cases. One DSH shared-H0
+test failed because this machine has no configured DSH root; the identical
+failure was reproduced on clean `c2e73b52`. One old `smoke-stage1` record test
+skipped because that historical run is absent. No full-suite success is claimed.
+Raw failures/retries, case-to-report index, commands and JUnit remain preserved.
+
+An authored Parquet control on a Python 3.13 platform without Arrow used its real
+3.12 provider to create, share and resume H0. Republishing a fresh runtime instance
+changed identity and rejected old lookup/reuse/resume without rewriting prior
+records or checkpoint state. Real CostBench static/dynamic selected train tasks
+likewise matched H0 preflight to actual service/scorer/metadata identities on a
+platform without their packages; both controls were measured with zero invalid
+tasks. They used fixture/mock actors, not inference or benchmark performance
+measurement. The actual H0 CLI separately completed creation and reuse. A
+baseline/current cache control showed an invalid runtime binding reused a cached
+score on `c2e73b52` and became invalid without a cached score after this change.
+
+Exact manifests, successful controls and logs remain outside the source checkout.
+Temporary test environments, workspaces and the comparison worktree were cleaned.
+No user dataset/runtime was replaced and no main merge was made. Identity still
+covers only explicitly managed dataset artifacts, not a sealed OS, unmanaged
+dataset dependencies or Harness candidate dependency preparation/lifecycle.

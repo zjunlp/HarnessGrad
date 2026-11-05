@@ -58,12 +58,16 @@ EXCEPTIONS = {
         "Dynamic protocol control validates real sandbox execution and sealed scoring.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.tool_relay"):
         "Dynamic control owns the selected-task relay and trusted event record lifecycle.",
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.verification.verifier"):
+        "Direct dynamic controls reuse bound-runtime admission and the read-only verifier sandbox.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.service.tool_transport"):
         "Dynamic control uses the actor transport for costed, event-triggering actions.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.run.runner"):
         "Dataset control validates the real sandbox and sealed official trajectory scorer.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.run.tool_relay"):
         "Manual control owns the same selected-task relay and trusted record lifecycle.",
+    ("data-eval", "data/datasets/costbench/control.py", "eval.verification.verifier"):
+        "Direct static controls reuse bound-runtime admission and the read-only verifier sandbox.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.service.tool_transport"):
         "Control executes costed tool actions through the actor's actual transport.",
     ("data-eval", "data/datasets/costbench/relay.py", "eval.service.tool_transport"):

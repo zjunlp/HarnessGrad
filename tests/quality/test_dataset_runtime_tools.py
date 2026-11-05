@@ -189,6 +189,140 @@ def test_prepare_cli_reports_malformed_descriptor_without_installing(opted_in, m
 
 
 @pytest.fixture
+def execution_cli(monkeypatch):
+    receipt = {"dataset": "costbench", "profile": "execution", "python": "/execution/bin/python",
+               "path": "/execution", "runtime_id": "verified-artifact",
+               "runtime_paths": ["/execution", "/base-python"], "reused": False}
+    descriptor = Mock(return_value={"dataset": "costbench", "profile": "execution"})
+    prepare = Mock(return_value=receipt)
+    check = Mock(return_value=dict(present=True, status="ready", scope="dataset-execution-runtime",
+                                   detail="execution artifact verified", runtime=receipt))
+    monkeypatch.setattr(dataset_runtime, "execution_descriptor", descriptor)
+    monkeypatch.setattr(dataset_runtime, "prepare_execution", prepare)
+    monkeypatch.setattr(dataset_runtime, "check_execution", check)
+    provider = Mock(side_effect=AssertionError("execution artifacts must not load the QA provider"))
+    monkeypatch.setattr(prepare_dataset, "DatasetProvider", provider)
+    for name in ("descriptor", "prepare", "resolve", "check"):
+        monkeypatch.setattr(dataset_runtime, name, Mock(side_effect=AssertionError("provider profile invoked")))
+    return SimpleNamespace(descriptor=descriptor, prepare=prepare, check=check,
+                           provider=provider, receipt=receipt)
+
+
+def test_execution_prepare_only_prepares_and_verifies_the_artifact(execution_cli, tmp_path, capsys):
+    root = tmp_path / "runtime-store"
+    assert prepare_dataset.main(["--dataset", "costbench", "--runtime", "execution", "--python", "/base/python",
+                                 "--runtime-root", str(root), "--timeout", "12", "--json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["profile"] == "execution" and result["scope"] == "dataset-execution-runtime"
+    assert result["runtime"] == execution_cli.receipt and "tasks" not in result
+    execution_cli.descriptor.assert_called_once_with("costbench")
+    execution_cli.prepare.assert_called_once_with("costbench", python="/base/python", root=root, timeout_s=12)
+    execution_cli.check.assert_called_once_with("costbench", root=root)
+    execution_cli.provider.assert_not_called()
+
+
+def test_execution_check_never_prepares_or_loads_the_provider(execution_cli, capsys):
+    assert prepare_dataset.main(["--dataset", "costbench", "--runtime", "execution", "--check", "--json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["action"] == "check" and result["runtime"] == execution_cli.receipt
+    execution_cli.prepare.assert_not_called()
+    execution_cli.provider.assert_not_called()
+    execution_cli.check.assert_called_once_with("costbench", root=None)
+
+
+@pytest.mark.parametrize("check_only", [False, True])
+def test_execution_missing_declaration_is_invalid_without_fallback(execution_cli, capsys, check_only):
+    execution_cli.descriptor.return_value = None
+    args = ["--dataset", "costbench", "--runtime", "execution", "--json"]
+    assert prepare_dataset.main(args + (["--check"] if check_only else [])) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "invalid" and result["scope"] == "dataset-execution-runtime"
+    assert "no dataset execution runtime declaration" in result["detail"]
+    execution_cli.prepare.assert_not_called()
+    execution_cli.check.assert_not_called()
+    execution_cli.provider.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["invalid", "unavailable"])
+@pytest.mark.parametrize("check_only", [False, True])
+def test_execution_readiness_failure_keeps_status_and_json_exit_code(
+        execution_cli, capsys, status, check_only):
+    execution_cli.check.return_value = dict(present=False, status=status,
+                                           scope="dataset-execution-runtime", detail="artifact changed")
+    args = ["--dataset", "costbench", "--runtime", "execution", "--json"]
+    assert prepare_dataset.main(args + (["--check"] if check_only else [])) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == status and not result["present"]
+    assert result["profile"] == "execution" and result["scope"] == "dataset-execution-runtime"
+    assert execution_cli.prepare.call_count == (0 if check_only else 1)
+    execution_cli.provider.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["invalid", "unavailable"])
+def test_execution_prepare_exception_preserves_runtime_failure_class(execution_cli, capsys, status):
+    execution_cli.prepare.side_effect = dataset_runtime.DatasetRuntimeUnavailable("damaged artifact", status=status)
+    assert prepare_dataset.main(["--dataset", "costbench", "--runtime", "execution", "--json"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == status and result["scope"] == "dataset-execution-runtime"
+    execution_cli.check.assert_not_called()
+    execution_cli.provider.assert_not_called()
+
+
+@pytest.mark.parametrize("previous", [None, "/previous-store"])
+def test_execution_root_is_visible_during_check_and_restored_after_failure(
+        execution_cli, tmp_path, monkeypatch, capsys, previous):
+    if previous is None:
+        monkeypatch.delenv("HG_DATASET_RUNTIME_ROOT", raising=False)
+    else:
+        monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", previous)
+    root = tmp_path / "execution-store"
+    seen = []
+    def check(name, **kwargs):
+        seen.append((name, kwargs["root"], os.environ["HG_DATASET_RUNTIME_ROOT"]))
+        raise dataset_runtime.DatasetRuntimeUnavailable("runtime inventory mismatch", status="invalid")
+    execution_cli.check.side_effect = check
+    assert prepare_dataset.main(["--dataset", "costbench", "--runtime", "execution", "--check",
+                                 "--runtime-root", str(root), "--json"]) == 1
+    assert seen == [("costbench", root, str(root))]
+    assert os.environ.get("HG_DATASET_RUNTIME_ROOT") == previous
+    assert json.loads(capsys.readouterr().out)["status"] == "invalid"
+    execution_cli.prepare.assert_not_called()
+
+
+def test_execution_check_rejects_preparation_only_python_parameter(execution_cli, capsys):
+    with pytest.raises(SystemExit) as exc:
+        prepare_dataset.main(["--dataset", "costbench", "--runtime", "execution", "--check", "--python", "/base/python"])
+    assert exc.value.code == 2
+    execution_cli.descriptor.assert_not_called()
+    execution_cli.prepare.assert_not_called()
+    execution_cli.check.assert_not_called()
+
+
+def test_execution_timeout_is_a_nonzero_artifact_check_result(execution_cli, capsys):
+    execution_cli.prepare.side_effect = subprocess.TimeoutExpired("runtime preparation", 1)
+    assert prepare_dataset.main(["--dataset", "costbench", "--runtime", "execution", "--timeout", "1", "--json"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "unavailable" and result["scope"] == "dataset-execution-runtime"
+    assert result["profile"] == "execution"
+    execution_cli.check.assert_not_called()
+
+
+def test_explicit_provider_profile_preserves_loading_behavior(opted_in, monkeypatch, capsys):
+    client = Mock()
+    client.check.return_value = dict(present=True, status="ready", scope="dataset-provider-load", detail="loadable")
+    factory = Mock(return_value=client)
+    monkeypatch.setattr(prepare_dataset, "DatasetProvider", factory)
+    execution_check = Mock(side_effect=AssertionError("execution profile selected"))
+    monkeypatch.setattr(dataset_runtime, "check_execution", execution_check)
+    assert prepare_dataset.main(["--dataset", "synthetic", "--runtime", "provider", "--check", "--json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["profile"] == "provider" and result["scope"] == "dataset-provider-load"
+    factory.assert_called_once_with("synthetic", timeout_s=None)
+    client.check.assert_called_once_with()
+    execution_check.assert_not_called()
+
+
+@pytest.fixture
 def provider(opted_in, monkeypatch):
     tasks = [{"task_id": name, "goal": "Synthetic task"} for name in ("a", "b")]
     metadata = {"KIND": "dataset", "ORACLE_SOURCE": "released", "SPLIT": None,

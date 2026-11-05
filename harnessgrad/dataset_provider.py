@@ -71,7 +71,7 @@ def _configuration(name: str, snapshot: dict | None) -> dict[str, str]:
 class DatasetProvider:
     """One statically discovered QA provider; constructing it performs no build."""
 
-    def __init__(self, name: str, *, timeout_s: float | None = None):
+    def __init__(self, name: str, *, timeout_s: float | None = None, freeze_runtime=False):
         declaration = dataset_runtime.descriptor(name)
         if declaration is None:
             raise ValueError(f"{name}: no dataset runtime descriptor")
@@ -80,14 +80,20 @@ class DatasetProvider:
         if timeout_s is not None and timeout_s <= 0:
             raise ValueError("provider timeout must be positive")
         self.name, self.declaration, self.timeout_s = name, declaration, timeout_s
+        self.freeze_runtime = freeze_runtime
+        self.runtime = None
 
     def _request(self, operation: str, *, task_ids=None, config_snapshot=None) -> dict:
         configuration = _configuration(self.name, config_snapshot)
-        runtime = dataset_runtime.resolve(self.name)
+        runtime = (dataset_runtime.admit_provider(self.name, self.runtime)
+                   if self.freeze_runtime and self.runtime is not None
+                   else dataset_runtime.resolve(self.name))
         descriptor_sha = self.declaration["descriptor_sha256"]
         if runtime["descriptor_sha256"] != descriptor_sha:
             raise DatasetProviderError(self.name, operation, "descriptor changed after discovery",
                                        error_type="IdentityMismatch")
+        if self.freeze_runtime:
+            self.runtime = dict(runtime)
         request = {"schema": SCHEMA, "dataset": self.name, "operation": operation,
                    "descriptor_sha256": descriptor_sha, "runtime_id": runtime["runtime_id"],
                    "runtime_path": runtime["path"], "configuration": configuration,

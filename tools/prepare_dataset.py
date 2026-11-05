@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare an opted-in dataset provider, then check that its data is loadable.
+"""Prepare an opted-in dataset provider or execution runtime.
 
 Only this explicit preparation command installs dependencies. ``--check`` never
-installs or downloads anything. A successful check describes provider loading;
-it does not claim that a benchmark trial or its private scorer has run.
+installs or downloads anything. Provider checks include data loading; execution
+checks only verify the runtime artifact, without launching services or scoring.
+Neither profile claims that a benchmark trial or its private scorer has run.
 """
 from __future__ import annotations
 
@@ -44,9 +45,11 @@ def _runtime_root(root):
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", required=True)
+    parser.add_argument("--runtime", choices=("provider", "execution"), default="provider",
+                        help="prepare/check provider loading or the execution artifact")
     parser.add_argument("--check", action="store_true", help="check without installing")
     parser.add_argument("--python", help="base interpreter for explicit preparation")
-    parser.add_argument("--runtime-root", type=Path, help="external provider runtime store")
+    parser.add_argument("--runtime-root", type=Path, help="external dataset runtime store")
     parser.add_argument("--timeout", type=float, help="optional preparation/provider timeout in seconds")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -55,27 +58,35 @@ def main(argv=None) -> int:
     if args.timeout is not None and (not math.isfinite(args.timeout) or args.timeout <= 0):
         parser.error("--timeout must be finite and positive")
 
-    result = {"dataset": args.dataset, "action": "check" if args.check else "prepare"}
+    execution = args.runtime == "execution"
+    runtime_scope = "dataset-execution-runtime" if execution else "dataset-provider-runtime"
+    preparation_scope = runtime_scope if execution else "dataset-runtime-preparation"
+    result = {"dataset": args.dataset, "profile": args.runtime,
+              "action": "check" if args.check else "prepare"}
     try:
         with _runtime_root(args.runtime_root):
-            if dataset_runtime.descriptor(args.dataset) is None:
-                raise ValueError(f"{args.dataset}: no dataset runtime declaration")
+            descriptor = dataset_runtime.execution_descriptor if execution else dataset_runtime.descriptor
+            if descriptor(args.dataset) is None:
+                kind = "execution runtime" if execution else "runtime"
+                raise ValueError(f"{args.dataset}: no dataset {kind} declaration")
             if not args.check:
-                result["runtime"] = dataset_runtime.prepare(
+                prepare = dataset_runtime.prepare_execution if execution else dataset_runtime.prepare
+                result["runtime"] = prepare(
                     args.dataset, python=args.python, root=args.runtime_root,
                     timeout_s=args.timeout)
-            readiness = DatasetProvider(args.dataset, timeout_s=args.timeout).check()
+            readiness = (dataset_runtime.check_execution(args.dataset, root=args.runtime_root)
+                         if execution else DatasetProvider(args.dataset, timeout_s=args.timeout).check())
             result.update(readiness)
         code = 0 if result.get("present") is True and result.get("status") == "ready" else 1
     except dataset_runtime.DatasetRuntimeUnavailable as exc:
-        result.update(present=False, status=exc.status, scope="dataset-provider-runtime", detail=str(exc))
+        result.update(present=False, status=exc.status, scope=runtime_scope, detail=str(exc))
         code = 1
     except subprocess.TimeoutExpired as exc:
-        result.update(present=False, status="unavailable", scope="dataset-runtime-preparation", detail=str(exc))
+        result.update(present=False, status="unavailable", scope=preparation_scope, detail=str(exc))
         code = 1
     except (ValueError, OSError) as exc:
         result.update(present=False, status="invalid" if isinstance(exc, ValueError) else "unavailable",
-                      scope="dataset-runtime-preparation", detail=str(exc))
+                      scope=preparation_scope, detail=str(exc))
         code = 2 if isinstance(exc, ValueError) else 1
 
     if args.json:

@@ -246,9 +246,12 @@ def reference_problems(reference: dict, current: dict, *,
     ref_id = dict((reference or {}).get("identity") or {})
     cur_id = dict((current or {}).get("identity") or {})
     problems = []
-    from harnessgrad import scoring_identity
+    from harnessgrad import scoring_identity, dataset_runtime_identity
     problems.extend(scoring_identity.problems(
         (reference or {}).get("scoring_identity"), (current or {}).get("scoring_identity")))
+    problems.extend(dataset_runtime_identity.problems(
+        (reference or {}).get("dataset_runtime_identity"),
+        (current or {}).get("dataset_runtime_identity")))
     for field in REFERENCE_FIXED:
         was, now = ref_id.get(field), cur_id.get(field)
         if was == now:

@@ -21,6 +21,7 @@ from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from harnessgrad import policies
 from harnessgrad import scoring_identity
+from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
 from harnessgrad.environments import _report_invalid
@@ -43,7 +44,7 @@ def _baseline_block(path: str, point: dict) -> dict:
     would throw away a real score because a side file moved.
     """
     block: dict = {"kind": "frozen", "path": path}
-    if point.get("scoring_identity") is not None:
+    if point.get("scoring_identity") is not None or point.get('dataset_runtime_identity') is not None:
         block["comparable"] = False
     try:
         reference = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -59,7 +60,13 @@ def _baseline_block(path: str, point: dict) -> dict:
         reference, point,
         reference_tasks=reference.get("per_task") or {},
         current_tasks=point.get("per_task") or {})
-    if reference.get("scoring_identity") is not None or point.get("scoring_identity") is not None:
+    for problem in dataset_runtime_identity_mod.problems(
+            reference.get('dataset_runtime_identity'), point.get('dataset_runtime_identity')):
+        if problem not in block['problems']:
+            block['problems'].append(problem)
+    if (reference.get("scoring_identity") is not None or point.get("scoring_identity") is not None
+            or reference.get('dataset_runtime_identity') is not None
+            or point.get('dataset_runtime_identity') is not None):
         block["comparable"] = not bool(block["problems"])
     return block
 
@@ -223,6 +230,8 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     except (OSError, json.JSONDecodeError) as exc:
         return f"{run_dir.name}/run_meta.json is unreadable: {exc}"
     errors = scoring_identity.problems(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
+    errors += dataset_runtime_identity_mod.problems(
+        meta.get('dataset_runtime_identity'), getattr(args, 'dataset_runtime_identity', None))
     if errors:
         return "; ".join(errors)
     recorded_from = meta.get("from_run") or meta.get("evaluated_from") or {}
@@ -246,12 +255,20 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     return None
 
 
-def _resume_runtime_mismatch(work: Path, prior: dict[str, dict]) -> str | None:
+def _resume_runtime_mismatch(work: Path, prior: dict[str, dict], *,
+                             dataset_runtime_identity: dict | None = None) -> str | None:
     """Resume may not bypass current Bun/transport admission or mix old trials."""
     from eval.containers import bun_runtime
     try:
+        dataset_runtime_identity_mod.admit(dataset_runtime_identity)
+        task_runtimes = dataset_runtime_identity_mod.project_many(dataset_runtime_identity, prior)
+        for task_id, record in prior.items():
+            expected = task_runtimes[task_id]
+            errors = dataset_runtime_identity_mod.problems(record.get('dataset_runtime_identity'), expected)
+            if errors:
+                return f"{task_id}: " + '; '.join(errors)
         current = bun_runtime.identity(work)
-    except bun_runtime.RuntimeUnavailable as exc:
+    except (bun_runtime.RuntimeUnavailable, OSError, TypeError, ValueError) as exc:
         return str(exc)
     if current is None:
         return None
@@ -263,7 +280,8 @@ def _resume_runtime_mismatch(work: Path, prior: dict[str, dict]) -> str | None:
     return None
 
 
-def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
+def _merge_prior(res: dict, prior: dict[str, dict], *,
+                 dataset_runtime_identity: dict | None = None) -> dict:
     """Fold the already-scored tasks back into a fresh `evaluate()` result.
 
     Counts of invalid and harness-failed tasks come from the same records, so the merged
@@ -273,6 +291,7 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     from eval.verification.isolation import observed_class
 
     merged = dict(res)
+    merged.update(dataset_runtime_identity_mod.fields(dataset_runtime_identity))
     per_task = dict(merged.get("per_task") or {})
     multiple_trials = merged.get("trials", 1) > 1
     trial_scores = dict(merged.get("per_task_trials") or {})
@@ -355,6 +374,12 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     """
     cache: dict = {}
     planned_ids = [t["task_id"] for t in tasks]
+    try:
+        current_runtime_identity = dataset_runtime_identity_mod.for_evaluation(
+            getattr(args, 'dataset_runtime_identity', None), tasks, setups, verifiers)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f'refusing dataset runtime identity: {exc}', level='error')
+        return 2
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}
     sha = commit_state(work, f"eval of {args.from_run} round "
@@ -390,6 +415,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                                          round_no=0, harness_sha=sha)
     execution_plan = trial_plan or ordinary_plan
     if execution_plan:
+        execution_plan.update(dataset_runtime_identity_mod.fields(current_runtime_identity))
         # Bind the selected declarations too: same seeds with a different user,
         # judge, task input or endpoint are not the same measurement.
         declarations = {'tasks': tasks, 'scorable': {t['task_id']: scorable[t['task_id']] for t in tasks},
@@ -433,7 +459,8 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         if prior:
             why = _resume_mismatch(run_dir, args,
                                    os.environ.get("HG_ALFWORLD_POOL", ""), sha)
-            why = why or _resume_runtime_mismatch(work, prior)
+            why = why or _resume_runtime_mismatch(
+                work, prior, dataset_runtime_identity=current_runtime_identity)
             if why:
                 console.note(f"refusing --resume: {why}", level="error")
                 return 2
@@ -450,11 +477,12 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        progress_dir=run_dir,
                        trials=args.trials, jobs=args.jobs,
                        setups=setups, verifiers=verifiers, envs=envs, run_id=run_id,
+                       **dataset_runtime_identity_mod.fields(current_runtime_identity),
                        run_seed=os.environ["HARNESSGRAD_SEED"],
                        recordings_root=run_dir / "recordings", round_no=0,
                        **({'persist_trial_report': False} if execution_plan else {}))
     if prior:
-        res = _merge_prior(res, prior)
+        res = _merge_prior(res, prior, dataset_runtime_identity=current_runtime_identity)
     if trial_plan:
         fresh_rows = (res.get('repeated_trials') or {}).get('results', [])
         report = repeated_trials.aggregate(trial_plan['manifest'], old_trial_rows + fresh_rows,
@@ -520,6 +548,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                   "selection_basis_round": 0, "selected_within": "eval"},
         scores=[res["per_task"][t] for t in scored], task_ids=scored,
         scoring_identity=getattr(args, "scoring_identity", None),
+        dataset_runtime_identity=current_runtime_identity,
         train_scores=None, train_ids=None, split=split,
         env_record=_env_record(envs, scored),
         invalid=res.get("invalid"),

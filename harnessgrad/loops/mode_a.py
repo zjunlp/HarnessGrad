@@ -33,6 +33,7 @@ from harnessgrad import components
 from harnessgrad import config as platform_config
 from harnessgrad import policies
 from harnessgrad import scoring_identity
+from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
 from harnessgrad import snapshot
 from harnessgrad.channel import _stage_for_method
 from harnessgrad.environments import _env_record
@@ -92,7 +93,8 @@ def _no_loadable_change(changed: list[str], unreachable: list[str]) -> dict | No
     }
 
 
-def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | None = None) -> dict | None:
+def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | None = None,
+                     dataset_runtime_identity: dict | None = None) -> dict | None:
     """The earlier point that already measured **this exact harness**, or None.
 
     `identity.harness_sha` is a *content address* -- `ckpt.git_state.commit_state`
@@ -106,8 +108,9 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
     """
     from eval.containers import bun_runtime
     try:
+        dataset_runtime_identity_mod.admit(dataset_runtime_identity)
         current = bun_runtime.identity(repo) if repo is not None else None
-    except bun_runtime.RuntimeUnavailable:
+    except (bun_runtime.RuntimeUnavailable, OSError, TypeError, ValueError):
         # Let normal evaluation report the unavailable runtime; never reuse scores
         # to bypass preparation or a changed compatibility transport.
         return None
@@ -115,6 +118,9 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
         if (point.get("identity") or {}).get("harness_sha") != sha:
             continue
         if (point.get("sampling") or {}).get("trials", trials) != trials:
+            continue
+        if dataset_runtime_identity_mod.problems(
+                point.get('dataset_runtime_identity'), dataset_runtime_identity):
             continue
         if current is not None:
             records = (point.get("env") or {}).get("harness_runtime") or []
@@ -715,10 +721,26 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # after committing the round, so the round had a state and a diff and no curve point.
         # A reused round spends no evaluation time, which is what `dt` should then say.
         t0 = time.time()
+        reuse_identity, runtime_reuse_error = None, False
+        if has_manifest and (declared_point is not None or getattr(args, 'reuse_identical', False)):
+            try:
+                reuse_identity = dataset_runtime_identity_mod.for_evaluation(
+                    getattr(args, 'dataset_runtime_identity', None), tasks, setups, verifiers)
+                if getattr(args, 'dataset_runtime_identity', None) is not None:
+                    # Curve points describe the fixed run plan, including H0's full pool.
+                    reuse_identity = args.dataset_runtime_identity
+                    dataset_runtime_identity_mod.admit(reuse_identity)
+            except (OSError, TypeError, ValueError):
+                runtime_reuse_error = True
+        if declared_point is not None and (runtime_reuse_error or dataset_runtime_identity_mod.problems(
+                declared_point.get('dataset_runtime_identity'), reuse_identity)):
+            declared_point = None
         prior_point = declared_point
         if prior_point is None:
-            prior_point = (_identical_prior(curve, sha, args.trials, repo=work)
-                           if (has_manifest and getattr(args, "reuse_identical", False))
+            prior_point = (_identical_prior(curve, sha, args.trials, repo=work,
+                                           dataset_runtime_identity=reuse_identity)
+                           if (has_manifest and not runtime_reuse_error
+                               and getattr(args, "reuse_identical", False))
                            else None)
         if prior_point is not None:
             reused_from = prior_point.get("round")
@@ -728,6 +750,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 f"({sha[:12]}); reusing that measurement instead of spending "
                 f"{len(tasks)} task runs", level="info")
             res = {"per_task": dict(prior_point.get("per_task") or {}),
+                   **dataset_runtime_identity_mod.fields(reuse_identity),
                    "invalid": [], "harness_failed": [],
                    "trials": (prior_point.get("sampling") or {}).get("trials", args.trials),
                    "reused_from": reused_from,
@@ -738,9 +761,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             res = (evaluate(work, tasks, scorable, cache, harness_sha=sha, jobs=args.jobs,
                             trials=args.trials, progress_dir=run_dir,
                             sandbox=args.sandbox, setups=setups, verifiers=verifiers,
-                        envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
-                        recordings_root=run_dir / "recordings",
-                        round_no=r)
+                            **dataset_runtime_identity_mod.fields(getattr(args, 'dataset_runtime_identity', None)),
+                            envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
+                            recordings_root=run_dir / "recordings",
+                            round_no=r)
                    if has_manifest else None)
         _require_untampered(res)
         _report_invalid(res, args.dataset)
@@ -786,6 +810,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                                gpu_budget=getattr(args, "gpu_budget", None)),
             sampling=sampling,
             scoring_identity=getattr(args, "scoring_identity", None),
+            dataset_runtime_identity=(getattr(args, 'dataset_runtime_identity', None)
+                if getattr(args, 'dataset_runtime_identity', None) is not None
+                else (res or {}).get('dataset_runtime_identity')),
             scores=[res["per_task"][t] for t in _scored(res, task_ids)],
             task_ids=_scored(res, task_ids),
             train_scores=[res["per_task"][t] for t in _scored(res, train_ids)],
@@ -973,7 +1000,14 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             point["score_geomean"] = round(policies.geomean(list(studied.values())), 6)
             scoring_problems = scoring_identity.problems(
                 baseline_point.get("scoring_identity"), point.get("scoring_identity"))
-            if baseline_point.get("scoring_identity") is not None or point.get("scoring_identity") is not None:
+            runtime_problems = dataset_runtime_identity_mod.problems(
+                baseline_point.get('dataset_runtime_identity'), point.get('dataset_runtime_identity'))
+            for problem in runtime_problems:
+                if problem not in point['baseline']['problems']:
+                    point['baseline']['problems'].append(problem)
+            if (baseline_point.get("scoring_identity") is not None or point.get("scoring_identity") is not None
+                    or baseline_point.get('dataset_runtime_identity') is not None
+                    or point.get('dataset_runtime_identity') is not None):
                 point["baseline"]["comparable"] = not bool(point["baseline"]["problems"])
             # **The other direction.** `capability_floor` records only where a candidate is
             # *below* the baseline, because Anthropic's criterion is a disqualification.
@@ -984,7 +1018,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             # points, so the comparison is paired and the discordant pairs are the signal.
             # Recorded beside the floor, not instead of it: one says "this candidate is
             # safely no worse", the other says "this candidate is better than chance allows".
-            if not scoring_problems:
+            if not scoring_problems and not runtime_problems:
                 point["capability_floor"] = {
                     "baseline": f"round-{baseline_point.get('round', 0)}",
                     **policies.floor_violations(

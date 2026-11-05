@@ -10,13 +10,14 @@ Python modules from a dirty source tree.
 | Component | Checkout resources referenced | Wheel declaration | Verified scope |
 | --- | --- | --- | --- |
 | GSM8K shared QA scaffold | `data/scaffolds/qa/cli/qa`, `prediction.schema.json`, Python verifier and scaffold modules, GSM8K adapter, `gsm8k/runtime.json` and `requirements-load.txt` | Exact package-data entries for the extensionless CLI, schema and provider declaration; Python modules via namespace discovery | Offline installed-wheel synthetic row: actor `qa submit`, re-materialized verifier inputs and the adapter's decimal-aware scorer reach reward 1. The provider declaration is shipped separately from its external dependency artifact; preparation still requires uv and the pinned package. |
+| CostBench execution-runtime declaration | `data/datasets/costbench/execution-runtime.json` and `requirements.lock`; runtime manager and execution helper Python modules | Exact package-data entries for the two declaration/lock files; Python modules via namespace discovery | These exact resource bytes are checked by the installed-wheel resource contract. The prepared venv, upstream bundle, selected cases, source pins and remaining actor/scorer assets are separate resources. This does not establish complete CostBench static/dynamic execution from a wheel; use the reviewed checkout and explicitly prepared external execution artifact. |
 | Codex task Harness | `agent.py`, `codex_runtime.py`, `harness.json`, `README.md` | Python modules via namespace discovery; exact JSON and README package-data entries | Declared components are checked by the installed-wheel resource contract. Codex itself remains an external installation: prepare local bindings and validate the chosen task images separately. |
 | OpenClaw task Harness | `agent.py`, `openclaw_runtime.py`, `harness.json`, `runtime-identity.json`, `prompt.md`, `config.json`, `README.md` | Python modules via namespace discovery; exact JSON, prompt and README package-data entries | The template and preparation tool ship independently of the external OpenClaw/Node installation. Prepare the supported release before measurement; this adapter declares files environments only. |
 | OpenCode task Harness | `agent.py`, `opencode_runtime.py`, `harness.json`, `README.md` | Python modules via namespace discovery; exact JSON and README package-data entries | The portable template selects external v1 source and Bun during explicit preparation. Source, dependencies and model-backed task quality remain external provisioning obligations. |
 | miniSWE task Harness | `agent.py`, `mock_model.py`, `harness.json`, `requirements.txt`, `README.md` | Python modules via namespace discovery; exact JSON, requirements and README package-data entries | Dependencies are provisioned through the shared ABI-matched overlay mechanism. The executing interpreter, files/exec declaration and platform runtime provenance are retained. |
 | ALFWorld / ScienceWorld / Jericho / Bird / Chess native runtimes | `data/runtimes/*-native.json` and individually pinned native artifacts | Not included | Not wheel-ready. Their manifests include digest-bound runtime sources, targets and environment. Do not rewrite paths or repin to simulate portability. |
 | AppWorld / ALFWorld / Bird native CLIs | Dataset-specific extensionless CLIs and supporting assets | Not included by the GSM8K entries | Not validated from wheel; use a reviewed checkout and provisioned dataset/runtime. |
-| Kumo, CostBench, MemoryAgentBench and native research adapters | Source inventories, locked resources and/or native provenance under adapter directories | Not generally included | Catalog visibility does not mean installed execution support. See `docs/clean-install-validation.md`. |
+| Kumo, MemoryAgentBench and native research adapters | Source inventories, locked resources and/or native provenance under adapter directories | Not generally included | Catalog visibility does not mean installed execution support. See `docs/clean-install-validation.md`. |
 
 ## Maintain the inventory
 
@@ -30,8 +31,9 @@ credentials or unreviewed runtime caches. Record what was skipped, and retain
 licenses and immutable provenance. If the scorer itself uses an adapter-specific
 metric rather than an upstream metric, state its real identity.
 
-The test `tests/quality/test_clean_install_contract.py` checks the GSM8K path
-above and declared bundled-harness components, including exclusion of synthetic
-untracked non-Python data. It also demonstrates the known remaining untracked
+The test `tests/quality/test_clean_install_contract.py` checks the GSM8K path,
+the two CostBench declaration/lock resources and declared bundled-harness
+components, including exclusion of synthetic untracked non-Python data.
+It also demonstrates the known remaining untracked
 Python module discovery risk. Neither this file nor that test authorizes a real
 benchmark or proves all external dependencies are installed.

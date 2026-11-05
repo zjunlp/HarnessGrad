@@ -89,6 +89,7 @@ def test_rejected_requests_preserve_scoring_and_real_failures(tmp_path, monkeypa
         spec = json.loads(setup['tool_relay']['content'])
         spec['dataset_root'] = str(database)
         setup['tool_relay']['content'] = json.dumps(spec)
+        setup['tool_relay']['read_paths'].append(str(index.parent.resolve()))
     elif outcome == 'budget':
         # The initial status consumes this explicit test budget; the first turn
         # must be refused even though malformed envelopes do not consume calls.

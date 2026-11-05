@@ -28,6 +28,9 @@ trials, and the effective agent model, backend and endpoint. A different model o
 set is a *different* H0, and the tool measures one instead of reusing.
 An explicit split selection is part of this identity too; split files are hashed by content.
 An opted-in adapter also includes its frozen scoring identity in this configuration.
+Managed dataset runtimes are preflighted for the selected tasks, including in
+dry-run mode. Their actual artifact identities must also match the finished
+driver records before this tool publishes or reuses the H0 configuration.
 """
 from __future__ import annotations
 
@@ -42,6 +45,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from harnessgrad import scoring_identity
+from harnessgrad import dataset_runtime_identity
 from harnessgrad import h0_identity
 from harnessgrad import config as platform_config
 
@@ -87,7 +91,11 @@ def child_environment(args) -> dict[str, str]:
 def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict:
     """What makes two H0 measurements the same measurement."""
     ids = study_ids_from(args.study_ids) if study_ids is None else study_ids
-    agent = platform_config.load(child_environment(args) if env is None else env).agent
+    environment = dict(child_environment(args) if env is None else env)
+    agent = platform_config.load(environment).agent
+    if args.study_ids is not None:
+        for key in ("HG_APPWORLD_STUDY_IDS", "HG_ALFWORLD_STUDY_IDS"):
+            environment[key] = str(args.study_ids.resolve())
     split = getattr(args, "split", "declared")
     split_fields = {}
     if split in ("default", "official"):
@@ -110,6 +118,9 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         "sampling": getattr(args, "sampling", "all"),
         **split_fields,
         **scoring_identity.fields(scoring_identity.resolve(args.dataset)),
+        **dataset_runtime_identity.fields(dataset_runtime_identity.resolve_h0(
+            args.dataset, side=args.side, task_ids=ids, split=split,
+            sampling=getattr(args, "sampling", "all"), env=environment)),
     }
 
 
@@ -128,6 +139,7 @@ def points(path: pathlib.Path) -> list[dict]:
 
 def find_existing(config: dict, runs_root: pathlib.Path) -> tuple[pathlib.Path, dict] | None:
     """A valid H0 already recorded for this configuration, or None."""
+    dataset_runtime_identity.admit(config.get("dataset_runtime_identity"))
     for run in sorted(runs_root.glob("h0-" + config["dataset"] + "-*")):
         h0 = run / "h0.json"
         meta = run / "run_meta.json"
@@ -162,7 +174,7 @@ def find_existing(config: dict, runs_root: pathlib.Path) -> tuple[pathlib.Path, 
 
 
 def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_ids=None,
-           configuration=None) -> dict:
+           configuration=None, runtime=None) -> dict:
     """Refuse to call something an H0 unless it is a complete, valid measurement."""
     h0 = run / "h0.json"
     if not h0.is_file():
@@ -172,6 +184,22 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
     per_task = base.get("per_task") or {}
     invalid = base.get("invalid") or {}
     problems = []
+    if configuration is not None:
+        runtime = configuration.get("dataset_runtime_identity")
+    meta_path = run / "run_meta.json"
+    metadata = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
+    curve = points(run / "curve.jsonl")
+    recorded_runtimes = [payload.get("dataset_runtime_identity"), base.get("dataset_runtime_identity"),
+                         metadata.get("dataset_runtime_identity"),
+                         curve[0].get("dataset_runtime_identity") if curve else None]
+    if isinstance(metadata.get("h0_configuration"), dict):
+        recorded_runtimes.append(metadata["h0_configuration"].get("dataset_runtime_identity"))
+    for recorded in recorded_runtimes:
+        problems.extend(dataset_runtime_identity.problems(recorded, runtime))
+    try:
+        dataset_runtime_identity.admit(runtime)
+    except (OSError, TypeError, ValueError) as exc:
+        problems.append(str(exc))
     if configuration is not None:
         meta_path = run / "run_meta.json"
         meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
@@ -209,7 +237,11 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
         problems.append("no h0_sha recorded")
     if problems:
         raise SystemExit(f"{run.name}: refusing to publish this as H0: " + "; ".join(problems))
-    return {"score": base.get("score"), "n_tasks": len(per_task),
+    # evaluate() retains per-task results; older/raw payloads need not carry a mean.
+    score = base.get("score")
+    if score is None:
+        score = sum(per_task.values()) / len(per_task)
+    return {"score": score, "n_tasks": len(per_task),
             "h0_sha": payload.get("h0_sha")}
 
 

@@ -542,6 +542,18 @@ def _verifier_runtime_paths(workdir: Path, spec: dict, options: dict, bindings) 
 def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dict:
     """Fail closed on runtime bind errors, then dispatch the existing scorer routes."""
     try:
+        python_binding = (verifier or {}).get("python_runtime")
+        if "python_runtime" in (verifier or {}):
+            try:
+                from harnessgrad.dataset_runtime import admit_binding
+                argv = (verifier or {}).get("argv") or []
+                if len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
+                    raise ValueError("requires isolated, bytecode-free Python startup")
+                runtime = admit_binding(python_binding, "verifier", python=argv[0] if argv else None)
+                if verifier.get("runtime_paths") != runtime["runtime_paths"]:
+                    raise ValueError("runtime_paths differ from the bound Python runtime")
+            except (OSError, ValueError, RuntimeError) as exc:
+                raise ImmutableRuntimeUnavailable(f"verifier Python runtime: {exc}") from exc
         bindings = (*options.get("immutable_runtimes", ()),
                     *projections((verifier or {}).get("inputs")))
         if bindings:
@@ -568,7 +580,10 @@ def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dic
                 return {"kind": "command", "passed": False, "score": None,
                         "outcome": "unmeasured", "unmeasured": str(exc)}
         if judge_spec is None:
-            return apply(_verify_dispatch(workdir, verifier, answer, **options), contract)
+            verdict = apply(_verify_dispatch(workdir, verifier, answer, **options), contract)
+            if python_binding is not None:
+                verdict["python_runtime"] = dict(python_binding)
+            return verdict
         from eval.service.judge import Judge, JudgeUnavailable
         try:
             if (not options.get("sandbox") or (options.get("env") or {}).get("kind", "files") != "files"
@@ -582,6 +597,8 @@ def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dic
             if report["faults"]:
                 verdict.update(score=None, passed=False, outcome="unmeasured",
                                unmeasured="judge call or transport failed")
+            if python_binding is not None:
+                verdict["python_runtime"] = dict(python_binding)
             return apply(verdict, contract)
         except (JudgeUnavailable, ValueError, OSError) as exc:
             return {"kind": "command", "passed": False, "score": None,

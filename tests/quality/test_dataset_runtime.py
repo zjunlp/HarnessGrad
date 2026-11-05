@@ -37,7 +37,7 @@ def environment(tmp_path, monkeypatch):
         if args[1] == "venv":
             # The manager must build at the eventual physical path, without exposing
             # an index a second reader could mistake for a finished environment.
-            assert not list((tmp_path / "store").glob("*/ready.json"))
+            assert not (Path(args[-1]).parents[2] / "ready.json").exists()
             subprocess.run([sys.executable, "-m", "venv", "--without-pip", args[-1]],
                            check=True, capture_output=True, text=True)
             return ""

@@ -74,6 +74,7 @@ exclude = ["data.authored*", "data.candidates*"]
 # extensionless and is intentionally listed rather than matched by a wildcard.
 "data.scaffolds.qa" = ["prediction.schema.json", "cli/qa"]
 "data.datasets.gsm8k" = ["runtime.json", "requirements-load.txt"]
+"data.datasets.costbench" = ["execution-runtime.json", "requirements.lock"]
 "harnessgrad.improvers" = ["improvers.json", "launchable.json", "skill.md"]
 "harnessgrad.runtime" = ["eight_stage_protocol.schema.json"]
 "methods" = ["dsh-improver"]

@@ -120,6 +120,8 @@ def test_eval_resume_checks_identity_without_rewriting_metadata(tmp_path):
 @pytest.mark.parametrize("dataset", ["appworld", "gsm8k", "memoryagentbench", "personamem_v2", "tau3_bench"])
 def test_unopted_h0_configuration_keeps_scorer_fields_absent(dataset, monkeypatch):
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    # Runtime preparation is tested separately; this case isolates scoring opt-in.
+    monkeypatch.setattr(prepare_h0.dataset_runtime_identity, "resolve_h0", lambda *a, **k: None)
     args = SimpleNamespace(dataset=dataset, side="train", study_ids=None,
                            model="agent", endpoint="endpoint", trials=1)
     assert prepare_h0.configuration(args) == {

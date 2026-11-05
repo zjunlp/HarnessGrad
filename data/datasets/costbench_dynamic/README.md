@@ -31,7 +31,7 @@ filter all tools outside the named range. A banned tool remains visible and its
 failed invocation is charged and retained in the benchmark's valid tool path.
 The actor and reference may ban different tools because their paths differ.
 
-`python3 costbench.py show` reads the relay's **current** query and schemas.
+`python costbench.py show` reads the relay's **current** query and schemas.
 Intervention responses return updated schemas or a new user message as relevant.
 Inspection consumes no turn and cannot reset or reconfigure the environment.
 Future schedules, replacement preferences, random seeds, reference plans and
@@ -72,28 +72,54 @@ recalculation works for both splits. No upstream source file is changed.
 
 ## Preparation and controls
 
-First prepare the existing static dataset. Then, using the pinned Python 3.12
-runtime:
+The static and dynamic adapters share the managed `costbench` Python 3.12
+execution artifact. Platform Python can be 3.12+ and does not import the
+execution dependencies. For already prepared static and dynamic data, only run:
 
 ```bash
 export HG_DATA_COSTBENCH=/absolute/path/outside/repository/costbench
-"$HG_DATA_COSTBENCH/runtime/bin/python" data/datasets/costbench_dynamic/prepare.py \
-  --root "$HG_DATA_COSTBENCH"
+python tools/prepare_dataset.py --dataset costbench --runtime execution
+python tools/prepare_dataset.py --dataset costbench --runtime execution --check --json
 ```
 
-Preparation verifies the static manifest and released queries, freezes private
+This does not regenerate data or repeat the full gold audit. The check only
+verifies the execution artifact. `HG_DATASET_RUNTIME_ROOT` selects its external
+store, defaulting to `~/.cache/harnessgrad/dataset-runtimes`.
+`HG_DATA_COSTBENCH_RUNTIME` and the old `$HG_DATA_COSTBENCH/runtime` path no longer
+select either adapter's execution environment. Both expose the selected managed
+path through their lazy `RUNTIME` attribute.
+
+For first-time dynamic data preparation, first complete the static adapter's
+[full preparation](../costbench/README.md#preparation-and-controls). Then run the
+dynamic audit from the platform environment:
+
+```bash
+python data/datasets/costbench_dynamic/prepare.py --root "$HG_DATA_COSTBENCH" --install
+```
+
+`--install` prepares or verifies the same managed artifact and restarts under its
+Python with `-I -B`; `--root` and `--smoke` are preserved. Preparation verifies the static manifest and released queries, freezes private
 plans, executes every dynamic gold trajectory, and writes
 `dynamic-prepared-v1/{manifest.json,gold-audit.json,tasks/}`. Each audit checks
 reference path equality, goal attainment, answer correctness and exact reference
 cost. `--smoke` instead writes a separate 48-case diagnostic across all modes,
 splits and domains. Neither preparation calls a model or changes static artifacts.
 
+Both adapters bind the same artifact to their service and verifier roles.
+Launchers recheck the specified manifest and contents before execution rather
+than selecting a replacement from the latest index. The service has explicit
+read-only code/input mounts, private HOME/temp/cache/cwd and no ambient
+credentials or model socket; the scorer uses the existing read-only verifier
+sandbox. Their receipts/evidence record actual interpreter and package origins.
+See the static adapter's [environment description](../costbench/README.md#preparation-and-controls) for the full boundary;
+H0, measurement-cache and resume identity binding remain outside this stage.
+
 ```bash
-python3 data/datasets/costbench_dynamic/control.py --oracle --platform \
+python data/datasets/costbench_dynamic/control.py --oracle --platform \
   --task-id costbench_dynamic/cost_change/test/Query00001
-python3 data/datasets/costbench_dynamic/control.py --noop --platform \
+python data/datasets/costbench_dynamic/control.py --noop --platform \
   --task-id costbench_dynamic/ban_tool/test/Query00001
-python3 -m pytest -q tests/quality/test_costbench_dynamic_dataset.py \
+python -m pytest -q tests/quality/test_costbench_dynamic_dataset.py \
   tests/quality/test_costbench_dynamic_runtime.py \
   tests/quality/test_costbench_dynamic_scoring.py \
   --basetemp=/tmp/hg-costbench-dynamic-tests
@@ -104,10 +130,15 @@ actors receive no oracle. Platform tests cover both splits and every mode with
 oracle and no-op arms, current-schema inspection, denied reconfiguration and
 forged actor records. These are no-model controls, not model performance results;
 the previous static API runs do not constitute a dynamic API evaluation.
+Direct controls without `--platform` also keep the bound service and sandboxed
+scorer; they do not inject the execution environment's site-packages into
+platform Python.
 
 Aggregate complete platform trial archives with `data/datasets/costbench/report.py --mode MODE`
-and an explicit `--expected-cells` manifest, plus the same `--bundle`, `--runtime`
-and archive arguments used by the static report. Bare verifier evidence is not
+and an explicit `--expected-cells` manifest, plus the same `--bundle`
+and archive arguments used by the static report. Optional `--runtime` asserts the
+selected managed artifact's path; the report verifies it and uses its Python with
+`-I -B` for aggregation. Bare verifier evidence is not
 accepted because it omits platform validity; retain the standard run layout with
 final progress and ordinary task indexes. A report accepts one mode and
 rejects static/dynamic or cross-mode mixing; compare train and test separately.

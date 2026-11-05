@@ -73,6 +73,7 @@ from harnessgrad import experiments
 from harnessgrad import readiness
 from harnessgrad import slots
 from harnessgrad import scoring_identity
+from harnessgrad import dataset_runtime_identity
 from harnessgrad.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
@@ -82,7 +83,8 @@ from harnessgrad.environments import (
     _check_env_kinds, _env_record, _narrow_to_run, _report_harness_failed,
     _report_invalid, _required_env_kinds, _resolve_envs, _warn_missing_overlay)
 from harnessgrad.identity import _identity
-from harnessgrad.loops.eval_side import _eval_from_record, _eval_resume_seed, _eval_source, _run_eval_side
+from harnessgrad.loops.eval_side import (_eval_from_record, _eval_resume_seed, _eval_source,
+                                        _progress_results, _run_eval_side)
 from harnessgrad.loops.mode_a import _run_mode_a
 from harnessgrad.methods import PlatformTampered, _check_method_entrypoint
 from harnessgrad.records import (
@@ -336,10 +338,14 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
     meta_path = run_dir / "run_meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
     try:
+        runtime_identity = getattr(args, "dataset_runtime_identity", None)
+        dataset_runtime_identity.admit(runtime_identity)
+        dataset_runtime_identity.require_same(meta.get("dataset_runtime_identity"), runtime_identity)
         scoring_identity.require_same(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
         for point in existing:
+            dataset_runtime_identity.require_same(point.get("dataset_runtime_identity"), runtime_identity)
             scoring_identity.require_same(point.get("scoring_identity"), getattr(args, "scoring_identity", None))
-    except ValueError as exc:
+    except (OSError, TypeError, ValueError) as exc:
         raise ResumeRefused(str(exc)) from exc
     recorded_split = meta.get("split_sha")
     now_split = datasets.split_sha(split) if split else None
@@ -479,6 +485,7 @@ def _base_from_point(point: dict) -> dict:
     """
     identity = point.get("identity") or {}
     base = {
+        **dataset_runtime_identity.fields(point.get("dataset_runtime_identity")),
         "per_task": point.get("per_task") or {},
         "invalid": point.get("invalid"),
         "harness_failed": point.get("harness_failed"),
@@ -969,6 +976,7 @@ def _main(attempt: dict) -> int:
 
 
 def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
+    sources.enter_context(datasets.provider_session())
     ap = argparse.ArgumentParser(
         description=(
             "Ordinary runs have no universal filesystem-quota or backend-observer\n"
@@ -1565,6 +1573,12 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     except (OSError, TypeError, ValueError) as exc:
         console.note(f"invalid scoring profile: {exc}", level="error")
         return 2
+    try:
+        args.dataset_runtime_identity = dataset_runtime_identity.capture(
+            args.dataset, side_ids, setups, verifiers)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f"invalid dataset runtime identity: {exc}", level="error")
+        return 2
     verifier_kinds = sorted({v.get("kind", "answer") for v in verifiers.values()})
     # The record says **unified**, not the flag. `--mode` is accepted so existing scripts
     # keep working, but it selects nothing any more, and a point that said `run_mode: B`
@@ -1601,7 +1615,25 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 return 2
         try:
             scoring_identity.require_same(saved_meta.get("scoring_identity"), args.scoring_identity)
-        except ValueError as exc:
+            dataset_runtime_identity.require_same(
+                saved_meta.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+            curve_path = run_dir / "curve.jsonl"
+            if curve_path.is_file():
+                for line in curve_path.read_text().splitlines():
+                    if line.strip():
+                        point = json.loads(line)
+                        dataset_runtime_identity.require_same(
+                            point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+            if args.side == "eval":
+                prior = _progress_results(run_dir)
+                expected = dataset_runtime_identity.project_many(args.dataset_runtime_identity, prior)
+                for tid, record in prior.items():
+                    if (args.dataset_runtime_identity is not None
+                            or record.get("dataset_runtime_identity") is not None) and tid not in side_ids:
+                        raise ValueError("dataset_runtime_identity progress names an unselected task")
+                    dataset_runtime_identity.require_same(
+                        record.get("dataset_runtime_identity"), expected[tid])
+        except (OSError, TypeError, ValueError) as exc:
             console.note(f"refusing --resume: {exc}", level="error")
             return 2
     if args.side == 'eval' and args.resume:
@@ -1639,7 +1671,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         # evidence of an incomplete diagnostic, never an inferred successful run.
         _write_run_meta(run_dir, run_id=run_id, dataset=args.dataset,
                         sampling_policy="diagnostic", enforcement=enforcement,
-                        **scoring_identity.fields(args.scoring_identity))
+                        **scoring_identity.fields(args.scoring_identity),
+                        **dataset_runtime_identity.fields(args.dataset_runtime_identity))
         def finalize_incomplete(detail):
             if not (run_dir / "diagnostic_receipt.json").exists():
                 save_policy_receipt({"trials": 1, "invalid": {
@@ -2038,6 +2071,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         harness_source=harness_source,
         scenario=scenario_receipt,
         **scoring_identity.fields(args.scoring_identity),
+        **dataset_runtime_identity.fields(args.dataset_runtime_identity),
         dataset=args.dataset, sampling_policy=args.sampling,
         enforcement=enforcement,
         diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
@@ -2302,10 +2336,21 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                              level="error")
                 return 2
             try:
+                dataset_runtime_identity.admit(args.dataset_runtime_identity)
+                donor_metadata = json.loads((donor_dir / "run_meta.json").read_text())
+                dataset_runtime_identity.require_same(
+                    donor_metadata.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+                dataset_runtime_identity.require_same(
+                    donor_point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
                 scoring_identity.require_same(donor_point.get("scoring_identity"), args.scoring_identity)
                 if payload is not None:
+                    dataset_runtime_identity.require_same(
+                        payload.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+                    dataset_runtime_identity.require_same(
+                        (payload.get("base") or {}).get("dataset_runtime_identity"),
+                        args.dataset_runtime_identity)
                     scoring_identity.require_same(payload.get("scoring_identity"), args.scoring_identity)
-            except ValueError as exc:
+            except (OSError, TypeError, ValueError) as exc:
                 console.note(f"refusing --h0-from {args.h0_from!r}: {exc}", level="error")
                 return 2
             if payload is not None:
@@ -2363,6 +2408,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             base = evaluate(work, tasks_all, scorable, cache, harness_sha=h0_sha,
                             trials=args.trials, jobs=args.jobs, progress_dir=run_dir,
                             sandbox=args.sandbox, setups=setups, verifiers=verifiers,
+                            **dataset_runtime_identity.fields(args.dataset_runtime_identity),
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
                             recordings_root=run_dir / "recordings",
                             **({"diagnostic_authorization": diagnostic_authorization}
@@ -2371,7 +2417,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             try:
                 (run_dir / "h0.json").write_text(
                     json.dumps({"base": base, "h0_sha": h0_sha, "run_id": run_id,
-                                **scoring_identity.fields(args.scoring_identity)}, default=str))
+                                **scoring_identity.fields(args.scoring_identity),
+                                **dataset_runtime_identity.fields(args.dataset_runtime_identity)}, default=str))
             except (TypeError, OSError) as exc:
                 console.note(f"could not write h0.json ({exc}); this run cannot be a --h0-from "
                              f"donor", level="warn")
@@ -2500,6 +2547,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                                 gpu_budget=args.gpu_budget),
             sampling=sampling,
             scoring_identity=args.scoring_identity,
+            dataset_runtime_identity=args.dataset_runtime_identity,
             scores=[base["per_task"][t] for t in _scored(base, task_ids)],
             task_ids=_scored(base, task_ids),
             train_scores=[base["per_task"][t] for t in _scored(base, train_ids)],

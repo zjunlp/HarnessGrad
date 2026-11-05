@@ -11,8 +11,10 @@ import threading
 import traceback
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from eval.service.tool_transport import Relay
+from execution import observation
 from bootstrap import bootstrap
 from runtime import CostBenchRuntime
 
@@ -109,7 +111,8 @@ def main():
     args.receipt.write_text(json.dumps({'transport': relay.receipt, 'stopped_cleanly': clean,
                                       'task_id': config['task_id'], 'failure': service.failure,
                                       'failure_detail': service.failure_detail,
-                                      'shutdown_failure': service.shutdown_failure}))
+                                      'shutdown_failure': service.shutdown_failure,
+                                      'python_runtime': observation()}))
     return 0 if clean and service.failure is None else 1
 
 

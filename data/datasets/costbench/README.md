@@ -10,8 +10,9 @@ Source: [JiayuJeff/CostBench](https://github.com/JiayuJeff/CostBench/tree/642406
 revision `6424069f3f773ade076bcedbed302ed47cfb1837`.
 The archive, executable source files, released query files and prepared manifest
 are pinned by SHA-256. `source-files.json` lists executable source pins;
-`requirements.lock` pins the isolated Python 3.12 environment. Large datasets and
-generated databases live outside the repository.
+`execution-runtime.json` selects Python 3.12 and `requirements.lock` pins its
+execution dependencies. The service and scorer share that managed artifact;
+large datasets, generated databases and runtime artifacts live outside the repository.
 
 ## Scope and protocol
 
@@ -108,14 +109,37 @@ filtered aggregate EMR.
 
 ## Preparation and controls
 
-Run from the repository with a Python 3.12 platform environment and `uv` available:
+Run from the repository with the activated platform Python environment (3.12+)
+and `uv` available. The platform does not need CostBench's compiled dependencies;
+the service and scorer execute in their own pinned Python 3.12 environment.
+
+For already prepared static or dynamic data, prepare only the execution artifact:
 
 ```bash
 export HG_DATA_COSTBENCH=/absolute/path/outside/repository/costbench
-python3 data/datasets/costbench/prepare.py --root "$HG_DATA_COSTBENCH" --install
+python tools/prepare_dataset.py --dataset costbench --runtime execution
+python tools/prepare_dataset.py --dataset costbench --runtime execution --check --json
 ```
 
-Preparation downloads the pinned archive, installs the isolated runtime,
+The check verifies only the runtime artifact; it does not download data, repeat
+the gold audit, start a service or score a task. `HG_DATASET_RUNTIME_ROOT` selects
+the external runtime store for preparation and subsequent execution; the default
+is `~/.cache/harnessgrad/dataset-runtimes`. The preparation CLI also accepts
+`--runtime-root` and `--python`. The static and dynamic adapters share the
+`costbench` execution descriptor. Their runtime selection no longer reads
+`HG_DATA_COSTBENCH_RUNTIME` or `$HG_DATA_COSTBENCH/runtime`; the lazy `RUNTIME`
+attribute returns the selected managed artifact path. Metadata discovery remains
+lazy and does not need prepared data or execution dependencies.
+
+For the first full data preparation, use:
+
+```bash
+export HG_DATA_COSTBENCH=/absolute/path/outside/repository/costbench
+python data/datasets/costbench/prepare.py --root "$HG_DATA_COSTBENCH" --install
+```
+
+`--install` prepares the managed execution artifact, then restarts preparation
+with its interpreter under `-I -B`. Preparation downloads the pinned archive,
 regenerates the official lookup databases, freezes each query's tool prices and
 optimal path, and executes **all train and test gold paths**. It writes
 `prepared-v1/manifest.json`, `gold-audit.json` and `raw-train-audit.json`.
@@ -124,17 +148,24 @@ partial preparation is diagnostic only. The generated lookup database is
 losslessly partitioned by location preference to avoid reloading a gigabyte per
 tool call. Each accessed shard is digest-checked before the original lookup runs.
 
-`HG_DATA_COSTBENCH_RUNTIME` optionally selects the installed runtime directory; by
-default it is `$HG_DATA_COSTBENCH/runtime`. The driver/verifier also requires
-Python 3.12 because it loads this runtime's compiled dependencies. Metadata
-discovery remains lazy and does not need prepared data or those dependencies.
+Selected service and verifier declarations bind the same exact artifact manifest
+and runtime ID with separate roles. Each launcher verifies that artifact before
+execution, without installing or switching to the latest store index. The service
+runs with `-I -B`, read-only runtime/code/input mounts and private HOME, temporary,
+cache, configuration and working directories. Its `read_paths` are an explicit
+trusted-input allowlist; it receives no ambient credentials or model socket.
+The verifier uses the same interpreter with the existing read-only sandbox
+runtime mounts. Service receipts and scorer evidence record the actual Python,
+prefix, version, isolated/read-only state, site paths and package origins.
+Actor isolation remains a separate platform boundary. These runtime identities
+are not yet uniformly bound to H0, measurement-cache or resume comparisons.
 
 ```bash
-python3 data/datasets/costbench/control.py --oracle --platform \
+python data/datasets/costbench/control.py --oracle --platform \
   --task-id costbench/test/Query00001 --output /tmp/costbench-test-gold.json
-python3 data/datasets/costbench/control.py --noop --platform \
+python data/datasets/costbench/control.py --noop --platform \
   --task-id costbench/train/Query00003 --output /tmp/costbench-train-noop.json
-python3 -m pytest -q tests/quality/test_costbench_dataset.py \
+python -m pytest -q tests/quality/test_costbench_dataset.py \
   tests/quality/test_costbench_official_scorer.py \
   tests/quality/test_costbench_preparation.py \
   tests/quality/test_costbench_model_failure.py \
@@ -143,8 +174,9 @@ python3 -m pytest -q tests/quality/test_costbench_dataset.py \
   --basetemp=/tmp/hg-costbench-tests
 ```
 
-Omit `--platform` for the direct relay/verifier control. Oracle actions are
-injected only into the control harness; normal task setup exposes only the
+Omit `--platform` for the direct relay/verifier control; its service and scorer
+still use the bound execution artifact and sandboxed verifier route. Oracle
+actions are injected only into the control harness; normal task setup exposes only the
 selected public query, official instructions, tool schemas and client. The
 private case, lookup tables, reference path and scorer are outside the actor's
 filesystem projection. The trusted relay seals its record after execution, and
@@ -178,7 +210,7 @@ Keep the upstream settings in the existing `.env`:
 | `HG_AGENT_API_KEY` | The existing provider credential |
 | `HG_AGENT_TIMEOUT_S` | Optional upstream timeout in seconds; the launcher defaults to 180 |
 
-Run from the repository root with the Python 3.12 platform environment. Set the
+Run from the repository root with the activated platform Python environment. Set the
 workspace and `.env` paths for your checkout. Exported `HG_AGENT_*` values take
 precedence over `.env`, following the driver's normal configuration rules.
 The following command checks launcher startup and shutdown with `driver.py --help`;
@@ -191,7 +223,7 @@ export COSTBENCH_FORWARDER="$COSTBENCH_WORKSPACE/reports/costbench-live-serial-2
 mkdir -p "$COSTBENCH_WORKSPACE/reports"
 export COSTBENCH_FORWARDER_LOG_DIR="$(mktemp -d "$COSTBENCH_WORKSPACE/reports/costbench-https-XXXXXXXX")"
 
-python3 - driver.py --help <<'PY'
+python - driver.py --help <<'PY'
 import hashlib
 import importlib.util
 import os
@@ -259,12 +291,19 @@ Build `expected-cells.json` before evaluation as a JSON list of
 `trial_evidence` index, retaining their standard run directory layout, then run:
 
 ```bash
-python3 data/datasets/costbench/report.py \
+python data/datasets/costbench/report.py \
   --bundle "$HG_DATA_COSTBENCH/bundle" \
-  --runtime "$HG_DATA_COSTBENCH/runtime" \
   --expected-cells /path/to/expected-cells.json \
   /path/to/run/trial-evidence/round-0/*/*/*.json
 ```
+
+The report selects the prepared managed execution artifact. Optional `--runtime`
+asserts its expected path. After
+validating the archives, the report verifies that artifact and, when needed,
+restarts under its interpreter with `-I -B` and a private minimal environment.
+It imports dependencies from that interpreter rather than injecting a foreign
+site-packages directory. This trusted offline aggregation CLI does not imply the
+service/scorer sandbox has been exercised by running the report alone.
 
 The report refuses missing, duplicate, unexpected, platform-invalid, unmeasured
 or unverified cells and mismatched archive/scorer identities. It reads each

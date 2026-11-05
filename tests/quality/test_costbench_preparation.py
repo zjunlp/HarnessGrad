@@ -29,6 +29,42 @@ def test_static_protocol_is_explicit():
         assert len(pins[relative]) == 64
 
 
+def test_install_prepares_and_uses_managed_python_before_full_data_preparation(tmp_path, monkeypatch):
+    import sys
+    from harnessgrad import dataset_runtime
+    mod = preparation()
+    calls = []
+    monkeypatch.setattr(dataset_runtime, 'prepare_execution', lambda name: (
+        calls.append(name) or {'python': '/selected/venv/bin/python'}))
+    monkeypatch.setattr(mod.subprocess, 'call', lambda argv: calls.append(argv) or 0)
+    monkeypatch.setattr(mod, 'prepare', lambda *args: pytest.fail('data prepared by platform Python'))
+    monkeypatch.setattr(sys, 'argv', ['prepare.py', '--install', '--root', str(tmp_path)])
+    assert mod.main() == 0
+    assert calls[0] == 'costbench'
+    assert calls[1][:4] == ['/selected/venv/bin/python', '-I', '-B', str(ASSETS / 'prepare.py')]
+    assert calls[1][4:] == ['--root', str(tmp_path), '--splits', 'train', 'test']
+
+
+@pytest.mark.parametrize('smoke', [False, True])
+def test_dynamic_install_preserves_root_and_smoke_with_managed_python(tmp_path, monkeypatch, smoke):
+    import sys
+    from harnessgrad import dataset_runtime
+    path = ASSETS.parent / 'costbench_dynamic/prepare.py'
+    spec = importlib.util.spec_from_file_location('dynamic_prepare_dispatch', path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    calls = []
+    monkeypatch.setattr(dataset_runtime, 'prepare_execution', lambda name: (
+        calls.append(name) or {'python': '/selected/venv/bin/python'}))
+    monkeypatch.setattr(mod.subprocess, 'call', lambda argv: calls.append(argv) or 0)
+    monkeypatch.setattr(mod, 'prepare', lambda *args: pytest.fail('data prepared by platform Python'))
+    argv = ['prepare.py', '--install', '--root', str(tmp_path)] + (['--smoke'] if smoke else [])
+    monkeypatch.setattr(sys, 'argv', argv)
+    assert mod.main() == 0 and calls[0] == 'costbench'
+    assert calls[1] == ['/selected/venv/bin/python', '-I', '-B', str(path),
+                        '--root', str(tmp_path), *(['--smoke'] if smoke else [])]
+
+
 def test_bootstrap_rejects_modified_source(tmp_path):
     mod = preparation()
     bundle = tmp_path / 'bundle'

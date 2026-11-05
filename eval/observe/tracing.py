@@ -466,7 +466,8 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                     measured: list[dict], unmeasured: dict | None,
                     *, diagnostic: dict | None = None,
                     enforcement: dict | None = None,
-                    trial_evidence: list[dict] | None = None) -> None:
+                    trial_evidence: list[dict] | None = None,
+                    dataset_runtime_identity: dict | None = None) -> None:
     """Write one task's result the moment it exists, not at the end of the round.
 
     **Measured, twice, and the second time cost two hours.** A round's results were
@@ -493,11 +494,14 @@ def _write_progress(progress_dir, round_no: int, tid: str,
     """
     if progress_dir is None:
         return
+    from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+    runtime_fields = dataset_runtime_identity_mod.fields(dataset_runtime_identity)
     try:
         dest = Path(progress_dir) / "progress" / f"round-{round_no}"
         dest.mkdir(parents=True, exist_ok=True)
         if unmeasured is not None:
             record = {"task_id": tid, "round": round_no, "invalid": unmeasured,
+                      **runtime_fields,
                       "exit_code": None,
                       "process_outcome": unmeasured.get("outcome")}
             if enforcement is not None:
@@ -567,6 +571,7 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                 break
         _write_progress_record(task_file(dest, f"{tid}.json"), json.dumps({
             "task_id": tid, "round": round_no,
+            **runtime_fields,
             **({"runtime_services": [r.get("runtime_services") for r in measured]}
                if any(r.get("runtime_services") for r in measured) else {}),
             "score": sum(scores) / len(scores) if scores else None,

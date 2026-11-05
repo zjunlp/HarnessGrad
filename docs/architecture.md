@@ -58,13 +58,36 @@ from private answers and resolves only selected execution declarations. This is
 dependency isolation for trusted adapter code, not a new security sandbox. Adapters
 without a descriptor retain their existing path.
 
+Trusted Python services and scorers can separately opt into
+`data/datasets/<name>/execution-runtime.json`. The same stdlib-only
+`harnessgrad/dataset_runtime.py` prepares and verifies these artifacts without
+importing `eval` or `tools`. CostBench static/dynamic share one execution artifact
+for their service and verifier; their loading code stays in platform Python.
+`SETUP.tool_relay.python_runtime` and `VERIFY.python_runtime` bind the exact
+physical artifact manifest, interpreter and role. Launch admission rechecks that
+artifact without selecting a replacement from the current index.
+[`python_service.py`](../eval/containers/python_service.py) provides the bound
+service's read-only dependencies and private state/environment; the verifier
+reuses `runtime_paths` and the existing sandbox. Actor isolation remains separate.
+GSM8K's provider descriptor/API and unbound legacy execution routes keep their
+existing behavior. Preparation and check commands are documented in
+[dataset runtime interfaces](dataset-runtime-interfaces.md#dataset-execution-runtime).
+`harnessgrad/dataset_runtime_identity.py` binds the actual loading artifact and
+selected task/role execution artifacts into metadata, H0 and curve points.
+Cache and progress records use task projections; H0, whole-point reuse and
+resume check identity and exact artifact contents before accepting old results.
+A bounded registry provider session prevents reselecting loading artifacts
+between catalog and declaration requests. Legacy records retain their shape;
+one missing or mismatched managed identity prevents reuse and paired comparison.
+This does not migrate τ³ to managed artifacts or claim system-library closure.
+
 The top-level package remains `eval`. Its implementations are grouped by
 concern; package initializers do not import implementations:
 
 | Package | Modules | Responsibility |
 | --- | --- | --- |
 | [`eval/run/`](../eval/run/) | [`runner.py`](../eval/run/runner.py), [`candidate.py`](../eval/run/candidate.py), [`metrics.py`](../eval/run/metrics.py), [`integrity.py`](../eval/run/integrity.py), [`task_contract.py`](../eval/run/task_contract.py) | Task execution, candidate validation, measurement and shared task contracts |
-| [`eval/containers/`](../eval/containers/) | [`container.py`](../eval/containers/container.py), [`container_state.py`](../eval/containers/container_state.py), [`sandbox.py`](../eval/containers/sandbox.py), [`harness_runtime.py`](../eval/containers/harness_runtime.py) | Container execution/state, host sandbox and harness dependency overlays |
+| [`eval/containers/`](../eval/containers/) | [`container.py`](../eval/containers/container.py), [`container_state.py`](../eval/containers/container_state.py), [`sandbox.py`](../eval/containers/sandbox.py), [`harness_runtime.py`](../eval/containers/harness_runtime.py), [`python_service.py`](../eval/containers/python_service.py) | Container execution/state, host sandbox, harness dependency overlays and explicitly bound trusted Python services |
 | [`eval/admission/`](../eval/admission/) | [`pilot_admission.py`](../eval/admission/pilot_admission.py), [`artifact_admission.py`](../eval/admission/artifact_admission.py), [`runner_admission.py`](../eval/admission/runner_admission.py), [`scorer_admission.py`](../eval/admission/scorer_admission.py), [`scorer_bundle.py`](../eval/admission/scorer_bundle.py), [`scorer_backend.py`](../eval/admission/scorer_backend.py), [`lifecycle_receipt.py`](../eval/admission/lifecycle_receipt.py) | Pilot, artifact, runner and scorer admission evidence and lifecycle receipts |
 | [`eval/service/`](../eval/service/) | [`services.py`](../eval/service/services.py), [`modelgate.py`](../eval/service/modelgate.py), [`unix_model_relay.py`](../eval/service/unix_model_relay.py), [`separated_stdio.py`](../eval/service/separated_stdio.py), [`stepwise_transport.py`](../eval/service/stepwise_transport.py) | Service lifecycle, model gateway, relay and stepwise/stdio transports |
 | [`eval/observe/`](../eval/observe/) | [`console.py`](../eval/observe/console.py), [`progress.py`](../eval/observe/progress.py), [`trace.py`](../eval/observe/trace.py), [`tracing.py`](../eval/observe/tracing.py), [`phases.py`](../eval/observe/phases.py) | Phase vocabulary, console/progress reporting and trace writing/reading |

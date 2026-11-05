@@ -330,7 +330,7 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/costbench/source.tar.gz`
 - **SHA256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
 
-> Run costbench/prepare.py using Python 3.12 and requirements.lock. Static sequence5, seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. Gold audit executes every task; generated search databases stay outside git.
+> Run costbench/prepare.py --install to prepare data with the managed Python 3.12 execution artifact. Static sequence5, seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. Gold audit executes every task; generated search databases stay outside git.
 
 ## `costbench_dynamic`
 
@@ -346,7 +346,7 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/costbench/source.tar.gz`
 - **SHA256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
 
-> Prepare static costbench first, then run costbench_dynamic/prepare.py. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
+> Prepare static costbench first, then run costbench_dynamic/prepare.py --install with the shared managed execution artifact. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
 
 ## `deepsearchqa`
 

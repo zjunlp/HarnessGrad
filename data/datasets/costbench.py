@@ -9,18 +9,18 @@ from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
-import sys
 
-from harnessgrad.paths import configured_path, dataset_root
+from harnessgrad.paths import dataset_root
+from data.scaffolds.asset_module import load as load_asset
 
 KIND = 'dataset'
+MANAGED_EXECUTION_RUNTIME = 'costbench'
 ORACLE_SOURCE = 'released'
 SPLIT_SOURCE = 'declared'
 ASSETS = Path(__file__).resolve().parent / 'costbench'
 
 DATASET_ROOT = dataset_root('costbench')
 PREPARED = DATASET_ROOT / 'prepared-v1'
-RUNTIME = configured_path('HG_DATA_COSTBENCH_RUNTIME', DATASET_ROOT / 'runtime')
 REVISION = '6424069f3f773ade076bcedbed302ed47cfb1837'
 ARCHIVE_SHA256 = 'b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844'
 MANIFEST_SHA256 = '7bcc4ba0bc653229b5536f625d797217b3b48f31764314d9d2a397e2e8332587'
@@ -74,15 +74,23 @@ def load():
     return [control_task(tid) for tid in roster()], {tid: METRIC for tid in roster()}
 
 
+def _execution():
+    return load_asset(ASSETS / 'execution.py')
+
+
 def _setup(tid, row):
     folder = PREPARED / row['path']
     public = (folder / 'public.json').read_bytes()
     if hashlib.sha256(public).hexdigest() != row['public_sha256']:
         raise ValueError('CostBench public task digest mismatch')
+    execution = _execution()
+    binding = execution.binding('service')
     return {'files': [{'path': 'costbench.py', 'from': str(ASSETS / 'cli/costbench.py')},
                       {'path': 'costbench_transport.py', 'from': str(TRANSPORT.resolve())},
                       {'path': 'costbench_public.json', 'content': public.decode()}],
-            'tool_relay': {'program': str(ASSETS / 'relay.py'), 'python': str(RUNTIME / 'bin/python'),
+            'tool_relay': {'program': str(ASSETS / 'relay.py'), 'python': binding['python'],
+                           'python_runtime': binding,
+                           'read_paths': execution.read_paths(ASSETS, TRANSPORT, folder, DATASET_ROOT),
                            'content_flag': '--case-spec', 'filename': 'case-spec.json',
                            'content': json.dumps({'case': str(folder / 'private.json'),
                                                  'sha256': row['private_sha256'],
@@ -95,13 +103,14 @@ def _setup(tid, row):
 
 
 def _verify(tid, row):
+    binding = _execution().binding('verifier')
     return {'kind': 'command',
-            'argv': [sys.executable, '-I', 'costbench_code/verify/check.py', '--task-id', tid,
+            'python_runtime': binding, 'runtime_paths': list(binding['runtime_paths']),
+            'argv': [binding['python'], '-I', '-B', 'costbench_code/verify/check.py', '--task-id', tid,
                      '--case-sha256', row['private_sha256']],
             'inputs': [{'path': 'costbench_code', 'from': str(ASSETS), 'immutable': True},
                        {'path': 'costbench_private.json', 'from': str(PREPARED / row['path'] / 'private.json')},
-                       {'path': 'costbench_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True},
-                       {'path': 'costbench_runtime', 'from': str(RUNTIME), 'immutable': True}],
+                       {'path': 'costbench_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True}],
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
             'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
             'trial_evidence': {'version': 1},
@@ -132,25 +141,18 @@ def downloads():
              'version': REVISION, 'url': f'https://codeload.github.com/JiayuJeff/CostBench/tar.gz/{REVISION}',
              'sha256': ARCHIVE_SHA256, 'size': 'pinned source archive; 1912 train and 381 test queries',
              'dst': 'source.tar.gz',
-             'note': 'Run costbench/prepare.py using Python 3.12 and requirements.lock. Static sequence5, '
+             'note': 'Run costbench/prepare.py --install to prepare data with the managed Python 3.12 execution artifact. Static sequence5, '
                      'seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. '
                      'Gold audit executes every task; generated search databases stay outside git.'}]
 
 
 def provision_status():
-    try:
-        rows = roster()
-        present = (RUNTIME / 'bin/python').is_file() and all(
-            (PREPARED / row['path'] / 'private.json').is_file()
-            and (PREPARED / row['path'] / 'public.json').is_file() for row in rows.values())
-        return {'root': str(DATASET_ROOT), 'present': present, 'tasks': len(rows),
-                'detail': 'static sequence5; train compatibility is declared separately'}
-    except (OSError, ValueError, KeyError) as exc:
-        return {'root': str(DATASET_ROOT), 'present': False, 'detail': str(exc)}
+    return _execution().provision_status(
+        DATASET_ROOT, PREPARED, roster, 'static sequence5; train compatibility is declared separately')
 
 
 def __getattr__(name):
-    """`SPLIT` and `OFFICIAL_EVAL` are read from the prepared manifest, lazily.
+    """Read split metadata lazily; RUNTIME selects an explicitly prepared artifact.
 
     When the payload is absent both raise `AttributeError`, not the `FileNotFoundError`
     the manifest read produces: `data/scaffolds/registry.py::load_split` and the audits
@@ -158,6 +160,8 @@ def __getattr__(name):
     unprovisioned dataset must not break discovery. `load()` is where the absence is
     reported, and it names the root.
     """
+    if name == 'RUNTIME':
+        return Path(_execution().runtime()['path'])
     if name not in ('SPLIT', 'OFFICIAL_EVAL'):
         raise AttributeError(name)
     try:

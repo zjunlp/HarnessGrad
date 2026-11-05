@@ -6,7 +6,6 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import sys
 import tempfile
 import uuid
@@ -85,20 +84,14 @@ def run(oracle, platform, task_id, work, *, attack=False, recordings_root=None):
         relay.stop()
         if relay.fault():
             raise RuntimeError(relay.fault())
-        record = relay.recording_input()
-        shutil.copytree(record['from'], work / record['path'])
-        for entry in verifier['inputs']:
-            dest = work / entry['path']
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            if entry.get('immutable'):
-                dest.symlink_to(entry['from'], target_is_directory=True)
-            else:
-                shutil.copyfile(entry['from'], dest)
-        proc = subprocess.run(verifier['argv'], cwd=work, capture_output=True, text=True, errors="replace")
-        reward, evidence = work / 'verifier/reward.txt', work / 'verifier/evidence.json'
-        return (float(reward.read_text()) if reward.exists() else None), {
-            'returncode': proc.returncode, 'stderr': proc.stderr,
-            'evidence': json.loads(evidence.read_text()) if evidence.exists() else None}
+        from eval.verification.verifier import _verify
+        verifier['inputs'].append(relay.recording_input())
+        result = _verify(work, verifier, '', sandbox=True, timeout_s=None,
+                         env=dataset.DEFAULT_ENV, task_id=task_id)
+        score = result.get('score')
+        return score, {'returncode': 0 if score is not None else 1,
+                       'stderr': result.get('unmeasured', ''),
+                       'evidence': result.get('evidence'), 'verdict': result}
     finally:
         relay.cleanup()
 

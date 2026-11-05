@@ -274,17 +274,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root',type=Path,default=DEFAULT_ROOT)
     parser.add_argument('--splits',nargs='+',choices=['test','train'],default=['train','test'])
-    parser.add_argument('--install',action='store_true',help='create isolated Python3.12 runtime with uv')
+    parser.add_argument('--install',action='store_true',help='prepare the managed execution runtime, then prepare data')
     args = parser.parse_args()
     if len(set(args.splits)) != len(args.splits):
         parser.error('--splits must not contain duplicates')
     args.root.mkdir(parents=True,exist_ok=True)
     if args.install:
-        runtime = args.root/'runtime'
-        if not (runtime/'bin/python').exists():
-            subprocess.run(['uv','venv','--python','3.12',str(runtime)],check=True)
-        subprocess.run(['uv','pip','install','--python',str(runtime/'bin/python'),'-r',str(ASSETS/'requirements.lock')],check=True)
-        command = [str(runtime/'bin/python'),str(Path(__file__).resolve()),'--root',str(args.root),'--splits',*args.splits]
+        from harnessgrad.dataset_runtime import prepare_execution
+        runtime = prepare_execution('costbench')
+        command = [runtime['python'], '-I', '-B', str(Path(__file__).resolve()),
+                   '--root',str(args.root),'--splits',*args.splits]
         return subprocess.call(command)
     prepare(args.root.resolve(),args.splits)
     return 0

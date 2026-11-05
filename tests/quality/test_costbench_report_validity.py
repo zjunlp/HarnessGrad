@@ -8,7 +8,7 @@ import sys
 import pytest
 
 from eval.run import runner
-from test_costbench_official_scorer import ASSETS, archive, evidence, reporting_functions
+from test_costbench_official_scorer import ASSETS, archive, evidence, reporting_functions, module
 from test_costbench_model_failure import (
     endpoint, selected, test_http_failure_does_not_become_task_score as http_control,
 )
@@ -110,7 +110,7 @@ def test_report_checks_final_progress_after_trial_archive(tmp_path, monkeypatch,
 
 @pytest.mark.parametrize('http_status,handling', [(429, 'recovered'), (200, 'healthy'), (200, 'spoofed')])
 def test_report_cli_uses_real_platform_validity(selected, tmp_path, monkeypatch, endpoint,
-                                               http_status, handling):
+                                               capsys, http_status, handling):
     # This existing control exercises the real runner, sandbox, relay and pinned
     # scorer against a local HTTP fixture. Oracle actions are control-only.
     http_control(selected, tmp_path, monkeypatch, endpoint, http_status, handling)
@@ -137,12 +137,39 @@ def test_report_cli_uses_real_platform_validity(selected, tmp_path, monkeypatch,
         assert result.returncode == 0, result.stderr
         report = json.loads(result.stdout)
         assert report['complete'] is True and report['primary_denominator'] == 1
+        assert report['python_runtime']['python'] == str(dataset.RUNTIME / 'bin/python')
+        assert report['python_runtime']['version'][:2] == [3, 12]
+        assert report['python_runtime']['isolated'] is True
         assert report['primary_mean'] == float(handling == 'healthy')
         assert report['official_raw'] == row['result']['verdict']['evidence']['official']['official']['official_raw']
         if handling == 'spoofed':
             assert row['result']['exit_code'] != 0
     assert paths[0].read_bytes() == saved_bytes
     if handling == 'healthy':
+        reporter = module('costbench_report_handoff', ASSETS / 'report.py')
+        restarts = []
+
+        def restart_without_discovery(argv, env):
+            # The already selected artifact remains valid even if publication
+            # disappears between the platform and scorer interpreter launches.
+            environment = {**env, 'HG_DATASET_RUNTIME_ROOT': str(tmp_path / 'empty-store')}
+            child = subprocess.run(argv, env=environment, capture_output=True, text=True, timeout=60)
+            restarts.append(child)
+            sys.stdout.write(child.stdout)
+            return child.returncode
+
+        with monkeypatch.context() as patch:
+            default_args = command[3:]
+            location = default_args.index('--runtime')
+            del default_args[location:location + 2]
+            patch.setattr(sys, 'argv', [str(ASSETS / 'report.py'), *default_args, str(paths[0])])
+            patch.setattr(reporter.subprocess, 'call', restart_without_discovery)
+            capsys.readouterr()
+            assert reporter.main() == 0
+            handed_off = json.loads(capsys.readouterr().out)
+        assert len(restarts) == 1
+        assert handed_off['python_runtime']['runtime_id'] == report['python_runtime']['runtime_id']
+        assert handed_off['python_runtime']['python'] == report['python_runtime']['python']
         # Whole run directories can move; a detached archive cannot establish
         # final validity. Changed progress must fail its existing index hash.
         relocated = tmp_path / 'relocated'

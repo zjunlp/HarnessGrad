@@ -14,6 +14,7 @@ import io
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tempfile
 
@@ -202,9 +203,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=dataset_root('costbench'))
     parser.add_argument('--smoke', action='store_true')
+    parser.add_argument('--install', action='store_true',
+                        help='prepare the managed execution runtime, then prepare data')
     args = parser.parse_args()
+    if args.install:
+        from harnessgrad.dataset_runtime import prepare_execution
+        runtime = prepare_execution('costbench')
+        command = [runtime['python'], '-I', '-B', str(Path(__file__).resolve()),
+                   '--root', str(args.root)]
+        if args.smoke:
+            command.append('--smoke')
+        return subprocess.call(command)
     prepare(args.root.resolve(), args.smoke)
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

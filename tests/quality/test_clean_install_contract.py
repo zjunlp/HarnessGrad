@@ -37,6 +37,8 @@ RESOURCES = (
     "data/scaffolds/qa/verify/check.py",
     "data/datasets/gsm8k/runtime.json",
     "data/datasets/gsm8k/requirements-load.txt",
+    "data/datasets/costbench/execution-runtime.json",
+    "data/datasets/costbench/requirements.lock",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
@@ -140,10 +142,16 @@ from pathlib import Path
 import harnessgrad
 from data.scaffolds import registry
 from data.scaffolds.aggregation import aggregation_policy
+from data.datasets import costbench, costbench_dynamic
+from harnessgrad.dataset_runtime import execution_descriptor
 assert not site.ENABLE_USER_SITE
 assert registry.published()
 assert len(registry.load_tasks('demo')[0]) == 8
 assert aggregation_policy('demo', 'run_reward')
+assert registry.provider('costbench') is None
+assert execution_descriptor('costbench')['python'] == '3.12'
+assert costbench._execution() is costbench_dynamic._execution()
+assert callable(costbench._execution().binding)
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)

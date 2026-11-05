@@ -44,6 +44,44 @@ _FIXTURE_NAMES = frozenset({"demo", "probe_set", "broken_service",
 # Only the trusted provider worker enters this scope. A process environment flag
 # must not turn off runtime selection for ordinary platform callers.
 _LOCAL_PROVIDER = ContextVar("harnessgrad_local_dataset_provider", default=False)
+_PROVIDER_SESSION = ContextVar("harnessgrad_dataset_provider_session", default=None)
+
+
+@contextmanager
+def provider_session():
+    """Keep one selected provider artifact within a single platform operation."""
+    token = _PROVIDER_SESSION.set({})
+    try:
+        yield
+    finally:
+        _PROVIDER_SESSION.reset(token)
+
+
+def provider_runtime(name):
+    """The artifact that actually served this session, without selecting another."""
+    session = _PROVIDER_SESSION.get()
+    client = (session or {}).get(name)
+    return None if client is None or client.runtime is None else dict(client.runtime)
+
+
+def managed_runtime(name):
+    """Static opt-in discovery for preparation tools; does not load an adapter."""
+    from harnessgrad.dataset_runtime import descriptor
+    if descriptor(name) is not None:
+        return True
+    root = Path(__file__).resolve().parents[1]
+    path = root / (f"{name}.py" if name in _FIXTURE_NAMES else f"datasets/{name}.py")
+    if not path.is_file():
+        return False
+    for node in ast.parse(path.read_bytes()).body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "MANAGED_EXECUTION_RUNTIME"
+                for target in node.targets):
+            value = ast.literal_eval(node.value)
+            if not isinstance(value, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", value):
+                raise ValueError("MANAGED_EXECUTION_RUNTIME must name its execution artifact")
+            return True
+    return False
 
 
 @contextmanager
@@ -65,11 +103,17 @@ def provider(name: str):
     if (_LOCAL_PROVIDER.get() or name in _FIXTURE_NAMES
             or not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", name)):
         return None
+    session = _PROVIDER_SESSION.get()
+    if session is not None and name in session:
+        return session[name]
     from harnessgrad.dataset_runtime import descriptor
     if descriptor(name) is None:
         return None
     from harnessgrad.dataset_provider import DatasetProvider
-    return DatasetProvider(name)
+    client = DatasetProvider(name, freeze_runtime=session is not None)
+    if session is not None:
+        session[name] = client
+    return client
 
 
 def module_name(name: str) -> str:
@@ -825,6 +869,16 @@ def _check_no_secrets(task: dict, name: str) -> None:
 def _check_setup(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: SETUP[{tid!r}] must be a dict")
+    relay = spec.get("tool_relay") or {}
+    if "python_runtime" in relay:
+        from harnessgrad.dataset_runtime import validate_binding
+        if not isinstance(relay.get("python"), str):
+            raise ValueError("bound Python service requires an explicit interpreter")
+        validate_binding(relay["python_runtime"], "service", python=relay["python"])
+        paths = relay.get("read_paths")
+        if (not isinstance(paths, list) or not paths
+                or any(not isinstance(path, str) or not Path(path).is_absolute() for path in paths)):
+            raise ValueError("bound Python service requires absolute read_paths")
     if ((spec.get("tool_relay") or {}).get("record")) is not None:
         from data.scaffolds.runtime_extensions import validate_record
         validate_record(spec["tool_relay"]["record"])
@@ -869,6 +923,14 @@ def _check_setup(spec, tid: str, name: str) -> None:
 def _check_verifier(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
+    if "python_runtime" in spec:
+        from harnessgrad.dataset_runtime import validate_binding
+        argv = spec.get("argv")
+        if not isinstance(argv, list) or len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
+            raise ValueError("bound Python verifier requires isolated, bytecode-free startup")
+        validate_binding(spec["python_runtime"], "verifier", python=argv[0])
+        if spec.get("runtime_paths") != spec["python_runtime"]["runtime_paths"]:
+            raise ValueError("verifier runtime_paths differ from the bound Python runtime")
     from data.scaffolds.scorer_isolation import declared_class
     declared_class(spec)
     if 'native_benchmark' in spec:

@@ -1,6 +1,7 @@
 """Execute a harness on a task set. Framework-owned (INTERFACE.md §0)."""
 from __future__ import annotations
 from harnessgrad import slots
+from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
 
 import concurrent.futures as futures
 import hashlib
@@ -1307,7 +1308,8 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              round_no: int = 0, trials: int = 1, jobs: int = 1,
              progress_dir: Path | None = None,
              diagnostic_authorization: Authorization | None = None,
-             persist_trial_report: bool = True) -> dict:
+             persist_trial_report: bool = True,
+             dataset_runtime_identity: dict | None = None) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1325,6 +1327,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                          recordings_root=recordings_root, round_no=round_no,
                          trials=trials, jobs=jobs, progress_dir=progress_dir,
                          persist_trial_report=persist_trial_report,
+                         dataset_runtime_identity=dataset_runtime_identity,
                          diagnostic_authorization=diagnostic_authorization)
         if diagnostic_authorization is not None:
             result["enforcement"] = diagnostic_authorization.record()
@@ -1445,7 +1448,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               recordings_root: Path | None = None,
               trials: int = 1, jobs: int = 1,
               diagnostic_authorization: Authorization | None = None,
-              persist_trial_report: bool = True) -> dict:
+              persist_trial_report: bool = True,
+              dataset_runtime_identity: dict | None = None) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1474,6 +1478,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         raise ValueError(f"trials must be at least 1, not {trials}")
     if jobs < 1:
         raise ValueError(f"jobs must be at least 1, not {jobs}")
+    runtime_identity, runtime_identity_error = None, None
+    try:
+        # Cache hits must prove the same artifacts as fresh trusted launches.
+        runtime_identity = dataset_runtime_identity_mod.for_evaluation(
+            dataset_runtime_identity, tasks, setups, verifiers)
+    except (OSError, TypeError, ValueError) as exc:
+        runtime_identity_error = str(exc)
+    task_runtimes = dataset_runtime_identity_mod.project_many(
+        runtime_identity, [task['task_id'] for task in tasks])
     evaluation_protocols = {task["task_id"]: protocol for task in tasks
                             if (protocol := chess_stepwise.protocol_of(task)) is not None}
     if len(set(evaluation_protocols.values())) > 1:
@@ -1562,6 +1575,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
 
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
+        selected = task_runtimes[task['task_id']]
+        if selected is not None:
+            key += ":dataset-runtime:" + hashlib.sha256(json.dumps(
+                selected, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
         if bun_identity is not None:
             key += ":runtime:" + hashlib.sha256(json.dumps(
                 bun_identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -1695,8 +1712,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # of number this platform exists to refuse.
     def _measure(task_index: int, task: dict) -> dict:
         tid = task["task_id"]
+        task_runtime = task_runtimes[tid]
+        runtime_fields = dataset_runtime_identity_mod.fields(task_runtime)
         enforcement = (diagnostic_authorization.record()
                        if diagnostic_authorization is not None else None)
+        if runtime_identity_error is not None:
+            invalid_runtime = {"stage": "dataset runtime identity", "detail": runtime_identity_error}
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime,
+                            **runtime_fields)
+            return {"task_id": tid, "invalid": invalid_runtime}
         # The backend observation for *this* environment, when the platform has one. It is
         # handed to both admission checks -- this one, which decides whether the task runs
         # at all, and `run_one`'s, which is the same check made once more where the task is
@@ -1710,7 +1734,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                                               observation=observation)
         if refusal is not None:
             _write_progress(progress_dir, round_no, tid, [], refusal["invalid"],
-                            diagnostic=refusal, enforcement=enforcement)
+                            diagnostic=refusal, enforcement=enforcement, **runtime_fields)
             return {"task_id": tid, "invalid": refusal["invalid"]}
         # A cache hit cannot bypass the interactive isolation/input requirements.
         # Construction is local and lazy; it neither loads the CSV nor launches I/O.
@@ -1721,14 +1745,14 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             except ValueError as exc:
                 refusal = _invalid(task, exc, stage="stepwise admission", service=None)
                 _write_progress(progress_dir, round_no, tid, [], refusal["invalid"],
-                                diagnostic=refusal)
+                                diagnostic=refusal, **runtime_fields)
                 return {"task_id": tid, "invalid": refusal["invalid"]}
         # The trial count is part of the key: a cached single measurement is not a
         # cached mean of three, and reusing one for the other would quietly answer a
         # different question than the run asked.
         if runtime_error is not None:
             invalid_runtime = {"stage": "harness runtime preparation", "detail": runtime_error}
-            _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime, **runtime_fields)
             return {"task_id": tid, "invalid": invalid_runtime}
         if tid in native_errors:
             invalid_runtime = {'stage': 'native runtime preparation', 'detail': native_errors[tid]}
@@ -1740,6 +1764,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             hit = None
         if (hit is not None and bun_identity is not None
                 and (hit.get("harness_runtime") or {}).get("bun") != bun_identity):
+            hit = None
+        if hit is not None and dataset_runtime_identity_mod.problems(
+                hit.get('dataset_runtime_identity'), task_runtime):
             hit = None
         if hit is not None:
             if declared_class((verifiers or {}).get(tid)) == "pristine-offline":
@@ -1804,11 +1831,14 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     held.failed(f"{type(exc).__name__}: {exc}")
                     captured = getattr(exc, 'trial_evidence_result', None)
                     if tid in evidence_tasks and captured is not None:
+                        captured.update(runtime_fields)
                         row = {'task_id': tid, 'trial_id': trial_identity(trial),
                                'seed': str(trial_protocol['seeds'][trial]) if trial_protocol else str(run_seed),
                                'status': 'raised', 'exception_type': type(exc).__name__}
                         exc.trial_evidence = trial_evidence.save(progress_dir, evidence_plan, row, captured)
                     raise
+
+                result.update(runtime_fields)
 
                 # Validate the trial identity before either report consumes its
                 # score; a refused verdict must remain unmeasured in pass^k too.
@@ -1933,6 +1963,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             diagnostic = unmeasured_result or result
             _write_progress(progress_dir, round_no, tid, [], unmeasured,
                             diagnostic=diagnostic, enforcement=enforcement,
+                            **runtime_fields,
                             **({'trial_evidence': trial_rows[tid]} if ordinary_task_plan else {}))
             if ordinary_task_plan:
                 trial_evidence.save_ordinary_task(progress_dir, ordinary_task_plan, trial_rows[tid])
@@ -1940,6 +1971,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     "harness_runtime": (diagnostic or {}).get("harness_runtime"),
                     "runtime_services": (diagnostic or {}).get("runtime_services")}
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement,
+                        **runtime_fields,
                         **({'trial_evidence': trial_rows[tid]} if ordinary_task_plan else {}))
         if ordinary_task_plan:
             trial_evidence.save_ordinary_task(progress_dir, ordinary_task_plan, trial_rows[tid])
@@ -2126,6 +2158,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                           # `loop-terminal_bench-41133` round 5: all five verdict files were
                           # empty because the round was entirely cache hits.
                           "verdict": verdicts.get(tid) or {},
+                          **dataset_runtime_identity_mod.fields(task_runtimes[tid]),
                           "harness_runtime": result.get("harness_runtime"),
                           "runtime_services": result.get("runtime_services")}
 
@@ -2221,7 +2254,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         if progress_dir is not None and persist_trial_report:
             report_root = repeated_trials.report_root(progress_dir, round_no, harness_sha)
             repeated_trials.persist(report_root, report)
-    return {**repeated, "per_task": per_task, "per_task_std": per_task_std, "score_std": score_std,
+    return {**repeated, **dataset_runtime_identity_mod.fields(runtime_identity),
+            "per_task": per_task, "per_task_std": per_task_std, "score_std": score_std,
             "scorer_isolation_class": scorer_isolation_class,
             # Preserve unobserved diagnostic facts without making them comparable.
             "scorer_isolation_comparable": scorer_isolation_class != "unknown",

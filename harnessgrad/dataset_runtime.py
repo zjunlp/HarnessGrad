@@ -1,4 +1,4 @@
-"""Explicit Python dependency environments for dataset providers.
+"""Explicit Python dependency artifacts for dataset loading and execution.
 
 Discovery and inspection use only the standard library.  Preparation is the only
 operation allowed to install anything.  A venv is built at its final physical
@@ -27,8 +27,11 @@ from harnessgrad.paths import configured_path, main_checkout
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "harnessgrad.dataset-runtime.v1"
+EXECUTION_SCHEMA = "harnessgrad.dataset-execution-runtime.v1"
 ARTIFACT_SCHEMA = "harnessgrad.dataset-runtime-artifact.v1"
+BINDING_SCHEMA = "harnessgrad.python-runtime-binding.v1"
 SCOPE = "dataset-provider-runtime"
+EXECUTION_SCOPE = "dataset-execution-runtime"
 RECIPE_VERSION = 1
 _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 _PIN = re.compile(r"([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.!+_-]*)\Z")
@@ -58,12 +61,11 @@ def _package(name):
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-def descriptor(name: str) -> dict | None:
-    """Read a static opt-in declaration without importing any dataset adapter."""
+def _descriptor(name, filename, schema, fields):
     if not isinstance(name, str) or not _NAME.fullmatch(name):
         raise ValueError("invalid dataset runtime name")
     folder = ROOT / "data" / "datasets" / name
-    declaration = folder / "runtime.json"
+    declaration = folder / filename
     if not declaration.exists():
         return None
     if declaration.is_symlink() or not declaration.is_file():
@@ -71,9 +73,8 @@ def descriptor(name: str) -> dict | None:
     raw = declaration.read_bytes()
     value = json.loads(raw)
     if (not isinstance(value, dict)
-            or set(value) != {"schema", "dataset", "provider", "python", "requirements"}
-            or value["schema"] != SCHEMA or value["dataset"] != name
-            or value["provider"] != "qa"
+            or set(value) != fields
+            or value["schema"] != schema or value["dataset"] != name
             or not isinstance(value["python"], str)
             or not re.fullmatch(r"3\.[0-9]+", value["python"])):
         raise ValueError("invalid dataset runtime declaration")
@@ -102,6 +103,22 @@ def descriptor(name: str) -> dict | None:
             "source_root": str(ROOT.resolve())}
 
 
+def descriptor(name: str) -> dict | None:
+    """Read a QA provider opt-in without importing its adapter (the v1 API)."""
+    value = _descriptor(name, "runtime.json", SCHEMA,
+                        {"schema", "dataset", "provider", "python", "requirements"})
+    if value is not None and value["provider"] != "qa":
+        raise ValueError("invalid dataset runtime declaration")
+    return value
+
+
+def execution_descriptor(name: str) -> dict | None:
+    """Read the separate shared service/verifier dependency declaration."""
+    value = _descriptor(name, "execution-runtime.json", EXECUTION_SCHEMA,
+                        {"schema", "dataset", "python", "requirements"})
+    return None if value is None else {**value, "profile": "execution"}
+
+
 def _store(root=None):
     default = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "harnessgrad/dataset-runtimes"
     path = Path(root).expanduser() if root is not None else Path(configured_path("HG_DATASET_RUNTIME_ROOT", default))
@@ -120,9 +137,10 @@ def _key(spec):
         "machine": platform.machine(), "recipe": RECIPE_VERSION})).hexdigest()
 
 
-def _unavailable(name, reason, *, status="unavailable"):
+def _unavailable(name, reason, *, status="unavailable", execution=False):
+    profile = " --runtime execution" if execution else ""
     return DatasetRuntimeUnavailable(
-        f"{name}: {reason}. Prepare explicitly with `python tools/prepare_dataset.py --dataset {name}`",
+        f"{name}: {reason}. Prepare explicitly with `python tools/prepare_dataset.py --dataset {name}{profile}`",
         status=status)
 
 
@@ -150,6 +168,7 @@ def _run(argv, *, timeout_s=None):
 def _probe(python, *, timeout_s=None):
     code = """import importlib.metadata,json,sys,sysconfig
 print(json.dumps({'executable':sys.executable,'prefix':sys.prefix,'base_prefix':sys.base_prefix,
+'base_exec_prefix':sys.base_exec_prefix,
 'version':sys.version,'minor':str(sys.version_info.major)+'.'+str(sys.version_info.minor),
 'stdlib':sysconfig.get_path('stdlib'),'paths':sys.path,
 'packages':{d.metadata['Name']:d.version for d in importlib.metadata.distributions()}}))"""
@@ -161,6 +180,20 @@ def _base(probe):
     return {"executable": str(executable), "sha256": _digest(executable),
             "version": probe["version"], "base_prefix": probe["base_prefix"],
             "stdlib": probe["stdlib"]}
+
+
+def _execution_base(probe):
+    # Keep _base and provider-v1 manifests byte-for-byte compatible. Execution
+    # adds the separately allocated executable-prefix needed by readonly binds.
+    return {**_base(probe), "base_exec_prefix": str(Path(probe["base_exec_prefix"]).resolve())}
+
+
+def _execution_paths(probe, venv):
+    paths = list(dict.fromkeys(str(Path(path).resolve(strict=True)) for path in
+                (venv, probe["base_prefix"], probe["base_exec_prefix"])))
+    if any(Path(path) == Path("/") or not Path(path).is_dir() for path in paths):
+        raise ValueError("execution runtime requires physical non-root directory prefixes")
+    return paths
 
 
 def _inventory(venv):
@@ -229,26 +262,46 @@ def _admit(name, spec, folder):
     if instance.is_symlink():
         raise ValueError("runtime instance must not be a symlink")
     manifest_path = instance / "artifact.json"
+    return _verify_manifest(name, spec, manifest_path, ready["runtime_id"])
+
+
+def _verify_manifest(name, spec, manifest_path, runtime_id):
+    """Validate an exact artifact; the mutable discovery index is not consulted."""
+    manifest_path = Path(manifest_path)
+    if (not manifest_path.is_absolute() or manifest_path.name != "artifact.json"
+            or manifest_path.is_symlink() or manifest_path.resolve(strict=True) != manifest_path):
+        raise ValueError("runtime manifest must have its physical absolute path")
     manifest = json.loads(manifest_path.read_bytes())
-    if hashlib.sha256(_canonical(manifest)).hexdigest() != ready["runtime_id"]:
+    if hashlib.sha256(_canonical(manifest)).hexdigest() != runtime_id:
         raise ValueError("runtime manifest identity changed")
     if (manifest.get("schema") != ARTIFACT_SCHEMA or manifest.get("key") != _key(spec)
             or manifest.get("dataset") != name or manifest.get("descriptor_sha256") != spec["descriptor_sha256"]
             or manifest.get("requirements_sha256") != spec["requirements_sha256"]):
         raise ValueError("runtime declaration or target changed")
-    venv = instance / "venv"
+    execution = spec.get("profile") == "execution"
+    if manifest.get("profile") != ("execution" if execution else None):
+        raise ValueError("runtime profile changed")
+    venv = manifest_path.parent / "venv"
     if venv.is_symlink() or str(venv) != manifest["path"]:
         raise ValueError("runtime physical path changed")
+    _store(venv)  # Exact bindings must not bypass the outside-platform rule.
     if _inventory(venv) != manifest["files"]:
         raise ValueError("runtime file inventory changed")
     probe = _probe(venv / "bin/python")
-    if _base(probe) != manifest["base_python"]:
+    base = _execution_base(probe) if execution else _base(probe)
+    if base != manifest["base_python"]:
         raise ValueError("runtime base interpreter changed")
     _validate_probe(probe, spec, venv)
-    return {"python": str(venv / "bin/python"), "path": str(venv),
-            "runtime_id": ready["runtime_id"], "manifest_path": str(manifest_path),
+    result = {"python": str(venv / "bin/python"), "path": str(venv),
+            "runtime_id": runtime_id, "manifest_path": str(manifest_path),
             "descriptor_sha256": spec["descriptor_sha256"],
             "requirements_sha256": spec["requirements_sha256"], "scope": SCOPE}
+    if execution:
+        paths = _execution_paths(probe, venv)
+        if paths != manifest.get("runtime_paths"):
+            raise ValueError("runtime physical prefixes changed")
+        result.update(dataset=name, profile="execution", runtime_paths=paths, scope=EXECUTION_SCOPE)
+    return result
 
 
 def _validate_probe(probe, spec, venv):
@@ -268,20 +321,45 @@ def _validate_probe(probe, spec, venv):
             raise ValueError("runtime exposes a base or foreign package directory")
 
 
-def resolve(name: str, *, root=None) -> dict:
-    """Verify one published runtime. Never build or silently select a fallback."""
+def _resolve_profile(name, getter, root, *, execution=False):
     try:
-        spec = descriptor(name)
+        spec = getter(name)
         folder = _store(root) / _key(spec) if spec is not None else None
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
-        raise _unavailable(name, str(exc), status="invalid") from exc
+        raise _unavailable(name, str(exc), status="invalid", execution=execution) from exc
     if spec is None:
-        raise _unavailable(name, "no dataset runtime declaration")
+        raise _unavailable(name, "no dataset runtime declaration", execution=execution)
     published = (folder / "ready.json").exists()
     try:
         return _admit(name, spec, folder)
     except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
-        raise _unavailable(name, str(exc), status="invalid" if published else "unavailable") from exc
+        raise _unavailable(name, str(exc), status="invalid" if published else "unavailable",
+                           execution=execution) from exc
+
+
+def resolve(name: str, *, root=None) -> dict:
+    """Verify one published provider runtime. Never build or select a fallback."""
+    return _resolve_profile(name, descriptor, root)
+
+
+def admit_provider(name: str, runtime: dict) -> dict:
+    """Recheck an already selected loading artifact without reading ready.json."""
+    try:
+        spec = descriptor(name)
+        if spec is None:
+            raise ValueError("provider runtime declaration is absent")
+        selected = _verify_manifest(name, spec, runtime["manifest_path"], runtime["runtime_id"])
+        for key in ("python", "path", "descriptor_sha256", "requirements_sha256"):
+            if runtime[key] != selected[key]:
+                raise ValueError(f"bound provider {key} differs from the exact artifact")
+        return selected
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+        raise _unavailable(name, str(exc), status="invalid") from exc
+
+
+def resolve_execution(name: str, *, root=None) -> dict:
+    """Select a published service/verifier artifact for a new binding."""
+    return _resolve_profile(name, execution_descriptor, root, execution=True)
 
 
 def check(name: str, *, root=None) -> dict:
@@ -294,30 +372,60 @@ def check(name: str, *, root=None) -> dict:
             "detail": "verified provider runtime", "runtime": runtime}
 
 
-def prepare(name: str, *, python=None, root=None, timeout_s=None) -> dict:
-    """Explicitly install and verify a runtime, or verify an existing publication."""
-    spec = descriptor(name)
+def check_execution(name: str, *, root=None) -> dict:
+    """Check execution dependencies only; no service, task or scorer is started."""
+    try:
+        runtime = resolve_execution(name, root=root)
+    except DatasetRuntimeUnavailable as exc:
+        return {"present": False, "status": exc.status, "scope": EXECUTION_SCOPE, "detail": str(exc)}
+    return {"present": True, "status": "ready", "scope": EXECUTION_SCOPE,
+            "detail": "verified execution runtime", "runtime": runtime}
+
+
+def _physical_python(uv, spec, requested, timeout_s):
+    # uv may select an active venv or a version alias. Building against its final
+    # executable prevents a different driver's aliases being required in bwrap.
+    found = _run([uv, "python", "find", requested or spec["python"]], timeout_s=timeout_s).strip()
+    executable = Path(found).expanduser().resolve(strict=True)
+    probe = _probe(executable, timeout_s=timeout_s)
+    if probe["minor"] != spec["python"]:
+        raise ValueError("base interpreter version does not match the execution declaration")
+    return executable
+
+
+def _prepare_spec(name, spec, *, python=None, root=None, timeout_s=None, execution=False):
     if spec is None:
-        raise _unavailable(name, "no dataset runtime declaration")
+        raise _unavailable(name, "no dataset runtime declaration", execution=execution)
     folder = _store(root) / _key(spec)
+    resolver = resolve_execution if execution else resolve
     with _locked(folder):
         if (folder / "ready.json").exists():
-            runtime = resolve(name, root=root)
+            runtime = resolver(name, root=root)
             if python is not None:
+                if execution:
+                    selected = Path(python).expanduser()
+                    if not selected.is_file():
+                        uv = shutil.which("uv")
+                        if uv is None:
+                            raise _unavailable(name, "uv is required to resolve the requested base interpreter", execution=True)
+                        selected = _physical_python(uv, spec, python, timeout_s)
+                    python = selected.resolve(strict=True)
                 requested = _probe(python, timeout_s=timeout_s)
                 actual = _probe(runtime["python"], timeout_s=timeout_s)
-                if _base(requested) != _base(actual):
-                    raise _unavailable(name, "prepared runtime uses a different base interpreter")
+                base = _execution_base if execution else _base
+                if base(requested) != base(actual):
+                    raise _unavailable(name, "prepared runtime uses a different base interpreter", execution=execution)
             return {**runtime, "reused": True}
         uv = shutil.which("uv")
         if uv is None:
-            raise _unavailable(name, "uv is required to prepare the runtime")
+            raise _unavailable(name, "uv is required to prepare the runtime", execution=execution)
         instances = folder / "instances"
         instances.mkdir(exist_ok=True)
         instance = Path(tempfile.mkdtemp(prefix="build-", dir=instances))
         venv = instance / "venv"
         try:
-            _run([uv, "venv", "--no-project", "--python", python or spec["python"], venv], timeout_s=timeout_s)
+            selected = _physical_python(uv, spec, python, timeout_s) if execution else python or spec["python"]
+            _run([uv, "venv", "--no-project", "--python", selected, venv], timeout_s=timeout_s)
             _run([uv, "pip", "install", "--python", venv / "bin/python", "-r", spec["requirements_path"]], timeout_s=timeout_s)
             probe = _probe(venv / "bin/python", timeout_s=timeout_s)
             _validate_probe(probe, spec, venv)
@@ -329,10 +437,96 @@ def prepare(name: str, *, python=None, root=None, timeout_s=None) -> dict:
                 "recipe": {"version": RECIPE_VERSION, "uv": _run([uv, "--version"]).strip()},
                 "base_python": _base(probe), "files": _inventory(venv),
                 "integrity_scope": "venv-files-and-base-interpreter; host-system-libraries-not-sealed"}
+            if execution:
+                manifest.update(profile="execution", base_python=_execution_base(probe),
+                                runtime_paths=_execution_paths(probe, venv))
             _atomic_json(instance / "artifact.json", manifest)
             runtime_id = hashlib.sha256(_canonical(manifest)).hexdigest()
             _atomic_json(folder / "ready.json", {"instance": instance.name, "runtime_id": runtime_id})
         except BaseException:
             _remove_instance(instance)
             raise
-    return {**resolve(name, root=root), "reused": False}
+    return {**resolver(name, root=root), "reused": False}
+
+
+def prepare(name: str, *, python=None, root=None, timeout_s=None) -> dict:
+    """Explicitly install a provider runtime, or verify an existing publication."""
+    return _prepare_spec(name, descriptor(name), python=python, root=root, timeout_s=timeout_s)
+
+
+def prepare_execution(name: str, *, python=None, root=None, timeout_s=None) -> dict:
+    """Explicitly prepare a shared service/verifier dependency artifact."""
+    return _prepare_spec(name, execution_descriptor(name), python=python, root=root,
+                         timeout_s=timeout_s, execution=True)
+
+
+def bind(runtime: dict, role: str) -> dict:
+    """Capture a verified execution artifact for one trusted launch role.
+
+    The role record does not pin the store's mutable discovery index. Launchers
+    must call admit_binding immediately before starting the selected process.
+    """
+    if role not in {"service", "verifier"}:
+        raise ValueError("Python execution runtime role must be service or verifier")
+    if not isinstance(runtime, dict) or runtime.get("profile") != "execution":
+        raise ValueError("a role binding requires a verified execution artifact")
+    binding = {"schema": BINDING_SCHEMA, "dataset": runtime["dataset"], "profile": "execution",
+            "role": role, **{key: runtime[key] for key in
+            ("runtime_id", "manifest_path", "python", "path", "runtime_paths")}}
+    return validate_binding(binding, role)
+
+
+def validate_binding(binding: dict, expected_role: str, python=None) -> dict:
+    """Validate declaration structure without reading or executing its artifact.
+
+    Registry/lint uses this cheap check while materializing task declarations.
+    A launch must still call admit_binding to verify the actual selected bytes.
+    """
+    fields = {"schema", "dataset", "profile", "role", "runtime_id", "manifest_path",
+              "python", "path", "runtime_paths"}
+    if (not isinstance(binding, dict) or set(binding) != fields
+            or binding["schema"] != BINDING_SCHEMA or binding["profile"] != "execution"
+            or not isinstance(expected_role, str) or expected_role not in {"service", "verifier"}
+            or binding["role"] != expected_role
+            or not isinstance(binding["dataset"], str) or not _NAME.fullmatch(binding["dataset"])
+            or not isinstance(binding["runtime_id"], str)
+            or not re.fullmatch(r"[0-9a-f]{64}", binding["runtime_id"])):
+        raise ValueError("invalid or mismatched Python runtime role binding")
+    paths = binding["runtime_paths"]
+    if (not isinstance(paths, list) or not paths
+            or any(not isinstance(path, str) for path in paths)
+            or len(paths) != len(set(paths))):
+        raise ValueError("bound runtime_paths must be a nonempty list of unique directory paths")
+    for value in (binding["path"], binding["python"], binding["manifest_path"], *paths):
+        if (not isinstance(value, str) or not value or "\x00" in value or "\\" in value
+                or value.startswith("//") or not PurePosixPath(value).is_absolute()
+                or PurePosixPath(value) == PurePosixPath("/")
+                or ".." in PurePosixPath(value).parts or str(PurePosixPath(value)) != value):
+            raise ValueError("bound runtime paths must be normalized absolute paths")
+    venv = PurePosixPath(binding["path"])
+    if PurePosixPath(binding["python"]) != venv / "bin/python":
+        raise ValueError("bound runtime python must be its exact venv/bin/python")
+    if PurePosixPath(binding["manifest_path"]) != venv.parent / "artifact.json":
+        raise ValueError("bound manifest must belong to the exact runtime instance")
+    if paths[0] != binding["path"]:
+        raise ValueError("bound runtime_paths must start with the exact venv path")
+    if python is not None and str(python) != binding["python"]:
+        raise ValueError("launch executable differs from the bound runtime Python")
+    return {**binding, "runtime_paths": list(paths)}
+
+
+def admit_binding(binding: dict, expected_role: str, python=None) -> dict:
+    """Verify an exact role-bound artifact without reading the latest index."""
+    name = binding.get("dataset", "execution") if isinstance(binding, dict) else "execution"
+    try:
+        binding = validate_binding(binding, expected_role, python)
+        spec = execution_descriptor(name)
+        if spec is None:
+            raise ValueError("execution runtime declaration is absent")
+        selected = _verify_manifest(name, spec, binding["manifest_path"], binding["runtime_id"])
+        for key in ("python", "path", "runtime_paths"):
+            if binding[key] != selected[key]:
+                raise ValueError(f"bound runtime {key} differs from the exact artifact")
+        return selected
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+        raise _unavailable(name, str(exc), status="invalid", execution=True) from exc
