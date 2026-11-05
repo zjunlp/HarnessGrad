@@ -43,7 +43,7 @@ KIND, METRIC, DEVIATION, PROVISION, REFUSAL = 1, 2, 3, 5, 8
 
 #: The datasets whose adapter refuses the benchmark by design (`REFUSED`), as the refusal
 #: contract in `tests/quality/test_dataset_refusals.py` states them.
-REFUSED = ("api_bank", "nestful", "sotuqa", "tau2_bench")
+REFUSED = ("tau2_bench",)
 
 #: The three spellings a host answer takes. The header may explain them in prose; a
 #: *readiness cell* may not be one of them, because it would describe the machine that ran
@@ -165,7 +165,7 @@ def test_every_published_dataset_appears_exactly_once():
 def test_catalog_discovery_does_not_depend_on_runtime_imports(monkeypatch):
     expected = doc._published()
     monkeypatch.setattr(registry, "published", lambda: ())
-    assert len(expected) == 59
+    assert len(expected) == 56
     assert doc._published() == expected
 
 

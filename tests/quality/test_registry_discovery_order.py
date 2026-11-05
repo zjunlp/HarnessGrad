@@ -29,7 +29,6 @@ EXPECTED_DATASETS = (
     # sorted in. It sorts second, between `agentdojo` and `alfworld`.
     "aime",
     "alfworld",
-    "api_bank",
     "appworld",
     # `authored_example_fix_bug` (2026-11-02) 是控制台"起草"流程产出的示例场景：它是一份
     # 真的适配器（KIND = dataset），所以它出现在目录里是对的。成员变化照这个元组的规矩
@@ -48,10 +47,9 @@ EXPECTED_DATASETS = (
     "jobbench", "kumo", "livecodebench",
     "livemathbench", "locomo", "math",
     "math500", "memoryagentbench", "musique",
-    "nestful", "nq", "officeqa_pro",
+    "nq", "officeqa_pro",
     "personamem_v2", "physicsquestions", "reasoning_gym",
-    "scienceworld", "searchqa", "sotuqa",
-    "sportsunderstanding", "spreadsheetbench", "spreadsheetbench2",
+    "scienceworld", "searchqa", "sportsunderstanding", "spreadsheetbench", "spreadsheetbench2",
     "strategyqa", "strongreject", "supergpqa",
     "swe_bench", "swe_bench_pro", "tau2_bench",
     "tau3_bench", "tau_bench", "terminal_bench",

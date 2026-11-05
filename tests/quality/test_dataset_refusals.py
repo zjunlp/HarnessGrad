@@ -1,12 +1,19 @@
-"""The datasets that refuse, and why a refusal has to be provable.
+"""The one dataset that still refuses, and why a refusal has to be provable.
 
-`data/datasets/sotuqa.py`, `data/datasets/api_bank.py`, `data/datasets/nestful.py` and `data/datasets/tau2_bench.py` do not load.
-Each refuses because its official metric or interaction contract is not reproducible on the
-current platform. FEVER and HotpotQA now have a structured evidence answer contract and are
-no longer refusal cases.
+`data/datasets/tau2_bench.py` does not load: it is a dual-control benchmark whose second party
+does not exist on this platform, and the official metric is unreachable without it.
+
+`api_bank`, `nestful` and `sotuqa` were removed from the repository on 2026-11-03 rather than
+kept as refusals: each needs an artefact this project cannot produce (the dialogue state those
+recorded replies depend on, a release whose official Win Rate reproduces itself, a judge model
+that has not been retired), so a refusal could only ever restate that. `docs/refusal-policy.md`
+keeps the reasons for anyone reading an older receipt.
+
+FEVER and HotpotQA now have a structured evidence answer contract and are not refusal cases.
 """
 from __future__ import annotations
 
+import pathlib
 import sys
 from pathlib import Path
 
@@ -15,7 +22,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-REFUSING = ["sotuqa", "api_bank", "tau2_bench", "nestful"]
+REFUSING = ["tau2_bench"]
 
 
 @pytest.fixture(params=REFUSING)
@@ -141,7 +148,11 @@ def test_hotpot_answer_only_metrics_are_computable_and_distinct():
 def test_the_refusing_modules_still_declare_the_dataset_contract(refused):
     """A refusal does not excuse the parts a program can still decide."""
     assert refused.KIND == "dataset"
-    assert refused.DATASET_ROOT.is_absolute()
+    # The declaration must be a path without needing storage to be configured: resolving it here
+    # made this test depend on `HG_DATA_ROOT`, which is exactly what a refusal file must not do
+    # (it is read on a machine that has never provisioned anything).
+    root = refused.DATASET_ROOT
+    assert isinstance(root, pathlib.Path) or hasattr(root, "directory"), root
     downloads = refused.downloads()
     assert downloads and all(entry.get("version") for entry in downloads)
     for entry in downloads:

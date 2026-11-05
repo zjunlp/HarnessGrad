@@ -179,7 +179,6 @@ def test_dataset_with_no_downloads_has_an_explicit_empty_section():
 @pytest.mark.parametrize("name,directory,override,destination", [
     ("kumo", "kumo", "HG_DATA_KUMO", "upstream"),
     ("gsm8k", "gsm8k", "HG_DATA_GSM8K", "."),
-    ("api_bank", "api-bank", "HG_DATA_API_BANK", "_src/vendor.tar.gz"),
     ("costbench_dynamic", "costbench", "HG_DATA_COSTBENCH", "dynamic-prepared-v1"),
     ("strongreject", "strongreject/native-v1", "HG_DATA_STRONGREJECT_NATIVE_V1", "tasks/example.json"),
     ("terminal_bench", "terminal-bench", "HG_DATA_TERMINAL_BENCH", "."),

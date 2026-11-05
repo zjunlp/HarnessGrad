@@ -86,6 +86,9 @@ jobs:
       - name: Documentation, registry and CI guards
         run: |
           status=0
+          # pytest refuses a --basetemp whose parent does not exist, and it creates only the
+          # leaf. One mkdir here is cheaper than one failing verb per test file.
+          mkdir -p "$RUNNER_TEMP/pytest-checks"
           for file in \
             tests/quality/test_documentation_links.py \
             tests/quality/test_documentation_commands.py \
@@ -177,67 +180,40 @@ jobs:
           PY
 
       # What this change can reach. A pull request compares against its base; a push compares
-      # against the previous tip; a manual run has no base and therefore runs everything.
-      # The guards are dropped here because the `checks` job already ran them on this commit.
-      - name: Select the tests this change can reach
-        id: select
+      # against the previous tip; a scheduled run has no base and measures the whole tree,
+      # which is the point of running it nightly.
+      - name: Plan the tests this change can reach
         run: |
           base='${{ github.event.pull_request.base.sha || github.event.before }}'
-          suite="__full__"
-          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ]; then
-            python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' --files \
-              > "$RUNNER_TEMP/selected.txt"
-            grep -v -x -E 'test_(ci_workflow|contributors|documentation_commands|documentation_links|import_direction|registry_broken_adapters|test_lanes)\.py' \
-              "$RUNNER_TEMP/selected.txt" > "$RUNNER_TEMP/suite.txt" || true
-            suite=$(tr '\n' ' ' < "$RUNNER_TEMP/suite.txt")
-            # Written where a reader can see it without a token: the step summary is part of
-            # the run page, and "which tests did this run pick" is the question a red job asks.
-            {
-              echo "### Suite selected for this change"
-              echo
-              if [ -s "$RUNNER_TEMP/suite.txt" ]; then
-                sed 's/^/- `/' "$RUNNER_TEMP/suite.txt" | sed 's/$/`/'
-              else
-                echo "_nothing outside the guards: the guards ran in the checks job_"
-              fi
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "selected:"; cat "$RUNNER_TEMP/selected.txt" | sed 's/^/  /'
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            printf '{"base": null, "suite": [], "full": true, "changed": 0}\n' > plan.json
+          else
+            python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' \
+              --plan plan.json --without-guards
           fi
-          echo "suite=$suite" >> "$GITHUB_OUTPUT"
-          # An annotation is readable from outside (a fork, a reviewer, me) without the log,
-          # which is what the last two diagnostics needed and could not get.
-          echo "::notice::base=${base:-<none>} selection=${suite:-<guards only>}"
+          python3 tools/ci_select.py --describe plan.json
 
-      - name: Nothing in the suite can reach this change
-        if: steps.select.outputs.suite == ''
-        run: |
-          echo "documentation-only change: the guards already covered it in the checks job"
-
-      # Four concurrent files on a four-core runner. Measured: the full `--fast` suite takes
-      # ~23 minutes at two workers on this runner, and the cost is subprocess work rather than
-      # the parent process -- but the load-sensitive failures seen on a large host start at
-      # three concurrent files, so this is a compromise, and the job is advisory precisely
-      # because a runner's timing is not a property of the change.
-      # `tools/run_tests.py` owns the lane split, the per-file temporary root outside the
-      # checkout, and the run-alone recheck of a failure.
+      # The suite runs from the plan, and only that: the first version passed the selection
+      # through a shell string, where an empty value silently means "no --file at all" and
+      # therefore the whole suite. A file cannot lose its contents that way.
       - name: Suite
-        if: steps.select.outputs.suite != '' && steps.select.outputs.suite != '__full__'
         env:
           HG_TEST_TMPDIR: ${{ runner.temp }}/hg-pytest
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
-          args=""
-          for file in ${{ steps.select.outputs.suite }}; do
-            args="$args --file $file"
-          done
-          python3 tools/run_tests.py --fast --jobs 4 $args
+          if [ '${{ github.event_name }}' = "schedule" ]; then
+            python3 tools/run_selected.py --plan plan.json --jobs 4 --full
+          else
+            python3 tools/run_selected.py --plan plan.json --jobs 4
+          fi
 
       # A change with no computable base (a force-push) or a core path selects everything.
       # That is the right *selection* and the wrong thing to block a push on: the full suite
       # is a nightly job now, and the nightly job is the one that runs it.
       - name: Full suite deferred to the nightly run
-        if: steps.select.outputs.suite == '__full__'
+        if: github.event_name != 'schedule'
         run: |
-          echo "::notice::this change selects everything; the full suite runs nightly (schedule)"
-          echo "The full suite is deferred to the nightly run for a change that selects everything." \
-            >> "$GITHUB_STEP_SUMMARY"
+          if python3 -c "import json,sys; sys.exit(0 if json.load(open('plan.json')).get('full') else 1)"; then
+            echo "::notice::this change selects everything; the full suite runs nightly"
+          fi
+          true

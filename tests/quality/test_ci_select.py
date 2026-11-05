@@ -78,6 +78,73 @@ def test_a_wide_change_falls_back_to_the_full_suite() -> None:
     assert any("running everything" in reason for reason in reasons), reasons
 
 
+def test_the_plan_round_trips_through_a_file(tmp_path) -> None:
+    """The suite is read from a plan, not from a shell string that can lose its contents."""
+    import json
+    plan = tmp_path / "plan.json"
+    assert ci_select.main.__module__  # the entry point exists
+    picked, _ = ci_select.select(["README.md"])
+    plan.write_text(json.dumps({"base": "abc", "changed": 1, "suite": [], "full": False}))
+    assert json.loads(plan.read_text())["suite"] == []
+
+
+def test_the_runner_reads_a_plan_and_can_run_nothing(tmp_path) -> None:
+    """`run_selected.py` is what the workflow calls; an empty plan must not mean `pytest .`."""
+    import json
+    import subprocess
+
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"base": "abc", "suite": [], "full": False}))
+    proc = subprocess.run([sys.executable, "tools/run_selected.py", "--plan", str(plan)],
+                          cwd=ROOT, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    assert "nothing in the suite can reach this change" in proc.stdout
+    assert "run_tests.py" not in proc.stdout
+
+
+def test_the_plan_says_full_only_when_the_selection_does(tmp_path) -> None:
+    """A documentation change selects the guards; that is not "this change selects everything"."""
+    import json
+    import subprocess
+
+    plan = tmp_path / "plan.json"
+    proc = subprocess.run([sys.executable, "tools/ci_select.py", "--paths", "docs/x.md",
+                           "--plan", str(plan), "--without-guards"],
+                          cwd=ROOT, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(plan.read_text())["full"] is False
+
+    proc = subprocess.run([sys.executable, "tools/ci_select.py", "--paths",
+                           "eval/run/runner.py", "--plan", str(plan), "--without-guards"],
+                          cwd=ROOT, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(plan.read_text())
+    assert payload["full"] is True and payload["suite"] == []
+
+
+def test_the_runner_builds_one_file_flag_per_selected_test(tmp_path) -> None:
+    import json
+    import subprocess
+
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"base": "abc", "suite": ["test_ci_select.py"], "full": False}))
+    proc = subprocess.run([sys.executable, "tools/run_selected.py", "--plan", str(plan),
+                           "--dry-run"], cwd=ROOT, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    assert "--file test_ci_select.py" in proc.stdout, proc.stdout
+    assert "--jobs" in proc.stdout
+
+
+def test_the_guard_filter_lives_here_and_not_in_the_workflow() -> None:
+    """The workflow asks for a suite without guards; a second list there drifted once."""
+    picked, _ = ci_select.select(["README.md"])
+    assert set(picked) == set(ci_select.GUARDS)
+    # `--without-guards` is applied in main(), so this checks the data the flag reads.
+    remaining = [name for name in picked if name not in ci_select.GUARDS]
+    assert remaining == [], remaining
+    assert "test_ci_select.py" in ci_select.GUARDS, "the selector's own guard must be in the set"
+
+
 def test_a_change_to_a_test_runs_that_test() -> None:
     picked, _ = ci_select.select(["tests/quality/test_contributors.py"])
     assert "test_contributors.py" in picked

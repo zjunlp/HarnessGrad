@@ -152,13 +152,58 @@ def main() -> int:
     parser.add_argument("--paths", nargs="*", default=None,
                         help="explicit paths instead of a git diff")
     parser.add_argument("--files", action="store_true", help="print only the file names")
+    parser.add_argument("--describe", default="",
+                        help="print a plan's selection and record it on the run page")
+    parser.add_argument("--plan", default="",
+                        help="write the selection as JSON for tools/run_selected.py")
+    parser.add_argument("--without-guards", action="store_true",
+                        help="drop the guard files, for a job whose previous stage already ran "
+                             "them on this commit")
     parser.add_argument("--force-full", action="store_true")
     args = parser.parse_args()
+
+    if args.describe:
+        import json
+        import os
+        plan = json.loads(Path(args.describe).read_text(encoding="utf-8"))
+        suite = plan.get("suite") or []
+        summary = [f"base={plan.get('base')} full={plan.get('full')} "
+                   f"changed={plan.get('changed')} files={len(suite)}"]
+        summary += [f"  {name}" for name in suite]
+        print("\n".join(summary))
+        # Written here rather than in the workflow: `$GITHUB_STEP_SUMMARY` and the annotation
+        # syntax are the two places a shell step gets wrong, and this is the third iteration.
+        step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if step_summary:
+            with open(step_summary, "a", encoding="utf-8") as handle:
+                handle.write("### Suite for this change\n\n")
+                handle.write(f"base `{plan.get('base')}` · changed {plan.get('changed')} "
+                             f"file(s)\n\n")
+                if suite:
+                    for name in suite:
+                        handle.write(f"- `{name}`\n")
+                else:
+                    handle.write("_nothing outside the guards; they ran in the checks job_\n")
+        print(f"::notice::base={plan.get('base')} files={len(suite)} "
+              f"suite={','.join(suite) or '-'}")
+        return 0
 
     paths = args.paths if args.paths is not None else (
         changed(args.base, args.head) if args.base else [])
     picked, reasons = ([], ["full run requested"]) if args.force_full else select(paths)
 
+    # `full` is a property of the *selection*, not of what is left after the guards are
+    # subtracted: a documentation change selects the guards alone, which leaves an empty suite
+    # and is not the same thing as "this change selects everything".
+    full = not picked and any("running everything" in reason for reason in reasons)
+    if args.without_guards:
+        picked = [name for name in picked if name not in GUARDS]
+    if args.plan:
+        import json
+        Path(args.plan).write_text(json.dumps(
+            {"base": args.base or None, "changed": len(paths), "suite": picked, "full": full},
+            indent=1) + "\n", encoding="utf-8")
+        return 0
     if args.files:
         print("\n".join(picked))
         return 0

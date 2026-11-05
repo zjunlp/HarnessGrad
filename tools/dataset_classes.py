@@ -215,11 +215,8 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "gaia": ("context", "tools", "control"),
     # Refused datasets carry the functions their task shape would stress, for the same reason
     # they carry a demand: the judgement is about the benchmark, not about our contract.
-    "api_bank": ("tools",),
     "fever": ("context",),
     "hotpotqa": ("context",),
-    "nestful": ("tools",),
-    "sotuqa": ("context",),
     "tau2_bench": ("tools", "control"),
 }
 
@@ -326,11 +323,8 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "gaia": ("evidence", "information_seeking"),
     # Refused datasets still have an entry: the classification is about what the benchmark
     # measures, and a refusal is a statement about this platform's contract, not about it.
-    "api_bank": ("tool_use", "tool_calling"),
     "fever": ("evidence", "information_seeking"),
     "hotpotqa": ("evidence", "information_seeking"),
-    "nestful": ("tool_use", "tool_calling"),
-    "sotuqa": ("evidence", "information_seeking"),
     "tau2_bench": ("tool_use", "tool_dialogue"),
 }
 
