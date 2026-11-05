@@ -89,8 +89,7 @@ def console(tmp_path, monkeypatch):
                                                   ROOT / "console/server.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    # `BUDGET_DIR` 是写死的生产预算目录（/tmp/hg-rsi10-lb），提交服务会往里放 capacity
-    # 戳。测试必须换成自己的，否则会抢生产预算窗口。
+    # Use an isolated lease directory; never touch an operator's shared capacity stamp.
     monkeypatch.setattr(module, "BUDGET_DIR", store / "budget")
 
     httpd = module.ConsoleServer(("127.0.0.1", 0), module.Handler)

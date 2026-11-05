@@ -31,9 +31,6 @@ import time
 from openai import OpenAI
 
 
-DEFAULT_BASE_URL = "http://127.0.0.1:8002/v1"
-
-
 def banner(text: str) -> None:
     print(f"\n\033[1m{text}\033[0m")
 
@@ -46,7 +43,7 @@ def check(label: str, ok: bool, detail: str = "") -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    ap.add_argument("--base-url", required=True, help="explicit OpenAI-compatible endpoint; this tool sends model requests")
     ap.add_argument("--model", default=None,
                     help="served model name; taken from /v1/models if omitted")
     ap.add_argument("--timeout", type=float, default=120.0)
