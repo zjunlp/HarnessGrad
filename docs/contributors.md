@@ -6,9 +6,9 @@ Ordered by number of credited entries. `since` is the month an entry was adopted
 
 <a id="xubqpanda"></a>
 
-## [@Xubqpanda](https://github.com/Xubqpanda) — 66 entries
+## [@Xubqpanda](https://github.com/Xubqpanda) — 59 entries
 
-Buqiang Xu. platform core; every harness, method and benchmark adapter in this catalogue
+Buqiang Xu. platform core; every harness and method in this catalogue
 
 **harness**
 
@@ -46,25 +46,20 @@ Buqiang Xu. platform core; every harness, method and benchmark adapter in this c
 **benchmark**
 
 - `bbeh` — 2026-10-24 — hard reasoning; the light first real experiment
-- `terminal_bench` — 2026-10-26 — container tasks; official scorer in the image
-- `swe_bench_pro` — 2026-10-27 — repository-level patches, per-task images
 - `deepsearchqa` — 2026-10-28 — search and judge services must be provisioned
 - `appworld` — 2026-10-29 — stateful API tasks; TGC verified
 - `agentdojo` — 2026-11-03 — declared adapter
-- `aime` — 2026-11-03 — declared adapter
 - `alfworld` — 2026-11-03 — declared adapter
 - `authored_example_fix_bug` — 2026-11-03 — declared adapter
 - `bird_minidev` — 2026-11-03 — declared adapter
 - `browsecomp` — 2026-11-03 — declared adapter
 - `chessbench_puzzles` — 2026-11-03 — declared adapter
-- `deepswe` — 2026-11-03 — declared adapter
 - `ds1000` — 2026-11-03 — declared adapter
 - `fever` — 2026-11-03 — declared adapter
 - `harvey_lab` — 2026-11-03 — declared adapter
 - `hle` — 2026-11-03 — declared adapter
 - `hotpotqa` — 2026-11-03 — declared adapter
 - `jericho` — 2026-11-03 — declared adapter
-- `jobbench` — 2026-11-03 — declared adapter
 - `livemathbench` — 2026-11-03 — declared adapter
 - `math` — 2026-11-03 — declared adapter
 - `math500` — 2026-11-03 — declared adapter
@@ -75,41 +70,34 @@ Buqiang Xu. platform core; every harness, method and benchmark adapter in this c
 - `scienceworld` — 2026-11-03 — declared adapter
 - `searchqa` — 2026-11-03 — declared adapter
 - `spreadsheetbench` — 2026-11-03 — declared adapter
-- `spreadsheetbench2` — 2026-11-03 — declared adapter
 - `supergpqa` — 2026-11-03 — declared adapter
 - `swe_bench` — 2026-11-03 — declared adapter
-- `tau2_bench` — 2026-11-03 — dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer
 - `tau_bench` — 2026-11-03 — declared adapter
 - `travelplanner` — 2026-11-03 — declared adapter
 - `twowikimultihopqa` — 2026-11-03 — declared adapter
 - `widesearch` — 2026-11-03 — declared adapter
 - `workbench` — 2026-11-03 — declared adapter
 
-<a id="crepuscular-drizzle"></a>
+<a id="harbor-framework"></a>
 
-## [@crepuscular-drizzle](https://github.com/crepuscular-drizzle) — 14 entries
+## [@harbor-framework](https://github.com/harbor-framework) — 12 entries
 
-Wen Yu. dataset storage contract: explicit, portable roots instead of machine literals
+Harbor. Harbor framework and benchmark adapter contributions; original benchmark and dataset authors retain their respective attribution and licenses.
 
 **benchmark**
 
-- `cooperbench` — 2026-11-03 — declared adapter
-- `costbench` — 2026-11-03 — declared adapter
-- `costbench_dynamic` — 2026-11-03 — declared adapter
-- `kumo` — 2026-11-03 — declared adapter
-- `locomo` — 2026-11-03 — declared adapter
-- `memoryagentbench` — 2026-11-03 — declared adapter
-- `personamem_v2` — 2026-11-03 — declared adapter
-- `strongreject` — 2026-11-03 — declared adapter
-- `tau3_bench` — 2026-11-03 — declared adapter
-
-**platform**
-
-- `platform core` — 2026-10-01 — driver, rounds, sandbox, records, scoring
-- `dataset root resolver` — 2026-11-03 — one place that answers where a dataset's bytes live; no machine literal in an adapter
-- `dataset storage migration` — 2026-11-03 — 58 adapters moved from an operator's absolute path to one resolver: HG_DATA_<NAME> > HG_DATA_ROOT, no implicit directory, portable catalogues
-- `env-file precedence` — 2026-11-03 — shell > worktree .env > primary .env, read without importing an adapter
-- `provisioning CLI` — 2026-11-03 — per-dataset fetch/check from the adapter's own declaration
+- `terminal_bench` — 2026-10-26 — container tasks; official scorer in the image; HarnessGrad integration: Xubqpanda
+- `swe_bench_pro` — 2026-10-27 — repository-level patches, per-task images; HarnessGrad integration: Xubqpanda
+- `aime` — 2026-11-03 — declared adapter; HarnessGrad integration: Xubqpanda
+- `cooperbench` — 2026-11-03 — declared adapter; HarnessGrad integration: crepuscular-drizzle
+- `deepswe` — 2026-11-03 — declared adapter; HarnessGrad integration: Xubqpanda
+- `jobbench` — 2026-11-03 — declared adapter; HarnessGrad integration: Xubqpanda
+- `kumo` — 2026-11-03 — declared adapter; HarnessGrad integration: crepuscular-drizzle
+- `locomo` — 2026-11-03 — declared adapter; HarnessGrad integration: crepuscular-drizzle
+- `spreadsheetbench2` — 2026-11-03 — declared adapter; HarnessGrad integration: Xubqpanda
+- `strongreject` — 2026-11-03 — declared adapter; HarnessGrad integration: crepuscular-drizzle
+- `tau2_bench` — 2026-11-03 — dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer; HarnessGrad integration: Xubqpanda
+- `tau3_bench` — 2026-11-03 — declared adapter; HarnessGrad integration: crepuscular-drizzle
 
 <a id="trancefornow"></a>
 
@@ -133,3 +121,24 @@ Trance. method launch validation and measurement identity
 - `measurement identity in the matrix` — 2026-11-03 — a row carries the harness, split and scorer identity its score was measured with
 - `method launch validation` — 2026-11-03 — refuses a method that cannot start before a round spends a model call
 - `readiness rows` — 2026-11-03 — editor and method are separate pre-H0 rows
+
+<a id="crepuscular-drizzle"></a>
+
+## [@crepuscular-drizzle](https://github.com/crepuscular-drizzle) — 9 entries
+
+Wen Yu. dataset storage contract: explicit, portable roots instead of machine literals
+
+**benchmark**
+
+- `costbench` — 2026-11-03 — declared adapter
+- `costbench_dynamic` — 2026-11-03 — declared adapter
+- `memoryagentbench` — 2026-11-03 — declared adapter
+- `personamem_v2` — 2026-11-03 — declared adapter
+
+**platform**
+
+- `platform core` — 2026-10-01 — driver, rounds, sandbox, records, scoring
+- `dataset root resolver` — 2026-11-03 — one place that answers where a dataset's bytes live; no machine literal in an adapter
+- `dataset storage migration` — 2026-11-03 — 58 adapters moved from an operator's absolute path to one resolver: HG_DATA_<NAME> > HG_DATA_ROOT, no implicit directory, portable catalogues
+- `env-file precedence` — 2026-11-03 — shell > worktree .env > primary .env, read without importing an adapter
+- `provisioning CLI` — 2026-11-03 — per-dataset fetch/check from the adapter's own declaration

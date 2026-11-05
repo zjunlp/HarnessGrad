@@ -234,9 +234,9 @@
       {
         "name": "aime",
         "adapter": "data/datasets/aime.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "alfworld",
@@ -299,9 +299,9 @@
       {
         "name": "cooperbench",
         "adapter": "data/datasets/cooperbench.py",
-        "contributor": "crepuscular-drizzle",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: crepuscular-drizzle"
       },
       {
         "name": "costbench",
@@ -328,9 +328,9 @@
       {
         "name": "deepswe",
         "adapter": "data/datasets/deepswe.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "ds1000",
@@ -392,16 +392,16 @@
       {
         "name": "jobbench",
         "adapter": "data/datasets/jobbench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "kumo",
         "adapter": "data/datasets/kumo.py",
-        "contributor": "crepuscular-drizzle",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: crepuscular-drizzle"
       },
       {
         "name": "livecodebench",
@@ -420,9 +420,9 @@
       {
         "name": "locomo",
         "adapter": "data/datasets/locomo.py",
-        "contributor": "crepuscular-drizzle",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: crepuscular-drizzle"
       },
       {
         "name": "math",
@@ -518,9 +518,9 @@
       {
         "name": "spreadsheetbench2",
         "adapter": "data/datasets/spreadsheetbench2.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "strategyqa",
@@ -532,9 +532,9 @@
       {
         "name": "strongreject",
         "adapter": "data/datasets/strongreject.py",
-        "contributor": "crepuscular-drizzle",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: crepuscular-drizzle"
       },
       {
         "name": "supergpqa",
@@ -553,24 +553,24 @@
       {
         "name": "swe_bench_pro",
         "adapter": "data/datasets/swe_bench_pro.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-10-27",
         "adoption": 1,
-        "note": "repository-level patches, per-task images"
+        "note": "repository-level patches, per-task images; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "tau2_bench",
         "adapter": "data/datasets/tau2_bench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer"
+        "note": "dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "tau3_bench",
         "adapter": "data/datasets/tau3_bench.py",
-        "contributor": "crepuscular-drizzle",
+        "contributor": "harbor-framework",
         "since": "2026-11-03",
-        "note": "declared adapter"
+        "note": "declared adapter; HarnessGrad integration: crepuscular-drizzle"
       },
       {
         "name": "tau_bench",
@@ -582,10 +582,10 @@
       {
         "name": "terminal_bench",
         "adapter": "data/datasets/terminal_bench.py",
-        "contributor": "Xubqpanda",
+        "contributor": "harbor-framework",
         "since": "2026-10-26",
         "adoption": 1,
-        "note": "container tasks; official scorer in the image"
+        "note": "container tasks; official scorer in the image; HarnessGrad integration: Xubqpanda"
       },
       {
         "name": "travelplanner",
@@ -633,7 +633,7 @@
       "handle": "Xubqpanda",
       "name": "Buqiang Xu",
       "joined": "2026-10-01",
-      "note": "platform core; every harness, method and benchmark adapter in this catalogue"
+      "note": "platform core; every harness and method in this catalogue"
     },
     {
       "handle": "crepuscular-drizzle",
@@ -646,6 +646,12 @@
       "name": "Trance",
       "joined": "2026-10-29",
       "note": "method launch validation and measurement identity"
+    },
+    {
+      "handle": "harbor-framework",
+      "name": "Harbor",
+      "joined": "2026-10-26",
+      "note": "Harbor framework and benchmark adapter contributions; original benchmark and dataset authors retain their respective attribution and licenses."
     }
   ],
   "platform": [

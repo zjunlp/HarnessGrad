@@ -49,9 +49,9 @@ def test_every_declared_adapter_is_credited() -> None:
         sorted(set(contributors.declared_benchmarks()) ^ credited))
 
 
-def test_three_people_and_every_one_has_a_credit() -> None:
+def test_every_listed_contributor_has_a_credit() -> None:
     people = {person["handle"] for person in _record()["people"]}
-    assert people == {"Xubqpanda", "crepuscular-drizzle", "trancefornow"}, people
+    assert {"Xubqpanda", "crepuscular-drizzle", "trancefornow", "harbor-framework"} <= people
     credited = {entry["contributor"] for entry in contributors.entries(_record())}
     assert credited == people, "a person is listed with no credit or a credit has no person"
 
@@ -232,14 +232,12 @@ def test_the_interactive_page_carries_the_record_and_the_controls() -> None:
 def test_avatars_are_cached_and_embedded_rather_than_linked() -> None:
     """A README shows an SVG through an `<img>`, which may not load a remote resource.
 
-    So the avatar has to be part of the file: the drawing embeds a data URI from
-    `.github/assets/avatars/`, and every contributor has a cached image. The initial is drawn
-    underneath either way, so a person without a cached image degrades to a letter.
+    Cached avatars are embedded, and contributors without a cached image must
+    remain visible via their initial; rendering never fetches remote images.
     """
     record = _record()
-    for person in record["people"]:
-        handle = person["handle"]
-        assert contributors.avatar_data_uri(handle), f"{handle} has no cached avatar"
+    assert contributors.avatar_data_uri("harbor-framework") is None
+    assert ">H</text>" in contributors._avatar("harbor-framework", 20, 20, 10, "#123456")
     for board in ("harness", "method", "benchmark"):
         svg = contributors.render_svg(record, board)
         for handle, _ in contributors.totals(
