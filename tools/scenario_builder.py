@@ -345,7 +345,7 @@ def draft(note: str, materials_dir: pathlib.Path | None, out: pathlib.Path,
                                         ("HG_AUTHOR_MODEL", model),
                                         ("HG_AUTHOR_API_KEY", api_key)) if not value]
     if missing:
-        raise BundleInvalid([f"起草需要设置 {missing}（本地端点见 docs/local-model-endpoints.md）"])
+        raise BundleInvalid([f"起草需要设置 {missing}（配置自己的 OpenAI 兼容 endpoint）"])
     names = sorted(p.name for p in materials_dir.iterdir()) if materials_dir else []
     system, user = draft_prompt(note, names)
     reason = ""

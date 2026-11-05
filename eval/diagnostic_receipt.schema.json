@@ -112,11 +112,8 @@
           ]
         },
         "endpoint": {
-          "enum": [
-            "http://127.0.0.1:8001/v1",
-            "http://127.0.0.1:8002/v1",
-            null
-          ]
+          "type": ["string", "null"],
+          "description": "Credential-free HTTP(S) URL or null; runtime validation checks syntax and identity binding, not service availability."
         },
         "limits": {
           "type": "object",

@@ -24,7 +24,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-STUDY_FILE = Path("/mnt/20t/xubuqiang/hg-work/rsi10/train100.csv")
+# Optional release-data control: never discover or read a private historical selection.
+STUDY_FILE = Path(os.environ['HG_TEST_ALFWORLD_STUDY_FILE']).expanduser() if os.environ.get('HG_TEST_ALFWORLD_STUDY_FILE') else None
 
 PROBE = """
 import json, sys
@@ -72,7 +73,7 @@ def test_without_a_study_file_there_is_no_division():
     assert got["tasks"] > 0
 
 
-@pytest.mark.skipif(not STUDY_FILE.exists(), reason="train100.csv 未生成")
+@pytest.mark.skipif(STUDY_FILE is None or not STUDY_FILE.is_file(), reason="set HG_TEST_ALFWORLD_STUDY_FILE for this optional control")
 def test_a_study_file_makes_the_two_sides_come_from_two_directories():
     got = _probe(HG_ALFWORLD_STUDY_IDS=STUDY_FILE)
     assert got["study"] == 100
@@ -86,7 +87,7 @@ def test_a_study_file_makes_the_two_sides_come_from_two_directories():
 @pytest.mark.parametrize("pool,expected", [("valid_seen", 140),
                                            ("valid_train", 200),
                                            ("valid_unseen", 134)])
-@pytest.mark.skipif(not STUDY_FILE.exists(), reason="train100.csv 未生成")
+@pytest.mark.skipif(STUDY_FILE is None or not STUDY_FILE.is_file(), reason="set HG_TEST_ALFWORLD_STUDY_FILE for this optional control")
 def test_the_eval_pool_is_selectable(pool, expected):
     got = _probe(HG_ALFWORLD_STUDY_IDS=STUDY_FILE, HG_ALFWORLD_POOL=pool)
     assert got["pool"] == pool
@@ -115,6 +116,7 @@ def test_the_same_directory_cannot_supply_a_task_twice():
     assert len({r["task_id"] for r in twice}) == len(twice)
 
 
+@pytest.mark.skipif(STUDY_FILE is None or not STUDY_FILE.is_file(), reason="set HG_TEST_ALFWORLD_STUDY_FILE for this optional control")
 def test_measuring_the_split_the_study_set_comes_from_is_refused():
     """`--pool train` + 一个 train 的 study 文件 = 在自己的学习材料上考试。响亮拒绝。"""
     got = _probe(HG_ALFWORLD_STUDY_IDS=STUDY_FILE, HG_ALFWORLD_POOL="train")

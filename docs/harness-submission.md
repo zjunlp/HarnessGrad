@@ -26,7 +26,7 @@ python3 -c 'import playwright.sync_api'
 
 若自检报`Can't find source path .../harnessgrad_work`，先核对上述目录与权限；这是挂载源不存在，不能据安装脚本的通用提示推断需关闭安全功能。没有该父目录写权限时，使用已有平台`eval.containers.sandbox.self_check(platform, work_root)`并指定自己已存在的平台外工作根，保留真实结果；不要修改共享目录或内核策略。
 
-当前生产服务预算目录固定为`/tmp/hg-rsi10-lb`，提交driver使用capacity=1。须先安排窗口：目录不存在时可在本机专用窗口创建；已存在capacity必须为1且无冲突driver。**不同capacity不得覆盖stamp、删除目录或杀其他进程。** 本手册不提供改变生产预算路径的隐藏参数。
+设置 `HG_CONSOLE_BUDGET_DIR` 指向平台外、已存在且可写的共享 lease 目录；Console 直接启动和提交 driver 均使用 capacity=1（`jobs` 不改变共享 capacity）。所有共享同一计算资源的 console/driver 必须使用相同目录与 capacity，否则无法实现跨进程协调。已存在的 capacity 不匹配时必须停止并由部署管理员处理；不要覆盖 stamp、删除其他运行的目录或终止其他进程。
 
 ### 1. 建立本次独立目录
 
@@ -36,20 +36,15 @@ set -euo pipefail
 repo=$PWD
 test -f "$repo/driver.py"
 case=$(mktemp -d /tmp/hg-submit-XXXXXXXX)
-mkdir -p "$case/runs" "$case/submissions" "$case/work" "$case/evidence"
-python3 - <<'PY'
-from pathlib import Path
-budget=Path('/tmp/hg-rsi10-lb')
-stamp=budget/'capacity'
-if stamp.exists() and stamp.read_text().strip()!='1':
-    raise SystemExit('Budget capacity conflict: stop and arrange a dedicated window; do not overwrite it')
-budget.mkdir(exist_ok=True)
-PY
+mkdir -p "$case/runs" "$case/submissions" "$case/work" "$case/evidence" "$case/budget"
+# This isolated demo directory coordinates only processes configured to use it.
+# For shared hardware, obtain the common lease directory from its administrator.
 {
   printf 'export HG_CONSOLE_PLATFORM=%q\n' "$repo"
   printf 'export HG_CONSOLE_RUNS=%q\n' "$case/runs"
   printf 'export HG_CONSOLE_SUBMISSIONS_ROOT=%q\n' "$case/submissions"
   printf 'export HG_CONSOLE_SUBMISSIONS_WORK=%q\n' "$case/work"
+  printf 'export HG_CONSOLE_BUDGET_DIR=%q\n' "$case/budget"
   printf 'export HG_CONSOLE_UAT_OUT=%q\n' "$case/evidence/uat.md"
   printf 'export HG_AGENT_BACKEND=mock\nexport TMPDIR=/tmp\nexport PYTHONDONTWRITEBYTECODE=1\n'
 } > "$case/env.sh"

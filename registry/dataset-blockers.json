@@ -324,8 +324,8 @@
      "evidence": [
       {
        "kind": "repository",
-       "path": "docs/adapter-integration-journal.md",
-       "locator": "## CostBench static protocol \u2014 2026-10-21"
+       "path": "data/datasets/costbench.py",
+       "locator": "CostBench static sequence-5: official test and repaired training runtime."
       }
      ],
      "next_action": "Before reporting candidate performance, record source/configuration, split, selected tasks, trials, metric eligibility, model identity, actual usage and cleanup. Label static/subset results explicitly; do not treat zero eligible cost samples as optimal cost or reference controls as model evaluation."
@@ -747,7 +747,7 @@
      "family": "measurement-coverage",
      "id": "adapter-acceptance-pending",
      "next_action": "Review the current Conda validation receipt and adapter documentation. Validate the intended local-model configuration and native sandbox on the target host before model evaluation. Specify task scope, model and budget for the experiment; use the manual question-weighted report with complete selected coverage and matching trial evidence. Preserve invalid and unmeasured outcomes and verification records. Formal staged evaluation remains subject to existing platform runtime and publication checks.",
-     "observed": "Native files adapter following pinned Harbor input rendering and scoring, using official LoCoMo data: 10 conversations, 1986 questions, all five categories. Complete conversation.md and questions are available at task start; the harness writes answers.json. Per-question scores are retained in standard verdict evidence. The platform uses its existing task mean; report.py provides a separately invoked question-weighted summary with explicit selected coverage. Uses Conda and the existing local HTTP model route with network none. No platform execution changes, model judge or declared study/eval split. Current implementation and validation scope are documented in data/datasets/locomo/README.md and specs/validation-20261017.json. Real local-model inference, target-host readiness and full model benchmark results are not established.",
+     "observed": "Native files adapter following pinned Harbor input rendering and scoring, using official LoCoMo data: 10 conversations, 1986 questions, all five categories. Complete conversation.md and questions are available at task start; the harness writes answers.json. Per-question scores are retained in standard verdict evidence. The platform uses its existing task mean; report.py provides a separately invoked question-weighted summary with explicit selected coverage. Uses Conda and the existing local HTTP model route with network none. No platform execution changes, model judge or declared study/eval split. Current implementation and validation limitations are documented in data/datasets/locomo/README.md; historical validation evidence is archived separately. Real local-model inference, target-host readiness and full model benchmark results are not established.",
      "status": "measurement"
     }
    ],

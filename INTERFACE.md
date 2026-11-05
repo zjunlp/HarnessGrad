@@ -2714,8 +2714,8 @@ Measured 2026-10-04, in this order:
 
 Three things follow, and they are the platform's:
 
-1. **`tools/serve_local_model.sh` starts the server with the flags** (parser overridable via
-   `HARNESSGRAD_TOOL_PARSER`, default `qwen3_xml`; `none` to disable).
+1. **The deployment configures its model server** with tool-call support and a parser
+   compatible with the selected model's actual chat template.
 2. **`tools/probe_tool_calls.py` is the check** -- one tool definition, both wires, exit 0
    only when a structured call comes back. A model that fails it is not a worse model; it is
    a model that cannot drive an agent shell, and this is the only thing that distinguishes

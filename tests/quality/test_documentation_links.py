@@ -368,7 +368,8 @@ def test_the_documentation_graph_is_covered():
     """The scan has to look at the graph, not an empty list."""
     counts = _result()["counts"]
     assert counts["documents"] >= 40, counts
-    assert counts["links"] >= 300, counts
+    # Historical operational journal was archived; count the remaining live graph.
+    assert counts["links"] >= 250, counts
     assert counts["inline"] >= 300, counts
 
 

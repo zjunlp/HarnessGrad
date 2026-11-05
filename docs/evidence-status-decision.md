@@ -139,8 +139,7 @@ registry.
 
 ## Provenance
 
-Reviewed-but-not-applied alternatives: `registry/proposals/limit-{appworld,bfcl_v3,triviaqa}.json`
-and `registry/proposals/record-bfcl_v3.json`; the four-option analysis is
-`registry/w-decisionpack.md`. `tools/apply_blocker_proposal.py` was used for the RECORD edits and
+Reviewed alternatives and the historical four-option analysis are archived outside the public tree; they are not active runtime configuration.
+`tools/apply_blocker_proposal.py` was used for the RECORD edits and
 refuses silently-dropping replacements. Pre-removal blocker text remains readable in
 `git show <commit-before-this-decision>:registry/dataset-blockers.json`.

@@ -80,19 +80,8 @@ batch flow does not call the LoCoMo summary, create `dataset_reports`, or attach
 
 ## Validation
 
-The dated validation record in `specs/validation-20261017.json` describes the
-implementation tested on 2026-10-17, including the diagnostic script that was later
-removed. Its source hashes are historical, not a manifest of the current tree.
-Subsequent validation is the platform's own receipts (`runs/`) and the dataset's
-`registry/dataset-blockers.json` entry; the historical journal that used to hold the prose was
-deleted in the 2026-10-27 repo slim. The record covered Conda execution, pinned Harbor
-input/scorer comparisons, standard task verdict evidence and manual aggregation.
-A bounded API connectivity check on 2026-10-18 used Conda, the standard driver,
-`loop`, one complete conversation and its first three questions. All three answers,
-per-question verdicts, saved traces and the manual summary were verified. Six API
-calls completed successfully. Because the native model route accepts HTTP only,
-the check used a temporary loopback HTTP bridge to the configured HTTPS provider;
-the bridge and temporary workspace were closed and removed afterward. This is a
-three-question connectivity check, not a benchmark score or validation of direct
-HTTPS support. Real local-model inference and a full model benchmark remain
-unvalidated.
+Dataset validation requires a provisioned dataset and an appropriate isolated runtime.
+Tests can exercise synthetic scoring and aggregation without model access. A mock or
+small control does not establish a full benchmark result, endpoint compatibility, or
+production isolation. Preserve any execution receipts separately with their precise
+source, scorer, split, harness and model identities.

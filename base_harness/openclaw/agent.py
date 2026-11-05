@@ -62,6 +62,10 @@ def task_prompt(task: dict) -> str:
 def runtime_identity() -> dict:
     manifest = json.loads((ROOT / "harness.json").read_text(encoding="utf-8"))
     declared = {str(Path(value).resolve()) for value in manifest.get("runtime_paths", [])}
+    if any(not isinstance(_RUNTIME.get(key), str) or not _RUNTIME[key].strip()
+           for key in ("package_root", "entrypoint", "node")):
+        raise AdapterError("OpenClaw runtime is not configured: prepare a candidate with explicit "
+                           "package_root, entrypoint, node and matching read-only runtime_paths")
     package_root = Path(_RUNTIME["package_root"])
     package = package_root / "package.json"
     entry = Path(_RUNTIME["entrypoint"])

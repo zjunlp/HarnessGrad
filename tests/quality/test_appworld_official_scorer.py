@@ -19,6 +19,16 @@ BUNDLE = dataset.DATASET_ROOT / "_src" / "data-0.1.0.bundle"
 CONTROL_TASK = "e85d92a_1"
 
 
+def configured_appworld_python():
+    value = os.environ.get('AW_PYTHON', '').strip()
+    if not value:
+        pytest.skip('AW_PYTHON must explicitly select a provisioned AppWorld interpreter')
+    path = Path(value).expanduser()
+    if not path.is_absolute() or not path.is_file() or not os.access(path, os.X_OK):
+        pytest.fail('AW_PYTHON must name an executable absolute interpreter')
+    return str(path)
+
+
 def test_bundle_digest_and_release_count():
     assert hashlib.sha256(BUNDLE.read_bytes()).hexdigest() == dataset.downloads()[0]["sha256"]
     assert len(dataset.task_ids()) == dataset.TASKS_IN_RELEASE == 732
@@ -107,7 +117,7 @@ def test_every_released_reference_passes_its_official_evaluation(tmp_path):
     evaluate two task ids.  One subprocess per covered task makes this a replay of the
     release artifacts rather than a test of a shared process's leftovers.
     """
-    python = "/mnt/20t/xubuqiang/venvs/appworld/bin/python"
+    python = configured_appworld_python()
     probe = tmp_path / "probe.py"
     for task_id in sorted(dataset._oracle_ids()):
         reference = dataset.oracle_files({"task_id": task_id})["reference.py"]
@@ -197,7 +207,7 @@ def test_check_separates_measured_zero_from_unmeasured(tmp_path):
     empty = tmp_path / "empty.jsonl"
     empty.write_text("")
     appworld_env = dict(__import__("os").environ, APPWORLD_ROOT=str(dataset.UNPACKED))
-    proc = subprocess.run(["/mnt/20t/xubuqiang/venvs/appworld/bin/python", str(check), "--task-id", CONTROL_TASK, "--log", str(empty), "--reward-file", str(reward), "--evidence-file", str(evidence)], cwd=tmp_path, env=appworld_env)
+    proc = subprocess.run([configured_appworld_python(), str(check), "--task-id", CONTROL_TASK, "--log", str(empty), "--reward-file", str(reward), "--evidence-file", str(evidence)], cwd=tmp_path, env=appworld_env)
     assert proc.returncode == 0
     assert reward.read_text().strip() == "0.0"
     assert json.loads(evidence.read_text())["measured"] is True

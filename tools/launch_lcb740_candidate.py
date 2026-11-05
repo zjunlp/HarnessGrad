@@ -34,6 +34,9 @@ def launch(*, agent: bytes, statement: bytes, tests: bytes, work_root: Path,
            model: str, index_record: bytes | None = None,
            approved_index_sha256: str | None = None, timeout=120, max_calls=4,
            max_tokens=512, max_total_tokens=2048, _connect=None):
+    endpoint = os.environ.get('HG_AGENT_BASE_URL', '')
+    if not endpoint:
+        raise ValueError('HG_AGENT_BASE_URL must explicitly name the model endpoint')
     work_root = workspace_path(work_root)
     work_root.mkdir(parents=True, exist_ok=True)
     if type(timeout) is not int or not 0 < timeout <= 120:
@@ -49,7 +52,7 @@ def launch(*, agent: bytes, statement: bytes, tests: bytes, work_root: Path,
         actor.mkdir()
         (actor / "task.md").write_bytes(statement)
         (actor / "agent.py").write_bytes(agent)
-        with Relay(relay_dir, model=model, max_calls=max_calls, max_tokens=max_tokens,
+        with Relay(relay_dir, model=model, endpoint=endpoint, max_calls=max_calls, max_tokens=max_tokens,
                    max_total_tokens=max_total_tokens, _connect=_connect) as relay:
             argv = namespace_command(actor, [PYTHON, "-I", "-S", "agent.py"],
                                      writable=True, relay_dir=relay_dir)

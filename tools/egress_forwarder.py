@@ -3,8 +3,8 @@
 
 Why this exists
 ---------------
-The machine's proxy (our own mihomo, `~/.config/harnessgrad-proxy/`) binds `127.0.0.1`, and
-a container cannot reach the host's loopback -- it has its own. A task's check, however,
+An independently managed host proxy may bind `127.0.0.1`, which a container cannot
+reach through its own loopback interface. A task's check, however,
 often needs the internet: measured across the Terminal-Bench checkout, **83 of 89**
 `test.sh` files bootstrap their own test runner with `curl https://astral.sh/uv/... | sh`.
 Without a route, the check never runs, and the platform recorded that as a task the
@@ -16,8 +16,7 @@ cannot. The platform then hands `HG_EGRESS_PROXY=http://172.17.0.1:<port>` to th
 process (`eval/run/runner.py:_check_env`), and never to the harness -- a harness reaches its
 model through the platform, and a proxy in front of that breaks it.
 
-    python3 tools/egress_forwarder.py        # 172.17.0.1:17890 -> 127.0.0.1:17891
-    ~/.config/harnessgrad-proxy/start-all.sh # that, plus the proxy itself
+    python3 tools/egress_forwarder.py        # bridge an independently managed proxy
 
 `HG_EGRESS_UPSTREAM` and `HG_EGRESS_PORT` change the upstream and the published port; the
 defaults are the ones `docs/egress.md` documents.

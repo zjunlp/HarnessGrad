@@ -10,7 +10,6 @@ import shutil
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[2]
-LAUNCHER = ROOT / "tools/serve_local_model.sh"
 
 # Importing the dataset prepares shared data. Compile only the self-contained
 # resolver so these unit tests cannot load, download, or mutate any dataset.
@@ -27,50 +26,6 @@ def executable(path, body="exit 0"):
     path.write_text("#!/bin/sh\n" + body + "\n")
     path.chmod(0o755)
     return path
-
-
-def test_shell_syntax():
-    subprocess.run(["bash", "-n", str(LAUNCHER)], check=True)
-
-
-def test_vllm_help_without_runtime(monkeypatch):
-    monkeypatch.delenv("HARNESSGRAD_VLLM_VENV", raising=False)
-    result = subprocess.run(["bash", str(LAUNCHER), "--help"], capture_output=True, text=True)
-    assert result.returncode == 0
-    assert "Usage:" in result.stdout
-
-
-@pytest.mark.parametrize("runtime", [None, "missing", "no-python"])
-def test_vllm_missing_runtime_names_configuration(tmp_path, monkeypatch, runtime):
-    monkeypatch.delenv("HARNESSGRAD_VLLM_VENV", raising=False)
-    if runtime is not None:
-        venv = tmp_path / runtime
-        monkeypatch.setenv("HARNESSGRAD_VLLM_VENV", str(venv))
-        if runtime == "no-python":
-            executable(venv / "bin/vllm", "echo SHOULD_NOT_RUN; exit 99")
-    result = subprocess.run(
-        ["bash", str(LAUNCHER), "--model", str(tmp_path)], capture_output=True, text=True
-    )
-    assert result.returncode == 2
-    assert "HARNESSGRAD_VLLM_VENV" in result.stderr
-    assert "SHOULD_NOT_RUN" not in result.stdout
-
-
-def test_vllm_explicit_runtime_configures_path_only(tmp_path):
-    # Source just definitions, then call configuration: never reach serving code.
-    prefix = LAUNCHER.read_text().split('MODEL="" PORT=8002', 1)[0]
-    venv = tmp_path / "runtime with spaces"
-    executable(venv / "bin/vllm", "exit 99")
-    executable(venv / "bin/python", "exit 99")
-    (venv / "lib").mkdir()
-    result = subprocess.run(
-        ["bash", "-c", prefix + '\nconfigure_runtime || exit $?\nprintf "%s\\n" "$VLLM" "$PATH"'],
-        env={**os.environ, "HARNESSGRAD_VLLM_VENV": str(venv)},
-        capture_output=True, text=True,
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.splitlines()[0] == str(venv / "bin/vllm")
-    assert result.stdout.splitlines()[1].startswith(str(venv / "bin") + ":")
 
 
 @pytest.mark.parametrize("value", [None, "", "/nonexistent/appworld/python"])

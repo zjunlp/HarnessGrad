@@ -24,6 +24,11 @@ test('error prefixes translate while raw detail and field survive', () => {
   assert.match(en, /Unsafe archive path/); assert.match(en, /raw <detail>/); assert.match(en, /archive/);
   assert.match(errors('zh')('unsafe-path'), /越界路径/);
 });
+test('launch status does not claim endpoint authentication', () => {
+  assert.match(window.HG_LAUNCH_I18N.en['ls.58'], /not connectivity or authentication/);
+  assert.match(window.HG_LAUNCH_I18N.zh['ls.58'], /未验证连接或鉴权/);
+});
+
 test('confirmation has independent placeholders and no POST in tests', () => {
   for (const lang of ['en','zh']) assert.match(window.HG_LAUNCH_I18N[lang]['submit.confirm'], /\{file\}.*\{scenario\}/);
   assert.match(source, /t\("submit.confirm"\)/);

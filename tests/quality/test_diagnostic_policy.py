@@ -23,7 +23,7 @@ def context():
     return dict(dataset="demo", side="train",
                 metric=dict(name="unit-test metric", scorer_sha256="b" * 64),
                 hashes={k: "c" * 64 for k in policy.HASH_NAMES},
-                endpoint=policy.ENDPOINTS[0], gates=attestation(),
+                endpoint="http://127.0.0.1:8002/v1", gates=attestation(),
                 limits=dict(resource=dict(filesystem_bytes=1024),
                             budget=dict(model_calls=1, wall_seconds=1)),
                 comparability_notes=["Synthetic fixture; not evidence for a production pilot."])

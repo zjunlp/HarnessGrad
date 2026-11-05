@@ -14,9 +14,33 @@ from pathlib import Path
 import pytest
 
 import tools.apply_blocker_proposal as applier
+import tools.check_dataset_blockers as checker
 
 ROOT = Path(__file__).resolve().parents[2]
 LIVE = ROOT / "registry" / "dataset-blockers.json"
+
+
+def test_historical_journal_reference_is_not_live_blocker_evidence(tmp_path):
+    evidence = [{'kind': 'repository', 'path': 'docs/adapter-integration-journal.md',
+                 'locator': 'archived locator'}]
+    # Historical text remains unchanged and is not represented as newly verified.
+    checker._evidence(evidence, tmp_path, 'history', archived_journal=True)
+    with pytest.raises(checker.RegistryError, match='missing evidence'):
+        checker._evidence(evidence, tmp_path, 'active blocker')
+
+
+def test_new_history_cannot_claim_archived_journal_without_baseline():
+    document = json.loads(LIVE.read_text())
+    row = document['datasets'][0]
+    original = next(item for item in document['datasets'] if item['historical_runs'])['historical_runs'][0]
+    forged = copy.deepcopy(original)
+    forged['record_id'] = 'new-unverified-history'
+    forged['run_id'] = None
+    forged['evidence'] = [{'kind': 'repository', 'path': 'docs/adapter-integration-journal.md',
+                           'locator': 'does not exist'}]
+    row['historical_runs'].append(forged)
+    with pytest.raises(checker.RegistryError, match='stale evidence locator'):
+        checker.validate(document)
 
 
 @pytest.fixture

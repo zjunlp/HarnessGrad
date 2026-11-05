@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""HarnessGrad 的运维层:准备环境、起停 run、看进度、比较候选、管理模型服务。
+"""Legacy local API: prepare environments, manage runs, and inspect candidates.
+
+Model service lifecycle belongs to the deployment operator, not this API.
 
     python3 tools/serve_ui.py --port 8770
 
@@ -14,7 +16,7 @@
 * `prepare_report` / `start_prepare` —— 跑之前把 docker 镜像导进来。平台在 run 进行中
   拒绝拉镜像,所以这是跑新数据集的前提;
 * `start_job` / `job_status` / `stop_job` / `driver_pid` —— 从界面起停一个 run;
-* `model_service` —— 起停本地 vLLM;
+* `model_service` —— deprecated compatibility response; no service management;
 * `promote` / `version_graph` —— 把某个候选状态提升为当前 harness,以及版本图;
 * `step_diff` / `explain_diff`、`provider_catalog` / `read_settings` / `write_settings` /
   `test_connection`、`model_presets` / `method_catalogue` / `improver_options` /
@@ -78,25 +80,18 @@ def model_presets() -> dict:
                 env[k.strip()] = v.strip()
 
     presets = {
-        "本地 Qwen3.5-9B(vLLM,免费、秒回)": {
-            "HG_AGENT_BACKEND": "openai",
-            "HG_AGENT_MODEL": "qwen3.5-9b-local",
-            "HG_AGENT_BASE_URL": "http://127.0.0.1:8002/v1",
-            "HG_AGENT_API_KEY": "local",
-            "note": "需要先启动本地服务:./tools/serve_local_model.sh --model <模型>",
-        },
         "mock(零成本冒烟,不调模型)": {
             "HG_AGENT_BACKEND": "mock",
             "note": "用来验证流程通不通,分数不代表任何模型",
         },
     }
-    if env.get("HG_AGENT_API_KEY"):
-        presets[f"DeepSeek {env.get('HG_AGENT_MODEL', 'flash')}(远程 API)"] = {
+    if env.get("HG_AGENT_MODEL") and env.get("HG_AGENT_BASE_URL"):
+        presets["配置的 OpenAI 兼容模型"] = {
             "HG_AGENT_BACKEND": "openai",
-            "HG_AGENT_MODEL": env.get("HG_AGENT_MODEL", "deepseek-flash"),
-            "HG_AGENT_BASE_URL": env.get("HG_AGENT_BASE_URL", "https://api.deepseek.com"),
-            "HG_AGENT_API_KEY": env["HG_AGENT_API_KEY"],
-            "note": "走网络,按量计费",
+            "HG_AGENT_MODEL": env["HG_AGENT_MODEL"],
+            "HG_AGENT_BASE_URL": env["HG_AGENT_BASE_URL"],
+            "HG_AGENT_API_KEY": env.get("HG_AGENT_API_KEY", ""),
+            "note": "使用用户配置的服务；运行可能产生费用",
         }
     return presets
 
@@ -569,9 +564,8 @@ def explain_diff(run_id: str, round_no: int) -> dict:
         f"```diff\n{patch[:12000]}\n```\n\n"
         "用中文写 3-5 句话:改了什么、针对什么问题、有什么风险。")
 
-    # 先试本地服务:免费且快,演示时最稳
-    candidates = [("http://127.0.0.1:8002/v1", "local",
-                   os.environ.get("HARNESSGRAD_EXPLAIN_MODEL", "qwen3.5-9b-local"))]
+    # Only explicitly configured endpoints may receive a run's diff.
+    candidates = []
     env = {}
     ef = ROOT / ".env"
     if ef.exists():
@@ -620,11 +614,9 @@ def explain_diff(run_id: str, round_no: int) -> dict:
 #: `local` 标记的项不需要 key —— 本地 vLLM 不鉴权,而把它显示成"缺 API key"会让
 #: 人以为配置不完整。DSH 的做法是允许"无凭据的 provider 原生配置",这里照做。
 PROVIDERS = {
-    "本地 vLLM(免费,秒回)": {
-        "base_url": "http://127.0.0.1:8002/v1",
-        "models": ["qwen3.5-9b-local", "qwen3-30b-local", "qwen2.5-7b-local"],
-        "local": True,
-        "note": "需要先在下面启动本地模型服务;首次加载约 2 分钟",
+    "本地 OpenAI 兼容服务": {
+        "base_url": "", "models": [], "local": True,
+        "note": "由部署方管理服务；请填写 endpoint 与模型名",
     },
     "DeepSeek": {
         "base_url": "https://api.deepseek.com",
@@ -649,29 +641,8 @@ PROVIDERS = {
 
 def provider_catalog() -> dict:
     """给设置页的目录:每个提供方的默认值,以及本机当前可用的本地模型。"""
-    catalog = {k: dict(v) for k, v in PROVIDERS.items()}
-
-    # 本地服务真在跑的话,把它自报的模型名填进去 —— 这比预设的猜测准
-    try:
-        with urllib.request.urlopen("http://127.0.0.1:8002/v1/models", timeout=4) as r:
-            names = [m["id"] for m in json.load(r).get("data", [])]
-        if names:
-            catalog["本地 vLLM(免费,秒回)"]["models"] = names
-            catalog["本地 vLLM(免费,秒回)"]["running"] = True
-    except Exception:                                       # noqa: BLE001
-        catalog["本地 vLLM(免费,秒回)"]["running"] = False
-
-    # 有哪些本地模型权重可服务,给"启动服务"用
-    candidates = []
-    for base in ("/mnt/20t/qzs/PLMs", "/mnt/20t/lhz/models", "/mnt/20t/xuhaoming/models"):
-        d = Path(base)
-        if not d.is_dir():
-            continue
-        for sub in sorted(d.iterdir()):
-            if (sub / "config.json").exists() and (sub / "model.safetensors.index.json").exists():
-                candidates.append(str(sub))
-    catalog["_local_model_dirs"] = candidates[:20]
-    return catalog
+    # Catalog inspection is offline and does not enumerate host model directories.
+    return {k: dict(v) for k, v in PROVIDERS.items()}
 
 
 # ------------------------------------------------------------------ 设置 ---
@@ -859,49 +830,8 @@ def test_connection(which: str) -> dict:
 
 def model_service(action: str = "status", model_dir: str = "",
                   port: int = 0) -> dict:
-    """本地模型服务的启停与状态。
-
-    启停交给 `tools/harnessgrad.sh`,不在这里重新实现:那个脚本要处理端口占用、
-    等就绪、以及这台共享机器上"别杀别人的进程",那些逻辑只有一份才对。面板只是
-    调用它并展示结果。
-    """
-    script = ROOT / "tools" / "harnessgrad.sh"
-    if not script.exists():
-        return {"error": "tools/harnessgrad.sh 不存在"}
-
-    env = dict(os.environ)
-    if model_dir:
-        env["HG_MODEL_DIR"] = model_dir
-    if port:
-        env["HG_MODEL_PORT"] = str(port)
-
-    if action == "status":
-        # 直接查端口,不调脚本 —— status 要快,而脚本的 status 会做几次 HTTP 探测
-        target = port or int(env.get("HG_MODEL_PORT", 8001))
-        pid = subprocess.run(["bash", "-c",
-                              f"ss -ltnp 2>/dev/null | grep ':{target} ' | "
-                              f"grep -oP 'pid=\\K[0-9]+' | head -1"],
-                             capture_output=True, text=True, errors="replace").stdout.strip()
-        live = False
-        if pid:
-            try:
-                with urllib.request.urlopen(
-                        f"http://127.0.0.1:{target}/v1/models", timeout=4) as r:
-                    live = bool(json.load(r).get("data"))
-            except Exception:                               # noqa: BLE001
-                live = False
-        return {"running": bool(pid), "ready": live, "pid": pid or None,
-                "port": target}
-
-    if action in ("start", "stop"):
-        # 不等待:启动要两分钟,而一个挂两分钟的 HTTP 请求会被浏览器先掐掉。
-        # 面板轮询 /api/model-service 看它什么时候就绪。
-        subprocess.Popen(["bash", str(script), action], cwd=str(ROOT), env=env,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                         start_new_session=True)
-        return {"started": action, "note": "本地模型服务首次加载约 2 分钟"}
-
-    return {"error": f"未知动作 {action}"}
+    """Deprecated API: model lifecycle belongs to the deployment operator."""
+    return {"error": "model-service management is not provided; configure an existing endpoint"}
 
 
 # ------------------------------------------------------------------ 读数(同前) ---
@@ -1623,12 +1553,7 @@ class Handler(BaseHTTPRequestHandler):
             which = parse_qs(query).get("which", ["agent"])[0]
             return self._json(test_connection(which))
         if path == "/api/model-service":
-            from urllib.parse import parse_qs
-            q = parse_qs(query)
-            return self._json(model_service(
-                q.get("action", ["status"])[0],
-                q.get("model_dir", [""])[0],
-                int(q.get("port", ["0"])[0] or 0)))
+            return self._json(model_service(), 410)
         if path == "/api/promote":
             from urllib.parse import parse_qs
             q = parse_qs(query)

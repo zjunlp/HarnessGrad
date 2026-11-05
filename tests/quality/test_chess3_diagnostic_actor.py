@@ -25,7 +25,7 @@ def test_control_sends_at_zero_retains_connection_and_reads_terminal(
     monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(tmp_path))
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
     repo = tmp_path / "control"
-    shutil.copytree(Path(__file__).resolve().parents[2] / "reports/w-chess3-control", repo)
+    shutil.copytree(Path(__file__).resolve().parents[2] / "tests/fixtures/chess3-diagnostic-control", repo)
     gold = {"fen": chess.STARTING_FEN, "moves": moves, "puzzle_id": "synthetic-only"}
     task = {"task_id": "chessbench_puzzles/test/0", "goal": "synthetic",
             "inputs": [], "interaction": dataset.STEPWISE_CONTRACT}

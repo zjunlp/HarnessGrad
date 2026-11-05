@@ -1,8 +1,7 @@
 r"""FEVER exported-row conjunctive strict@5, not classification Macro-F1.
 
 The adapter reads the pinned `copenlu/fever_gold_evidence` validation split and keeps
-that provenance explicit; it does not claim test gold access. Reward follows the
-operator's recorded choice in `registry/w-fevobj-receipts.md`: binary correctness of
+that provenance explicit; it does not claim test gold access. Reward is binary correctness of
 the label AND the whole exported evidence group within the first five predicted pairs,
 with NOT ENOUGH INFO evidence-exempt. This retains the strict predicate while naming
 the exported-row denominator honestly; it is not an original-claim FEVER aggregate.

@@ -63,6 +63,17 @@ def test_saved_mock_never_defaults_to_live_backend(setup, monkeypatch):
     assert setup.launch_form()['defaults']['task_backend'] == 'mock'
 
 
+def test_ambient_driver_key_is_not_advertised_as_saved(setup, monkeypatch):
+    from harnessgrad import config
+    monkeypatch.setattr(config, 'current', lambda: SimpleNamespace(agent=SimpleNamespace(
+        model='model', base_url='https://example.invalid/v1', api_key='ambient-secret', backend='openai')))
+    monkeypatch.delenv('HG_CONSOLE_TASK_API_KEY', raising=False)
+    defaults = setup.launch_form()['defaults']
+    assert defaults['task_api_key_set'] is False
+    assert setup.launch_env(form(task_backend='openai', task_model='model'))['HG_AGENT_API_KEY'] == ''
+    assert 'ambient-secret' not in repr(defaults)
+
+
 def test_mock_never_inherits_live_endpoint_and_backend_mismatch_is_rejected(setup):
     setup.save_settings({'task': {'model': 'live', 'base_url': 'https://example.invalid/v1', 'api_key': 'secret'}})
     env = setup.launch_env(form())

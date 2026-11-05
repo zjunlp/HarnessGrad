@@ -15,7 +15,10 @@ The candidate contains the adapter (`agent.py`), `prompt.md`, `config.json` and
 its mock fixture (`mock_model.py`). Changes to these files affect the run.
 OpenClaw's installed compiled package and Node executable are **external read-only
 dependencies**, named by `runtime-identity.json` and `harness.json.runtime_paths`.
-The package is 532 MB on this host and is not copied into checkpoints. This
+The public template is deliberately unconfigured: prepare a candidate with the local
+package root, its `openclaw.mjs`, Node binary and matching read-only runtime paths before
+execution. Keep these paths outside the checkout and task-writable storage; validate the
+actual package/version and sandbox on the target deployment. The package is not copied into checkpoints. This
 adapter therefore does not expose the upstream agent loop as editable candidate
 source, unlike the vendored MiniAgent harness.
 
@@ -30,10 +33,11 @@ provisioning in a container before declaring `exec` support.
 
 ## Model-free validation
 
-From the repository root:
+After preparing a separate candidate, run its smoke check with a mock backend;
+`base_harness/openclaw` itself is a template and intentionally refuses execution
+until its external runtime is configured. Run focused tests with:
 
 ```bash
-HG_AGENT_BACKEND=mock python3 tools/validate_harness.py base_harness/openclaw --smoke
 pytest -q tests/quality/test_openclaw_harness.py --basetemp=/tmp/hg-openclaw-tests
 ```
 

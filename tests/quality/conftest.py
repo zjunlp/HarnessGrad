@@ -66,7 +66,7 @@ SYNTHETIC_BLOCKER = {
     "observed": "Synthetic fixture entry. It is not a live requirement and is not in the real "
                 "registry; it is attached to a published dataset only inside a private copy.",
     "evidence": [{"kind": "repository", "path": "AGENTS.md",
-                  "locator": "## Dataset taxonomy"}],
+                  "locator": "# Contribution and agent guidance"}],
     "next_action": "Synthetic fixture obligation, used only to exercise the blocker tooling. "
                    "It is not a live requirement and it authorizes nothing.",
 }

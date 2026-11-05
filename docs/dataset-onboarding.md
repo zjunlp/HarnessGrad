@@ -37,8 +37,7 @@ or a different study set is a different H0, and the tool measures one rather tha
 traces are the same traces too -- which matters for methods that read the traces rather than the
 score.
 
-**This page is the procedure. `docs/adapter-integration-journal.md` is the in-repository onboarding log and evidence index.**
-Every adapter entry must also update `docs/adapter-integration-journal.md` when it teaches the shared platform a reusable capability.
+**This page is the procedure.** Document reusable adapter contracts in the adapter's own public documentation; preserve historical evaluation evidence separately and link only to material actually distributed with the project.
 If the dataset is new to you, read `docs/dataset-first-day.md` first: it is the
 reconnaissance — three measurements that decide whether this dataset is runnable, refused, or
 runnable with a measured exclusion — and its whole point is that **no adapter is written until

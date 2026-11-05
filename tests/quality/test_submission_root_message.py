@@ -12,10 +12,13 @@ const fs = require('fs');
 const vm = require('vm');
 const elements = new Map();
 function element(id) {
-  if (!elements.has(id)) elements.set(id, {dataset: {}, style: {}, value: '',
+  if (!elements.has(id)) elements.set(id, {dataset: {}, style: {}, value: '', options: [{}],
     addEventListener() {}, appendChild() {}, dispatchEvent() {}});
   return elements.get(id);
 }
+global.window = {};
+vm.runInThisContext(fs.readFileSync(require('path').join(require('path').dirname(process.argv[1]), 'launch-i18n.js'), 'utf8'));
+window.HGI18n = {t: key => window.HG_LAUNCH_I18N.zh[key] || key};
 global.location = {search: ''};
 global.document = {getElementById: element, querySelectorAll: () => [],
   querySelector: () => element('query'), readyState: 'complete'};
@@ -30,7 +33,7 @@ setImmediate(() => console.log(element('submit-global-error').innerHTML));
 
     message = render('configure HG_CONSOLE_SUBMISSIONS_ROOT outside the platform')
     assert 'HG_CONSOLE_SUBMISSIONS_ROOT=/tmp/hg-console-submissions' in message
-    assert '重启控制台服务' in message
+    assert '重启服务' in message
     assert '平台目录之外' in message
     assert '持久' in message
     assert 'bwrap' not in message
