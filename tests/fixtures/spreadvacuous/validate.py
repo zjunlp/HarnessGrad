@@ -68,7 +68,7 @@ receipt('TMPDIR=/tmp/spreadvacuous-tmp PYTHONDONTWRITEBYTECODE=1 python3 tests/f
 parts.append('Inherited observations, not a rerun of eligibility:\n' + (FIXTURE / 'inherited-eligibility.txt').read_text())
 record(['git', 'rev-parse', 'HEAD', 'wg-w-spreadcache', 'wg-w-spreadelig'])
 record(['sha256sum', 'data/datasets/spreadsheetbench/verify/check.py'])
-record(['python3', 'tools/apply_blocker_proposal.py', 'registry/proposals/w-spreadvacuous.json', '--dataset', 'spreadsheetbench', '--blocker', 'dataset-journal-gap'])
+record(['python3', 'tools/apply_blocker_proposal.py', 'tests/fixtures/spreadvacuous/proposal.json', '--dataset', 'spreadsheetbench', '--blocker', 'dataset-journal-gap'])
 record(['python3', 'tools/check_dataset_blockers.py'])
 record(['git', 'diff', '--check'])
 record(['git', 'diff', 'e0c1cd3254e0168c9e9e1a7dabee750772ddc868', '--',
@@ -117,7 +117,7 @@ parts.append('NOT VERIFIED / NOT PERFORMED:\n'
              '  cache worker bytes and was tested both before/after in the sparse combined overlay.\n'
              '- Any frozen run/receipt mutation, registry application, main write, push, merge or branch deletion.\n')
 files = sorted([ROOT / check, ROOT / 'tests/quality/test_spreadsheetbench_classification_w_spread2.py',
-                ROOT / 'registry/proposals/w-spreadvacuous.json', report, DEST, *FIXTURE.iterdir()])
+                ROOT / 'tests/fixtures/spreadvacuous/proposal.json', report, DEST, *FIXTURE.iterdir()])
 # Self-referential size stabilizes once its decimal digit count stops changing.
 DEST.write_text('')
 for _ in range(8):
