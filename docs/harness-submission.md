@@ -56,7 +56,7 @@ printf 'CASE=%s\n' "$case"
 
 记下打印的CASE。env.sh仅存上面的路径和mock设置，不导出整份环境/密钥。所有数据根和临时目录均在平台树外。
 
-默认host headroom保留至少16GiB空闲内存并保留CPU/12%内存门槛。约15GiB总内存的本地WSL跑此mock控制时，可仅在两个测试终端显式使用以下设置；不要改共享机器默认值或将门槛全关：
+主机 headroom 阈值默认不启用；部署方应根据自身资源显式配置。下例仅展示配置方式，并非通用推荐值：
 
 ```bash
 export HG_SLOT_MIN_FREE_GB=1
