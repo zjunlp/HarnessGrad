@@ -681,7 +681,7 @@ def load_settings() -> dict:
             "model": str(block.get("model") or "").strip(),
         }
     out["task"]["base_url"] = out["task"]["base_url"] or os.environ.get(
-        "HG_CONSOLE_TASK_BASE_URL", "").strip() or "http://127.0.0.1:8002/v1"
+        "HG_CONSOLE_TASK_BASE_URL", "").strip()
     out["task"]["api_key"] = out["task"]["api_key"] or os.environ.get(
         "HG_CONSOLE_TASK_API_KEY", "").strip()
     return out

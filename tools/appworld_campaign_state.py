@@ -173,8 +173,9 @@ def validate_identity(identity):
     model = identity['model']
     if not isinstance(model, dict) or set(model) != {'backend', 'name', 'endpoint', 'weights_sha256', 'tokenizer_sha256', 'deployment_sha256'}:
         raise RecoveryError('model identity must bind weights, tokenizer and deployment, not alias alone')
-    if model['backend'] != 'openai' or model['endpoint'] not in ('http://127.0.0.1:8001/v1', 'http://127.0.0.1:8002/v1') or not model['name']:
-        raise RecoveryError('invalid local model binding')
+    from eval.policy.diagnostic_policy import _endpoint
+    if model['backend'] != 'openai' or not _endpoint(model['endpoint']) or not model['name']:
+        raise RecoveryError('invalid credential-free model endpoint binding')
     for key in ('weights_sha256', 'tokenizer_sha256', 'deployment_sha256'):
         value = model[key]
         if not isinstance(value, str) or len(value) != 64 or any(c not in '0123456789abcdef' for c in value):

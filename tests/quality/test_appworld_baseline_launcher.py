@@ -45,6 +45,19 @@ def identity():
                        'trials': 1, 'seed': 42, 'jobs': 1, 'native_settings': {}, 'context_policy': 'native-defaults'}}
 
 
+@pytest.mark.parametrize('endpoint', ['http://127.0.0.1:8001/v1', 'http://127.0.0.1:8002/v1',
+                                      'https://models.example.invalid/v1'])
+def test_deployment_neutral_endpoint_identity(identity, endpoint):
+    identity['model']['endpoint'] = endpoint
+    assert state.validate_identity(identity)['model']['endpoint'] == endpoint
+
+
+def test_endpoint_credentials_never_enter_identity(identity):
+    identity['model']['endpoint'] = 'https://user:secret@models.example.invalid/v1'
+    with pytest.raises(state.RecoveryError):
+        state.validate_identity(identity)
+
+
 @pytest.fixture
 def selection(identity):
     return {'schema': state.SELECTION_SCHEMA,

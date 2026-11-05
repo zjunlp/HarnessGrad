@@ -17,6 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from eval.service import unix_model_relay as relay_mod
 
 MODEL = "SYNTHETIC_OFFLINE_PROVIDER"
+ENDPOINT = 'http://127.0.0.1:8002/v1'
+ROUTE = '/v1/chat/completions'
 
 
 class Provider:
@@ -58,6 +60,19 @@ class Provider:
         return conn
 
 
+@pytest.mark.parametrize('endpoint', ['', 'file:///tmp/x', 'https://host/v1',
+                                      'http://user:secret@host/v1', 'http://host/v1?key=x'])
+def test_invalid_or_credential_bearing_endpoint_is_rejected(endpoint):
+    with pytest.raises(ValueError):
+        relay_mod._route(endpoint)
+
+
+def test_explicit_route_accepts_other_port_and_no_ambient_default():
+    assert relay_mod._route('http://127.0.0.1:9911/custom') == ('127.0.0.1', 9911, '/custom/chat/completions')
+    with pytest.raises(TypeError):
+        relay_mod.Relay(Path('/not-created'), model=MODEL)
+
+
 @pytest.fixture
 def start_relay(monkeypatch, tmp_path_factory):
     def forbid_tcp(*args, **kwargs):
@@ -73,13 +88,13 @@ def start_relay(monkeypatch, tmp_path_factory):
             provider = provider if provider is not None else Provider()
             directory = tmp_path_factory.mktemp("ux")
             relay = stack.enter_context(relay_mod.Relay(
-                directory, model=MODEL, _connect=provider, **limits))
+                directory, model=MODEL, endpoint=ENDPOINT, _connect=provider, **limits))
             return relay, provider
 
         yield start
 
 
-def request(relay, changes=None, *, raw=None, route=relay_mod.ROUTE, headers=None,
+def request(relay, changes=None, *, raw=None, route=ROUTE, headers=None,
             before_send=None):
     payload = {"model": MODEL, "messages": [{"role": "user", "content": "public fixture"}],
                "max_tokens": 2}
@@ -114,7 +129,7 @@ def test_fixed_route_model_and_headers_with_private_socket(start_relay):
                                          "X-Caller-Context": "private-fixture"})
     assert status == 200 and body["choices"][0]["message"]["content"] == "fixture"
     method, route, payload, headers = provider.requests[0]
-    assert (method, route, payload["model"]) == ("POST", relay_mod.ROUTE, MODEL)
+    assert (method, route, payload["model"]) == ("POST", ROUTE, MODEL)
     assert headers == {"Content-Type": "application/json", "Connection": "close"}
     receipt = relay.receipt()
     assert receipt["calls"] == 1 and receipt["reserved_output_tokens"] == 2
@@ -142,13 +157,13 @@ def test_invalid_requests_never_reserve_or_forward(start_relay, change):
 
 @pytest.mark.parametrize("raw,route,headers,status", [
     (b"{}", "/caller-route", {}, 403),
-    (b"not json", relay_mod.ROUTE, {}, 400),
-    (b"null", relay_mod.ROUTE, {}, 400),
-    (b"[" * 2000 + b"0" + b"]" * 2000, relay_mod.ROUTE, {}, 400),
-    (b"x" * (relay_mod.MAX_BODY + 1), relay_mod.ROUTE, {}, 413),
-    (b"{}", relay_mod.ROUTE, {"Transfer-Encoding": "chunked"}, 400),
-    (b"{}", relay_mod.ROUTE, {"Content-Length": "-1"}, 413),
-    (b"{}", relay_mod.ROUTE, {"Content-Length": "not-a-number"}, 413),
+    (b"not json", ROUTE, {}, 400),
+    (b"null", ROUTE, {}, 400),
+    (b"[" * 2000 + b"0" + b"]" * 2000, ROUTE, {}, 400),
+    (b"x" * (relay_mod.MAX_BODY + 1), ROUTE, {}, 413),
+    (b"{}", ROUTE, {"Transfer-Encoding": "chunked"}, 400),
+    (b"{}", ROUTE, {"Content-Length": "-1"}, 413),
+    (b"{}", ROUTE, {"Content-Length": "not-a-number"}, 413),
 ])
 def test_route_framing_and_size_rejected_before_forward(start_relay, raw, route, headers, status):
     relay, provider = start_relay()

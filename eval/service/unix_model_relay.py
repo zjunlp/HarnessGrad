@@ -1,4 +1,4 @@
-"""Agent-only HTTP over AF_UNIX, with a fixed localhost:8002 model route.
+"""Agent-only HTTP over AF_UNIX to an explicitly configured model endpoint.
 
 Budgets reserve attempted calls and requested output tokens before forwarding.
 Failed/unknown requests retain their reservation. No credentials or caller headers
@@ -16,24 +16,20 @@ import threading
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-#: **The agent endpoint, not a constant.** A bwrap task reaches the model through this relay,
-#: and its route used to be `127.0.0.1:8002` -- one vLLM server, one GPU. A docker task sets
-#: `HG_AGENT_BASE_URL` and goes through `lb_proxy`, so the two sandbox kinds were using different
-#: amounts of the machine: measured 2026-10-20T15:35Z, four ALFWorld runs at jobs=12 held GPU0 at
-#: 0% and GPU1 at 100%, and `8100/stats` counted no traffic at all for them. The default stays
-#: 8002 (the endpoint this machine keeps) so a caller that sets nothing sees no change.
-_DEFAULT_ENDPOINT = "http://127.0.0.1:8002/v1"
-
-
 def _route(raw: str) -> "tuple[str, int, str]":
-    """`(host, port, path)` from an endpoint URL, accepting a bare `host:port`."""
+    """Validate an explicitly supplied HTTP endpoint; caller cannot select routes."""
     from urllib.parse import urlsplit
-    parts = urlsplit(raw if "://" in raw else f"http://{raw}")
-    path = (parts.path or "/v1").rstrip("/") + "/chat/completions"
-    return parts.hostname or "127.0.0.1", parts.port or 8002, path
-
-
-HOST, PORT, ROUTE = _route(os.environ.get("HG_AGENT_BASE_URL") or _DEFAULT_ENDPOINT)
+    if not isinstance(raw, str) or raw != raw.strip() or any(ord(c) < 32 or ord(c) == 127 for c in raw):
+        raise ValueError('explicit credential-free HTTP model endpoint required')
+    try:
+        parts = urlsplit(raw)
+        if (parts.scheme != 'http' or not parts.hostname or parts.username is not None
+                or parts.password is not None or parts.query or parts.fragment):
+            raise ValueError('unsupported endpoint')
+        port = parts.port or 80
+    except ValueError as exc:
+        raise ValueError('explicit credential-free HTTP model endpoint required') from exc
+    return parts.hostname, port, (parts.path or '/v1').rstrip('/') + '/chat/completions'
 MAX_CALLS, MAX_TOKENS, MAX_TOTAL_TOKENS = 4, 512, 2048
 MAX_BODY, MAX_RESPONSE = 32768, 2097152
 
@@ -62,9 +58,10 @@ class _Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
 
 
 class Relay:
-    def __init__(self, directory: Path, *, model: str, max_calls=MAX_CALLS,
+    def __init__(self, directory: Path, *, model: str, endpoint: str, max_calls=MAX_CALLS,
                  max_tokens=MAX_TOKENS, max_total_tokens=MAX_TOTAL_TOKENS,
                  _connect=None):
+        self.host, self.port, self.route = _route(endpoint)
         for value, ceiling in ((max_calls, MAX_CALLS), (max_tokens, MAX_TOKENS),
                                (max_total_tokens, MAX_TOTAL_TOKENS)):
             if not _integer(value, ceiling):
@@ -105,7 +102,7 @@ class Relay:
                 self.close_connection = True
 
             def do_POST(self):
-                if self.path != ROUTE:
+                if self.path != owner.route:
                     return self.reject(403, "route")
                 lengths = self.headers.get_all("Content-Length", [])
                 if self.headers.get("Transfer-Encoding") or len(lengths) != 1:
@@ -142,8 +139,8 @@ class Relay:
                 conn = None
                 usage_known = False
                 try:
-                    conn = owner.connect(HOST, PORT, timeout=10)
-                    conn.request("POST", ROUTE, body=json.dumps(request), headers={
+                    conn = owner.connect(owner.host, owner.port, timeout=10)
+                    conn.request("POST", owner.route, body=json.dumps(request), headers={
                         "Content-Type": "application/json", "Connection": "close"})
                     response = conn.getresponse()
                     payload = response.read(MAX_RESPONSE + 1)
@@ -205,7 +202,7 @@ class Relay:
 
     def receipt(self):
         with self.lock:
-            return {"endpoint": f"http://{HOST}:{PORT}{ROUTE}", "model": self.model,
+            return {"endpoint": f"http://{self.host}:{self.port}{self.route}", "model": self.model,
                     "calls": self.calls, "max_calls": self.max_calls,
                     "max_tokens_per_call": self.max_tokens,
                     "max_reserved_output_tokens": self.max_total_tokens,
