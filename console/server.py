@@ -485,7 +485,9 @@ def kind_counts(rows: list[dict]) -> dict[str, int]:
 #: ③ 每次启动追加一行到 `.launch-log.jsonl`（时间、run_id、完整 argv），出事能倒查。
 LAUNCH_DIR = ROOT / ".launch"
 LAUNCH_LOG = ROOT / ".launch-log.jsonl"
-BUDGET_DIR = pathlib.Path("/tmp/hg-rsi10-lb")
+# One explicitly configured external lease directory coordinates direct launches
+# and submissions. No machine-specific path is silently selected.
+BUDGET_DIR = pathlib.Path(os.environ['HG_CONSOLE_BUDGET_DIR']).expanduser() if os.environ.get('HG_CONSOLE_BUDGET_DIR') else None
 DRIVER = PLATFORM / "driver.py"
 
 
@@ -877,9 +879,14 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
     if not RUNS.is_dir() or not os.access(RUNS, os.W_OK):
         return 400, {"error": "runs-root-not-writable",
                      "detail": f"runs 根目录不存在或不可写：{RUNS}"}
-    if not BUDGET_DIR.is_dir():
+    if BUDGET_DIR is None:
         return 400, {"error": "no-budget-dir",
-                     "detail": f"GPU 预算目录不存在：{BUDGET_DIR}（要先排窗口）"}
+                     "detail": "Set HG_CONSOLE_BUDGET_DIR to a shared writable directory outside the platform before starting the console."}
+    if not BUDGET_DIR.is_absolute() or not BUDGET_DIR.is_dir() or not os.access(BUDGET_DIR, os.W_OK):
+        return 400, {"error": "no-budget-dir",
+                     "detail": "HG_CONSOLE_BUDGET_DIR must be an existing absolute writable directory."}
+    if BUDGET_DIR.resolve().is_relative_to(PLATFORM.resolve()):
+        return 400, {"error": "no-budget-dir", "detail": "HG_CONSOLE_BUDGET_DIR must be outside the platform checkout."}
     known = {a["name"] for a in adapters()}
     if form.get("dataset") not in known:
         return 400, {"error": "unknown-dataset",
@@ -3928,6 +3935,8 @@ def submission_service(httpd):
         _submission_reject('service-not-ready', 'configure HG_CONSOLE_SUBMISSIONS_ROOT outside the platform')
     if httpd.server_address[0] != '127.0.0.1':
         _submission_reject('service-not-ready', 'submission service requires a 127.0.0.1 listener')
+    if BUDGET_DIR is None or not BUDGET_DIR.is_absolute():
+        _submission_reject('service-not-ready', 'configure HG_CONSOLE_BUDGET_DIR as an absolute shared directory outside the platform')
     with _submission_init_lock:
         if not hasattr(httpd, '_submission_service'):
             try:

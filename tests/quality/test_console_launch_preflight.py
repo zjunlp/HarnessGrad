@@ -64,8 +64,19 @@ def test_preview_surfaces_environment_guard_without_launching(tmp_path, monkeypa
         "ok": False,
         "status": 400,
         "error": "no-budget-dir",
-        "detail": f"GPU 预算目录不存在：{missing_budget}（要先排窗口）",
+        "detail": "HG_CONSOLE_BUDGET_DIR must be an existing absolute writable directory.",
     }
+
+
+def test_missing_or_in_checkout_budget_is_refused(tmp_path, monkeypatch):
+    module = _console()
+    budget = tmp_path / 'budget'
+    budget.mkdir()
+    _prepare(module, monkeypatch, budget)
+    monkeypatch.setattr(module, 'BUDGET_DIR', None)
+    assert module.guard_launch(_form())[1]['error'] == 'no-budget-dir'
+    monkeypatch.setattr(module, 'BUDGET_DIR', module.PLATFORM)
+    assert module.guard_launch(_form())[1]['error'] == 'no-budget-dir'
 
 
 def test_preview_is_ready_only_when_the_real_guard_passes(tmp_path, monkeypatch):
