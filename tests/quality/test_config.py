@@ -46,7 +46,8 @@ def test_the_surface_has_exactly_the_declared_variables():
     # HG_DATA_ROOT adds the shared external dataset directory.
     # HG_TAU2_JUDGE_MODEL adds the second per-dataset judge override (τ²'s ALL evaluator
     # calls a judge for the tasks with `nl_assertions`; τ³ already had one).
-    assert len(hg_names) == 51, hg_names
+    # DSH installation, Node and prepared home are explicit improver configuration.
+    assert len(hg_names) == 54, hg_names
     assert len(config.ENV_NAMES) == len(set(config.ENV_NAMES))
     # The three credentials the repository's rule names. `DEEPSEEK_API_KEY` is the
     # default improver registry entry's `api_key_env`, so it is declared beside it.

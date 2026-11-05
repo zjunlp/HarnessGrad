@@ -7,7 +7,10 @@ import pytest
 
 from data.datasets import tau3_bench as dataset
 
-if not (dataset.DATASET_ROOT / 'manifest.json').is_file():
+from conftest import optional_storage_import
+with optional_storage_import():
+    payload_present = (dataset.DATASET_ROOT / 'manifest.json').is_file()
+if not payload_present:
     pytest.skip('prepare pinned tau3 data and isolated runtime', allow_module_level=True)
 
 from test_tau3_bench_dataset import control_module

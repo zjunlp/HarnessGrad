@@ -103,13 +103,9 @@ NOT_PLATFORM = {
     "contrib": "the contribution door (`contrib/`): a submission schema, one example "
                "submission and the validator that checks handed-in harnesses. It decides "
                "what a *contributor* may submit, never what a number means; no run reads it",
-    "site-redirect": "two static pages that keep the old project-page URL working "
-                     "(`site-redirect/index.html` and `404.html`, published by "
-                     "`.github/workflows/site-redirect.yml`): a **human** follows them, a run "
-                     "never reads them. The site itself left this repository on 2026-10-27 "
-                     "(it is `zjunlp/HarnessGrad-Hub`), so the `website` entry this replaces "
-                     "is gone with it -- and `website/` was never in `PLATFORM` either, for "
-                     "the same reason",
+    "site-redirect": "historical static redirect pages, retained but no longer deployed; "
+                     "a run never reads them. The website source is on the separate `website` "
+                     "branch, and `website/` was never in `PLATFORM` either, for the same reason",
     "examples": "two reference harnesses (`examples/bash-harness`, "
                 "`examples/python-react-harness`) that show the contract in the two "
                 "languages people submit in. Like `base_harness`, they are **candidates**: "

@@ -11,7 +11,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
-import data.datasets.appworld as dataset  # noqa: E402
+from conftest import optional_storage_import
+with optional_storage_import():
+    import data.datasets.appworld as dataset  # noqa: E402
 
 BUNDLE = dataset.DATASET_ROOT / "_src" / "data-0.1.0.bundle"
 CONTROL_TASK = "e85d92a_1"

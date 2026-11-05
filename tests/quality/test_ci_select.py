@@ -164,7 +164,7 @@ def test_the_runner_builds_one_file_flag_per_selected_test(tmp_path) -> None:
     proc = subprocess.run([sys.executable, "tools/run_selected.py", "--plan", str(plan),
                            "--dry-run"], cwd=ROOT, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
-    assert "--file test_ci_select.py" in proc.stdout, proc.stdout
+    assert "--file tests/quality/test_ci_select.py" in proc.stdout, proc.stdout
     assert "--jobs" in proc.stdout
 
 
@@ -214,7 +214,7 @@ def test_a_full_plan_says_deferred_rather_than_listing_no_files(tmp_path, capsys
 
 @pytest.mark.parametrize("state,suite,flags,expected", [
     ("selected", ["test_ci_select.py", "test_ci_workflow.py"], [],
-     ["--fast", "--file", "test_ci_select.py", "--file", "test_ci_workflow.py"]),
+     ["--file", "tests/quality/test_ci_select.py", "--file", "tests/quality/test_ci_workflow.py"]),
     ("selected", [], [], None),
     ("deferred", [], [], None),
     ("full", [], [], []),
@@ -224,7 +224,7 @@ def test_a_full_plan_says_deferred_rather_than_listing_no_files(tmp_path, capsys
     ("selected", [], ["--full-if-empty"], []),
     ("deferred", [], ["--full-if-empty"], []),
     ("selected", ["test_ci_select.py"], ["--full-if-empty"],
-     ["--fast", "--file", "test_ci_select.py"]),
+     ["--file", "tests/quality/test_ci_select.py"]),
 ])
 def test_runner_subprocess_argv(tmp_path, monkeypatch, capsys, state, suite, flags, expected):
     """Intercept the actual subprocess boundary, not the dry-run display string."""
@@ -259,7 +259,7 @@ def test_runner_subprocess_argv(tmp_path, monkeypatch, capsys, state, suite, fla
 
 @pytest.mark.parametrize("state,suite,flags,expected", [
     ("selected", ["test_ci_select.py"], [],
-     ["--jobs", "2", "--fast", "--file", "test_ci_select.py"]),
+     ["--jobs", "2", "--file", "tests/quality/test_ci_select.py"]),
     ("selected", [], [], None),
     ("deferred", [], [], None),
     ("full", [], [], ["--jobs", "2"]),
@@ -331,6 +331,106 @@ def test_plan_producer_names_execution_state(tmp_path, monkeypatch, paths, flags
     assert payload["state"] == state
     assert payload["full"] is (state != "selected")
     assert payload["suite"] == []
+
+
+@pytest.mark.parametrize("changed,required", [
+    ("data/datasets/tau2_bench/lib/runtime.py", "test_dataset_controls.py"),
+    ("tools/dataset_classes.py", "test_dataset_classes.py"),
+    ("tests/fixtures/aggregation_s9_before.json", "test_aggregation_policies.py"),
+    ("tests/fixtures/tau2_scorer_probe.py", "test_tau2_bench_official_scorer.py"),
+    ("tests/fixtures/hg_bfclguard/edges.jsonl", "test_bfclguard_reachability.py"),
+])
+def test_generated_plan_reaches_every_file_in_real_lane_runner(
+        tmp_path, monkeypatch, changed, required):
+    """Exercise selection and real lane dispatch; replace only costly pytest execution.
+
+    In particular this fails if --fast strips controls/classes, or the aggregation
+    fixture is misrouted to bfclguard. No dataset, model or server is launched.
+    """
+    from tools import run_selected, run_tests
+
+    plan = tmp_path / "plan.json"
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--paths", changed,
+                                     "--without-guards", "--plan", str(plan)])
+    assert ci_select.main() == 0
+    payload = ci_select.load_plan(str(plan))
+    assert payload["state"] == "selected"
+    assert required in payload["suite"]
+    if "aggregation" in changed:
+        assert payload["suite"] == ["test_aggregation_policies.py"]
+    reached = []
+
+    def fake_pytest(path, *args):
+        reached.append(path.relative_to(ROOT).as_posix())
+        return {"file": path.name, "code": 0, "seconds": 0, "summary": "stub"}
+
+    def real_runner(command, **kwargs):
+        assert kwargs == {"cwd": ROOT}
+        monkeypatch.setattr(sys, "argv", [*command[1:], "--basetemp-root",
+                                         str(tmp_path / "lane-temp")])
+        return SimpleNamespace(returncode=run_tests.main())
+
+    monkeypatch.setattr(run_tests, "run_one", fake_pytest)
+    monkeypatch.setattr(run_selected.subprocess, "run", real_runner)
+    monkeypatch.setattr(sys, "argv", ["run_selected.py", "--plan", str(plan)])
+    assert run_selected.main() == 0
+    assert sorted(reached) == sorted(f"tests/quality/{name}" for name in payload["suite"])
+
+
+@pytest.mark.parametrize("fixture", [
+    "tests/fixtures/unmapped/data.json",
+    "tests/fixtures/unmapped/README.md",
+    "tests/fixtures/tau2_unknown.py",
+    "tests/fixtures/hg_bfclguard_other/edges.jsonl",
+    "tests/fixtures/aggregation_s9_before.json.extra",
+])
+def test_unknown_fixture_plan_defers_without_launching(tmp_path, monkeypatch, fixture):
+    from tools import run_selected
+
+    picked, reasons = ci_select.select([fixture])
+    assert picked == []
+    assert "no audited fixture consumers" in reasons[0]
+    plan = tmp_path / "plan.json"
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--paths", fixture,
+                                     "--plan", str(plan)])
+    assert ci_select.main() == 0
+    assert ci_select.load_plan(str(plan))["state"] == "deferred"
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("an unknown fixture must not launch a full suite on push")
+
+    monkeypatch.setattr(run_selected.subprocess, "run", forbidden)
+    monkeypatch.setattr(sys, "argv", ["run_selected.py", "--plan", str(plan)])
+    assert run_selected.main() == 0
+
+
+@pytest.mark.parametrize("patterns,expected", [
+    (["tests/quality/test_target.py"], ["tests/quality/test_target.py"]),
+    (["test_target.py"], ["tests/nested/tests/quality/test_target.py",
+                          "tests/quality/test_target.py"]),
+    (["target"], ["tests/nested/tests/quality/test_target.py",
+                  "tests/quality/test_target.py", "tests/unit/test_target_extra.py"]),
+    (["tests/quality/test_target.py", "tests/unit/test_target_extra.py"],
+     ["tests/quality/test_target.py", "tests/unit/test_target_extra.py"]),
+    (["tests/quality/test_missing.py"], []),
+])
+def test_qualified_runner_filters_are_exact(tmp_path, monkeypatch, patterns, expected):
+    from tools import run_tests
+
+    for name in ("tests/quality/test_target.py", "tests/unit/test_target_extra.py",
+                 "tests/nested/tests/quality/test_target.py"):
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    monkeypatch.setattr(run_tests, "ROOT", tmp_path)
+    assert [p.relative_to(tmp_path).as_posix() for p in run_tests.discover(patterns)] == expected
+
+
+def test_missing_fixture_consumer_defers(monkeypatch, tmp_path):
+    monkeypatch.setattr(ci_select, "TESTS", tmp_path)
+    picked, reasons = ci_select.select(["tests/fixtures/aggregation_s9_before.json"])
+    assert picked == []
+    assert "no audited fixture consumers" in reasons[0]
 
 
 def test_legacy_full_plan_is_deferred(tmp_path):

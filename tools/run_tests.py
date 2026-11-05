@@ -49,6 +49,9 @@ import subprocess
 import sys
 import tempfile
 import time
+import platform
+import re
+import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -109,7 +112,11 @@ def free_gb(path: Path) -> float:
 
 
 def discover(patterns: list[str]) -> list[Path]:
-    """Every test file matching ANY of `patterns`, by substring of its path.
+    """Match ANY filter: qualified repository paths exactly, bare terms by substring.
+
+    Qualified paths keep explicit CI plans from also selecting a nested file whose
+    path merely contains the requested path. Bare terms retain the interactive
+    substring convenience (for example, `--file dataset`).
 
     A list rather than one string because a reviewer checking a change usually has
     several files in mind, and running them one invocation at a time meant paying
@@ -119,7 +126,9 @@ def discover(patterns: list[str]) -> list[Path]:
     found = sorted((ROOT / "tests").rglob("test_*.py"))
     if patterns:
         found = [p for p in found
-                 if any(pattern in str(p.relative_to(ROOT)) for pattern in patterns)]
+                 if any(p.relative_to(ROOT).as_posix() == pattern if "/" in pattern
+                        else pattern in p.relative_to(ROOT).as_posix()
+                        for pattern in patterns)]
     # A `conftest.py` is collected by pytest, not run as a test module; and the
     # shared fixture helpers are imported, not executed.
     return [p for p in found if not p.name.startswith("conftest")]
@@ -137,19 +146,190 @@ def cost_of(path: Path, costs: dict[str, float]) -> float:
     return costs.get(path.name, 8.0)
 
 
+def receipt_argv(argv: list[str]) -> list[str]:
+    """Allow only fixed runner vocabulary; never retain arbitrary CLI values."""
+    fixed = {"-m", "pytest", "-q", "-p", "no:cacheprovider", "--jobs", "--fast",
+             "--file", "--dataset", "--registry-only", "--with-registry", "--list",
+             "--basetemp-root", "--allow-load-sensitive", "--keep-basetemp",
+             "--no-rerun", "--pytest-arg", "--output-json", "--plan", "--full",
+             "--full-if-empty", "--dry-run", "<redacted>", "<redacted-pytest-arg>"}
+    return [arg if arg in fixed else "<redacted>" for arg in argv]
+
+
+class QualityReceipt:
+    """Atomic, opt-in file-level evidence; exit zero is not a coverage claim.
+
+    No environment dump or subprocess output is persisted. argv retains only
+    fixed runner vocabulary; arbitrary values and executable paths are redacted.
+    An unfinished receipt remains running,
+    with completed attempts preserved even after SIGKILL (no cleanup guarantee).
+    'passed' means pytest returned zero, not that every collected test ran.
+    'skipped' describes runner exclusions, not individual pytest skip markers.
+    'attempted' includes spawn errors; 'executed' requires successful Popen.
+    'unexecuted' is planned files with no confirmed launch. A fatal signal in the
+    tiny spawn/checkpoint window conservatively leaves launch unconfirmed.
+    Receipt destinations are replaced per invocation; use unique paths to retain
+    historical runs. Invalid CLI syntax and unwritable destinations cannot be
+    receipted. Fatal signals leave a running snapshot, never a success claim.
+    """
+
+    def __init__(self, output: str, discovered: list[str], planned: list[str],
+                 *, state: str = "selected", skipped: list[str] | None = None,
+                 deferred: list[str] | None = None):
+        self.path = Path(output).resolve() if output else None
+        self.lock = threading.Lock()
+        self.data = {
+            "schema_version": 1, "kind": "quality-file-receipt",
+            "state": state, "status": "planned", "returncode": None,
+            "argv": receipt_argv([sys.executable, *sys.argv]),
+            "argv_policy": "fixed_vocabulary_only_all_arbitrary_values_redacted",
+            "attempted": [],
+            "attempted_semantics": "launch_intent_only_starting_outcome_unknown_until_confirmed",
+            "identity": {}, "started_at": time.time(),
+            "discovered": discovered, "planned": planned, "executed": [],
+            "passed": [], "failed": [], "skipped": skipped or [],
+            "deferred": deferred or [], "unexecuted": list(planned),
+            "attempts": [], "full_coverage": False,
+            "coverage_scope": "file_invocations_not_test_cases_or_capabilities",
+            "all_skipped": [],
+            "passed_semantics": "pytest_exit_zero_including_all_skipped_and_unknown_counts",
+        }
+        if self.path:
+            def git(*args: str) -> str | None:
+                try:
+                    p = subprocess.run(["git", *args], cwd=ROOT, capture_output=True,
+                                       text=True, timeout=5)
+                    return p.stdout.strip() if p.returncode == 0 else None
+                except (OSError, subprocess.TimeoutExpired):
+                    return None
+            dirty = git("status", "--porcelain", "--untracked-files=no")
+            self.data["identity"] = {
+                "commit": git("rev-parse", "HEAD"),
+                "tracked_dirty": None if dirty is None else bool(dirty),
+                "python": platform.python_version(),
+                "platform": platform.system(), "machine": platform.machine(),
+                "pytest_environment": {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+                                       "PYTHONDONTWRITEBYTECODE": "1"},
+            }
+        selector_argv = os.environ.get("HG_QUALITY_SELECTOR_ARGV_JSON")
+        if selector_argv:
+            self.data["selector_argv"] = receipt_argv(json.loads(selector_argv))
+        self.save()
+
+    def save(self) -> None:
+        if not self.path:
+            return
+        for key in ("argv", "selector_argv", "runner_argv"):
+            if key in self.data:
+                self.data[key] = receipt_argv(self.data[key])
+        for attempt in self.data["attempts"]:
+            attempt["argv"] = receipt_argv(attempt["argv"])
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fd, name = tempfile.mkstemp(prefix=self.path.name + ".", dir=self.path.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                json.dump(self.data, stream, indent=2)
+                stream.write("\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(name, self.path)
+        finally:
+            if os.path.exists(name):
+                os.unlink(name)
+
+    def start(self, rel: str, argv: list[str]) -> int:
+        with self.lock:
+            index = len(self.data["attempts"])
+            self.data["attempts"].append({"file": rel, "argv": receipt_argv(argv),
+                                          "status": "starting", "returncode": None})
+            self.data["status"] = "running"
+            if rel not in self.data["attempted"]:
+                self.data["attempted"].append(rel)
+            self.save()
+            return index
+
+    def launched(self, index: int) -> None:
+        with self.lock:
+            attempt = self.data["attempts"][index]
+            attempt["status"] = "running"
+            rel = attempt["file"]
+            if rel not in self.data["executed"]:
+                self.data["executed"].append(rel)
+                self.data["unexecuted"].remove(rel)
+            self.save()
+
+    def end(self, index: int, code: int | None, seconds: float,
+            error: str | None = None, counts: dict | None = None) -> None:
+        with self.lock:
+            attempt = self.data["attempts"][index]
+            attempt.update(status="completed" if code is not None else "error",
+                           returncode=code, seconds=seconds)
+            if error:
+                attempt["error_type"] = error
+            attempt["test_case_counts"] = counts
+            attempt["test_case_counts_unknown"] = counts is None
+            rel = attempt["file"]
+            if counts and counts.get("skipped", 0) and not any(
+                    counts.get(k, 0) for k in ("passed", "failed", "error", "errors", "xfailed", "xpassed")):
+                if rel not in self.data["all_skipped"]:
+                    self.data["all_skipped"].append(rel)
+            # Once failed, always failed in this invocation, even if a rerun passes.
+            target = "passed" if code == 0 else "failed"
+            if target == "failed" and rel in self.data["passed"]:
+                self.data["passed"].remove(rel)
+            if rel not in self.data[target] and not (target == "passed" and rel in self.data["failed"]):
+                self.data[target].append(rel)
+            self.save()
+
+    def finish(self, code: int, status: str = "completed") -> int:
+        with self.lock:
+            self.data.update(returncode=code, status=status, finished_at=time.time())
+            self.data["full_coverage"] = bool(self.data["discovered"]) and (
+                status == "completed" and not self.data["unexecuted"]
+                and set(self.data["planned"]) == set(self.data["discovered"])
+                and set(self.data["executed"]) == set(self.data["planned"])
+                and bool(self.data["attempts"])
+                and all(a["status"] == "completed" for a in self.data["attempts"]))
+            self.save()
+        return code
+
+
 def run_one(path: Path, basetemp_root: Path, extra: list[str],
-            keep: bool = False) -> dict:
+            keep: bool = False, receipt: QualityReceipt | None = None) -> dict:
     rel = path.relative_to(ROOT)
-    tmp = basetemp_root / path.stem
+    tmp = basetemp_root / rel.with_suffix("")
     tmp.mkdir(parents=True, exist_ok=True)
     cmd = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
            f"--basetemp={tmp}", str(rel), *extra]
     env = {**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
            "PYTHONDONTWRITEBYTECODE": "1"}
     started = time.time()
-    proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, errors="replace", env=env)
-    if not keep:
-        shutil.rmtree(tmp, ignore_errors=True)
+    safe_cmd = cmd[:8] + ["<redacted-pytest-arg>" for _ in extra]
+    attempt = receipt.start(str(rel), safe_cmd) if receipt else None
+    try:
+        with subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True, errors="replace", env=env) as child:
+            if receipt:
+                receipt.launched(attempt)
+            stdout, stderr = child.communicate()
+            proc = subprocess.CompletedProcess(cmd, child.returncode, stdout, stderr)
+    except BaseException as exc:
+        if receipt:
+            receipt.end(attempt, None, time.time() - started, type(exc).__name__)
+        raise
+    else:
+        if receipt:
+            # Only parse pytest's terminal summary, never arbitrary output lines.
+            lines = [line.strip("= ") for line in proc.stdout.splitlines() if line.strip()]
+            summary = lines[-1] if lines else ""
+            counts = None
+            if re.fullmatch(r"(?:\d+ (?:passed|failed|skipped|deselected|errors?|xfailed|xpassed|warnings?)(?:, )?)+ in .+", summary):
+                counts = {key: int(value) for value, key in re.findall(
+                    r"(\d+) (passed|failed|skipped|deselected|errors?|xfailed|xpassed|warnings?)", summary)}
+            receipt.end(attempt, proc.returncode, time.time() - started, counts=counts)
+    finally:
+        if not keep:
+            shutil.rmtree(tmp, ignore_errors=True)
     tail = [ln for ln in proc.stdout.splitlines() if ln.strip()]
     return {"file": path.name, "rel": str(rel), "code": proc.returncode,
             "seconds": round(time.time() - started, 1),
@@ -164,8 +344,9 @@ def main() -> int:
                     help="concurrent files in the parallel lane (default: min(cpus, 32))")
     ap.add_argument("--fast", action="store_true",
                     help="skip the measured-slow files (a convenience, not full coverage)")
-    ap.add_argument("--file", action="append", default=[], metavar="SUBSTRING",
-                    help="only files whose path contains this substring. Repeatable; "
+    ap.add_argument("--file", action="append", default=[], metavar="PATH_OR_SUBSTRING",
+                    help="repository-relative paths (containing /) match exactly; bare "
+                         "terms match path substrings. Repeatable; "
                          "a file matching any of them is included. `--file a --file b` "
                          "runs both in one pass, which is the point: they still land in "
                          "their own lanes.")
@@ -193,8 +374,23 @@ def main() -> int:
                     help="skip the run-alone recheck of failed files")
     ap.add_argument("--pytest-arg", action="append", default=[],
                     help="extra argument forwarded to every pytest invocation")
+    ap.add_argument("--output-json", default="", help="atomic file-level receipt; CLI arguments must not contain secrets")
     args = ap.parse_args()
+    discovered = [str(f.relative_to(ROOT)) for f in discover([])]
+    receipt = QualityReceipt(args.output_json, discovered, [])
+    if args.jobs < 1:
+        print("--jobs must be positive", file=sys.stderr)
+        return receipt.finish(2, "invalid")
 
+    try:
+        return execute(args, receipt, discovered)
+    except (Exception, KeyboardInterrupt) as exc:
+        receipt.data["error_type"] = type(exc).__name__
+        return receipt.finish(130 if isinstance(exc, KeyboardInterrupt) else 1,
+                              "interrupted" if isinstance(exc, KeyboardInterrupt) else "error")
+
+
+def execute(args, receipt: QualityReceipt, discovered: list[str]) -> int:
     costs = load_costs()
     files = discover(args.file)
     selection_note = ""
@@ -211,7 +407,7 @@ def main() -> int:
                                            include_registry=args.with_registry))
         except KeyError as exc:
             print(f"unknown dataset: {exc}", file=sys.stderr)
-            return 2
+            return receipt.finish(2, "invalid")
         before = len(files)
         files = [f for f in files if f.name in wanted]
         selection_note = (f"scope: datasets {', '.join(sorted(set(args.dataset)))} "
@@ -220,9 +416,14 @@ def main() -> int:
                           + f"; {len(files)}/{before} files")
     if args.fast:
         files = [f for f in files if f.name not in SLOW]
+    planned = [str(f.relative_to(ROOT)) for f in files]
+    receipt.data.update(planned=planned, unexecuted=list(planned),
+                        state="full" if planned and set(planned) == set(discovered) else "selected",
+                        skipped=[f for f in discovered if f not in planned])
+    receipt.save()
     if not files:
         print("no test files matched", file=sys.stderr)
-        return 2
+        return receipt.finish(2, "empty")
 
     exclusive = [f for f in files if f.name in EXCLUSIVE]
     parallel = [f for f in files if f.name not in EXCLUSIVE]
@@ -235,7 +436,7 @@ def main() -> int:
     if root == ROOT or ROOT in root.parents:
         print(f"refusing: basetemp root {root} is inside the platform {ROOT}; "
               "the driver rejects a harness work root there", file=sys.stderr)
-        return 2
+        return receipt.finish(2, "invalid")
     root.mkdir(parents=True, exist_ok=True)
     if args.basetemp_root:
         basetemp_root = root
@@ -260,7 +461,7 @@ def main() -> int:
               f"(bounded by the slowest single file, ~{longest:.0f}s)")
         for f in exclusive:
             print(f"  [exclusive] {f.relative_to(ROOT)}  ~{cost_of(f, costs):.0f}s")
-        return 0
+        return receipt.finish(0, "dry_run")
 
     print(f"basetemp: {basetemp_root}")
     print(f"parallel lane: {len(parallel)} files at {args.jobs} jobs")
@@ -269,10 +470,10 @@ def main() -> int:
     results: list[dict] = []
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs + 1) as pool:
-        futures = [pool.submit(run_one, f, basetemp_root, args.pytest_arg, args.keep_basetemp)
+        futures = [pool.submit(run_one, f, basetemp_root, args.pytest_arg, args.keep_basetemp, receipt)
                    for f in parallel]
         future_excl = pool.submit(
-            lambda: [run_one(f, basetemp_root, args.pytest_arg, args.keep_basetemp)
+            lambda: [run_one(f, basetemp_root, args.pytest_arg, args.keep_basetemp, receipt)
                             for f in exclusive])
         for fut in concurrent.futures.as_completed(futures):
             r = fut.result()
@@ -293,14 +494,14 @@ def main() -> int:
           f"(serial measured total {sum(cost_of(f, costs) for f in files):.0f}s)")
     if not failed:
         print("all files passed")
-        return 0
+        return receipt.finish(0)
 
     # A failure under load and a failure in the code look identical in the summary, and
     # they need different responses. Re-run each failed file on its own: if it passes
     # alone, the earlier failure was contention between processes, not a broken test.
     # That distinction is the difference between "this suite is unreliable" and "this
     # test is not isolated", and only the second is worth chasing.
-    by_name = {f.name: f for f in files}
+    by_rel = {str(f.relative_to(ROOT)): f for f in files}
     if args.no_rerun:
         load_sensitive, real = [], failed
     else:
@@ -309,8 +510,8 @@ def main() -> int:
               "load contention from real failures...")
         load_sensitive, real = [], []
         for r in failed:
-            alone = run_one(by_name[r["file"]], basetemp_root, args.pytest_arg,
-                            args.keep_basetemp)
+            alone = run_one(by_rel[r["rel"]], basetemp_root, args.pytest_arg,
+                            args.keep_basetemp, receipt)
             if alone["code"] == 0:
                 load_sensitive.append(r)
                 print(f"  load-sensitive {r['file']} (passes alone: {alone['summary']})")
@@ -335,9 +536,11 @@ def main() -> int:
         print("  These are isolation defects in the tests, not code regressions. Lower")
         print("  --jobs, or fix the shared resource; do not ignore them forever.")
 
+    receipt.data["load_sensitive"] = [r["rel"] for r in load_sensitive]
+    receipt.data["allow_load_sensitive"] = args.allow_load_sensitive
     if real:
-        return 1
-    return 0 if args.allow_load_sensitive else 1
+        return receipt.finish(1)
+    return receipt.finish(0 if args.allow_load_sensitive else 1)
 
 
 if __name__ == "__main__":

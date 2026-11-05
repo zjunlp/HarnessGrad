@@ -65,6 +65,7 @@ DEFAULT_CONFIG = ROOT / "harnessgrad" / "improvers" / "improvers.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from harnessgrad.config import current as current_config      # noqa: E402
+from eval.containers.sandbox import shared_temporary_root      # noqa: E402
 
 #: Where a native codex binary may live if the npm wrapper is unusable. Ordered so the
 #: common global install is tried before the version-manager trees; order only decides
@@ -191,6 +192,24 @@ def _interpreter_prefix(exe: Path) -> Path | None:
     return None
 
 
+def _program_runtime_trees(path: Path) -> list[str]:
+    """The launcher's package and interpreter, without a tool's credential home."""
+    path = Path(path).expanduser()
+    trees: list[Path] = []
+    for parent in path.parents:
+        if parent.name == "node_modules":
+            trees.append(parent)
+            break
+    else:
+        trees.append(path.parent)
+    tool = _shebang_tool(path)
+    if tool is not None and tool.name not in ("sh", "bash", "env"):
+        prefix = _interpreter_prefix(tool)
+        if prefix is not None:
+            trees.append(prefix)
+    return list(dict.fromkeys(str(tree) for tree in trees if tree.is_dir()))
+
+
 def runtime_trees(path: Path) -> list[str]:
     """What a method must be able to read in order to *run* this improver.
 
@@ -218,27 +237,11 @@ def runtime_trees(path: Path) -> list[str]:
 
     Bound read-only by the caller: a tool the method runs is not state it may write.
     """
-    path = Path(path).expanduser()
-    trees: list[Path] = []
-    for parent in path.parents:
-        if parent.name == "node_modules":
-            trees.append(parent)
-            break
-    else:
-        trees.append(path.parent)
-    tool = _shebang_tool(path)
-    if tool is not None and tool.name not in ("sh", "bash", "env"):
-        prefix = _interpreter_prefix(tool)
-        if prefix is not None:
-            trees.append(prefix)
+    trees = _program_runtime_trees(path)
     home = config_home()
-    if home is not None:
-        trees.append(home)
-    out: list[str] = []
-    for tree in trees:
-        if tree.is_dir() and str(tree) not in out:
-            out.append(str(tree))
-    return out
+    if home is not None and home.is_dir() and str(home) not in trees:
+        trees.append(str(home))
+    return trees
 
 
 class Candidate:
@@ -268,7 +271,7 @@ class Candidate:
         return h.hexdigest()
 
 
-def _run_version(path: Path, timeout: int = 60) -> tuple[bool, str, str]:
+def _run_version(path: Path, timeout: int = 60, *, env: dict | None = None) -> tuple[bool, str, str]:
     """Run `<path> --version`. Returns (ok, version, reason).
 
     This is the whole verification: a codex that cannot print its version cannot run a
@@ -276,7 +279,7 @@ def _run_version(path: Path, timeout: int = 60) -> tuple[bool, str, str]:
     """
     try:
         proc = subprocess.run([str(path), "--version"], capture_output=True, text=True, errors="replace",
-                              timeout=timeout)
+                              timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         return False, "", f"`--version` timed out after {timeout}s"
     except OSError as exc:
@@ -352,6 +355,83 @@ def load_config(path: Path | None = None) -> dict:
             raise FileNotFoundError(f"configured improver registry does not exist: {path}")
         return {}
     return json.loads(path.read_text())
+
+
+def _dsh_installation(entry: dict, launcher: Path) -> tuple[dict, dict, dict]:
+    """Resolve the bundled DSH launcher before probing or binding its installation.
+
+    Opaque third-party launchers keep their declared behavior. A local registry can
+    opt into this installation contract by declaring a `root` and `argv_style=dsh`.
+    The two placeholders belong to DSH's path declarations, not arbitrary env expansion.
+    """
+    bundled = launcher.resolve() == (ROOT / 'methods/dsh-improver').resolve()
+    if not bundled and not (entry.get('argv_style') == 'dsh' and 'root' in entry):
+        return entry, {}, {}
+    if entry.get('argv_style') != 'dsh':
+        raise ValueError('the bundled DSH launcher requires argv_style=dsh')
+    cfg = current_config().improver
+    build = entry.get('build_command') or []
+    declared_root = str(entry.get('root') or '')
+    # Local registries written before `root` existed name it in git's -C argument.
+    if not declared_root and len(build) >= 3 and build[:2] == ['git', '-C']:
+        declared_root = str(build[2]) if build[2] != '{root}' else ''
+    raw_root = cfg.dsh_root or declared_root
+    if not raw_root:
+        raise ValueError('the DSH improver needs HG_DSH_ROOT or its registry root')
+    root = Path(raw_root).expanduser().resolve()
+    cli = root / 'apps/cli/lib/bin.js'
+    if not cli.is_file() or not cli.resolve().is_relative_to(root):
+        raise ValueError(f'no built DSH CLI inside configured root: {cli}')
+    raw_node = cfg.dsh_node or str(entry.get('interpreter') or 'node')
+    found = shutil.which(str(Path(raw_node).expanduser()))
+    if not found:
+        raise ValueError(f'DSH Node executable is unavailable: {raw_node}; set HG_DSH_NODE')
+    node = Path(found).resolve()
+    if node.is_relative_to(ROOT):
+        raise ValueError(f'DSH Node must be outside the hidden platform checkout: {node}')
+    node_root = _interpreter_prefix(node) or node.parent
+    raw_home = cfg.dsh_home or str(entry.get('home') or '')
+    if not raw_home:
+        raise ValueError('the DSH improver needs HG_IMPROVER_DSH_HOME or its registry home')
+    home = Path(raw_home).expanduser().resolve()
+    if not home.is_dir():
+        raise ValueError(f'prepared DSH improver home does not exist: {home}')
+    for path in (root, home, node_root):
+        if path.is_relative_to(ROOT) or ROOT.is_relative_to(path):
+            raise ValueError(f'DSH runtime must not contain or lie within the platform checkout: {path}')
+        shared = shared_temporary_root(path)
+        if shared is not None:
+            raise ValueError(f'DSH runtime directory {path} would expose shared temporary root {shared}; '
+                             'use a dedicated installation directory')
+
+    replacements = []
+    for old, new in ((declared_root, root), (str(entry.get('home') or ''), home)):
+        if old and '{' not in old:
+            replacements.append((Path(old).expanduser().resolve(), new))
+    replacements.sort(key=lambda pair: len(pair[0].parts), reverse=True)
+
+    def expand(value):
+        value = str(value)
+        if '{root}' in value or '{home}' in value:
+            return re.sub(r'\{(root|home)\}', lambda match: str(
+                {'root': root, 'home': home}[match.group(1)]), value)
+        path = Path(value).expanduser()
+        if path.is_absolute():
+            for old, new in replacements:
+                if path.is_relative_to(old):
+                    return str(new / path.relative_to(old))
+        return value
+
+    effective = {**entry, 'root': str(root), 'home': str(home), 'interpreter': str(node),
+                 'runtime': list(dict.fromkeys([str(root), str(home), str(node_root),
+                                                *(expand(p) for p in entry.get('runtime') or [])])),
+                 'build_command': [expand(p) for p in build]}
+    execution_env = {'HG_DSH_ROOT': str(root), 'HG_DSH_NODE': str(node)}
+    identity = {'root': str(root), 'node': str(node), 'entrypoint': str(cli),
+                'sha256': Candidate(cli).sha256(), 'node_sha256': Candidate(node).sha256()}
+    if not identity['sha256'] or not identity['node_sha256']:
+        raise ValueError('cannot read the configured DSH CLI or Node executable')
+    return effective, execution_env, identity
 
 
 def resolve(config: dict | None = None, *, version: str = "", requested: str = "",
@@ -466,15 +546,30 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
             return {"ok": False, "name": entry.get("name") or key, "kind": entry.get("kind"),
                     "requested": requested or key,
                     "reason": f"the {key!r} improver's launcher is missing: {path}"}
-        ok, ver, reason = _run_version(path)
+        try:
+            bundled_launcher = (ROOT / 'methods/dsh-improver').resolve()
+            bundled = path.resolve() == bundled_launcher
+            if bundled:
+                # Only methods/ is visible for this launcher. Probe, record and
+                # execute that path even when the registry names an external
+                # symlink; the alias itself is not bound into the sandbox.
+                path = bundled_launcher
+            entry, execution_env, dsh_runtime = _dsh_installation(entry, path)
+        except (OSError, ValueError) as exc:
+            return {"ok": False, "name": entry.get("name") or key, "kind": entry.get("kind"),
+                    "requested": requested or key, "reason": str(exc)}
+        probe_env = {**os.environ, **execution_env} if execution_env else None
+        ok, ver, reason = _run_version(path, env=probe_env)
         version = ver
         command = entry.get("build_command") or []
         if command:
             try:
                 built = subprocess.run([str(part) for part in command], capture_output=True,
-                                       text=True, errors="replace", timeout=60)
+                                       text=True, errors="replace", timeout=60, env=probe_env)
                 if built.returncode == 0 and built.stdout.strip():
                     version = f"{ver}+{built.stdout.strip().splitlines()[0][:40]}"
+                elif dsh_runtime:
+                    version = f"{ver}+unidentified(exit={built.returncode})"
             except (OSError, subprocess.TimeoutExpired) as exc:
                 # Recorded as a version that says it could not check, rather than silently
                 # dropping the field: a point whose improver identity is `0.1.5+unknown` is
@@ -508,7 +603,14 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                 prefix = _interpreter_prefix(Path(found))
                 if prefix is not None and str(prefix) not in trees:
                     trees.append(str(prefix))
-        for implied in runtime_trees(path):
+        # Only the bundled DSH launcher is already visible under methods/. An
+        # external launcher still needs its package and shebang interpreter, but
+        # neither DSH path should inherit the unrelated Codex credential home.
+        if dsh_runtime:
+            implied_trees = () if bundled else _program_runtime_trees(path)
+        else:
+            implied_trees = runtime_trees(path)
+        for implied in implied_trees:
             if implied not in trees:
                 trees.append(implied)
         return {"ok": bool(ok), "path": str(path), "version": version,
@@ -522,6 +624,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                 # point (`_improver_identity` filters them out) -- but the method needs both,
                 # and the resolution is the only place that read them off the entry.
                 "home": tool_home,
+                **({"dsh_runtime": dsh_runtime} if dsh_runtime else {}),
                 "api_key_env": str(entry.get("api_key_env") or ""),
                 **{key: str(entry[key]) for key in ("base_url", "provider", "profile", "wire")
                    if entry.get(key)},

@@ -80,7 +80,9 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 6  # 6 mounts the active venv and its base interpreter as distinct runtime trees;
+PLAN_VERSION = 8  # 8 excludes method runtime trees exposing shared temporary roots;
+                  # 7 excludes method runtime trees overlapping the platform, including aliases;
+                  # 6 mounts the active venv and its base interpreter as distinct runtime trees;
                   # 5 adds the read-only host-side tool socket (`eval/containers/tool_route.py`);
                   # 4 was the offline model socket and the trusted namespace-local HTTP bootstrap.
 
@@ -99,6 +101,21 @@ DNS = ("/run/systemd/resolve", "/mnt/wsl/resolv.conf")
 
 class SandboxUnavailable(RuntimeError):
     """bwrap is missing or cannot build a namespace. Never silently fall back."""
+
+
+def shared_temporary_root(path: Path) -> Path | None:
+    """Return a shared temporary root exposed by mounting this directory.
+
+    Dedicated installation subdirectories are allowed, but a root or its ancestor
+    would expose other tasks. Check the mount destination and its actual source,
+    including aliases of both the runtime and the allocator's temporary root.
+    """
+    mounts = (path.absolute(), path.resolve())
+    for root in (Path('/tmp'), Path('/var/tmp'), Path(tempfile.gettempdir())):
+        for spelling in (root.absolute(), root.resolve()):
+            if any(spelling.is_relative_to(mount) for mount in mounts):
+                return spelling
+    return None
 
 
 def interpreter_prefixes() -> tuple[Path, ...]:

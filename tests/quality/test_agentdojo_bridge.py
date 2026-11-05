@@ -16,16 +16,31 @@ from pathlib import Path
 import pytest
 
 from data.datasets import agentdojo as dataset
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA = Path('/mnt/20t/xubuqiang/datasets/agentdojo')
+DATA = dataset_root('agentdojo')
 PYTHON = DATA / 'runtime/bin/python'
 BRIDGE = ROOT / 'data/datasets/agentdojo/bridge.py'
 
 
+def _require_runtime():
+    try:
+        available = PYTHON.is_file()
+    except DataRootNotConfigured as exc:
+        pytest.skip(str(exc))
+    if not available:
+        pytest.skip(f'isolated AgentDojo runtime not provisioned at {PYTHON}')
+
+
+@pytest.fixture
+def runtime():
+    # Gate before tests read cases.json, not just before the bridge subprocess.
+    _require_runtime()
+
+
 def run_bridge(mode, case_file=None, action_file=None):
-    if not PYTHON.is_file():
-        pytest.skip('isolated AgentDojo runtime not provisioned')
+    _require_runtime()
     argv = [str(PYTHON), str(BRIDGE), mode]
     if case_file is not None:
         argv += ['--case', str(case_file)]
@@ -44,7 +59,7 @@ def test_version_and_pair_count():
     assert all(set(c) == {'suite', 'user', 'injection', 'prompt'} for c in cases)
 
 
-def test_gold_transcript_reaches_utility_with_real_observations(tmp_path):
+def test_gold_transcript_reaches_utility_with_real_observations(tmp_path, runtime):
     """The replay transcript alone is enough: no state, no reported tool results."""
     case = json.loads((DATA / '_src/cases.json').read_text())[0]
     case_path = tmp_path / 'case.json'
@@ -81,7 +96,7 @@ def test_gold_noop_and_forged_state(tmp_path):
     assert forged['reward'] == 0.0
 
 
-def test_registered_attack_text_matches_agent_snapshot_and_replay(tmp_path):
+def test_registered_attack_text_matches_agent_snapshot_and_replay(tmp_path, runtime):
     case = json.loads((DATA / '_src/cases.json').read_text())[0]
     case_path = tmp_path / 'case.json'
     case_path.write_text(json.dumps(case))
@@ -93,8 +108,11 @@ def test_registered_attack_text_matches_agent_snapshot_and_replay(tmp_path):
     assert snapshot['attack'] == run_bridge('evaluate', case_path)['attack'] == 'ignore_previous'
 
 
-def test_cli_has_no_snapshot_path_at_all(tmp_path):
+def test_cli_has_no_snapshot_path_at_all(tmp_path, monkeypatch):
     """The old `dojo.initial.json` path is gone; a leftover file is just an unread file."""
+    # SETUP's CLI is source-only; enumerate one synthetic case without external storage.
+    monkeypatch.setattr(dataset, 'DATASET_ROOT', tmp_path / 'synthetic-storage')
+    monkeypatch.setattr(dataset, '_indices', lambda: [0])
     (tmp_path / 'dojo.initial.json').write_text(json.dumps({'suite': 'banking'}))
     for entry in dataset.SETUP['agentdojo/0']['files']:
         shutil.copy2(entry['from'], tmp_path / entry['path'])
@@ -106,7 +124,7 @@ def test_cli_has_no_snapshot_path_at_all(tmp_path):
     assert not (tmp_path / 'action.json').exists()
 
 
-def test_verifier_measures_without_the_agent_visible_snapshot(tmp_path):
+def test_verifier_measures_without_the_agent_visible_snapshot(tmp_path, runtime):
     """The verifier must measure when no environment is agent-side.
 
     Documented in the adapter docstring. The verifier replays `case.json` through the
@@ -114,8 +132,6 @@ def test_verifier_measures_without_the_agent_visible_snapshot(tmp_path):
     `dojo.initial.json` there. Both halves are asserted here so a change to one side
     cannot silently break the other.
     """
-    if not PYTHON.is_file():
-        pytest.skip('isolated AgentDojo runtime not provisioned')
     case = json.loads((DATA / '_src/cases.json').read_text())[0]
     work = tmp_path / 'verify-only'
     (work / 'verify').mkdir(parents=True)

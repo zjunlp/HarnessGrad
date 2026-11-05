@@ -14,17 +14,10 @@ watching the file it was asked for land there and nowhere else. It also picks up
 `AGENTS.md` the working directory carries, which for a task directory is the task's own
 instructions. So the subprocess's `cwd` is the task, and nothing has to be translated.
 
-**`agent_model` is DSH's own default, not the platform's `HG_AGENT_MODEL`.** This harness
-does not read `HG_AGENT_MODEL`: DSH takes its model from its profile, whose
-`agent-default-model` names `deepseek-flash`. Recording the platform's variable here would
-put a model on the curve point that this harness never asked for -- the same "the record
-names a party that did no work" defect the improver field exists to prevent.
-
-**`--profile headless`.** DSH ships named profiles; the headless one is "answer one task,
-stream reasoning to stderr, print the final assistant message, and exit" -- a one-shot agent
-rather than a session, which is what a harness needs. Its `agent-default-model` names
-`provider: deepseek-official, model: deepseek-flash` out of the box, so this harness measures
-DSH with the model it ships with rather than with one this platform chose for it.
+**Model selection.** When `HG_AGENT_MODEL` and `HG_AGENT_BASE_URL` are configured, the
+adapter writes a per-task patch that selects that route. With neither configured,
+DSH keeps its shipped model default. The trace records the selected model and the
+patch identity. `--profile headless` selects the one-task profile in both cases.
 
 **DSH needs a profile, a container's `HOME` is empty, and the profile must not travel in this
 tree.** Measured 2026-10-06. DSH resolves its plugin tree out of
@@ -40,8 +33,8 @@ louder (`Cannot find package '@deepseek-ai/cordis-plugin-timer'`), which is how 
 `symlinks=False`, so a link in this tree is *followed and copied* -- and these point into a 2 GB
 dependency graph full of links of its own. Measured: the driver spun inside `shutil.copytree`
 for over 800 s per attempt and produced nothing. So they are bound instead
-(`harness.json`'s `runtime_paths` names `~/.dsh/profiles`), and `_install_profile` creates the
-one link that joins them to the writable `HOME` the container gave this process.
+(`harness.json`'s prepared `runtime_paths` names the installation), and `_install_profile`
+rebuilds the relative farm under the writable `HOME` the container gave this process.
 
 **Credentials come from the agent's environment.** DSH reads a stored credential when it has
 one and `DEEPSEEK_API_KEY` when it does not; measured with an empty `HOME` (which is what a
@@ -56,23 +49,15 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shlex
+import shutil
 import subprocess
 import time
 
-#: Where DSH lives and how to start it. Both are bound into the task container read-only by
-#: `harness.json`'s `runtime_paths`, so these are the paths *inside* it.
-#: **`node` version matters, and the failure is silent.** Measured 2026-10-06: the built
-#: `apps/cli/lib/bin.js` runs under node **v22.19.0** and produces *nothing* under
-#: **v22.16.0** -- exit code 0, no stdout, no stderr, no files, for every argv including
-#: `--help`. The silence has a cause in DSH's own source: the headless runner returns early
-#: when any of its `agents` / `agentDefaultModel` / `sessions` services is missing
-#: (`packages/bundle/headless/src/index.ts`), so a tree that fails to compose exits as if it
-#: had answered nothing to say. Both node binaries are on this host; this is the one that
-#: works with the checkout as built.
-DEFAULT_NODE = "/home/xubuqiang/.nvm/versions/node/v22.19.0/bin/node"
-DEFAULT_DSH = "/mnt/20t/xubuqiang/deepseek-harness/apps/cli/lib/bin.js"
+# The shipped harness is portable. Prepare this manifest with
+# tools/configure_dsh_harness.py to record the installation the sandbox will bind.
+CLI_RELATIVE = Path("apps/cli/lib/bin.js")
 
 #: Where DSH keeps its own state. A container's `HOME` is a writable tmpfs, but it may be
 #: unset entirely, and DSH resolves its home from it.
@@ -83,67 +68,139 @@ DEFAULT_HOME = "/tmp/dsh-home"
 DEFAULT_MODEL = "deepseek-flash"
 
 
-#: The plugin farm DSH's loader resolves its entries through, as **data**: one
-#: `relative/name<TAB>absolute target` per line, 277 lines, 42 KB.
-#:
-#: It travels as text rather than as links because the platform stages a harness with
-#: `shutil.copytree` (`ckpt/git_state.py:stage_workspace`), and a link in this tree is a
-#: link the staging step has to decide about. Measured before it was fixed: 277 links into a
-#: 2 GB DSH checkout made the driver recurse inside `copytree` for over 800 s per attempt and
-#: produce nothing. Reproducing them here costs one `os.symlink` call each, into the writable
-#: `HOME` the container gave this process, and leaves the harness tree nothing but text.
+# One package name and DSH-root-relative target per line. Text avoids copying the
+# installed dependency graph when the platform stages the candidate.
 FARM_MANIFEST = Path(__file__).resolve().parent / "dsh_farm.tsv"
 
 
-def _install_profile(home: Path) -> None:
-    """Give DSH the two things an empty `HOME` is missing, and nothing else.
+def _declared_paths() -> list[Path]:
+    manifest = json.loads(Path(__file__).with_name("harness.json").read_text(encoding="utf-8"))
+    return [Path(value).expanduser() for value in manifest.get("runtime_paths", [])]
 
-    **A directory it can write, and the module farm inside it.** Measured 2026-10-06, in a
-    task container: DSH's `prepareProfile` writes `$HOME/.dsh/profiles/headless/cordis.yml`
-    on every boot, so `profiles/` has to be a real writable directory -- pointing the whole
-    of it at a read-only tree fails with `EROFS` on exactly that write. What DSH does *not*
-    create for itself is `profiles/node_modules`, the farm its loader resolves loader-entry
-    package names through; a container's `HOME` starts empty, the tree fails to compose, and
-    the headless runner then returns *early and silently* (exit 0, no output, no files --
-    `packages/bundle/headless/src/index.ts` returns when any of its `agents` /
-    `agentDefaultModel` / `sessions` services is missing). In a container the boot failure is
-    loud (`Cannot find package '@deepseek-ai/cordis-plugin-timer'`), which is how it was
-    found.
 
-    The farm is rebuilt from `dsh_farm.tsv` rather than copied, and the links point at
-    absolute paths inside the DSH checkout -- which the container binds at the same path
-    read-only (`harness.json`'s `runtime_paths`), so they resolve there.
+def _executable(value: str, env: dict, *, preserve_symlinks: bool = False) -> str:
+    found = shutil.which(value, path=env.get("PATH", ""))
+    if not found:
+        raise ValueError(f"DSH executable is unavailable: {value}")
+    path = Path(found)
+    return str(path.absolute() if preserve_symlinks else path.resolve())
 
-    Idempotent, and it leaves an existing profile alone: an operator running this by hand
-    keeps their own. Returns how many links it created, so the trace can say what happened
-    rather than leaving a silent `except` to be guessed at.
+
+def runtime(env: dict | None = None) -> dict:
+    """Resolve one installation for execution, configuration facts and plugin links.
+
+    Explicit command wrappers own their runtime. Supply HG_AGENT_DSH or
+    HG_AGENT_DSH_ROOT as well when the wrapper needs this adapter's plugin farm.
     """
-    if not FARM_MANIFEST.is_file():
-        return -1
-    dsh = home / ".dsh"
-    dsh.mkdir(parents=True, exist_ok=True)
-    profiles = dsh / "profiles"
-    profiles.mkdir(parents=True, exist_ok=True)
-    farm = profiles / "node_modules"
-    if farm.exists():
-        return -2
-    farm.mkdir(parents=True, exist_ok=True)
-    made = 0
-    for line in FARM_MANIFEST.read_text(encoding="utf-8").splitlines():
-        if "\t" not in line:
-            continue
-        name, _, target = line.partition("\t")
-        link = farm / name
+    env = os.environ if env is None else env
+    wrapper = shlex.split(env.get("HG_AGENT_DSH_COMMAND", ""))
+    declared = _declared_paths()
+    explicit_root = env.get("HG_AGENT_DSH_ROOT")
+    cli = env.get("HG_AGENT_DSH")
+    wrapper_cli = next((part for part in wrapper[1:]
+                        if not part.startswith("-") and part.endswith(CLI_RELATIVE.as_posix())), None)
+    if wrapper_cli:
+        cli = wrapper_cli
+    if not cli and explicit_root:
+        cli = str(Path(explicit_root).expanduser() / CLI_RELATIVE)
+    if not cli and not wrapper:
+        cli = next((str(root / CLI_RELATIVE) for root in declared
+                    if (root / CLI_RELATIVE).is_file()), None)
+    root = None
+    if cli:
+        cli = Path(cli).expanduser().resolve()
+        if not cli.is_file() or tuple(cli.parts[-4:]) != tuple(CLI_RELATIVE.parts):
+            raise ValueError(f"DSH CLI must be an installed {CLI_RELATIVE}: {cli}")
+        root = cli.parents[3]
+        if explicit_root and root != Path(explicit_root).expanduser().resolve():
+            raise ValueError("HG_AGENT_DSH and HG_AGENT_DSH_ROOT name different installations")
+    elif not wrapper:
+        raise ValueError("DSH is not configured; run tools/configure_dsh_harness.py "
+                         "or set HG_AGENT_DSH and declare its runtime_paths")
+    if wrapper:
+        argv = list(wrapper)
+        # A venv's Python is commonly a symlink to the base interpreter. Its
+        # spelling selects pyvenv.cfg and site-packages, so keep that spelling
+        # while making relative/PATH commands independent of the task cwd.
+        argv[0] = _executable(argv[0], env, preserve_symlinks=True)
+        # A direct interpreter + bin.js override names the interpreter that
+        # actually runs. Prepared bindings or HG_AGENT_NODE must not substitute
+        # another one for diagnostics. An opaque wrapper may choose internally;
+        # even an explicit DSH root does not reveal its interpreter.
+        node = argv[0] if wrapper_cli and wrapper[1] == wrapper_cli else None
+        if node is not None:
+            argv[1] = str(cli)
+    else:
+        node = env.get("HG_AGENT_NODE")
+        if not node:
+            node = next((str(bound) for bound in declared
+                         if bound.is_file() and os.access(bound, os.X_OK)), None)
+        if not node:
+            node = next((str(path) for bound in declared
+                         for path in (bound / "node", bound / "bin/node") if path.is_file()), None)
+        node = _executable(node or "node", env)
+        argv = [node, str(cli)]
+    return {"argv": argv, "root": root, "node": node, "cli": str(cli) if cli else None}
+
+
+def farm_targets(root: Path, manifest: Path | None = None) -> list[tuple[str, Path]]:
+    """Validate the complete farm before writing any links or profile directories."""
+    try:
+        root = root.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"DSH root cannot be resolved: {root}: {exc}") from exc
+    if not root.is_dir():
+        raise ValueError(f"DSH root is not a directory: {root}")
+    entries = []
+    seen = set()
+    for number, line in enumerate((manifest or FARM_MANIFEST).read_text(encoding="utf-8").splitlines(), 1):
+        parts = line.split("\t")
+        if len(parts) != 2:
+            raise ValueError(f"invalid DSH farm row {number}")
+        name, relative = parts
+        package = PurePosixPath(name)
+        target = PurePosixPath(relative)
+        valid_name = (len(package.parts) == (2 if name.startswith("@") else 1)
+                      and all(part not in {"", ".", ".."} for part in package.parts))
+        if (not valid_name or package.is_absolute() or name != package.as_posix()
+                or "\\" in name or name in seen or not relative
+                or not target.parts or target.is_absolute() or ".." in target.parts or "\\" in relative
+                or relative != target.as_posix()):
+            raise ValueError(f"unsafe DSH farm row {number}: {line}")
+        destination = root / relative
         try:
-            link.parent.mkdir(parents=True, exist_ok=True)
-            link.symlink_to(target)
-            made += 1
-        except OSError:
-            # A filesystem that will not take one link is not a reason to fail the task:
-            # DSH will try to materialise its own profile and the trace will say what
-            # happened.
-            continue
-    return made
+            resolved = destination.resolve(strict=True)
+        except FileNotFoundError as exc:
+            raise ValueError(f"DSH dependency is missing: {destination}") from exc
+        except (OSError, RuntimeError) as exc:
+            raise ValueError(f"DSH dependency cannot be resolved: {destination}: {exc}") from exc
+        if not resolved.is_relative_to(root) or not resolved.is_dir():
+            raise ValueError(f"DSH dependency escapes its installation or is not a package: {destination}")
+        entries.append((name, destination))
+        seen.add(name)
+    if not entries:
+        raise ValueError("DSH farm manifest is empty")
+    return entries
+
+
+def _install_profile(home: Path, root: Path) -> int:
+    """Create the writable farm, or verify an existing one matches this installation."""
+    entries = farm_targets(root)
+    farm = home / ".dsh" / "profiles" / "node_modules"
+    if farm.is_symlink() or (farm.exists() and not farm.is_dir()):
+        raise ValueError(f"DSH profile farm must be a real directory: {farm}")
+    if farm.exists():
+        for name, target in entries:
+            link = farm / name
+            if not link.is_symlink() or link.resolve() != target.resolve():
+                raise ValueError(f"DSH profile contains stale or missing link: {link}; use a fresh HOME")
+        return -2
+    farm.mkdir(parents=True)
+    for name, target in entries:
+        link = farm / name
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+    return len(entries)
 
 
 #: The question a failed DSH boot cannot answer from its own output.
@@ -187,18 +244,19 @@ console.log(JSON.stringify(out));
 """
 
 
-def _loader_probe(home: Path, env: dict) -> dict:
+def _loader_probe(home: Path, env: dict, selected: dict | None = None) -> dict:
     """Ask the container what DSH's own silent resolution path does there.
 
     Never raises and never blocks the task: a probe that fails is itself the answer, and it
     is recorded as text rather than dropped.
     """
-    node = os.environ.get("HG_AGENT_NODE", DEFAULT_NODE)
-    dsh = os.environ.get("HG_AGENT_DSH", DEFAULT_DSH)
-    loader_js = str(Path(dsh).resolve().parents[3] / "vendor" / "loader" / "lib"
-                    / "index.js")
-    base = (home / ".dsh" / "profiles" / "headless").as_uri() + "/"
     try:
+        selected = selected or runtime(env)
+        if selected["root"] is None or selected["node"] is None:
+            return {"probe_skipped": "custom command owns its runtime"}
+        node = selected["node"]
+        loader_js = str(selected["root"] / "vendor/loader/lib/index.js")
+        base = (home / ".dsh" / "profiles" / "headless").as_uri() + "/"
         probe_env = dict(env, HG_PROBE_LOADER=loader_js, HG_PROBE_BASE=base)
         done = subprocess.run([node, "--input-type=module", "-e", _LOADER_PROBE_JS],
                               env=probe_env, capture_output=True, text=True, errors="replace", timeout=60)
@@ -278,7 +336,8 @@ def _model_patch(env: dict, home: Path) -> "Path | None":
     return path
 
 
-def command(prompt_path: Path, patch: "Path | None" = None) -> list[str]:
+def command(prompt_path: Path, patch: "Path | None" = None, *,
+            selected: dict | None = None) -> list[str]:
     """The argv that answers one task.
 
     The task text is passed as a single argument rather than on stdin: the headless app's
@@ -286,12 +345,7 @@ def command(prompt_path: Path, patch: "Path | None" = None) -> list[str]:
     documents. It comes from a file because a task statement can be long enough to run into
     a command-line limit, and a truncated task is a task the agent was never given.
     """
-    argv = shlex.split(os.environ.get("HG_AGENT_DSH_COMMAND", ""))
-    if not argv:
-        argv = [os.environ.get("HG_AGENT_NODE", DEFAULT_NODE),
-                os.environ.get("HG_AGENT_DSH", DEFAULT_DSH)]
-    if not argv:
-        raise ValueError("HG_AGENT_DSH_COMMAND is empty")
+    argv = list((selected or runtime())["argv"])
     if patch is not None:
         argv = argv + ["--patch", str(patch)]
     return argv + ["--profile", "headless", prompt_path.read_text(encoding="utf-8")]
@@ -337,9 +391,11 @@ def _sha(text: str | None) -> str | None:
 
 
 _FACTS: dict | None = None
+_FACTS_KEY: tuple | None = None
 
 
-def facts(env: dict, home: Path, prompt: str, patch: "Path | None") -> dict:
+def facts(env: dict, home: Path, prompt: str, patch: "Path | None",
+          selected: dict | None = None) -> dict:
     """What this run's configuration actually is, as facts on the trace.
 
     **Why the trace and not a file.** The improver reads the previous round's traces; writing a
@@ -354,13 +410,14 @@ def facts(env: dict, home: Path, prompt: str, patch: "Path | None") -> dict:
     schemas live inside DSH and `--dump-config` does not print them without booting, so a hash
     claiming to cover tools would be a number nothing verifies (findings.md §186).
     """
-    global _FACTS
-    if _FACTS is not None:
+    global _FACTS, _FACTS_KEY
+    selected = selected or runtime(env)
+    key = (tuple(selected["argv"]), selected["root"], selected["node"])
+    if _FACTS is not None and _FACTS_KEY == key:
         out = dict(_FACTS)
     else:
         dump = None
-        argv = [env.get("HG_AGENT_NODE", DEFAULT_NODE), env.get("HG_AGENT_DSH", DEFAULT_DSH),
-                "--profile", "headless", "--dump-config"]
+        argv = selected["argv"] + ["--profile", "headless", "--dump-config"]
         try:
             proc = subprocess.run(argv, capture_output=True, text=True, errors="replace", env=env,
                                   timeout=int(knobs().get("limits", {}).get("dump_config_timeout_s", 20)))
@@ -373,7 +430,13 @@ def facts(env: dict, home: Path, prompt: str, patch: "Path | None") -> dict:
         out = {"config_sha": _sha(dump), "rows": len(rows),
                "row_ids": [r.split(":", 1)[1].strip() for r in rows][:48],
                "dump_ok": dump is not None}
+        # Wrappers may carry arbitrary arguments, including credentials. Keep
+        # command identity without publishing their raw argv in the trace.
+        out["runtime_command_sha"] = _sha(json.dumps(selected["argv"]))
+        out["runtime_node"] = selected["node"]
+        out["runtime_cli"] = selected["cli"]
         _FACTS = dict(out)
+        _FACTS_KEY = key
     out["prompt_sha"] = _sha(prompt)
     out["profile_sha"] = _sha(patch.read_text(encoding="utf-8")) if patch and patch.is_file() else None
     out["knobs_sha"] = _sha(KNOBS_FILE.read_text(encoding="utf-8")) if KNOBS_FILE.is_file() else None
@@ -477,7 +540,8 @@ def run(task: dict, workdir: Path) -> int:
     # the environment promises and does not provide is worth one `mkdir`, and this harness
     # cannot run without it.
     Path(env.get("TMPDIR") or "/tmp").mkdir(parents=True, exist_ok=True)
-    farm_links = _install_profile(home)
+    selected = runtime(env)
+    farm_links = _install_profile(home, selected["root"]) if selected["root"] is not None else None
     # DSH's own name for the key the platform gives the agent. Never logged, never written.
     if env.get("HG_AGENT_API_KEY") and not env.get("DEEPSEEK_API_KEY"):
         env["DEEPSEEK_API_KEY"] = env["HG_AGENT_API_KEY"]
@@ -494,7 +558,7 @@ def run(task: dict, workdir: Path) -> int:
         def record(value: dict) -> None:
             trace.write(json.dumps(value, ensure_ascii=False) + "\n")
 
-        measured = facts(env, home, prompt, patch)
+        measured = facts(env, home, prompt, patch, selected)
         record({"harness_identity": {"harness": "deepseek-harness",
                                      "harness_version": "0.2.0",
                                      "agent_backend": "dsh-headless",
@@ -507,25 +571,18 @@ def run(task: dict, workdir: Path) -> int:
                                      "knobs_sha": measured["knobs_sha"]},
                 "task_id": task.get("task_id")})
         record({"harness_facts": measured})
-        # What the launcher did before it launched anything. A harness whose setup fails
-        # silently fails in a way nobody can read afterwards: `-1` is "the manifest is not
-        # beside me", `-2` is "the farm was already there", `>= 0` is how many links this
-        # process made.
-        # What the launcher did before it launched anything. A harness whose setup fails
-        # silently fails in a way nobody can read afterwards: `-1` is "the manifest is not
-        # beside me", `-2` is "the farm was already there", `>= 0` is how many links this
-        # process made, and `probe_resolves` says whether the farm's links reach their
-        # targets *here* -- which is the difference between "the links were not made" and
-        # "they were made somewhere this process cannot see".
+        # A custom wrapper with no installation declaration owns its profile;
+        # normal launches report the validated farm and selected runtime root.
         probe = (home / ".dsh" / "profiles" / "node_modules" / "@deepseek-ai"
                  / "cordis-plugin-timer")
         profile_info = {"home": str(home), "manifest": FARM_MANIFEST.is_file(),
                         "links_created": farm_links,
                         "probe_resolves": probe.exists()}
-        profile_info.update(_loader_probe(home, env))
+        profile_info["runtime_root"] = str(selected["root"]) if selected["root"] else None
+        profile_info.update(_loader_probe(home, env, selected))
         record({"profile": profile_info})
         launched_at = time.time()
-        proc = subprocess.Popen(command(prompt_path, patch), cwd=workdir, env=env,
+        proc = subprocess.Popen(command(prompt_path, patch, selected=selected), cwd=workdir, env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                 errors="replace")
         def translate(out: str, err: str) -> None:

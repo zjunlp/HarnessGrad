@@ -32,6 +32,9 @@ harnessgrad = "harnessgrad.cli:main"
 # The entrypoint has to remain importable as `driver`, because that is the name in
 # INTERFACE.md, in `tools/serve_ui.py` and in every recorded run.
 py-modules = ["driver"]
+# Only explicitly reviewed resources below belong in a distribution; do not
+# absorb ignored local credentials/receipts from a developer checkout.
+include-package-data = false
 
 [tool.setuptools.packages.find]
 # The repository is not one regular package: `eval/`, `tools/`, `methods/`, `eval/ckpt/`
@@ -49,5 +52,51 @@ py-modules = ["driver"]
 # imports `scenarios.load` at module import, so an installed CLI that could not find it
 # would fail before printing `run --help`.
 namespaces = true
-include = ["harnessgrad*", "eval*", "data*", "methods*", "tools*", "scenarios*"]
+include = ["harnessgrad*", "eval*", "data*", "methods*", "tools*", "scenarios*", "base_harness*"]
 exclude = ["data.authored*", "data.candidates*"]
+
+# A wheel must carry the same local demo and runtime contracts as a checkout.
+# Namespace discovery alone only includes Python modules, not these resources.
+[tool.setuptools.package-data]
+"base_harness" = ["launchable.json", "deepseek-harness/harness.json", "deepseek-harness/knobs.json", "deepseek-harness/surface.json", "deepseek-harness/dsh_farm.tsv", "deepseek-harness/README.md"]
+"base_harness.codex" = ["harness.json"]
+"base_harness.loop" = ["harness.json", "requirements.txt"]
+"base_harness.miniagent" = ["harness.json", "requirements.txt", "LICENSE.upstream", "PROVENANCE.json", "README.md", "agent.yaml", "components.yaml"]
+"base_harness.miniagent.prompts" = ["extract.md", "system.md"]
+"base_harness.miniagent.skills" = ["main.md"]
+"base_harness.miniagent.tool_descriptions" = ["read_skill.json", "shell.json"]
+"base_harness.miniswe" = ["harness.json"]
+"base_harness.openclaw" = ["harness.json", "README.md", "config.json", "prompt.md", "runtime-identity.json"]
+"base_harness.opencode" = ["harness.json"]
+"base_harness.oracle" = ["harness.json"]
+"data" = ["aggregation_policies.json", "dataset.schema.json"]
+"harnessgrad.improvers" = ["improvers.json", "launchable.json", "skill.md"]
+"harnessgrad.runtime" = ["eight_stage_protocol.schema.json"]
+"methods" = ["dsh-improver"]
+"methods.a" = ["method.json"]
+"methods.ace" = ["method.json"]
+"methods.adas" = ["method.json"]
+"methods.ahe" = ["method.json"]
+"methods.arbor" = ["method.json"]
+"methods.b" = ["method.json"]
+"methods.darwinx" = ["method.json"]
+"methods.dgm" = ["method.json"]
+"methods.dream_rsi" = ["method.json"]
+"methods.echo_base" = ["method.json"]
+"methods.evo_harness" = ["method.json"]
+"methods.evoprompt" = ["method.json"]
+"methods.gepa" = ["method.json"]
+"methods.harnessx" = ["method.json"]
+"methods.hyperagents" = ["method.json"]
+"methods.lightrsi" = ["method.json"]
+"methods.llm_improver" = ["method.json"]
+"methods.meta_harness" = ["method.json"]
+"methods.modular_rsi" = ["method.json"]
+"methods.noop" = ["method.json"]
+"methods.opro" = ["method.json"]
+"methods.raise_step_cap" = ["method.json"]
+"methods.rrsi" = ["method.json"]
+"methods.sica_ci" = ["method.json"]
+"methods.skillopt" = ["method.json"]
+"methods.tthe" = ["method.json"]
+"scenarios" = ["demo-smoke.json"]

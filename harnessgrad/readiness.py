@@ -49,6 +49,7 @@ from pathlib import Path
 import data.scaffolds.registry as datasets
 from harnessgrad import PLATFORM_ROOT
 from harnessgrad.config import current
+from harnessgrad.provisioning import Readiness
 
 #: The interpreter floor the platform declares (README, `pyproject`-free by design).
 MIN_PYTHON = (3, 12)
@@ -82,6 +83,8 @@ class Check:
     required: bool
     ok: bool
     detail: str
+    # Additive diagnostic metadata; required/ok remain the admission contract.
+    readiness: Readiness | None = None
 
 
 def plan_checks(args) -> list[Check]:
@@ -563,9 +566,9 @@ def _dataset_check(args) -> Check:
     (a blocker it declares, a judge it cannot configure). Collapsing them into one
     "dataset unavailable" would send the user to the wrong fix.
 
-    `provision_status()` is consulted only when the adapter has one: a module without it
-    is assumed provisioned, which is the documented rule (`tools/dataset_lint.py`) and
-    what `load()` decides anyway.
+    This checks public inventory, not full-pool provisioning. Selected declarations
+    are checked separately; a successful row is not proof of runtime integrity.
+    Full adapter validation is the explicit dataset-lint operation.
     """
     name = getattr(args, "dataset", None)
     if not name:
@@ -604,7 +607,8 @@ def _dataset_check(args) -> Check:
     if not tasks:
         return Check("dataset", True, False, f"{name}: load() returned no tasks")
     detail = f"{name}: {len(tasks)} tasks; source loaded, checking selected declarations"
-    return Check("dataset", True, True, detail)
+    return Check("dataset", True, True, detail,
+                 Readiness("ready", "public-task-inventory"))
 
 
 def _split_check(args) -> Check:

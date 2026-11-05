@@ -58,6 +58,14 @@ GUARDS = (
     "test_test_lanes.py",
 )
 
+#: Audited fixture consumers. Unknown fixtures must defer, not borrow an unrelated test.
+#: A trailing slash maps a directory; other entries are exact files.
+FIXTURE_CONSUMERS = {
+    "tests/fixtures/tau2_scorer_probe.py": ("test_tau2_bench_official_scorer.py",),
+    "tests/fixtures/hg_bfclguard/": ("test_bfclguard_reachability.py",),
+    "tests/fixtures/aggregation_s9_before.json": ("test_aggregation_policies.py",),
+}
+
 #: Paths whose blast radius is the whole platform.
 CORE = ("driver.py", "eval/", "harnessgrad/", "conftest.py", "pyproject.toml", "install.sh")
 
@@ -124,7 +132,17 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
         stem = _stem(Path(path).name)
         if any(path == core or path.startswith(core) for core in CORE):
             return [], [f"{path} is a core path: running everything"]
-        if path.startswith(("docs/", ".github/")) or path.endswith(".md"):
+        if path.startswith("tests/fixtures/"):
+            consumers = {
+                name for fixture, names in FIXTURE_CONSUMERS.items()
+                if path == fixture or (fixture.endswith("/") and path.startswith(fixture))
+                for name in names
+            }
+            if not consumers or any(not (TESTS / name).is_file() for name in consumers):
+                return [], [f"{path} has no audited fixture consumers: running everything"]
+            picked.update(consumers)
+            reasons.append(f"{path}: fixture consumers")
+        elif path.startswith(("docs/", ".github/")) or path.endswith(".md"):
             reasons.append(f"{path}: documentation only")
         elif path.startswith("data/datasets/"):
             # The dataset name, not the file name: an adapter's assets live in a directory of
@@ -152,15 +170,6 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
             if (TESTS / Path(path).name).is_file():
                 picked.add(Path(path).name)
             reasons.append(f"{path}: itself")
-        elif path.startswith("tests/fixtures/"):
-            # A fixture is only evidence through the test that drives it. `tau2_scorer_probe.py`
-            # is run by the official-scorer test because the adapter needs a 3.13 interpreter the
-            # test process does not have; `hg_bfclguard/` is the reachability fixture.
-            if path.startswith("tests/fixtures/tau2_"):
-                picked.add("test_tau2_bench_official_scorer.py")
-            else:
-                picked.update({"test_bfclguard_reachability.py"})
-            reasons.append(f"{path}: fixture consumer")
         else:
             return [], [f"{path} is not mapped: running everything"]
 

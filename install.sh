@@ -7,7 +7,7 @@
 #
 #     bubblewrap   so a harness cannot see the platform while it runs
 #     git          every checkpoint is a commit in the run's workspace
-#     python3      >= 3.10 (dataclass syntax in the platform's own modules)
+#     python3      >= 3.12 (the minimum declared by pyproject.toml)
 #
 # `openai` is NOT installed here. It is imported only by a harness entrypoint that
 # talks to a model (`base_harness/loop/agent.py:105`, lazily, inside the call), so a
@@ -83,7 +83,7 @@ if [ -n "$PY" ]; then
         warn "put the newer one first, or run the driver as: $PY driver.py"
     fi
 else
-    bad "no python3 >= 3.10 on PATH -- the platform uses \`X | None\` annotations"
+    bad "no python3 >= 3.12 on PATH -- required by pyproject.toml"
     if [ -n "$FIRST_PY3" ]; then
         warn "'python3' resolves to $FIRST_PY3 ($("$FIRST_PY3" -V 2>&1))"
     fi

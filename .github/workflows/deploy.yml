@@ -1,0 +1,74 @@
+# Platform changes rebuild the website branch and overlay this commit's contributor record.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/contributors.html'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out website source
+        uses: actions/checkout@v4
+        with:
+          ref: website
+          path: site
+
+      - name: Check out triggering platform commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: platform-record
+          sparse-checkout: docs/contributors.html
+          sparse-checkout-cone-mode: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.1
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
+
+      - name: Install and build website
+        working-directory: site
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec astro build
+
+      - name: Stage platform contributor record
+        run: cp platform-record/docs/contributors.html site/dist/contributors.html
+
+      - name: Check built links
+        run: pnpm --dir site check:links
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

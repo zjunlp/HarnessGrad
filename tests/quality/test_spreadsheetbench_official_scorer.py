@@ -38,7 +38,9 @@ sys.path.insert(0, str(ROOT))
 
 import openpyxl  # noqa: E402
 
-DATA_ROOT = Path("/mnt/20t/xubuqiang/datasets/spreadsheetbench")
+from harnessgrad.paths import DataRootNotConfigured, dataset_root  # noqa: E402
+
+DATA_ROOT = dataset_root("spreadsheetbench")
 
 
 def _check():
@@ -58,6 +60,10 @@ def check():
 
 @pytest.fixture(scope="module")
 def bench():
+    try:
+        DATA_ROOT.resolve()
+    except DataRootNotConfigured as exc:
+        pytest.skip(str(exc))
     import data.datasets.spreadsheetbench as module
     if not module._RECORDS:
         pytest.skip(f"no SpreadsheetBench data under {module.DATASET_ROOT}")

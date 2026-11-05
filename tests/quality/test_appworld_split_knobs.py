@@ -28,7 +28,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import data.datasets.appworld as appworld  # noqa: E402
+from conftest import optional_storage_import
+with optional_storage_import():
+    import data.datasets.appworld as appworld  # noqa: E402
 
 STUDY_KNOB = "HG_APPWORLD_STUDY_IDS"
 POOL_KNOB = "HG_APPWORLD_POOL"

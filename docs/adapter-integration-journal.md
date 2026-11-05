@@ -6378,3 +6378,99 @@ a live payload. Production readiness invokes check-only in a subprocess; metadat
 and asset validation are not model/endpoint or binary-import health checks.
 
 Evidence is deliberately bounded: integrated production-declaration sandbox reruns measured oracle/noop 1/0 on one USER-toggle telecom task and [1,1,1]/[0,0,0] on the default three tasks. All eight executions recorded sandbox enforcement, complete relay cleanup and no fixture errors; the default airline judge returned complete 4/4 assertion coverage, excluded from reward. These deterministic fixtures do not authorize H0 or prove general model behavior. No new benchmark execution or timing claim is made here.
+
+### DSH installation paths survive relocation (2026-11-03)
+
+The DSH improver resolves one configured checkout, Node executable and prepared
+profile home for version probing, build identity, read-only bindings and actual
+execution. Its recorded runtime survives the restricted CLI environment without
+exposing other credentials or retaining personal-directory defaults.
+
+The task Harness stores all 277 plugin targets relative to its selected checkout.
+Preparation validates the dependency closure and records local sandbox bindings;
+stale farms, missing packages and escaping targets fail before link creation.
+Relocation controls cover normal and custom-command execution, configuration facts,
+loader interpreter selection and profile isolation. These model-free controls do
+not establish that a real DSH profile can boot or complete benchmark tasks.
+
+### DSH runtime preparation respects sandbox boundaries (2026-11-04)
+
+Rebased `fix/portable-runtime-paths` onto `origin/main` at `9d429943`, preserving
+the new τ² judge configuration and journal entry. DSH Harness preparation now
+refuses system runtime trees (including `/usr` and `/usr/local`), `/tmp` installs
+and installations overlapping the hidden platform before changing the manifest.
+The supported setup uses dedicated DSH and Node installations outside those trees;
+canonical-path checks also cover symlink aliases. The native sandbox's hiding and
+mount ordering remain intact.
+
+External DSH improvers retain their launcher's package directory and shebang
+interpreter without borrowing the unrelated Codex credential home. Only the
+bundled launcher can rely on the already-visible `methods/` directory.
+
+Validation: 222 tests and 38 subtests passed across DSH paths/session logs,
+improver resolution/registry/cost/prompt, configuration, method readiness,
+sandbox, path migration and documentation/import guards. The sandbox suite's
+expected default work directory was created for its rerun and removed afterwards.
+Three pre-existing checks requiring other local Node Harness installations were
+deselected. Actual bubblewrap and cached-image Docker controls verify runtime
+execution, read-only bindings, hidden private files and preservation of the image's
+Python; rejection controls verify the old manifest survives unsupported paths.
+These are fixture-based integration checks, with no model calls or real DSH
+profile/benchmark execution.
+
+### Bundled DSH launcher aliases use the mounted path (2026-11-04)
+
+An external symlink to `methods/dsh-improver` now selects the canonical bundled
+path before probing. Version probing, launcher hashing, recorded identity and
+execution use that same visible path, without exposing the alias directory or
+borrowing Codex credentials. Other external launchers retain their supplied paths.
+
+Both file-symlink and directory-symlink regression cases failed in real bubblewrap
+before the fix and now pass, including checks that alias credentials and platform
+code stay hidden. The focused DSH/improver/registry/prompt suite passed all 98
+tests, including the existing native and cached-image container runtime controls.
+These checks use fixtures and make no model calls.
+
+### Runtime mounts preserve platform isolation and wrapper environments (2026-11-04)
+
+The DSH improver rejects an inferred Node installation directory that contains
+the platform, including both standalone executables and `bin/` prefixes, before
+version probing. The method sandbox also excludes runtime mounts whose absolute
+destination or resolved source overlaps the platform in either direction. This
+blocks ancestor mounts and aliases of platform subtrees from exposing credentials
+or scorers after the platform hide. Mount plan version 7 records this change.
+
+Custom `HG_AGENT_DSH_COMMAND` executables keep their symlink spelling after being
+located and made absolute, preserving a Python venv's environment. Normal Node
+installation resolution continues to use canonical paths. A no-pip venv with a
+private module verifies absolute, PATH-selected and relative commands through both
+host and native-sandbox execution, including configuration inspection and `sys.prefix`.
+
+All 12 added regression cases failed before their respective fixes. Validation
+passed 195 tests and 38 subtests across improver resolution, method readiness,
+sandbox/integrity boundaries, DSH runtime/session behavior and documentation/import
+guards. Three separate existing Codex/OpenCode/OpenClaw path checks still fail on
+inaccessible old-user installation paths. Temporary work trees and fixture data
+were cleaned; these controls used no model calls or benchmark measurements.
+
+### Improver runtime mounts exclude shared temporary roots (2026-11-04)
+
+Confirmed that a standalone Node executable directly under `/tmp` could infer
+the entire shared directory as its runtime. With the platform elsewhere, the
+method's visible-path rebind exposed other tasks after the private `/tmp` mount.
+DSH installation resolution now refuses directories exposing `/tmp`, `/var/tmp`
+or the active tempfile allocation root before version probing, with a diagnostic
+requiring a dedicated installation directory. The method plan applies the same
+guard to all improver runtime trees, checking both mount destination and resolved
+source, including ancestors and aliases of configured temporary roots. Independent
+installation subdirectories remain usable. Mount plan version 8 records the change.
+
+All 13 new regression cases failed before the fix and pass afterwards: five
+resolution cases cover standard/configured roots, symlinks and a `bin/` prefix;
+eight real bubblewrap cases verify synthetic sibling-task files stay unreadable
+through direct and aliased mounts while a dedicated runtime remains executable.
+The platform fixture is outside the shared temporary roots so the earlier
+platform-overlap guard cannot mask the issue. Independent diff review passed.
+Validation passed 158 tests and 38 subtests across improver resolution/readiness,
+sandbox/isolation, userspace recording and documentation/import guards. Temporary
+fixtures were cleaned; these controls used no model calls or benchmark measurements.

@@ -17,6 +17,10 @@ from __future__ import annotations
 
 import re
 import pathlib
+import os
+import subprocess
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 WORKFLOWS = (ROOT / ".github" / "workflows" / "quality.yml",
@@ -70,8 +74,9 @@ def test_the_suite_job_goes_through_the_lane_runner() -> None:
     text = _text()
     assert "tools/run_tests.py" in text, (
         "the suite must run through tools/run_tests.py")
-    assert "--fast" in text and "--jobs" in text, (
-        "the suite job must state both the depth and the concurrency it runs at")
+    assert 'tools/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs' in text, (
+        "the suite job must execute the validated plan with explicit concurrency")
+    assert "--fast" not in text, "CI must not silently prune explicitly planned slow tests"
 
 
 def test_actions_are_pinned_to_a_major_version() -> None:
@@ -165,11 +170,104 @@ def test_a_manual_dispatch_runs_the_full_suite() -> None:
     assert "github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'" in text
     plan = text.split("- name: Plan the tests this change can reach", 1)[1].split(
         "- name: Suite", 1)[0]
-    assert "--force-full --plan plan.json" in plan
+    assert '--force-full --plan "$RUNNER_TEMP/quality-evidence/plan.json"' in plan
     assert "printf" not in plan, "all plan states must be produced by the selector"
     suite = text.split("- name: Suite", 1)[1].split(
         "- name: Full suite deferred", 1)[0]
     assert re.search(r"schedule\|workflow_dispatch\)\s*"
-                     r"python3 tools/run_selected.py --plan plan.json --jobs 4 --full ;;", suite)
-    assert re.search(r"\*\)\s*python3 tools/run_selected.py --plan plan.json --jobs 4 ;;", suite)
+                     r'python3 tools/run_selected.py --plan "\$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --full '
+                     r'--output-json "\$RUNNER_TEMP/quality-evidence/suite.json" ;;', suite)
+    assert re.search(r'\*\)\s*python3 tools/run_selected.py --plan "\$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 '
+                     r'--output-json "\$RUNNER_TEMP/quality-evidence/suite.json" ;;', suite)
     assert "--full-if-empty" not in suite, "empty push selections must never expand to full"
+
+
+def _step(name: str) -> str:
+    """Extract one named step without adding a YAML dependency."""
+    return _text().split(f"      - name: {name}\n", 1)[1].split("\n      - ", 1)[0]
+
+
+def test_advisory_failures_do_not_suppress_planning_or_turn_green() -> None:
+    checks, report = _text().split("\n  report:", 1)
+    assert "continue-on-error:" not in checks
+    assert "needs: checks" in report
+    assert "    continue-on-error: true" in report
+    for name, step_id in (("Catalogue documents", "catalogue"),
+                          ("Adapters this machine can import", "adapters")):
+        step = _step(name)
+        assert f"id: {step_id}" in step
+        assert "continue-on-error: true" in step
+    summary = _step("Advisory summary and status")
+    assert "if: always()" in summary
+    for step_id in ("catalogue", "adapters", "plan", "suite", "evidence"):
+        assert f"steps.{step_id}.outcome" in summary
+    assert ".conclusion" not in summary
+    assert 'exit "$status"' in summary
+    assert "gh workflow run" not in report
+    assert "createWorkflowDispatch" not in report
+
+
+def test_push_supersession_cannot_cancel_scheduled_or_manual_full_runs() -> None:
+    concurrency = _text().split("\nconcurrency:\n", 1)[1].split("\njobs:", 1)[0]
+    assert "group: quality-${{ github.event_name }}-${{ github.ref }}" in concurrency
+    assert "cancel-in-progress: true" in concurrency
+
+
+def test_plan_and_receipt_are_uploaded_even_after_failure() -> None:
+    upload = _step("Upload selection evidence")
+    assert "if: always()" in upload
+    assert "uses: actions/upload-artifact@v4" in upload
+    assert "if-no-files-found: warn" in upload
+    assert "${{ runner.temp }}/quality-evidence/plan.json" in upload
+    assert "${{ runner.temp }}/quality-evidence/suite.json" in upload
+    initialize = _step("Initialize fresh evidence directory")
+    assert 'mkdir -- "$RUNNER_TEMP/quality-evidence"' in initialize
+    assert "rm -rf" not in initialize
+    assert "github.run_id" in upload and "github.run_attempt" in upload
+
+
+@pytest.mark.parametrize("failed_step", [None, "CATALOGUE", "ADAPTERS", "PLAN", "SUITE", "EVIDENCE"])
+@pytest.mark.parametrize("missing", [None, "plan.json", "suite.json"])
+def test_advisory_summary_reports_real_outcomes_and_missing_evidence(
+    tmp_path: pathlib.Path, failed_step: str | None, missing: str | None,
+) -> None:
+    """Execute only the summary shell against synthetic files; never run the suite."""
+    block = _step("Advisory summary and status").split("        run: |\n", 1)[1]
+    script = "\n".join(line[10:] for line in block.splitlines())
+    evidence = tmp_path / "quality-evidence"
+    evidence.mkdir()
+    for name in ("plan.json", "suite.json"):
+        if name != missing:
+            (evidence / name).write_text("{}", encoding="utf-8")
+    summary = tmp_path / "summary.md"
+    env = {**os.environ, "RUNNER_TEMP": str(tmp_path), "GITHUB_STEP_SUMMARY": str(summary)}
+    for step in ("CATALOGUE", "ADAPTERS", "PLAN", "SUITE", "EVIDENCE"):
+        env[f"{step}_OUTCOME"] = "failure" if step == failed_step else "success"
+    result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
+                            cwd=tmp_path, env=env, capture_output=True, text=True, timeout=10)
+    assert result.returncode == int(failed_step is not None or missing is not None)
+    text = summary.read_text(encoding="utf-8")
+    if failed_step:
+        assert f"{failed_step} step outcome: failure" in text
+    if missing:
+        assert "Evidence missing:" in text
+        assert "execution not established" in text
+        assert "::warning::missing quality evidence:" in result.stderr
+    assert "empty/deferred selection" in text
+
+
+def test_summary_does_not_treat_a_skipped_suite_as_success(tmp_path: pathlib.Path) -> None:
+    block = _step("Advisory summary and status").split("        run: |\n", 1)[1]
+    script = "\n".join(line[10:] for line in block.splitlines())
+    env = {**os.environ, "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_STEP_SUMMARY": str(tmp_path / "summary.md")}
+    for step in ("CATALOGUE", "ADAPTERS", "PLAN", "SUITE", "EVIDENCE"):
+        env[f"{step}_OUTCOME"] = "skipped" if step == "SUITE" else "success"
+    evidence = tmp_path / "quality-evidence"
+    evidence.mkdir()
+    for name in ("plan.json", "suite.json"):
+        (evidence / name).write_text("{}", encoding="utf-8")
+    result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], cwd=tmp_path,
+                            env=env, capture_output=True, text=True, timeout=10)
+    assert result.returncode == 1
+    assert "SUITE step outcome: skipped" in (tmp_path / "summary.md").read_text()

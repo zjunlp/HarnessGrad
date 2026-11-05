@@ -27,14 +27,19 @@
 # at composition time, so the pin is visible in the argv and cannot drift behind the record.
 set -euo pipefail
 
-root="${HG_DSH_ROOT:-/mnt/20t/xubuqiang/deepseek-harness}"
+root="${HG_DSH_ROOT:-}"
+[ -n "$root" ] || {
+  echo "dsh improver: set HG_DSH_ROOT to the built DSH checkout" >&2
+  exit 2
+}
+node="${HG_DSH_NODE:-node}"
 bin="$root/apps/cli/lib/bin.js"
 
 # `tools/improver.py:_run_version` verifies the resolved improver by asking it its version,
 # so `--version` has to answer before anything else happens.
 if [ "${1:-}" = "--version" ]; then
   [ -f "$bin" ] || { echo "dsh improver: no built CLI at $bin" >&2; exit 2; }
-  exec node "$bin" --version
+  exec "$node" "$bin" --version
 fi
 
 [ -f "$bin" ] || {
@@ -65,7 +70,7 @@ cat >"$pin" <<EOF
     model: ${HG_IMPROVER_MODEL:-deepseek-flash}
 EOF
 
-exec node "$bin" \
+exec "$node" "$bin" \
   --profile "${HG_IMPROVER_PROFILE:-headless}" \
   --patch "$pin" \
   "$@"

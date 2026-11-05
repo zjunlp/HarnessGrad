@@ -35,7 +35,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import data.datasets.livecodebench as dataset  # noqa: E402
+from conftest import optional_storage_import
+with optional_storage_import():
+    import data.datasets.livecodebench as dataset  # noqa: E402
 
 ADAPTER = ROOT / "data" / "datasets" / "livecodebench.py"
 CHECK = ROOT / "data" / "datasets" / "livecodebench" / "verify" / "check.py"
