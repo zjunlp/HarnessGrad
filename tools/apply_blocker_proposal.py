@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Apply one reviewed blocker-proposal fragment to the registry, with obligation-loss checks.
 
-Worker proposals arrive as `registry/proposals/<worker>.json`. This tool is the parent-side
-integration step: it verifies the proposal against the *current* registry, refuses when the
+The caller supplies a proposal JSON path. This tool verifies the proposal against the
+*current* registry, refuses when the
 proposal would silently drop an obligation the old `next_action` carried, and only then writes.
 It never touches status, family, evidence, history or `shared_blockers` - only the two prose
 fields a proposal is allowed to change.
@@ -18,9 +18,9 @@ Shapes accepted for the proposal document:
 
 Usage::
 
-    python3 tools/apply_blocker_proposal.py registry/proposals/w-x.json \
+    python3 tools/apply_blocker_proposal.py /path/to/proposal.json \
         --dataset fever --blocker dataset-journal-gap            # dry run, reports only
-    python3 tools/apply_blocker_proposal.py registry/proposals/w-x.json \
+    python3 tools/apply_blocker_proposal.py /path/to/proposal.json \
         --dataset fever --blocker dataset-journal-gap --apply    # writes, then re-checks
 
 Exit codes: 0 applied or clean dry run, 1 refusal or validation failure, 2 usage error.
