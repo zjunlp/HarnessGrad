@@ -816,7 +816,7 @@ def launch_argv(form: dict, run_id: str) -> list[str]:
             "--improver-model", str(form["improver_model"]),
             "--run-id", run_id,
             "--runs-root", str(RUNS),
-            "--gpu-budget", str(jobs),
+            "--gpu-budget", "1",
             "--gpu-budget-dir", str(BUDGET_DIR)]
 
 
@@ -887,6 +887,16 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
                      "detail": "HG_CONSOLE_BUDGET_DIR must be an existing absolute writable directory."}
     if BUDGET_DIR.resolve().is_relative_to(PLATFORM.resolve()):
         return 400, {"error": "no-budget-dir", "detail": "HG_CONSOLE_BUDGET_DIR must be outside the platform checkout."}
+    # Submissions use one shared slot. Keep this capacity independent of the
+    # requested worker count: `jobs` is parallelism, not lease capacity.
+    stamp = BUDGET_DIR / 'capacity'
+    if stamp.exists():
+        try:
+            recorded = stamp.read_text(encoding='utf-8').strip()
+        except (OSError, UnicodeError):
+            return 400, {"error": "budget-capacity", "detail": "Cannot read shared budget capacity."}
+        if recorded != '1':
+            return 400, {"error": "budget-capacity", "detail": "Console and submissions require shared capacity=1; do not overwrite an existing capacity stamp."}
     known = {a["name"] for a in adapters()}
     if form.get("dataset") not in known:
         return 400, {"error": "unknown-dataset",

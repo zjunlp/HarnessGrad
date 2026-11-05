@@ -31,7 +31,7 @@ python3 console/server.py --port 4460
 | --- | --- | --- |
 | `HG_CONSOLE_RUNS` | `~/.local/share/harnessgrad/runs` | 已存在的 run 根目录；观察视图只读 |
 | `HG_CONSOLE_PLATFORM` | 当前 console 所在 checkout | 平台代码根目录 |
-| `HG_CONSOLE_BUDGET_DIR` | 未设置 | 启动/提交使用的、平台外共享 lease 目录；同一资源的参与者必须使用相同目录和 capacity |
+| `HG_CONSOLE_BUDGET_DIR` | 未设置 | 启动/提交使用的、平台外共享 lease 目录；Console 两种路径的 capacity 都为 1，同一资源的参与者必须共享目录和 capacity |
 
 如果端口已被占用，直接换 `--port 4461`；不要为了腾端口去 kill 别人的进程。
 静态文件在 `static/`，`index.html` 里的脚本标签是 `/console.js`。

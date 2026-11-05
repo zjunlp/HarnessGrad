@@ -26,7 +26,7 @@ python3 -c 'import playwright.sync_api'
 
 若自检报`Can't find source path .../harnessgrad_work`，先核对上述目录与权限；这是挂载源不存在，不能据安装脚本的通用提示推断需关闭安全功能。没有该父目录写权限时，使用已有平台`eval.containers.sandbox.self_check(platform, work_root)`并指定自己已存在的平台外工作根，保留真实结果；不要修改共享目录或内核策略。
 
-设置 `HG_CONSOLE_BUDGET_DIR` 指向平台外、已存在且可写的共享 lease 目录；提交 driver 使用 capacity=1。所有共享同一计算资源的 console/driver 必须使用相同目录与 capacity，否则无法实现跨进程协调。已存在的 capacity 不匹配时必须停止并由部署管理员处理；不要覆盖 stamp、删除其他运行的目录或终止其他进程。
+设置 `HG_CONSOLE_BUDGET_DIR` 指向平台外、已存在且可写的共享 lease 目录；Console 直接启动和提交 driver 均使用 capacity=1（`jobs` 不改变共享 capacity）。所有共享同一计算资源的 console/driver 必须使用相同目录与 capacity，否则无法实现跨进程协调。已存在的 capacity 不匹配时必须停止并由部署管理员处理；不要覆盖 stamp、删除其他运行的目录或终止其他进程。
 
 ### 1. 建立本次独立目录
 
