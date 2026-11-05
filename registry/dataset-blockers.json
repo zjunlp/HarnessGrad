@@ -324,8 +324,8 @@
      "evidence": [
       {
        "kind": "repository",
-       "path": "docs/adapter-integration-journal.md",
-       "locator": "## CostBench static protocol \u2014 2026-10-21"
+       "path": "data/datasets/costbench.py",
+       "locator": "CostBench static sequence-5: official test and repaired training runtime."
       }
      ],
      "next_action": "Before reporting candidate performance, record source/configuration, split, selected tasks, trials, metric eligibility, model identity, actual usage and cleanup. Label static/subset results explicitly; do not treat zero eligible cost samples as optimal cost or reference controls as model evaluation."

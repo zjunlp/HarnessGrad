@@ -630,12 +630,9 @@ fix.
 agent did the work, and the file holds the model's narration; or the reverse, and the file the
 agent wrote is gone when the verifier looks. **Fix.** Keep the file the agent wrote, record
 `answer_source: artifact`, and use the final message only when there is no file.
-**Source.** `docs/adapter-integration-journal.md`, “Fixed the same day: the codex adapter was
-overwriting the task's own answer”: `-o <workdir>/answer.txt`, preceded by
-`answer.txt.unlink()`, so the CLI's final message **replaced** whatever the task asked the agent
-to write; `deepseek-harness` had the same defect, and `loop` always overwrote the file. The
-three-source rule is `docs/adapter-spec.md` §5, pinned by
-`tests/quality/test_answer_delivery.py`.
+**Contract.** The three-source rule is `docs/adapter-spec.md` §5, pinned by
+`tests/quality/test_answer_delivery.py`. Never overwrite a task artifact with the CLI's final
+message merely to obtain an answer.
 
 ### 6.2 A trace the extractor cannot read
 
@@ -678,12 +675,9 @@ zero on every container task for `ModuleNotFoundError: No module named 'openai'`
 plainly called a model, and the call was never counted or priced — the number is about a
 different experiment. **Fix.** Route every call through the six `HG_AGENT_*` variables, isolate
 `HOME`, and if the model did not come from `HG_AGENT_MODEL`, write a `harness_identity` record
-saying what did run. **Source.** `docs/adapter-spec.md` §1 rules 1 and 3;
-`docs/adapter-integration-journal.md`, where a `deepseek-harness` smoke with the real `HOME`
-“answered through a **real DeepSeek endpoint** with the local key … and produced a trace with 1
-call and 0 commands”, and the platform now refuses rather than recording a model it did not
-use; and `harnessgrad/identity.py`, which records that its own `agent_backend` line once said
-`mock` while a live model answered every task.
+saying what did run. **Contract.** `docs/adapter-spec.md` §1 rules 1 and 3 describe the model boundary;
+`harnessgrad/identity.py` records the declared backend and model. A mismatch between
+configuration and the actual route invalidates the claimed identity.
 
 ### Not a mistake, but the sixth thing that bites: the entrypoint language
 

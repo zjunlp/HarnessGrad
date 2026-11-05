@@ -96,7 +96,7 @@ def _unique_strings(values, label: str) -> None:
     _require(len(set(values)) == len(values), f"{label}: duplicates")
 
 
-def _evidence(items, root: Path, label: str) -> None:
+def _evidence(items, root: Path, label: str, *, archived_journal: bool = False) -> None:
     _require(isinstance(items, list) and bool(items), f"{label}: evidence required")
     kinds = []
     for item in items:
@@ -113,6 +113,11 @@ def _evidence(items, root: Path, label: str) -> None:
         rel = Path(path)
         _require(not rel.is_absolute() and ".." not in rel.parts,
                  f"{label}: repository evidence must stay inside root")
+        # Frozen pre-cleanup records reference the archived journal by its old
+        # repository path. Preserve those records byte-for-byte; their external
+        # source is not asserted present or reinterpreted by this validator.
+        if archived_journal and path == 'docs/adapter-integration-journal.md':
+            continue
         source = root / rel
         _require(source.resolve().is_relative_to(root.resolve()), f"{label}: evidence escapes root")
         _require(source.is_file(), f"{label}: missing evidence {path}")
@@ -151,6 +156,11 @@ def validate(document: dict, *, root: Path = ROOT) -> dict:
         _require(blocker["id"] not in shared, "duplicate shared blocker")
         shared.add(blocker["id"])
 
+    raw = HISTORY.read_bytes()
+    _require(hashlib.sha256(raw).hexdigest() == HISTORY_SHA256, "historical baseline pin changed")
+    baseline = json.loads(raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    frozen_history = {row['record']['record_id']: row for row in baseline['records']}
+    _require(len(frozen_history) == len(baseline['records']), 'duplicate historical baseline record')
     _require(isinstance(document["datasets"], list), "datasets: expected list")
     seen, history, run_ids = set(), {}, set()
     for row in document["datasets"]:
@@ -198,15 +208,15 @@ def validate(document: dict, *, root: Path = ROOT) -> dict:
                      f"{name}: historical incomplete cannot become complete")
             _require(run["effect"] is None, f"{name}: historical incomplete cannot acquire an effect")
             _text(run["observation"], f"{name}: historical observation")
-            _evidence(run["evidence"], root, f"{name}: historical evidence")
+            # Only an exact record from the hash-pinned baseline can retain a
+            # reference to the archived journal without local locator validation.
+            frozen = frozen_history.get(run['record_id']) == {'dataset': name, 'record': run}
+            _evidence(run["evidence"], root, f"{name}: historical evidence", archived_journal=frozen)
             key = run["record_id"]
             _require(key not in history, f"duplicate historical record: {key}")
             history[key] = {"dataset": name, "record": run}
     _require(seen == published, f"missing published datasets: {sorted(published - seen)}")
 
-    raw = HISTORY.read_bytes()
-    _require(hashlib.sha256(raw).hexdigest() == HISTORY_SHA256, "historical baseline pin changed")
-    baseline = json.loads(raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
     for old in baseline["records"]:
         key = old["record"]["record_id"]
         _require(history.get(key) == old, f"historical record removed or changed: {key}")
