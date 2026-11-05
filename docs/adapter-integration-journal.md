@@ -10,7 +10,7 @@ This is the repository record of what each dataset taught the platform.
 An adapter is not complete when it loads. It is complete when its scorer, runtime, split, evidence, privacy and resource boundaries are understood and recorded. Every new adapter entry must link the evidence artifacts, the platform change, the validation command and the commit that carries the change.
 
 Current planning supersedes historical sizing advice below: follow
-[`AGENTS.md`](../AGENTS.md#staged-pilot-policy), first a one-task/one-trial
+[`AGENTS.md`](../AGENTS.md), first a one-task/one-trial
 diagnostic after all dataset gates pass, then a separate review of its valid
 measured receipt before any expansion. Temporary reruns of blocked/incomplete
 datasets preselect `min(30, ceil(10% * eligible))` tasks, `trials=1`, `jobs=1`.

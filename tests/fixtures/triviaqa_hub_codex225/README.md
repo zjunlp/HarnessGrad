@@ -35,7 +35,7 @@ acquired. Original scorer licensing remains separately pinned in
 
 API content responses retain original base64 blobs. Nonrecursive Git tree
 responses connect loader/manifest/license to the reconstructed immutable commit.
-`tools/check_triviaqa_hub_provenance_codex225.py` independently checks those
+`tests/fixtures/triviaqa_hub_codex225/check_provenance.py` independently checks those
 identities offline. Signed commit reconstruction establishes byte consistency;
 it does not independently verify PGP or establish Hub conversion custody.
 Tree entries referencing other files/directories are metadata only: none of

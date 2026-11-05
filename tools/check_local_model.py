@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that a locally served model is usable by HarnessGrad.
 
-Run it against a server started by tools/serve_local_model.sh:
+Run it against an explicitly configured, separately managed server:
 
     python3 tools/check_local_model.py --base-url http://127.0.0.1:8002/v1
 

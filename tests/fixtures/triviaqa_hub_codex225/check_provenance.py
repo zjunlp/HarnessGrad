@@ -11,8 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "tests/fixtures/triviaqa_hub_codex225"
+FIXTURE = Path(__file__).resolve().parent
 COMMIT = "413205c1a7247a2ff81cf709117ce93624fa6fd3"
 RECEIPT_SHA256 = "36996acbab13dca74686c9ffc152df4dd0f418c875b3dfaabeeb29493dc2aef3"
 PINS = {
