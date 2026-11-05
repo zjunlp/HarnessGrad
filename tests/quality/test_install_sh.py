@@ -24,9 +24,10 @@ ROOT = Path(__file__).resolve().parents[2]
 INSTALL = ROOT / "install.sh"
 
 
-def run_install(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+def run_install(*args: str, env: dict[str, str] | None = None,
+                checkout: Path = ROOT) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["bash", str(INSTALL), *args], cwd=ROOT, capture_output=True, text=True,
+        ["bash", str(checkout / 'install.sh'), *args], cwd=checkout, capture_output=True, text=True,
         timeout=120, env={**os.environ, **(env or {})},
     )
 
@@ -46,6 +47,31 @@ def test_a_ready_machine_reports_ready():
     assert "ready" in proc.stdout
     # --check must not install anything, so it must not be asking for sudo.
     assert "apt-get install" not in proc.stdout.split("Summary")[-1]
+
+
+@pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
+@pytest.mark.parametrize('existing_work', [False, True])
+def test_check_does_not_require_or_change_default_work_directory(tmp_path, existing_work):
+    # Reuse the real sandbox code in an isolated checkout layout; never create or
+    # remove the shared checkout's default sibling directory to exercise this case.
+    checkout = tmp_path / 'checkout'; checkout.mkdir()
+    shutil.copy2(INSTALL, checkout / 'install.sh')
+    for name in ('eval', 'harnessgrad'):
+        (checkout / name).symlink_to(ROOT / name, target_is_directory=True)
+    (checkout / 'driver.py').write_text('# private platform sentinel\n')
+    work = tmp_path / 'harnessgrad_work'
+    if existing_work:
+        work.mkdir()
+        (work / 'keep.txt').write_text('existing experiment data\n')
+    scratch = tmp_path / 'scratch'; scratch.mkdir()
+    proc = run_install('--check', checkout=checkout, env={'TMPDIR': str(scratch)})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert '  ready.' in proc.stdout
+    assert work.exists() is existing_work
+    if existing_work:
+        assert list(work.iterdir()) == [work / 'keep.txt']
+        assert (work / 'keep.txt').read_text() == 'existing experiment data\n'
+    assert list(scratch.iterdir()) == [], 'self-check must clean its temporary directories'
 
 
 def test_a_bad_override_is_refused_rather_than_ignored(tmp_path):
@@ -101,7 +127,8 @@ def test_a_broken_bwrap_is_caught_by_the_self_check(tmp_path):
     fake.write_text("#!/bin/sh\necho 'bwrap: Creating new namespace failed' >&2\nexit 1\n")
     fake.chmod(0o755)
 
-    proc = run_install("--check", env={"HG_BWRAP": str(fake)})
+    scratch = tmp_path / 'scratch'; scratch.mkdir()
+    proc = run_install("--check", env={"HG_BWRAP": str(fake), 'TMPDIR': str(scratch)})
     assert proc.returncode == 1, proc.stdout
     assert "namespace did not apply" in proc.stdout, proc.stdout
     assert "kernel" in proc.stdout or "LSM" in proc.stdout
@@ -112,6 +139,7 @@ def test_a_broken_bwrap_is_caught_by_the_self_check(tmp_path):
     assert "bubblewrap" not in summary.split("run these yourself")[-1] or True
     assert " apt-get install -y bubblewrap" not in summary, \
         "a broken bwrap is not fixed by reinstalling the package"
+    assert list(scratch.iterdir()) == [], 'failed self-check must clean its temporary directories'
 
 
 def test_a_too_old_python_is_refused(tmp_path):

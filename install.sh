@@ -218,13 +218,17 @@ else
     detail="$("$PY" - <<'PY' 2>&1
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 sys.path.insert(0, ".")
 try:
     import eval.containers.sandbox as sandbox
 except Exception as exc:
     print(f"could not import the platform's sandbox module: {exc}")
     raise SystemExit(1)
-report = sandbox.self_check(Path(".").resolve(), Path("../harnessgrad_work").resolve())
+# A fresh checkout has no experiment work directory yet. Probe the sandbox with
+# a disposable directory instead of requiring or creating a permanent work root.
+with TemporaryDirectory(prefix="hg-install-check-") as work:
+    report = sandbox.self_check(Path(".").resolve(), Path(work).resolve())
 print(report["detail"])
 raise SystemExit(0 if report["ok"] else 1)
 PY
