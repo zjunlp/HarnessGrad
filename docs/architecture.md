@@ -33,23 +33,22 @@ with an automated guard in `tests/quality/test_import_direction.py`.
 | [harnessgrad/loops/](../harnessgrad/loops/) | Scheduling in [mode_a.py](../harnessgrad/loops/mode_a.py) and [eval_side.py](../harnessgrad/loops/eval_side.py); Mode B coordination also lives in `driver.py`. There is no `loops/mode_b.py`. | Consumers. | Driver -> loops -> orchestration helpers, `eval.run.runner`, candidate validation and `ckpt`. Runtime primitives must not import schedules. |
 | [harnessgrad/store/](../harnessgrad/store/) | Run-record validation, reading and certification in [schema.py](../harnessgrad/store/schema.py). | Leaf/record contract and reader. | Record consumers, validators and web read API -> store; store -> standard library, not execution/scheduling code. |
 | [eval/](../eval/) | **Platform execution runtime, despite the name**: task execution, environments, model gateway, verification/scoring, admission, progress and traces. Start at [runner.py](../eval/run/runner.py). | Consumer of low-level contracts/helpers; provider to orchestration. Not a test suite. | Orchestration -> `eval`; `eval` -> runtime peers, config, `ckpt` and external execution backends. Keep method algorithms and scheduling above it. Existing imports from `tools` are listed below. |
-| [data/](../data/) | **29 dataset adapters** with private assets, platform fixtures, and a separate **scaffolds/** directory for shared platform code. Start at [registry.py](../data/scaffolds/registry.py) and [qa/](../data/scaffolds/qa/). | Mixed: scaffold/contracts, adapter consumers and runtime-consuming controls. **Not a leaf directory.** | Driver/tools -> registry -> selected `data.datasets.<name>` adapter; adapters -> shared scaffolding. Controls may call `eval`; existing adapter/reporting coupling is listed below. Runtime should consume task/verifier declarations instead of discovering datasets itself. |
+| [data/](../data/) | dataset adapters with private assets, platform fixtures, and a separate **scaffolds/** directory for shared platform code. Start at [registry.py](../data/scaffolds/registry.py) and [qa/](../data/scaffolds/qa/). | Mixed: scaffold/contracts, adapter consumers and runtime-consuming controls. **Not a leaf directory.** | Driver/tools -> registry -> selected `data.datasets.<name>` adapter; adapters -> shared scaffolding. Controls may call `eval`; existing adapter/reporting coupling is listed below. Runtime should consume task/verifier declarations instead of discovering datasets itself. |
 | [methods/](../methods/) | External improvement methods and controls, plus shared [protocol.py](../methods/protocol.py), editor/application helpers and per-method `run.py` entry points. | Consumers of method/harness exchange contracts; supplies candidates, not platform scores. | Platform invokes methods through subprocess entry points and JSON/artifacts. Methods -> their own helpers, supplied workspace/channel and declared model/tool dependencies; shared runtime compatibility contracts are available. Do not import method algorithms into the referee. |
 | [base_harness/](../base_harness/) | Runnable starting artifacts and the adapters for external harnesses: `loop` (the starting point a method improves), `codex`, `deepseek-harness`, `opencode`, `miniswe`, `miniagent`, `openclaw`, and `oracle` (control). Each has `harness.json` and `agent.py`; [launchable.json](../base_harness/launchable.json) names the subset a study may start from. The platform's **test instruments** are not here: `loop_plain` (the deterministic floor) and `cli_agent` (the generic CLI wrapper) live in [tests/fixtures/base_harness/](../tests/fixtures/base_harness/), since neither is a harness a study may start from and `driver.py:_harness_roots` is what keeps their names resolvable for the tests. See [writing a harness](writing_a_harness.md). | Consumers of task/model/file contracts; measured artifacts, not platform libraries. | Platform stages and executes manifest entry points; harnesses use their own code/dependencies and supplied task/environment contracts. No platform imports of harness implementation code. |
 | [eval/ckpt/](../eval/ckpt/) | [git_state.py](../eval/ckpt/git_state.py) stages, commits, restores and materializes harness states and manifests. | Low-level helper leaf, inside the runtime since 2026-10-27 (it was a top-level `ckpt/`). | Driver, orchestration and execution -> `eval.ckpt` -> standard library/external Git. No reverse imports into runtime or orchestration. |
 | [tools/](../tools/) | Operator CLIs/services for validation, datasets, model services, setup, reporting and inspection. [serve_ui.py](../tools/serve_ui.py) is the retained operations service; the UI is [`console/`](../console/). | Mostly consumers, with shared runtime helpers mixed in. Not a leaf area. | Tools -> platform APIs/contracts and artifacts; services may launch driver subprocesses. Runtime reuse of selected helpers already exists, so do not assume a strict one-way `tools -> eval` boundary. |
 | [harnessgrad/improvers/](../harnessgrad/improvers/) | [improvers.json](../harnessgrad/improvers/improvers.json) catalogs improver configuration; [skill.md](../harnessgrad/improvers/skill.md) is the default method-facing guidance. | Configuration/reference leaves, not Python implementations. | Resolver/channel code -> these data files; these files do not import platform code. |
-| `adapters/` (absent) | Historical external-method replay/compilation route, with a separate RRSI measurement integration in `harnessgrad_domain/`. These are **not dataset adapters**. | Historical consumers; domain integration is a runtime consumer. | Replay/compiler scripts -> external artifacts and their own helpers. Domain integration -> driver setup, dataset registry and `eval.run.runner`; core execution must not depend on this route. The directory is not in this checkout. |
-| ~~`web/`~~ | **Deleted 2026-10-19** (commit `99163538`, 22,807 lines): the SPA and its read API were replaced by [`console/`](../console/), which reads the registry and `runs/` directly. The rows below that still name `web/server/launch.py` describe the deleted tree. | -- | Execution code never depended on the frontend; nothing in `eval/` or `harnessgrad/` imports it. |
+| `adapters/`, `web/` | Absent from this checkout. The current operator interface is [console/](../console/). | No current areas to classify. | Execution does not depend on the console frontend. |
 | [site-redirect/](../site-redirect/) | Historical redirect pages retained but no longer deployed. The website source lives on this repository's `website` branch; the platform's deployment workflow builds it and stages `docs/contributors.html`. | Leaf artifacts, no build step, no imports. | Nothing depends on them; nothing here changes a measurement. |
 | [tests/](../tests/) | [quality/](../tests/quality/) covers platform boundaries/integrations; [runtime/](../tests/runtime/) covers event/budget APIs; [blockers/](../tests/blockers/) and [fixtures/](../tests/fixtures/) hold focused checks and test material. Web also has colocated tests. | Test consumers. | Tests -> subjects under test and fixtures. Production code should not import test helpers; one existing tooling exception is listed below. |
 | Historical reports | Operational review and experiment receipts are archived outside the public checkout. | Historical evidence, not executable libraries. | Missing historical receipts must remain explicitly unverified, not treated as current measurements. |
 | [docs/](./) and root documentation | Architecture, setup, contributor guidance, contract proposals and onboarding/audit material; [README](../README.md), [INTERFACE](../INTERFACE.md), [DOWNLOADS](../DOWNLOADS.md) and [AGENTS](../AGENTS.md) are root references. | Documentation/reference contracts and evidence. | Readers/contributors -> documentation; documentation links to source/evidence. Schemas and evidence loaded as files are explicit artifact contracts, not executable dependencies. |
-| `legacy/` | **Absent in this checkout.** Historical external-method code remains under `adapters/`; compatibility wrappers are under `harnessgrad/runtime/`. | No current area to classify. | Do not invent a dependency or migration destination under this name. |
+| `legacy/` | **Absent in this checkout.** Compatibility wrappers are under `harnessgrad/runtime/`. | No current area to classify. | Do not invent a dependency or migration destination under this name. |
 
 ## Runtime navigation
 
-The top-level package remains `eval`. Its 32 implementations are grouped by
+The top-level package remains `eval`. Its implementations are grouped by
 concern; package initializers do not import implementations:
 
 | Package | Modules | Responsibility |
@@ -104,29 +103,10 @@ distinct from the execution engine in `eval/`.
 
 ## Dataset navigation
 
-The count **29** comes from `data/datasets/*.py` modules declaring
-`KIND = "dataset"`, not from counting directories or assuming every Python file
-is an adapter. It includes refused/unavailable integrations; it is not a claim
-that 29 datasets are ready to run. [registry.published()](../data/scaffolds/registry.py)
-discovers declarations through imports, while the web read API's
-`web/server/launch.py` launch-option scanner parses each module's AST for a
-`KIND = "dataset"` assignment instead. `docs/dataset-onboarding.md` §2 names
-`registry.published()` as the one answer to "which datasets exist", and the AST
-scanner exists only because the Launch form must not import a module to describe
-it: the earlier zero-argument-`load()` test it replaced dropped the real dataset
-`musique` (whose `load` is keyword-only) and offered platform fixtures.
-
-The dataset adapter modules are:
-
-| Dataset adapter | Dataset adapter | Dataset adapter | Dataset adapter |
-| --- | --- | --- | --- |
-| [agentdojo](../data/datasets/agentdojo.py) | [alfworld](../data/datasets/alfworld.py) | [api_bank](../data/datasets/api_bank.py) | [appworld](../data/datasets/appworld.py) |
-| [bfcl_v3](../data/datasets/bfcl_v3.py) | [bird_minidev](../data/datasets/bird_minidev.py) | [chessbench_puzzles](../data/datasets/chessbench_puzzles.py) | [ds1000](../data/datasets/ds1000.py) |
-| [fever](../data/datasets/fever.py) | [gaia](../data/datasets/gaia.py) | [gsm8k](../data/datasets/gsm8k.py) | [hotpotqa](../data/datasets/hotpotqa.py) |
-| [jericho](../data/datasets/jericho.py) | [livecodebench](../data/datasets/livecodebench.py) | [musique](../data/datasets/musique.py) | [nestful](../data/datasets/nestful.py) |
-| [physicsquestions](../data/datasets/physicsquestions.py) | [reasoning_gym](../data/datasets/reasoning_gym.py) | [scienceworld](../data/datasets/scienceworld.py) | [sotuqa](../data/datasets/sotuqa.py) |
-| [sportsunderstanding](../data/datasets/sportsunderstanding.py) | [spreadsheetbench](../data/datasets/spreadsheetbench.py) | [strategyqa](../data/datasets/strategyqa.py) | [tau2_bench](../data/datasets/tau2_bench.py) |
-| [tau_bench](../data/datasets/tau_bench.py) | [terminal_bench](../data/datasets/terminal_bench.py) | [triviaqa](../data/datasets/triviaqa.py) | [twowikimultihopqa](../data/datasets/twowikimultihopqa.py) |
+Dataset declarations live in `data/datasets/*.py`; the authoritative catalog is
+[registry.published()](../data/scaffolds/registry.py). It includes unavailable
+integrations, so publication does not imply readiness. The adapter set changes;
+consult the registry rather than a fixed count or manually maintained list.
 
 Shared infrastructure is separated under `data/scaffolds/`: registry/split handling,
 [dataset.schema.json](../data/dataset.schema.json), [qa/base.py](../data/scaffolds/qa/base.py)
@@ -172,10 +152,8 @@ single directory-level dependency DAG would be misleading:
   `methods.protocol`, not a method algorithm.
   [tools/check_triviaqa_provenance.py](../tools/check_triviaqa_provenance.py)
   imports a test helper, an existing exception to the test-consumer direction.
-- **Web boundary:** `web/server/readapi.py -> harnessgrad.store.schema`;
-  `web/server/launch.py` reads catalog/config files and invokes
-  `driver.py --help` rather than importing the driver. The SPA consumes the
-  resulting HTTP records or fixture records.
+- **Console boundary:** the console reads platform records and exposes operator
+  APIs; execution remains independent of the frontend.
 
 [Boundary tests](../tests/quality/test_boundaries.py) check specific platform
 rules, including avoiding imports of method/harness implementations. They do
@@ -183,13 +161,8 @@ not establish every architectural direction in this map.
 
 ## Known structural problems
 
-- **`adapters/` historical route:** its replay/compiler modules remain in an
-  active-looking top-level directory. Its README marks the route unmaintained,
-  while `harnessgrad_domain/` is explicitly excepted as the RRSI measurement
-  integration. The name also collides conceptually with dataset adapters in
-  `data/`.
 - **`data/` separation:** shared registry/QA/control code lives in `data/scaffolds/`;
-  fixtures stay at the top level; 29 adapters and their private assets live in `data/datasets/`.
+  fixtures stay at the top level; adapters and their private assets live in `data/datasets/`.
   Moving or classifying the directory as a unit obscures their different roles
   and the existing control/reporting dependencies on runtime.
 - **`eval/` naming and cross-concern dependencies:** seven subpackages now
@@ -202,9 +175,6 @@ not establish every architectural direction in this map.
 - **`harnessgrad` half-leaf, half-consumer naming:** contracts/configuration
   and orchestration share one package; public aliases further blur the roles.
   The parent initializer additionally pulls execution code into leaf imports.
-- **Root cleanup now under `reports/`:** audit/evidence files now live there;
-  cleanup commit `ad57926` updates references to that location. Root-level
-  report paths are historical; `reports/` is the evidence destination. Audit material also remains in
-  `docs/`, so the move has not created a complete documentation/evidence split.
-  Generated `runs/`, dataset payloads and web build output are separate from
-  this source map; see [.gitignore](../.gitignore).
+- **Evidence location:** historical operational receipts are archived outside the
+  public checkout. Generated `runs/`, dataset payloads and frontend build output
+  are separate from this source map; see [.gitignore](../.gitignore).

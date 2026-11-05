@@ -2,13 +2,8 @@
 
 这份文件是**服务端与前端共同遵守的唯一契约**。它定义"上传一个 harness、在预先配置好的任务场景里评分"需要什么、返回什么、失败时说什么。写代码前后各读一遍：服务端按它实现，前端按它写 mock，两人联调只在它上面签字。
 
-状态：**草案，冻结于第 0 周**。改动走 PR，且前后端双方都要 review；`api_version` 不兼容时升号。
-
-2026-10-30 A5 增补：本会话用户明确采纳下列请求错误码及查询边界；原冻结文本已备份。此增补随 A4–A7 独立 PR 送审，尚不代表前后端 owner 已 review。
-
-2026-10-30 A6 实现说明：用户已确认本阶段采用服务侧入场配额。以下队列/保留期口径落实原 A6 与 §5.5，随同一 PR 送前后端 review；原冻结备份不变。
-
-2026-11-01 待补齐项：场景 `limits.agent_timeout_s` 与 `limits.wall_clock_minutes` 尚未接入端到端执行，本次 PR 明确保留此缺口；当前拒绝非空 `limits`，不忽略配置继续评分。此标记不表示原契约要求已豁免，仍随 PR 交 owner review。
+状态：**草案**。接口不兼容时应提升 `api_version`。场景中的非空
+`limits` 尚未接入端到端执行，当前会被拒绝，不会被忽略。
 
 ---
 
@@ -65,7 +60,7 @@
 | `name` | 是 | 唯一键，等于文件名 |
 | `dataset` | 是 | 必须是 `data/scaffolds/registry.py::published()` 里的名字 |
 | `split` | 是 | `declared` / `official` / `default` / 相对路径 |
-| `side` | 是 | `train` 或 `eval`（`eval` 需要 G3 落地，见 §6） |
+| `side` | 是 | `train` 或 `eval`；可用性由服务端检查 |
 | `pool` | `side=eval` 时必填 | 该 split 下的池名，用于报告 |
 | `sampling` | 是 | `all` / `random_N` 等 driver 支持的值 |
 | `rounds` | 是 | 上传 harness 评分的常态是 `0` |
@@ -75,7 +70,7 @@
 | `model.backend` | 是 | `live` 或 `mock`；`live` 要求服务端配置了端点与 key |
 | `limits` | 否 | 预留的服务端硬上限字段；当前 CLI 与提交服务拒绝非空值，待平台落实执行能力后启用 |
 
-当前上传评分仅支持 `rounds=0` 且不声明非空 `limits` 的场景。提交服务对非零轮次或非空 `limits` 返回 `503 service-not-ready`；不会忽略限制后继续执行。上例省略尚不支持的 `limits`，实际是否可用仍须通过下述数据、模型与沙箱检查。本支持范围及文档收口随 A4–A7 PR 交前后端 owner review，尚不代表已批准。
+当前上传评分仅支持 `rounds=0` 且不声明非空 `limits` 的场景。提交服务对非零轮次或非空 `limits` 返回 `503 service-not-ready`；不会忽略限制后继续执行。上例省略尚不支持的 `limits`，实际是否可用仍须通过下述数据、模型与沙箱检查。
 
 **场景是否可用的判定**（服务端每次请求都重新算，并写进响应）：`available` + `reason`（`ok` / `side-eval-unsupported` / `dataset-not-provisioned` / `no-model-endpoint` / `sandbox-unavailable`）。
 
@@ -100,7 +95,7 @@
 
 记录 `archive_sha256`（上传字节）与 `tree_sha256`（解包后按 `路径\0内容` 排序哈希），两者都进响应与 receipt。
 
-2026-11-01 随已合入主分支的 identity 命名同步：服务 `tree_sha256` 继续使用共享 `source_identity()`，读取其 `submission_sha256`；该上游函数排除 `__pycache__/` 与 `*.pyc`，其他输入仍参与。`run_meta.harness_source.harness_sha` 是实际 staged Git tree 身份，与曲线同名字段核对，不替代目录摘要。历史 `harness_source.sha256` 仅作为旧产物读取兼容，冲突字段拒绝；不改写旧 receipt 或摘要。公开字段名不变，此同步说明随 A4–A7 PR 交前后端 review，不代表已完成该 review。
+身份口径：服务 `tree_sha256` 继续使用共享 `source_identity()`，读取其 `submission_sha256`；该上游函数排除 `__pycache__/` 与 `*.pyc`，其他输入仍参与。`run_meta.harness_source.harness_sha` 是实际 staged Git tree 身份，与曲线同名字段核对，不替代目录摘要。历史 `harness_source.sha256` 仅作为旧产物读取兼容，冲突字段拒绝；不改写旧 receipt 或摘要。公开字段名不变。
 
 ### 4.2 manifest 检查（解包后、入队前）
 
@@ -240,7 +235,7 @@ received → validating → rejected
 
 入场额度包含接收预留、私有原包/解包/scratch、各提交的 run/work；receipt 与控制元数据保留。容量满返回 `409 queue-full`；额度不足返回 `503 service-not-ready`，detail 含 quota/used/reserved/requested/limit。此限制不是运行期文件系统硬配额，无法限制任意 harness 瞬时写盘；观察到超额后拒绝新的接纳，不清理活动任务腾空间。
 
-同 submissions root 只允许一个 A6 服务；执行租约由 driver 继承。A5 到 A6 升级须先停旧服务，未知所有者的旧接收目录保留核对，不自动删除。原 `/api/runs` 和直接 CLI 继续使用既有 liveness/slots 守卫，不宣称它们已纳入新服务的原子队列；部署需预留执行窗口。
+同 submissions root 只允许一个提交服务；执行租约由 driver 继承。升级须先停旧服务，未知所有者的旧接收目录保留核对，不自动删除。原 `/api/runs` 和直接 CLI 继续使用既有 liveness/slots 守卫，不宣称它们已纳入新服务的原子队列；部署需预留执行窗口。
 
 ### 5.6 `GET /api/scenarios`
 
@@ -306,15 +301,4 @@ python3 driver.py --harness-path /tmp/my-harness --dataset appworld --split decl
   --run-id probe-1 --runs-root /tmp/probe-runs --work-root /tmp/probe-work
 ```
 
-（`--scenario` 落地后，等价物是 `python3 driver.py --harness-path DIR --scenario appworld-dev ...`。）
-
----
-
-## 8. 实现顺序依赖（契约里哪些字段先空着）
-
-| 字段 | 依赖 | 落地前服务端返回 |
-| --- | --- | --- |
-| `side: "eval"` 场景 | G3（`--side eval --harness-path`） | `available=false`，`reason=side-eval-unsupported` |
-| `scenario` 文件 | G2（`--scenario`） | 第 0 周可以先用请求里的显式字段，但**不对外** |
-| `queue_position` | G5（队列） | v1 允许 `null` |
-| `auth` | 对外开放前置 | v1 不存在该字段 |
+也可使用场景参数：`python3 driver.py --harness-path DIR --scenario appworld-dev ...`。

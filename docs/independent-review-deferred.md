@@ -8,17 +8,9 @@ This is a deferral, not a judgement that the review is unnecessary. The distinct
 and is why this file exists: the registry must no longer *gate* on a signature, and the
 review must not be quietly forgotten because its blocker disappeared.
 
-## Why
-
-The requirement could not be satisfied by the agent in principle, not by permission. A
-reviewer cannot certify their own independence — an "independent review" performed by the
-same party that produced the thing under review is not an independent review. So these gates
-were not merely slow; they were structurally unclosable from inside the work, and they made
-datasets that were otherwise ready permanently un-ready.
-
-They were also, in the operator's judgement, an example of the wider problem already recorded
-in `docs/enforcement-proof-decision.md`: requirements added to *demonstrate* rigour rather
-than to protect a measurement, which then block real work without protecting anything.
+Independent review cannot be performed by the party producing the work. Deferral
+removes an approval gate; it does not constitute independent review or production
+authorization. Consult the current registry for each dataset's actual blockers.
 
 ## Withdrawn outright — the requirement was the approval
 
@@ -28,9 +20,9 @@ than to protect a measurement, which then block real work without protecting any
 | `gsm8k` | `matched-scorer-protocol-receipts` | an *independently reviewed* pair of measured receipts matching the documented scorer/protocol identities |
 | `musique` | `matched-joint-policy-receipts` | the same, for the joint answer/support policy |
 
-`gsm8k` and `musique` now carry no open blocker. Their scorer and protocol identities **are
-documented** — that work was done and is checked in under `reports/` — and what is withdrawn
-is the demand that a second party sign it.
+`gsm8k` and `musique` now carry no open blocker. The withdrawn requirement is the demand that a second party sign the receipts.
+Historical receipts are archived outside the public checkout; their existence and
+current applicability must be verified independently.
 
 ## Kept, with the approval clause removed — these contain real work
 
@@ -47,8 +39,8 @@ deferred, so these stay in the registry with their requirement narrowed:
 ## What the operator is taking on
 
 Each row above, plus anything a later review re-raises under the same heading, is now the
-operator's to accept or reject. Until they do, the honest state of those datasets is
-**"evidence acquired, review pending"** — not verified, and not blocked either.
+operator's to accept or reject. Review remains pending; acquisition requirements may also remain open. Neither
+verification nor readiness follows from this deferral.
 
 Nothing here authorizes production. `production_authorized` remains `false`, and a dataset
 whose only remaining obstacle was a signature is still not a dataset that has been reviewed.
