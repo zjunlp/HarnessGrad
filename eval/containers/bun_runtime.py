@@ -18,6 +18,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from harnessgrad.paths import main_checkout
 from eval.ckpt.source_tree import runtime_spec, BUN_GENERATED
 from eval.ckpt.bun_dependencies import (RuntimeUnavailable, source_files, dependency_identity,
                                    _module_dirs, attach_layout)
@@ -68,11 +69,12 @@ def _prepared_installation(repo, env=None):
     if "_opencode_runtime" not in manifest:
         return None
     # Use the shipped trusted helper, never Python from a candidate checkout.
-    path = Path(__file__).resolve().parents[2] / "base_harness/opencode/opencode_runtime.py"
+    root = Path(__file__).resolve().parents[2]
+    path = root / "base_harness/opencode/opencode_runtime.py"
     spec = importlib.util.spec_from_file_location("_platform_opencode_runtime", path)
     helper = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(helper)
-    return helper.resolve(Path(repo), {} if env is None else env)
+    return helper.resolve(Path(repo), {} if env is None else env, forbidden=(root, main_checkout(root)))
 
 
 def owned_source(repo):
@@ -362,6 +364,7 @@ def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
         binary_sha256 = file_digest(bun)
         key = "external-" + hashlib.sha256(str(source).encode()).hexdigest()[:16]
         identity = {"kind": "bun", "binary_sha256": binary_sha256, "version": version,
+                    "cacheable": False,
                     "dependency_key": key, "store_sha256": None, "declaration": spec,
                     "external_source": str(source), "system": platform.system(),
                     "arch": platform.machine(), "responses_overlay": None}

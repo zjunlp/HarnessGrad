@@ -1489,6 +1489,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         bun_identity = bun_runtime.identity(repo)
     except bun_runtime.RuntimeUnavailable as exc:
         bun_error = str(exc)
+    # Legacy external Bun declarations do not pin their dependency contents.
+    # They remain executable, but neither read nor populate measurement caches.
+    cache_allowed = (bun_identity or {}).get("cacheable", True)
 
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
@@ -1654,7 +1657,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
             return {"task_id": tid, "invalid": invalid_runtime}
         key = measurement_key(task)
-        hit = None if fresh_measurement(tid) else cache.get(key)
+        hit = None if fresh_measurement(tid) or not cache_allowed else cache.get(key)
         if (hit is not None and bun_identity is not None
                 and (hit.get("harness_runtime") or {}).get("bun") != bun_identity):
             hit = None
@@ -2018,7 +2021,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         declared = result.get("identity")
         if declared:
             declarations.append(declared)
-        if not fresh_measurement(tid):
+        if cache_allowed and not fresh_measurement(tid):
             cache[key] = {"score": score, "trace": result["trace"],
                           "per_task_trials": per_task_trials.get(tid),
                           "per_task_std": per_task_std.get(tid),

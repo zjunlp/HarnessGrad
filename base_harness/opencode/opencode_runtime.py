@@ -7,9 +7,11 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import tempfile
 
 RECORD = "_opencode_runtime"
+SCHEMA = 2
 REMEDY = "prepare this Harness with tools/configure_opencode_harness.py"
 IGNORED = {".git", ".state", "__pycache__", "_harnessgrad", ".opencode-state"}
 
@@ -67,33 +69,59 @@ def _covered(path: Path, bindings: list[Path]) -> bool:
 
 
 def inventory(source: Path, bindings: list[Path]) -> dict:
-    """Hash source bytes and dependency metadata/layout without copying an installation."""
+    """Hash every bound installation entry, retaining separate source/metadata summaries."""
     code, packages, links = (hashlib.sha256() for _ in range(3))
-    counts = {"source_files": 0, "package_manifests": 0, "symlinks": 0}
+    contents = hashlib.sha256()
+    counts = {"source_files": 0, "package_manifests": 0, "symlinks": 0, "runtime_files": 0}
     def unreadable(error):
         raise error
-    for tree in dict.fromkeys((source, *(p for p in bindings if p.is_dir() and p != source))):
+
+    def entry(path: Path, tree: Path) -> None:
+        mode = path.lstat().st_mode
+        file_sha256 = None
+        if stat.S_ISLNK(mode):
+            target = path.resolve(strict=True)
+            if not _covered(target, bindings):
+                raise ValueError(f"OpenCode dependency link needs an explicit --runtime: {path}")
+            spelling = os.readlink(path)
+            row = [str(path), "link", spelling, str(target)]
+            links.update(str(path).encode() + b"\0" + spelling.encode() + b"\0" + str(target).encode() + b"\0")
+            counts["symlinks"] += 1
+            if target.is_file():
+                file_sha256 = digest(target)
+                row.append(file_sha256)
+        elif stat.S_ISREG(mode):
+            file_sha256 = digest(path)
+            row = [str(path), "file", stat.S_IMODE(mode), file_sha256]
+        elif stat.S_ISDIR(mode):
+            row = [str(path), "directory", stat.S_IMODE(mode)]
+        else:
+            raise ValueError(f"OpenCode installation contains an unsupported filesystem entry: {path}")
+        contents.update(json.dumps(row, ensure_ascii=False, separators=(",", ":")).encode() + b"\n")
+        if file_sha256 is None:
+            return
+        counts["runtime_files"] += 1
+        if path.name == "package.json":
+            packages.update(str(path).encode() + b"\0" + bytes.fromhex(file_sha256))
+            counts["package_manifests"] += 1
+        relative = path.relative_to(tree)
+        if tree == source and not ({"node_modules", *IGNORED} & set(relative.parts)):
+            code.update(relative.as_posix().encode() + b"\0" + bytes.fromhex(file_sha256))
+            counts["source_files"] += 1
+
+    # Do not exclude cache/VCS-named directories from the runtime digest: they are
+    # visible bindings and may contain imported code or data. Third-party and extra
+    # dependency bytes must change admission/cache identity even with unchanged stat data.
+    for tree in dict.fromkeys((source, *bindings)):
+        entry(tree, tree)
+        if not tree.is_dir():
+            continue
         for directory, dirs, files in os.walk(tree, followlinks=False, onerror=unreadable):
-            dirs[:] = sorted(name for name in dirs if name not in IGNORED)
+            dirs.sort()
             for name in sorted([*dirs, *files]):
-                path = Path(directory) / name
-                relative = path.relative_to(tree)
-                if path.is_symlink():
-                    target = path.resolve(strict=True)
-                    if not _covered(target, bindings):
-                        raise ValueError(f"OpenCode dependency link needs an explicit --runtime: {path}")
-                    links.update(str(path).encode() + b"\0" + os.readlink(path).encode() + b"\0" + str(target).encode() + b"\0")
-                    counts["symlinks"] += 1
-                if not path.is_file():
-                    continue
-                if path.name == "package.json":
-                    packages.update(str(path).encode() + b"\0" + bytes.fromhex(digest(path)))
-                    counts["package_manifests"] += 1
-                if tree == source and "node_modules" not in relative.parts:
-                    code.update(relative.as_posix().encode() + b"\0" + bytes.fromhex(digest(path)))
-                    counts["source_files"] += 1
+                entry(Path(directory) / name, tree)
     return {"source_sha256": code.hexdigest(), "package_metadata_sha256": packages.hexdigest(),
-            "symlinks_sha256": links.hexdigest(), **counts}
+            "symlinks_sha256": links.hexdigest(), "runtime_contents_sha256": contents.hexdigest(), **counts}
 
 
 def installation(harness: Path, declaration: dict, env: dict, *, source=None, bun=None,
@@ -125,7 +153,7 @@ def installation(harness: Path, declaration: dict, env: dict, *, source=None, bu
     for path in files:
         if not _covered(path.resolve(strict=True), bindings):
             raise ValueError(f"OpenCode identity file escapes its runtime bindings: {path}")
-    return {"schema": 1, "selection": choice, "source": str(root), "entrypoint": str(entry),
+    return {"schema": SCHEMA, "selection": choice, "source": str(root), "entrypoint": str(entry),
             "binary": str(binary), "source_version": version, "declaration": declaration,
             "runtime_paths": [str(p) for p in bindings], "inventory": inventory(root, bindings),
             "files": [{"path": str(p), "realpath": str(p.resolve(strict=True)), "sha256": digest(p)} for p in files]}
@@ -140,8 +168,12 @@ def check(record: dict) -> None:
                 raise ValueError(f"prepared OpenCode binding changed: {path}; {REMEDY}")
         for row in record["files"]:
             path = Path(row["path"])
-            if (str(path.resolve(strict=True)) != row["realpath"] or digest(path) != row["sha256"]
-                    or not _covered(path, bindings) or not _covered(path.resolve(), bindings)):
+            if not path.is_absolute() or ".." in path.parts or not _covered(path, bindings):
+                raise ValueError(f"prepared OpenCode identity file is outside its bindings: {path}; {REMEDY}")
+            realpath = path.resolve(strict=True)
+            if str(realpath) != row["realpath"] or not _covered(realpath, bindings):
+                raise ValueError(f"prepared OpenCode identity file is outside its bindings: {path}; {REMEDY}")
+            if digest(path) != row["sha256"]:
                 raise ValueError(f"prepared OpenCode runtime file changed: {path}; {REMEDY}")
         if inventory(Path(record["source"]), bindings) != record["inventory"]:
             raise ValueError(f"prepared OpenCode source or dependency identity changed; {REMEDY}")
@@ -149,11 +181,11 @@ def check(record: dict) -> None:
         raise ValueError(f"prepared OpenCode runtime changed or became unavailable; {REMEDY}") from exc
 
 
-def _resolve(harness: Path, env: dict) -> dict:
+def _resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...]) -> dict:
     manifest = json.loads((harness / "harness.json").read_text(encoding="utf-8"))
     record = manifest.get(RECORD)
-    if not isinstance(record, dict) or record.get("schema") != 1:
-        raise ValueError(f"external OpenCode installation is not prepared; {REMEDY}")
+    if not isinstance(record, dict) or record.get("schema") != SCHEMA:
+        raise ValueError(f"external OpenCode installation needs an updated Harness and preparation; {REMEDY}")
     paths = ("source", "entrypoint", "binary")
     files = record.get("files")
     if (not all(isinstance(record.get(k), str) and Path(record[k]).is_absolute() for k in paths)
@@ -163,6 +195,7 @@ def _resolve(harness: Path, env: dict) -> dict:
             or not all(isinstance(row, dict) and all(isinstance(row.get(k), str) for k in ("path", "realpath", "sha256"))
                        and re.fullmatch(r"[0-9a-f]{64}", row["sha256"]) for row in files)
             or not isinstance(record.get("inventory"), dict)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(record["inventory"].get("runtime_contents_sha256", "")))
             or not isinstance(record.get("selection"), dict)
             or not all(isinstance(record["selection"].get(k), str) for k in ("source", "bun"))
             or not isinstance(record.get("bun_version"), str) or not record["bun_version"].strip()
@@ -185,7 +218,7 @@ def _resolve(harness: Path, env: dict) -> dict:
             or manifest.get("runtime_paths") != record["runtime_paths"]):
         raise ValueError(f"OpenCode bindings or command differ from the prepared installation; {REMEDY}")
     for path in record["runtime_paths"]:
-        validate_binding(Path(path), forbidden=(harness,))
+        validate_binding(Path(path), forbidden=(*forbidden, harness))
     for variable in ("HG_HARNESS_SOURCE", "HG_AGENT_OPENCODE_SOURCE"):
         value = env.get(variable)
         if value and value != record["selection"]["source"] and Path(value).expanduser().resolve() != source:
@@ -202,8 +235,8 @@ def _resolve(harness: Path, env: dict) -> dict:
     return record
 
 
-def resolve(harness: Path, env: dict) -> dict:
+def resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...] = ()) -> dict:
     try:
-        return _resolve(harness, env)
+        return _resolve(harness, env, forbidden=forbidden)
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"prepared OpenCode runtime changed or became unavailable; {REMEDY}") from exc

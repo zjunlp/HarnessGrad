@@ -235,6 +235,164 @@ def test_explicit_file_dependency_changes_the_platform_runtime_identity(installe
     assert str(addon) in second["prepared_installation"]["runtime_paths"]
 
 
+@pytest.mark.parametrize("location", ["node_modules/fixture/index.js", "node_modules/fixture/data.json",
+    "node_modules/fixture/addon.node", "node_modules/fixture/module.wasm", "node_modules/.cache/plugin.js",
+    "__pycache__/plugin.pyc", ".state/plugin.js", ".git/runtime-data", "extra"])
+def test_all_runtime_content_is_fingerprinted_even_with_preserved_stat_data(tmp_path, location):
+    tree, extra = tmp_path / "source", tmp_path / "external-dependency"
+    tree.mkdir(); extra.mkdir()
+    path = extra / "plugin.js" if location == "extra" else tree / location
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"before")
+    before = runtime.inventory(tree, [tree, extra])
+    stamp = path.stat()
+    path.write_bytes(b"after!")
+    os.utime(path, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    after = runtime.inventory(tree, [tree, extra])
+    assert after["runtime_contents_sha256"] != before["runtime_contents_sha256"]
+    assert after["package_metadata_sha256"] == before["package_metadata_sha256"]
+    assert after["source_sha256"] == before["source_sha256"]
+    assert path.stat().st_size == stamp.st_size and path.stat().st_mtime_ns == stamp.st_mtime_ns
+
+
+@pytest.mark.parametrize("change", ["new-file", "empty-directory", "permissions", "removed-file"])
+def test_runtime_layout_and_permissions_change_the_identity(tmp_path, change):
+    dependency = tmp_path / "node_modules/fixture"
+    dependency.mkdir(parents=True)
+    path = dependency / "index.js"
+    path.write_text("runtime code")
+    before = runtime.inventory(tmp_path, [tmp_path])
+    if change == "new-file":
+        (dependency / "new.js").write_text("added code")
+    elif change == "empty-directory":
+        (dependency / "new-directory").mkdir()
+    elif change == "permissions":
+        path.chmod(path.stat().st_mode ^ 0o100)
+    else:
+        path.unlink()
+    assert runtime.inventory(tmp_path, [tmp_path])["runtime_contents_sha256"] != before["runtime_contents_sha256"]
+
+
+@needs_bwrap
+@pytest.mark.parametrize("record_change", ["old-schema", "missing-content-digest"])
+def test_metadata_only_records_require_updated_preparation(installed, record_change):
+    harness, _, _, _ = installed
+    prepare(installed)
+    manifest = json.loads((harness / "harness.json").read_text())
+    if record_change == "old-schema":
+        manifest[runtime.RECORD]["schema"] = 1
+    else:
+        manifest[runtime.RECORD]["inventory"].pop("runtime_contents_sha256")
+    (harness / "harness.json").write_text(json.dumps(manifest))
+    with pytest.raises(bun_runtime.RuntimeUnavailable, match="preparation|prepared"):
+        bun_runtime.prepare(harness)
+
+
+@needs_bwrap
+@pytest.mark.parametrize("escape", ["absolute", "parent-traversal"])
+def test_identity_rows_cannot_make_platform_read_unbound_host_files(installed, monkeypatch, escape):
+    harness, tree, _, base = installed
+    prepare(installed)
+    private = base / "synthetic-private-file"
+    private.write_text("synthetic-private-content")
+    manifest = json.loads((harness / "harness.json").read_text())
+    spelling = private if escape == "absolute" else tree / ".." / private.name
+    manifest[runtime.RECORD]["files"].append({"path": str(spelling), "realpath": str(private), "sha256": "0" * 64})
+    (harness / "harness.json").write_text(json.dumps(manifest))
+    open_file = Path.open
+    def guarded_open(path, *args, **kwargs):
+        if path.resolve() == private:
+            pytest.fail("the platform read an unbound identity file")
+        return open_file(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", guarded_open)
+    with pytest.raises(bun_runtime.RuntimeUnavailable, match="outside its bindings"):
+        bun_runtime.identity(harness)
+
+
+@needs_bwrap
+def test_platform_rejects_forged_bindings_before_reading_main_checkout(installed, monkeypatch):
+    harness, _, _, base = installed
+    prepare(installed)
+    primary = base / "synthetic-primary-checkout"
+    primary.mkdir()
+    (primary / "private-config").write_text("synthetic private configuration")
+    monkeypatch.setattr(bun_runtime, "main_checkout", lambda root: primary)
+    manifest = json.loads((harness / "harness.json").read_text())
+    manifest["runtime_paths"].append(str(primary))
+    manifest[runtime.RECORD]["runtime_paths"].append(str(primary))
+    (harness / "harness.json").write_text(json.dumps(manifest))
+    open_file = Path.open
+    walk = os.walk
+    def guarded_open(path, *args, **kwargs):
+        if path.resolve().is_relative_to(primary):
+            pytest.fail("the platform read its own checkout through a forged binding")
+        return open_file(path, *args, **kwargs)
+    def guarded_walk(path, *args, **kwargs):
+        if Path(path).resolve().is_relative_to(primary):
+            pytest.fail("the platform traversed its own checkout through a forged binding")
+        return walk(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", guarded_open)
+    monkeypatch.setattr(os, "walk", guarded_walk)
+    with pytest.raises(bun_runtime.RuntimeUnavailable, match="overlaps the platform"):
+        bun_runtime.identity(harness)
+
+
+@needs_bwrap
+@pytest.mark.parametrize("location", ["node_modules", "extra-runtime"])
+def test_dependency_code_change_refuses_old_score_then_reprepare_gets_a_fresh_score(installed, tmp_path, monkeypatch, location):
+    from eval.run import runner
+    harness, tree, _, base = installed
+    dependency = tree / "node_modules/fixture-dependency" if location == "node_modules" else base / "external-dependency"
+    dependency.mkdir(exist_ok=True)
+    (dependency / "package.json").write_text('{"name":"fixture-dependency","version":"1","type":"module","main":"index.js"}')
+    body = dependency / "index.js"
+    body.write_text('export const answer = "before";')
+    target = "fixture-dependency" if location == "node_modules" else str(body)
+    entry = tree / "packages/opencode/src/index.ts"
+    entry.write_text('import { answer } from ' + json.dumps(target) +
+                     '; console.log(process.argv.includes("--version") ? "1.0.1" : answer);')
+    extra = () if location == "node_modules" else (dependency,)
+    receipt = prepare(installed, runtime_paths=extra)
+    before = bun_runtime.identity(harness)
+    work, task = tmp_path / "work", tmp_path / "task"
+    work.mkdir(); task.mkdir()
+    def execute():
+        env = {"PATH": os.defpath, "HOME": str(task)}
+        argv = sandbox.command([receipt["binary"], "--no-env-file", "--no-install", str(entry)],
+            platform=ROOT, work_root=work, task_dir=task, repo=harness, env=env, network="none",
+            runtime_paths=tuple(Path(p) for p in receipt["runtime_paths"]))
+        return subprocess.check_output(argv, cwd=task, env=env, text=True, timeout=30).strip()
+    calls = []
+    def run(repo, item, *args, runtime_receipt, **kwargs):
+        answer = execute()
+        calls.append(answer)
+        runtime_receipt["bun"] = bun_runtime.prepare(repo)
+        return {"task_id": item["task_id"], "answer": answer, "trace": "", "exit_code": 0, "stderr": "",
+                "verdict": {"kind": "command", "passed": answer == "before"},
+                "harness_runtime": {"source": "platform", "python": None}}
+    monkeypatch.setattr(runner, "_run_one", run)
+    monkeypatch.setattr(runner, "snapshot", lambda root: {})
+    cache = {}
+    tasks = [{"task_id": "fixture", "prompt": "synthetic dependency/cache control"}]
+    def evaluate():
+        return runner._evaluate(harness, tasks, {}, cache=cache, harness_sha="same-source")
+    assert evaluate()["per_task"] == {"fixture": 1.0}
+    assert evaluate()["cached_tasks"] == ["fixture"]
+    stamp = body.stat()
+    body.write_text('export const answer = "after!";')
+    os.utime(body, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    assert execute() == "after!"
+    refused = evaluate()
+    assert refused["invalid"] and refused["per_task"] == {} and refused["cached_tasks"] == []
+    assert calls == ["before"]
+    prepare(installed, runtime_paths=extra)
+    assert bun_runtime.identity(harness) != before
+    fresh = evaluate()
+    assert fresh["cached_tasks"] == [] and fresh["per_task"] == {"fixture": 0.0}
+    assert calls == ["before", "after!"]
+    assert evaluate()["cached_tasks"] == ["fixture"]
+
+
 def test_standalone_external_diagnostic_is_explicit_and_formal_admission_refuses_it(installed, tmp_path, monkeypatch):
     harness, tree, bun, _ = installed
     env = {"HG_AGENT_OPENCODE_EXTERNAL_SOURCE": "1", "HG_AGENT_OPENCODE_SOURCE": str(tree),
