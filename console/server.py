@@ -550,8 +550,8 @@ def task_models() -> list[str]:
         names.append(settings["task"]["model"])
     try:
         sys.path.insert(0, str(PLATFORM))
-        from harnessgrad.config import current_config          # type: ignore
-        configured = current_config().agent.model
+        from harnessgrad.config import current
+        configured = current().agent.model
         if configured:
             names.append(str(configured))
     except Exception:  # noqa: BLE001 - a console without the package still lists `mock`
@@ -681,7 +681,7 @@ def load_settings() -> dict:
     out["task"]["base_url"] = out["task"]["base_url"] or os.environ.get(
         "HG_CONSOLE_TASK_BASE_URL", "").strip() or "http://127.0.0.1:8002/v1"
     out["task"]["api_key"] = out["task"]["api_key"] or os.environ.get(
-        "HG_CONSOLE_TASK_API_KEY", "").strip() or "local"
+        "HG_CONSOLE_TASK_API_KEY", "").strip()
     return out
 
 
@@ -759,6 +759,20 @@ def launch_form() -> dict:
     """选择器的取值全部来自平台自己，不写死。"""
     names = adapters()
     improver_rows = improvers()
+    settings = load_settings()
+    task = settings["task"]
+    meta = settings["meta"]
+    try:
+        from harnessgrad.config import current
+        agent = current().agent
+        task_model = task.get("model") or agent.model or ""
+        task_url = task.get("base_url") or agent.base_url or ""
+        task_key_set = bool(task.get("api_key") or agent.api_key)
+        backend = agent.backend if agent.backend in ("mock", "openai") else "mock"
+    except Exception:  # noqa: BLE001 - no configured platform model is not a default
+        task_model, task_url, task_key_set, backend = task.get("model", ""), task.get("base_url", ""), bool(task.get("api_key")), "mock"
+    if task.get("model") and task.get("model") != "mock":
+        backend = "openai"
     return {"datasets": names, "harnesses": base_harnesses(),
             "task_models": task_models(),
             # The improver used to be one dropdown that packed "harness + model" into one value.
@@ -772,7 +786,12 @@ def launch_form() -> dict:
             "methods": method_catalogue(),
             "pools": list(POOLS),
             "defaults": {"dataset": "alfworld", "harness": "loop",
-                         "task_model": (task_models()[-1] if task_models() else "mock"),
+                         "task_backend": backend, "task_model": task_model if backend == "openai" else "mock",
+                         "task_base_url": task_url, "task_api_key_set": task_key_set,
+                         # Legacy meta settings are retained on disk, not silently applied
+                         # to a CLI improver that owns its own provider configuration.
+                         "meta_base_url": "", "improver_model": "",
+                         "meta_api_key_set": bool(meta.get("api_key")),
                          "rounds": 10, "jobs": 12, "trials": 1, "sampling": "all"}}
 
 
@@ -806,14 +825,21 @@ def launch_env(form: dict) -> dict:
     `harnessgrad.identity`. The console used to inherit whatever the server had, which is how a
     launch could quietly measure a different model than the form showed.
     """
-    task = load_settings()["task"]
-    env = {}
-    if form.get("task_model"):
-        env["HG_AGENT_MODEL"] = str(form["task_model"])
-    if task.get("base_url"):
-        env["HG_AGENT_BASE_URL"] = task["base_url"]
-    if task.get("api_key"):
-        env["HG_AGENT_API_KEY"] = task["api_key"]
+    settings = load_settings()
+    task, meta = settings["task"], settings["meta"]
+    backend = str(form.get("task_backend") or ("mock" if form.get("task_model") == "mock" else "openai"))
+    env = {"HG_AGENT_BACKEND": backend,
+           "HG_AGENT_MODEL": str(form.get("task_model") or ""),
+           "HG_AGENT_BASE_URL": "", "HG_AGENT_API_KEY": ""}
+    if backend == "openai":
+        env["HG_AGENT_BASE_URL"] = str(form.get("task_base_url") or task.get("base_url") or "")
+        env["HG_AGENT_API_KEY"] = str(form.get("task_api_key") or task.get("api_key") or "")
+    # Method-owned editor clients consume HG_METHOD_*. Endpoint-backed improvers use
+    # a per-launch registry override; CLI improvers retain their own transport.
+    if form.get('meta_base_url'):
+        env['HG_METHOD_BASE_URL'] = str(form['meta_base_url'])
+        env['HG_METHOD_MODEL'] = str(form.get('improver_model') or '')
+        env['HG_METHOD_API_KEY'] = str(form.get('meta_api_key') or meta.get('api_key') or '')
     return env
 
 
@@ -823,7 +849,7 @@ def new_run_id(form: dict) -> str:
     return f"rsi10-{stamp}-{tag}-{form['improver']}-train"
 
 
-def guard_launch(form: dict) -> tuple[int, dict]:
+def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_key_pending: bool = False) -> tuple[int, dict]:
     """返回 (状态码, 错误体)；200 表示可以起跑。判断顺序是有意的：先安全，再合法性。"""
     if not procfs_readable():
         # **Fail closed.** An unreadable /proc cannot answer "is a run in progress", and the one
@@ -861,19 +887,49 @@ def guard_launch(form: dict) -> tuple[int, dict]:
     if form.get("harness") not in set(base_harnesses()):
         return 400, {"error": "unknown-harness",
                      "detail": f"task-harness {form.get('harness')!r} 不在可启动清单里"}
-    if not form.get("task_model"):
-        return 400, {"error": "no-task-model",
-                     "detail": "必须在「设置」里配置 task endpoint 的模型名"}
-    if form["task_model"] not in set(task_models()):
-        return 400, {"error": "unknown-task-model",
-                     "detail": f"task-model {form['task_model']!r} 不在设置里的模型清单中"}
+    backend = str(form.get("task_backend") or ("mock" if form.get("task_model") == "mock" else "openai"))
+    if backend not in ("mock", "openai"):
+        return 400, {"error": "bad-task-backend", "detail": "task backend 只能是 mock 或 openai"}
+    model = str(form.get("task_model") or "").strip()
+    if backend == "openai" and (not model or model == "mock"):
+        return 400, {"error": "no-task-model", "detail": "实时 task 模型需要填写实际模型名（不能是 mock）"}
+    if backend == "mock" and model not in ("", "mock"):
+        return 400, {"error": "task-backend-mismatch", "detail": "mock backend 只能使用 mock 模型"}
+    env = launch_env(form)
+    if backend == "openai" and not env["HG_AGENT_BASE_URL"]:
+        return 400, {"error": "no-task-url", "detail": "实时 task 模型需要填写 endpoint URL"}
+    for field in ("task_base_url", "meta_base_url"):
+        value = str(form.get(field) or "")
+        if value:
+            try:
+                if any(ord(c) < 32 or ord(c) == 127 for c in value):
+                    raise ValueError('unsafe endpoint')
+                parsed = urlparse(value)
+                if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+                    raise ValueError('unsafe endpoint')
+            except ValueError:
+                return 400, {"error": "bad-endpoint", "detail": f"{field} 必须是无凭据、无查询参数的 HTTP(S) endpoint URL"}
+    if any(ord(c) < 32 or ord(c) == 127 for c in model):
+        return 400, {"error": "bad-task-model", "detail": "task-model 不能包含控制字符"}
+    if backend == "openai" and not env["HG_AGENT_API_KEY"] and not preview_key_pending:
+        return 400, {"error": "no-task-key", "detail": "实时 task 模型需要 API key；本地服务也请填写其要求的占位 key"}
     if not form.get("improver"):
         return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
-    if form.get("improver_model") and form["improver_model"] not in set(
-            row["model"] for row in improvers() if row["model"]):
-        return 400, {"error": "unknown-meta-model",
-                     "detail": f"meta-model {form['improver_model']!r} 不是任何改进器声明的模型"}
-    for key, lo, hi in (("rounds", 1, 20), ("jobs", 1, 64), ("trials", 1, 3)):
+    selected = next((row for row in improvers() if row['name'] == form.get('improver')), None)
+    if not selected:
+        return 400, {"error": "unknown-improver", "detail": "请选择可用的 meta-harness"}
+    if form.get('meta_api_key') and not form.get('meta_base_url'):
+        return 400, {"error": "no-meta-url", "detail": "填写 meta API key 时也必须填写 endpoint URL"}
+    if form.get('meta_base_url'):
+        if not env.get('HG_METHOD_MODEL'):
+            return 400, {"error": "incomplete-meta-endpoint", "detail": "覆盖 meta endpoint 时必须填写模型名"}
+        if not env.get('HG_METHOD_API_KEY') and not preview_meta_key_pending:
+            return 400, {"error": "no-meta-key", "detail": "覆盖 meta endpoint 时必须填写 API key"}
+    # Model names are supplied by the operator; the registry is a suggestion, not an
+    # exhaustive list. Endpoint credentials are checked again on POST, never in a URL.
+    if any(ord(c) < 32 or ord(c) == 127 for c in str(form.get("improver_model") or "")):
+        return 400, {"error": "bad-meta-model", "detail": "meta-model 不能包含控制字符"}
+    for key, lo, hi in (("rounds", 0, 20), ("jobs", 1, 64), ("trials", 1, 3)):
         try:
             value = int(form[key])
         except (KeyError, TypeError, ValueError):
@@ -889,12 +945,26 @@ def api_launch(form: dict) -> tuple[int, dict]:
         return code, err
     run_id = new_run_id(form)
     argv = launch_argv(form, run_id)
+    environment = {**os.environ, **launch_env(form)}
+    selected = next((row for row in improvers() if row['name'] == form.get('improver')), None)
+    if selected and selected.get('kind') != 'cli' and form.get('meta_base_url'):
+        # Preserve registry identity while making the selected endpoint authoritative.
+        # No key enters this file; the selected entry points to the child's environment.
+        registry = read_json(PLATFORM / 'harnessgrad/improvers/improvers.json')
+        spec = registry['improvers'][selected['name']]
+        spec.update(base_url=environment['HG_METHOD_BASE_URL'], model=environment['HG_METHOD_MODEL'],
+                    api_key_env='HG_METHOD_API_KEY')
+        LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
+        registry_path = LAUNCH_DIR / f'{run_id}.improvers.json'
+        with registry_path.open('x', encoding='utf-8') as stream:
+            json.dump(registry, stream, ensure_ascii=False)
+        registry_path.chmod(0o600)
+        environment['HG_IMPROVER_CONFIG'] = str(registry_path.resolve())
     LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LAUNCH_DIR / f"{run_id}.log"
     with log_path.open("ab") as handle:
         subprocess.Popen(argv, stdout=handle, stderr=subprocess.STDOUT,
-                         start_new_session=True, cwd=str(PLATFORM),
-                         env={**os.environ, **launch_env(form)})
+                         start_new_session=True, cwd=str(PLATFORM), env=environment)
     with LAUNCH_LOG.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                                  "run_id": run_id, "argv": argv, "by": "console /launch.html"},
@@ -903,8 +973,11 @@ def api_launch(form: dict) -> tuple[int, dict]:
 
 
 def launch_preview(form: dict) -> dict:
-    """返回命令预览和与真正起跑相同的守卫结果，不产生任何副作用。"""
-    code, err = guard_launch(form)
+    """Preview without receiving credentials in the URL; POST revalidates actual keys."""
+    form = {k: v for k, v in form.items() if k not in ("task_api_key", "meta_api_key")}
+    code, err = guard_launch(form,
+        preview_key_pending=form.get("task_key_present") in (True, "true", "1"),
+        preview_meta_key_pending=form.get("meta_key_present") in (True, "true", "1"))
     try:
         argv = launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train")
     except (KeyError, TypeError, ValueError):
@@ -4132,7 +4205,9 @@ class Handler(BaseHTTPRequestHandler):
                 # 方法（怎么改）与改进器（谁去改）是两个字段；漏了前者，预览里就永远
                 # 没有 `--method-entrypoint`，而界面上的下拉却已经选好了 —— 两处不一致。
                 form["method"] = (query.get("method") or ["none"])[0]
-                form["task_model"] = (query.get("task_model") or [""])[0]
+                for field in ("task_backend", "task_model", "task_base_url", "meta_base_url",
+                              "task_key_present", "meta_key_present"):
+                    form[field] = (query.get(field) or [""])[0]
                 return self._send(launch_preview(form))
             if parts[1:] == ["methods"]:
                 return self._send({"rows": api_methods()})

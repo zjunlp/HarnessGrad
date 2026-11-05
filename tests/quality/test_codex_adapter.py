@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shlex
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -25,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from eval.observe.tracing import loop_facts                                   # noqa: E402
+from tools.configure_codex_harness import configure                           # noqa: E402
 
 HARNESS = ROOT / "base_harness" / "codex"
 
@@ -136,6 +140,14 @@ def test_the_manifest_still_conforms(codex):
 FAKE_CODEX = '''\
 import json, os, sys
 argv = sys.argv[1:]
+if argv == ['--version']:
+    print('codex-cli answer-fixture')
+    raise SystemExit(0)
+if os.environ.get('HG_AGENT_EXPECT_CODEX_ISOLATION'):
+    assert not any(key.startswith(('OPENAI_', 'CODEX_', 'HG_METHOD_', 'HG_ENV_', 'HG_JUDGE_'))
+                   and key != 'CODEX_HOME' for key in os.environ)
+    assert os.environ['HG_AGENT_API_KEY'] == 'task-fixture-key'
+    assert os.environ['CODEX_HOME'] != os.environ['HG_AGENT_PERSONAL_HOME_FIXTURE']
 target = argv[argv.index("-o") + 1] if "-o" in argv else None
 sys.stdin.read()
 if os.environ.get("FAKE_WRITES_ANSWER"):
@@ -150,19 +162,27 @@ print(json.dumps({"type": "turn.completed",
 
 
 def _run_with_fake(codex, tmp_path, monkeypatch, *, writes_answer: bool):
-    fake = tmp_path / "fake-codex.py"
-    fake.write_text(FAKE_CODEX)
-    monkeypatch.setenv("HG_AGENT_CODEX_COMMAND", f"{sys.executable} {fake}")
-    monkeypatch.setenv("HG_AGENT_MODEL", "fake-model")
-    monkeypatch.delenv("HG_AGENT_BASE_URL", raising=False)
-    if writes_answer:
-        monkeypatch.setenv("FAKE_WRITES_ANSWER", "1")
-    work = tmp_path / "work"
-    work.mkdir()
-    assert codex.run({"goal": "write the answer"}, work) == 0
-    rows = [json.loads(line) for line in (work / "trace.jsonl").read_text().splitlines()]
-    submitted = next(row for row in rows if row.get("submitted"))
-    return submitted, (work / "answer.txt").read_text()
+    if shutil.which("bwrap") is None:
+        pytest.skip("preparing Codex requires bubblewrap")
+    with tempfile.TemporaryDirectory(prefix="hg-codex-answer-", dir="/var/tmp") as directory:
+        fake = Path(directory) / "fake-codex.py"
+        fake.write_text(FAKE_CODEX)
+        harness = tmp_path / "candidate"
+        shutil.copytree(HARNESS, harness)
+        raw = shlex.join([sys.executable, str(fake)])
+        configure(harness, command=raw, env={"PATH": "/usr/bin:/bin"})
+        monkeypatch.setattr(codex, "__file__", str(harness / "agent.py"))
+        monkeypatch.setenv("HG_AGENT_CODEX_COMMAND", raw)
+        monkeypatch.setenv("HG_AGENT_MODEL", "fake-model")
+        monkeypatch.delenv("HG_AGENT_BASE_URL", raising=False)
+        if writes_answer:
+            monkeypatch.setenv("FAKE_WRITES_ANSWER", "1")
+        work = tmp_path / "work"
+        work.mkdir()
+        assert codex.run({"goal": "write the answer"}, work) == 0
+        rows = [json.loads(line) for line in (work / "trace.jsonl").read_text().splitlines()]
+        submitted = next(row for row in rows if row.get("submitted"))
+        return submitted, (work / "answer.txt").read_text()
 
 
 def test_a_task_written_answer_txt_is_kept_and_wins(codex, tmp_path, monkeypatch):
@@ -178,3 +198,16 @@ def test_the_final_message_is_the_fallback_when_the_task_wrote_nothing(
     assert submitted["answer_source"] == "final_message"
     assert submitted["answer"].endswith("391")
     assert on_disk == submitted["answer"]
+
+
+def test_personal_codex_settings_and_other_role_credentials_are_not_inherited(codex, tmp_path, monkeypatch):
+    for key in ('OPENAI_API_KEY', 'OPENAI_BASE_URL', 'CODEX_PROFILE', 'HG_METHOD_API_KEY',
+                'HG_ENV_API_KEY', 'HG_JUDGE_API_KEY'):
+        monkeypatch.setenv(key, 'synthetic-personal-value')
+    personal_home = str(tmp_path / 'personal-codex')
+    monkeypatch.setenv('CODEX_HOME', personal_home)
+    monkeypatch.setenv('HG_AGENT_PERSONAL_HOME_FIXTURE', personal_home)
+    monkeypatch.setenv('HG_AGENT_API_KEY', 'task-fixture-key')
+    monkeypatch.setenv('HG_AGENT_EXPECT_CODEX_ISOLATION', '1')
+    submitted, _ = _run_with_fake(codex, tmp_path, monkeypatch, writes_answer=False)
+    assert submitted['submitted'] is True

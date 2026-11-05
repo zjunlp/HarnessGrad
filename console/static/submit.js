@@ -42,7 +42,7 @@
   const apiUrl = (path) => `${API_BASE.replace(/\/$/, "")}${path}`;
   const showError = (message, detail = "") => { const el = $("submit-global-error"); el.innerHTML = `<b>${esc(message)}</b>${detail ? `<br><span>${esc(detail)}</span>` : ""}`; el.dataset.visible = "true"; };
   const clearError = () => { $("submit-global-error").dataset.visible = "false"; };
-  const errorText = (code, detail = "", field = "") => { const base = String(code || ""); const key = base.startsWith("run-refused:") ? "run-refused" : base; const item = ERROR_MESSAGES[key] || ["请求失败", "请查看错误详情并重试。"]; return `${item[0]}：${item[1]}${detail ? ` ${detail}` : ""}${field ? `（字段：${field}）` : ""}`; };
+  const errorText = (code, detail = "", field = "") => { const base = String(code || ""); const key = base.startsWith("run-refused:") ? "run-refused" : base; if (key === "service-not-ready" && detail === "configure HG_CONSOLE_SUBMISSIONS_ROOT outside the platform") return "服务未就绪：未配置提交存储。请在启动控制台服务的环境中设置 HG_CONSOLE_SUBMISSIONS_ROOT=/tmp/hg-console-submissions（示例路径须位于平台目录之外，且服务用户有写入权限），然后重启控制台服务并刷新页面；如需持久保存，请改用平台外的持久目录。"; const item = ERROR_MESSAGES[key] || ["请求失败", "请查看错误详情并重试。"]; return `${item[0]}：${detail || item[1]}${field ? `（字段：${field}）` : ""}`; };
   const statusText = (status) => STATUS[status] || [status || "未知状态", "服务返回了未识别的状态。"];
   // ── 从工作区"去评测"过来：把候选归档预填进文件框 ──────────────────────
   // 只预填，不提交：`?candidate=` 的文件由服务端打包，用户仍然要自己选场景、自己点提交。

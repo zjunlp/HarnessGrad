@@ -130,6 +130,7 @@
       </div>`;
   }
 
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const row = (title, hint, control) => `
     <div class="settings__row">
       <div class="settings__label"><b>${title}</b>${hint ? `<span>${hint}</span>` : ""}</div>
@@ -150,7 +151,7 @@
               `<button type="button" data-theme="${v}" aria-pressed="${theme === v}">${l}</button>`).join("")}
           </div>`) +
         row("字号", "只影响控制台的正文，不影响曲线图", `
-          <input class="input" id="sh-font" type="number" min="11" max="17" value="${size}"
+          <input class="input" id="sh-font" type="number" min="11" max="17" value="${esc(size)}"
                  style="width:88px;text-align:right"> <span class="hg-muted">px</span>`);
       pane.querySelectorAll("#sh-theme button").forEach((b) => b.addEventListener("click", () => {
         localStorage.setItem("hg.theme", b.dataset.theme); applyTheme();
@@ -163,16 +164,14 @@
       });
       return;
     }
-    // 模型：三类端点，各管一件事；密钥只显示"已配置"。
+    // 实验的 task / meta 配置属于启动页；这里仅配置助手。
     let data = {};
     try { data = await (await fetch("/api/settings")).json(); } catch { /* 离线时给空表 */ }
-    const sides = [["task", "task agent", "被测量的 harness 调用的模型"],
-                   ["meta", "meta agent", "改进 harness 的方法调用的模型"],
-                   ["assistant", "assistant", "造环境 / 改 harness 时帮忙的模型"]];
+    const sides = [["assistant", "assistant", "造环境 / 改 harness 时帮忙的模型"]];
     pane.innerHTML = sides.map(([side, title, hint]) => row(title, hint, `
         <div class="settings__stack">
-          <input class="input" id="sh-${side}-url" value="${(data[side] || {}).base_url || ""}" placeholder="http://127.0.0.1:8001/v1">
-          <input class="input" id="sh-${side}-model" value="${(data[side] || {}).model || ""}" placeholder="model name">
+          <input class="input" id="sh-${side}-url" value="${esc((data[side] || {}).base_url || "")}" placeholder="http://127.0.0.1:8001/v1">
+          <input class="input" id="sh-${side}-model" value="${esc((data[side] || {}).model || "")}" placeholder="model name">
           <input class="input" id="sh-${side}-key" type="password"
                  placeholder="${(data[side] || {}).api_key_set ? "已配置（留空 = 不修改）" : "api_key"}">
           <div class="hg-row"><button class="btn btn--sm" type="button" data-probe="${side}">测试连接</button>

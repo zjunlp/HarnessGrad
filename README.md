@@ -55,16 +55,19 @@ Each round records the candidate harness hash and its changes, alongside the run
 
 ## Installation
 
-Linux with Python **3.12+**, git, and a working `bubblewrap`. Keep the virtual environment
+Linux with Python **3.12+**, git, [uv](https://docs.astral.sh/uv/getting-started/installation/),
+and a working `bubblewrap`. Keep the virtual environment
 outside the checkout and outside `/tmp`, so the sandbox can mount its runtime without exposing
-your platform or task files.
+your platform or task files. The base Python installation must also stay outside those
+directories. Interpreter links used by tools such as uv are preserved inside the sandbox;
+only the required runtime directories are mounted, read-only.
 
 ```bash
 git clone https://github.com/zjunlp/HarnessGrad.git
 cd HarnessGrad
-python3 -m venv ~/.venvs/harnessgrad
+uv venv --python 3.12 ~/.venvs/harnessgrad
 source ~/.venvs/harnessgrad/bin/activate
-python3 -m pip install -e .
+uv pip install -e .
 ./install.sh --check
 ```
 
@@ -129,24 +132,30 @@ Want to join? [Bring a harness](docs/bring-your-own-harness.md), [add a method](
 
 ## The workbench
 
-The console is where a run becomes readable: the version bar lists every harness version and
-every run, the left column is the round list, the middle is that round's edit as a diff, and the
-right is the assistant that can argue with it. Both frames are a real console over the recorded
-run `appworld-study-sica_ci-20261019T1816Z`, not a mock-up — and they are regenerated, not
-cropped:
-
-![The version page: runs, rounds and the curve the rounds produced](.github/assets/console-version.png)
-
-![The editor: the round list, that round's diff, and the assistant](.github/assets/console-editor.png)
+Explore experiments, inspect harness versions and trajectories, and edit a candidate in the Console.
 
 ```bash
-python3 console/uat/readme_screenshots.py --url http://127.0.0.1:4484 \
-  --run appworld-study-sica_ci-20261019T1816Z --round 20 --out .github/assets
+export HG_CONSOLE_RUNS="$PWD/runs"  # existing run-record directory
+python3 console/server.py --port 4460
 ```
 
-What the left column is made of is the point of the platform: each row is a git commit in the
-run's workspace, so a diff is the accepted edit and `harness_sha` names the candidate the score
-was measured on. Nothing here is reconstructed after the fact.
+Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from the repository root after an experiment has created `runs/`, or point `HG_CONSOLE_RUNS` to another existing run-record directory. The Console binds to localhost by default.
+
+<details>
+<summary>🖥️ See the Console</summary>
+<br>
+<table>
+  <tr>
+    <td align="center"><a href=".github/assets/console-gallery/experiments.png"><img src=".github/assets/console-gallery/experiments.png" alt="Experiments view" width="360"></a><br><strong>Experiments</strong></td>
+    <td align="center"><a href=".github/assets/console-gallery/versions.png"><img src=".github/assets/console-gallery/versions.png" alt="Harness versions view" width="360"></a><br><strong>Versions</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><a href=".github/assets/console-gallery/editor.png"><img src=".github/assets/console-gallery/editor.png" alt="Harness editor view" width="360"></a><br><strong>Editor</strong></td>
+    <td align="center"><a href=".github/assets/console-gallery/traces.png"><img src=".github/assets/console-gallery/traces.png" alt="Task trajectories view" width="360"></a><br><strong>Trajectories</strong></td>
+  </tr>
+</table>
+<sub>Click an image to view it at full size.</sub>
+</details>
 
 ## Citation
 

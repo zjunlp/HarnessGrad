@@ -79,6 +79,15 @@ care about its internal structure. There is exactly one interface point:
 | `env_kinds` | no (`["files"]`) | which environments this harness can operate on (§2.5). The platform **refuses** a run whose dataset needs a kind the harness does not declare, rather than scoring it zero on every task. |
 | `runtime_paths` | no (`[]`) | absolute trees mounted read-only because the harness needs them — a CLI installed outside `/usr`, a runtime it was built against. Bound *before* the platform is hidden, so declaring the platform's own path does not expose it. **Applies to `files` and to `exec`.** An earlier version restricted it to `files` on the theory that "inside a container the runtime is the image's" — which is false for a task image that ships no runtime at all (measured: the real Terminal-Bench image is `ubuntu:24.04` plus a `COPY`, with no `python3`). |
 
+For `files`, runtimes are mounted read-only at their physical host paths, with the
+links used by every declared path restored. Parent and child declarations remain
+accessible in any order. Platform and temporary trees stay hidden through aliases.
+Intermediate directories needed to traverse relative links are created empty.
+Required traversal directories and links are restored after hiding platform and
+temporary storage, without exposing their host contents.
+Explicit runtimes must not overlap writable task directories, extra writable paths,
+or scratch state directories; conflicting layouts are refused before launch.
+
 ### 1.1.1 The harness is a command, not a language
 
 The platform invokes `entrypoint` with an interpreter the environment provides. Python,

@@ -49,6 +49,7 @@ def _prepare(module, monkeypatch, budget_dir: Path):
     monkeypatch.setattr(module, "live_drivers_by_run", lambda: {})
     monkeypatch.setattr(module, "adapters", lambda: [{"name": "demo"}])
     monkeypatch.setattr(module, "base_harnesses", lambda: ["loop"])
+    monkeypatch.setattr(module, "improvers", lambda: [{"name": "noop", "kind": "cli", "model": ""}])
 
 
 def test_preview_surfaces_environment_guard_without_launching(tmp_path, monkeypatch):

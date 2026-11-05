@@ -80,8 +80,13 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 8  # 8 excludes method runtime trees exposing shared temporary roots;
-                  # 7 excludes method runtime trees overlapping the platform, including aliases;
+PLAN_VERSION = 13  # 13 restores required traversal structure after platform/temporary hides;
+                   # 12 preserves empty traversal directories needed by relative runtime links;
+                   # 11 refuses declared runtimes overlapping writable task/state storage;
+                   # 10 mounts declared runtimes at physical paths and restores all declared link chains;
+                   # 9 restores interpreter symlinks without exposing parent directories;
+                   # 8 excludes method runtime trees exposing shared temporary roots;
+                   # 7 excludes method runtime trees overlapping the platform, including aliases;
                   # 6 mounts the active venv and its base interpreter as distinct runtime trees;
                   # 5 adds the read-only host-side tool socket (`eval/containers/tool_route.py`);
                   # 4 was the offline model socket and the trusted namespace-local HTTP bootstrap.
@@ -130,8 +135,8 @@ def interpreter_prefixes() -> tuple[Path, ...]:
     # The active virtualenv/conda prefix comes from the executable, because a normal venv's
     # `bin/python` is a symlink into the base interpreter while `pyvenv.cfg` and the packages
     # stay in `sys.prefix`: resolving the executable first would lose the environment. The
-    # venv path itself is then checked like any other prefix, so a symlinked *prefix* is still
-    # refused -- only the executable inside it may be a link.
+    # Resolve each discovered prefix to a physical bind source. Alias links needed by
+    # the executable are checked and restored separately without exposing their parents.
     candidates = []
     discovered = _venv_prefix()
     if discovered is not None:
@@ -143,9 +148,15 @@ def interpreter_prefixes() -> tuple[Path, ...]:
         if (not path.is_absolute() or path == Path('/') or '..' in path.parts
                 or not path.is_dir()):
             raise SandboxUnavailable(f'the Python runtime prefix is not an absolute directory: {value!r}')
-        if any(part.is_symlink() for part in (path, *path.parents)):
-            raise SandboxUnavailable(f'the Python runtime prefix contains a symlink: {path}; '
-                                     'use its physical directory when creating the environment')
+        # Prefixes are bind-mounted at their physical paths; the executable's
+        # alias chain is restored separately after hides. Never bind an alias's
+        # parent tree merely to make it traversable.
+        try:
+            path = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            raise SandboxUnavailable(f'cannot resolve the Python runtime prefix: {value!r}') from exc
+        if path == Path('/'):
+            raise SandboxUnavailable('the Python runtime prefix resolves to the filesystem root')
         if not any(path == parent or parent in path.parents for parent in map(Path, RUNTIME)):
             if path not in prefixes:
                 prefixes.append(path)
@@ -154,7 +165,11 @@ def interpreter_prefixes() -> tuple[Path, ...]:
 
 def _venv_prefix() -> Path | None:
     """The virtualenv or conda prefix that owns the running interpreter, if any."""
-    for exe in (Path(sys.executable).absolute(), Path(sys.executable).resolve()):
+    try:
+        executables = (Path(sys.executable).absolute(), Path(sys.executable).resolve(strict=True))
+    except (OSError, RuntimeError) as exc:
+        raise SandboxUnavailable(f'cannot resolve the Python executable: {exc}') from exc
+    for exe in executables:
         for parent in exe.parents:
             if (parent / "pyvenv.cfg").exists() or (parent / "conda-meta").is_dir():
                 return parent
@@ -183,6 +198,55 @@ def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writabl
             raise SandboxUnavailable(f'Python environment {prefix} is inside writable task/work storage; '
                                      'create the venv separately (for example ~/.venvs/harnessgrad)')
     return prefixes
+
+
+def _runtime_symlinks(paths, mounted, *, hidden=()):
+    """Collect links and empty traversal directories, without exposing parent trees."""
+    links = {}
+    directories = set()
+    for path in paths:
+        remaining = list(Path(path).absolute().parts[1:])
+        current = Path('/')
+        followed = 0
+        while remaining:
+            part = remaining.pop(0)
+            if part == '..':
+                # The kernel must enter this directory before following '..'. Its
+                # contents need not be mounted, but the directory itself must exist.
+                directories.add(current)
+                current = current.parent
+                continue
+            current = current / part
+            if not current.is_symlink():
+                continue
+            followed += 1
+            if followed > 40:
+                raise SandboxUnavailable('runtime path has too many symbolic links')
+            target = os.readlink(current)
+            if (not any(current.is_relative_to(root) for root in mounted)
+                    or any(current.is_relative_to(root) for root in hidden)):
+                links[current] = target
+            target = Path(target)
+            remaining = list(target.parts[1:] if target.is_absolute() else target.parts) + remaining
+            current = Path('/') if target.is_absolute() else current.parent
+    return tuple(links.items()), directories
+
+
+def _interpreter_symlinks(prefixes, *, platform, work_root, task_dir,
+                         writable_paths, state_dirs, private_paths):
+    """Validate the interpreter chain before restoring its missing links."""
+    hidden = hidden_trees(work_root, platform)
+    links, directories = _runtime_symlinks((sys.executable,), (*map(Path, RUNTIME), *prefixes),
+                                          hidden=hidden)
+    protected = tuple(Path(path).resolve() for path in (
+        *hidden, work_root, task_dir,
+        *writable_paths, *state_dirs, *private_paths))
+    for link, _ in links:
+        if any(link.is_relative_to(root) for root in protected):
+            raise SandboxUnavailable(
+                f'Python executable link {link} is in hidden, writable, or private storage; '
+                'create the venv with an interpreter outside that storage')
+    return links, directories
 
 
 def hidden_trees(work_root: Path, platform: Path) -> list[Path]:
@@ -279,15 +343,15 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     if network == "none":
         plan += ["--unshare-net"]
 
-    for path in RUNTIME:
-        if Path(path).exists():
-            plan += ["--ro-bind", path, path]
-    for path in DNS:
-        if Path(path).exists():
-            plan += ["--ro-bind", path, path]
-
-    for prefix in _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs):
-        plan += ["--ro-bind", str(prefix), str(prefix)]
+    prefixes = _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
+    runtime_roots = tuple(Path(path) for path in (*RUNTIME, *DNS, *prefixes)
+                          if Path(path).exists())
+    for path in runtime_roots:
+        plan += ["--ro-bind", str(path), str(path)]
+    links, runtime_directories = _interpreter_symlinks(
+        prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
+        writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths)
+    runtime_links = dict(links)
 
     # Trees the harness declares it needs, bound read-only.
     #
@@ -299,10 +363,31 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     #
     # Bound **before** the hides, so a declaration cannot re-materialise something the
     # hides remove: the platform stays hidden even if a harness declares its path.
-    for path in runtime_paths:
-        target = Path(path)
-        if target.exists():
-            plan += ["--ro-bind", str(target), str(target)]
+    declared = tuple(Path(path) for path in runtime_paths if Path(path).exists())
+    physical = sorted({path.resolve(strict=True) for path in declared},
+                      key=lambda path: (len(path.parts), str(path)))
+    writable = tuple(Path(path).resolve() for path in (
+        *((task_dir,) if task_dir_writable else ()), *writable_paths, *state_dirs))
+    for path in physical:
+        if any(path.is_relative_to(root) or root.is_relative_to(path) for root in writable):
+            raise SandboxUnavailable(
+                f'declared runtime {path} overlaps writable task/state storage; '
+                'keep runtime_paths separate from writable directories')
+    # Every bind stays at its physical host path. A parent then supplies the same
+    # tree as a child bind, while a child's external link target is bound separately.
+    for path in physical:
+        plan += ["--ro-bind", str(path), str(path)]
+    mounted = (*runtime_roots, *physical)
+    hidden = hidden_trees(work_root, platform)
+    links, directories = _runtime_symlinks(declared, mounted, hidden=hidden)
+    runtime_links.update(links)
+    runtime_directories.update(directories)
+    for directory in sorted(runtime_directories, key=lambda path: (len(path.parts), str(path))):
+        if not any(directory.is_relative_to(root) for root in mounted):
+            plan += ["--dir", str(directory)]
+    for link, target in runtime_links.items():
+        if not any(link.is_relative_to(root) for root in mounted):
+            plan += ["--symlink", target, str(link)]
 
     # Paths that must survive the hides below. Bound twice, exactly like `repo`: once
     # here so the mount target exists, and again after the hides, because **a tmpfs
@@ -341,11 +426,22 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     # as an empty mount point, which is the deliberate stopping point -- nothing
     # readable remains, and erasing the name too would mean covering the whole branch
     # the work root lives on.
-    for tree in hidden_trees(work_root, platform):
+    for tree in hidden:
         plan += ["--tmpfs", str(tree)]
     if private_tmp:
         # A private /tmp, so two runs cannot read each other's task directories.
         plan += ["--tmpfs", "/tmp"]
+
+    # A link may enter a hidden tree only to leave it again through '..'. Restore
+    # the required empty directories and exact links after every hide, without
+    # binding any hidden host contents. Later task mounts and freezes keep their
+    # existing precedence.
+    for directory in sorted(runtime_directories, key=lambda path: (len(path.parts), str(path))):
+        if any(directory.is_relative_to(tree) for tree in hidden):
+            plan += ["--dir", str(directory)]
+    for link, target in runtime_links.items():
+        if any(link.is_relative_to(tree) for tree in hidden):
+            plan += ["--symlink", target, str(link)]
 
     # --- Re-assert everything, in order ----------------------------------------
     #
