@@ -43,10 +43,8 @@ components (`context`, or a `prompt`/`skill`/`skills` value when a record carrie
 * **A state names what the record shows, not what caused it.** `no_component_named` replaced
   the earlier `outside_declared_map`: `components.attribute` writes
   `{"components": [], "unattributed": touched}` both for a harness that declared no map and
-  for one whose map misses the moved path, so the record cannot say "outside". Measured on
-  the 2026-11-02 archive, all 292 such points moved `agent.py`, which `base_harness/loop`
-  declares as `control` *today* -- the declaration postdates every archived run, which is the
-  fact `reports/component-attribution-2026-11-02.md` establishes.
+  for one whose map misses the moved path, so the record cannot say "outside". Later
+  declarations must not be retroactively attributed to historical runs.
 * **An unknown value is `—`, never `0`.** A round with no previous point, or where either
   score is not a number, has no gain; it is excluded from means and medians and counted in
   `unknown`. A component with no attributed round gets no row rather than a fabricated 0.

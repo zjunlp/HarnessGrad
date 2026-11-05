@@ -32,10 +32,8 @@ def run(argv: list[str], *, timeout_s: float, cwd: Path | None = None,
     stronger lifecycle boundary (for example a PID namespace).
 
     The defect this closes is a **leaked descendant**, not a hang. `subprocess.run`
-    reaps only the direct child, so a daemon the harness started outlived the task -
-    measured: a `time.sleep(30)` grandchild was still alive after `run_one` returned
-    0.464 s after a 0.3 s timeout (`reports/w-banhung-evidence/reproduction-wait-before.log`).
-    `start_new_session` plus `killpg` is what removes it.
+    reaps only the direct child, so a daemon started by the harness may outlive the task.
+    `start_new_session` plus `killpg` removes descendants that remain in the process group.
     """
     with subprocess.Popen(argv, stdin=subprocess.PIPE if input_text is not None else None,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
