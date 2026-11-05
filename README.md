@@ -45,7 +45,6 @@ The table records the inventory at this README revision; the benchmark row is ch
 - **Bring a harness:** supply a directory with `harness.json` and an entrypoint accepting `--task` and `--workdir`. See [bring your own harness](docs/bring-your-own-harness.md).
 - **Bring a method:** supply a program that reads a trajectory and writes a candidate tree. See [bring your own method](docs/bring-your-own-method.md).
 - **Bring a benchmark:** write an adapter that materialises tasks and runs its official scorer. See [dataset onboarding](docs/dataset-onboarding.md).
-- **Reproduce a paper:** choose a recipe and review its prerequisites and cost in [RSI experiments](docs/rsi-experiments.md).
 
 <a id="why-one-command-is-enough"></a>
 
