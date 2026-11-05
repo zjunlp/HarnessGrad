@@ -84,7 +84,7 @@ def _probe(selected: dict, *, native: bool) -> tuple[str, str]:
                                        repo=work, env=env, network="none",
                                        runtime_paths=tuple(Path(p) for p in selected["runtime_paths"]))
             ran = subprocess.run(argv, cwd=task, env=env, input="", capture_output=True,
-                                 text=True, timeout=20)
+                                 text=True, encoding='utf-8', errors='strict', timeout=20)
             if ran.returncode or not ran.stdout.strip():
                 where = "native sandbox" if native else "host"
                 hint = (" The launcher can also report missing dist/entry for a missing dependency; "
@@ -103,7 +103,7 @@ def _probe(selected: dict, *, native: bool) -> tuple[str, str]:
                                    env=env, network="none",
                                    runtime_paths=tuple(Path(p) for p in selected["runtime_paths"]))
             ran = subprocess.run(argv, cwd=task, env=env, input=json.dumps(selected),
-                                 capture_output=True, text=True, timeout=20)
+                                 capture_output=True, text=True, encoding='utf-8', errors='strict', timeout=20)
             if ran.returncode:
                 raise ValueError("OpenClaw runtime projection failed in native sandbox; use physical dependency paths: "
                                  + ran.stderr.strip()[-1000:])

@@ -866,3 +866,11 @@ def test_native_task_uses_fixed_runtime_private_state_and_readonly_bindings(inst
     assert trace[-2]["usage"]["calls"] == 2
     assert next(row for row in trace if "command" in row)["observation"]["returncode"] == 0
     assert "synthetic-task-key" not in (task / "trace.jsonl").read_text()
+
+
+def test_configure_version_probe_rejects_non_utf8_output(tmp_path):
+    node = tmp_path / 'node'
+    node.write_text(f"#!{sys.executable}\nimport os\nos.write(1, b'\\xff')\n", encoding='utf-8')
+    node.chmod(0o755)
+    with pytest.raises(UnicodeDecodeError):
+        preparation._probe({'node': str(node), 'argv': [str(node)]}, native=False)

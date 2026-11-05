@@ -55,7 +55,9 @@ ROOT = Path(__file__).resolve().parents[2]
 # AppWorld recovery adds a strict ASCII Git commit probe and a status probe using
 # surrogateescape, preserving undecodable path bytes.
 # The retired model-service API no longer spawns a host process.
-EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 35}
+# Portable harness preparation added three tool subprocess probes; each is
+# checked, and OpenClaw version/admission output is explicitly strict UTF-8.
+EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 38}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.
