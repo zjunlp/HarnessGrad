@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,13 @@ import time
 
 ROOT = Path(__file__).resolve().parent
 IGNORED = {".git", "node_modules", ".state", "_harnessgrad", "__pycache__", ".opencode-state"}
+
+
+def prepared_installation(env):
+    spec = importlib.util.spec_from_file_location("_task_opencode_runtime", ROOT / "opencode_runtime.py")
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    return helper.resolve(ROOT, env)
 
 
 def bun_binary(parent: dict) -> str:
@@ -160,9 +168,9 @@ def configuration(env: dict) -> dict:
 def child_environment(parent: dict, state: Path, version: str = "0.0.0") -> dict:
     # Retain task service endpoints/PATH; the platform has already selected task credentials.
     excluded = {"OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY",
-                "CODEX_HOME", "OPENCODE_SERVER", "OPENCODE_CONFIG", "BUN_OPTIONS", "NODE_OPTIONS"}
+                "CODEX_HOME", "OPENCODE_SERVER", "OPENCODE_CONFIG", "BUN_OPTIONS", "NODE_OPTIONS", "NODE_PATH"}
     env = {k: v for k, v in parent.items()
-           if not k.startswith(("HG_METHOD_", "HG_ENV_", "OPENCODE_")) and k not in excluded}
+           if not k.startswith(("HG_METHOD_", "HG_ENV_", "HG_JUDGE_", "OPENCODE_", "OPENAI_", "CODEX_")) and k not in excluded}
     for key, folder in {
         "HOME": "home", "USERPROFILE": "home", "OPENCODE_TEST_HOME": "home",
         "XDG_CONFIG_HOME": "config", "XDG_DATA_HOME": "data", "XDG_CACHE_HOME": "cache",
@@ -502,19 +510,24 @@ def run(task: dict, work: Path) -> int:
             trace.write(redact(json.dumps(value, ensure_ascii=False), parent) + "\n")
         started = time.monotonic()
         stream = EventCollector(record)
+        written = []
         try:
             expires = started + timeout_seconds(parent)
             prompt = task_prompt(task)
             declaration = json.loads((ROOT / "harness.json").read_text(encoding="utf-8")).get("runtime")
             if not isinstance(declaration, dict) or declaration.get("kind") != "bun":
                 raise ValueError("Declare the Bun runtime in harness.json before execution")
+            manifest = json.loads((ROOT / "harness.json").read_text(encoding="utf-8"))
+            installed = prepared_installation(parent) if "_opencode_runtime" in manifest else None
+            diagnostic = parent.get("HG_AGENT_OPENCODE_EXTERNAL_SOURCE") not in (None, "", "0")
             # The source is inside the candidate, or under a declared `runtime_paths` entry --
             # the same rule the platform's `bun_runtime.owned_source` applies, so the harness
             # and the platform cannot disagree about which tree is being run.
             declared_roots = [Path(str(entry)).expanduser().resolve()
                               for entry in (json.loads((ROOT / "harness.json").read_text(
                                   encoding="utf-8")).get("runtime_paths") or [])]
-            candidates = ([Path(parent["HG_HARNESS_SOURCE"]).expanduser()]
+            candidates = ([Path(installed["source"])] if installed else
+                          [Path(parent["HG_HARNESS_SOURCE"]).expanduser()]
                           if parent.get("HG_HARNESS_SOURCE") else
                           [Path(parent["HG_AGENT_OPENCODE_SOURCE"]).expanduser()]
                           if parent.get("HG_AGENT_OPENCODE_SOURCE") else
@@ -522,7 +535,8 @@ def run(task: dict, work: Path) -> int:
             source = None
             for base in candidates:
                 base = base.resolve()
-                for guess in ([base] if base.name == declaration["source"] else
+                for guess in ([base] if installed or base.name == declaration["source"]
+                              or parent.get("HG_HARNESS_SOURCE") or parent.get("HG_AGENT_OPENCODE_SOURCE") else
                               [base / declaration["source"]]):
                     if (guess / declaration["entrypoint"]).is_file():
                         source = guess
@@ -539,7 +553,7 @@ def run(task: dict, work: Path) -> int:
                                   .get("runtime_paths") or [])]
             owned = source.is_relative_to(ROOT.resolve()) or any(
                 source.is_relative_to(root) for root in declared)
-            if not owned:
+            if not owned and not diagnostic:
                 raise ValueError("Source must be inside this candidate or under a declared "
                                  "runtime path")
             entry = (source / declaration["entrypoint"]).resolve()
@@ -548,7 +562,7 @@ def run(task: dict, work: Path) -> int:
             if parent.get("HG_HARNESS_ENTRYPOINT") and Path(parent["HG_HARNESS_ENTRYPOINT"]).resolve() != entry:
                 raise ValueError("Runtime entry disagrees with platform declaration")
             if not entry.is_file():
-                raise ValueError("OpenCode source missing; prepare this candidate before running")
+                raise ValueError("OpenCode source missing; prepare a copy with tools/configure_opencode_harness.py")
             version = cli_version(source)
             env = child_environment(parent, work / ".opencode-state", version)
             env["PWD"] = str(work)
@@ -556,8 +570,13 @@ def run(task: dict, work: Path) -> int:
                         "agent_model": parent.get("HG_AGENT_MODEL"),
                         "agent_base_url": parent.get("HG_AGENT_BASE_URL"),
                         "wire": parent.get("HG_AGENT_OPENCODE_WIRE", "chat"),
-                        "source": str(source), "source_sha256": source_hash(source),
-                        "source_in_candidate": owned}
+                        "source": str(source), "source_sha256": (installed["inventory"]["source_sha256"]
+                                                                   if installed else source_hash(source)),
+                        "source_in_candidate": source.is_relative_to(ROOT.resolve()),
+                        "external_source_diagnostic": diagnostic}
+            if installed is not None:
+                identity["runtime"] = {key: installed[key] for key in
+                                       ("binary", "bun_version", "source_version", "inventory")}
             record({"harness_identity": identity, "task_id": task.get("task_id")})
             # Where the entrypoint lives, used to find the tree's `bunfig.toml` and its
             # tsconfig. Not the process's cwd any more: v1 takes its *project root* from
@@ -580,7 +599,7 @@ def run(task: dict, work: Path) -> int:
             # registers the Solid JSX transform (`preload = ["@opentui/solid/preload"]`).
             # Running from the task directory without it makes every `.tsx` fall back to
             # the React runtime -- measured, `Cannot find module 'react/jsx-dev-runtime'`.
-            prefix = [bun_binary(parent), "--no-env-file", "--no-install"]
+            prefix = [installed["binary"] if installed else bun_binary(parent), "--no-env-file", "--no-install"]
             argv = [*prefix, "--preload", str(preload),
                     str(entry), "run", "--format", "json",
                     "--model", "harnessgrad/" + parent["HG_AGENT_MODEL"], "--agent", "build"]
@@ -655,7 +674,7 @@ def run(task: dict, work: Path) -> int:
             record({"submitted": True, "answer": answer, "answer_source": origin,
                     **({"submitted_files": submission_paths(task)} if origin == "files" else {})})
             return 0
-        except (OSError, ValueError, KeyError, TypeError) as exc:
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
             record({"error": redact(str(exc), parent)})
             print(redact(str(exc), parent), file=sys.stderr)
             return 1

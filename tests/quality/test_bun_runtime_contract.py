@@ -135,6 +135,15 @@ def test_source_symlink_escape_is_rejected(tmp_path, monkeypatch):
         runtime.prepare(repo)
 
 
+def test_source_root_symlink_cannot_be_treated_as_owned_source(tmp_path):
+    repo = harness(tmp_path)
+    external = tmp_path / "external-engine"
+    (repo / "engine").rename(external)
+    (repo / "engine").symlink_to(external, target_is_directory=True)
+    with pytest.raises(runtime.RuntimeUnavailable, match="belong to this candidate"):
+        runtime.owned_source(repo)
+
+
 def test_runtime_identity_survives_result_cache_and_binary_change(tmp_path, monkeypatch):
     from eval.run import runner
     repo = harness(tmp_path)

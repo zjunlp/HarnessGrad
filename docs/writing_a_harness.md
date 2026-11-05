@@ -56,7 +56,9 @@ External CLI templates can require local installation preparation before measure
 The [Codex preparation procedure](../base_harness/codex/README.md) fixes one CLI and
 its runtime bindings in a Harness copy; [DSH preparation](../base_harness/deepseek-harness/README.md)
 also validates its plugin link targets. [OpenClaw preparation](../base_harness/openclaw/README.md)
-fixes its supported package, Node executable and bindings together. Run preparation
+fixes its supported package, Node executable and bindings together.
+[OpenCode preparation](../base_harness/opencode/README.md) selects an installed v1
+source tree and Bun without copying that tree into checkpoints. Run preparation
 before recording the candidate identity, and repeat it when selecting another installation.
 
 **`name` and `version` are the harness's identity and a method may not change

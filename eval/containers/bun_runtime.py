@@ -7,6 +7,7 @@ Neither lifecycle scripts nor package downloads are permitted here.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import platform
@@ -62,6 +63,18 @@ def _declared_roots(repo) -> list[Path]:
     return [Path(str(entry)).expanduser() for entry in manifest.get("runtime_paths") or []]
 
 
+def _prepared_installation(repo, env=None):
+    manifest = json.loads((Path(repo) / "harness.json").read_text(encoding="utf-8"))
+    if "_opencode_runtime" not in manifest:
+        return None
+    # Use the shipped trusted helper, never Python from a candidate checkout.
+    path = Path(__file__).resolve().parents[2] / "base_harness/opencode/opencode_runtime.py"
+    spec = importlib.util.spec_from_file_location("_platform_opencode_runtime", path)
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    return helper.resolve(Path(repo), {} if env is None else env)
+
+
 def owned_source(repo):
     """The bun runtime spec and the source tree it names, inside the candidate or declared.
 
@@ -74,6 +87,9 @@ def owned_source(repo):
     if spec is None:
         return None
     root = Path(repo).resolve()
+    prepared = _prepared_installation(root)
+    if prepared is not None:
+        return spec, Path(prepared["source"]), Path(prepared["entrypoint"]), True
     candidates = [root] + _declared_roots(root)
     for index, base in enumerate(candidates):
         base = base.resolve()
@@ -82,6 +98,8 @@ def owned_source(repo):
         # and the narrower one is what lets a manifest bind the source without binding its
         # siblings: `.../prior-art/opencode` rather than all of `.../prior-art`.
         source = base if (index and base.name == spec["source"]) else (base / spec["source"]).resolve()
+        if not index and not source.is_relative_to(root):
+            continue
         entry = (source / spec["entrypoint"]).resolve()
         if not source.is_dir() or not entry.is_file():
             continue
@@ -104,6 +122,9 @@ def admit(repo, env):
         spec = runtime_spec(repo)
         if spec is None:
             return {}
+        prepared = _prepared_installation(repo, env)
+        if prepared is not None:
+            return {"HG_HARNESS_SOURCE": prepared["source"], "HG_HARNESS_ENTRYPOINT": prepared["entrypoint"]}
         _, source, entry, _external = owned_source(repo)
         for name, expected in (("HG_AGENT_OPENCODE_SOURCE", source),
                                ("HG_HARNESS_SOURCE", source), ("HG_HARNESS_ENTRYPOINT", entry)):
@@ -295,13 +316,34 @@ def _owned_state(repo: Path) -> Path:
 
 
 def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
-    owned = owned_source(repo)
-    if owned is None:
+    declaration = runtime_spec(repo)
+    if declaration is None:
         return None
+    prepared = _prepared_installation(repo)
+    owned = ((declaration, Path(prepared["source"]), Path(prepared["entrypoint"]), True)
+             if prepared is not None else owned_source(repo))
     repo = repo.resolve()
     _owned_state(repo)
     spec, source, entry, external = owned
     if external:
+        if prepared is not None:
+            binary = prepared["binary"]
+            binary_sha256 = next(row["sha256"] for row in prepared["files"] if row["path"] == binary)
+            key = "external-" + hashlib.sha256(json.dumps(
+                {"source": str(source), "inventory": prepared["inventory"], "binary": binary_sha256,
+                 "files": prepared["files"], "runtime_paths": prepared["runtime_paths"],
+                 "declaration": spec}, sort_keys=True).encode()).hexdigest()
+            identity = {"kind": "bun", "binary_sha256": binary_sha256, "version": prepared["bun_version"],
+                        "dependency_key": key, "store_sha256": None, "declaration": spec,
+                        "external_source": str(source), "prepared_installation": {
+                            "inventory": prepared["inventory"], "files": prepared["files"],
+                            "runtime_paths": prepared["runtime_paths"]},
+                        "system": platform.system(), "arch": platform.machine(), "responses_overlay": None}
+            return {"kind": "bun", "dependency_key": key, "bun_version": prepared["bun_version"],
+                    "identity": identity, "binary": binary, "execution_binary": binary,
+                    "source": str(source), "external": True, "offline": True, "installed": True,
+                    "cache_hit": True, "backend": "prepared-external-tree", "system": platform.system(),
+                    "arch": platform.machine(), "runtime_paths": prepared["runtime_paths"], "seconds": 0.0}
         # **A declared external source is already installed; preparation is admitting it.**
         # Copying or linking into it would write to a tree the platform bound read-only, and
         # the offline store this function builds exists for candidates that carry their own
@@ -314,8 +356,9 @@ def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
             raise RuntimeUnavailable(
                 "An external Bun source needs a Bun binary: set HG_BUN_BINARY or "
                 "HG_AGENT_OPENCODE_BUN")
-        version = _run([str(bun), "--version"], cwd=bun.parent,
-                       env={"PATH": os.environ.get("PATH", ""), "HOME": "/tmp"}).strip()
+        with tempfile.TemporaryDirectory(prefix="hg-bun-version-") as neutral:
+            version = _run([str(bun), f"--config={os.devnull}", "--no-env-file", "--no-install", "--no-macros", "--version"],
+                           cwd=neutral, env={"PATH": os.defpath, "HOME": neutral}).strip()
         binary_sha256 = file_digest(bun)
         key = "external-" + hashlib.sha256(str(source).encode()).hexdigest()[:16]
         identity = {"kind": "bun", "binary_sha256": binary_sha256, "version": version,
@@ -327,7 +370,7 @@ def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
                 "source": str(source), "external": True, "offline": True,
                 "installed": True, "cache_hit": True, "backend": "external-tree",
                 "system": platform.system(), "arch": platform.machine(),
-                "runtime_paths": [str(source), str(bun.parent)], "seconds": 0.0}
+                "runtime_paths": [str(source), str(bun)], "seconds": 0.0}
     started = time.monotonic()
     problems = validate_source(repo) if attach else []
     if problems:
@@ -370,7 +413,7 @@ def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
                "lifecycle_scripts": False, "cache_hit": hit, "installed": not hit,
                "backend": "shared-third-party-store", "dependency_store": str(store),
                "seconds": round(time.monotonic() - started, 4),
-               "runtime_paths": [str(bun.parent), str(store)] + ([transport["path"]] if transport else [])}
+               "runtime_paths": [str(bun), str(store)] + ([transport["path"]] if transport else [])}
     if not attach:
         return receipt
     state = _owned_state(repo)

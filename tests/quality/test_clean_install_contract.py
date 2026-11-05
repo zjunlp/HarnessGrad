@@ -27,6 +27,8 @@ RESOURCES = (
     "base_harness/miniswe/README.md",
     "base_harness/openclaw/openclaw_runtime.py",
     "tools/configure_openclaw_harness.py",
+    "base_harness/opencode/opencode_runtime.py",
+    "tools/configure_opencode_harness.py",
     "scenarios/demo-smoke.json",
     "data/aggregation_policies.json",
     "data/scaffolds/qa/cli/qa",
@@ -161,6 +163,26 @@ except ValueError as exc:
     assert "configure_openclaw_harness.py" in str(exc)
 else:
     raise AssertionError("unprepared installed template was accepted")
+'''
+    run([python, "-c", code], root, env)
+
+
+def test_installed_opencode_template_and_preparation_tool(installed):
+    root, env, runtime = installed
+    python = str(runtime / "bin/python")
+    assert "--source" in run([python, "-m", "tools.configure_opencode_harness", "--help"], root, env)
+    code = '''
+import json
+from pathlib import Path
+from base_harness.opencode import opencode_runtime
+root = Path(opencode_runtime.__file__).parent
+assert json.loads((root / "harness.json").read_text())["runtime_paths"] == []
+try:
+    opencode_runtime.resolve(root, {})
+except ValueError as exc:
+    assert "configure_opencode_harness.py" in str(exc)
+else:
+    raise AssertionError("unprepared installed OpenCode template was accepted")
 '''
     run([python, "-c", code], root, env)
 

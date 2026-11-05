@@ -1,6 +1,6 @@
 {
   "name": "opencode",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
@@ -16,13 +16,19 @@
     "entrypoint": "packages/opencode/src/index.ts",
     "package": "opencode"
   },
-  "notes": "Public template: prepare an opencode/ source tree and Bun runtime for a separate candidate, then declare the exact read-only runtime_paths before running. External source overrides must still satisfy the declared runtime ownership boundary. Container execution requires separate target-image provisioning.",
+  "notes": "Prepare an external OpenCode v1 installation with tools/configure_opencode_harness.py. The prepared manifest fixes the source tree, Bun executable and read-only bindings; checkpoints carry the adapter and its installation identity, not a copy of the source/dependency tree. Candidate-owned Bun source continues to use tools/configure_bun_harness.py. Container environments still require compatible runtime provisioning.",
   "components": {
     "control": [
       "harness.json"
     ],
     "delegation": [
       "agent.py"
+    ],
+    "reliability": [
+      "opencode_runtime.py"
+    ],
+    "unattributed": [
+      "README.md"
     ]
   }
 }
