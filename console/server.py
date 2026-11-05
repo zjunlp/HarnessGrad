@@ -769,7 +769,9 @@ def launch_form() -> dict:
         agent = current().agent
         task_model = task.get("model") or agent.model or ""
         task_url = task.get("base_url") or agent.base_url or ""
-        task_key_set = bool(task.get("api_key") or agent.api_key)
+        # Only advertise keys launch_env can actually use; do not claim an
+        # ambient driver key is saved while the launcher intentionally clears it.
+        task_key_set = bool(task.get("api_key"))
         backend = agent.backend if agent.backend in ("mock", "openai") else "mock"
     except Exception:  # noqa: BLE001 - no configured platform model is not a default
         task_model, task_url, task_key_set, backend = task.get("model", ""), task.get("base_url", ""), bool(task.get("api_key")), "mock"
