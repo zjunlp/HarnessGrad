@@ -22,6 +22,7 @@ from eval.run.runner import evaluate
 from harnessgrad import policies
 from harnessgrad import scoring_identity
 from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+from harnessgrad import candidate_runtime
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
 from harnessgrad.environments import _report_invalid
@@ -146,28 +147,43 @@ def _unmeasured_rounds(run_dir: Path) -> dict[int, dict]:
             out[int(point.get("round") or 0)] = point["unmeasured"]
     return out
 
-def _eval_from_record(runs_root: Path, run_id: str, round_no: int) -> dict:
+def _eval_from_record(runs_root: Path, run_id: str, round_no: int, *,
+                      source: Path | None = None) -> dict:
     """What the train run's own record says about the state being measured.
 
     Read rather than recomputed: the link has to survive on the record, and a reader of
     the eval run should be able to follow it to the train run's point without running
     anything. `harness_sha` is the join key and it is on both points already.
     """
-    curve = Path(runs_root) / run_id / "curve.jsonl"
-    if not curve.exists():
-        return {"run_id": run_id, "round": round_no}
-    for line in reversed(curve.read_text().splitlines()):
+    run_dir = Path(runs_root) / run_id
+    curve = run_dir / "curve.jsonl"
+    point = None
+    for line in reversed(curve.read_text().splitlines() if curve.exists() else []):
         if not line.strip():
             continue
         try:
             p = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if p.get("round") == round_no:
-            return {"run_id": run_id, "round": round_no,
-                    "harness_sha": (p.get("identity") or {}).get("harness_sha"),
-                    "train_score": p.get("score") if p.get("side") != "eval" else None}
-    return {"run_id": run_id, "round": round_no}
+        if isinstance(p, dict) and p.get("round") == round_no:
+            point = p
+            break
+    binding = (point or {}).get("harness_runtime_identity")
+    if source is not None and candidate_runtime.has_python(source):
+        if point is None:
+            raise ValueError("the selected managed checkpoint has no original curve point")
+        # A trained candidate must keep its exact actor artifact. Missing provenance
+        # cannot turn eval into preparation of the current publication for these deps.
+        binding = candidate_runtime.checkpoint_binding(run_dir, point)
+        if binding is None:
+            raise ValueError("harness_runtime_identity is missing from the selected managed checkpoint")
+        binding = candidate_runtime.admit(source, binding)
+    if point is None:
+        return {"run_id": run_id, "round": round_no}
+    return {"run_id": run_id, "round": round_no,
+            **candidate_runtime.fields(binding),
+            "harness_sha": (point.get("identity") or {}).get("harness_sha"),
+            "train_score": point.get("score") if point.get("side") != "eval" else None}
 
 def _progress_results(run_dir: Path) -> dict[str, dict]:
     """Per-task results an interrupted eval run already wrote.
@@ -232,6 +248,8 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     errors = scoring_identity.problems(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
     errors += dataset_runtime_identity_mod.problems(
         meta.get('dataset_runtime_identity'), getattr(args, 'dataset_runtime_identity', None))
+    errors += candidate_runtime.problems(
+        meta.get("harness_runtime_identity"), getattr(args, "current_harness_runtime_identity", None))
     if errors:
         return "; ".join(errors)
     recorded_from = meta.get("from_run") or meta.get("evaluated_from") or {}
@@ -256,17 +274,22 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
 
 
 def _resume_runtime_mismatch(work: Path, prior: dict[str, dict], *,
-                             dataset_runtime_identity: dict | None = None) -> str | None:
+                             dataset_runtime_identity: dict | None = None,
+                             harness_runtime_identity: dict | None = None) -> str | None:
     """Resume may not bypass current Bun/transport admission or mix old trials."""
     from eval.containers import bun_runtime
     try:
         dataset_runtime_identity_mod.admit(dataset_runtime_identity)
+        candidate_runtime.admit(work, harness_runtime_identity)
         task_runtimes = dataset_runtime_identity_mod.project_many(dataset_runtime_identity, prior)
         for task_id, record in prior.items():
             expected = task_runtimes[task_id]
             errors = dataset_runtime_identity_mod.problems(record.get('dataset_runtime_identity'), expected)
             if errors:
                 return f"{task_id}: " + '; '.join(errors)
+            errors = candidate_runtime.problems(record.get("harness_runtime_identity"), harness_runtime_identity)
+            if errors:
+                return f"{task_id}: " + "; ".join(errors)
         current = bun_runtime.identity(work)
     except (bun_runtime.RuntimeUnavailable, OSError, TypeError, ValueError) as exc:
         return str(exc)
@@ -375,6 +398,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     cache: dict = {}
     planned_ids = [t["task_id"] for t in tasks]
     try:
+        actor_binding = candidate_runtime.admit(
+            work, getattr(args, "current_harness_runtime_identity", None),
+            envs=envs, setups=setups, sandbox=args.sandbox)
         current_runtime_identity = dataset_runtime_identity_mod.for_evaluation(
             getattr(args, 'dataset_runtime_identity', None), tasks, setups, verifiers)
     except (OSError, TypeError, ValueError) as exc:
@@ -382,6 +408,10 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         return 2
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}
+    preparation = getattr(args, "harness_preparation", None)
+    preparation_seconds = float((preparation or {}).get("seconds") or 0.0)
+    if preparation is not None:
+        cumulative["harness_preparation_wall_clock_s"] = preparation_seconds
     sha = commit_state(work, f"eval of {args.from_run} round "
                              f"{(eval_from or {}).get('round')}")
     t0 = time.time()
@@ -416,6 +446,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     execution_plan = trial_plan or ordinary_plan
     if execution_plan:
         execution_plan.update(dataset_runtime_identity_mod.fields(current_runtime_identity))
+        execution_plan.update(candidate_runtime.fields(actor_binding))
         # Bind the selected declarations too: same seeds with a different user,
         # judge, task input or endpoint are not the same measurement.
         declarations = {'tasks': tasks, 'scorable': {t['task_id']: scorable[t['task_id']] for t in tasks},
@@ -460,7 +491,8 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
             why = _resume_mismatch(run_dir, args,
                                    os.environ.get("HG_ALFWORLD_POOL", ""), sha)
             why = why or _resume_runtime_mismatch(
-                work, prior, dataset_runtime_identity=current_runtime_identity)
+                work, prior, dataset_runtime_identity=current_runtime_identity,
+                harness_runtime_identity=actor_binding)
             if why:
                 console.note(f"refusing --resume: {why}", level="error")
                 return 2
@@ -478,11 +510,13 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        trials=args.trials, jobs=args.jobs,
                        setups=setups, verifiers=verifiers, envs=envs, run_id=run_id,
                        **dataset_runtime_identity_mod.fields(current_runtime_identity),
+                       **candidate_runtime.fields(actor_binding),
                        run_seed=os.environ["HARNESSGRAD_SEED"],
                        recordings_root=run_dir / "recordings", round_no=0,
                        **({'persist_trial_report': False} if execution_plan else {}))
     if prior:
         res = _merge_prior(res, prior, dataset_runtime_identity=current_runtime_identity)
+    res.update(candidate_runtime.fields(actor_binding))
     if trial_plan:
         fresh_rows = (res.get('repeated_trials') or {}).get('results', [])
         report = repeated_trials.aggregate(trial_plan['manifest'], old_trial_rows + fresh_rows,
@@ -534,7 +568,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         return 2
 
     cumulative["evaluation_trials"] = len(tasks)
-    cumulative["wall_clock_s"] = time.time() - t0
+    cumulative["wall_clock_s"] = time.time() - t0 + preparation_seconds
     cumulative["env_generation_tokens"] = sum(
         (res.get("env_usage") or {}).get(k, 0) for k in ("input", "output"))
 
@@ -549,6 +583,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         scores=[res["per_task"][t] for t in scored], task_ids=scored,
         scoring_identity=getattr(args, "scoring_identity", None),
         dataset_runtime_identity=current_runtime_identity,
+        harness_runtime_identity=actor_binding,
         train_scores=None, train_ids=None, split=split,
         env_record=_env_record(envs, scored),
         invalid=res.get("invalid"),
@@ -563,6 +598,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         per_task_trials=res.get("per_task_trials"),
         **_test_rate_fields(res),
         **_level_fields(res, scored))
+    if preparation is not None:
+        point["harness_preparation"] = preparation
+        point["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
     point["measured_by_platform"] = True
     point["verifier_kinds"] = sorted({(verifiers.get(t) or {}).get("kind", "answer")
                                       for t in scored})

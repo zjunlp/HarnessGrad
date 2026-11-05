@@ -41,7 +41,7 @@ from tools.validate_harness import check as check_harness, source_identity, file
 import tools.run_summary as run_summary
 from eval.ckpt.git_state import (STATE_DIRNAME, commit_state, content_sha, manifest,
                                 stage_workspace)
-from eval.ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness, copy_rejected_harness, has_python_runtime
 from eval.observe.console import CONSOLE as console
 from eval.run.metrics import select_task_set
 from eval.run import metrics
@@ -74,6 +74,7 @@ from harnessgrad import readiness
 from harnessgrad import slots
 from harnessgrad import scoring_identity
 from harnessgrad import dataset_runtime_identity
+from harnessgrad import candidate_runtime
 from harnessgrad.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
@@ -85,7 +86,7 @@ from harnessgrad.environments import (
 from harnessgrad.identity import _identity
 from harnessgrad.loops.eval_side import (_eval_from_record, _eval_resume_seed, _eval_source,
                                         _progress_results, _run_eval_side)
-from harnessgrad.loops.mode_a import _run_mode_a
+from harnessgrad.loops.mode_a import _run_mode_a, _snapshot_round
 from harnessgrad.methods import PlatformTampered, _check_method_entrypoint
 from harnessgrad.records import (
     _cost_of, _curve_point, _require_untampered, _save_round_state, _save_traces,
@@ -345,6 +346,7 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
         for point in existing:
             dataset_runtime_identity.require_same(point.get("dataset_runtime_identity"), runtime_identity)
             scoring_identity.require_same(point.get("scoring_identity"), getattr(args, "scoring_identity", None))
+            candidate_runtime.checkpoint_binding(run_dir, point)
     except (OSError, TypeError, ValueError) as exc:
         raise ResumeRefused(str(exc)) from exc
     recorded_split = meta.get("split_sha")
@@ -384,6 +386,8 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
         raise ResumeNothingToDo(
             f"round {last} of a {args.rounds}-round budget is already measured")
     view = run_dir / f"state_after_round{last}"
+    if not view.is_dir() and getattr(args, "_resume_candidate_source", None) is not None:
+        view = Path(args._resume_candidate_source)
     if not view.is_dir():
         raise ResumeRefused(
             f"{run_dir.name} has no state_after_round{last}/; the state round {last} scored "
@@ -416,6 +420,8 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
     # same state and continuing would stitch a score to a tree it does not belong to.
     h0_sha = (existing[0].get("identity") or {}).get("harness_sha")
     base_state = run_dir / "state_after_round0"
+    if not base_state.is_dir() and getattr(args, "_resume_initial_source", None) is not None:
+        base_state = Path(args._resume_initial_source)
     restored_base = None
     if h0_sha and base_state.is_dir():
         stage_workspace(base_state, work)
@@ -461,6 +467,11 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
             f"state_after_round{last}/ hashes to {staged_sha[:12]} but round {last} was "
             f"measured on {recorded_sha[:12]}; the saved state is not the state that score "
             f"belongs to")
+    last_point = max(existing, key=lambda point: int(point.get("round") or 0))
+    current_binding = candidate_runtime.checkpoint_binding(run_dir, last_point)
+    if not last_point.get("unmeasured"):
+        candidate_runtime.admit(work, current_binding)
+    args.current_harness_runtime_identity = current_binding
     h0_sha = h0_sha or staged_sha
     return {"existing": existing, "last": last, "base": base, "h0_sha": h0_sha,
             "recorded_sha": recorded_sha,
@@ -486,6 +497,7 @@ def _base_from_point(point: dict) -> dict:
     identity = point.get("identity") or {}
     base = {
         **dataset_runtime_identity.fields(point.get("dataset_runtime_identity")),
+        **candidate_runtime.fields(point.get("harness_runtime_identity")),
         "per_task": point.get("per_task") or {},
         "invalid": point.get("invalid"),
         "harness_failed": point.get("harness_failed"),
@@ -500,6 +512,36 @@ def _base_from_point(point: dict) -> dict:
         "cached_tasks": point.get("cached_tasks"),
     }
     return base
+
+
+def _managed_python_intent(source: Path) -> bool:
+    """Recognize malformed Python declarations without treating them as legacy."""
+    try:
+        declaration = json.loads((Path(source) / "harness.json").read_text())
+    except (OSError, TypeError, ValueError):
+        return False
+    runtime = declaration.get("runtime") if isinstance(declaration, dict) else None
+    return isinstance(runtime, dict) and runtime.get("kind") == "python"
+
+
+def _refuse_managed_source(run_dir: Path, source: Path, error) -> int:
+    """Keep invalid source and a refusal, without launching or installing anything."""
+    receipt = {"status": "invalid", "stage": "source declaration", "error": str(error),
+               "seconds": 0.0}
+    saved = candidate_runtime.record_preparation(run_dir, 0, receipt)
+    if not (run_dir / "state_after_round0").exists():
+        _save_round_state(run_dir, 0, source, rejected_candidate=True)
+    elif saved is not None:
+        try:
+            copy_rejected_harness(source, Path(saved).with_suffix(".source"),
+                                  ignore=shutil.ignore_patterns(".git"))
+        except OSError as exc:
+            console.note(f"could not retain refused source: {type(exc).__name__}", level="warn")
+    if not (run_dir / "curve.jsonl").exists():
+        _write_run_meta(run_dir, harness_preparation=receipt,
+                        runtime_refusal={"stage": "harness source declaration", "detail": str(error)})
+    console.note(f"refusing managed Python source: {error}", level="error")
+    return 2
 
 
 def describe_model() -> dict:
@@ -1202,6 +1244,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                          'a valid method-requested early stop remains successful')
     # `--config` / `--set` are expanded into the flags they name before the parser sees
     # them (`_expand_experiment_argv`); nothing else about the parse changes.
+    ap.add_argument("--harness-runtime-binding", type=Path, help=argparse.SUPPRESS)
     expanded = _expand_experiment_argv(sys.argv[1:])
     expanded = sys.argv[1:] if expanded is None else expanded
     reviewed_flags = ('--expected-harness-sha256', '--expected-harness-filesystem-sha256')
@@ -1222,6 +1265,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         if '--no-sandbox' in expanded:
             ap.error('reviewed source requires the sandbox request; --no-sandbox is unsupported')
     args = ap.parse_args(expanded)
+    if args.harness_runtime_binding is not None and (args.resume or args.h0_from):
+        ap.error("--harness-runtime-binding cannot be combined with --resume or --h0-from")
     explicit = set(vars(args)) & _SCENARIO_ARG_DEFAULTS.keys()
     for field, default in _SCENARIO_ARG_DEFAULTS.items():
         if not hasattr(args, field):
@@ -1393,10 +1438,13 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         # Checkpoint eval retains its original source and provenance helpers.
         try:
             harness_src, _round = _eval_source(args, runs_root)
+            eval_from = _eval_from_record(runs_root, args.from_run, _round, source=harness_src)
         except SystemExit as exc:
             print(exc, file=sys.stderr)
             return 2
-        eval_from = _eval_from_record(runs_root, args.from_run, _round)
+        except (OSError, TypeError, ValueError) as exc:
+            print(f"refusing --from-run: {exc}", file=sys.stderr)
+            return 2
     else:
         harness_src = _harness_by_name(args.harness)
         if harness_src is None:
@@ -1579,6 +1627,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     except (OSError, TypeError, ValueError) as exc:
         console.note(f"invalid dataset runtime identity: {exc}", level="error")
         return 2
+    args.harness_runtime_identity = None
+    args.current_harness_runtime_identity = None
+    args.harness_preparation = None
     verifier_kinds = sorted({v.get("kind", "answer") for v in verifiers.values()})
     # The record says **unified**, not the flag. `--mode` is accepted so existing scripts
     # keep working, but it selects nothing any more, and a point that said `run_mode: B`
@@ -1618,12 +1669,32 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             dataset_runtime_identity.require_same(
                 saved_meta.get("dataset_runtime_identity"), args.dataset_runtime_identity)
             curve_path = run_dir / "curve.jsonl"
+            existing_points = []
             if curve_path.is_file():
                 for line in curve_path.read_text().splitlines():
                     if line.strip():
                         point = json.loads(line)
+                        existing_points.append(point)
                         dataset_runtime_identity.require_same(
                             point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+            restored_runtime = candidate_runtime.validate_resume(
+                run_dir, saved_meta, existing_points, harness_src,
+                envs=envs, setups=setups, sandbox=args.sandbox)
+            if restored_runtime is not None:
+                args.harness_runtime_identity = restored_runtime["initial"]
+                args.current_harness_runtime_identity = restored_runtime["current"]
+                managed_history = (args.harness_runtime_identity is not None
+                                   or args.current_harness_runtime_identity is not None
+                                   or any(point.get("harness_runtime_identity") is not None for point in existing_points))
+                if args.side == "train" and existing_points and managed_history:
+                    harness_src = sources.enter_context(candidate_runtime.checkpoint_source(
+                        run_dir, existing_points[0]))
+                    args._resume_initial_source = harness_src
+                    last_point = max(existing_points, key=lambda point: int(point.get("round") or 0))
+                    args._resume_candidate_source = sources.enter_context(candidate_runtime.checkpoint_source(
+                        run_dir, last_point))
+                    harness_source = saved_meta.get("harness_source")
+            args.harness_preparation = saved_meta.get("harness_preparation")
             if args.side == "eval":
                 prior = _progress_results(run_dir)
                 expected = dataset_runtime_identity.project_many(args.dataset_runtime_identity, prior)
@@ -1633,6 +1704,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                         raise ValueError("dataset_runtime_identity progress names an unselected task")
                     dataset_runtime_identity.require_same(
                         record.get("dataset_runtime_identity"), expected[tid])
+                    candidate_runtime.require_same(
+                        record.get("harness_runtime_identity"), args.current_harness_runtime_identity)
         except (OSError, TypeError, ValueError) as exc:
             console.note(f"refusing --resume: {exc}", level="error")
             return 2
@@ -1852,7 +1925,14 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # them. What it must not be is silent -- measured, `loop` on Terminal-Bench died on
     # its first model call and the run reported nothing but `score 0.000`, which reads
     # exactly like a method that decided not to edit.
-    _warn_missing_overlay(harness_src, envs, args.dataset)
+    try:
+        managed_source = has_python_runtime(harness_src)
+        if not managed_source:
+            _warn_missing_overlay(harness_src, envs, args.dataset)
+    except (OSError, TypeError, ValueError) as exc:
+        if not _managed_python_intent(harness_src):
+            raise
+        return _refuse_managed_source(run_dir, harness_src, exc)
 
     man_at_door = manifest(harness_src)
     problem = _check_env_kinds(man_at_door, _required_env_kinds(envs))
@@ -2072,6 +2152,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         scenario=scenario_receipt,
         **scoring_identity.fields(args.scoring_identity),
         **dataset_runtime_identity.fields(args.dataset_runtime_identity),
+        **candidate_runtime.fields(args.harness_runtime_identity),
         dataset=args.dataset, sampling_policy=args.sampling,
         enforcement=enforcement,
         diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
@@ -2201,8 +2282,52 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             print(f'refusing --harness-path: {exc}', file=sys.stderr)
             return 2
     else:
-        stage_workspace(harness_src, work)
+        try:
+            stage_workspace(harness_src, work)
+        except (OSError, TypeError, ValueError) as exc:
+            if not _managed_python_intent(harness_src):
+                raise
+            return _refuse_managed_source(run_dir, harness_src, exc)
     man = manifest(work)
+    if not args.resume:
+        fixed_source_sha = commit_state(work, "fixed source before runtime preparation")
+        if has_python_runtime(work):
+            _save_round_state(run_dir, 0, work)
+            _snapshot_round(run_dir, 0, run_dir / "state_after_round0",
+                            run_id=run_id, harness_sha=fixed_source_sha)
+        preparation_started = time.monotonic()
+        try:
+            donor_binding = None
+            if args.harness_runtime_binding is not None:
+                donor_binding = candidate_runtime.validate(json.loads(args.harness_runtime_binding.read_text()))
+            elif args.side == "eval" and eval_from:
+                donor_binding = eval_from.get("harness_runtime_identity")
+            if args.h0_from:
+                donor_curve = Path(args.runs_root) / args.h0_from / "curve.jsonl"
+                if donor_curve.is_file():
+                    rows = [json.loads(line) for line in donor_curve.read_text().splitlines() if line.strip()]
+                    donor_binding = rows[0].get("harness_runtime_identity") if rows else None
+            preparation = candidate_runtime.prepare(
+                work, binding=donor_binding, envs=envs, setups=setups, sandbox=args.sandbox)
+            selected_binding = None if preparation is None else preparation["identity"]
+            selected_binding = candidate_runtime.admit(
+                work, selected_binding, envs=envs, setups=setups, sandbox=args.sandbox)
+        except (OSError, TypeError, ValueError) as exc:
+            receipt = getattr(exc, "receipt", None) or {
+                "status": "failed", "error": str(exc),
+                "seconds": round(time.monotonic() - preparation_started, 6)}
+            candidate_runtime.record_preparation(run_dir, 0, receipt)
+            _write_run_meta(run_dir, harness_preparation=receipt,
+                            runtime_refusal={"stage": "harness runtime preparation", "detail": str(exc)})
+            console.note(f"refusing harness runtime preparation: {exc}", level="error")
+            return 2
+        if preparation is not None:
+            candidate_runtime.record_preparation(run_dir, 0, preparation)
+            args.harness_preparation = preparation
+        args.harness_runtime_identity = selected_binding
+        args.current_harness_runtime_identity = selected_binding
+        _write_run_meta(run_dir, **candidate_runtime.fields(selected_binding),
+                        harness_preparation=preparation)
     # `_check_env_kinds` already ran, against this same manifest read from the source --
     # see the note beside `envs, env_problem = _resolve_envs(envs)` for why it has to be
     # the first refusal rather than this one.
@@ -2267,6 +2392,10 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # amount the method did not spend (INTERFACE.md §2.5.7).
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}
+    preparation_seconds = float((args.harness_preparation or {}).get("seconds") or 0.0)
+    if args.harness_preparation is not None and not args.resume:
+        cumulative["harness_preparation_wall_clock_s"] = preparation_seconds
+        cumulative["wall_clock_s"] += preparation_seconds
 
     # Staged runs already fixed their task set; score-based policies select after H0.
     # Committed **before** the measurement, so the measurement can be cached under the
@@ -2298,6 +2427,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             f"resuming {run_id} at round {resume_state['last']}"
             f" ({(resume_state['recorded_sha'] or '')[:12]}); the workspace was re-staged"
             f" from state_after_round{resume_state['last']}", level="info")
+        baseline_state = run_dir / "state_after_round0"
+        if baseline_state.is_dir():
+            man = manifest(baseline_state)
     if resume_state is None:
         h0_sha = commit_state(work, "H0")
         t0 = time.time()
@@ -2342,6 +2474,12 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                     donor_metadata.get("dataset_runtime_identity"), args.dataset_runtime_identity)
                 dataset_runtime_identity.require_same(
                     donor_point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+                candidate_runtime.admit(work, args.harness_runtime_identity,
+                                        envs=envs, setups=setups, sandbox=args.sandbox)
+                candidate_runtime.require_same(
+                    donor_metadata.get("harness_runtime_identity"), args.harness_runtime_identity)
+                candidate_runtime.require_same(
+                    donor_point.get("harness_runtime_identity"), args.harness_runtime_identity)
                 scoring_identity.require_same(donor_point.get("scoring_identity"), args.scoring_identity)
                 if payload is not None:
                     dataset_runtime_identity.require_same(
@@ -2349,6 +2487,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                     dataset_runtime_identity.require_same(
                         (payload.get("base") or {}).get("dataset_runtime_identity"),
                         args.dataset_runtime_identity)
+                    candidate_runtime.require_same(
+                        payload.get("harness_runtime_identity"), args.harness_runtime_identity)
+                    candidate_runtime.require_same(
+                        (payload.get("base") or {}).get("harness_runtime_identity"),
+                        args.harness_runtime_identity)
                     scoring_identity.require_same(payload.get("scoring_identity"), args.scoring_identity)
             except (OSError, TypeError, ValueError) as exc:
                 console.note(f"refusing --h0-from {args.h0_from!r}: {exc}", level="error")
@@ -2409,6 +2552,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                             trials=args.trials, jobs=args.jobs, progress_dir=run_dir,
                             sandbox=args.sandbox, setups=setups, verifiers=verifiers,
                             **dataset_runtime_identity.fields(args.dataset_runtime_identity),
+                            **candidate_runtime.fields(args.current_harness_runtime_identity),
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
                             recordings_root=run_dir / "recordings",
                             **({"diagnostic_authorization": diagnostic_authorization}
@@ -2418,7 +2562,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 (run_dir / "h0.json").write_text(
                     json.dumps({"base": base, "h0_sha": h0_sha, "run_id": run_id,
                                 **scoring_identity.fields(args.scoring_identity),
-                                **dataset_runtime_identity.fields(args.dataset_runtime_identity)}, default=str))
+                                **dataset_runtime_identity.fields(args.dataset_runtime_identity),
+                                **candidate_runtime.fields(args.harness_runtime_identity)}, default=str))
             except (TypeError, OSError) as exc:
                 console.note(f"could not write h0.json ({exc}); this run cannot be a --h0-from "
                              f"donor", level="warn")
@@ -2528,7 +2673,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # Round 0's state too: "measure H0 on the exam" is the baseline every later eval is
     # read against, and it needs a state to measure exactly like any other round.
     # (`h0_sha` was committed before the measurement, above.)
-    if resume_state is None:
+    if resume_state is None and not (run_dir / "state_after_round0").exists():
         _save_round_state(run_dir, 0, work)
     if resume_state is not None:
         # The points already on disk are the record; a resumed run appends to them.
@@ -2548,6 +2693,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             sampling=sampling,
             scoring_identity=args.scoring_identity,
             dataset_runtime_identity=args.dataset_runtime_identity,
+            harness_runtime_identity=args.harness_runtime_identity,
             scores=[base["per_task"][t] for t in _scored(base, task_ids)],
             task_ids=_scored(base, task_ids),
             train_scores=[base["per_task"][t] for t in _scored(base, train_ids)],
@@ -2565,6 +2711,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             per_task_trials=base.get("per_task_trials"),
             cached_tasks=base.get("cached_tasks"),
             **test_rate_fields(base))]
+    if resume_state is None and args.harness_preparation is not None:
+        curve[0]["harness_preparation"] = args.harness_preparation
+        curve[0]["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
     # The base harness is always evaluated by the platform, so its point is a
     # platform measurement like any other. Leaving the field unset made the
     # exported record claim the score was the method's -- the opposite of true.

@@ -25,6 +25,7 @@ from eval.run.metrics import ci95
 from eval.run.metrics import mean
 from harnessgrad import scoring_identity as scoring_identity_mod
 from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+from harnessgrad import candidate_runtime
 from harnessgrad.environments import _env_record
 from eval.observe.tracing import task_file
 from harnessgrad.methods import PlatformTampered
@@ -293,7 +294,7 @@ def _curve_point(*, run_id, round_index, identity, sampling, scores, task_ids,
                  per_task_test_rate=None, test_rate=None, test_rate_n_tasks=0,
                  tests_passed=0, tests_total=0,
                  per_task_test_rate_trials=None, per_level=None, scoring_identity=None,
-                 dataset_runtime_identity=None) -> dict:
+                 dataset_runtime_identity=None, harness_runtime_identity=None) -> dict:
     isolation_by_task = {tid: (per_task_scorer_isolation or {}).get(tid, "unknown")
                          for tid in task_ids}
     isolation = common_class(isolation_by_task.values())
@@ -303,6 +304,7 @@ def _curve_point(*, run_id, round_index, identity, sampling, scores, task_ids,
         "identity": identity,
         **scoring_identity_mod.fields(scoring_identity),
         **dataset_runtime_identity_mod.fields(dataset_runtime_identity),
+        **candidate_runtime.fields(harness_runtime_identity),
         # Which side of the split this point measures, and therefore what `score` *is*.
         #
         # `score` cannot be null on a train run: the method's acceptance rule reads it

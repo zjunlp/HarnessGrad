@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Build a harness's dependency overlay, once, for each Python version it will meet.
+"""Prepare a Harness's declared Python runtime or its legacy dependency overlays.
+
+Managed Python
+--------------
+A harness.json with runtime.kind="python" selects a source-owned, fully pinned
+requirements lock and one CPython minor. This branch uses uv and bubblewrap,
+installs wheels only, and never imports installed packages on the host. The
+interpreter must already be installed. Configuration is offline by default;
+--fetch explicitly allows wheel downloads. --list checks without building.
+See docs/writing_a_harness.md for the declaration and lifecycle contract.
+
+Legacy overlays
+---------------
+The remaining documentation below applies to harnesses without that declaration.
 
     python3 tools/configure_harness.py --harness base_harness/loop          # the `files` half
     python3 tools/configure_harness.py --harness base_harness/loop --dataset terminal_bench
@@ -72,6 +85,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -511,9 +525,55 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="report, build nothing")
     ap.add_argument("--force", action="store_true", help="rebuild an existing overlay")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--fetch", action="store_true",
+                    help="managed Python only: explicitly allow downloading wheels during configuration")
+    ap.add_argument("--runtime-root", type=Path,
+                    help="managed Python only: external immutable dependency store")
+    ap.add_argument("--runtime-timeout-s", type=float, default=120,
+                    help="managed Python preparation command timeout (default: 120 seconds)")
     args = ap.parse_args()
 
     harness = Path(args.harness).expanduser().resolve()
+    from eval.ckpt.source_tree import runtime_spec
+    try:
+        managed_spec = runtime_spec(harness)
+    except (OSError, ValueError) as exc:
+        print(f"invalid runtime declaration: {exc}", file=sys.stderr)
+        return 2
+    if managed_spec is not None and managed_spec["kind"] == "python":
+        from harnessgrad import python_harness_runtime as managed
+        if not math.isfinite(args.runtime_timeout_s) or args.runtime_timeout_s <= 0:
+            print("--runtime-timeout-s must be finite and positive", file=sys.stderr)
+            return 2
+        if (args.dataset or args.builder_image or len(args.python) > 1
+                or (args.python and args.host_interpreter != DEFAULT_HOST_INTERPRETER)
+                or (args.list and (args.fetch or args.force or args.python
+                                   or args.host_interpreter != DEFAULT_HOST_INTERPRETER))):
+            print("managed Python supports one native interpreter, not dataset/image overlays; --list is read-only", file=sys.stderr)
+            return 2
+        selected = args.python[0] if args.python else (
+            args.host_interpreter if args.host_interpreter != DEFAULT_HOST_INTERPRETER else None)
+        try:
+            receipt = managed.prepare(harness, build=not args.list, allow_downloads=args.fetch,
+                                      python=selected if not args.list else None, root=args.runtime_root,
+                                      timeout_s=args.runtime_timeout_s, force=args.force)
+        except managed.RuntimeUnavailable as exc:
+            if args.json:
+                print(json.dumps(exc.receipt or {"status": "invalid", "detail": str(exc)}, indent=2))
+            else:
+                print(str(exc), file=sys.stderr)
+            return 1 if args.list else 2
+        if args.json:
+            print(json.dumps(receipt, indent=2))
+        else:
+            artifact = receipt["identity"]["artifact"]
+            print(f"managed Python {managed_spec['python']}  {artifact['runtime_id']}")
+            print(f"interpreter  {artifact['python']}")
+            print(f"prepared in {receipt['seconds']:.3f}s; cache hit: {receipt['cache_hit']}")
+        return 0
+    if args.fetch or args.runtime_root is not None or args.runtime_timeout_s != 120:
+        print("--fetch/--runtime-root/--runtime-timeout-s require a managed Python declaration", file=sys.stderr)
+        return 2
     install = runtime.install_spec(harness)
     if install is None:
         manifest = harness / "harness.json"

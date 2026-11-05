@@ -58,6 +58,11 @@ DOCUMENTATION_ONLY = ("notes",)
 #: the platform's own files into a measured tree.
 _NOT_SOURCE = (".git", "__pycache__", "_harnessgrad", "node_modules", ".state")
 
+_MANAGED_PYTHON_SMOKE_UNSUPPORTED = (
+    'managed Python smoke is not supported by validate_harness; '
+    'use driver.py --harness-path <dir> --dataset <dataset> --rounds 0 '
+    'with the sandbox enabled to execute its bound runtime')
+
 
 def _resolve(path: Path) -> Path:
     """Normalize old pathlib's loop RuntimeError into a refused input."""
@@ -104,12 +109,12 @@ def _tree_files(root: Path, ignored=(), *, boundary: Path | None = None) -> list
     return sorted(files, key=lambda item: item[0].encode('utf-8'))
 
 
-#: Bytecode is the one thing excluded from a source identity. It is *derived* from sources
+#: Bytecode is excluded from the legacy submission identity. It is *derived* from sources
 #: that are hashed anyway, and it appears or disappears depending on whether the tree has
 #: ever been imported -- measured 2026-11-01: a `base_harness/loop` copy gained a
 #: `__pycache__/` when the test suite loaded its `agent.py`, and the same submission then
-#: hashed differently. Everything else stays in, including Bun state, because that is what
-#: actually ran.
+#: hashed differently. Legacy/Bun input keeps everything else. Managed Python uses its
+#: source-only copying policy: generated environments and runtime state are not inputs.
 _BYTECODE = '__pycache__'
 
 
@@ -121,7 +126,8 @@ def source_identity(root: Path) -> dict:
     `entries` counts these file paths; directories contribute no entry. Safe
     in-tree links use their logical path and target bytes; escaping, broken or
     cyclic links are refused. Bytecode (`__pycache__/`, `*.pyc`) is excluded -- see
-    `_BYTECODE`; every other input file is included, including Bun state.
+    `_BYTECODE`; every other legacy input file is included, including Bun state.
+    Managed Python also excludes generated environments/state using its source-copy policy.
 
     **This is the submission contract's `path\\0content` hash, not a Git tree hash.** The
     platform records two identities for an external harness and they are different
@@ -131,8 +137,17 @@ def source_identity(root: Path) -> dict:
     actually ran -- the same name and the same function the curve point carries.
     """
     root = _resolve(Path(root))
-    files = [(name, path) for name, path in _tree_files(root, ignored=(_BYTECODE,))
-             if not name.endswith('.pyc')]
+    ignored, bytecode = (_BYTECODE,), ('.pyc',)
+    try:
+        manifest = json.loads((root / 'harness.json').read_bytes())
+    except (OSError, ValueError):
+        manifest = {}
+    runtime = manifest.get('runtime') if isinstance(manifest, dict) else None
+    if isinstance(runtime, dict) and runtime.get('kind') == 'python':
+        from eval.ckpt.source_tree import PYTHON_BYTECODE, PYTHON_GENERATED
+        ignored, bytecode = PYTHON_GENERATED, PYTHON_BYTECODE
+    files = [(name, path) for name, path in _tree_files(root, ignored=ignored)
+             if not name.endswith(bytecode)]
     digest = hashlib.sha256()
     for name, path in files:
         digest.update(name.encode('utf-8') + b'\0')
@@ -349,13 +364,21 @@ def check(root: Path) -> list[dict]:
     if role not in ROLES:
         problem('manifest-invalid', f"role {role!r} is not one of {list(ROLES)}", 'role')
 
-    from eval.ckpt.source_tree import BUN_GENERATED, runtime_spec
+    from eval.ckpt.source_tree import BUN_GENERATED, PYTHON_GENERATED, runtime_spec
     try:
         runtime = runtime_spec(root)
     except (OSError, ValueError) as exc:
         problem('manifest-invalid', str(exc), 'runtime')
         runtime = None
-    ignored = BUN_GENERATED if runtime else _NOT_SOURCE
+    ignored = (PYTHON_GENERATED if runtime and runtime["kind"] == "python"
+               else BUN_GENERATED if runtime else _NOT_SOURCE)
+    if runtime and runtime["kind"] == "python":
+        try:
+            from harnessgrad.python_harness_runtime import descriptor, source_fingerprint
+            descriptor(root)
+            source_fingerprint(root)
+        except (OSError, ValueError) as exc:
+            problem('manifest-invalid', str(exc), 'runtime')
     try:
         # Check links throughout the source, not only the declared entrypoint.
         _tree_files(root, ignored)
@@ -383,6 +406,9 @@ def validate(root: Path, smoke: bool) -> list[str]:
     if unknown:
         print(f"  note: extra manifest keys ignored by the platform: {unknown}")
     if smoke:
+        runtime = man.get('runtime')
+        if isinstance(runtime, dict) and runtime.get('kind') == 'python':
+            return [_MANAGED_PYTHON_SMOKE_UNSUPPORTED]
         base = root / man.get('path', '.')
         errs.extend(_smoke(base, base / man['entrypoint']))
 
@@ -502,10 +528,13 @@ def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> lis
     problems = check(root)
     if problems:
         return problems
+    man = json.loads((root/'harness.json').read_text(encoding='utf-8'))
+    runtime = man.get('runtime')
+    if isinstance(runtime, dict) and runtime.get('kind') == 'python':
+        return [{'code': 'smoke-unsupported', 'detail': _MANAGED_PYTHON_SMOKE_UNSUPPORTED}]
     state = root/'.state'
     if state.is_symlink() or (state.exists() and not state.is_dir()):
         return [{'code':'smoke-failed','detail':'.state must be an ordinary directory'}]
-    man = json.loads((root/'harness.json').read_text(encoding='utf-8'))
     env = {'PATH': '/usr/bin:/bin', 'HOME': '/tmp', 'TMPDIR': '/tmp',
            'HG_AGENT_BACKEND': 'mock', 'PYTHONDONTWRITEBYTECODE': '1'}
     limits = sandbox.configured_limits()

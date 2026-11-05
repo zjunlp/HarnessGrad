@@ -86,7 +86,7 @@ def owned_source(repo):
     be written to).
     """
     spec = runtime_spec(repo)
-    if spec is None:
+    if spec is None or spec["kind"] != "bun":
         return None
     root = Path(repo).resolve()
     prepared = _prepared_installation(root)
@@ -119,10 +119,12 @@ def owned_source(repo):
 def admit(repo, env):
     """Formal execution cannot opt into the adapter's external-source diagnostic."""
     try:
+        spec = runtime_spec(repo)
+        if spec is not None and spec["kind"] != "bun":
+            return {}
         if env.get("HG_AGENT_OPENCODE_EXTERNAL_SOURCE") not in (None, "", "0"):
             raise RuntimeUnavailable("External source diagnostic mode is forbidden in formal execution")
-        spec = runtime_spec(repo)
-        if spec is None:
+        if spec is None or spec["kind"] != "bun":
             return {}
         prepared = _prepared_installation(repo, env)
         if prepared is not None:
@@ -319,7 +321,7 @@ def _owned_state(repo: Path) -> Path:
 
 def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
     declaration = runtime_spec(repo)
-    if declaration is None:
+    if declaration is None or declaration["kind"] != "bun":
         return None
     prepared = _prepared_installation(repo)
     owned = ((declaration, Path(prepared["source"]), Path(prepared["entrypoint"]), True)

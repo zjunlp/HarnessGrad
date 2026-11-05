@@ -238,3 +238,140 @@ Temporary test environments, workspaces and the comparison worktree were cleaned
 No user dataset/runtime was replaced and no main merge was made. Identity still
 covers only explicitly managed dataset artifacts, not a sealed OS, unmanaged
 dataset dependencies or Harness candidate dependency preparation/lifecycle.
+
+### Candidate-owned Python preparation and lifecycle (2026-11-06)
+
+Harnesses may opt into `runtime={kind:python, python:X.Y,
+requirements:requirements.lock}`. The new stdlib-only
+`python_harness_runtime` manager shares inventory/atomic publication helpers with
+dataset runtimes while keeping its own schema and trust boundary. A complete
+flat exact lock is resolved and checked before wheel-only installation in a
+sparse bubblewrap builder. Automatic candidate preparation is offline; explicit
+`configure_harness --fetch` permits downloads, without Python downloads, sdists,
+local/editable dependencies or install hooks. Installed metadata is read with a
+trusted base `-I -S` interpreter, so package startup never runs on the host.
+
+Preparation follows candidate staging and commit, once before reuse or
+measurement. Source-only edits share dependency artifacts; lock changes prepare
+another artifact. An append-only receipt records success/refusal and preparation
+time, which enters wall time without consuming tokens or task trials. Failed
+candidates retain source and remain unmeasured. Managed staging checks source
+ownership before Git initialization writes `.gitignore`; a canary regression
+verified that an escaping alias cannot modify an external file or destroy an
+existing workspace. Runtime prefixes cannot overlap platform/candidate/work
+trees. Existing generated local environments are excluded from source copies.
+
+Native files actors start the exact bound venv with isolated startup, a trusted
+source bootstrap, sanitized Python environment, read-only dependencies and
+private HOME/temp/`.state`. Ignored channel/history/state paths are masked, and
+exact admitted runtime mounts under private `/tmp` survive the hides without
+revealing adjacent files. The platform interpreter projection is disabled for
+this actor only; scorer/provider/service environments do not inherit actor
+dependencies. Containers, observed/cooperative workers, agent package
+projections, external runtime paths and unsandboxed launches are explicitly
+unsupported. Legacy/Bun behavior and existing base Harness recipes are retained.
+Validator static checks accept the new contract; both legacy smoke entrances
+refuse it and direct callers to a sandboxed driver control.
+
+`harness_runtime_identity` binds all owned source bytes (including gitignored
+source), the dependency declaration and actual artifact. It stays separate from
+fixed dataset identity because dependencies are legitimate candidate edits.
+Cache and H0 check all recorded copies and live artifacts before reuse. H0 tools
+also bind staged source, support explicit Harness selection, and hand an exact
+managed binding to the driver. Train resume validates each checkpoint's own
+source/artifact, while eval resume checks selected source and completed progress
+before writes. Managed snapshots now naturally start at round 0 and use saved
+source-only states, preserving the existing portable schema and parent chain.
+Restoring after physical checkpoint deletion needs no H0 remeasurement or
+dependency rebuild.
+
+Parent validation covers 840 distinct passing cases, including 135 new controls,
+offline installed-wheel checks and actual sandboxed actors/H0 CLI creation and
+reuse. Later targeted validation covers automatic portable snapshots and the
+installed managed modules. One DSH shared-H0 test failed identically on clean
+`49a5e631` because this machine has no configured DSH root. Two explicit opt-in
+provider controls were not enabled, and one historical `smoke-stage1` test skipped
+because its record is absent. No full-suite success or benchmark performance is
+claimed. Commands, raw failures/retries, JUnit, case index, source hashes and
+selected control receipts are retained outside source at
+`/tmp/hg-python-candidate-20261106-vl_hpflt`.
+
+This phase does not migrate all base Harnesses or seal system libraries. Old
+dependency instances must remain available while runs still reference their
+exact physical manifests. No real inference, main merge or user dataset/runtime
+replacement was performed.
+
+### Correct candidate source identity and checkpoint eval provenance (2026-11-06)
+
+The three review findings against `f1920ebd` are fixed. Source fingerprints now
+hash a canonical, schema-tagged list of paths, executable flags and content
+digests. Arbitrary binary content cannot impersonate another file record.
+Bindings use version 2; ambiguous version-1 bindings are refused before artifact
+admission, H0/cache reuse or resume. Historical records are not rewritten or
+silently upgraded. Dependency artifact schema, recipe and keys are unchanged,
+so their valid prepared contents remain reusable for new measurements.
+
+The managed actor bootstrap adds the validated entrypoint directory before the
+Harness root. Nested sibling imports have ordinary script precedence, root
+imports still work, and `-I -B`, environment sanitization and task isolation stay
+in force. Checkpoint eval now requires the selected managed curve point's exact
+original binding and admits its retained source/artifact before preparation or
+eval record writes. Missing, null, malformed, wrong-round or damaged provenance
+cannot select a newer publication or fall back to the initial run binding.
+Legacy unopted checkpoints retain optional curve provenance.
+
+Validation covers 375 distinct passing cases, including 17 new regressions,
+38 passing subtests, installed-wheel checks and actual bubblewrap actors. The
+binary framing control keeps the Git tree unchanged while splitting ignored
+binary content into executable Python source: its old binding is refused, its
+old cached score is unused, and a new binding reuses dependencies while measuring
+the changed answer. Nested-entry controls verify sibling precedence, root/wheel
+imports and ambient-path isolation. Lifecycle controls publish artifact B after
+training with A, retain A for valid eval, and refuse missing/damaged provenance
+before prepare or measurement. V1 H0/resume controls preserve all prior bytes.
+
+One historical `smoke-stage1` test skipped because its record is absent. An
+extended eval-coverage test has an existing mock that accepts only positional
+arguments while the baseline caller passes identity keywords; its failure was
+reproduced on clean `f1920ebd` and left outside this fix. Initial packaging checks
+also exposed missing build tools/inactive Python PATH in the borrowed test
+environment; an offline task-owned tools venv passed the corrected invocation
+without modifying the user's environment. Raw attempts, JUnit, source hashes,
+commands, independent review and cleanup receipts are preserved at
+`/tmp/hg-candidate-review-fixes-20261106-sqfmyxij`. No real model inference or main
+merge was performed.
+
+### Enforce source directories that survive file-only snapshots (2026-11-06)
+
+The empty-directory finding against `81be3510` is addressed by a single source
+policy for managed Python: every non-generated directory must be a parent of a
+retained owned file. Empty directories and directories populated only by filtered
+state, environments or bytecode are refused. The common source fingerprint check
+already guards static validation, Git staging, preparation, direct admission,
+cache/H0 reuse and checkpoint recovery, so unsupported input cannot reach actor
+measurement. Staging refusal preserves an existing workspace and the input tree;
+initial and method-produced invalid sources remain retained, unmeasured evidence.
+Platform state and filtered local environments keep their separate treatment,
+and unopted Harness copying is unchanged.
+
+A retained marker such as `.gitkeep` makes directory presence explicit. Such a
+file is hashed and snapshotted even when Git ignores it. Supported directories
+therefore round-trip through the existing snapshot schema as file parents;
+no directory-only artifact format or implicit source mutation is introduced.
+Source schema and binding version are 3. V1 and v2 histories are preserved but
+cannot be upgraded for score reuse or resume, because v2 did not certify this
+directory policy. Dependency artifact schema/keys remain unchanged and their
+valid contents can still serve new source bindings.
+
+Validation covers 320 distinct passing cases and 38 passing subtests. Eighteen
+new or extended cases cover empty/generated-only directories, direct preparation
+and H0 lookup, refusal before workspace deletion or builds, initial/candidate
+unmeasured handling, v2 rejection, and a real bubblewrap/cache/snapshot control.
+The positive control restores an ignored directory marker with the original
+binding and answer; deleting the marker is refused while the directory is empty,
+and removing the directory requires a new binding and fresh score while reusing
+the dependency artifact. Packaging, imports, file snapshots and ordinary H0/
+resume regression checks also pass. Commands, JUnit, selected control receipts,
+source hashes and cleanup evidence are retained outside the checkout at
+`/tmp/hg-empty-source-fix-20261106-ducnxdwi`. No real model inference or main merge
+was performed.

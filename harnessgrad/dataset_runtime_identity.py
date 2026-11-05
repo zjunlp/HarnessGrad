@@ -214,7 +214,8 @@ def for_evaluation(value, tasks, setups, verifiers):
     return selected
 
 
-def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env=None):
+def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env=None,
+               managed_harness=False):
     """Preflight opted-in adapters under the driver's effective environment.
 
     A subprocess prevents adapter imports and configuration caches in this tool
@@ -222,10 +223,12 @@ def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env
     service, scorer or installer. Legacy tools keep their metadata-only discovery.
     """
     from data.scaffolds import registry
-    if not registry.managed_runtime(dataset):
+    if not managed_harness and not registry.managed_runtime(dataset):
         return None
     request = {"dataset": dataset, "side": side, "task_ids": task_ids,
                "split": split, "sampling": sampling}
+    if managed_harness:
+        request["managed_harness"] = True
     result = subprocess.run([sys.executable, "-B", "-m", __name__],
                             cwd=Path(__file__).resolve().parents[1], env=env,
                             input=_canonical(request), capture_output=True, text=True, timeout=120)
@@ -258,7 +261,10 @@ def _h0_preflight(request):
         if not ids:
             raise ValueError("H0 has no selected tasks")
         _, setups, verifiers = registry.load_tasks(dataset, task_ids=ids)
-        registry.load_envs(dataset, task_ids=ids)
+        envs = registry.load_envs(dataset, task_ids=ids)
+        if request.get("managed_harness"):
+            from harnessgrad import candidate_runtime
+            candidate_runtime.validate_routes(envs, setups, True)
         return capture(dataset, ids, setups, verifiers)
 
 

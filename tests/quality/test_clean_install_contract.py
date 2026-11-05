@@ -42,6 +42,9 @@ RESOURCES = (
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
+    "harnessgrad/candidate_runtime.py",
+    "harnessgrad/python_harness_runtime.py",
+    "harnessgrad/python_artifacts.py",
     "methods/noop/method.json",
     "methods/dsh-improver",
 )

@@ -34,6 +34,7 @@ from harnessgrad import config as platform_config
 from harnessgrad import policies
 from harnessgrad import scoring_identity
 from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+from harnessgrad import candidate_runtime
 from harnessgrad import snapshot
 from harnessgrad.channel import _stage_for_method
 from harnessgrad.environments import _env_record
@@ -94,7 +95,8 @@ def _no_loadable_change(changed: list[str], unreachable: list[str]) -> dict | No
 
 
 def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | None = None,
-                     dataset_runtime_identity: dict | None = None) -> dict | None:
+                     dataset_runtime_identity: dict | None = None,
+                     harness_runtime_identity: dict | None = None) -> dict | None:
     """The earlier point that already measured **this exact harness**, or None.
 
     `identity.harness_sha` is a *content address* -- `ckpt.git_state.commit_state`
@@ -109,6 +111,7 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
     from eval.containers import bun_runtime
     try:
         dataset_runtime_identity_mod.admit(dataset_runtime_identity)
+        actor_identity = candidate_runtime.admit(repo, harness_runtime_identity) if repo is not None else harness_runtime_identity
         current = bun_runtime.identity(repo) if repo is not None else None
     except (bun_runtime.RuntimeUnavailable, OSError, TypeError, ValueError):
         # Let normal evaluation report the unavailable runtime; never reuse scores
@@ -121,6 +124,8 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
             continue
         if dataset_runtime_identity_mod.problems(
                 point.get('dataset_runtime_identity'), dataset_runtime_identity):
+            continue
+        if candidate_runtime.problems(point.get("harness_runtime_identity"), actor_identity):
             continue
         if current is not None:
             records = (point.get("env") or {}).get("harness_runtime") or []
@@ -348,7 +353,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     # decided to keep -- so the request now carries *both* and the method chooses. One copy
     # per run, made before any step, because it must not move as the run goes on.
     pristine = method_root / "base_harness"
-    copy_harness(work, pristine, ignore=shutil.ignore_patterns(".git"))
+    (copy_rejected_harness if curve and curve[-1].get("unmeasured") else copy_harness)(
+        work, pristine, ignore=shutil.ignore_patterns(".git"))
 
     #: Rounds whose step did not finish -- the edit sequence never applied. Recorded
     #: rather than only printed: "3 rounds but 2 steps" is a fact a reader comparing two
@@ -675,6 +681,38 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 candidate_problems.append(problem)
         has_manifest = not candidate_problems
         sha = commit_state(work, f"round {r}: {step.get('label', 'method step')}")
+        preparation = None
+        actor_binding = None
+        preparation_started = time.monotonic()
+        if has_manifest:
+            try:
+                prior_binding = next((point.get("harness_runtime_identity") for point in reversed(curve)
+                                      if (point.get("identity") or {}).get("harness_sha") == sha
+                                      and not point.get("unmeasured")), None)
+                if prior_binding is not None and not candidate_runtime.matches_source(work, prior_binding):
+                    prior_binding = None
+                preparation = candidate_runtime.prepare(
+                    work, binding=prior_binding, envs=envs, setups=setups, sandbox=args.sandbox)
+                actor_binding = None if preparation is None else preparation["identity"]
+                if getattr(args, "harness_runtime_identity", None) is not None and actor_binding is None:
+                    raise ValueError("a managed Python run cannot drop or switch its runtime declaration")
+                actor_binding = candidate_runtime.admit(
+                    work, actor_binding, envs=envs, setups=setups, sandbox=args.sandbox)
+            except (OSError, TypeError, ValueError) as exc:
+                preparation = getattr(exc, "receipt", None) or {
+                    "status": "failed", "error": str(exc),
+                    "seconds": round(time.monotonic() - preparation_started, 6)}
+                candidate_problems.append(f"harness runtime preparation: {exc}")
+                has_manifest = False
+                actor_binding = None
+            if preparation is not None:
+                candidate_runtime.record_preparation(run_dir, r, preparation)
+        preparation_seconds = float((preparation or {}).get("seconds") or 0.0)
+        if preparation is not None:
+            cumulative["harness_preparation_wall_clock_s"] = (
+                cumulative.get("harness_preparation_wall_clock_s", 0.0) + preparation_seconds)
+            cumulative["wall_clock_s"] += preparation_seconds
+        args.current_harness_runtime_identity = actor_binding
         diff = _save_round_diff(run_dir, r, work,
                                 curve[-1]["identity"]["harness_sha"], sha)
         # **What changed, measured -- as opposed to what the method said it changed.**
@@ -692,7 +730,12 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # The round's committed state as one portable, git-free JSON artifact, so the
         # round stays openable even when `state_after_roundN` was not kept. Its own
         # failure is reported and swallowed inside `_snapshot_round`.
-        snapshot_parent = (_snapshot_round(run_dir, r, work, run_id=run_id,
+        # Managed snapshots carry owned source only, including rejected candidates
+        # of a managed run; method channels and generated environments are not source.
+        managed_source = (actor_binding is not None
+                          or getattr(args, "harness_runtime_identity", None) is not None)
+        snapshot_source = run_dir / f"state_after_round{r}" if managed_source else work
+        snapshot_parent = (_snapshot_round(run_dir, r, snapshot_source, run_id=run_id,
                                            harness_sha=sha, parent_id=snapshot_parent)
                            or snapshot_parent)
         # **An identical candidate costs nothing to measure.** A method without an early
@@ -735,10 +778,14 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if declared_point is not None and (runtime_reuse_error or dataset_runtime_identity_mod.problems(
                 declared_point.get('dataset_runtime_identity'), reuse_identity)):
             declared_point = None
+        if declared_point is not None and candidate_runtime.problems(
+                declared_point.get("harness_runtime_identity"), actor_binding):
+            declared_point = None
         prior_point = declared_point
         if prior_point is None:
             prior_point = (_identical_prior(curve, sha, args.trials, repo=work,
-                                           dataset_runtime_identity=reuse_identity)
+                                           dataset_runtime_identity=reuse_identity,
+                                           harness_runtime_identity=actor_binding)
                            if (has_manifest and not runtime_reuse_error
                                and getattr(args, "reuse_identical", False))
                            else None)
@@ -751,6 +798,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 f"{len(tasks)} task runs", level="info")
             res = {"per_task": dict(prior_point.get("per_task") or {}),
                    **dataset_runtime_identity_mod.fields(reuse_identity),
+                   **candidate_runtime.fields(actor_binding),
                    "invalid": [], "harness_failed": [],
                    "trials": (prior_point.get("sampling") or {}).get("trials", args.trials),
                    "reused_from": reused_from,
@@ -762,6 +810,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                             trials=args.trials, progress_dir=run_dir,
                             sandbox=args.sandbox, setups=setups, verifiers=verifiers,
                             **dataset_runtime_identity_mod.fields(getattr(args, 'dataset_runtime_identity', None)),
+                            **candidate_runtime.fields(actor_binding),
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
                             recordings_root=run_dir / "recordings",
                             round_no=r)
@@ -813,6 +862,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             dataset_runtime_identity=(getattr(args, 'dataset_runtime_identity', None)
                 if getattr(args, 'dataset_runtime_identity', None) is not None
                 else (res or {}).get('dataset_runtime_identity')),
+            harness_runtime_identity=actor_binding,
             scores=[res["per_task"][t] for t in _scored(res, task_ids)],
             task_ids=_scored(res, task_ids),
             train_scores=[res["per_task"][t] for t in _scored(res, train_ids)],
@@ -825,7 +875,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             evaluation_protocols=(res or {}).get("evaluation_protocols"),
             split=split,
             env_record=_env_record(envs, task_ids if res else []),
-            cost=_cost_of(res, measured_trials, dt + gen_share,
+            cost=_cost_of(res, measured_trials, dt + gen_share + preparation_seconds,
                           step.get("claimed_cost")),
             cumulative=cumulative,
             n_trials=(res or {}).get("trials"), score_std=(res or {}).get("score_std"),
@@ -840,6 +890,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             files_claimed=reply.get("files"),
             candidate_problems=candidate_problems,
             method_reported=step.get("method_reported") or {})
+        if preparation is not None:
+            point["harness_preparation"] = preparation
+            point["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
         point["edit_kind"] = step.get("edit_kind")
         # **A reused measurement says so.** The score is the earlier state's score, so a
         # reader -- or a statistic like "best of N rounds" -- must be able to tell a

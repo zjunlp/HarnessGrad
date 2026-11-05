@@ -51,6 +51,7 @@ all rather than because the platform has opinions:
 | `env_kinds` | no (default `["files"]`) | which environments this harness can operate on. The platform refuses a run whose dataset needs a kind you do not declare, rather than scoring it zero on every task. Declaring `"exec"` means your harness can run inside a container — so it must be **self-contained except for `install`**: the image is not the host, and the host's interpreter, packages and paths are not there |
 | `install` (again, for `exec`) | — | if you declare `"exec"`, list your dependencies here. The image will not have them, your tree is read-only during a run, and a missing import fails with a traceback the platform records as an exit code — which reads like a weak harness. Measured: the platform's own base harness scored zero on every container task for `ModuleNotFoundError: No module named 'openai'` |
 | `runtime_paths` | no (default `[]`) | absolute files or dedicated directory trees the sandbox must bind read-only because you need them — a CLI installed outside `/usr`, a runtime you were built against. Applies to `files` **and** `exec`: a task image need not have any runtime at all — the real Terminal-Bench images ship no `python3` — so the platform mounts the interpreter it invokes your entrypoint with, and mounts whatever you list here read-only beside it. |
+| `runtime` | no | opt into a managed Python environment with the declaration below, or the existing Bun runtime contract. Managed Python replaces legacy `install` overlays for this Harness. |
 
 External CLI templates can require local installation preparation before measurement.
 The [Codex preparation procedure](../base_harness/codex/README.md) fixes one CLI and
@@ -70,6 +71,105 @@ your harness is allowed to rewrite any of it — including the entrypoint.
 > If you are contributing a *base* harness for others to improve, pick a version
 > and keep it stable: every curve point records it, and two runs under different
 > versions are not comparable.
+
+### 2.1 Managed Python dependencies
+
+A Python Harness can declare its own interpreter and complete dependency lock:
+
+```json
+"runtime": {
+  "kind": "python",
+  "python": "3.12",
+  "requirements": "requirements.lock"
+}
+```
+
+Add this field to `harness.json`. Keep `runtime_paths` empty, and omit `install`
+or set it to the same lock path. The lock must contain the complete dependency
+closure as unique `package==version` lines, plus optional comments. A Harness
+using only the standard library can use an empty lock. Ranges, extras, markers,
+URLs, local/editable dependencies, installer options and source distributions
+are not supported. Incomplete transitive dependencies are refused before install.
+The entrypoint and lock must be owned, normalized relative files. Other source
+files must also be regular owned files, without symbolic links.
+
+Every source directory must be the parent of a retained source file. Empty
+directories, including directories containing only filtered environments,
+bytecode or state, are refused before staging or measurement. If a directory's
+presence matters, include an owned marker file such as `.gitkeep`; it enters
+the source identity and portable snapshot even if Git ignores it. Platform
+state directories and the filtered local environments themselves remain
+excluded from source. Invalid input is rejected without deleting its directories.
+
+Install the declared CPython minor, `uv` and bubblewrap before configuration.
+From the activated platform environment:
+
+```bash
+# Offline: wheels must already be available in the operator's uv cache.
+python tools/configure_harness.py --harness /path/to/my-harness
+# Explicitly allow downloading wheels when preparing the initial environment.
+python tools/configure_harness.py --harness /path/to/my-harness --fetch
+# Check the published artifact without installing anything.
+python tools/configure_harness.py --harness /path/to/my-harness --list --json
+```
+
+Only run the preparation command matching your available wheel cache. The
+default store is `~/.cache/harnessgrad/harness-runtimes`; `HG_HARNESS_RUNTIME_ROOT`
+or `--runtime-root` selects a dedicated directory outside source/platform/work
+trees. `UV_CACHE_DIR` selects a separate installer cache. Python is never
+downloaded automatically. `--force` explicitly publishes a fresh instance; keep
+old instances while saved runs still reference them.
+
+The driver prepares each frozen candidate once, before cache lookup or
+measurement, using offline wheels. Source-only edits reuse the dependency
+artifact; lock changes prepare another artifact. Preparation failure records
+an unmeasured candidate and a private receipt. It does not become an ordinary
+zero score. Preparation time is recorded separately and included in wall time;
+it consumes no model tokens or evaluation trials.
+
+The actor starts the bound venv with `-I -B`. A trusted bootstrap adds the
+entrypoint's directory first and the Harness source root second, so nested
+entrypoints can import both sibling modules and root modules. The artifact and source are
+read-only; each task gets private HOME, temporary storage and `.state`. The
+platform venv is not projected into this actor. Provider, service and scorer
+dependencies keep their separate role bindings. This isolates Python packages;
+it does not seal the operating system or hash every system library.
+
+The current route supports **sandboxed native `files` tasks**. Container/`exec`,
+observed or cooperative workers, `agent_runtime` projections, external
+`runtime_paths` and `--no-sandbox` are refused. Existing Harnesses without
+`runtime.kind="python"` keep their legacy runtime behavior; shipped base
+Harnesses have not been migrated by this change.
+
+Each measured point records `harness_runtime_identity`, including owned source
+bytes and its exact dependency artifact. The source fingerprint also covers
+gitignored source files; generated environments, bytecode and task state are
+excluded and unavailable to the actor. H0, cache and resume validate this
+binding before reuse. Training checkpoints may have different locks and each
+is validated against its own artifact. A run starting with managed Python
+cannot later drop that declaration. Portable snapshots contain source, while
+dependency artifacts stay in the external store.
+
+Source bindings use version 3: a canonical list of file paths, executable flags
+and content digests, with the file-and-parent-directory policy above. Versions 1
+and 2 cannot safely establish this identity: v1 used ambiguous binary framing;
+v2 admitted empty directories that snapshots could lose. Both are refused for
+admission, cache/H0 reuse and resume. Their historical records are preserved;
+remeasure the source to establish a new binding. Dependency artifact manifests
+retain their existing format, and valid prepared dependencies can still be reused.
+An eval selected with `--from-run` requires the original managed checkpoint's
+binding; a missing or invalid identity is refused before preparation, without
+selecting the current published dependency instance.
+
+For shared H0, first configure the selected source, then use
+`python tools/prepare_h0.py --dataset demo --harness-path /path/to/my-harness ...`.
+The helper's discovery and dry-run paths only read prepared artifacts. It
+checks source and runtime identity before publishing or reusing the baseline.
+Static `validate_harness.py` checks support this declaration. Its CLI and upload
+smoke routes explicitly refuse managed Python; use the sandboxed driver with
+`--harness-path /path/to/my-harness --dataset demo --rounds 0 --improver none`
+and `HG_AGENT_BACKEND=mock` for a controlled interface check. This exercises the
+actual actor environment without making a model request.
 
 ---
 

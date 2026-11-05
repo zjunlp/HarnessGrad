@@ -900,3 +900,24 @@ Observed Runtime accepts an optional platform-only absolute monotonic `deadline`
 when supplied, image inspection, copying, initialization, kernel observation and
 commands share that deadline. Existing callers retain their per-command behavior
 when it is absent. Cleanup keeps its separate bounded teardown grace and receipt.
+
+## Harness 候选与数据集运行时的边界
+
+Python 依赖按执行角色管理，不按数据集统一装入一个虚拟环境：
+
+| 角色 | 声明与生命周期 |
+| --- | --- |
+| 平台编排 | 平台 Python，标准库运行依赖 |
+| 数据加载 provider | 数据集的 `runtime.json`，在导入 adapter 前准备和绑定 |
+| 可信服务／评分器 | 数据集的 `execution-runtime.json` 和各任务的 `python_runtime`，按角色挂载 |
+| Harness actor | 候选的 `harness.json.runtime.kind="python"` 和完整 lock，在固定候选之后准备 |
+
+Harness 依赖允许随方法编辑变化，因此单独记录 `harness_runtime_identity`；
+不把它并入固定的数据集身份，也不把合理的依赖修改视为数据集变更。
+每个已测 checkpoint 绑定自己的源码和实际制品，缓存、H0 与恢复运行均重新核验。
+依赖构建只发生在候选准备阶段，不在每个任务里安装。任务共享只读制品，
+可写 HOME、临时目录和 `.state` 各自私有，actor 制品不会传给 scorer 或服务。
+
+当前 Harness 路线显式支持沙箱中的 native `files`，未迁移现有 base Harness；
+无声明的 Harness 继续使用原有路径。完整声明、准备命令、限制及回执见
+[Harness Python 环境](writing_a_harness.md#21-managed-python-dependencies)。

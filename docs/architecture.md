@@ -81,6 +81,21 @@ between catalog and declaration requests. Legacy records retain their shape;
 one missing or mismatched managed identity prevents reuse and paired comparison.
 This does not migrate τ³ to managed artifacts or claim system-library closure.
 
+Harness-owned Python dependencies have a separate opt-in path:
+`harnessgrad/python_harness_runtime.py` prepares dependency-only, immutable
+artifacts from a flat complete lock, using a wheel-only bubblewrap builder.
+It reads installed metadata as data and never executes package startup on the
+host. `harnessgrad/candidate_runtime.py` binds owned source and dependencies,
+controls per-candidate preparation, and admits cache, H0 and resume operations.
+The driver prepares after staging and committing a candidate; native files
+actors launch its exact interpreter with isolated startup, read-only runtime
+mounts and private task state. Actor paths are not passed to trusted scorers or
+services. Dependencies are editable Harness state, so their identity stays
+separate from the fixed dataset identity. Every checkpoint keeps its own actor
+binding. Legacy overlays and Bun behavior remain available to unopted Harnesses.
+See [the Harness author contract](writing_a_harness.md#21-managed-python-dependencies)
+for supported routes and configuration.
+
 The top-level package remains `eval`. Its implementations are grouped by
 concern; package initializers do not import implementations:
 

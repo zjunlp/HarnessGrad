@@ -200,6 +200,31 @@ def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writabl
     return prefixes
 
 
+def _opaque_source_mounts(repo: Path, names, state_dirs):
+    """Hide ignored actor storage without changing the host's source checkout."""
+    allowed = {'.git', '_harnessgrad', '.opencode-state', '.state'}
+    if any(name not in allowed for name in names):
+        raise SandboxUnavailable('unsupported opaque source directory')
+    private_states = {Path(path).resolve() for path in state_dirs}
+    plan = []
+    for directory, dirs, files in os.walk(repo, followlinks=False):
+        for name in sorted((set(dirs) | set(files)) & set(names)):
+            path = Path(directory) / name
+            if name in dirs:
+                dirs.remove(name)
+            if path.is_symlink():
+                raise SandboxUnavailable('opaque source storage must not be a symlink')
+            if path in private_states:
+                continue  # The existing private writable .state tmpfs covers it.
+            if path.is_dir():
+                plan += ['--tmpfs', str(path), '--remount-ro', str(path)]
+            elif path.is_file():
+                plan += ['--ro-bind', '/dev/null', str(path)]
+            else:
+                raise SandboxUnavailable('opaque source storage must be an owned file or directory')
+    return plan
+
+
 def _runtime_symlinks(paths, mounted, *, hidden=()):
     """Collect links and empty traversal directories, without exposing parent trees."""
     links = {}
@@ -323,6 +348,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
             package_overlays: tuple[tuple[Path, Path], ...] = (),
             immutable_runtimes: tuple[tuple[Path, str], ...] = (),
             private_paths: tuple[Path, ...] = (),
+            platform_interpreter: bool = True,
+            opaque_source_dirs: tuple[str, ...] = (),
             unsetenv: tuple[str, ...] = ()) -> list[str]:
     """Wrap `argv` so it runs with the platform off its disk.
 
@@ -343,14 +370,16 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     if network == "none":
         plan += ["--unshare-net"]
 
-    prefixes = _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
+    prefixes = (_interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
+                if platform_interpreter else ())
     runtime_roots = tuple(Path(path) for path in (*RUNTIME, *DNS, *prefixes)
                           if Path(path).exists())
     for path in runtime_roots:
         plan += ["--ro-bind", str(path), str(path)]
-    links, runtime_directories = _interpreter_symlinks(
+    links, runtime_directories = (_interpreter_symlinks(
         prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
         writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths)
+        if platform_interpreter else ([], set()))
     runtime_links = dict(links)
 
     # Trees the harness declares it needs, bound read-only.
@@ -521,6 +550,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
                 f"the workspace is staged (ckpt/git_state.py); a workspace built by "
                 f"hand from an older commit will not have it.")
         plan += ["--tmpfs", str(state)]
+    if opaque_source_dirs:
+        plan += _opaque_source_mounts(repo, opaque_source_dirs, state_dirs)
 
     # Last mounts win: runtime_paths or a parent bind must never uncover the
     # installed reference-bearing package after its public projection is mounted.
@@ -848,6 +879,8 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
         package_overlays: tuple[tuple[Path, Path], ...] = (),
         immutable_runtimes: tuple[tuple[Path, str], ...] = (),
         private_paths: tuple[Path, ...] = (),
+        platform_interpreter: bool = True,
+        opaque_source_dirs: tuple[str, ...] = (),
         limits: dict | None = None):
     """`subprocess.run` with the namespace in place. Same return type.
 
@@ -886,6 +919,8 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
                           model_socket=model_socket, model_path=model_path,
                           tool_socket=tool_socket,
                           immutable_runtimes=immutable_runtimes,
+                          **({'platform_interpreter': False} if not platform_interpreter else {}),
+                          **({'opaque_source_dirs': opaque_source_dirs} if opaque_source_dirs else {}),
                           **({'private_paths': private_paths} if private_paths else {}),
                           **({'unsetenv': unsetenv} if unsetenv else {}))
     except SandboxUnavailable as exc:

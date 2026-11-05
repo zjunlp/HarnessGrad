@@ -124,10 +124,12 @@ def test_unopted_h0_configuration_keeps_scorer_fields_absent(dataset, monkeypatc
     monkeypatch.setattr(prepare_h0.dataset_runtime_identity, "resolve_h0", lambda *a, **k: None)
     args = SimpleNamespace(dataset=dataset, side="train", study_ids=None,
                            model="agent", endpoint="endpoint", trials=1)
-    assert prepare_h0.configuration(args) == {
+    actual = prepare_h0.configuration(args)
+    assert len(actual["harness_sha"]) == 40
+    assert actual == {
         "dataset": dataset, "side": "train", "n_study_ids": 0, "study_ids_sha": None,
         "agent_model": "agent", "agent_backend": "mock", "endpoint": "endpoint", "trials": 1,
-        "sampling": "all"}
+        "sampling": "all", "harness_sha": actual["harness_sha"]}
 
 
 def test_h0_lookup_requires_consistent_payload_metadata_and_curve(tmp_path):

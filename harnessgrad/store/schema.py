@@ -98,6 +98,9 @@ CURVE_POINT: tuple[Field, ...] = (
     Field("dataset_runtime_identity", "optional bound dataset provider/service/verifier "
                                      "runtime identities and their digest; absence preserves "
                                      "legacy records", required=False, kinds=(dict,)),
+    Field("harness_runtime_identity", "optional candidate source and managed execution "
+                                     "artifact; dependencies may change between candidates",
+          required=False, kinds=(dict,)),
 )
 
 #: Fields added at a known time. Absence is a note, not a problem: the point predates the
@@ -213,6 +216,12 @@ def check_point(point: dict, *, index: int = 0) -> tuple[list[str], list[str]]:
             validate(point["dataset_runtime_identity"])
         except (TypeError, ValueError) as exc:
             problems.append(f"{where}: {exc}")
+    if "harness_runtime_identity" in point:
+        from harnessgrad.candidate_runtime import validate
+        try:
+            validate(point["harness_runtime_identity"])
+        except (TypeError, ValueError) as exc:
+            problems.append(f"{where}: {exc}")
     return problems, notes
 
 
@@ -241,6 +250,12 @@ def check_run_meta(meta: dict) -> tuple[list[str], list[str]]:
         from harnessgrad.dataset_runtime_identity import validate
         try:
             validate(meta["dataset_runtime_identity"])
+        except (TypeError, ValueError) as exc:
+            problems.append(f"run_meta: {exc}")
+    if "harness_runtime_identity" in meta:
+        from harnessgrad.candidate_runtime import validate
+        try:
+            validate(meta["harness_runtime_identity"])
         except (TypeError, ValueError) as exc:
             problems.append(f"run_meta: {exc}")
     return problems, notes

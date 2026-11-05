@@ -8,8 +8,6 @@ libraries and the base standard library are compatibility inputs, not a sealed O
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
-import fcntl
 import hashlib
 import json
 import os
@@ -18,12 +16,16 @@ import platform
 import re
 import shutil
 import signal
-import stat
 import subprocess
 import sys
 import tempfile
 
 from harnessgrad.paths import configured_path, main_checkout
+from harnessgrad.python_artifacts import (
+    atomic_json as _atomic_json, canonical as _canonical, digest as _digest,
+    freeze as _freeze, inventory as _inventory, locked as _locked,
+    remove_instance as _remove_instance,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "harnessgrad.dataset-runtime.v1"
@@ -43,18 +45,6 @@ class DatasetRuntimeUnavailable(RuntimeError):
     def __init__(self, message, *, status="unavailable"):
         super().__init__(message)
         self.status = status
-
-
-def _canonical(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
-
-
-def _digest(path):
-    result = hashlib.sha256()
-    with Path(path).open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            result.update(block)
-    return result.hexdigest()
 
 
 def _package(name):
@@ -194,64 +184,6 @@ def _execution_paths(probe, venv):
     if any(Path(path) == Path("/") or not Path(path).is_dir() for path in paths):
         raise ValueError("execution runtime requires physical non-root directory prefixes")
     return paths
-
-
-def _inventory(venv):
-    result = {}
-    interpreter = (venv / "bin/python").resolve(strict=True)
-    for path in sorted(venv.rglob("*")):
-        relative = str(path.relative_to(venv))
-        if path.is_symlink():
-            resolved = path.resolve(strict=True)
-            if not resolved.is_relative_to(venv) and not (
-                    relative.startswith("bin/python") and resolved == interpreter):
-                raise ValueError(f"runtime symlink escapes the venv: {relative}")
-            result[relative] = {"kind": "link", "target": os.readlink(path)}
-        elif path.is_file():
-            result[relative] = {"kind": "file", "sha256": _digest(path),
-                                "mode": stat.S_IMODE(path.stat().st_mode)}
-        elif not path.is_dir():
-            raise ValueError(f"runtime contains a non-regular entry: {relative}")
-    return result
-
-
-def _freeze(venv):
-    for path in sorted(venv.rglob("*"), reverse=True):
-        if not path.is_symlink():
-            path.chmod(stat.S_IMODE(path.stat().st_mode) & ~0o222)
-    venv.chmod(stat.S_IMODE(venv.stat().st_mode) & ~0o222)
-
-
-def _remove_instance(instance):
-    for parent, dirs, _ in os.walk(instance):
-        Path(parent).chmod(0o700)
-        for name in dirs:
-            path = Path(parent) / name
-            if not path.is_symlink():
-                path.chmod(0o700)
-    shutil.rmtree(instance)
-
-
-@contextmanager
-def _locked(folder):
-    folder.mkdir(parents=True, exist_ok=True)
-    with (folder / ".prepare.lock").open("a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        yield
-
-
-def _atomic_json(path, value):
-    handle = tempfile.NamedTemporaryFile("wb", dir=path.parent, prefix=".publish-", delete=False)
-    temporary = Path(handle.name)
-    try:
-        with handle:
-            handle.write(_canonical(value))
-            handle.flush()
-            os.fsync(handle.fileno())
-        temporary.chmod(0o444)
-        os.replace(temporary, path)
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 def _admit(name, spec, folder):

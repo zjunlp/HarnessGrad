@@ -19,6 +19,17 @@ prepare_h0 = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(prepare_h0)
 
 
+
+def _mock_driver(monkeypatch, launch):
+    """Double measurements while leaving source-only Git preflight real."""
+    real_run = prepare_h0.subprocess.run
+    def dispatch(command, **kwargs):
+        if command and str(command[0]) == "git":
+            return real_run(command, **kwargs)
+        return launch(command, **kwargs)
+    monkeypatch.setattr(prepare_h0.subprocess, "run", dispatch)
+
+
 def _args(tmp_path: pathlib.Path, ids: list[str] | None = None, **over):
     ids_file = None
     if ids is not None:
@@ -45,8 +56,10 @@ def test_a_different_study_set_or_model_is_a_different_h0(tmp_path):
                 json.dumps(c, sort_keys=True)}) == 3
 
 
-def _write_run(root: pathlib.Path, name: str, *, per_task: dict, invalid=None, sha="abc",
+def _write_run(root: pathlib.Path, name: str, *, per_task: dict, invalid=None, sha=None,
                config=None) -> pathlib.Path:
+    if sha is None:
+        sha = (config or {}).get("harness_sha", "abc")
     run = root / name
     run.mkdir(parents=True)
     (run / "h0.json").write_text(json.dumps({
@@ -62,7 +75,8 @@ def _write_run(root: pathlib.Path, name: str, *, per_task: dict, invalid=None, s
                               "run": {"sampling": config.get("sampling", "all")}}
         (run / "curve.jsonl").write_text(json.dumps({"measured_by_platform": True,
             "sampling": {"policy": config.get("sampling", "all")}, "identity": {
-            "agent_model": config["agent_model"], "agent_backend": config["agent_backend"]}}))
+            "agent_model": config["agent_model"], "agent_backend": config["agent_backend"],
+            "harness_sha": sha}}))
     (run / "run_meta.json").write_text(json.dumps(metadata))
     return run
 
@@ -143,7 +157,7 @@ def test_invalid_study_file_is_refused_before_launch(tmp_path, monkeypatch, cont
     ids.write_text(contents)
     def launch(*args, **kwargs):
         pytest.fail("an invalid study file must not launch the driver")
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match=message):
         prepare_h0.main(["--dataset", "demo", "--study-ids", str(ids),
                          "--runs-root", str(tmp_path / "runs")])
@@ -158,7 +172,7 @@ def test_study_ids_are_forwarded_for_every_adapter(tmp_path, monkeypatch, datase
     def launch(command, **kwargs):
         captured.update(command=command, env=kwargs["env"])
         return prepare_h0.subprocess.CompletedProcess(command, 2)
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="H0 run failed"):
         prepare_h0.main(["--dataset", dataset, "--study-ids", str(ids),
                          "--runs-root", str(tmp_path / "runs")])
@@ -197,7 +211,7 @@ def test_split_file_identity_uses_contents_instead_of_path(tmp_path):
 def test_missing_split_file_is_refused_before_launch(tmp_path, monkeypatch):
     def launch(*args, **kwargs):
         pytest.fail("a missing split file must not launch the driver")
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="no such split file"):
         prepare_h0.main(["--dataset", "demo", "--split", str(tmp_path / "missing.json"),
                          "--runs-root", str(tmp_path / "runs")])
@@ -209,7 +223,7 @@ def test_model_override_reaches_the_child_environment(tmp_path, monkeypatch):
     def launch(command, **kwargs):
         captured.update(kwargs["env"])
         return prepare_h0.subprocess.CompletedProcess(command, 2)
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="H0 run failed"):
         prepare_h0.main(["--dataset", "demo", "--model", "requested-model",
                          "--runs-root", str(tmp_path / "runs")])
@@ -218,6 +232,7 @@ def test_model_override_reaches_the_child_environment(tmp_path, monkeypatch):
 
 def test_configuration_resolves_dotenv_then_environment_then_cli(tmp_path, monkeypatch):
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "base_harness/loop")
     for name in ("HG_AGENT_MODEL", "HG_AGENT_BACKEND", "HG_AGENT_BASE_URL"):
         monkeypatch.delenv(name, raising=False)
     (tmp_path / ".env").write_text("HG_AGENT_MODEL=file-model\nHG_AGENT_BACKEND=openai\n"
@@ -262,7 +277,7 @@ def test_reuse_hint_includes_the_run_store(tmp_path, capsys, monkeypatch):
     run = _write_run(tmp_path, "h0-appworld-hint", per_task={"t1": .5}, config=config)
     def forbidden_launch(*args, **kwargs):
         pytest.fail("a reusable H0 must not launch a new measurement")
-    monkeypatch.setattr(prepare_h0.subprocess, "run", forbidden_launch)
+    _mock_driver(monkeypatch, forbidden_launch)
     assert prepare_h0.main(["--dataset", "appworld", "--study-ids", str(tmp_path / "ids.txt"),
                             "--model", config["agent_model"], "--endpoint", config["endpoint"],
                             "--runs-root", str(tmp_path)]) == 0
@@ -294,6 +309,7 @@ def test_unverified_curve_cannot_publish_or_reuse_h0(tmp_path, measured):
 @pytest.mark.parametrize("inherited", [None, "environment-judge"])
 def test_opted_scoring_provider_keeps_dotenv_judge_precedence(tmp_path, monkeypatch, inherited):
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "base_harness/loop")
     monkeypatch.delenv("HG_JUDGE_MODEL", raising=False)
     if inherited is not None:
         monkeypatch.setenv("HG_JUDGE_MODEL", inherited)
@@ -352,7 +368,7 @@ def test_relative_runs_root_is_resolved_before_launching_in_another_cwd(tmp_path
     def launch(command, **kwargs):
         captured.update(command=command, cwd=kwargs["cwd"])
         return prepare_h0.subprocess.CompletedProcess(command, 2)
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="H0 run failed"):
         prepare_h0.main(["--dataset", "demo", "--runs-root", "runs"])
     command = captured["command"]
