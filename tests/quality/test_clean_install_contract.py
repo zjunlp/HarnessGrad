@@ -23,6 +23,8 @@ RESOURCES = (
     "base_harness/loop/agent.py",
     "base_harness/loop/harness.json",
     "base_harness/loop/requirements.txt",
+    "base_harness/miniswe/requirements.txt",
+    "base_harness/miniswe/README.md",
     "scenarios/demo-smoke.json",
     "data/aggregation_policies.json",
     "data/scaffolds/qa/cli/qa",

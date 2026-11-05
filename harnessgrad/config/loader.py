@@ -134,7 +134,10 @@ _RAW: tuple[str | None, ...] | None = None
 
 
 def _raw(env: Mapping[str, str]) -> tuple[str | None, ...]:
-    return tuple(env.get(name) for name in ENV_NAMES)
+    from harnessgrad.env_file import REVIEWED_ENVIRONMENT_ONLY
+    # Dataset roots also resolve through paths._settings(). A mode transition
+    # must invalidate any earlier file-derived configuration snapshot.
+    return tuple(env.get(name) for name in (*ENV_NAMES, REVIEWED_ENVIRONMENT_ONLY))
 
 
 def current() -> Config:

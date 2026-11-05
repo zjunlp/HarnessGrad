@@ -9,6 +9,7 @@ from __future__ import annotations
 from eval.ckpt.source_tree import copy_harness, has_bun_runtime
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,10 +20,24 @@ from pathlib import Path
 STATE_DIRNAME = ".state"
 
 
+def _git_environment():
+    """Isolate framework Git only; native harness child env is unchanged."""
+    from harnessgrad.env_file import reviewed_environment_only
+    if not reviewed_environment_only():
+        return None
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env.update(GIT_CONFIG_GLOBAL='/dev/null', GIT_CONFIG_SYSTEM='/dev/null',
+               GIT_CONFIG_NOSYSTEM='1', GIT_ATTR_NOSYSTEM='1', GIT_TEMPLATE_DIR='',
+               GIT_CONFIG_COUNT='3', GIT_CONFIG_KEY_0='core.hooksPath', GIT_CONFIG_VALUE_0='/dev/null',
+               GIT_CONFIG_KEY_1='core.attributesFile', GIT_CONFIG_VALUE_1='/dev/null',
+               GIT_CONFIG_KEY_2='init.templateDir', GIT_CONFIG_VALUE_2='')
+    return env
+
+
 def _git(repo: Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
-        check=True, capture_output=True, text=True, errors="replace",
+        check=True, capture_output=True, text=True, errors="replace", env=_git_environment(),
     ).stdout
 
 

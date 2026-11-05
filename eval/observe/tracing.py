@@ -454,6 +454,14 @@ def process_outcome(exit_code, stderr, wrapper: bool = False) -> str | None:
     return "stopped_by_signal"
 
 
+def _write_progress_record(path, text):
+    if os.environ.get('HG_TASK_VERDICT_JOURNAL') == '1':
+        from eval.observe.task_verdicts import replace_progress
+        replace_progress(path, text)
+    else:
+        path.write_text(text, encoding='utf-8')
+
+
 def _write_progress(progress_dir, round_no: int, tid: str,
                     measured: list[dict], unmeasured: dict | None,
                     *, diagnostic: dict | None = None,
@@ -510,10 +518,16 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                     traces.mkdir(exist_ok=True)
                     task_file(traces, f"{tid}.invalid.jsonl").write_text(
                         body, encoding="utf-8")
-            task_file(dest, f"{tid}.json").write_text(json.dumps(
+            _write_progress_record(task_file(dest, f"{tid}.json"), json.dumps(
                 record,
-                indent=1, ensure_ascii=False), encoding="utf-8")
+                indent=1, ensure_ascii=False))
             return
+        # The full round verdicts are saved only after evaluate() returns. Keep
+        # each actual verifier result now so a later interruption cannot leave
+        # only a scalar progress score. This journal is never method feedback.
+        from eval.observe import task_verdicts
+        verdict_receipt = (task_verdicts.save(progress_dir, round_no, tid, measured)
+                           if measured and os.environ.get('HG_TASK_VERDICT_JOURNAL') == '1' else None)
         from eval.verification.isolation import common_class, observed_class
         isolation = common_class(observed_class(r.get("verdict")) for r in measured)
         scores = [float((r.get("verdict") or {}).get(
@@ -551,7 +565,7 @@ def _write_progress(progress_dir, round_no: int, tid: str,
             if isinstance(value, dict):
                 wall = value.get("total")
                 break
-        task_file(dest, f"{tid}.json").write_text(json.dumps({
+        _write_progress_record(task_file(dest, f"{tid}.json"), json.dumps({
             "task_id": tid, "round": round_no,
             **({"runtime_services": [r.get("runtime_services") for r in measured]}
                if any(r.get("runtime_services") for r in measured) else {}),
@@ -571,10 +585,11 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                 last_exit, last_stderr,
                 wrapper=bool((measured[-1] if measured else {}).get("sandbox"))),
             "complete": True,
+            **({'verdict_receipt': verdict_receipt} if verdict_receipt else {}),
             **({"level": level} if level is not None else {}),
             **({"enforcement": enforcement} if enforcement is not None else {}),
             **({'trial_evidence': trial_evidence} if trial_evidence is not None else {}),
-        }, indent=1, ensure_ascii=False), encoding="utf-8")
+        }, indent=1, ensure_ascii=False))
         traces = dest / "traces"
         traces.mkdir(exist_ok=True)
         for index, result in enumerate(measured, start=1):
@@ -583,7 +598,7 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                 task_file(traces, f"{tid}.trial{index}.jsonl").write_text(
                     body, encoding="utf-8")
     except (OSError, ValueError, TypeError) as exc:                      # noqa: BLE001
-        if trial_evidence is not None:
+        if trial_evidence is not None or os.environ.get('HG_TASK_VERDICT_JOURNAL') == '1':
             raise
         print(f"warning: could not write the progress record for {tid}: {exc}",
               file=sys.stderr)

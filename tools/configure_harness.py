@@ -289,20 +289,31 @@ def verify_one(harness: Path, install: tuple[str, str], version: str,
     modules = sorted({m for p in prov["packages"].values() for m in p.get("top_level") or []})
     if not modules:
         return True, f"{version}: nothing recorded a top_level.txt; not import-probed"
-    script = ("import importlib,sys\n"
+    script = ("import importlib,json,sys\n"
               "bad=[]\n"
               f"for m in {modules!r}:\n"
               "    try: importlib.import_module(m)\n"
               "    except BaseException as e: bad.append(f'{m}: {type(e).__name__}: {e}')\n"
-              "print('\\n'.join(bad))\n")
+              "print('HGIMPORTPROBE' + json.dumps(bad))\n")
     proc = subprocess.run(
-        ["docker", "run", "--rm", "--network", "none",
+        ["docker", "run", "--rm", "--pull=never", "--network", "none",
          "-v", f"{overlay}:/overlay:ro", "-e", "PYTHONPATH=/overlay",
          "--entrypoint", python, pinned, "-c", script],
         capture_output=True, text=True, errors="replace", timeout=300)
-    bad = proc.stdout.strip()
+    # Imports may legitimately print a startup banner. Only the structured probe
+    # result describes errors; a missing/corrupt result still fails closed.
+    reports = [line[len("HGIMPORTPROBE"):] for line in proc.stdout.splitlines()
+               if line.startswith("HGIMPORTPROBE")]
+    try:
+        if len(reports) != 1:
+            raise ValueError("expected exactly one import probe result")
+        bad = json.loads(reports[0])
+        if not isinstance(bad, list) or any(not isinstance(item, str) for item in bad):
+            raise ValueError("invalid import probe result")
+    except ValueError as exc:
+        return False, f"{version}: {exc}: {(proc.stderr or proc.stdout).strip()[-500:]}"
     if proc.returncode != 0 or bad:
-        return False, f"{version}: {bad or proc.stderr.strip()[-500:]}"
+        return False, f"{version}: {'; '.join(bad) or proc.stderr.strip()[-500:] or 'import probe exited ' + str(proc.returncode)}"
     return True, f"{version}: {len(modules)} module(s) import with {python}"
 
 

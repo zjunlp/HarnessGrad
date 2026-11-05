@@ -17,6 +17,7 @@ into <workspace>/_harnessgrad/ before each call.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import json
 import os
 import secrets
@@ -33,7 +34,7 @@ from scenarios import load as load_scenario
 from tools.improver import forbidden_reason
 from tools.improver import load_config as load_improvers
 from tools.improver import resolve as resolve_improver
-from tools.validate_harness import check as check_harness, source_identity
+from tools.validate_harness import check as check_harness, source_identity, filesystem_identity
 # Imported, never copied: the page a finished run leaves behind and the one
 # `python3 tools/run_summary.py runs/<id>` writes must be the *same* page, including its
 # rule that an unknown is a named absence and never a fabricated zero.
@@ -199,7 +200,12 @@ def load_env(path: Path) -> dict:
     Real environment variables win: an explicit `HG_AGENT_MODEL=... ./driver.py`
     must not be silently overridden by a file on disk.
     """
-    from harnessgrad.env_file import read_env_file
+    from harnessgrad.env_file import read_env_file, reviewed_environment_only
+    if reviewed_environment_only():
+        # The reviewed launcher has already constructed the complete child env.
+        # Reset even when skipping files: imported config may predate this mode.
+        platform_config.reset()
+        return {}
     loaded = read_env_file(path)
     for key, value in loaded.items():
         os.environ.setdefault(key, value)
@@ -632,6 +638,30 @@ def _external_source_snapshot(source: Path, target: Path) -> None:
                             target_is_directory=owned.is_dir())
 
 
+def _strip_reviewed_bytecode(root: Path) -> None:
+    """Exclude executable caches omitted by the reviewed submission identity.
+
+    -B only prevents cache writes; Python still reads existing bytecode. Validate
+    all links before deletion, never follow a cache alias while removing it, and
+    let the subsequent full source hash refuse any broken reviewed source alias.
+    """
+    if root.is_symlink():
+        raise ValueError('reviewed snapshot root must not be a symlink')
+    owned_root = root.resolve(strict=True)
+    paths = list(root.rglob('*'))
+    for path in paths:
+        if path.is_symlink() and not path.resolve(strict=True).is_relative_to(owned_root):
+            raise ValueError('unsafe reviewed snapshot link: target is outside the harness')
+    for path in sorted(paths, key=lambda value: len(value.parts), reverse=True):
+        if path.name == '__pycache__':
+            if path.is_symlink() or not path.is_dir():
+                path.unlink()
+            else:
+                shutil.rmtree(path)
+        elif path.name.endswith('.pyc') and not path.is_dir():
+            path.unlink()
+
+
 def _harness_roots() -> list[Path]:
     """The directories a `--harness <name>` is looked up in, in order.
 
@@ -934,6 +964,11 @@ def _write_end_summary(args, run_dir: Path, curve_path: Path) -> Path | None:
 
 
 def _main(attempt: dict) -> int:
+    with ExitStack() as sources:
+        return _main_with_sources(attempt, sources)
+
+
+def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     ap = argparse.ArgumentParser(
         description=(
             "Ordinary runs have no universal filesystem-quota or backend-observer\n"
@@ -951,6 +986,10 @@ def _main(attempt: dict) -> int:
     source_args.add_argument("--harness", default="loop")
     source_args.add_argument("--harness-path", metavar="DIR",
                              help="external harness directory (absolute path)")
+    ap.add_argument("--expected-harness-sha256", metavar="SHA256",
+                    help="require reviewed source bytes with --harness-path before any model/task")
+    ap.add_argument("--expected-harness-filesystem-sha256", metavar="SHA256",
+                    help="opt-in normalized owned-source filesystem identity; requires expected source SHA256")
     ap.add_argument("--scenario", metavar="NAME", help="reviewed JSON scenario from scenarios/")
     ap.add_argument("--dataset", default=argparse.SUPPRESS)
     ap.add_argument("--sampling", default=argparse.SUPPRESS,
@@ -1156,6 +1195,24 @@ def _main(attempt: dict) -> int:
     # `--config` / `--set` are expanded into the flags they name before the parser sees
     # them (`_expand_experiment_argv`); nothing else about the parse changes.
     expanded = _expand_experiment_argv(sys.argv[1:])
+    expanded = sys.argv[1:] if expanded is None else expanded
+    reviewed_flags = ('--expected-harness-sha256', '--expected-harness-filesystem-sha256')
+    strict_reviewed = any(value.startswith('--') and any(
+        option.startswith(value.split('=', 1)[0]) for option in reviewed_flags) for value in expanded)
+    if strict_reviewed:
+        # Legacy CLI retains argparse abbreviations/last-value behavior. A reviewed
+        # invocation cannot have hidden abbreviated or duplicate effective options.
+        ap.allow_abbrev = False
+        seen = set()
+        for value in expanded:
+            option = value.split('=', 1)[0]
+            action = ap._option_string_actions.get(option)
+            if action is not None:
+                if action.dest in seen:
+                    ap.error('reviewed source forbids duplicate argument: ' + option)
+                seen.add(action.dest)
+        if '--no-sandbox' in expanded:
+            ap.error('reviewed source requires the sandbox request; --no-sandbox is unsupported')
     args = ap.parse_args(expanded)
     explicit = set(vars(args)) & _SCENARIO_ARG_DEFAULTS.keys()
     for field, default in _SCENARIO_ARG_DEFAULTS.items():
@@ -1183,6 +1240,19 @@ def _main(attempt: dict) -> int:
     except (OSError, ValueError) as exc:
         print(f'refusing --scenario: {exc}', file=sys.stderr)
         return 2
+
+    if args.expected_harness_sha256 is not None:
+        value = args.expected_harness_sha256
+        if args.harness_path is None or len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
+            print('--expected-harness-sha256 requires --harness-path and a lowercase SHA256', file=sys.stderr)
+            return 2
+
+    if args.expected_harness_filesystem_sha256 is not None:
+        value = args.expected_harness_filesystem_sha256
+        if (args.expected_harness_sha256 is None or len(value) != 64
+                or any(c not in '0123456789abcdef' for c in value)):
+            print('--expected-harness-filesystem-sha256 requires expected source SHA256 and a lowercase SHA256', file=sys.stderr)
+            return 2
 
     # **Readiness is answered from the arguments a run would use, and answered first.**
     # Here rather than after the harness/dataset resolution above because `--check-only`
@@ -1243,6 +1313,7 @@ def _main(attempt: dict) -> int:
     runs_root = Path(args.runs_root)
     eval_from = None
     harness_source = None
+    reviewed_original = None
     if args.harness_path is not None:
         harness_src = Path(args.harness_path)
         if not harness_src.is_absolute():
@@ -1254,8 +1325,14 @@ def _main(attempt: dict) -> int:
                 print(f"refusing --harness-path: {problem['detail']}", file=sys.stderr)
             return 2
         try:
-            harness_src = harness_src.resolve(strict=True)
+            canonical_source = harness_src.resolve(strict=True)
+            if args.expected_harness_filesystem_sha256 is not None and harness_src != canonical_source:
+                raise ValueError("reviewed filesystem source must use its canonical non-symlink path")
+            harness_src = canonical_source
             source_receipt = source_identity(harness_src)
+            if args.expected_harness_sha256 is not None:
+                if source_receipt['submission_sha256'] != args.expected_harness_sha256:
+                    raise ValueError('harness source differs from expected reviewed SHA256')
             # Two identities, named apart and never interchangeable: `submission_sha256` is
             # the digest of the directory that was handed in, `harness_sha` is the Git tree
             # hash of the staged copy that ran -- the same name and function the curve point
@@ -1278,6 +1355,31 @@ def _main(attempt: dict) -> int:
             if output.is_relative_to(harness_src) or harness_src.is_relative_to(output):
                 print('refusing --harness-path: input and run/work output directories overlap',
                       file=sys.stderr)
+                return 2
+        if args.expected_harness_sha256 is not None:
+            try:
+                reviewed_original = harness_src
+                if (args.expected_harness_filesystem_sha256 is not None
+                        and filesystem_identity(harness_src)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('harness filesystem differs from expected reviewed SHA256')
+                snapshot_root = Path(sources.enter_context(tempfile.TemporaryDirectory(prefix='hg-reviewed-source-')))
+                snapshot = snapshot_root / 'source'
+                _external_source_snapshot(harness_src, snapshot)
+                _strip_reviewed_bytecode(snapshot)
+                if (args.expected_harness_filesystem_sha256 is not None
+                        and filesystem_identity(snapshot)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('owned harness filesystem differs from expected reviewed SHA256')
+                if source_identity(snapshot)['submission_sha256'] != args.expected_harness_sha256:
+                    raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
+                if source_identity(harness_src) != source_receipt:
+                    raise ValueError('harness source changed while taking reviewed snapshot')
+                if (args.expected_harness_filesystem_sha256 is not None
+                        and filesystem_identity(harness_src)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('harness filesystem changed while taking reviewed snapshot')
+                harness_src = snapshot
+                args.harness = manifest(harness_src)['name']
+            except (OSError, ValueError, RuntimeError) as exc:
+                print(f'refusing --harness-path: {exc}', file=sys.stderr)
                 return 2
     elif args.side == "eval":
         # Checkpoint eval retains its original source and provenance helpers.
@@ -2027,12 +2129,34 @@ def _main(attempt: dict) -> int:
             with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
                 snapshot = Path(staging) / 'source'
                 _external_source_snapshot(harness_src, snapshot)
+                if args.expected_harness_sha256 is not None:
+                    _strip_reviewed_bytecode(snapshot)
                 snapshot_identity = source_identity(snapshot)
+                if (args.expected_harness_sha256 is not None
+                        and snapshot_identity['submission_sha256'] != args.expected_harness_sha256):
+                    raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
+                if (args.expected_harness_filesystem_sha256 is not None
+                        and filesystem_identity(snapshot)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('owned harness filesystem differs before staging')
+                generated_root = tuple(name for name in ('.git', '.gitignore', '.state')
+                                       if not (snapshot / name).exists() and not (snapshot / name).is_symlink())
                 stage_workspace(snapshot, work)
+                if (args.expected_harness_filesystem_sha256 is not None
+                        and filesystem_identity(work, generated_root=generated_root)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('staged harness filesystem differs from reviewed owned snapshot')
+                if (args.expected_harness_filesystem_sha256 is not None
+                        and filesystem_identity(snapshot)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('owned harness filesystem changed during staging')
                 if source_identity(snapshot) != snapshot_identity:
                     raise ValueError('harness source snapshot changed during staging')
-            if source_identity(harness_src) != source_receipt:
+            if (source_identity(harness_src) != source_receipt
+                    or (reviewed_original is not None and source_identity(reviewed_original) != source_receipt)):
                 raise ValueError('harness source changed during staging; use a stable input directory')
+            if args.expected_harness_filesystem_sha256 is not None:
+                if (filesystem_identity(harness_src)['sha256'] != args.expected_harness_filesystem_sha256
+                        or filesystem_identity(reviewed_original)['sha256'] != args.expected_harness_filesystem_sha256):
+                    raise ValueError('harness filesystem changed during staging')
+                harness_source['filesystem'] = filesystem_identity(harness_src)
             # What actually ran, in the name the curve point uses for the same function.
             harness_source['harness_sha'] = content_sha(work)
             _write_run_meta(run_dir, harness_source=harness_source)
