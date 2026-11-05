@@ -235,7 +235,7 @@ received → validating → rejected
 
 入场额度包含接收预留、私有原包/解包/scratch、各提交的 run/work；receipt 与控制元数据保留。容量满返回 `409 queue-full`；额度不足返回 `503 service-not-ready`，detail 含 quota/used/reserved/requested/limit。此限制不是运行期文件系统硬配额，无法限制任意 harness 瞬时写盘；观察到超额后拒绝新的接纳，不清理活动任务腾空间。
 
-同 submissions root 只允许一个提交服务；执行租约由 driver 继承。升级须先停旧服务，未知所有者的旧接收目录保留核对，不自动删除。原 `/api/runs` 和直接 CLI 继续使用既有 liveness/slots 守卫，不宣称它们已纳入新服务的原子队列；部署需预留执行窗口。
+同 submissions root 只允许一个提交服务；队列执行租约由 driver 继承。升级须先停旧服务，未知所有者的旧接收目录保留核对，不自动删除。`/api/runs`、提交队列和直接 CLI 若共享同一资源，必须使用相同的 slots 目录及 capacity；它们并不共享同一个原子队列。Console 使用 `HG_CONSOLE_BUDGET_DIR` 和 `HG_CONSOLE_BUDGET_CAPACITY` 显式配置。
 
 ### 5.6 `GET /api/scenarios`
 
