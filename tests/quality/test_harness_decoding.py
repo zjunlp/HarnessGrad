@@ -54,7 +54,8 @@ ROOT = Path(__file__).resolve().parents[2]
 # five data and three tools sites; each matched site remains property-checked.
 # AppWorld recovery adds a strict ASCII Git commit probe and a status probe using
 # surrogateescape, preserving undecodable path bytes.
-EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 36}
+# The retired model-service API no longer spawns a host process.
+EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 35}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.
