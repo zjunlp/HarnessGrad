@@ -19,6 +19,8 @@ import importlib
 import json
 import math
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 #: **What a module in `data/` is for.** A dataset declares `KIND = "dataset"`; anything that
@@ -38,6 +40,36 @@ KIND_FIXTURE = "fixture"
 # Fixtures keep their historical module names; adapters have no old-path shims.
 _FIXTURE_NAMES = frozenset({"demo", "probe_set", "broken_service",
                             "verify_demo", "verify_exec", "verify_service"})
+
+# Only the trusted provider worker enters this scope. A process environment flag
+# must not turn off runtime selection for ordinary platform callers.
+_LOCAL_PROVIDER = ContextVar("harnessgrad_local_dataset_provider", default=False)
+
+
+@contextmanager
+def _local_provider():
+    """Resolve adapter code locally inside its already-selected Python runtime."""
+    token = _LOCAL_PROVIDER.set(True)
+    try:
+        yield
+    finally:
+        _LOCAL_PROVIDER.reset(token)
+
+
+def provider(name: str):
+    """An opt-in provider discovered without importing the adapter, or ``None``.
+
+    Older adapters and platform fixtures keep their existing execution path.
+    A declared but unprepared runtime is an error, never a host-Python fallback.
+    """
+    if (_LOCAL_PROVIDER.get() or name in _FIXTURE_NAMES
+            or not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", name)):
+        return None
+    from harnessgrad.dataset_runtime import descriptor
+    if descriptor(name) is None:
+        return None
+    from harnessgrad.dataset_provider import DatasetProvider
+    return DatasetProvider(name)
 
 
 def module_name(name: str) -> str:
@@ -106,6 +138,9 @@ def provision_status(name: str) -> dict | None:
     dataset only through this module (the import-boundary rule in
     `tests/quality/test_boundaries.py`).
     """
+    remote = provider(name)
+    if remote is not None:
+        return remote.check()
     module = importlib.import_module(module_name(name))
     status = getattr(module, "provision_status", None)
     if not callable(status):
@@ -119,6 +154,10 @@ def load(name: str) -> tuple[list[dict], dict[str, str]]:
     A root declaration can serve preparation tools while runtime tasks come from
     committed assets. Its presence alone does not make it a loading dependency.
     """
+    remote = provider(name)
+    if remote is not None:
+        catalog = remote.catalog()
+        return catalog["tasks"], catalog["scorable"]
     module = importlib.import_module(module_name(name))
     return module.load()
 
@@ -135,6 +174,16 @@ def load_split(name: str) -> tuple[list[dict], dict[str, str], dict | None]:
     split the *run* supplies is a different thing and is validated by `validate_split`
     with only the run's own side required; see that function for why.
     """
+    remote = provider(name)
+    if remote is not None:
+        catalog = remote.catalog()
+        tasks, scorable = catalog["tasks"], catalog["scorable"]
+        split = catalog["metadata"].get("SPLIT")
+        groups = catalog["metadata"].get("SPLIT_GROUPS")
+        if groups is not None:
+            groups = _validate_split_groups(name, tasks, groups)
+        return tasks, scorable, (None if split is None else validate_split(
+            name, tasks, split, split_groups=groups))
     tasks, scorable = load(name)
     module = importlib.import_module(module_name(name))
     split = getattr(module, "SPLIT", None)
@@ -168,8 +217,12 @@ def load_split_groups(name: str, tasks: list[dict]) -> dict[str, str] | None:
     The adapter hashes its private grouping key once and declares only that digest.
     Neither the grouping key nor this mapping is added to the actor's tasks.
     """
-    module = importlib.import_module(module_name(name))
-    groups = getattr(module, "SPLIT_GROUPS", None)
+    remote = provider(name)
+    if remote is not None:
+        groups = remote.catalog()["metadata"].get("SPLIT_GROUPS")
+    else:
+        module = importlib.import_module(module_name(name))
+        groups = getattr(module, "SPLIT_GROUPS", None)
     return None if groups is None else _validate_split_groups(name, tasks, groups)
 
 
@@ -306,6 +359,10 @@ def oracle_source(name: str) -> tuple[str | None, str | None]:
     authored oracle that exists for three tasks proves the check is reachable on three tasks,
     and a reader who cannot see that would read the control as covering the whole pool.
     """
+    remote = provider(name)
+    if remote is not None:
+        metadata = remote.catalog()["metadata"]
+        return metadata.get(ORACLE_SOURCE_ATTR), metadata.get("ORACLE_COVERAGE")
     module = importlib.import_module(module_name(name))
     return (getattr(module, ORACLE_SOURCE_ATTR, None),
             getattr(module, "ORACLE_COVERAGE", None))
@@ -327,6 +384,16 @@ def official_split(name: str, tasks: list[dict]) -> dict:
     and is refused rather than guessed, because a guessed evaluation set produces a number
     that looks official and is not.
     """
+    remote = provider(name)
+    if remote is not None:
+        metadata = remote.catalog()["metadata"]
+        if OFFICIAL_EVAL_ATTR not in metadata:
+            raise ValueError(f"dataset {name!r} does not declare {OFFICIAL_EVAL_ATTR}")
+        declared = metadata[OFFICIAL_EVAL_ATTR]
+        ids = [t["task_id"] for t in tasks]
+        eval_ids = list(ids) if declared is None else list(declared)
+        eval_set = set(eval_ids)
+        return {"train": [i for i in ids if i not in eval_set], "eval": eval_ids}
     module = importlib.import_module(module_name(name))
     if not hasattr(module, OFFICIAL_EVAL_ATTR):
         raise ValueError(
@@ -688,6 +755,12 @@ def load_envs(name: str, *, task_ids=None) -> dict[str, dict]:
     declaration keys but never materializes environments for unselected tasks.
     The result remains an ordinary dict.
     """
+    remote = provider(name)
+    if remote is not None:
+        resolved = remote.resolve(task_ids)
+        for tid, spec in resolved["envs"].items():
+            _check_env(spec, tid, name)
+        return resolved["envs"]
     tasks, _ = load(name)
     selected = _selected_tasks(name, tasks, task_ids)
     module = importlib.import_module(module_name(name))
@@ -902,6 +975,17 @@ def load_tasks(name: str, *, task_ids=None) -> tuple[list[dict], dict[str, dict]
     the platform did before verifiers existed. The equivalence is deliberate, so that
     adding this layer changed nothing for the datasets that already worked.
     """
+    remote = provider(name)
+    if remote is not None:
+        resolved = remote.resolve(task_ids)
+        tasks, setups, verifiers = (resolved[key] for key in ("tasks", "setups", "verifiers"))
+        for task in tasks:
+            _check_no_secrets(task, name)
+        for tid, spec in setups.items():
+            _check_setup(spec, tid, name)
+        for tid, spec in verifiers.items():
+            _check_verifier(spec, tid, name)
+        return tasks, setups, verifiers
     tasks, scorable = load(name)
     module = importlib.import_module(module_name(name))
     selected = _selected_tasks(name, tasks, task_ids)

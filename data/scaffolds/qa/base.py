@@ -43,6 +43,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Callable, Sequence
 from harnessgrad.paths import DataRootNotConfigured, DatasetPath
@@ -133,6 +134,26 @@ def is_eval(task_id: str) -> bool:
     return hashlib.sha256(task_id.encode()).digest()[0] % 3 == 0
 
 
+class _Declarations(Mapping[str, dict]):
+    """Ordered task keys with declaration values built only when requested."""
+
+    def __init__(self, records: Sequence[dict], build: Callable[[dict], dict]):
+        self._records = {record["task_id"]: record for record in records}
+        self._build = build
+
+    def __getitem__(self, task_id: str) -> dict:
+        return self._build(self._records[task_id])
+
+    def __iter__(self):
+        return iter(self._records)
+
+    def __len__(self) -> int:
+        return len(self._records)
+
+    def __contains__(self, task_id) -> bool:
+        return task_id in self._records
+
+
 class QASpec:
     """One QA dataset's decisions. Everything else is `Scaffold`'s.
 
@@ -213,6 +234,7 @@ class QASpec:
         #: `None`, or the reason `load()` will refuse. Set by `build()` when the data
         #: is not on disk -- see `build()` for why that must not be an import failure.
         self.load_error: str | None = None
+        self._load_cause: Exception | None = None
 
     # ---------------------------------------------------------------- the table ---
 
@@ -231,12 +253,14 @@ class QASpec:
         if self.load_error is None:
             try:
                 self._records = self.records()
+                self._load_cause = None
             except DataRootNotConfigured:
                 # Listing metadata before configuration must not permanently
                 # poison a later explicitly configured load in this process.
                 self._records = []
             except Exception as exc:  # noqa: BLE001 - carried, not swallowed
                 self.load_error = f"{type(exc).__name__}: {exc}"
+                self._load_cause = exc
                 self._records = []
         return self._records
 
@@ -296,7 +320,7 @@ class QASpec:
         be empty, because `load()` has no other way to say "this task has a grade"."""
         records = self.ensure()
         if self.load_error:
-            raise ValueError(f"{self.name}: cannot read {self.root} ({self.load_error})")
+            raise ValueError(f"{self.name}: cannot read {self.root} ({self.load_error})") from self._load_cause
         if not records:
             raise ValueError(f"{self.name}: no tasks under {self.root}")
         # A **declared** division has to have both sides filled: the adapter claims the
@@ -476,6 +500,10 @@ class QASpec:
     def downloads(self) -> list[dict]:
         return self._downloads()
 
+    def environment(self, record: dict) -> dict:
+        """The selected task's plain-files execution environment."""
+        return {"kind": "files"}
+
     def build(self) -> dict:
         """Everything a `data/datasets/<name>.py` module exports, as one dict.
 
@@ -492,13 +520,12 @@ class QASpec:
         by `load()`, which is the call that actually needs the bytes.
         """
         records = self.ensure()
-        ids = [r["task_id"] for r in records]
         division = self.division()
         exported = {
             "KIND": "dataset",
             "DATASET_ROOT": self.root,
             "DEFAULT_ENV": {"kind": "files"},
-            "ENV": {tid: {"kind": "files"} for tid in ids},
+            "ENV": _Declarations(records, self.environment),
             #: `None` when the benchmark states no division, and `data/scaffolds/registry.py`
             #: reads that as "nothing divides this pool": the run covers every task.
             "SPLIT": None if division is None else {"train": division["train"],
@@ -517,31 +544,29 @@ class QASpec:
             #: rule at run time instead.
             "SPLIT_SOURCE": "none" if division is None else division["source"],
         }
-        # `SETUP` and `VERIFY` are **not** built here. Each is a dict with one entry per
-        # task and each entry renders the goal or serialises the gold, so building them at
-        # import made importing triviaqa cost 18 s. The caller that needs them (the
-        # platform's `run_one`, or the lint) asks for them by name; see the adapter's
-        # module `__getattr__`.
+        # `SETUP` and `VERIFY` are **not** built here. Their mappings expose task keys
+        # without constructing values; selected lookups render only the requested
+        # declarations. Explicit items()/values() iteration still builds the full pool.
+        # Building every declaration at import made importing triviaqa cost 18 s.
         # The one-side-empty check is made at load time, not here: with no data both
         # sides are empty, and that is a provisioning problem, not a split problem.
         return exported
 
-    def setup_map(self) -> dict:
-        """`SETUP`: one entry per task. Built on demand -- see `build()`."""
-        return {r["task_id"]: self.setup(r) for r in self.ensure()}
+    def setup_map(self) -> Mapping[str, dict]:
+        """`SETUP`: task keys now, each task's declaration on lookup."""
+        return _Declarations(self.ensure(), self.setup)
 
-    #: The `kind` every entry of `VERIFY` carries, declared once. `verify_map()`
-    #: materializes one entry per task on purpose (building it at import cost 18 s on
-    #: triviaqa), so a caller that only needs the *set* of kinds must not be forced to
-    #: pay for 949 identical dicts -- that turned a taxonomy report into a 19-second
-    #: command and made the dataset-classification suite take fifteen minutes.
+    #: The `kind` every entry of `VERIFY` carries, declared once. A caller that only
+    #: needs the *set* of kinds must not materialize the entire verify_map() -- that
+    #: turned a taxonomy report into a 19-second command and made the
+    #: dataset-classification suite take fifteen minutes.
     #: `tests/quality/test_dataset_classes.py` pins this against a materialized map so
     #: the declaration cannot drift away from what `verifier()` actually builds.
     VERIFIER_KIND = "command"
 
-    def verify_map(self) -> dict:
-        """`VERIFY`: one entry per task. Built on demand -- see `build()`."""
-        return {r["task_id"]: self.verifier(r) for r in self.ensure()}
+    def verify_map(self) -> Mapping[str, dict]:
+        """`VERIFY`: task keys now, each task's declaration on lookup."""
+        return _Declarations(self.ensure(), self.verifier)
 
     def control_dir(self) -> Path:
         return Path(__file__).resolve().parent / "oracle_harness"
@@ -552,9 +577,9 @@ def module_getattr(spec: "QASpec", name: str):
 
     Returns `SETUP`, `VERIFY`, `_RECORDS` or `_LOAD_ERROR` on demand and raises
     `AttributeError` for anything else, which is what a module-level `__getattr__` must
-    do. The two maps are built lazily because each holds one entry per task and building
-    them at import cost 18 s on triviaqa (`QASpec.ensure`); `_RECORDS` is exposed because
-    the control and the tests read it, and it is the same cached list `load()` uses.
+    do. Looking up either mapping does not construct its values; declarations are built
+    only for requested task keys. `_RECORDS` is exposed because the control and the tests
+    read it, and it is the same cached list `load()` uses.
     """
     if name == "SETUP":
         return spec.setup_map()

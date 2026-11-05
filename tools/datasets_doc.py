@@ -223,21 +223,29 @@ def _published() -> tuple[str, ...]:
 
 def _import_adapter(name: str):
     """Metadata remains readable before optional runtimes or task pools are installed."""
+    provider = registry.provider(name)
+    if provider is not None:
+        view = _source_adapter(name)
+        # Only the explicit --host report calls this hook. Static documentation
+        # must remain independent of both data and prepared runtime availability.
+        view.provision_status = provider.check
+        return view
     try:
         return importlib.import_module(registry.module_name(name))
     except Exception:
-        # Reuse the download catalog's trusted-source declaration reader. This
-        # view exposes metadata only; it cannot load or report provisioned tasks.
-        from tools.datasets import _source_downloads
+        return _source_adapter(name)
 
-        path = ROOT / "data/datasets" / f"{name}.py"
-        if not path.is_file():
-            raise
-        constants = _module_constants(ast.parse(path.read_text(encoding="utf-8")))
-        downloads = _source_downloads(path, resolve_root=False)
-        if constants.get("KIND") != "dataset" or not callable(downloads):
-            raise
-        return SimpleNamespace(__file__=str(path), downloads=downloads, **constants)
+
+def _source_adapter(name: str):
+    """Read owned metadata without importing a provider's loading dependencies."""
+    from tools.datasets import _source_downloads
+
+    path = ROOT / "data/datasets" / f"{name}.py"
+    constants = _module_constants(ast.parse(path.read_text(encoding="utf-8")))
+    downloads = _source_downloads(path, resolve_root=False)
+    if constants.get("KIND") != "dataset" or not callable(downloads):
+        raise ValueError(f"{name}: no readable dataset metadata")
+    return SimpleNamespace(__file__=str(path), downloads=downloads, **constants)
 
 
 # ------------------------------------------------------------------------ declarations ---
@@ -472,7 +480,10 @@ def _provision(name: str, module, *, refused: bool) -> str:
     if not entries:
         return "unknown (the adapter declares nothing to fetch)"
     if "http" in kinds or "hf-dataset" in kinds or "hf-file" in kinds:
-        return f"`python3 tools/datasets.py --fetch --dataset {name}`"
+        command = f"`python3 tools/datasets.py --fetch --dataset {name}`"
+        if registry.provider(name) is not None:
+            command += f"; then `python tools/prepare_dataset.py --dataset {name}`"
+        return command
     if "authored" in kinds:
         return f"{DASH} the bytes ship with the repository; nothing to fetch"
     if "pip" in kinds:

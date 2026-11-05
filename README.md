@@ -116,6 +116,8 @@ Configure the dataset and both model roles, then start a run. Use your own OpenA
 # The provided configuration uses GSM8K.
 python tools/configure_harness.py --harness base_harness/loop
 python tools/datasets.py --fetch --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k
+python tools/datasets.py --check --dataset gsm8k
 export HG_AGENT_BACKEND=openai
 export HG_AGENT_BASE_URL='YOUR_SOLVER_ENDPOINT_URL'
 export HG_AGENT_MODEL='YOUR_SOLVER_MODEL_NAME'
@@ -129,6 +131,11 @@ python tools/run_summary.py runs/dgm-quickstart
 ```
 
 Replace the placeholders before running. The check probes endpoints but does not generate responses. The run uses five training tasks and one editing round; see the [recipe](experiments/method-dgm.json) and [experiment documentation](docs/rsi-experiments.md) for details.
+
+GSM8K's preparation command installs its pinned data-loading dependencies in a separate
+environment; the platform environment does not need pyarrow. Fetching only downloads data.
+Use `python tools/prepare_dataset.py --dataset gsm8k --check` to check the prepared
+environment and data without installing anything. See [dataset runtimes](docs/dataset-runtime-interfaces.md#dataset-provider-runtime) for the preparation and loading contract.
 
 <a id="contributors"></a>
 

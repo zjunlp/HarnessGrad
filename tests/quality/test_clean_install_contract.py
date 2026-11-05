@@ -35,6 +35,8 @@ RESOURCES = (
     "data/scaffolds/qa/cli/qa",
     "data/scaffolds/qa/prediction.schema.json",
     "data/scaffolds/qa/verify/check.py",
+    "data/datasets/gsm8k/runtime.json",
+    "data/datasets/gsm8k/requirements-load.txt",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",

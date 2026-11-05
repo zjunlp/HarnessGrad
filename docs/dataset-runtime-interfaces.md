@@ -674,6 +674,47 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 
 <a id="scoring-identity"></a>
 
+<a id="dataset-provider-runtime"></a>
+
+### 8.1 独立的数据加载依赖
+
+适配器可通过 `data/datasets/<name>/runtime.json` 显式选择数据 provider。
+当前支持 QA provider，首个使用者为 GSM8K。该声明和精确依赖文件可以在平台
+Python 中静态读取；适配器的加载依赖只安装到外部专用环境，平台不导入它们。
+
+```bash
+python tools/datasets.py --fetch --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k --check --json
+```
+
+`--fetch` 只下载声明的数据，不安装依赖，并提示显式准备命令。`prepare_dataset.py`
+准备并验证运行时，然后检查数据能否由 provider 加载；`--check` 只检查，不安装或下载。
+`--python` 指定准备使用的基础解释器，`--runtime-root` 或
+`HG_DATASET_RUNTIME_ROOT` 指定仓库外的运行时存储。失败检查在 JSON 模式下同样非零退出。
+
+provider 的 catalog 返回任务及私有评分元数据；resolve 只读取选中任务的
+SETUP/VERIFY/ENV。私有元数据不得写入 actor 的任务 JSON。该加载进程使用已准备的
+解释器，属于可信的平台控制路径，不代表 actor 或评分器的沙箱已经完成执行。
+
+`tools/datasets.py --check` 分别报告下载数据和目标运行时依赖的状态，pip 项不会从
+平台 Python 的包目录取版本。`tools/dataset_lint.py --inspect` 对此类适配器仅检查
+静态声明，无须已准备运行时；普通 lint 经 provider 检查 catalog 和执行声明。
+lint 仅跳过明确缺少数据、配置或尚未准备的运行时。身份或协议校验失败、运行时损坏、
+provider 超时及启动故障均使 lint 非零退出，`--allow-unprovisioned` 也不忽略这些故障。
+超时和启动故障的检查回执保留 `unavailable` 及具体 `error_type`，与未准备运行时区分。
+回执中的 scope 区分静态声明、运行时、数据可加载和执行声明检查，均不能推导出
+真实评分已通过或生产实验可运行。未声明 runtime.json 的适配器沿用原有加载路径。
+直接导入适配器的诊断脚本（例如 `data/scaffolds/qa/control.py`）仍使用调用它的
+解释器，需要在具备该适配器依赖的环境执行；本次未将这些入口改为 provider 客户端。
+`tools/datasets.py --check --json` 现在与文本模式一致：任一数据集缺失或未准备时非零退出，
+不再只输出失败状态却返回 0。此退出码修正同样适用于未迁移的适配器。
+
+provider 是可信适配器的依赖执行进程，不是额外的安全沙箱。每次请求冻结数据路径；
+当前 QA 后端不接收模型凭据或模型配置。运行时库存覆盖 venv 内容和基础解释器文件，
+不声称封闭宿主系统库或完整标准库。provider 回执含实际运行时身份；本接口尚未将其
+统一接入 H0、结果缓存和恢复运行的身份比较，这些路径不能据此声称已有完整绑定。
+
 ## 9. 可选评分身份
 
 适配器通过新增 `data/datasets/<name>/scoring_profile.py` 显式启用，文件导出

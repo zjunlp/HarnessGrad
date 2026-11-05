@@ -48,6 +48,16 @@ with an automated guard in `tests/quality/test_import_direction.py`.
 
 ## Runtime navigation
 
+Dataset adapters may opt into a statically declared provider runtime. For this route,
+`data/datasets/<name>/runtime.json` is read before importing the adapter;
+`harnessgrad/dataset_runtime.py` prepares and verifies its dependency artifact, and
+`harnessgrad/dataset_provider.py` launches the trusted
+`data/scaffolds/provider_worker.py` under that interpreter. The registry keeps its
+existing public API and validators. The QA provider returns public tasks separately
+from private answers and resolves only selected execution declarations. This is
+dependency isolation for trusted adapter code, not a new security sandbox. Adapters
+without a descriptor retain their existing path.
+
 The top-level package remains `eval`. Its implementations are grouped by
 concern; package initializers do not import implementations:
 

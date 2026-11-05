@@ -36,16 +36,19 @@ import importlib
 import json
 import sys
 from pathlib import Path, PurePosixPath
-
-from harnessgrad.config import ConfigMissing
-from harnessgrad.paths import DataRootNotConfigured
-from harnessgrad.provisioning import Readiness, normalize_provision_status
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "data" / "dataset.schema.json"
 
 sys.path.insert(0, str(ROOT))
 import data.scaffolds.registry as registry  # noqa: E402
+from harnessgrad.config import ConfigMissing  # noqa: E402
+from harnessgrad.paths import DataRootNotConfigured  # noqa: E402
+from harnessgrad.provisioning import Readiness, normalize_provision_status  # noqa: E402
+from harnessgrad import dataset_runtime  # noqa: E402
+from harnessgrad.dataset_provider import DatasetProvider  # noqa: E402
+from harnessgrad.paths import dataset_root as configured_dataset_root  # noqa: E402
 
 
 class Result:
@@ -375,6 +378,133 @@ def lint_oracle(module, schema: dict, result: Result) -> None:
                 f"cannot claim more reachability than the oracle control demonstrated")
 
 
+def _inspect_provider(name: str, schema: dict) -> Result:
+    """Inspect trusted source declarations without importing the adapter or its runtime."""
+    from tools.datasets import _source_downloads
+
+    result = Result(name)
+    result.readiness = Readiness("unchecked", "static-provider-declarations")
+    source = ROOT / "data" / "datasets" / f"{name}.py"
+    try:
+        if dataset_runtime.descriptor(name) is None:
+            raise ValueError("no dataset runtime declaration")
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        literals, functions = {}, set()
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                functions.add(node.name)
+            targets = (node.targets if isinstance(node, ast.Assign) else
+                       [node.target] if isinstance(node, ast.AnnAssign) else [])
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    try:
+                        literals[target.id] = ast.literal_eval(node.value)
+                    except (ValueError, TypeError):
+                        pass  # Computed metadata is verified only by the provider.
+        kind = literals.get(schema["module"]["kind_attribute"])
+        if kind not in schema["module"]["kinds"]:
+            result.error(f"KIND must be one of {schema['module']['kinds']}, got {kind!r}")
+        for attribute in schema["module"]["required_callables"]:
+            if attribute not in functions:
+                result.error(f"`{attribute}()` is missing a source function declaration")
+        module = SimpleNamespace(__file__=str(source), **literals)
+        lint_paths(module, schema, result)
+        if schema["module"]["oracle_attribute"] in literals:
+            lint_oracle(module, schema, result)
+        downloads = _source_downloads(source, resolve_root=False)
+        if callable(downloads):
+            lint_downloads(downloads(), schema, result)
+        if result.ok:
+            result.readiness = Readiness("ready", "static-provider-declarations",
+                                         "Provider loading and task declarations were not checked")
+    except Exception as exc:
+        result.error(f"provider source declaration: {type(exc).__name__}: {exc}")
+    return result
+
+
+def lint_provider(name: str, schema: dict, *, inspect_only: bool = False) -> Result:
+    """Use the provider protocol while keeping optional imports outside the platform."""
+    result = _inspect_provider(name, schema)
+    if inspect_only or not result.ok:
+        return result
+    try:
+        client = DatasetProvider(name)
+        snapshot = client.check()
+        result.readiness = normalize_provision_status(snapshot)
+        result.provision_snapshot = snapshot
+        if not snapshot["present"]:
+            missing_prerequisite = result.readiness.status in {"config_missing", "data_missing"} or (
+                result.readiness.status == "unavailable"
+                and result.readiness.scope == "dataset-provider-runtime")
+            if missing_prerequisite:
+                result.unprovisioned = result.readiness.detail or "provider is not prepared"
+            else:
+                result.error(result.readiness.detail or "provider loading check failed")
+            return result
+        catalog = client.catalog()
+        tasks, scorable, metadata = (catalog[key] for key in ("tasks", "scorable", "metadata"))
+        task_ids = lint_tasks(tasks, scorable, schema, result)
+        kind = metadata.get(schema["module"]["kind_attribute"])
+        if kind not in schema["module"]["kinds"]:
+            result.error(f"KIND must be one of {schema['module']['kinds']}, got {kind!r}")
+        module = SimpleNamespace(**metadata)
+        lint_oracle(module, schema, result)
+        lint_downloads(metadata.get("DOWNLOADS"), schema, result)
+        base = Path(configured_dataset_root(name))
+        if not _outside_platform(base, ROOT):
+            result.error("DATASET_ROOT is inside the platform tree")
+        split = metadata.get("SPLIT")
+        lint_split(split, task_ids, schema, result)
+        if split is not None:
+            registry.validate_split(name, tasks, split, split_groups=metadata.get("SPLIT_GROUPS"))
+        elif metadata.get("SPLIT_GROUPS") is not None:
+            registry._validate_split_groups(name, tasks, metadata["SPLIT_GROUPS"])
+        if metadata.get("REFUSED") is not None:
+            reason = metadata["REFUSED"]
+            if not isinstance(reason, str) or len(reason.strip()) < 40:
+                result.error(f"REFUSED is set but is not an explanation: {reason!r}")
+            else:
+                result.refused = reason
+            return result
+
+        # Explicit selection prevents lazy declarations outside this catalog from
+        # being materialized. The current lint requests the complete catalog.
+        resolved = client.resolve([task["task_id"] for task in tasks])
+        if resolved["tasks"] != tasks:
+            result.error("provider resolve changed the selected task catalog")
+        setups, verifiers, envs = (resolved[key] for key in ("setups", "verifiers", "envs"))
+        for label, declarations in (("SETUP", setups), ("VERIFY", verifiers), ("ENV", envs)):
+            unknown = set(declarations) - task_ids
+            if unknown:
+                result.error(f"{label} names unknown task(s) {sorted(unknown)}")
+        absent_env = task_ids - set(envs)
+        if absent_env:
+            result.error(f"task(s) {sorted(absent_env)} have no ENV entry")
+        for task in tasks:
+            registry._check_no_secrets(task, name)
+        for tid, spec in setups.items():
+            registry._check_setup(spec, tid, name)
+        for tid, spec in verifiers.items():
+            registry._check_verifier(spec, tid, name)
+        for tid, spec in envs.items():
+            registry._check_env(spec, tid, name)
+        lint_verify(verifiers, task_ids, schema, result)
+        result.readiness = Readiness("ready", "provider-catalog-and-execution-declarations",
+                                     "Complete catalog declarations checked; no benchmark trial was executed")
+    except (DataRootNotConfigured, ConfigMissing) as exc:
+        result.readiness = Readiness("config_missing", "dataset-provider-configuration", str(exc))
+        result.unprovisioned = str(exc)
+    except dataset_runtime.DatasetRuntimeUnavailable as exc:
+        result.readiness = Readiness(exc.status, "dataset-provider-runtime", str(exc))
+        if exc.status == "unavailable":
+            result.unprovisioned = str(exc)
+        else:
+            result.error(str(exc))
+    except Exception as exc:
+        result.error(f"dataset provider: {type(exc).__name__}: {exc}")
+    return result
+
+
 def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
                  inspect_only: bool = False) -> Result:
     """Lint one adapter; explicit missing data/configuration is not a defect.
@@ -385,6 +515,9 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
     imports still execute Python and are not promised to be free of adapter-owned I/O.
     Default validation remains the full contract; inspection is not run admission.
     """
+    manifest = ROOT / "data" / "datasets" / name / "runtime.json"
+    if manifest.exists() or manifest.is_symlink():
+        return lint_provider(name, schema, inspect_only=inspect_only)
     result = Result(name)
     try:
         module = importlib.import_module(registry.module_name(name))

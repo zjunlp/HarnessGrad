@@ -103,6 +103,7 @@ import data.scaffolds.registry as registry  # noqa: E402
 from harnessgrad.paths import env_name  # noqa: E402
 from harnessgrad.paths import DataRootNotConfigured, scorer_paths  # noqa: E402
 from tools.check_dataset_blockers import published_declarations  # noqa: E402
+from harnessgrad import dataset_runtime  # noqa: E402
 
 
 def _schema() -> dict:
@@ -156,6 +157,11 @@ def _source_downloads(path: Path, *, resolve_root: bool = True):
 
 def _download_adapter(name: str):
     """Read provisioning metadata even before optional runtime/data installation."""
+    if dataset_runtime.descriptor(name) is not None:
+        fn = _source_downloads(ROOT / "data" / "datasets" / f"{name}.py")
+        values = {key: fn.__globals__[key] for key in ("DATASET_ROOT", "ROOT")
+                  if fn and key in fn.__globals__}
+        return SimpleNamespace(downloads=fn, **values)
     try:
         return importlib.import_module(registry.module_name(name))
     except Exception as exc:
@@ -180,7 +186,8 @@ def datasets_with_downloads(*, source_fallback: bool = False) -> list[tuple[str,
     for name in names:
         try:
             fn = (_source_downloads(ROOT / "data/datasets" / f"{name}.py", resolve_root=False)
-                  if source_fallback else getattr(importlib.import_module(registry.module_name(name)), "downloads", None))
+                  if source_fallback or dataset_runtime.descriptor(name) is not None
+                  else getattr(importlib.import_module(registry.module_name(name)), "downloads", None))
         except Exception as exc:
             raise RuntimeError(f"Cannot read {name} downloads() source declaration") from exc
         if callable(fn):
@@ -272,6 +279,8 @@ def check_entry(entry: dict, base: Path) -> dict:
 
 
 def check_dataset(name: str, downloads: list[dict]) -> dict:
+    if dataset_runtime.descriptor(name) is not None:
+        return _check_provider_downloads(name, downloads)
     module = _download_adapter(name)
     base = dataset_root(module)
     entries = [check_entry(entry, base) for entry in downloads]
@@ -286,6 +295,55 @@ def check_dataset(name: str, downloads: list[dict]) -> dict:
             status = {"error": f"{type(exc).__name__}: {exc}"}
     return {"dataset": name, "root": str(base), "entries": entries, "status": status,
             "present": all(e["present"] for e in entries) if entries else False}
+
+
+def _check_provider_downloads(name: str, downloads: list[dict]) -> dict:
+    """Check bytes and the declared dependency environment, never the platform's packages."""
+    module = _download_adapter(name)
+    base = dataset_root(module)
+    runtime_status = dataset_runtime.check(name)
+    packages = [entry.get("package") for entry in downloads if entry.get("kind") == "pip"]
+    versions, package_error = {}, ""
+    if packages and runtime_status["present"]:
+        code = ("import importlib.metadata as m,json,sys\nvalues={}\n"
+                "for name in json.loads(sys.argv[1]):\n"
+                " try: values[name]=m.version(name)\n"
+                " except m.PackageNotFoundError: values[name]=None\n"
+                "print(json.dumps(values))")
+        try:
+            process = subprocess.run([runtime_status["runtime"]["python"], "-B", "-I", "-c", code,
+                                      json.dumps(packages)], capture_output=True, text=True,
+                                     errors="replace", timeout=30)
+            if process.returncode:
+                package_error = process.stderr.strip() or "runtime package check failed"
+            else:
+                versions = json.loads(process.stdout)
+                if not isinstance(versions, dict):
+                    raise ValueError("runtime package check returned no package map")
+        except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
+            package_error = str(exc)
+    entries = []
+    for entry in downloads:
+        if entry.get("kind") != "pip":
+            entries.append(check_entry(entry, base))
+            continue
+        package, expected = entry.get("package"), str(entry.get("version"))
+        installed = versions.get(package)
+        detail = (f"{package}=={installed} in dataset runtime" if installed == expected else
+                  f"{package}: expected {expected}, found {installed or 'not installed'} in dataset runtime")
+        if not runtime_status["present"]:
+            detail = runtime_status["detail"]
+        elif package_error:
+            detail = package_error
+        entries.append({"name": entry.get("name"), "kind": "pip", "version": entry.get("version"),
+                        "present": bool(runtime_status["present"] and not package_error and installed == expected),
+                        "detail": detail})
+    data = [entry for entry in entries if entry["kind"] != "pip"]
+    return {"dataset": name, "root": str(base), "entries": entries,
+            "runtime": runtime_status, "data_present": bool(data) and all(e["present"] for e in data),
+            "status": {"scope": "declared-downloads-and-provider-runtime",
+                       "detail": "Downloaded bytes and dependencies only; provider loading is checked by prepare_dataset.py"},
+            "present": bool(entries) and runtime_status["present"] and all(e["present"] for e in entries)}
 
 
 # ------------------------------------------------------------------- fetching ---
@@ -736,6 +794,8 @@ def _main(argv=None) -> int:
                 print(f"  {'ok  ' if ok else 'FAIL'} {message}")
                 if not ok:
                     failed += 1
+            if dataset_runtime.descriptor(name) is not None:
+                print(f"  next: python tools/prepare_dataset.py --dataset {name}")
         return 1 if failed else 0
 
     if args.check:
@@ -743,7 +803,7 @@ def _main(argv=None) -> int:
         if args.json:
             print(json.dumps({"schema_version": _schema()["schema_version"],
                               "datasets": checked}, indent=1, sort_keys=True))
-            return 0
+            return 1 if any(not row["present"] for row in checked) else 0
         failed = 0
         for row in checked:
             mark = "ok  " if row["present"] else "MISS"
@@ -754,6 +814,9 @@ def _main(argv=None) -> int:
             if status and status.get("tasks") is not None:
                 extra = f" ({status.get('tasks')} task(s) loadable)"
             print(f"{mark} {row['dataset']}{extra} (root: {row['root']})")
+            if "runtime" in row:
+                print(f"  runtime: {row['runtime']['status']} ({row['runtime']['scope']})"
+                      f" -- {row['runtime']['detail']}")
             for entry in row["entries"]:
                 flag = "  ok " if entry["present"] else "  -- "
                 print(f"{flag} [{entry['kind']}] {entry['name']} @ {entry['version']}"
