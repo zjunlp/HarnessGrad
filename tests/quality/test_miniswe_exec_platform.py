@@ -90,7 +90,8 @@ except OSError:
         f'assert p("private-verifier-token.txt").read_text()=={private!r}; '
         'print("artifact and isolation checked")'
     )
-    environment = {'kind': 'exec', 'image': 'sha256:d3a04ec8e295710347e978d8e58c663161d829e7dfa544da4d82d0d67abbd8eb',
+    image = os.environ.get('HG_TEST_MINISWE_EXEC_IMAGE') or 'sha256:d3a04ec8e295710347e978d8e58c663161d829e7dfa544da4d82d0d67abbd8eb'
+    environment = {'kind': 'exec', 'image': image,
                     'workdir': '/app', 'network': 'none'}
     from eval.service.container_observation import observe_for
     observation = observe_for(environment['image'], {'cpus': 2, 'memory_mb': 4096},

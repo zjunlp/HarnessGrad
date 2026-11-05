@@ -16,6 +16,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -54,18 +55,33 @@ def test_the_manifest_satisfies_the_contributor_contract():
 @needs_miniswe
 def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path):
     """The whole entrypoint, as the platform invokes it: argv, cwd, exit code, artifacts."""
-    (tmp_path / "task.json").write_text(json.dumps({
+    from eval.containers import harness_runtime, sandbox
+
+    if shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap is unavailable")
+    harness = tmp_path / "work/miniswe"
+    shutil.copytree(HARNESS, harness, ignore=shutil.ignore_patterns("__pycache__"))
+    overlay = harness_runtime.lookup(harness, sys.executable)
+    if overlay is None:
+        pytest.skip("provision the miniSWE overlay for this Python before the native integration control")
+    work = tmp_path / "task"
+    work.mkdir()
+    (work / "task.json").write_text(json.dumps({
         "task_id": "t-mock", "goal": "Write the word alpha into answer.txt."}))
+    env = {**os.environ, **harness_runtime.env_for(overlay), "HG_AGENT_BACKEND": "mock"}
+    command = sandbox.command(
+        [sys.executable, str(harness / "agent.py"), "--task", str(work / "task.json"),
+         "--workdir", str(work)], platform=ROOT, work_root=harness.parent,
+        task_dir=work, repo=harness, env=env, network="none",
+        runtime_paths=harness_runtime.extra_paths(overlay))
     proc = subprocess.run(
-        [sys.executable, str(HARNESS / "agent.py"), "--task", str(tmp_path / "task.json"),
-         "--workdir", str(tmp_path)],
-        env={**os.environ, "HG_AGENT_BACKEND": "mock"}, cwd=tmp_path,
+        command, env=env, cwd=work,
         capture_output=True, text=True, errors="replace", timeout=300)
     assert proc.returncode == 0, proc.stderr[-1200:]
-    assert (tmp_path / "answer.txt").read_text().strip() == "MINISWE_MOCK"
+    assert (work / "answer.txt").read_text().strip() == "MINISWE_MOCK"
 
     trace = [json.loads(line) for line in
-             (tmp_path / "trace.jsonl").read_text().splitlines() if line.strip()]
+             (work / "trace.jsonl").read_text().splitlines() if line.strip()]
     identity = trace[0]["harness_identity"]
     assert identity["harness"] == "miniswe"
     assert identity["agent_backend"] == "mock", "a mock run must say so"

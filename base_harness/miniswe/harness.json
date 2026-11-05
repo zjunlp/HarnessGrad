@@ -1,6 +1,6 @@
 {
   "name": "miniswe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
@@ -11,7 +11,7 @@
   ],
   "runtime_paths": [],
   "role": "harness",
-  "notes": "mini-SWE-agent 2.4.6 with LiteLLM 1.75.9. Dependencies are provisioned for the executing interpreter through requirements.txt. Ordinary exec validated with the pinned AppWorld Python 3.11 actor and ABI-matched overlay; other images and observed workers need separate validation.",
+  "notes": "mini-SWE-agent 2.4.6 with LiteLLM 1.75.9. Dependencies are provisioned for the executing interpreter through requirements.txt. Ordinary exec validated with the pinned AppWorld Python 3.11 actor and ABI-matched overlay; other images and observed workers need separate validation. Each task uses private HOME, mini configuration and XDG state while preserving the platform-provided dependency overlay.",
   "components": {
     "control": [
       "harness.json"

@@ -33,3 +33,19 @@ lifecycle isolation or production H0 authorization. No real model or benchmark
 is run. The terminating upstream submission sentinel remains represented as an
 unexecuted trajectory action. Changing the manifest changes submission identity;
 future experiments need a newly frozen identity.
+
+Each task keeps its own HOME, mini configuration and XDG configuration/cache/state
+directories. The adapter clears daily mini/LiteLLM settings and other model roles'
+credentials, then supplies the task's selected model endpoint and key. It preserves
+the platform-provided `PYTHONPATH`, so the child uses the same ABI-matched overlay
+and `sys.executable` as its parent, including inside an exec image. Legacy manifests
+may explicitly declare package directories in `runtime_paths`; the adapter does not
+guess another user's site-packages directory when dependencies are unavailable.
+
+The shared overlay tool is the preparation entry point. There is no separate
+miniSWE Python-selection manifest or task-side installation discovery.
+
+The synthetic exec regression can select another locally provisioned Python 3.11
+image with `HG_TEST_MINISWE_EXEC_IMAGE`; the test records that image's actual
+backend observation and overlay provenance. This option changes only the test
+fixture, and does not establish AppWorld support for the selected image.

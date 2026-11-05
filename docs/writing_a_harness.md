@@ -58,7 +58,9 @@ its runtime bindings in a Harness copy; [DSH preparation](../base_harness/deepse
 also validates its plugin link targets. [OpenClaw preparation](../base_harness/openclaw/README.md)
 fixes its supported package, Node executable and bindings together.
 [OpenCode preparation](../base_harness/opencode/README.md) selects an installed v1
-source tree and Bun without copying that tree into checkpoints. Run preparation
+source tree and Bun without copying that tree into checkpoints.
+[miniSWE preparation](../base_harness/miniswe/README.md) provisions its declared
+dependencies for each executing Python version, including task images. Run preparation
 before recording the candidate identity, and repeat it when selecting another installation.
 
 **`name` and `version` are the harness's identity and a method may not change

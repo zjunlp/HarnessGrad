@@ -187,6 +187,26 @@ else:
     run([python, "-c", code], root, env)
 
 
+def test_installed_miniswe_template_and_overlay_requirements(installed):
+    root, env, runtime = installed
+    python = str(runtime / "bin/python")
+    assert "--harness" in run([python, "-m", "tools.configure_harness", "--help"], root, env)
+    code = '''
+import json
+from pathlib import Path
+import base_harness.miniswe.agent as agent
+from eval.containers import harness_runtime
+root = Path(agent.__file__).parent
+manifest = json.loads((root / "harness.json").read_text())
+assert manifest["runtime_paths"] == []
+assert manifest["install"] == "requirements.txt"
+assert manifest["env_kinds"] == ["files", "exec"]
+assert harness_runtime.install_spec(root)[1] == "requirements.txt"
+assert (root / "requirements.txt").read_text().splitlines() == ["mini-swe-agent==2.4.6", "litellm==1.75.9"]
+'''
+    run([python, "-c", code], root, env)
+
+
 def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
     """Exercise installed adapter SETUP and isolated verifier without released tasks.
 
