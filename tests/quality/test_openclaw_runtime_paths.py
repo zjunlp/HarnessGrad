@@ -131,6 +131,169 @@ def prepare(installed, **kwargs):
     return preparation.configure(harness, str(launcher), node=str(node), env={"PATH": os.defpath}, **kwargs)
 
 
+class NoMeasurementCache(dict):
+    def get(self, *args, **kwargs):
+        pytest.fail("OpenClaw read the measurement cache without complete dependency contents")
+    def __setitem__(self, *args, **kwargs):
+        pytest.fail("OpenClaw populated the measurement cache without complete dependency contents")
+
+
+@needs_bwrap
+def test_trusted_admission_blocks_changed_launcher_before_cached_scoring(installed, monkeypatch):
+    from eval.run import runner
+    from eval.containers import openclaw_runtime as platform_runtime
+    harness, _, _, _ = installed
+    prepared = prepare(installed)
+    entry = Path(prepared["entrypoint"])
+    calls = []
+    def execute(repo, task, *args, **kwargs):
+        changed = "changed-runtime" in entry.read_text()
+        calls.append(changed)
+        return {"task_id": task["task_id"], "answer": str(changed), "trace": "", "exit_code": 0,
+                "stderr": "", "verdict": {"kind": "command", "passed": not changed},
+                "harness_runtime": {"source": "platform", "python": None}}
+    monkeypatch.setattr(runner, "_run_one", execute)
+    monkeypatch.setattr(runner, "snapshot", lambda root: {})
+    tasks = [{"task_id": "fixture", "prompt": "synthetic cached-runtime control"}]
+    cache = NoMeasurementCache({"old score": {"score": 1.0}})
+    def evaluate():
+        return runner._evaluate(harness, tasks, {}, cache=cache, harness_sha="unchanged-harness")
+    first = evaluate()
+    assert first["per_task"] == {"fixture": 1.0} and not first["cached_tasks"]
+    assert first["harness_runtime"][0]["openclaw"]["cacheable"] is False
+    assert evaluate()["per_task"] == {"fixture": 1.0}
+    assert calls == [False, False]
+    entry.write_text(entry.read_text() + "\n// changed-runtime\n")
+    with pytest.raises(platform_runtime.RuntimeUnavailable, match="file changed"):
+        platform_runtime.identity(harness, {})
+    refused = evaluate()
+    assert refused["invalid"] and not refused["per_task"] and not refused["cached_tasks"]
+    assert calls == [False, False]
+    direct = runner.run_one(harness, tasks[0])
+    assert direct["invalid"]["stage"] == "harness runtime preparation" and calls == [False, False]
+    prepare(installed)
+    fresh = evaluate()
+    assert fresh["per_task"] == {"fixture": 0.0} and not fresh["cached_tasks"]
+    assert calls == [False, False, True]
+
+
+@needs_bwrap
+def test_unpinned_dependency_changes_are_always_measured_fresh(installed, monkeypatch):
+    from eval.run import runner
+    from eval.containers import openclaw_runtime as platform_runtime
+    harness, launcher, _, _ = installed
+    dependency = launcher.resolve().with_name("untracked-dependency.js")
+    dependency.write_text("before")
+    prepare(installed)
+    initial = platform_runtime.identity(harness, {})
+    calls = []
+    def execute(repo, task, *args, **kwargs):
+        value = dependency.read_text()
+        calls.append(value)
+        return {"task_id": task["task_id"], "answer": value, "trace": "", "exit_code": 0,
+                "stderr": "", "verdict": {"kind": "command", "passed": value == "before"},
+                "harness_runtime": {"source": "platform", "python": None}}
+    monkeypatch.setattr(runner, "_run_one", execute)
+    monkeypatch.setattr(runner, "snapshot", lambda root: {})
+    cache = NoMeasurementCache({"old score": {"score": 1.0}})
+    tasks = [{"task_id": "fixture", "prompt": "untracked dependency control"}]
+    first = runner._evaluate(harness, tasks, {}, cache=cache, harness_sha="same-harness")
+    assert first["per_task"] == {"fixture": 1.0}
+    dependency.write_text("after")
+    assert platform_runtime.identity(harness, {}) == initial
+    second = runner._evaluate(harness, tasks, {}, cache=cache, harness_sha="same-harness")
+    assert second["per_task"] == {"fixture": 0.0} and not second["cached_tasks"]
+    assert calls == ["before", "after"]
+
+
+@needs_bwrap
+def test_platform_admission_never_imports_candidate_python_or_executes_a_cli(installed, monkeypatch):
+    from eval.containers import openclaw_runtime as platform_runtime
+    harness, _, _, base = installed
+    prepare(installed)
+    marker = base / "candidate-executed-on-host"
+    for name in ("agent.py", "openclaw_runtime.py"):
+        (harness / name).write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise RuntimeError('candidate')\n")
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("admission executed a host subprocess"))
+    assert platform_runtime.identity(harness, {})["cacheable"] is False
+    assert not marker.exists()
+
+
+@needs_bwrap
+def test_cooperative_dispatch_preserves_and_checks_the_trusted_identity(installed, monkeypatch):
+    from eval.run import cooperative, runner
+    harness, _, _, _ = installed
+    prepared = prepare(installed)
+    launches = []
+    def dispatch(*args, **kwargs):
+        launches.append(True)
+        return {"task_id": "fixture", "harness_runtime": {"source": "workers"}}
+    monkeypatch.setattr(cooperative, "run", dispatch)
+    first = runner.run_one(harness, {"task_id": "fixture", "prompt": "synthetic cooperative admission"},
+                           setup={"workers": {}})
+    assert first["harness_runtime"]["source"] == "workers"
+    assert first["harness_runtime"]["openclaw"]["cacheable"] is False
+    entry = Path(prepared["entrypoint"])
+    entry.write_text(entry.read_text() + "\n// changed runtime\n")
+    second = runner.run_one(harness, {"task_id": "fixture", "prompt": "synthetic cooperative admission"},
+                            setup={"workers": {}})
+    assert second["invalid"]["stage"] == "harness runtime preparation"
+    assert launches == [True]
+
+
+@needs_bwrap
+def test_platform_rejects_its_checkout_before_hashing_forged_bindings(installed, monkeypatch):
+    from eval.containers import openclaw_runtime as platform_runtime
+    harness, _, _, base = installed
+    prepare(installed)
+    primary = base / "synthetic-primary-checkout"
+    primary.mkdir()
+    (primary / "private-config").write_text("synthetic-private-content")
+    monkeypatch.setattr(platform_runtime, "main_checkout", lambda root: primary)
+    manifest = json.loads((harness / "harness.json").read_text())
+    manifest["runtime_paths"].append(str(primary))
+    record = manifest[runtime.RECORD]
+    record["runtime_paths"].append(str(primary))
+    record["binding_identities"].append({"path": str(primary), "realpath": str(primary), "kind": "directory"})
+    (harness / "harness.json").write_text(json.dumps(manifest))
+    open_file, walk = Path.open, os.walk
+    def guard_open(path, *args, **kwargs):
+        if path.resolve().is_relative_to(primary):
+            pytest.fail("platform admission read its checkout")
+        return open_file(path, *args, **kwargs)
+    def guard_walk(path, *args, **kwargs):
+        if Path(path).resolve().is_relative_to(primary):
+            pytest.fail("platform admission traversed its checkout")
+        return walk(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", guard_open)
+    monkeypatch.setattr(os, "walk", guard_walk)
+    with pytest.raises(platform_runtime.RuntimeUnavailable, match="overlaps the platform"):
+        platform_runtime.identity(harness, {})
+
+
+@needs_bwrap
+def test_platform_does_not_read_dependencies_outside_the_declared_projection(installed, monkeypatch):
+    from eval.containers import openclaw_runtime as platform_runtime
+    harness, _, _, base = installed
+    prepared = prepare(installed)
+    entry = Path(prepared["entrypoint"])
+    outside = npm_package(base / "packages/node_modules/unbound-dependency", "unbound-dependency")
+    declare(entry, dependencies={"unbound-dependency": "1.0.0"})
+    manifest = json.loads((harness / "harness.json").read_text())
+    for row in manifest[runtime.RECORD]["files"]:
+        if row["path"] == str(entry.with_name("package.json")):
+            row["sha256"] = runtime.digest(entry.with_name("package.json"))
+    (harness / "harness.json").write_text(json.dumps(manifest))
+    open_file = Path.open
+    def guard_open(path, *args, **kwargs):
+        if path.resolve().is_relative_to(outside):
+            pytest.fail("admission read unbound npm metadata")
+        return open_file(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", guard_open)
+    with pytest.raises(platform_runtime.RuntimeUnavailable, match="outside its runtime bindings"):
+        platform_runtime.identity(harness, {})
+
+
 def agent(harness):
     spec = importlib.util.spec_from_file_location("_prepared_openclaw_agent", harness / "agent.py")
     module = importlib.util.module_from_spec(spec)

@@ -107,7 +107,8 @@ def _symlinks(bindings: list[Path]) -> list[dict]:
     return [{"path": path, "realpath": target} for path, target in sorted(links.items())]
 
 
-def _npm_packages(package: Path, *, forbidden: tuple[Path, ...] = ()) -> tuple[list[Path], list[dict]]:
+def _npm_packages(package: Path, *, forbidden: tuple[Path, ...] = (),
+                  bindings: list[Path] | None = None) -> tuple[list[Path], list[dict]]:
     """Resolve installed production dependencies without executing package code."""
     pending, seen, lookups = [package], set(), {}
     while pending:
@@ -115,6 +116,8 @@ def _npm_packages(package: Path, *, forbidden: tuple[Path, ...] = ()) -> tuple[l
         if root in seen:
             continue
         validate_binding(root, forbidden=forbidden)
+        if bindings is not None and not _covered(root, bindings):
+            raise ValueError(f"OpenClaw npm dependency is outside its runtime bindings: {root}; {REMEDY}")
         metadata = root / "package.json"
         if not metadata.is_file() or not metadata.resolve(strict=True).is_relative_to(root):
             raise ValueError(f"npm package needs its own package.json: {root}")
@@ -230,7 +233,7 @@ def cli_version(output: str, expected: str) -> str:
     return output.strip()
 
 
-def check_files(record: dict) -> None:
+def check_files(record: dict, *, forbidden: tuple[Path, ...] = ()) -> None:
     try:
         for entry in record["binding_identities"]:
             path = Path(entry["path"])
@@ -243,14 +246,15 @@ def check_files(record: dict) -> None:
             path = Path(entry["path"])
             if str(path.resolve(strict=True)) != entry["realpath"] or digest(path) != entry["sha256"]:
                 raise ValueError(f"prepared OpenClaw runtime file changed: {path}; {REMEDY}")
-        packages, lookups = _npm_packages(Path(record["package_root"]))
+        packages, lookups = _npm_packages(Path(record["package_root"]), forbidden=forbidden,
+                                          bindings=[Path(p) for p in record["runtime_paths"]])
         if [str(p) for p in packages] != record["packages"] or lookups != record["package_lookups"]:
             raise ValueError(f"prepared OpenClaw npm dependency graph changed; {REMEDY}")
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"prepared OpenClaw runtime changed or became unavailable; {REMEDY}") from exc
 
 
-def _resolve(harness: Path, env: dict) -> dict:
+def _resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...]) -> dict:
     manifest = json.loads((harness / "harness.json").read_text(encoding="utf-8"))
     record = manifest.get(RECORD)
     if not isinstance(record, dict) or record.get("schema") != 1:
@@ -303,7 +307,7 @@ def _resolve(harness: Path, env: dict) -> dict:
         raise ValueError(f"OpenClaw runtime bindings differ from the prepared installation; {REMEDY}")
     trees = [Path(p) for p in bindings]
     for tree in trees:
-        validate_binding(tree, forbidden=(harness,))
+        validate_binding(tree, forbidden=(*forbidden, harness))
     for row in files:
         path = Path(row["path"])
         if not path.is_absolute() or not _covered(path, trees) or not _covered(path.resolve(), trees):
@@ -321,13 +325,13 @@ def _resolve(harness: Path, env: dict) -> dict:
             raise ValueError(f"OpenClaw {variable} override differs from the prepared installation; {REMEDY}")
     node_version(record["node_version"])
     cli_version(record["version_output"], expected["version"])
-    check_files(record)
+    check_files(record, forbidden=(*forbidden, harness))
     executable(str(node), {"PATH": ""})
     return record
 
 
-def resolve(harness: Path, env: dict) -> dict:
+def resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...] = ()) -> dict:
     try:
-        return _resolve(harness, env)
+        return _resolve(harness, env, forbidden=forbidden)
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"prepared OpenClaw runtime changed or became unavailable; {REMEDY}") from exc

@@ -26,6 +26,7 @@ RESOURCES = (
     "base_harness/miniswe/requirements.txt",
     "base_harness/miniswe/README.md",
     "base_harness/openclaw/openclaw_runtime.py",
+    "eval/containers/openclaw_runtime.py",
     "tools/configure_openclaw_harness.py",
     "base_harness/opencode/opencode_runtime.py",
     "tools/configure_opencode_harness.py",

@@ -49,3 +49,9 @@ The synthetic exec regression can select another locally provisioned Python 3.11
 image with `HG_TEST_MINISWE_EXEC_IMAGE`; the test records that image's actual
 backend observation and overlay provenance. This option changes only the test
 fixture, and does not establish AppWorld support for the selected image.
+
+The native integration test discovers the executing Python's overlay before
+deciding whether to skip; pytest itself need not have mini-swe-agent installed.
+It uses the production surfaced-path mounts so overlays under `/tmp` remain
+visible after sandbox hiding. A small overlay-only bubblewrap regression covers
+that layout and readonly dependencies without imitating mini's CLI.

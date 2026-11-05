@@ -14,6 +14,7 @@ from pathlib import Path
 
 import eval.containers.container as container_mod
 import eval.containers.harness_runtime as harness_runtime
+import eval.containers.openclaw_runtime as openclaw_runtime
 import eval.service.modelgate as modelgate_mod
 from eval.service import container_observation as container_observation_mod
 from eval.service.native_model_route import NativeModelRoute
@@ -342,6 +343,12 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
     refusal = _refuse_unobserved_policies(
         task, env, verifier, run_id=run_id,
         diagnostic_authorization=diagnostic_authorization, observation=observation)
+    openclaw_identity = None
+    if refusal is None:
+        try:
+            openclaw_identity = openclaw_runtime.identity(repo, os.environ)
+        except openclaw_runtime.RuntimeUnavailable as exc:
+            refusal = _invalid(task, exc, stage="harness runtime preparation", service=None)
     # **Both branches of this merge are kept, and neither is optional.** Ours is the admission
     # receipt (`appworld-observe`): a container observation that admits only the policy fields
     # it actually measured back. Theirs is the cooperative/worker execution path (`workers` in
@@ -356,8 +363,13 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
                           trial_id=trial_id, recordings_root=recordings_root)
         if observation is not None:
             cooperative.setdefault("env_observation", observation)
+        if openclaw_identity is not None:
+            cooperative["harness_runtime"] = {**(cooperative.get("harness_runtime") or {}),
+                                               "openclaw": openclaw_identity}
         return cooperative
     runtime_receipt = {}
+    if openclaw_identity is not None:
+        runtime_receipt["openclaw"] = {"identity": openclaw_identity}
     try:
         result = refusal if refusal is not None else _run_one(
             repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
@@ -382,9 +394,10 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         result['trial_evidence_output'] = evidence_output
     if runtime_receipt:
         result["runtime_services"] = runtime_receipt
-        if runtime_receipt.get("bun"):
-            result["harness_runtime"] = {**(result.get("harness_runtime") or {}),
-                                         "bun": runtime_receipt["bun"]["identity"]}
+        for kind in ("bun", "openclaw"):
+            if runtime_receipt.get(kind):
+                result["harness_runtime"] = {**(result.get("harness_runtime") or {}),
+                                             kind: runtime_receipt[kind]["identity"]}
         capture = runtime_receipt.get("responses_capture")
         if capture is not None and not capture["complete"]:
             result.setdefault("invalid", {"stage": "Responses capture", "service": None,
@@ -1483,21 +1496,27 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
     from eval.containers import bun_runtime
-    bun_identity, bun_error = None, None
+    bun_identity, openclaw_identity, runtime_error = None, None, None
     try:
         bun_runtime.admit(repo, os.environ)
         bun_identity = bun_runtime.identity(repo)
-    except bun_runtime.RuntimeUnavailable as exc:
-        bun_error = str(exc)
-    # Legacy external Bun declarations do not pin their dependency contents.
-    # They remain executable, but neither read nor populate measurement caches.
-    cache_allowed = (bun_identity or {}).get("cacheable", True)
+        openclaw_identity = openclaw_runtime.identity(repo, os.environ)
+    except (bun_runtime.RuntimeUnavailable, openclaw_runtime.RuntimeUnavailable) as exc:
+        runtime_error = str(exc)
+    runtime_identities = {kind: value for kind, value in
+                          (("bun", bun_identity), ("openclaw", openclaw_identity)) if value is not None}
+    # External runtimes without complete dependency-content identities still run,
+    # but neither read nor populate the measurement cache.
+    cache_allowed = all(value.get("cacheable", True) for value in runtime_identities.values())
 
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
         if bun_identity is not None:
             key += ":runtime:" + hashlib.sha256(json.dumps(
                 bun_identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if openclaw_identity is not None:
+            key += ":openclaw:" + hashlib.sha256(json.dumps(
+                openclaw_identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         # A changed scorer declaration must not reuse another runtime's score.
         bundle = ((verifiers or {}).get(task["task_id"]) or {}).get("scorer_bundle")
         if bundle is not None:
@@ -1652,8 +1671,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # The trial count is part of the key: a cached single measurement is not a
         # cached mean of three, and reusing one for the other would quietly answer a
         # different question than the run asked.
-        if bun_error is not None:
-            invalid_runtime = {"stage": "harness runtime preparation", "detail": bun_error}
+        if runtime_error is not None:
+            invalid_runtime = {"stage": "harness runtime preparation", "detail": runtime_error}
             _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
             return {"task_id": tid, "invalid": invalid_runtime}
         key = measurement_key(task)
@@ -1741,7 +1760,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 # cached either: the cache key names the harness, and the reason this
                 # task failed was not the harness, so caching it would carry a dataset bug
                 # into every later round and hide the round where it was introduced.
-                if bun_identity is not None and (result.get("harness_runtime") or {}).get("bun") != bun_identity:
+                if any((result.get("harness_runtime") or {}).get(kind) != expected
+                       for kind, expected in runtime_identities.items()):
                     result.setdefault("invalid", {"stage": "harness runtime identity",
                         "detail": "Runtime changed after evaluation admission; refusing mixed measurements"})
                 if trial_protocol or ordinary_task_plan:

@@ -136,6 +136,14 @@ every transitive file in directory bindings. A successful version probe establis
 startup for that installation, not model-backed task quality. Preparation imports
 the trusted shipped helper; candidate Python code runs only in the task sandbox.
 
+The platform also validates prepared bindings, recorded files and the npm graph
+before evaluating a task set or starting a task, using its own trusted helper.
+Changed recorded files are refused before any measurement-cache lookup. Because
+the prepared identity does not cover every dependency byte, prepared OpenClaw measurements
+neither read nor populate the scoring cache: each evaluation takes a fresh
+measurement. A compact verified installation digest is retained in the runtime
+receipt, including when execution uses cooperative workers.
+
 The per-task deadline uses the smaller of `HG_AGENT_OPENCLAW_TIMEOUT_S` (default
 300 seconds) and the platform's `HG_AGENT_DEADLINE_S`, with a stop margin. Native
 shells have that timeout too. `HG_AGENT_TIMEOUT_S` is a per-model-request setting
