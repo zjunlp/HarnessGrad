@@ -88,7 +88,7 @@ for name in primitives:
         return ast.dump(next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name))
     assert body(before) == body(after), name
 parts.append('Observation from validate.py: unchanged ASTs = ' + json.dumps(primitives) + '\n')
-report = ROOT / 'registry/w-spreadvacuous-divergence.md'
+report = FIXTURE / 'divergence.md'
 citations = re.findall(r'((?:tests|registry|data)/[\w/.-]+):(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)', report.read_text())
 for filename, positions in citations:
     lines = (ROOT / filename).read_text().splitlines()

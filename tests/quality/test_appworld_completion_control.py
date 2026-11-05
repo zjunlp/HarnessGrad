@@ -1,6 +1,6 @@
 """Completion-aware fabricated control: state, completion, recording and replay are separable.
 
-The AppWorld protocol review (`registry/w-appworld-protocol-review.md`) found that the public prompt
+The AppWorld recording/replay contract requires attention because the public prompt
 pointed the actor at a harness-side final answer while the official checker replays recorded API calls
 into a fresh world and evaluates *that*, and it recorded one absent control:
 
