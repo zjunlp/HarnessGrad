@@ -13,7 +13,9 @@
 """
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -28,19 +30,41 @@ HARNESS = [("实验", "/#/runs"), ("轨迹", "/#/trace"), ("版本", "/#/version
            ("编辑", "/harness.html"), ("启动", "/launch.html"), ("评测", "/submit.html")]
 BUILD = [("场景", "/author.html#/scenarios"), ("起草", "/author.html#/draft"),
          ("导入", "/author.html#/import"), ("去优化 Harness", "/")]
+HARNESS_EN = [("Runs", "/#/runs"), ("Trace", "/#/trace"), ("Version", "/#/version"),
+              ("Edit", "/harness.html"), ("Launch", "/launch.html"), ("Evaluate", "/submit.html")]
+BUILD_EN = [("Scenarios", "/author.html#/scenarios"), ("Draft", "/author.html#/draft"),
+            ("Import", "/author.html#/import"), ("Go to Optimize Harness", "/")]
 
 
 def shell() -> str:
     return (STATIC / "shell.js").read_text(encoding="utf-8")
 
 
-def mode_items(mode: str) -> list[tuple[str, str]]:
-    text = shell()
-    start = text.index(f"{mode}: {{")
-    end = text.index("},\n    build", start) if mode == "harness" else text.index("  };", start)
-    block = text[start:end]
-    return [(label, href) for label, href in
-            re.findall(r'\{ label: "([^"]+)", href: "([^"]+)"', block)]
+def mode_items(mode: str, language: str = "zh") -> list[tuple[str, str]]:
+    # Execute the real nav renderer and dictionaries, not a second parser for its
+    # implementation. The DOM is deliberately minimal: installation is deferred.
+    script = r'''
+const fs = require('fs'), vm = require('vm');
+const [dir, mode, language] = process.argv.slice(1);
+const window = {};
+const context = {window, location: {pathname: '/', hash: '', search: ''},
+  localStorage: {getItem() { return null; }}, URLSearchParams,
+  document: {readyState: 'loading', body: {dataset: {}},
+    documentElement: {dataset: {}, style: {setProperty() {}}},
+    addEventListener() {}}};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(dir + '/shell-i18n.js', 'utf8'), context);
+window.HGI18n = {t: key => window.HG_SHELL_I18N[language][key]};
+let source = fs.readFileSync(dir + '/shell.js', 'utf8');
+source = source.replace('  if (document.readyState === "loading")',
+                        '  window.__navHtml = navHtml;\n  if (document.readyState === "loading")');
+vm.runInContext(source, context);
+process.stdout.write(JSON.stringify(window.__navHtml(mode)));
+'''
+    html = json.loads(subprocess.check_output(
+        ["node", "-e", script, str(STATIC), mode, language], text=True))
+    return [(label, href) for href, label in
+            re.findall(r'<a class="nav-item" href="([^"]+)"[^>]*>([^<]+)</a>', html)]
 
 
 @pytest.mark.parametrize("page", PAGES)
@@ -60,7 +84,8 @@ def test_no_page_keeps_its_own_nav_entry(page):
 
 def test_the_harness_mode_lists_only_the_harness_sections():
     items = mode_items("harness")
-    assert items[:3] == HARNESS[:3], items
+    assert items == HARNESS, items
+    assert mode_items("harness", "en") == HARNESS_EN
     labels = [label for label, _ in items]
     assert "起草" not in labels and "场景" not in labels, labels
 
@@ -68,6 +93,7 @@ def test_the_harness_mode_lists_only_the_harness_sections():
 def test_the_build_mode_lists_only_the_authoring_sections():
     items = mode_items("build")
     assert items == BUILD, items
+    assert mode_items("build", "en") == BUILD_EN
     labels = [label for label, _ in items]
     for section in ("实验", "轨迹", "版本"):
         assert section not in labels, labels

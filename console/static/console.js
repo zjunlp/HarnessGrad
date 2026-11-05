@@ -13,6 +13,8 @@
 (() => {
   "use strict";
 
+  const t = (key) => window.HGI18n.t(key);
+  const msg = (key, ...values) => esc(t(key)).replace(/\{(\d+)\}/g, (_, i) => String(values[Number(i)] ?? ""));
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -38,7 +40,7 @@
   //: `#h-run` 里的基线起点。不是 run id，所以单独一个哨兵值。
   const BASE = "__base__";
   const POOLS = ["valid_unseen", "valid_seen", "valid_train"];
-  const KIND_LABEL = { study: "研究（多轮）", eval: "单点测量", unknown: "无曲线", "": "全部" };
+  const KIND_LABEL = { study: t("runs.study"), eval: t("runs.eval"), unknown: t("runs.noCurve"), "": t("runs.all") };
 
 
   /* ───────────────────────────────────── 小工具 */
@@ -72,15 +74,15 @@
   const fmt = (v, d = 3) => (isNum(v) ? Number(v).toFixed(d) : "—");
   const fmtInt = (v) => (isNum(v) ? String(Math.trunc(Number(v))) : "—");
   //: 每题模型调用数：≥1 保留一位小数（10.6 / 9.0），<1 保留两位（0.32），
-  //: 0 不走这里 —— 0 次调用是一个结论，渲染成"脚本化"徽标。
+  //: 0 不走这里 —— 0 次调用是一个结论，渲染成脚本化徽标。
   const fmtCalls = (v) => {
     if (!isNum(v)) return "—";
     const n = Number(v);
     return n >= 1 ? n.toFixed(1) : n.toFixed(2);
   };
-  const SCRIPTED_TITLE = "这一轮的 harness 一次模型都没调用：分数衡量的是被写进的程序，不是模型";
+  const SCRIPTED_TITLE = t("runs.extra6");
   const scriptedBadge = (detail = "") =>
-    `<span class="badge-scripted" title="${esc(detail ? `${SCRIPTED_TITLE}（${detail}）` : SCRIPTED_TITLE)}">脚本化</span>`;
+    `<span class="badge-scripted" title="${esc(detail ? `${SCRIPTED_TITLE}（${detail}）` : SCRIPTED_TITLE)}">${esc(t("runs.extra7"))}</span>`;
   //: 一个"这一轮的调用"单元格：0 次 -> 脚本化徽标；有数 -> 每题调用数；未知 -> "—"。
   //: 不用 0 表示未知，也不用 "—" 表示 0。
   //: withCount 只在 calls 确实是"这一轮"的次数时打开（逐轮表）；runs 列表里的
@@ -113,8 +115,8 @@
   };
   const shortSha = (s) => (s ? String(s).slice(0, 8) + (String(s).length > 8 ? "…" : "") : "—");
   const curveStateText = (s) => ({
-    missing: "不存在", empty: "为空", unparseable: "无法解析", unreadable: "读不了", ok: "正常",
-  }[s] || "状态未知");
+    missing: t("runs.extra1"), empty: t("runs.extra2"), unparseable: t("runs.extra3"), unreadable: t("runs.extra4"), ok: t("runs.extra5"),
+  }[s] || t("runs.extra0"));
   //: eval 池的分和 compare 一致：三位小数；没有测量就是 "—"，不是 0。
   const fmt3 = (v) => (isNum(v) ? Number(v).toFixed(3) : "—");
   //: 版本屏＝原来的三栏 harness 视图；`#/version` 与 `#/harness` 都到这里。
@@ -123,10 +125,10 @@
   //: 带行号的只读文件块。`note` 非空时先写清楚被截断/没展开。
   function linesBlock(text, note = "") {
     const lines = splitLines(text || "");
-    const head = note ? `<div class="notice"><b>未完整展开</b><div>${esc(note)}</div></div>` : "";
+    const head = note ? `<div class="notice"><b>${esc(t("version.notExpanded"))}</b><div>${esc(note)}</div></div>` : "";
     if (!lines.length) {
-      return `${head}<div class="empty-state"><div class="empty-title">空文件</div>
-        <div class="empty-sub">这个文件是 0 字节，没有行可编号。</div></div>`;
+      return `${head}<div class="empty-state"><div class="empty-title">${esc(t("version.emptyFile"))}</div>
+        <div class="empty-sub">${esc(t("version.emptyFileHint"))}</div></div>`;
     }
     return `${head}<pre class="code file">${lines.map((line, i) =>
       `<div class="ln"><span class="sig"></span><span class="no">${i + 1}</span><span class="txt">${esc(line)}</span></div>`).join("")}</pre>`;
@@ -163,10 +165,10 @@
       const h = await api("/api/health");
       state.health = h;
       const sha = h.platform_content_sha ? String(h.platform_content_sha).slice(0, 12) : "—";
-      platform.innerHTML = `<span class="status-dot" data-tone="${h.platform_content_sha ? "ok" : "warn"}"></span>平台 <b>${esc(sha)}</b>`;
+      platform.innerHTML = `<span class="status-dot" data-tone="${h.platform_content_sha ? "ok" : "warn"}"></span>${esc(t("platform"))} <b>${esc(sha)}</b>`;
       const free = h.disk_free_gb;
       const diskOk = isNum(free) && Number(free) >= 30;
-      disk.innerHTML = `<span class="status-dot" data-tone="${isNum(free) ? (diskOk ? "ok" : "warn") : "warn"}"></span>磁盘余量 <b>${isNum(free) ? esc(free) : "—"}</b> GB`;
+      disk.innerHTML = `<span class="status-dot" data-tone="${isNum(free) ? (diskOk ? "ok" : "warn") : "warn"}"></span>${esc(t("runs.disk"))} <b>${isNum(free) ? esc(free) : "—"}</b> GB`;
       const running = Array.isArray(h.running) ? h.running : [];
       liveBox.innerHTML = running.length
         ? running.map((x) => {
@@ -178,7 +180,7 @@
                 : `${Math.round(sec / 60)}m`;
           return `<a class="sess" href="#/runs" data-live-run="${esc(x.run_id)}" title="${esc(x.run_id)}">▶ ${esc(tail || "—")} <span class="row-id">${elapsed}</span></a>`;
         }).join("")
-        : `<div class="sess" style="color:var(--hg-alias-label-secondary)">没有 driver 在跑</div>`;
+        : `<div class="sess" style="color:var(--hg-alias-label-secondary)">${esc(t("runs.noDriver"))}</div>`;
       liveBox.querySelectorAll("[data-live-run]").forEach((a) => {
         a.onclick = (ev) => {
           ev.preventDefault();
@@ -198,9 +200,9 @@
         };
       });
     } catch (e) {
-      platform.innerHTML = `<span class="status-dot" data-tone="warn"></span>API 不可达`;
-      disk.innerHTML = `<span class="status-dot" data-tone="warn"></span>磁盘余量 <b>—</b>`;
-      liveBox.innerHTML = `<div class="sess" title="${esc(e.message)}" style="color:var(--hg-alias-label-secondary)">无法读取正在跑的 driver</div>`;
+      platform.innerHTML = `<span class="status-dot" data-tone="warn"></span>${esc(t("offline"))}`;
+      disk.innerHTML = `<span class="status-dot" data-tone="warn"></span>${esc(t("runs.disk"))} <b>—</b>`;
+      liveBox.innerHTML = `<div class="sess" title="${esc(e.message)}" style="color:var(--hg-alias-label-secondary)">${esc(t("runs.driverError"))}</div>`;
     }
   }
 
@@ -209,7 +211,7 @@
     const box = $("#runs-table");
     if (render && state.view === "runs" && !state.rowsLoaded) {
       box.className = "load";
-      box.textContent = "读取 runs…";
+      box.textContent = t("runs.loading");
     }
     try {
       const suffix = state.kind ? `?kind=${encodeURIComponent(state.kind)}` : "";
@@ -228,7 +230,7 @@
       state.rows = [];
       if (render) {
         box.className = "err";
-        box.textContent = `读取失败：${e.message}`;
+        box.textContent = `${t("runs.error")}${e.message}`;
         $("#f-count").textContent = "—";
         updateNavCount();
       }
@@ -254,7 +256,7 @@
       let keep = state[key];
       if (keep && !values.includes(keep)) keep = "";
       state[key] = keep;
-      el.innerHTML = `<option value="">${label}: 全部</option>`
+      el.innerHTML = `<option value="">${esc(label)}: ${esc(t("runs.all"))}</option>`
         + values.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
       el.value = keep;
     };
@@ -307,7 +309,7 @@
     if (r.status === "running") {
       return `<span class="badge badge--accent"><span class="dot live"></span>running${r.progress ? ` ${fmtInt(r.progress.done)}` : ""}</span>`;
     }
-    if (r.status === "empty") return `<span class="badge badge--warn">无曲线</span>`;
+    if (r.status === "empty") return `<span class="badge badge--warn">${esc(t("runs.noCurve"))}</span>`;
     if (isNum(r.invalid) && Number(r.invalid) > 0) {
       return `<span class="badge badge--warn">invalid ${fmtInt(r.invalid)}</span>`;
     }
@@ -315,29 +317,29 @@
   }
 
   function runsSub() {
-    if (state.kind === "study") return "多轮训练（每个方法一条曲线）";
-    if (state.kind === "eval") return "单点测量（某个 ckpt 在一个池上）";
-    if (state.kind === "unknown") return "没有可用 curve.jsonl 的 run（可能仍在启动、未完成或已中止）";
-    return "全部 run";
+    if (state.kind === "study") return t("runs.studySub");
+    if (state.kind === "eval") return t("runs.evalSub");
+    if (state.kind === "unknown") return t("runs.noCurveSub");
+    return t("runs.allSub");
   }
 
   function emptyRunsHtml(hasRows) {
     const bits = [];
     if (state.dataset) bits.push(`benchmark=${state.dataset}`);
     if (state.harness) bits.push(`harness=${state.harness}`);
-    if (state.status) bits.push(`状态=${state.status}`);
-    if (state.q) bits.push(`搜索=${state.q}`);
+    if (state.status) bits.push(`${t("runs.status")}=${state.status}`);
+    if (state.q) bits.push(`${t("runs.searchLabel")}=${state.q}`);
     if (!hasRows) {
       return `<div class="empty-state">
-        <div class="empty-title">这一类还没有 run</div>
-        <div class="empty-sub">当前视图是「${esc(KIND_LABEL[state.kind] || "全部")}」。可以切到「全部」看看其它 run。</div>
-        <button class="btn" id="show-all">看全部</button>
+        <div class="empty-title">${esc(t("runs.empty"))}</div>
+        <div class="empty-sub">${msg("runs.emptyHint", esc(KIND_LABEL[state.kind] || t("runs.all")))}</div>
+        <button class="btn" id="show-all">${esc(t("runs.showAll"))}</button>
       </div>`;
     }
     return `<div class="empty-state">
-      <div class="empty-title">没有匹配的 run</div>
-      <div class="empty-sub">${state.rows.length} 个 run 里没有符合当前筛选的。${bits.length ? `筛选：${esc(bits.join(" · "))}` : ""}</div>
-      <button class="btn" id="clear-filters">清除筛选</button>
+      <div class="empty-title">${esc(t("runs.noMatch"))}</div>
+      <div class="empty-sub">${msg("runs.message1", state.rows.length)}${bits.length ? `${msg("runs.message2", esc(bits.join(" · ")))}` : ""}</div>
+      <button class="btn" id="clear-filters">${esc(t("runs.clear"))}</button>
     </div>`;
   }
 
@@ -365,7 +367,7 @@
   function renderRuns() {
     const all = state.rows || [];
     const rows = visibleRows();
-    $("#f-count").textContent = `${rows.length} / ${all.length} 个 run`;
+    $("#f-count").textContent = `${rows.length} / ${all.length} ${t("runs.count")}`;
     $("#runs-sub").textContent = runsSub();
     updateNavCount();
 
@@ -376,7 +378,7 @@
       box.className = "";
       box.innerHTML = emptyRunsHtml(false);
       bindRunsEmpty(false);
-      renderRailEmpty("这一类还没有 run");
+      renderRailEmpty(t("runs.empty"));
       return;
     }
     if (!rows.length) {
@@ -385,7 +387,7 @@
       box.className = "";
       box.innerHTML = emptyRunsHtml(true);
       bindRunsEmpty(true);
-      renderRailEmpty("筛选结果为空，没有可显示的 run");
+      renderRailEmpty(t("runs.filteredEmpty"));
       return;
     }
     if (!rows.some((r) => r.id === state.runId)) {
@@ -397,12 +399,12 @@
 
     box.className = "";
     box.innerHTML = `<table class="tbl runs"><thead><tr>
-        <th>run</th><th class="nowrap" title="benchmark · 题池（train / eval 池）">数据 · 池</th>
-        <th class="nowrap" title="task-agent：harness · 模型 · 每轮步数">harness</th>
+        <th>run</th><th class="nowrap" title="${esc(t("runs.poolTitle"))}">${esc(t("runs.dataPool"))}</th>
+        <th class="nowrap" title="${esc(t("runs.agentTitle"))}">harness</th>
         <th class="nowrap">meta</th>
-        <th class="num">轮</th><th class="num">最好</th>
-        <th class="num nowrap" title="最新一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>
-        <th class="nowrap">状态</th><th class="nowrap">更新</th></tr></thead><tbody>
+        <th class="num">${esc(t("runs.round"))}</th><th class="num">${esc(t("runs.best"))}</th>
+        <th class="num nowrap" title="${esc(t("runs.callsTitle"))}">${esc(t("runs.calls"))}</th>
+        <th class="nowrap">${esc(t("runs.status"))}</th><th class="nowrap">${esc(t("runs.updated"))}</th></tr></thead><tbody>
       ${rows.map((r) => {
         const best = (r.status === "running" || r.best == null)
           ? "—"
@@ -410,13 +412,13 @@
         const agentBits = [];
         if (r.harness) agentBits.push(r.harness);
         if (r.agent_model) agentBits.push(String(r.agent_model).replace(/-local$/, ""));
-        if (r.steps != null) agentBits.push(`${r.steps} 步`);
+        if (r.steps != null) agentBits.push(`${r.steps} ${t("runs.steps")}`);
         const agent = agentBits.length ? agentBits.map(esc).join(" · ") : "—";
         const metaInfo = metaAgentBits(r);
         const metaCell = metaInfo.label
           ? esc(metaInfo.label)
-          : (r.stamp === "h0" ? "无（基线）" : "—");
-        const tasks = r.n_tasks == null ? "" : ` · ${r.n_tasks}题`;
+          : (r.stamp === "h0" ? t("runs.extra8") : "—");
+        const tasks = r.n_tasks == null ? "" : ` · ${esc(r.n_tasks)} ${esc(t("runs.tasks"))}`;
         return `<tr data-clickable="true" data-run="${esc(r.id)}" data-active="${r.id === state.runId}" title="${esc(r.id)}">
           <td><div title="${esc(r.pretty)}">${esc(shortLabel(r))}</div><div class="row-id">${esc(tailText(r.id))}</div></td>
           <td>${esc(r.dataset || "—")} · ${esc(r.pool || "—")}</td>
@@ -452,19 +454,19 @@
     if (!rail) return;
     rail.className = "col pad";
     rail.innerHTML = `<div class="empty-state"><div class="empty-title">${esc(message)}</div>
-      <div class="empty-sub">改一下上面的筛选，或点一行 run。</div></div>`;
+      <div class="empty-sub">${esc(t("runs.railHint"))}</div></div>`;
   }
 
   async function loadRunRail(force = false) {
     const rail = $("#run-rail");
     if (!rail) return;
     const id = state.runId;
-    if (!id) { renderRailEmpty("选一行 run"); return; }
+    if (!id) { renderRailEmpty(t("runs.selectRow")); return; }
     if (!force && state.railFor === id) return;
     const seq = ++state.railSeq;
     state.railFor = id;
     rail.className = "col pad";
-    rail.innerHTML = '<div class="load">读取中…</div>';
+    rail.innerHTML = `<div class="load">${esc(t("runs.loadingDetail"))}</div>`;
     let d;
     try {
       d = await api(`/api/runs/${encodeURIComponent(id)}`);
@@ -472,14 +474,14 @@
       if (seq !== state.railSeq) return;
       state.railFor = null;
       rail.className = "col pad";
-      rail.innerHTML = `<div class="err">读取失败：${esc(e.message)}</div>`;
+      rail.innerHTML = `<div class="err">${esc(t("runs.error"))}${esc(e.message)}</div>`;
       return;
     }
     if (seq !== state.railSeq || state.runId !== id || state.view !== "runs") return;
     const r = d.row;
     if (!r) {
       state.railFor = null;
-      rail.innerHTML = `<div class="err">API 没有返回这个 run 的摘要。</div>`;
+      rail.innerHTML = `<div class="err">${esc(t("runs.apiMissing"))}</div>`;
       return;
     }
     const rounds = Array.isArray(d.rounds) ? d.rounds : [];
@@ -490,24 +492,24 @@
     if (!hasCurve) {
       curveNote = `<div class="disclaimer">curve.jsonl ${curveStateText(r.curve_state)}，没有可画的测点。这里不补 0。</div>`;
     } else if (rounds.length === 1) {
-      curveNote = `<div class="disclaimer">这个 run 只有一个测点（${esc(r.pool || "—")}），没有曲线。</div>`;
+      curveNote = `<div class="disclaimer">${msg("runs.message4", esc(r.pool || "—"))}</div>`;
     } else if (scored.length < 2) {
-      curveNote = `<div class="disclaimer">只有 ${scored.length} 个有效分数，未画曲线。</div>`;
+      curveNote = `<div class="disclaimer">${msg("runs.message5", scored.length)}</div>`;
     }
     const chart = hasCurve && scored.length >= 2 ? curve(rounds) : "";
     const curveErrors = r.curve_errors
-      ? `<div class="disclaimer">curve.jsonl 有 ${esc(r.curve_errors)} 行坏数据，已跳过；上面的分数只来自解析成功的行。</div>`
+      ? `<div class="disclaimer">${msg("runs.message6", esc(r.curve_errors))}</div>`
       : "";
     const badPoints = d.bad_points
-      ? `<div class="disclaimer">有 ${esc(d.bad_points)} 个测点缺少合法的 round 号，未放进轮次表。</div>`
+      ? `<div class="disclaimer">${msg("runs.message7", esc(d.bad_points))}</div>`
       : "";
     //: 最新一轮 0 次调用 = 脚本化 harness。这里再说一次，因为曲线上的 1.000
     //: 和"模型在回路里跑出来的 1.000"不是一回事。
     const scriptedNote = r.model_in_loop === false
-      ? `<div class="disclaimer">最新一轮 harness 一次模型都没调用（脚本化）：这个分数衡量的是被写进的程序，不是模型。</div>`
+      ? `<div class="disclaimer">${msg("runs.message8")}</div>`
       : "";
 
-    const goDisabled = rounds.length ? "" : ' disabled title="这个 run 没有可查看的轮次"';
+    const goDisabled = rounds.length ? "" : ` disabled title="${esc(t("runs.extra13"))}"`;
     const metaInfo = metaAgentBits(r);
     rail.innerHTML = `<div class="card">
       <div class="card-head"><div class="card-title">${esc(r.pretty)}
@@ -515,32 +517,32 @@
       <div class="card-body stack">
         ${chart}${curveNote}${curveErrors}${badPoints}${scriptedNote}
         <dl class="kv">
-          <dt>benchmark</dt><dd>${esc(r.dataset || "—")} · ${esc(r.pool || "—")} · ${r.n_tasks == null ? "—" : esc(r.n_tasks)} 题</dd>
-          <dt>task-agent</dt><dd>${esc(r.harness || "—")} · ${esc(r.agent_model || "—")}${r.steps != null ? ` · ${esc(r.steps)} 步` : ""}</dd>
-          <dt>meta-agent</dt><dd>${metaInfo.full ? esc(metaInfo.full) : (r.stamp === "h0" ? "—（基线）" : "—")}</dd>
+          <dt>benchmark</dt><dd>${esc(r.dataset || "—")} · ${esc(r.pool || "—")} · ${r.n_tasks == null ? "—" : esc(r.n_tasks)} ${esc(t("runs.tasks"))}</dd>
+          <dt>task-agent</dt><dd>${esc(r.harness || "—")} · ${esc(r.agent_model || "—")}${r.steps != null ? ` · ${esc(r.steps)} ${esc(t("runs.steps"))}` : ""}</dd>
+          <dt>meta-agent</dt><dd>${metaInfo.full ? esc(metaInfo.full) : (r.stamp === "h0" ? t("runs.extra9") : "—")}</dd>
           <dt>harness sha</dt><dd class="mono">${esc(shortSha(r.harness_sha))}</dd>
           <dt>jobs / trials</dt><dd>${fmtInt(r.jobs)} / ${fmtInt(r.trials)}</dd>
           <dt>invalid</dt><dd>${fmtInt(r.invalid)}</dd>
-          <dt>进度</dt><dd>${r.progress ? `第 ${esc(r.progress.round)} 轮 · ${fmtInt(r.progress.done)} 条轨迹` : "—"}</dd>
-          <dt>更新</dt><dd>${esc(r.mtime || "—")}</dd>
+          <dt>${esc(t("runs.progress"))}</dt><dd>${r.progress ? msg("runs.progressValue", esc(r.progress.round), fmtInt(r.progress.done)) : "—"}</dd>
+          <dt>${esc(t("runs.updated"))}</dt><dd>${esc(r.mtime || "—")}</dd>
         </dl>
         <div class="composer-bar">
-          <button class="btn" id="go-harness"${goDisabled}>看改动</button>
+          <button class="btn" id="go-harness"${goDisabled}>${esc(t("runs.viewChanges"))}</button>
           <span class="spacer"></span>
           <a class="btn" href="https://huggingface.co/datasets/Xubqpanda/HarnessGrad" target="_blank" rel="noreferrer">Hub ↗</a>
         </div>
         <div id="eval-pool" class="eval-slot"></div>
       </div></div>
-      ${rounds.length ? `<div class="card"><div class="card-head"><div class="card-title">每轮
-        <span class="sub">点一行看那一轮的 diff</span></div></div>
+      ${rounds.length ? `<div class="card"><div class="card-head"><div class="card-title">${esc(t("runs.perRound"))}
+        <span class="sub">${esc(t("runs.roundHint"))}</span></div></div>
         <div class="card-body tight"><table class="grid"><thead><tr>
-          <th class="num">轮</th><th class="num">分数</th><th>harness</th><th class="num">题</th>
-          <th class="num calls-col" title="这一轮 harness 每题调用模型的次数；0 次 = 脚本化 harness">调用</th>
+          <th class="num">${esc(t("runs.round"))}</th><th class="num">${esc(t("runs.score"))}</th><th>harness</th><th class="num">${esc(t("runs.tasks"))}</th>
+          <th class="num calls-col" title="${esc(t("runs.roundCallsTitle"))}">${esc(t("runs.calls"))}</th>
           <th class="num">tokens</th></tr></thead><tbody>
         ${rounds.map((x) => {
           const sha = x.harness_sha
             ? `<a class="sha-link" href="#/harness/${encodeURIComponent(r.id)}/${encodeURIComponent(x.round)}"
-                 title="打开第 ${esc(x.round)} 轮的 harness">${esc(x.harness_sha)}<span class="sha-go" aria-hidden="true">↗</span></a>`
+                 title="${msg("runs.openRound", esc(x.round))}">${esc(x.harness_sha)}<span class="sha-go" aria-hidden="true">↗</span></a>`
             : "—";
           return `<tr data-clickable="true" data-round="${esc(x.round)}" data-scripted="${x.model_in_loop === false}">
           <td class="num">r${esc(x.round ?? "—")}</td><td class="num">${fmt(x.score)}</td>
@@ -576,11 +578,11 @@
     const mine = ++state.railEvalSeq;
     const live = () => mine === state.railEvalSeq && seq === state.railSeq
       && state.runId === r.id && state.view === "runs";
-    poolBox.innerHTML = '<div class="eval-load">读取 eval 池…</div>';
+    poolBox.innerHTML = `<div class="eval-load">${esc(t("runs.evalLoading"))}</div>`;
     if (!method) {
-      poolBox.innerHTML = `<div class="eval-card"><div class="eval-head">eval 池
-        <span class="sub">这个 run 没有可识别的方法名</span></div>
-        <div class="disclaimer">—（run_meta 与 run id 里都没有方法；不拿别的方法的分顶替）。</div></div>`;
+      poolBox.innerHTML = `<div class="eval-card"><div class="eval-head">${esc(t("runs.evalPools"))}
+        <span class="sub">${esc(t("runs.extra39"))}</span></div>
+        <div class="disclaimer">${esc(t("runs.evalNoMethod"))}</div></div>`;
       return;
     }
     let cmp;
@@ -588,8 +590,8 @@
       cmp = await api(`/api/compare?method=${encodeURIComponent(method)}`);
     } catch (e) {
       if (!live()) return;
-      poolBox.innerHTML = `<div class="eval-card"><div class="eval-head">eval 池</div>
-        <div class="disclaimer">读取 /api/compare 失败：${esc(e.message)}</div></div>`;
+      poolBox.innerHTML = `<div class="eval-card"><div class="eval-head">${esc(t("runs.evalPools"))}</div>
+        <div class="disclaimer">${esc(t("runs.evalError"))}${esc(e.message)}</div></div>`;
       return;
     }
     if (!live()) return;
@@ -607,9 +609,9 @@
     }
     const study = cmp.study || {};
     if (!row) {
-      poolBox.innerHTML = `<div class="eval-card"><div class="eval-head">eval 池
+      poolBox.innerHTML = `<div class="eval-card"><div class="eval-head">${esc(t("runs.evalPools"))}
         <span class="sub">method ${esc(method)}</span></div>
-        <div class="disclaimer">${esc(cmp.note || "这个方法没有可按轮配对的 ckpt 评测。")}</div></div>`;
+        <div class="disclaimer">${esc(cmp.note || t("runs.extra40"))}</div></div>`;
       return;
     }
     const cells = POOLS.map((pool) => {
@@ -621,17 +623,17 @@
         <div class="eval-val" data-empty="${!isNum(v)}">${isNum(v) ? fmt3(v) : "—"}</div>
         <div class="eval-src row-id">${src
           ? `<a href="#/runs/${encodeURIComponent(src)}" title="${esc(src)}">${esc(src.replace(/^.*?[0-9]{8}T[0-9]{4,6}Z-/, ""))}</a> · sha ${esc(sha || "—")}`
-          : "没有测量（不是 0）"}</div>
+          : esc(t("runs.extra24"))}</div>
       </div>`;
     }).join("");
     poolBox.innerHTML = `<div class="eval-card">
-      <div class="eval-head">eval 池
+      <div class="eval-head">${esc(t("runs.evalPools"))}
         <span class="sub">method ${esc(method)} · r${esc(row.round)}${fellBack
-          ? "（这条 run 这一轮没有评测，退回最近有评测的轮）" : ""} · stamp ${esc(study.stamp || "—")}</span></div>
+          ? esc(t("runs.extra41")) : ""} · stamp ${esc(study.stamp || "—")}</span></div>
       <div class="eval-grid">${cells}</div>
-      <div class="disclaimer">— 表示这一轮这一池没有测量（不是 0）。数据来自
+      <div class="disclaimer">${esc(t("runs.evalDisclaimer"))}
         <code>GET /api/compare?method=${esc(method)}</code>${study.run_id && study.run_id !== r.id
-          ? `；配对的是 <a href="#/runs/${encodeURIComponent(study.run_id)}">${esc(study.run_id)}</a>` : ""}。</div>
+          ? `${esc(t("runs.pairedWith"))} <a href="#/runs/${encodeURIComponent(study.run_id)}">${esc(study.run_id)}</a>` : ""}.</div>
     </div>`;
   }
 
@@ -661,7 +663,7 @@
     const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.score).toFixed(1)}`).join("");
     const dots = pts.map((p, i) => `<circle class="pt" cx="${x(i).toFixed(1)}" cy="${y(p.score).toFixed(1)}" r="1.8"><title>r${esc(p.round)}: ${p.score.toFixed(3)}</title></circle>`).join("");
     const first = pts[0], last = pts[pts.length - 1];
-    return `<svg class="curve" viewBox="0 0 ${w} ${h}" role="img" aria-label="分数曲线">
+    return `<svg class="curve" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(t("runs.extra42"))}">
       <line class="axis" x1="${pad.l}" y1="${pad.t + ih}" x2="${w - pad.r}" y2="${pad.t + ih}"/>
       <line class="h0" x1="${pad.l}" y1="${y(first.score)}" x2="${w - pad.r}" y2="${y(first.score)}"/>
       <path class="line" d="${line}"/>${dots}
@@ -699,10 +701,10 @@
       if (!families.has(key)) families.set(key, []);
       families.get(key).push(row);
     }
-    const parts = ['<div class="hg-picker__group">起点</div>',
+    const parts = [`<div class="hg-picker__group">${esc(t("runs.extra43"))}</div>`,
       `<button type="button" class="hg-picker__run" data-run="${BASE}"
         aria-selected="${state.hRun === BASE}"><span>Base_Harness/loop</span>
-        <span class="hg-picker__meta">只读</span></button>`];
+        <span class="hg-picker__meta">${esc(t("version.readOnly"))}</span></button>`];
     for (const [family, members] of [...families.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
       const openFamily = pickerOpenFamilies.has(family) ||
         members.some((m) => m.id === state.hRun);
@@ -726,7 +728,7 @@
 
   function roundChips(row) {
     const rounds = row.rounds_list || [];
-    if (!rounds.length) return '<span class="field__hint">这个 run 没有可选的轮次</span>';
+    if (!rounds.length) return `<span class="field__hint">${esc(t("version.noRounds"))}</span>`;
     return rounds.map((r) => `<button type="button" class="hg-picker__round"
       data-round="${r.round}" aria-selected="${row.id === state.hRun && r.round === state.hRound}">r${r.round}</button>`).join("");
   }
@@ -755,8 +757,8 @@
   }
 
   function renderHarnessRunOptions(rows) {
-    const groups = [["study", "研究（多轮）"], ["eval", "单点测量"], ["unknown", "无曲线"]];
-    let html = `<optgroup label="起点">
+    const groups = [["study", t("runs.study")], ["eval", t("runs.eval")], ["unknown", t("runs.noCurve")]];
+    let html = `<optgroup label="${esc(t("runs.extra43"))}">
       <option value="${BASE}"${state.hRun === BASE ? " selected" : ""}>Base_Harness/loop（基线）</option>
     </optgroup>`;
     for (const [kind, label] of groups) {
@@ -777,7 +779,7 @@
         const tail = id.slice(family(id).length).replace(/^[-_]/, "");
         const bits = [family(id), tail || id];
         if (r.mtime) bits.push(r.mtime);
-        if (kind === "unknown") bits.push("无曲线");
+        if (kind === "unknown") bits.push(t("runs.noCurve"));
         return `<option value="${esc(r.id)}"${r.id === state.hRun ? " selected" : ""}>${esc(bits.join(" · "))}</option>`;
       }).join("");
       html += "</optgroup>";
@@ -807,7 +809,7 @@
     const button = $("#h-explain-btn");
     if (!panel) return;
     if (!state.hRun || state.hRun === BASE || state.hRound == null) {
-      panel.innerHTML = '<div class="empty"><span class="empty__title">先选一个实验和一轮</span>解释针对"这一轮的改动"，基线没有改动可解释。</div>';
+      panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.selectFirst"))}</span>${esc(t("version.baseNoExplain"))}</div>`;
       return;
     }
     if (button) button.disabled = true;
@@ -816,12 +818,12 @@
       const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&round=${state.hRound}`);
       const payload = await response.json();
       if (!response.ok) {
-        panel.innerHTML = `<div class="empty"><span class="empty__title">没有拿到解释</span>${esc(payload.detail || payload.error || response.status)}</div>`;
+        panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.noExplain"))}</span>${esc(payload.detail || payload.error || response.status)}</div>`;
         return;
       }
       renderExplain(panel, payload);
     } catch (error) {
-      panel.innerHTML = `<div class="empty"><span class="empty__title">请求失败</span>${esc(error.message)}</div>`;
+      panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.requestFailed"))}</span>${esc(error.message)}</div>`;
     } finally {
       if (button) button.disabled = false;
     }
@@ -835,20 +837,20 @@
       const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&from=0&to=${state.hRound}`);
       const payload = await response.json();
       if (!response.ok) {
-        panel.innerHTML = `<div class="empty"><span class="empty__title">没有拿到趋势解释</span>${esc(payload.detail || payload.error || response.status)}</div>`;
+        panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.noTrend"))}</span>${esc(payload.detail || payload.error || response.status)}</div>`;
         return;
       }
       renderExplain(panel, payload);
     } catch (error) {
-      panel.innerHTML = `<div class="empty"><span class="empty__title">请求失败</span>${esc(error.message)}</div>`;
+      panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.requestFailed"))}</span>${esc(error.message)}</div>`;
     }
   }
 
   function renderExplain(panel, data) {
     if (data.degraded) {
       panel.innerHTML =
-        '<div class="explain__block"><div class="explain__label">模型回复没有通过契约</div>' +
-        `<div class="hint">${esc(data.parse_error || "未知原因")}</div></div>` +
+        `<div class="explain__block"><div class="explain__label">${esc(t("version.contract"))}</div>` +
+        `<div class="hint">${esc(data.parse_error || t("version.unknown"))}</div></div>` +
         `<pre class="wlog" style="max-height:220px">${esc(data.raw || "")}</pre>`;
       return;
     }
@@ -856,11 +858,11 @@
     panel.innerHTML =
       (data.range ? `<div class="explain__label">r${esc(data.range.from)} → r${esc(data.range.to)} 的走向</div>` : "") +
       `<div class="explain__claim">${esc(data.claim)}</div>` +
-      `<div class="explain__block"><div class="explain__label">依据</div><ul class="explain__list">${evidence}</ul></div>` +
-      `<div class="explain__block"><div class="explain__label">风险</div><div>${esc(data.risk)}</div></div>` +
-      `<div class="explain__block"><div class="explain__label">下一步</div><div>${esc(data.next)}</div></div>` +
-      `<div class="explain__meta">${esc(data.model)} · ${data.elapsed_ms}ms${data.cache_hit ? " · 缓存" : ""}</div>` +
-      (data.range ? "" : '<div class="explain__block"><button class="btn btn--sm" type="button" id="h-range-btn">看这一段（基线 → 这一轮）的趋势</button></div>');
+      `<div class="explain__block"><div class="explain__label">${esc(t("version.evidence"))}</div><ul class="explain__list">${evidence}</ul></div>` +
+      `<div class="explain__block"><div class="explain__label">${esc(t("version.risk"))}</div><div>${esc(data.risk)}</div></div>` +
+      `<div class="explain__block"><div class="explain__label">${esc(t("version.next"))}</div><div>${esc(data.next)}</div></div>` +
+      `<div class="explain__meta">${esc(data.model)} · ${data.elapsed_ms}ms${data.cache_hit ? ` · ${esc(t("version.cache"))}` : ""}</div>` +
+      (data.range ? "" : `<div class="explain__block"><button class="btn btn--sm" type="button" id="h-range-btn">${esc(t("version.range"))}</button></div>`);
   }
 
   function renderHarnessRoundOptions(rounds) {
@@ -877,8 +879,8 @@
       const disabled = isFile ? !hasState : !hasDiff;
       b.disabled = disabled;
       b.title = disabled
-        ? (isFile ? "这一轮没有可读的状态文件，文件视图不可用"
-          : "起点/这一轮没有 diff，改动视图不可用")
+        ? (isFile ? t("runs.extra37")
+          : t("runs.extra38"))
         : "";
       b.setAttribute("aria-pressed", String(b.dataset.mode === state.hMode));
     });
@@ -895,7 +897,7 @@
       rows = await harnessRows();
     } catch (e) {
       tree.className = "col err";
-      tree.textContent = `读取 runs 失败：${e.message}`;
+      tree.textContent = `${t("runs.extra33")}${e.message}`;
       ed.className = "col";
       ed.textContent = "";
       return;
@@ -903,7 +905,7 @@
     if (seq !== state.hSeq || !versionActive()) return;
     if (!rows.length) {
       tree.className = "col";
-      tree.innerHTML = `<div class="empty-state"><div class="empty-title">没有 run</div><div class="empty-sub">runs 根目录里没有可读的 run。</div></div>`;
+      tree.innerHTML = `<div class="empty-state"><div class="empty-title">${esc(t("runs.extra11"))}</div><div class="empty-sub">${esc(t("runs.extra12"))}</div></div>`;
       ed.className = "col";
       ed.innerHTML = "";
       ex.innerHTML = "";
@@ -931,7 +933,7 @@
       detail = await api(`/api/runs/${encodeURIComponent(state.hRun)}`);
     } catch (e) {
       tree.className = "col err";
-      tree.textContent = `读取 run 失败：${e.message}`;
+      tree.textContent = `${t("runs.extra34")}${e.message}`;
       ed.className = "col";
       ed.textContent = "";
       ex.innerHTML = "";
@@ -941,7 +943,7 @@
     const run = detail.row;
     if (!run) {
       tree.className = "col err";
-      tree.textContent = "API 没有返回这个 run 的摘要。";
+      tree.textContent = t("runs.apiMissing");
       return;
     }
     const rounds = Array.isArray(detail.rounds) ? detail.rounds : [];
@@ -951,12 +953,12 @@
       tree.innerHTML = `<div class="tree"><div class="tree-item" data-dir="true">
         <span class="tree-ico">·</span><span class="path">curve.jsonl ${esc(curveStateText(run.curve_state))}</span></div></div>`;
       ed.className = "col";
-      ed.innerHTML = `<div class="empty-state"><div class="empty-title">这个 run 没有可查看的轮次</div>
-        <div class="empty-sub">curve.jsonl ${esc(curveStateText(run.curve_state))}，因此没有 round-N.patch 或 state_after_roundN/ 可以打开。右侧是 run_meta 里能核对到的事实。</div></div>`;
+      ed.innerHTML = `<div class="empty-state"><div class="empty-title">${esc(t("runs.extra13"))}</div>
+        <div class="empty-sub">${msg("runs.message9", esc(curveStateText(run.curve_state)))}</div></div>`;
       ex.innerHTML = noCurveFacts(run, detail);
       syncMode(false);
       const hint = $("#h-start-hint");
-      if (hint) hint.textContent = `${run.pretty || run.id}：没有可查看的轮次`;
+      if (hint) hint.textContent = `${run.pretty || run.id}: ${t("runs.extra13")}`;
       return;
     }
     if (state.hRound == null || !rounds.some((x) => x.round === state.hRound)) {
@@ -1004,19 +1006,19 @@
     // 放在同一层会被读成"harness 里有 diffs/ 和 traces/"，所以加组标题和分隔线。
     tree.className = "col";
     tree.innerHTML = `<div class="tree">
-      <div class="tree-group-label">harness 本体<span class="tg-sub">state_after_round${esc(state.hRound)}/</span>
-        <span class="sz">${rd.has_state ? `${files.length} 个文件` : "未保存"}</span></div>
+      <div class="tree-group-label">${esc(t("runs.extra45"))}<span class="tg-sub">state_after_round${esc(state.hRound)}/</span>
+        <span class="sz">${rd.has_state ? `${files.length} 个文件` : t("version.notSaved")}</span></div>
       ${rd.has_state
         ? (files.length
           ? files.map((f) => `<div class="tree-item" data-file="${esc(f.path)}" data-active="${f.path === state.hFile}" title="${esc(f.path)}">
               <span class="tree-ico">·</span><span class="path">${esc(f.path)}</span><span class="sz">${humanBytes(f.size)}</span></div>`).join("")
-          : `<div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">状态目录是空的</span></div>`)
-        : `<div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">没有该轮状态快照</span></div>`}
-      <div class="tree-group-label separated">这一轮的记录</div>
+          : `<div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">${esc(t("version.emptyState"))}</span></div>`)
+        : `<div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">${esc(t("version.noSnapshot"))}</span></div>`}
+      <div class="tree-group-label separated">${esc(t("version.records"))}</div>
       <div class="tree-item" data-action="patch" data-active="${state.hMode === "diff"}" title="diffs/round-${esc(state.hRound)}.patch">
         <span class="tree-ico">·</span><span class="path">diffs/round-${esc(state.hRound)}.patch</span>
         <span class="sz">${rd.has_patch ? humanBytes(rd.patch_size) : "—"}</span></div>
-      <a class="tree-item" href="/trace.html?run=${encodeURIComponent(state.hRun)}&round=${esc(state.hRound)}" title="打开这一轮的轨迹">
+      <a class="tree-item" href="/trace.html?run=${encodeURIComponent(state.hRun)}&round=${esc(state.hRound)}" title="${esc(t("runs.extra46"))}">
         <span class="tree-ico">·</span><span class="path">round${esc(state.hRound)}_traces/</span>
         <span class="sz">${rd.traces == null ? "—" : `${esc(rd.traces)} 条 →`}</span></a>
       <div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="path">verdicts/round-${esc(state.hRound)}/</span>
@@ -1040,15 +1042,15 @@
     if (state.hMode === "file") {
       if (!hasStateDir) {
         ed.innerHTML = `<div class="empty-state"><div class="empty-title">这一轮没有状态快照</div>
-          <div class="empty-sub">state_after_round${esc(state.hRound)}/ 不存在，所以没有文件可读。diff 仍然可以看。</div></div>`;
+          <div class="empty-sub">${msg("runs.message10", esc(state.hRound))}</div></div>`;
       } else if (!files.length) {
-        ed.innerHTML = `<div class="empty-state"><div class="empty-title">状态目录是空的</div>
-          <div class="empty-sub">state_after_round${esc(state.hRound)}/ 存在，但里面没有可读文件。diff 仍然可以看。</div></div>`;
+        ed.innerHTML = `<div class="empty-state"><div class="empty-title">${esc(t("version.emptyState"))}</div>
+          <div class="empty-sub">${msg("runs.message11", esc(state.hRound))}</div></div>`;
       } else if (!state.hFile) {
-        ed.innerHTML = `<div class="empty-state"><div class="empty-title">左边选一个文件</div>
-          <div class="empty-sub">这些是 state_after_round${esc(state.hRound)}/ 里真实存在的文件。</div></div>`;
+        ed.innerHTML = `<div class="empty-state"><div class="empty-title">${esc(t("runs.extra14"))}</div>
+          <div class="empty-sub">${msg("runs.message12", esc(state.hRound))}</div></div>`;
       } else if (fileErr) {
-        ed.innerHTML = `<div class="err">读取文件失败：${esc(fileErr.message)}</div>`;
+        ed.innerHTML = `<div class="err">${esc(t("runs.extra32"))}${esc(fileErr.message)}</div>`;
       } else if (fileData) {
         ed.innerHTML = filePane(fileData);
       }
@@ -1061,7 +1063,7 @@
     syncMode(canFiles);
     const hint = $("#h-start-hint");
     if (hint) {
-      hint.textContent = `起点：${run.pretty || run.id}`
+      hint.textContent = `${t("version.start")}: ${run.pretty || run.id}`
         + `${state.hRound == null ? "" : ` · state_after_round${state.hRound}/`}`;
     }
   }
@@ -1086,7 +1088,7 @@
     } catch (e) {
       if (seq !== state.hSeq || !versionActive()) return;
       tree.className = "col err";
-      tree.textContent = `读取基线失败：${e.message}`;
+      tree.textContent = `${t("runs.extra35")}${e.message}`;
       return;
     }
     if (seq !== state.hSeq || !versionActive() || state.hRun !== BASE) return;
@@ -1097,14 +1099,14 @@
     }
     tree.className = "col";
     tree.innerHTML = `<div class="tree">
-      <div class="tree-group-label">起点 · base_harness/loop<span class="tg-sub">基线</span>
+      <div class="tree-group-label">起点 · base_harness/loop<span class="tg-sub">${esc(t("runs.extra44"))}</span>
         <span class="sz">${files.length} 个文件</span></div>
       ${files.length
         ? files.map((f) => `<div class="tree-item" data-base-file="${esc(f.path)}" data-active="${f.path === state.hBaseFile}" title="${esc(f.path)}">
             <span class="tree-ico">·</span><span class="path">${esc(f.path)}</span><span class="sz">${humanBytes(f.size)}</span></div>`).join("")
-        : `<div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">基线目录是空的</span></div>`}
-      <div class="tree-group-label separated">这一轮的记录</div>
-      <div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">基线没有 diff（没有“上一轮”）</span></div>
+        : `<div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">${esc(t("runs.extra15"))}</span></div>`}
+      <div class="tree-group-label separated">${esc(t("version.records"))}</div>
+      <div class="tree-item" data-dir="true"><span class="tree-ico">·</span><span class="row-id">${esc(t("runs.extra16"))}</span></div>
     </div>`;
     tree.querySelectorAll("[data-base-file]").forEach((it) => {
       it.onclick = () => {
@@ -1114,7 +1116,7 @@
       };
     });
     const hint = $("#h-start-hint");
-    if (hint) hint.textContent = "起点：Base_Harness/loop（基线，没有 diff）";
+    if (hint) hint.textContent = `${t("version.start")}: Base_Harness/loop (${t("runs.extra44")}, ${t("version.baseNoDiff")})`;
 
     let f = null;
     let err = null;
@@ -1127,9 +1129,9 @@
       if (seq !== state.hSeq || !versionActive() || state.hRun !== BASE) return;
     }
     ed.className = "col";
-    if (err) ed.innerHTML = `<div class="err">读取文件失败：${esc(err.message)}</div>`;
-    else if (!state.hBaseFile) ed.innerHTML = `<div class="empty-state"><div class="empty-title">基线没有可读文件</div>
-      <div class="empty-sub">base_harness/loop 下没有文件。</div></div>`;
+    if (err) ed.innerHTML = `<div class="err">${esc(t("runs.extra32"))}${esc(err.message)}</div>`;
+    else if (!state.hBaseFile) ed.innerHTML = `<div class="empty-state"><div class="empty-title">${esc(t("runs.extra17"))}</div>
+      <div class="empty-sub">${esc(t("runs.extra18"))}</div></div>`;
     else if (f) ed.innerHTML = baseFilePane(f);
     ex.innerHTML = baseFacts(base);
     syncMode(true, false);
@@ -1139,9 +1141,9 @@
     const head = `<div class="diff-head"><b>${esc(f.path)}</b>
       <span class="chip">base_harness/loop</span>
       <span class="chip">${humanBytes(f.size)}</span>
-      <span class="spacer"></span><span class="chip">只读</span></div>`;
+      <span class="spacer"></span><span class="chip">${esc(t("version.readOnly"))}</span></div>`;
     if (f.truncated || f.note) {
-      return `${head}<div class="notice"><b>未展开</b><div>${esc(f.note || "")}</div>
+      return `${head}<div class="notice"><b>${esc(t("version.notShown"))}</b><div>${esc(f.note || "")}</div>
         <div class="row-id">${esc(f.path)} · ${humanBytes(f.size)}</div></div>`;
     }
     return head + linesBlock(f.text);
@@ -1151,12 +1153,12 @@
     const manifest = base.manifest || {};
     const files = Array.isArray(base.files) ? base.files : [];
     return `<div class="card">
-      <div class="card-head"><div class="card-title">基线的事实<span class="sub">来自 base_harness/loop</span></div></div>
+      <div class="card-head"><div class="card-title">${esc(t("runs.extra19"))}<span class="sub">${esc(t("runs.extra20"))}</span></div></div>
       <div class="card-body"><dl class="kv">
-        <dt>路径</dt><dd class="mono">base_harness/loop</dd>
+        <dt>${esc(t("runs.extra21"))}</dt><dd class="mono">base_harness/loop</dd>
         <dt>harness.json</dt><dd>${esc(manifest.name || "—")} ${esc(manifest.version || "—")} · ${esc(manifest.entrypoint || "—")}</dd>
         <dt>harness sha</dt><dd>—（基线没有 run 记录）</dd>
-        <dt>文件</dt><dd>${files.length} 个 · 只读</dd>
+        <dt>${esc(t("runs.extra22"))}</dt><dd>${files.length} 个 · 只读</dd>
       </dl>
       <div class="disclaimer">${esc(base.sha_note || "基线没有 run 记录。")}</div>
       </div></div>`;
@@ -1164,13 +1166,13 @@
 
   function noCurveFacts(run, detail) {
     return `<div class="card">
-      <div class="card-head"><div class="card-title">这个 run 的事实<span class="sub">来自文件，不是推断</span></div></div>
+      <div class="card-head"><div class="card-title">${esc(t("runs.extra23"))}<span class="sub">${esc(t("version.factsSource"))}</span></div></div>
       <div class="card-body"><dl class="kv">
         <dt>benchmark</dt><dd>${esc(run.dataset || "—")} · ${esc(run.pool || "—")}</dd>
         <dt>task-agent</dt><dd>${esc(run.harness || "—")} · ${esc(run.agent_model || "—")}</dd>
         <dt>curve.jsonl</dt><dd>${esc(curveStateText(run.curve_state))}${run.curve_errors ? ` · ${esc(run.curve_errors)} 行坏数据` : ""}</dd>
-        <dt>状态</dt><dd>${run.status === "running" ? "driver 仍在跑，还没有写出测点" : "没有测点（未完成或已中止）"}</dd>
-        <dt>更新</dt><dd>${esc(run.mtime || "—")}</dd>
+        <dt>${esc(t("runs.status"))}</dt><dd>${run.status === "running" ? "driver 仍在跑，还没有写出测点" : "没有测点（未完成或已中止）"}</dd>
+        <dt>${esc(t("runs.updated"))}</dt><dd>${esc(run.mtime || "—")}</dd>
       </dl></div></div>`;
   }
 
@@ -1188,15 +1190,15 @@
       ? "—"
       : `${added == null ? "—" : `+${added}`} / ${removed == null ? "—" : `−${removed}`}`;
     return `<div class="card">
-      <div class="card-head"><div class="card-title">这一轮的事实<span class="sub">来自文件，不是推断</span></div></div>
+      <div class="card-head"><div class="card-title">${esc(t("version.facts"))}<span class="sub">${esc(t("version.factsSource"))}</span></div></div>
       <div class="card-body"><dl class="kv">
-        <dt>改动文件</dt><dd>${changed.length ? changed.map(esc).join("、") : "—"}</dd>
-        <dt>行数</dt><dd>${lineText}</dd>
-        <dt>状态快照</dt><dd>${rd.has_state ? `state_after_round${esc(state.hRound)}/` : "未保存"}</dd>
-        <dt>轨迹 / 判定</dt><dd>${rd.traces == null ? "—" : esc(rd.traces)} 条 / ${rd.verdicts == null ? "—" : esc(rd.verdicts)} 条
-          ${rd.traces ? `· <a href="/trace.html?run=${encodeURIComponent(state.hRun)}&round=${esc(state.hRound)}">看这一轮轨迹 →</a>` : ""}</dd>
-        <dt>patch</dt><dd>${rd.has_patch ? (rd.patch_size === 0 ? "0 B · 空 patch（没有改动）" : `${humanBytes(rd.patch_size)} · ${parsed.length ? `${parsed.length} 个文件` : "文件数未知"}`) : "没有"}</dd>
-        <dt>更新</dt><dd>${esc(run.mtime || "—")}</dd>
+        <dt>${esc(t("version.changedFiles"))}</dt><dd>${changed.length ? changed.map(esc).join("、") : "—"}</dd>
+        <dt>${esc(t("version.lines"))}</dt><dd>${lineText}</dd>
+        <dt>${esc(t("version.snapshot"))}</dt><dd>${rd.has_state ? `state_after_round${esc(state.hRound)}/` : t("version.notSaved")}</dd>
+        <dt>${esc(t("version.traceVerdict"))}</dt><dd>${rd.traces == null ? "—" : esc(rd.traces)} 条 / ${rd.verdicts == null ? "—" : esc(rd.verdicts)} 条
+          ${rd.traces ? `· <a href="/trace.html?run=${encodeURIComponent(state.hRun)}&round=${esc(state.hRound)}">${esc(t("runs.extra47"))}</a>` : ""}</dd>
+        <dt>patch</dt><dd>${rd.has_patch ? (rd.patch_size === 0 ? t("runs.extra54") : `${humanBytes(rd.patch_size)} · ${parsed.length ? `${parsed.length} 个文件` : t("runs.extra53")}`) : t("runs.extra52")}</dd>
+        <dt>${esc(t("runs.updated"))}</dt><dd>${esc(run.mtime || "—")}</dd>
       </dl></div></div>`;
   }
 
@@ -1316,10 +1318,10 @@
     if (!rd.has_patch) {
       //: 一句话说清楚「少了什么」，不解释未来的功能。
       const why = Number(state.hRound) === 0
-        ? "round 0 是基线，没有改动。"
-        : `diffs/round-${esc(state.hRound)}.patch 不存在，这一轮没有记录改动。`;
-      return `<div class="diff-head"><b>round-${esc(state.hRound)}.patch</b><span class="spacer"></span><span class="chip">只读</span></div>
-        <div class="empty-state"><div class="empty-title">这一轮没有 diff</div>
+        ? t("runs.extra55")
+        : `${msg("runs.message13", esc(state.hRound))}`;
+      return `<div class="diff-head"><b>round-${esc(state.hRound)}.patch</b><span class="spacer"></span><span class="chip">${esc(t("version.readOnly"))}</span></div>
+        <div class="empty-state"><div class="empty-title">${esc(t("runs.extra25"))}</div>
         <div class="empty-sub">${why}</div></div>`;
     }
     const stat = (typeof rd.stat === "object" && rd.stat) ? rd.stat : {};
@@ -1328,9 +1330,9 @@
           <span class="chip">0 个文件</span>
           <span class="chip" style="color:#2f9e64">+${esc(stat.added == null ? "—" : stat.added)}</span>
           <span class="chip" style="color:#d04b3a">−${esc(stat.removed == null ? "—" : stat.removed)}</span>
-          <span class="spacer"></span><span class="chip">只读</span></div>
-        <div class="empty-state"><div class="empty-title">这一轮没有改动</div>
-        <div class="empty-sub">diffs/round-${esc(state.hRound)}.patch 是 0 字节空文件（from 与 to 相同），没有 hunk 可编号。</div></div>`;
+          <span class="spacer"></span><span class="chip">${esc(t("version.readOnly"))}</span></div>
+        <div class="empty-state"><div class="empty-title">${esc(t("runs.extra26"))}</div>
+        <div class="empty-sub">${msg("runs.message14", esc(state.hRound))}</div></div>`;
     }
     const files = parsePatch(rd.patch);
     let idx = Number(state.hPatchFile) || 0;
@@ -1348,7 +1350,7 @@
     const totalAdded = added == null ? "—" : `+${added}`;
     const totalRemoved = removed == null ? "—" : `−${removed}`;
     const sha = stat.from && stat.to
-      ? `<span class="chip mono" title="改动前 → 改动后">${esc(String(stat.from).slice(0, 8))} → ${esc(String(stat.to).slice(0, 8))}</span>`
+      ? `<span class="chip mono" title="${esc(t("runs.extra48"))}">${esc(String(stat.from).slice(0, 8))} → ${esc(String(stat.to).slice(0, 8))}</span>`
       : "";
     let switcher = "";
     const fileStats = (f) => {
@@ -1358,7 +1360,7 @@
         : { added: f.added, removed: f.removed };
     };
     if (files.length > 1) {
-      switcher = `<select id="h-patch-file" aria-label="选择 patch 里的文件">${files.map((f, i) => {
+      switcher = `<select id="h-patch-file" aria-label="${esc(t("runs.extra49"))}">${files.map((f, i) => {
         const st = fileStats(f);
         return `<option value="${i}"${i === idx ? " selected" : ""}>${i + 1}/${files.length} · ${esc(f.path)} (+${st.added}/−${st.removed})</option>`;
       }).join("")}</select>`;
@@ -1367,12 +1369,12 @@
     }
     let body;
     if (!file) {
-      body = `<div class="notice"><b>patch 里解析不出文件头。</b><div>下面按原始文本显示，不编号，避免给出错误行号。</div></div>
+      body = `<div class="notice"><b>${esc(t("runs.extra27"))}</b><div>${esc(t("runs.extra28"))}</div></div>
         <pre class="code raw">${esc(rd.patch || "")}</pre>`;
     } else if (file.binary) {
-      body = `<div class="notice"><b>${esc(file.path)} 是二进制改动。</b><div>没有文本 hunk 可以编号。</div></div>`;
+      body = `<div class="notice"><b>${esc(file.path)} 是二进制改动。</b><div>${esc(t("runs.extra29"))}</div></div>`;
     } else if (!file.rows.length) {
-      body = `<div class="notice"><b>${esc(file.path)} 没有文本 hunk。</b><div>可能只是文件模式 / 改名改动。</div></div>`;
+      body = `<div class="notice"><b>${esc(file.path)} 没有文本 hunk。</b><div>${esc(t("runs.extra30"))}</div></div>`;
     } else {
       body = `<pre class="code">${file.rows.map(patchRowHtml).join("")}</pre>`;
     }
@@ -1380,9 +1382,9 @@
       <span class="chip">${changed} 个文件</span>
       <span class="chip" style="color:#2f9e64">${esc(totalAdded)}</span>
       <span class="chip" style="color:#d04b3a">${esc(totalRemoved)}</span>
-      <span class="spacer"></span>${sha}<span class="chip">只读</span></div>
+      <span class="spacer"></span>${sha}<span class="chip">${esc(t("version.readOnly"))}</span></div>
       <div class="file-switch">${switcher}${file ? (() => { const st = fileStats(file); return `<span class="chip">本文件 +${st.added} / −${st.removed}</span>`; })() : ""}
-        <span class="row-id" style="margin-left:auto">行号：左 = 旧 / 右 = 新</span></div>
+        <span class="row-id" style="margin-left:auto">${esc(t("runs.extra31"))}</span></div>
       ${body}`;
   }
 
@@ -1405,14 +1407,14 @@
     const head = `<div class="diff-head"><b>${esc(f.path)}</b>
       <span class="chip">round-${esc(state.hRound)}</span>
       <span class="chip">${humanBytes(f.size)}</span>
-      <span class="spacer"></span><span class="chip">只读</span></div>`;
+      <span class="spacer"></span><span class="chip">${esc(t("version.readOnly"))}</span></div>`;
     if (f.truncated || f.note) {
-      return `${head}<div class="notice"><b>未展开</b><div>${esc(f.note || `文件 ${humanBytes(f.size)}，超过 400 KB 读取上限。`)}</div>
+      return `${head}<div class="notice"><b>${esc(t("version.notShown"))}</b><div>${esc(f.note || `文件 ${humanBytes(f.size)}，超过 400 KB 读取上限。`)}</div>
         <div class="row-id">${esc(f.path)} · ${humanBytes(f.size)}</div></div>`;
     }
     const lines = splitLines(f.text || "");
     if (!lines.length) {
-      return `${head}<div class="empty-state"><div class="empty-title">空文件</div>
+      return `${head}<div class="empty-state"><div class="empty-title">${esc(t("version.emptyFile"))}</div>
         <div class="empty-sub">${esc(f.path)} 是 0 字节，没有行可编号。</div></div>`;
     }
     return `${head}<pre class="code file">${lines.map((line, i) =>
@@ -1685,18 +1687,18 @@
       if (view === "runs") {
         const box = $("#runs-table");
         box.className = "err";
-        box.textContent = `读取失败：${e.message}`;
+        box.textContent = `${t("runs.error")}${e.message}`;
       } else if (view === "harness") {
         const box = $("#h-tree");
         if (box) {
           box.className = "col err";
-          box.textContent = `读取失败：${e.message}`;
+          box.textContent = `${t("runs.error")}${e.message}`;
         }
       } else if (view === "coverage") {
         const box = $("#cov-root");
         if (box) {
           box.className = "cov-wrap";
-          box.innerHTML = `<div class="err">读取失败：${esc(e.message)}</div>`;
+          box.innerHTML = `<div class="err">${esc(t("runs.error"))}${esc(e.message)}</div>`;
         }
       }
     }
@@ -1794,7 +1796,7 @@
   const editButton = $("#h-edit-btn");
   if (editButton) editButton.addEventListener("click", async () => {
     if (!state.hRun || state.hRun === BASE || state.hRound == null) {
-      alert("先选一个实验和一轮：基线没有对应的 harness 版本。");
+      alert(t("runs.extra36"));
       return;
     }
     // 服务器给每一行带了 rounds_stored / diffs_stored / snapshot_rounds：状态目录、单文件
@@ -1816,7 +1818,7 @@
       return;
     }
     editButton.disabled = true;
-    editButton.textContent = "复制中…";
+    editButton.textContent = t("version.copying");
     try {
       const response = await fetch("/api/harness/from-round", { method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1826,7 +1828,7 @@
         // 服务端的理由已经是给读者看的（哪一轮、缺什么、存了哪些），放进工具栏比弹窗好：
         // 弹窗关掉就没了，而这条信息正是"接下来该做什么"。
         const hint = document.getElementById("h-start-hint");
-        const text = `${payload.error || "复制失败"}：${payload.detail || ""}`;
+        const text = `${payload.error || t("version.copyFailed")}：${payload.detail || ""}`;
         if (hint) hint.textContent = text;
         else alert(text);
         return;
@@ -1834,7 +1836,7 @@
       location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
     } finally {
       editButton.disabled = false;
-      editButton.textContent = "编辑这一版";
+      editButton.textContent = t("version.edit");
     }
   });
   const explainButton = $("#h-explain-btn");

@@ -77,6 +77,15 @@ body {
 }
 .sh-bar .sh-env[data-state="bad"] i { background: var(--sh-bad); }
 
+/* Keep the brand and both mode controls visible without forcing the page wide. */
+@media (max-width: 640px) {
+  .sh-bar { height: auto; min-height: var(--sh-bar); flex-wrap: wrap; gap: 6px 10px; padding: 8px 14px; }
+  .sh-bar .sh-logo { flex: 1 0 100%; }
+  .sh-bar .sh-modes { max-width: 100%; }
+  .sh-bar .sh-mode { padding-inline: 8px; }
+  .sh-bar .sh-spacer, .sh-bar .sh-env { display: none; }
+}
+
 /* ── 左侧分区导航 ─────────────────────────────────────────────────────── */
 .app { padding-top: 0; }
 .side {
@@ -605,3 +614,55 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 22px); }
 
 /* 版本条里展开的轮次：一小排圆点，不再弹窗问"第几轮"。 */
 .hg-srcbar__rounds { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; flex: 0 0 100%; }
+
+/* Small-screen layout only; wide data and code scroll within their panels. */
+@media (max-width: 900px) {
+  .main > div:has(> .workshop + .hg-chat) { grid-template-columns: minmax(0, 1fr) !important; }
+  .hg-chat { position: static; min-height: 360px; max-height: none; border-left: 0; border-top: var(--line); }
+  .submit-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .app, body[data-sidebar="collapsed"] .app { grid-template-columns: 72px minmax(0, 1fr); }
+  body[data-sidebar="expanded"] .side { position: absolute; z-index: 35; top: 0; bottom: 0; left: 0; width: min(248px, 85vw); box-shadow: var(--shadow-2); }
+  body[data-sidebar="expanded"] .sidebar-toggle { left: min(226px, calc(85vw - 22px)); z-index: 36; }
+  .app.submit-page { display: grid !important; height: 100%; }
+  .app.submit-page > .side { display: flex !important; }
+  .side { padding: 10px 4px; overflow: auto; }
+  .side .nav { padding: 4px 0; }
+  .side .nav-item { justify-content: center; padding: 8px 2px; font-size: 12px; text-align: center; overflow-wrap: anywhere; }
+  .side .sh-section { padding: 10px 2px 4px; text-align: center; }
+  body:not([data-sidebar="expanded"]) .side .nav-group { display: none; }
+  .side-foot, body[data-sidebar="collapsed"] .side .side-foot { display: flex; padding: 8px 2px; overflow-wrap: anywhere; }
+  body[data-sidebar="collapsed"] .side .status-line { display: none; }
+  body[data-sidebar="expanded"] .side .nav-item { justify-content: flex-start; padding: 9px 12px; text-align: left; }
+  body[data-sidebar="expanded"] .side .sh-section { text-align: left; padding: 16px 14px 8px; }
+  .sidebar-toggle { left: 50px; }
+  .sh-resize { display: none; }
+  .main .topbar { padding: 14px; gap: 8px; flex-wrap: wrap; }
+  .main .topbar .filters { flex-basis: 100%; }
+  .main .filters { margin: 10px; }
+  .main .filters select, .input.runs-q { max-width: 100%; }
+  .cols[data-cols="2"], .cols[data-cols="3"] { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .cols[data-cols="2"] > .col, .cols[data-cols="3"] > .col { min-height: 180px; overflow: auto; }
+  .tbl.runs { min-width: 720px; }
+  .trace-root .trace-shell { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .trace-root .trace-list { max-height: 240px; border-right: 0; border-bottom: var(--line); }
+  .trace-root .trace-main { min-height: 280px; }
+  .lab-toolbar { flex-wrap: wrap; }
+  .workshop { padding: 14px 12px 28px !important; min-width: 0; overflow-wrap: anywhere; }
+  .workshop code { overflow-wrap: anywhere; }
+  .card__head #source-search { min-width: 0; width: 100%; }
+  .card__head .card__sub, #source-current { white-space: normal; overflow-wrap: anywhere; }
+  .trace-root .bar > * { flex-shrink: 1; min-width: 0; }
+  .trace-root .bar #run, .trace-root .bar #round, .trace-root .bar #q { width: 100%; max-width: 100%; }
+  .trace-root .bar-filters, .workshop .card__head { flex-wrap: wrap; }
+  .workshop .card__body:has(#editor) { grid-template-columns: minmax(0, 1fr) !important; }
+  .workshop .card__body:has(#editor) > div { min-width: 0; }
+  .workshop .wcard { max-width: 100%; overflow-x: auto; padding: 14px; }
+  .wtable { min-width: 560px; }
+  .wrow input { min-width: 0 !important; width: 100%; }
+  .settings__body { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .settings__nav { flex-direction: row; border-right: 0; border-bottom: var(--line); }
+  .settings__row { grid-template-columns: minmax(0, 1fr); }
+  .settings__control { justify-content: flex-start; }
+}

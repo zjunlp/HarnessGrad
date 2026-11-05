@@ -69,28 +69,33 @@
     return { raw, parsed: false };
   }
 
+  // Only caller-owned UI strings enter the translator; never translate trace data.
+  const tr = (key) => typeof window !== "undefined" && window.HGI18n ? window.HGI18n.t(key) : key;
+  const ui = (key) => esc(tr(key));
+  const fmt = (key, values) => tr(key).replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? ""));
+
   //: 唯一的标记。两个页面共用，改一处两边一起变。
-  const MARKUP = `
+  const markup = () => `
     <div class="bar">
-      <b class="bar-title">轨迹</b>
+      <b class="bar-title">${ui("轨迹")}</b>
       <select id="run" aria-label="run"></select>
-      <select id="round" aria-label="轮次"></select>
+      <select id="round" aria-label="${ui("轮次")}"></select>
       <span class="chip" id="count">—</span>
       <span class="chip" id="total" style="display:none">—</span>
       <span class="spacer"></span>
       <div class="bar-filters">
-        <button class="chip" data-filter="all" aria-pressed="true">全部</button>
-        <button class="chip" data-filter="fail" aria-pressed="false">只看失败</button>
-        <button class="chip" data-filter="pass" aria-pressed="false">只看通过</button>
+        <button class="chip" data-filter="all" aria-pressed="true">${ui("全部")}</button>
+        <button class="chip" data-filter="fail" aria-pressed="false">${ui("只看失败")}</button>
+        <button class="chip" data-filter="pass" aria-pressed="false">${ui("只看通过")}</button>
       </div>
-      <input id="q" placeholder="过滤 task id" aria-label="过滤 task id">
+      <input id="q" placeholder="${ui("过滤 task id")}" aria-label="${ui("过滤 task id")}">
     </div>
     <div class="trace-shell">
-      <div class="trace-list" id="tasks"><div class="load" style="padding:14px">读清单…</div></div>
+      <div class="trace-list" id="tasks"><div class="load" style="padding:14px">${ui("读清单…")}</div></div>
       <div class="trace-main">
         <div class="vhead" id="vhead"></div>
-        <div class="tl" id="tl"><div class="empty-state"><div class="empty-title">左边选一条轨迹</div>
-          <div class="empty-sub">这些是这一轮留下的 task 轨迹；点一条看它的步骤。</div></div></div>
+        <div class="tl" id="tl"><div class="empty-state"><div class="empty-title">${ui("左边选一条轨迹")}</div>
+          <div class="empty-sub">${ui("这些是这一轮留下的 task 轨迹；点一条看它的步骤。")}</div></div></div>
       </div>
     </div>`;
 
@@ -108,7 +113,7 @@
   function mount(root, opts = {}) {
     if (!root) throw new Error("trace: 缺少挂载点");
     root.classList.add("trace-root");
-    root.innerHTML = MARKUP;
+    root.innerHTML = markup();
     const $ = (s) => root.querySelector(s);
     const $$ = (s) => Array.from(root.querySelectorAll(s));
     const state = { run: "", round: null, tasks: [], filter: "all", q: "", current: null, runs: [] };
@@ -129,8 +134,8 @@
         `<option value="${esc(r.id)}">${esc(r.pretty)} · ${esc(r.id.slice(0, 24))}…</option>`).join("");
       state.run = wantRun && state.runs.some((r) => r.id === wantRun) ? wantRun : (state.runs[0] || {}).id;
       if (!state.run) {
-        $("#run").innerHTML = "<option>（没有带轨迹的 run）</option>";
-        $("#tasks").innerHTML = '<div class="load" style="padding:14px">没有带轨迹的 run。</div>';
+        $("#run").innerHTML = `<option>${ui("（没有带轨迹的 run）")}</option>`;
+        $("#tasks").innerHTML = `<div class="load" style="padding:14px">${ui("没有带轨迹的 run。")}</div>`;
         return;
       }
       $("#run").value = state.run;
@@ -142,8 +147,8 @@
       const d = await api(`/api/runs/${encodeURIComponent(state.run)}`);
       const rounds = (d.rounds || []).filter((x) => x.traces > 0).map((x) => x.round);
       if (!rounds.length) {
-        $("#round").innerHTML = "<option>（这个 run 没有轨迹）</option>";
-        $("#tasks").innerHTML = '<div class="load" style="padding:14px">这个 run 没有保留轨迹。</div>';
+        $("#round").innerHTML = `<option>${ui("（这个 run 没有轨迹）")}</option>`;
+        $("#tasks").innerHTML = `<div class="load" style="padding:14px">${ui("这个 run 没有保留轨迹。")}</div>`;
         $("#vhead").innerHTML = "";
         $("#tl").innerHTML = "";
         notify();
@@ -152,7 +157,7 @@
       state.round = want != null && rounds.includes(want) ? want : rounds[rounds.length - 1];
       $("#round").innerHTML = rounds.map((n) => {
         const r = d.rounds.find((x) => x.round === n);
-        return `<option value="${n}" ${n === state.round ? "selected" : ""}>r${n} · ${r.score == null ? "—" : r.score.toFixed(3)} · ${r.traces} 条</option>`;
+        return `<option value="${n}" ${n === state.round ? "selected" : ""}>r${n} · ${r.score == null ? "—" : r.score.toFixed(3)} · ${esc(fmt("{n} 条", {n: r.traces}))}</option>`;
       }).join("");
       $("#round").onchange = (e) => { state.round = Number(e.target.value); loadTasks(); };
       await loadTasks();
@@ -164,14 +169,14 @@
 
     /* ── 任务清单 ─────────────────────────────────────── */
     async function loadTasks() {
-      $("#tasks").innerHTML = '<div class="load" style="padding:14px">读清单…</div>';
+      $("#tasks").innerHTML = `<div class="load" style="padding:14px">${ui("读清单…")}</div>`;
       let d;
       try { d = await api(`/api/runs/${encodeURIComponent(state.run)}/rounds/${state.round}/traces`); }
       catch (e) { $("#tasks").innerHTML = `<div class="err" style="margin:14px">${esc(e.message)}</div>`; return; }
       state.tasks = d.tasks || [];
-      if ($("#total")) $("#total").textContent = `${state.tasks.length} 条 · r${state.round}`;
+      if ($("#total")) $("#total").textContent = fmt("{n} 条 · r{round}", {n: state.tasks.length, round: state.round});
       if (opts.statusEl) {
-        opts.statusEl.innerHTML = `<span class="status-dot" data-tone="ok"></span>只读 · ${state.tasks.length} 条轨迹`;
+        opts.statusEl.innerHTML = `<span class="status-dot" data-tone="ok"></span>${esc(fmt("只读 · {n} 条轨迹", {n: state.tasks.length}))}`;
       }
       renderTasks();
       notify();
@@ -190,15 +195,15 @@
 
     function renderTasks() {
       const rows = visibleTasks();
-      if ($("#total")) $("#total").textContent = `${state.tasks.length} 条 · r${state.round}`;
-      if ($("#count")) $("#count").textContent = `${rows.length} / ${state.tasks.length} 条 · r${state.round}`;
-      if (!rows.length) { $("#tasks").innerHTML = '<div class="load" style="padding:14px">没有符合筛选的轨迹。</div>'; return; }
+      if ($("#total")) $("#total").textContent = fmt("{n} 条 · r{round}", {n: state.tasks.length, round: state.round});
+      if ($("#count")) $("#count").textContent = fmt("{shown} / {total} 条 · r{round}", {shown: rows.length, total: state.tasks.length, round: state.round});
+      if (!rows.length) { $("#tasks").innerHTML = `<div class="load" style="padding:14px">${ui("没有符合筛选的轨迹。")}</div>`; return; }
       $("#tasks").innerHTML = rows.map((t) => `
         <button class="task" data-name="${esc(t.name)}" aria-current="${t.name === state.current ? "true" : "false"}"
                 title="${esc(t.task_id)}">
           <span class="tid" title="${esc(t.task_id)}">${esc(shortId(t.task_id))}</span>
-          <span class="sc" data-v="${t.score == null ? "" : t.score}" title="得分">${t.score == null ? "—" : t.score.toFixed(0)}</span>
-          <span class="sc" title="步数">${t.steps} 步</span>
+          <span class="sc" data-v="${t.score == null ? "" : t.score}" title="${ui("得分")}">${t.score == null ? "—" : t.score.toFixed(0)}</span>
+          <span class="sc" title="${ui("步数")}">${esc(fmt("{n} 步", {n: t.steps}))}</span>
         </button>`).join("");
       $("#tasks").querySelectorAll("[data-name]").forEach((b) => {
         b.onclick = () => openTask(b.dataset.name);
@@ -211,7 +216,7 @@
     async function openTask(name) {
       state.current = name;
       renderTasks();
-      $("#tl").innerHTML = '<div class="load">读轨迹…</div>';
+      $("#tl").innerHTML = `<div class="load">${ui("读轨迹…")}</div>`;
       let d;
       const requestedRun = state.run, requestedRound = state.round;
       try { d = await api(`/api/runs/${encodeURIComponent(requestedRun)}/rounds/${requestedRound}/trace?name=${encodeURIComponent(name)}`); }
@@ -260,12 +265,12 @@
     function renderEvent(ev, i) {
       const value = ev.value && typeof ev.value === "object" && !Array.isArray(ev.value) ? ev.value : {};
       const hint = value.type || value.event || value.tool || value.role || "";
-      const label = ev.kind === "command" ? "执行命令" : ev.kind === "reply" ? "模型回复" :
-        ev.kind === "identity" ? "运行配置" : ev.kind === "env" ? "环境状态" :
-        ev.kind === "meta" ? (ev.label || "运行信息") : ev.kind === "raw" ? "未识别的原始记录" : "其他记录";
-      const number = ev.step == null ? `记录 ${i + 1}` : `步骤 ${ev.step}`;
-      const outcome = ev.kind === "command" ? (ev.exit === 0 ? "成功" : ev.exit == null ? "退出状态未知" : `退出码 ${ev.exit}`) :
-        ev.kind === "env" && ev.solved === true ? "已完成" : hint;
+      const label = ev.kind === "command" ? tr("执行命令") : ev.kind === "reply" ? tr("模型回复") :
+        ev.kind === "identity" ? tr("运行配置") : ev.kind === "env" ? tr("环境状态") :
+        ev.kind === "meta" ? (ev.label || tr("运行信息")) : ev.kind === "raw" ? tr("未识别的原始记录") : tr("其他记录");
+      const number = ev.step == null ? fmt("记录 {n}", {n: i + 1}) : fmt("步骤 {n}", {n: ev.step});
+      const outcome = ev.kind === "command" ? (ev.exit === 0 ? tr("成功") : ev.exit == null ? tr("退出状态未知") : fmt("退出码 {n}", {n: ev.exit})) :
+        ev.kind === "env" && ev.solved === true ? tr("已完成") : hint;
       return `<details class="trace-event" data-event="${i}"><summary class="trace-event__summary"><strong>${esc(number)}</strong>
         <span>${esc(label)}</span>${outcome ? `<span>${esc(outcome)}</span>` : ""}</summary><div data-event-body></div></details>`;
     }
@@ -295,7 +300,7 @@
       if (ev.kind === "identity") {
         const c = ev.config || {};
         return `<details class="step-card"><summary class="step-head"><span class="step-no">identity</span>
-          <span>harness 配置（这一轮实测生效的那份）</span>
+          <span>${ui("harness 配置（这一轮实测生效的那份）")}</span>
           <span class="spacer"></span><span>${esc((ev.config || {}).harness || "")}</span></summary>
           <pre class="out" style="border:0;border-radius:0">${esc(JSON.stringify(c, null, 1))}</pre></details>`;
       }
@@ -314,9 +319,9 @@
           pretty = JSON.stringify(j, null, 2);
         } catch { /* 不是 JSON：就是模型的原话（含最终答案） */ }
         return `<div class="step-card"><div class="step-head"><span class="step-no">step ${esc(ev.step)}</span>
-          <span>模型回复</span><span class="spacer"></span><span>${esc(ev.model_ms != null ? ev.model_ms + " ms" : "")}</span></div>
+          <span>${ui("模型回复")}</span><span class="spacer"></span><span>${esc(ev.model_ms != null ? ev.model_ms + " ms" : "")}</span></div>
           <div class="reply ${isCmd ? "cmd" : ""}">${esc(pretty)}</div>
-          ${ev.truncated ? `<div class="env">回复被截断${ev.note ? `：${esc(ev.note)}` : ""}</div>` : ""}</div>`;
+          ${ev.truncated ? `<div class="env">${ui("回复被截断")}${ev.note ? `：${esc(ev.note)}` : ""}</div>` : ""}</div>`;
       }
       if (ev.kind === "command") {
         // 全文都渲染进 DOM，折叠只靠 CSS 的 max-height —— 否则"展开全部"只是把
@@ -326,15 +331,15 @@
         const lines = raw.split("\n");
         const long = lines.length > 14;
         return `<div class="step-card"><div class="step-head"><span class="step-no">step ${esc(ev.step)}</span>
-          <span>执行</span><span class="spacer"></span>
+          <span>${ui("执行")}</span><span class="spacer"></span>
           <span class="${ev.exit === 0 ? "ok" : "fail"}">exit ${esc(ev.exit)}</span>
           <span>${esc(ev.command_ms != null ? ev.command_ms + " ms" : "")}</span></div>
           <div class="cmd">
             ${command.parsed ? `<div class="cmd-line"><span class="sig">$</span><span>${esc(command.prefix.join(" "))}</span></div>
-              <div class="env">--code 参数（按 shell 引号解码，仅供阅读，不执行）</div>
+              <div class="env">${ui("--code 参数（按 shell 引号解码，仅供阅读，不执行）")}</div>
               <pre class="out trace-code">${esc(command.code)}</pre>
-              ${command.suffix.length ? `<div class="env">后续参数：${esc(JSON.stringify(command.suffix))}</div>` : ""}
-              <details><summary>查看原始命令（${command.raw.length} 字符）</summary><pre class="out">${esc(command.raw)}</pre></details>`
+              ${command.suffix.length ? `<div class="env">${ui("后续参数：")}${esc(JSON.stringify(command.suffix))}</div>` : ""}
+              <details><summary>${esc(fmt("查看原始命令（{n} 字符）", {n: command.raw.length}))}</summary><pre class="out">${esc(command.raw)}</pre></details>`
               : `<div class="cmd-line"><span class="sig">$</span><span>${esc(command.raw)}</span></div>`}
             <pre class="out" data-clamped="${long}">${esc(raw)}</pre>
             ${long ? `<div><button class="btn" data-expand>展开全部（${lines.length} 行 / ${esc(ev.output_chars)} 字符）</button></div>` : ""}
@@ -375,12 +380,12 @@
     const ready = initSelectors(opts.initialRun || null,
       opts.initialRound == null ? null : Number(opts.initialRound))
       .catch((e) => {
-        if (opts.statusEl) opts.statusEl.textContent = "API 不可达";
+        if (opts.statusEl) opts.statusEl.textContent = tr("API 不可达");
         $("#tl").innerHTML = `<div class="err">${esc(e.message)}</div>`;
       });
 
     return { ready, open, root };
   }
 
-  window.HGTraceView = { mount };
+  if (typeof window !== "undefined") window.HGTraceView = { mount };
 })();

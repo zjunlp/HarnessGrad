@@ -7,6 +7,7 @@
  */
 (() => {
   "use strict";
+  const tr = (key) => window.HGI18n ? window.HGI18n.t(key) : key;
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const state = { files: [], file: null, dirty: false, source: "base", candidates: [], base: null,
@@ -28,10 +29,10 @@
     state.candidates = cands.rows || [];
     state.base = base;
     $("cand-root").textContent = (cands.root || "").replace(/^.*\/data\//, "data/");
-    const stamp = (seconds) => (seconds ? new Date(seconds * 1000).toLocaleString("zh-CN",
+    const stamp = (seconds) => (seconds ? new Date(seconds * 1000).toLocaleString(window.HGI18n?.language === "en" ? "en" : "zh-CN",
       { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
     state.bases = (state.baseRows || []).map((row) => ({
-      value: `base:${row.name}`, name: row.path, meta: "平台自带", kind: "base",
+      value: `base:${row.name}`, name: row.path, meta: tr("平台自带"), kind: "base",
     }));
     const newest = state.candidates.slice().sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
     // run 的每一轮也是 harness 版本（state_after_roundN），它们是这个平台里数量最多的一类。
@@ -44,7 +45,7 @@
       const points = Number(row.rounds ?? 0);
       const latest = Math.max(0, points - 1);
       return points > 0 ? { value: `run:${row.id}`, name: row.id, kind: "run",
-                           meta: `run · 最新 r${latest} · ${row.kind || ""}` } : null;
+                           meta: `run · ${tr("最新")} r${latest} · ${row.kind || ""}` } : null;
     }).filter(Boolean);
     state.entries = [
       ...state.bases,
@@ -84,7 +85,7 @@
       const path = String(row.from).split("/").slice(-2).join("/");
       return `来自 ${path}：快照直接签出，没有打补丁`;
     }
-    return `${state.entries.length} 个版本 · 按更新时间排列`;
+    return tr("{n} 个版本 · 按更新时间排列").replace("{n}", state.entries.length);
   }
 
   /* ── 另存为的名字 ────────────────────────────────────────────────────────
@@ -138,7 +139,7 @@
     `<li><button class="btn btn--ghost btn--sm" type="button" data-path="${esc(path)}" style="width:100%;justify-content:flex-start">${esc(path)}</button></li>`;
 
   async function openFile(path) {
-    if (state.dirty && !confirm("当前文件没保存，切换会丢掉改动。继续？")) return;
+    if (state.dirty && !confirm(tr("当前文件没保存，切换会丢掉改动。继续？"))) return;
     const url = state.source === "base"
       ? `/api/base/file?path=${encodeURIComponent(path)}`
       : `/api/harness/file?candidate=${encodeURIComponent(state.source)}&path=${encodeURIComponent(path)}`;
@@ -146,12 +147,12 @@
     state.file = path;
     $("editor").value = payload.text ?? payload.content ?? `（读取失败：${payload.detail || payload.error || "未知"}）`;
     $("editing").textContent = path;
-    $("lines").textContent = `${$("editor").value.split("\n").length} 行`;
+    $("lines").textContent = tr("{n} 行").replace("{n}", $("editor").value.split("\n").length);
     // 打开文件停在末尾会让人以为文件只有最后几行；选区回零、滚动回顶。
     $("editor").setSelectionRange(0, 0);
     $("editor").scrollTop = 0;
     markDirty(false);
-    $("chips").innerHTML = '<span class="field__hint">在编辑器里选中若干行</span>';
+    $("chips").innerHTML = `<span class="field__hint">${esc(tr("在编辑器里选中若干行"))}</span>`;
   }
 
   function selection() {
@@ -165,8 +166,8 @@
     const sel = selection();
     $("chips").innerHTML = sel
       ? `<span class="badge badge--accent">${esc(sel.path)}:${sel.from}-${sel.to}</span>` +
-        '<span class="field__hint">会随这一条消息一起发出</span>'
-      : '<span class="field__hint">选中若干行，可以带着上下文说</span>';
+        `<span class="field__hint">${esc(tr("会随这一条消息一起发出"))}</span>`
+      : `<span class="field__hint">${esc(tr("选中若干行，可以带着上下文说"))}</span>`;
   }
 
 
@@ -177,7 +178,7 @@
   async function loadHistory(candidate) {
     const m = /^(.*)-r(\d+)(?:-\d+)?$/.exec(candidate || "");
     const wrap = $("history-tab");
-    if (!m) { wrap.disabled = true; wrap.title = "这一版不是来自某个 run 的轮次，没有历史"; return; }
+    if (!m) { wrap.disabled = true; wrap.title = tr("这一版不是来自某个 run 的轮次，没有历史"); return; }
     wrap.disabled = false;
     const [, run, round] = m;
     try {
@@ -205,12 +206,12 @@
         const row = rows.find((r) => String(r.round) === button.dataset.round);
         $("patch-wrap").hidden = false;
         $("patch-title").textContent = `r${row.round} 的改动 · ${row.files.join(", ")}`;
-        $("history-patch").textContent = row.patch || "（这一轮没有补丁）";
+        $("history-patch").textContent = row.patch || tr("（这一轮没有补丁）");
       };
       $("range-go").onclick = async () => {
         const from = $("range-from").value;
         const to = $("range-to").value;
-        $("history-patch").textContent = "对比中…";
+        $("history-patch").textContent = tr("对比中…");
         try {
           const res = await fetch(`/api/runs/${encodeURIComponent(run)}/range-diff?from=${from}&to=${to}`);
           const payload = await res.json();
@@ -221,7 +222,7 @@
             : `r${payload.from} → r${payload.to}：${(payload.files || []).join(", ")} +${payload.added}/-${payload.removed}\n\n`
               + (payload.diff || "");
         } catch (error) {
-          $("history-patch").textContent = `请求失败：${error.message}`;
+          $("history-patch").textContent = `${tr("请求失败：")}${error.message}`;
         }
       };
       state.history = rows;
@@ -239,7 +240,7 @@
     const [, run, round] = m;
     $("patch-wrap").hidden = false;
     $("patch-title").textContent = `r0 → r${round} 的逐题对照`;
-    $("history-patch").textContent = "对照中…";
+    $("history-patch").textContent = tr("对照中…");
     try {
       const payload = await (await fetch(`/api/runs/${encodeURIComponent(run)}/compare`
         + `?with=${encodeURIComponent(run)}&round=0&round_b=${round}`)).json();
@@ -253,7 +254,7 @@
         payload.only_in_a.length ? `\n只在 r0 里：${payload.only_in_a.slice(0, 10).join(", ")}` : "",
       ].join("\n").trim();
     } catch (error) {
-      $("history-patch").textContent = `请求失败：${error.message}`;
+      $("history-patch").textContent = `${tr("请求失败：")}${error.message}`;
     }
   }
 
@@ -263,7 +264,7 @@
   function pushMessage(role, text, extra = {}) {
     const wrap = document.createElement("div");
     wrap.className = `hg-msg hg-msg--${role}`;
-    const who = role === "user" ? "你" : "助手";
+    const who = role === "user" ? tr("你") : tr("助手");
     const sel = extra.selection
       ? `<div class="hg-msg__sel">${esc(extra.selection.path)}:${esc(extra.selection.from)}-${esc(extra.selection.to)}</div>`
       : "";
@@ -293,20 +294,20 @@
     const instruction = $("instruction").value.trim();
     if (!instruction) return;
     if (state.source === "base") {
-      pushMessage("assistant", "先把当前文件「另存为候选」：基线是只读的，改它等于换掉所有曲线的起点。");
+      pushMessage("assistant", tr("先把当前文件「另存为候选」：基线是只读的，改它等于换掉所有曲线的起点。"));
       return;
     }
     const sel = selection();
     pushMessage("user", instruction, { selection: sel });
     $("instruction").value = "";
     $("send").disabled = true;
-    $("send-state").textContent = "助手在回…";
+    $("send-state").textContent = tr("助手在回…");
     // **等待要有秒表。** 一次 codex 调用可能几分钟；只显示"…"看起来就是停住了。
     const started = Date.now();
-    const pending = pushMessage("assistant", "助手在改 · 0s");
+    const pending = pushMessage("assistant", tr("助手在改 · {n}s").replace("{n}", 0));
     const ticker = setInterval(() => {
       const body = pending.querySelector(".hg-msg__body");
-      if (body) body.textContent = `助手在改 · ${Math.round((Date.now() - started) / 1000)}s`;
+      if (body) body.textContent = tr("助手在改 · {n}s").replace("{n}", Math.round((Date.now() - started) / 1000));
     }, 1000);
     try {
       const response = await fetch("/api/workbench/edit", {
@@ -319,20 +320,20 @@
       clearInterval(ticker);
       pending.remove();
       if (!response.ok) {
-        pushMessage("assistant", `${payload.error || "拒绝"}：${payload.detail || ""}`);
+        pushMessage("assistant", `${payload.error || tr("拒绝")}：${payload.detail || ""}`);
         return;
       }
       const said = payload.message || (payload.changed || []).length
         ? (payload.message || `改了 ${(payload.changed || []).length} 个文件。`)
-        : "这一轮没有改动。";
+        : tr("这一轮没有改动。");
       const seconds = Math.round((Date.now() - started) / 1000);
       pushMessage("assistant", `${said}\n· ${seconds}s${payload.continued ? " · 已自动续跑一轮" : ""}`,
                   { diff: payload.diff, changed: payload.changed, candidate: payload.candidate });
       if (!(payload.changed || []).length) {
-        const hint = pushMessage("assistant", "它这一轮没有动文件。需要的话我让它继续。");
+        const hint = pushMessage("assistant", tr("它这一轮没有动文件。需要的话我让它继续。"));
         const again = document.createElement("button");
         again.className = "btn btn--sm";
-        again.textContent = "继续";
+        again.textContent = tr("继续");
         again.addEventListener("click", () => {
           $("instruction").value = "继续执行：不要再复述计划，直接改文件，改完说明改了什么。";
           send();
@@ -350,7 +351,7 @@
       pending.remove();
       clearInterval(ticker);
       pending.remove();
-      pushMessage("assistant", `请求失败：${error.message}`);
+      pushMessage("assistant", `${tr("请求失败：")}${error.message}`);
     } finally {
       $("send").disabled = false;
       $("send-state").textContent = "";
@@ -359,7 +360,7 @@
 
   async function save() {
     const name = $("name").value.trim();
-    if (!NAME_RE.test(name)) { alert("候选名只允许字母数字与 . _ -（≤48）"); return; }
+    if (!NAME_RE.test(name)) { alert(tr("候选名只允许字母数字与 . _ -（≤48）")); return; }
     // 新版本以**当前打开的这一版**为底：这次只发送被改的那个文件，服务端若从基线起步，
     // 其余文件和 manifest 就会被换成 base_harness/loop 的，而响应仍然是 201。
     const response = await fetch("/api/harness/save", { method: "POST",
@@ -369,7 +370,7 @@
                                ? "" : state.source,
                              files: { [state.file]: $("editor").value } }) });
     const payload = await response.json();
-    if (!response.ok) { alert(`${payload.error || "保存失败"}\n${payload.detail || ""}`); return; }
+    if (!response.ok) { alert(`${payload.error || tr("保存失败")}\n${payload.detail || ""}`); return; }
     markDirty(false);
     await loadSources();
     await openSource(name);
@@ -390,7 +391,7 @@
       const row = event.target.closest("[data-source]");
       if (!row) return;
       // 平台自带的 harness 是只读的：先复制成候选再编辑，和基线同一条规则。
-      if (row.dataset.kind === "base") { alert("平台自带的 harness 是只读的：先「另存为」再改。"); return; }
+      if (row.dataset.kind === "base") { alert(tr("平台自带的 harness 是只读的：先「另存为」再改。")); return; }
       if (row.dataset.kind === "run") {
         // run 的某一轮：先把轮次就地展开成小圆点（以前是弹窗问"第几轮"），点哪一轮就复制哪一轮。
         const runId = row.dataset.source.slice(4);
@@ -398,7 +399,7 @@
         row.dataset.open = "true";
         const holder = document.createElement("div");
         holder.className = "hg-srcbar__rounds";
-        holder.textContent = "读取轮次…";
+        holder.textContent = tr("读取轮次…");
         row.after(holder);
         try {
           const data = await (await fetch(`/api/runs/${encodeURIComponent(runId)}`)).json();
@@ -406,7 +407,7 @@
           holder.innerHTML = rounds.length
             ? rounds.map((n) => `<button type="button" class="hg-picker__round"
                 data-copy="${runId}" data-round="${n}">r${n}</button>`).join("")
-            : '<span class="field__hint">这个 run 没有记录轮次</span>';
+            : `<span class="field__hint">${esc(tr("这个 run 没有记录轮次"))}</span>`;
         } catch (error) {
           holder.textContent = `读取失败：${error.message}`;
         }
@@ -417,13 +418,13 @@
         const runId = copy.dataset.copy;
         const round = Number(copy.dataset.round);
         copy.disabled = true;
-        copy.textContent = "复制中";
+        copy.textContent = tr("复制中");
         try {
           const response = await fetch("/api/harness/from-round", { method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ run: runId, round }) });
           const payload = await response.json();
-          if (!response.ok) { alert(`${payload.error || "复制失败"}\n${payload.detail || ""}`); return; }
+          if (!response.ok) { alert(`${payload.error || tr("复制失败")}\n${payload.detail || ""}`); return; }
           location.href = `/harness.html?candidate=${encodeURIComponent(payload.candidate)}`;
         } finally {
           copy.disabled = false;
@@ -445,7 +446,7 @@
     $("compare-go").addEventListener("click", compareRounds);
     $("save").addEventListener("click", save);
     $("send").addEventListener("click", send);
-    loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">读取失败：${esc(error.message)}</li>`; });
+    loadSources().catch((error) => { $("files").innerHTML = `<li class="field__hint">${esc(tr("读取失败："))}${esc(error.message)}</li>`; });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   else bind();

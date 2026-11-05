@@ -6,8 +6,9 @@
  */
 (() => {
   "use strict";
+  const tr = (key) => window.HGI18n ? window.HGI18n.t(key) : key;
   const $ = (id) => document.getElementById(id);
-  const PANELS = { scenarios: ["场景", "已经构造好的环境"], draft: ["起草", "一段说明 → 一场景"], import: ["导入", "把做好的场景拿进来"] };
+  const PANELS = { scenarios: [tr("场景"), tr("已经构造好的环境")], draft: ["起草", tr("一段说明 → 一场景")], import: ["导入", tr("把做好的场景拿进来")] };
 
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -41,17 +42,17 @@
       $("author-root").textContent = (payload.root || "").replace(/^.*\/data\//, "data/");
       const rows = payload.rows || [];
       if (!rows.length) {
-        body.innerHTML = '<tr><td colspan="6" class="hint">还没有场景。去「起草」写一段说明，或「导入」一个归档。</td></tr>';
+        body.innerHTML = `<tr><td colspan="6" class="hint">${esc(tr("还没有场景。去「起草」写一段说明，或「导入」一个归档。"))}</td></tr>`;
         return;
       }
       body.innerHTML = rows.map((row) => {
         const gates = row.gates || [];
         const gateCell = !row.valid
-          ? pill("bad", "结构未过")
+          ? pill("bad", tr("结构未过"))
           : row.gates_ok
-            ? pill("ok", `三道门通过（${gates.length} 题）`)
-            : pill("bad", "门未过");
-        const usable = row.gates_ok ? pill("ok", "可运行") : pill("wait", "尚不可运行");
+            ? pill("ok", tr("三道门通过（{n} 题）").replace("{n}", gates.length))
+            : pill("bad", tr("门未过"));
+        const usable = row.gates_ok ? pill("ok", tr("可运行")) : pill("wait", tr("尚不可运行"));
         const problems = (row.problems || []).length
           ? `<div class="hint" style="margin:4px 0 0">${esc(row.problems[0])}${row.problems.length > 1 ? ` …等 ${row.problems.length} 条` : ""}</div>`
           : "";
@@ -61,22 +62,22 @@
           <td><b>${esc(row.slug)}</b><div class="hint" style="margin:2px 0 0">${esc(row.title || "")}</div>${problems}</td>
           <td>${esc(row.tasks)}</td>
           <td><code>${esc(row.env_kind || "—")}</code></td>
-          <td>${row.valid ? pill("ok", "通过") : pill("bad", "未过")}</td>
+          <td>${row.valid ? pill("ok", tr("通过")) : pill("bad", tr("未过"))}</td>
           <td>${gateCell}${detail ? `<div class="hint" style="margin:4px 0 0">${esc(detail)}</div>` : ""}</td>
           <td>${usable}</td>
         </tr>`;
       }).join("");
     } catch (error) {
-      body.innerHTML = `<tr><td colspan="6" class="hint">读取失败：${esc(error.message)}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" class="hint">${esc(tr("读取失败："))}${esc(error.message)}</td></tr>`;
     }
   }
 
   async function draft() {
     const note = $("note").value.trim();
     const log = $("draft-log");
-    if (!note) { log.hidden = false; log.textContent = "先写一段任务说明。"; return; }
+    if (!note) { log.hidden = false; log.textContent = tr("先写一段任务说明。"); return; }
     log.hidden = false;
-    log.textContent = "起草中…（要跑模型，通常 30-90 秒；可能会重写几次）";
+    log.textContent = tr("起草中…（要跑模型，通常 30-90 秒；可能会重写几次）");
     $("draft-go").disabled = true;
     try {
       const response = await fetch("/api/author/draft", {
@@ -86,13 +87,13 @@
       });
       const payload = await response.json();
       if (!response.ok) {
-        log.textContent = `${payload.error || "拒绝"}\n\n${payload.detail || ""}`;
+        log.textContent = `${payload.error || tr("拒绝")}\n\n${payload.detail || ""}`;
         return;
       }
       const row = payload.row || {};
       log.textContent = [
         `场景 ${row.slug} 已起草`,
-        `题数 ${row.tasks} · 结构 ${row.valid ? "通过" : "未过"} · 三道门 ${row.gates_ok ? "通过" : "未过"}`,
+        `题数 ${row.tasks} · 结构 ${row.valid ? tr("通过") : tr("未过")} · 三道门 ${row.gates_ok ? tr("通过") : tr("未过")}`,
         ...(row.gates || []).map((g) => `  ${g.task_id}: oracle ${g.oracle ? "✓" : "✗"} · 空手 ${g.empty ? "✓" : "✗"} · 两次一致 ${g.deterministic ? "✓" : "✗"}`),
         ...(row.problems || []).map((p) => `  - ${p}`),
         "",
@@ -100,7 +101,7 @@
       ].join("\n").trim();
       location.hash = "#/scenarios";
     } catch (error) {
-      log.textContent = `请求失败：${error.message}`;
+      log.textContent = `${tr("请求失败：")}${error.message}`;
     } finally {
       $("draft-go").disabled = false;
     }
@@ -123,15 +124,15 @@
       });
       const payload = await response.json();
       if (!response.ok) {
-        log.textContent = `${payload.error || "拒绝"}\n\n${JSON.stringify(payload.detail || payload, null, 1)}`;
+        log.textContent = `${payload.error || tr("拒绝")}\n\n${JSON.stringify(payload.detail || payload, null, 1)}`;
         return;
       }
-      log.textContent = `已导入 ${payload.row.slug} → ${payload.imported}\n题数 ${payload.row.tasks} · 三道门 ${payload.row.gates_ok ? "通过" : "未过"}`;
+      log.textContent = `已导入 ${payload.row.slug} → ${payload.imported}\n题数 ${payload.row.tasks} · 三道门 ${payload.row.gates_ok ? tr("通过") : tr("未过")}`;
       chosen = null;
-      $("drop").textContent = "把归档拖到这里，或点一下选择文件";
+      $("drop").textContent = tr("把归档拖到这里，或点一下选择文件");
       location.hash = "#/scenarios";
     } catch (error) {
-      log.textContent = `请求失败：${error.message}`;
+      log.textContent = `${tr("请求失败：")}${error.message}`;
     } finally {
       $("upload").disabled = !chosen;
     }
@@ -146,7 +147,7 @@
     drop.addEventListener("click", () => file.click());
     file.addEventListener("change", () => {
       chosen = file.files[0] || null;
-      drop.textContent = chosen ? `${chosen.name} · ${(chosen.size / 1024).toFixed(0)} KB` : "未选择";
+      drop.textContent = chosen ? `${chosen.name} · ${(chosen.size / 1024).toFixed(0)} KB` : tr("未选择");
       $("upload").disabled = !chosen;
     });
     ["dragenter", "dragover"].forEach((name) => drop.addEventListener(name, (event) => {
@@ -157,7 +158,7 @@
     }));
     drop.addEventListener("drop", (event) => {
       chosen = event.dataTransfer.files[0] || null;
-      drop.textContent = chosen ? `${chosen.name} · ${(chosen.size / 1024).toFixed(0)} KB` : "未选择";
+      drop.textContent = chosen ? `${chosen.name} · ${(chosen.size / 1024).toFixed(0)} KB` : tr("未选择");
       $("upload").disabled = !chosen;
     });
     $("upload").addEventListener("click", upload);
