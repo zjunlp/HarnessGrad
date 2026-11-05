@@ -18,7 +18,9 @@
   <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality gate"></a>
 </p>
 
-## What you can run
+<a id="what-you-can-run"></a>
+
+## 🧩 What you can run
 
 A run is one point in a **harness × method × benchmark** space: a *harness* solves tasks, a
 *method* proposes edits to that harness between rounds, and a *benchmark* scores each
@@ -45,15 +47,21 @@ The table records the inventory at this README revision; the benchmark row is ch
 - **Bring a benchmark:** write an adapter that materialises tasks and runs its official scorer. See [dataset onboarding](docs/dataset-onboarding.md).
 - **Reproduce a paper:** choose a recipe and review its prerequisites and cost in [RSI experiments](docs/rsi-experiments.md).
 
-## Why one command is enough
+<a id="why-one-command-is-enough"></a>
+
+## ⚙️ Why one command is enough
 
 A harness supplies `harness.json` and an entrypoint accepting `--task` and `--workdir` ([interface](INTERFACE.md)). The platform runs dataset tasks and scoring, isolates execution, versions candidate harnesses, and records each run's outcomes and receipts. Dataset and harness prerequisites still need to be installed separately.
 
-## Why the comparison is fair
+<a id="why-the-comparison-is-fair"></a>
+
+## ⚖️ Why the comparison is fair
 
 Each round records the candidate harness hash and its changes, alongside the run's model roles and measurement metadata. Compare results only when their task selection, scorer, models and other relevant conditions support it. Failed or incomplete measurements are not scores, and unsupported measurements must not be replaced with proxy scores under the benchmark's name. See the [measurement policy](docs/refusal-policy.md).
 
-## Installation
+<a id="installation"></a>
+
+## 📦 Installation
 
 Linux with Python **3.12+**, git, [uv](https://docs.astral.sh/uv/getting-started/installation/),
 and a working `bubblewrap`. Keep the virtual environment
@@ -83,7 +91,7 @@ HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --che
 
 <a id="dataset-storage"></a>
 
-## Dataset storage
+## 🗂️ Dataset storage
 
 Set the shared external dataset directory in your local `.env`:
 
@@ -93,7 +101,9 @@ HG_DATA_ROOT=/path/to/datasets
 
 See [downloads](DOWNLOADS.md) for preparation and locations, and [datasets](DATASETS.md) for adapter details.
 
-## Quick start
+<a id="quick-start"></a>
+
+## 🚀 Quick start
 
 Configure the dataset and both model roles, then start a run. Use your own OpenAI-compatible endpoint URLs, model names and credentials; do not commit credentials.
 
@@ -115,7 +125,9 @@ python3 tools/run_summary.py runs/dgm-quickstart
 
 Replace the placeholders before running. The check probes endpoints but does not generate responses. The run uses five training tasks and one editing round; see the [recipe](experiments/method-dgm.json) and [experiment documentation](docs/rsi-experiments.md) for details.
 
-## Contributors
+<a id="contributors"></a>
+
+## 🌱 Contributors
 
 Thank you to everyone who contributes harnesses, methods, benchmarks, and improvements to HarnessGrad!
 The three charts show the most recent 30 days; each line includes contributions made before that window.
@@ -130,7 +142,9 @@ Want to join? [Bring a harness](docs/bring-your-own-harness.md), [add a method](
 ![Benchmarks: who contributed, by day](.github/assets/contributors-benchmark.svg)
 <!-- END contributors -->
 
-## The workbench
+<a id="the-workbench"></a>
+
+## 🖥️ The workbench
 
 Explore experiments, inspect harness versions and trajectories, and edit a candidate in the Console.
 
@@ -157,7 +171,9 @@ Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from t
 <sub>Click an image to view it at full size.</sub>
 </details>
 
-## Citation
+<a id="citation"></a>
+
+## 📖 Citation
 
 If the platform, the measurement protocol or a curve produced here is useful in your work:
 
@@ -171,7 +187,9 @@ If the platform, the measurement protocol or a curve produced here is useful in 
 }
 ```
 
-## License
+<a id="license"></a>
+
+## 📜 License
 
 MIT. Third-party benchmark code keeps its own licence and provenance next to the code that uses
 it (`PROVENANCE.json`, `LICENSE.upstream`).

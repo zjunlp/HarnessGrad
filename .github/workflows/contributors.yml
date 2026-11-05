@@ -1,60 +1,22 @@
-# Keep the contribution drawings equal to the record, without waiting for a human.
-#
-# The README's three curves are committed SVGs: GitHub does not run JavaScript in a README, so
-# the only way "the picture is always current" can be true is if something regenerates the file
-# after the record changes. That is this job. It runs on a schedule and by hand, renders
-# `registry/leaderboards.json` through the same `--write` a contributor runs, and commits only
-# when the drawing actually changed — so an idle day is a green run with no commit, not a churn
-# of empty commits.
-#
-# It is deliberately *not* a server: a badge service that renders on every request would need
-# hosting and a credential, and it would make the README depend on a third party staying up.
-# A scheduled commit is the same freshness with none of the availability risk, and the diff is
-# reviewable. The interactive page (`docs/contributors.html`) is regenerated in the same commit;
-# serving it needs Pages or the Hub, which is a separate decision.
+# Contributor graphics are maintained by a human, not an automated push.
+# Run `python3 tools/contributors.py --write` locally, review the diff and commit it.
 name: Contributors
 
 on:
-  schedule:
-    # 03:17 UTC daily: off the hour, so it does not queue behind every other cron.
-    - cron: '17 3 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: contributors
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  refresh:
-    name: Refresh the contribution drawings
+  check:
+    name: Check contributor drawings
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      # No third-party packages: the renderer is standard library, like the platform.
-      - name: Render from the record
-        run: |
-          python3 tools/contributors.py --write
-          python3 tools/contributors.py --check
-
-      - name: Commit only a real change
-        run: |
-          if git diff --quiet -- .github/assets/contributors-*.svg docs/contributors.md \
-               docs/contributors.html README.md ; then
-            echo "no change: the drawings already match the record"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/assets/contributors-*.svg docs/contributors.md \
-                  docs/contributors.html README.md
-          git commit -m "contributions: redraw from the record"
-          git push
+      - name: Check committed graphics
+        run: python3 tools/contributors.py --check
