@@ -1,5 +1,6 @@
 ---
 import HomepageStory from '../components/HomepageStory.astro';
+import LanguageSwitch from '../components/LanguageSwitch.astro';
 import '../styles/homepage.css';
 import '../styles/learning-cycle.css';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -26,7 +27,7 @@ const title = 'HarnessGrad: Harness as A Continual Learner';
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header wrapper">
       <a class="wordmark" href={`${base}/`} aria-label="HarnessGrad home"><svg width="28" height="28" viewBox="6 10 51 48" aria-hidden="true"><g fill="currentColor"><rect x="8" y="48" width="9.5" height="8" rx="2.5"/><rect x="20.5" y="42" width="9.5" height="14" rx="2.5"/><rect x="33" y="31" width="9.5" height="25" rx="2.5"/><rect x="45.5" y="12" width="9.5" height="44" rx="2.5"/></g></svg>HarnessGrad</a>
-      <nav aria-label="Main navigation"><a href={`${base}/getting-started/`}>Docs</a><a href={`${base}/news/`}>News</a><a href={`${base}/blog/`}>Blog</a><a href="https://github.com/zjunlp/HarnessGrad">GitHub</a><button id="theme-toggle" type="button" aria-label="Switch color theme" title="Switch color theme"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg></button></nav>
+      <nav aria-label="Main navigation"><LanguageSwitch /><a href={`${base}/getting-started/`}>Docs</a><a href={`${base}/news/`}>News</a><a href={`${base}/blog/`}>Blog</a><a href="https://github.com/zjunlp/HarnessGrad">GitHub</a><button id="theme-toggle" type="button" aria-label="Switch color theme" title="Switch color theme"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg></button></nav>
     </header>
     <main id="main" class="wrapper" tabindex="-1"><HomepageStory /></main>
     <footer class="site-footer wrapper"><span>HarnessGrad</span><p>Open research on agents that improve how they work.</p><a href={`${base}/contributing/`}>Contribute</a></footer>

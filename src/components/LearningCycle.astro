@@ -1,19 +1,25 @@
 ---
-const beats = [
+const zh = Astro.props.lang === 'zh';
+const beats = zh ? [
+  { name: '运行', title: '给智能体一个任务。', detail: '入口启动一次运行。模型与环境之间的桥梁利用 Harness 提供的工具和上下文，将推理连接到行动。' },
+  { name: '反馈', title: '带回经验。', detail: '收集环境反馈和运行轨迹。改进方法检查这些经验，决定下一步尝试什么。' },
+  { name: '编辑 Harness', title: '改变支架，而非模型。', detail: '改进方法在声明的可编辑范围内提出修改：工具、上下文构建或控制流程。模型保持固定。' },
+  { name: '评估', title: '测试修改，再做决定。', detail: '在声明的评估条件下运行候选版本，比较原始版本与候选版本的证据，并据此规划下一轮。' },
+] : [
   { name: 'Run', title: 'Give the agent a task.', detail: 'Your entrypoint starts a run. A model and environment bridge connects reasoning to actions, using the tools and context your harness provides.' },
   { name: 'Feedback', title: 'Bring the experience back.', detail: 'Collect environment feedback and the run trace. An improvement method examines this experience to decide what to try next.', note: 'A trace is material for the next experiment.' },
   { name: 'Edit harness', title: 'Change the scaffold, not the model.', detail: 'The method proposes an edit within your declared editable surface: tools, context construction, or control flow. The model stays fixed.', note: 'Only the allowed code is up for revision.' },
   { name: 'Evaluate', title: 'Test the change, then decide.', detail: 'Run the candidate under declared evaluation conditions. Compare the original and candidate evidence, then use what you learn to plan another round.', note: 'Keep the model fixed. Test the change, not the promise.' },
 ];
 ---
-<div class="learning-cycle" data-learning-cycle>
+<div class="learning-cycle" data-learning-cycle data-lang={zh ? 'zh' : 'en'}>
   <figure class="cycle-illustration" data-state="3" id="cycle-illustration">
-    <div class="cycle-controls" role="group" aria-label="Choose an illustrated experiment step" hidden>
+    <div class="cycle-controls" role="group" aria-label={zh ? '选择图示实验步骤' : 'Choose an illustrated experiment step'} hidden>
       {beats.map((beat, i) => <button type="button" data-cycle-button={i} aria-pressed={i === 0 ? 'true' : 'false'} aria-controls="cycle-illustration"><span aria-hidden="true">0{i + 1}</span>{beat.name}</button>)}
     </div>
     <svg viewBox="0 0 460 350" role="img" aria-labelledby="cycle-art-title cycle-art-desc">
-      <title id="cycle-art-title">One little agent, an evolving harness</title>
-      <desc id="cycle-art-desc">Illustrative experiment, not measured results. The same robot and model remain fixed. A run sends an action, feedback returns as a trace, the harness gains an edited tool shelf, and evaluation compares the original with the candidate.</desc>
+      <title id="cycle-art-title">{zh ? '同一个智能体，不断演进的 Harness' : 'One little agent, an evolving harness'}</title>
+      <desc id="cycle-art-desc">{zh ? '这是实验示意图，不是实测结果。机器人和模型保持不变：运行发出行动，反馈以轨迹形式返回，Harness 的工具架被修改，评估比较原始版本和候选版本。' : 'Illustrative experiment, not measured results. The same robot and model remain fixed. A run sends an action, feedback returns as a trace, the harness gains an edited tool shelf, and evaluation compares the original with the candidate.'}</desc>
       <g class="scene-lines">
         <path class="environment" d="M35 63 Q30 49 52 47 L409 49 Q430 48 425 70 L427 288 Q428 306 406 306 L51 308 Q32 308 34 287 Z"/>
         <path class="ground" d="M15 313 Q113 305 231 314 T446 311"/>
@@ -53,15 +59,15 @@ const beats = [
         </g>
       </g>
       <g class="svg-label cycle-labels">
-        <text x="36" y="31">Environment</text><text x="142" y="85">tools · context · control flow</text>
-        <text x="184" y="337">model stays fixed</text>
-        <g class="cycle-scene cycle-run"><text x="355" y="155">action</text></g>
-        <g class="cycle-scene cycle-feedback"><text x="350" y="149">run trace</text></g>
-        <g class="cycle-scene cycle-edit"><text x="57" y="227">context</text><text x="341" y="227">tools</text></g>
-        <g class="cycle-scene cycle-evaluate"><text x="70" y="239">original</text><text x="320" y="239">candidate</text></g>
+        <text x="36" y="31">{zh ? '环境' : 'Environment'}</text><text x="142" y="85">{zh ? '工具 · 上下文 · 控制流程' : 'tools · context · control flow'}</text>
+        <text x="184" y="337">{zh ? '模型保持固定' : 'model stays fixed'}</text>
+        <g class="cycle-scene cycle-run"><text x="355" y="155">{zh ? '行动' : 'action'}</text></g>
+        <g class="cycle-scene cycle-feedback"><text x="350" y="149">{zh ? '运行轨迹' : 'run trace'}</text></g>
+        <g class="cycle-scene cycle-edit"><text x="57" y="227">{zh ? '上下文' : 'context'}</text><text x="341" y="227">{zh ? '工具' : 'tools'}</text></g>
+        <g class="cycle-scene cycle-evaluate"><text x="70" y="239">{zh ? '原始版本' : 'original'}</text><text x="320" y="239">{zh ? '候选版本' : 'candidate'}</text></g>
       </g>
     </svg>
-    <figcaption><strong data-cycle-caption>Run → Feedback → Edit harness → Evaluate</strong><span>Illustrative cycle, not measured scores.<br />Same model throughout; no gain is assumed.</span></figcaption>
+    <figcaption><strong data-cycle-caption>{zh ? '运行 → 反馈 → 编辑 Harness → 评估' : 'Run → Feedback → Edit harness → Evaluate'}</strong><span>{zh ? '流程示意，并非实测分数。' : 'Illustrative cycle, not measured scores.'}<br />{zh ? '全程使用相同模型；不预设性能提升。' : 'Same model throughout; no gain is assumed.'}</span></figcaption>
   </figure>
   <ol class="cycle-steps">
     {beats.map((beat, i) => <li data-cycle-step={i} id={`experiment-step-${i + 1}`}>
@@ -76,7 +82,9 @@ const beats = [
     const figure = cycle.querySelector<HTMLElement>('.cycle-illustration')!;
     const buttons = [...cycle.querySelectorAll<HTMLButtonElement>('[data-cycle-button]')];
     const steps = [...cycle.querySelectorAll<HTMLElement>('[data-cycle-step]')];
-    const captions = ['01 / Run — give the agent a task.', '02 / Feedback — bring the experience back.', '03 / Edit harness — change the scaffold.', '04 / Evaluate — compare the evidence.'];
+    const captions = cycle.dataset.lang === 'zh'
+      ? ['01 / 运行 — 给智能体一个任务。', '02 / 反馈 — 带回经验。', '03 / 编辑 Harness — 改变支架。', '04 / 评估 — 比较证据。']
+      : ['01 / Run — give the agent a task.', '02 / Feedback — bring the experience back.', '03 / Edit harness — change the scaffold.', '04 / Evaluate — compare the evidence.'];
     const select = (index: number) => {
       figure.dataset.state = String(index);
       buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));

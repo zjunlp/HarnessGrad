@@ -616,7 +616,8 @@ h2 {
 }
 
 .site-header nav {
-  gap:22px;
+  gap:12px;
+  flex-wrap:wrap;
 }
 
 .split,.evidence {

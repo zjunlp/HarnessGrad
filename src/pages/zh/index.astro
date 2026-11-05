@@ -1,0 +1,41 @@
+---
+import HomepageStory from '../../components/HomepageStory.astro';
+import LanguageSwitch from '../../components/LanguageSwitch.astro';
+import '../../styles/homepage.css';
+import '../../styles/learning-cycle.css';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const title = 'HarnessGrad: Harness as A Continual Learner';
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content="固定模型，让 Harness 持续演进。运行并评估针对智能体工作方式的实验。" />
+    <link rel="canonical" href={`https://zjunlp.github.io${base}/zh/`} />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content="固定模型，让 Harness 持续演进。" />
+    <meta property="og:type" content="website" />
+    <link rel="preload" href={`${base}/fonts/chakra-petch-600.ttf`} as="font" type="font/ttf" crossorigin />
+    <script is:inline>try { const theme = localStorage.getItem('starlight-theme'); if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme; } catch {}</script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳至内容</a>
+    <header class="site-header wrapper">
+      <a class="wordmark" href={`${base}/zh/`} aria-label="HarnessGrad 首页"><svg width="28" height="28" viewBox="6 10 51 48" aria-hidden="true"><g fill="currentColor"><rect x="8" y="48" width="9.5" height="8" rx="2.5"/><rect x="20.5" y="42" width="9.5" height="14" rx="2.5"/><rect x="33" y="31" width="9.5" height="25" rx="2.5"/><rect x="45.5" y="12" width="9.5" height="44" rx="2.5"/></g></svg>HarnessGrad</a>
+      <nav aria-label="主导航"><LanguageSwitch /><a href={`${base}/zh/getting-started/`}>文档</a><a href={`${base}/zh/news/`}>新闻</a><a href={`${base}/zh/blog/`}>博客</a><a href="https://github.com/zjunlp/HarnessGrad">GitHub</a><button id="theme-toggle" type="button" aria-label="切换颜色主题" title="切换颜色主题"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg></button></nav>
+    </header>
+    <main id="main" class="wrapper" tabindex="-1"><HomepageStory lang="zh" /></main>
+    <footer class="site-footer wrapper"><span>HarnessGrad</span><p>关于智能体如何改进工作方式的开放研究。</p><a href={`${base}/zh/contributing/`}>参与贡献</a></footer>
+    <script>
+      const toggle = document.querySelector<HTMLButtonElement>('#theme-toggle');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : prefersDark.matches;
+      const label = () => toggle?.setAttribute('aria-label', `切换至${isDark() ? '浅色' : '深色'}主题`);
+      toggle?.addEventListener('click', () => { const theme = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = theme; try { localStorage.setItem('starlight-theme', theme); } catch {} label(); });
+      prefersDark.addEventListener('change', label); label();
+    </script>
+  </body>
+</html>

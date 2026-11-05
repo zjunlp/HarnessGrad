@@ -14,6 +14,8 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'HarnessGrad: Harness as A Continual Learner',
+			defaultLocale: 'root',
+			locales: { root: { label: 'English', lang: 'en' }, zh: { label: '简体中文', lang: 'zh-CN' } },
 			components: {
 				Header: './src/components/ContentHeader.astro',
 				PageTitle: './src/components/ContentTitle.astro',
@@ -89,22 +91,22 @@ export default defineConfig({
 			],
 			sidebar: [
 				{
-					label: 'Start here',
-					items: [{ label: 'Getting started', slug: 'getting-started' }],
+					label: 'Start here', translations: { zh: '开始使用' },
+					items: [{ label: 'Getting started', translations: { zh: '快速入门' }, slug: 'getting-started' }],
 				},
 				{
-					label: 'Benchmarks',
+					label: 'Benchmarks', translations: { zh: '基准测试' },
 					items: [{ autogenerate: { directory: 'benchmarks' } }],
 				},
 				{
-					label: 'Methods',
+					label: 'Methods', translations: { zh: '方法' },
 					items: [{ autogenerate: { directory: 'methods' } }],
 				},
 				{
-					label: 'Contribute',
+					label: 'Contribute', translations: { zh: '参与贡献' },
 					items: [
-						{ label: 'Submit a harness', slug: 'contributing' },
-						{ label: '5-minute upload', slug: 'submit-harness' },
+						{ label: 'Submit a harness', translations: { zh: '提交 harness' }, slug: 'contributing' },
+						{ label: '5-minute upload', translations: { zh: '五分钟上传' }, slug: 'submit-harness' },
 					],
 				},
 			],

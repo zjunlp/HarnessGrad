@@ -1,7 +1,14 @@
 ---
 import LearningCycle from './LearningCycle.astro';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-const modes = [
+const zh = Astro.props.lang === 'zh';
+const modes = zh ? [
+  { name: '上下文', cadence: '交互过程中', detail: '几句话就能改变下一步。' },
+  { name: '记忆', cadence: '跨任务', detail: '经验留下持久的痕迹。' },
+  { name: '技能', cadence: '经验积累时', detail: '有用的流程变得可复用。' },
+  { name: '权重', cadence: '训练更新时', detail: '学习改变模型参数。' },
+  { name: 'Harness', cadence: '实验轮次之间', detail: '反馈重塑智能体的工作方式。' },
+] : [
   { name: 'Context', cadence: 'Within an interaction', detail: 'A few words change the next step.' },
   { name: 'Memory', cadence: 'Across tasks', detail: 'Experience leaves a persistent trace.' },
   { name: 'Skills', cadence: 'As experience accumulates', detail: 'Useful procedures become reusable.' },
@@ -12,14 +19,15 @@ const modes = [
 <section class="hero split" aria-labelledby="brand-heading">
   <div>
     <h1 id="brand-heading"><span class="brand-line">HarnessGrad:</span> Harness as A Continual Learner</h1>
-    <p class="lead">Keep the model fixed. Let the harness evolve.</p>
-    <p>Tools, context, and control flow shape what an agent can do. HarnessGrad turns environment feedback into experiments on that editable code.</p>
-    <a class="button" href={`${base}/getting-started/`}>Start an experiment <span aria-hidden="true">↗</span></a>
+    {zh && <p>让 Harness 持续学习</p>}
+    <p class="lead">{zh ? '固定模型，让 Harness 持续演进。' : 'Keep the model fixed. Let the harness evolve.'}</p>
+    <p>{zh ? '工具、上下文和控制流程决定了智能体能做什么。HarnessGrad 将环境反馈转化为针对这些可编辑代码的实验。' : 'Tools, context, and control flow shape what an agent can do. HarnessGrad turns environment feedback into experiments on that editable code.'}</p>
+    <a class="button" href={`${base}/${zh ? 'zh/' : ''}getting-started/`}>{zh ? '开始实验' : 'Start an experiment'} <span aria-hidden="true">↗</span></a>
   </div>
   <figure class="agent-scene">
     <svg viewBox="0 0 500 410" role="img" aria-labelledby="scene-title scene-desc">
-      <title id="scene-title">An agent is a harness plus a model, working within an environment.</title>
-      <desc id="scene-desc">An original little agent sits inside a teal adjustable scaffold. The model stays fixed while tools, context and control flow can change. Actions go to the environment and feedback returns.</desc>
+      <title id="scene-title">{zh ? '智能体由 Harness 和模型组成，在环境中工作。' : 'An agent is a harness plus a model, working within an environment.'}</title>
+      <desc id="scene-desc">{zh ? '智能体位于可调整的支架内。模型保持固定，工具、上下文和控制流程可以改变。智能体向环境发出行动，并接收反馈。' : 'An original little agent sits inside a teal adjustable scaffold. The model stays fixed while tools, context and control flow can change. Actions go to the environment and feedback returns.'}</desc>
       <g class="scene-lines">
         <path class="environment" d="M48 96 Q39 55 90 52 L415 49 Q459 52 454 99 L455 311 Q456 346 416 349 L82 352 Q43 352 46 310 Z"/>
         <path class="ground" d="M21 365 Q139 355 239 365 T480 363"/>
@@ -38,18 +46,18 @@ const modes = [
         <path d="M81 284 Q90 265 101 276 Q112 261 119 281 M399 315 Q404 294 419 291 Q422 304 404 309 M402 329 L404 307 M402 321 Q385 316 389 305 Q401 307 402 321"/>
         <path class="teal" d="M180 329 Q242 347 310 328 M299 323 L311 328 L304 338"/>
       </g>
-      <g class="svg-label"><text x="55" y="34">Environment</text><text x="151" y="82">tools · context · control flow</text><text x="226" y="313">model</text><text x="67" y="337">actions</text><text x="333" y="337">feedback</text></g>
+      <g class="svg-label"><text x="55" y="34">{zh ? '环境' : 'Environment'}</text><text x="151" y="82">{zh ? '工具 · 上下文 · 控制流程' : 'tools · context · control flow'}</text><text x="226" y="313">{zh ? '模型' : 'model'}</text><text x="67" y="337">{zh ? '行动' : 'actions'}</text><text x="333" y="337">{zh ? '反馈' : 'feedback'}</text></g>
     </svg>
-    <figcaption><span>Agent = <strong>Harness</strong> + Model</span><span>A fixed model. A changeable way of working.</span></figcaption>
+    <figcaption><span>{zh ? '智能体' : 'Agent'} = <strong>Harness</strong> + {zh ? '模型' : 'Model'}</span><span>{zh ? '模型固定，工作方式可变。' : 'A fixed model. A changeable way of working.'}</span></figcaption>
   </figure>
 </section>
 
 <section class="split learning" aria-labelledby="learning-heading">
   <div class="section-copy">
-    <h2 id="learning-heading">Five ways to learn.<br />One overlooked learner.</h2>
-    <p>An agent can learn in its context, memories, skills, or weights. It can also change the harness that puts them to work.</p>
-    <p>HarnessGrad focuses on this last path: improving how an agent organizes tools, builds context, and acts in its environment.</p>
-    <p class="aside">These paths can work together. Their cadences overlap; this is a map of what changes, not a speed ranking.</p>
+    <h2 id="learning-heading">{zh ? '五种学习方式。' : 'Five ways to learn.'}<br />{zh ? '一个被忽视的学习主体。' : 'One overlooked learner.'}</h2>
+    <p>{zh ? '智能体可以通过上下文、记忆、技能或权重学习，也可以改变运用它们的 Harness。' : 'An agent can learn in its context, memories, skills, or weights. It can also change the harness that puts them to work.'}</p>
+    <p>{zh ? 'HarnessGrad 专注于最后一条路径：改善智能体组织工具、构建上下文和在环境中行动的方式。' : 'HarnessGrad focuses on this last path: improving how an agent organizes tools, builds context, and acts in its environment.'}</p>
+    <p class="aside">{zh ? '这些路径可以协同工作，节奏也有重叠；这里展示的是变化的对象，而非速度排名。' : 'These paths can work together. Their cadences overlap; this is a map of what changes, not a speed ranking.'}</p>
   </div>
   <figure class="pathways">
     <ol>
@@ -67,25 +75,25 @@ const modes = [
         <p class="sr-only">{mode.detail}</p>
       </li>)}
     </ol>
-    <figcaption>Different learning surfaces. The harness is ours to explore.</figcaption>
+    <figcaption>{zh ? '不同的学习载体。Harness 是我们探索的方向。' : 'Different learning surfaces. The harness is ours to explore.'}</figcaption>
   </figure>
 </section>
 
 <section class="integration" id="how-it-learns" aria-labelledby="integration-heading">
   <div class="section-copy">
-    <h2 id="integration-heading">Your harness.<br />Its next experiment.</h2>
-    <p>Keep your harness’s execution logic. Connect it through an adapter, choose a supported environment, and declare what can change.</p>
-    <p>An improvement method proposes an edit. HarnessGrad runs the candidate, gathers feedback, and evaluates what happened.</p>
-    <a class="text-link" href="https://github.com/zjunlp/HarnessGrad/blob/main/docs/bring-your-own-harness.md">Read the integration guide <span aria-hidden="true">↗</span></a>
+    <h2 id="integration-heading">{zh ? '你的 Harness。' : 'Your harness.'}<br />{zh ? '它的下一次实验。' : 'Its next experiment.'}</h2>
+    <p>{zh ? '保留 Harness 的执行逻辑，通过适配器接入，选择支持的环境，并声明可修改的部分。' : 'Keep your harness’s execution logic. Connect it through an adapter, choose a supported environment, and declare what can change.'}</p>
+    <p>{zh ? '改进方法提出修改，HarnessGrad 运行候选版本、收集反馈并评估结果。' : 'An improvement method proposes an edit. HarnessGrad runs the candidate, gathers feedback, and evaluates what happened.'}</p>
+    <a class="text-link" href="https://github.com/zjunlp/HarnessGrad/blob/main/docs/bring-your-own-harness.md">{zh ? '阅读集成指南' : 'Read the integration guide'} <span aria-hidden="true">↗</span></a>
   </div>
-  <LearningCycle />
+  <LearningCycle lang={zh ? 'zh' : 'en'} />
 </section>
 
 <section class="evidence" aria-labelledby="evidence-heading">
-  <div><h2 id="evidence-heading">Let the evidence speak.</h2><p>Explore recorded runs and their conditions, or start a small experiment of your own.</p></div>
-  <nav aria-label="Results and next steps" class="evidence-actions">
-    <a href={`${base}/benchmarks/appworld/`}>AppWorld results <span aria-hidden="true">↗</span></a>
-    <a href={`${base}/benchmarks/alfworld/`}>ALFWorld results <span aria-hidden="true">↗</span></a>
-    <a class="button" href={`${base}/getting-started/`}>Get started <span aria-hidden="true">↗</span></a>
+  <div><h2 id="evidence-heading">{zh ? '让证据说话。' : 'Let the evidence speak.'}</h2><p>{zh ? '探索已记录的运行及其条件，或亲自开始一个小实验。' : 'Explore recorded runs and their conditions, or start a small experiment of your own.'}</p></div>
+  <nav aria-label={zh ? '结果与后续步骤' : 'Results and next steps'} class="evidence-actions">
+    <a href={`${base}/${zh ? 'zh/' : ''}benchmarks/appworld/`}>{zh ? 'AppWorld 结果' : 'AppWorld results'} <span aria-hidden="true">↗</span></a>
+    <a href={`${base}/${zh ? 'zh/' : ''}benchmarks/alfworld/`}>{zh ? 'ALFWorld 结果' : 'ALFWorld results'} <span aria-hidden="true">↗</span></a>
+    <a class="button" href={`${base}/${zh ? 'zh/' : ''}getting-started/`}>{zh ? '开始使用' : 'Get started'} <span aria-hidden="true">↗</span></a>
   </nav>
 </section>

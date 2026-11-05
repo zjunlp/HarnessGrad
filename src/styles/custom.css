@@ -55,6 +55,8 @@ a { text-underline-offset:.2em; }
 .hg-nav a { min-height:44px; display:inline-flex; align-items:center; text-decoration:none; color:var(--sl-color-gray-2); border-bottom:2px solid transparent; }
 .hg-nav a:hover, .hg-nav a[aria-current] { color:var(--sl-color-accent-high); border-bottom-color:var(--sl-color-accent-high); }
 .hg-tools { display:flex; align-items:center; gap:.75rem; }
+/* Use the custom switch consistently, including in the mobile sidebar. */
+starlight-lang-select { display:none; }
 .hg-tools site-search button { width:8.5rem; border-radius:6px; background:transparent; box-shadow:none; }
 .hg-tools starlight-theme-select { font-size:12px; }
 .sidebar-content { font-size:14px; }

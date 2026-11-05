@@ -1,0 +1,41 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const relative = Astro.url.pathname.slice(base.length) || '/';
+const isZh = /^\/zh(?:\/|$)/.test(relative);
+const englishPath = /^\/404(?:\.html|\/)?$/.test(relative) ? '/' : (isZh ? relative.replace(/^\/zh(?=\/|$)/, '') || '/' : relative);
+const chinesePath = `/zh${englishPath === '/' ? '/' : englishPath}`;
+---
+<nav class="hg-languages" aria-label="Language / 语言" data-base={base}>
+  <a href={`${base}${englishPath}`} lang="en" data-locale="en" aria-current={!isZh ? 'true' : undefined}>English</a>
+  <a href={`${base}${chinesePath}`} lang="zh-CN" data-locale="zh" aria-current={isZh ? 'true' : undefined}>中文</a>
+</nav>
+<script is:inline>
+  (() => {
+    const nav = document.currentScript.previousElementSibling;
+    const base = nav.dataset.base;
+    for (const link of nav.querySelectorAll('a[data-locale]')) {
+      const target = new URL(link.href);
+      target.search = location.search;
+      target.hash = location.hash;
+      // A URL marker also makes an explicit English choice work without storage.
+      if (link.dataset.locale === 'en' && (target.pathname === base + '/' || target.pathname === base)) target.searchParams.set('hg-lang', 'en');
+      link.href = target.href;
+      link.addEventListener('click', () => {
+        try { localStorage.setItem('hg.website.locale', link.dataset.locale); } catch {}
+      });
+    }
+    // Only the unprefixed home page is negotiated. Deep links remain stable.
+    if (location.pathname !== base + '/' && location.pathname !== base) return;
+    if (new URL(location.href).searchParams.get('hg-lang') === 'en') return;
+    let saved = null;
+    try { saved = localStorage.getItem('hg.website.locale'); } catch {}
+    const preferred = saved === 'en' || saved === 'zh' ? saved :
+      ((navigator.languages?.length ? navigator.languages : [navigator.language]).map(language => /^(en|zh)(?:-|$)/i.exec(language || '')?.[1]?.toLowerCase()).find(Boolean) || 'en');
+    if (preferred === 'zh') location.replace(base + '/zh/' + location.search + location.hash);
+  })();
+</script>
+<style>
+  .hg-languages { display: inline-flex; gap: .45rem; align-items: center; white-space: nowrap; font-size: .85rem; }
+  .hg-languages a { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+  .hg-languages a[aria-current] { font-weight: 700; text-decoration: underline; }
+</style>
