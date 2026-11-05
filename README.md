@@ -114,8 +114,8 @@ Configure the dataset and both model roles, then start a run. Use your own OpenA
 
 ```bash
 # The provided configuration uses GSM8K.
-python3 tools/configure_harness.py --harness base_harness/loop
-python3 tools/datasets.py --fetch --dataset gsm8k
+python tools/configure_harness.py --harness base_harness/loop
+python tools/datasets.py --fetch --dataset gsm8k
 export HG_AGENT_BACKEND=openai
 export HG_AGENT_BASE_URL='YOUR_SOLVER_ENDPOINT_URL'
 export HG_AGENT_MODEL='YOUR_SOLVER_MODEL_NAME'
@@ -125,7 +125,7 @@ export HG_METHOD_MODEL='YOUR_EDITOR_MODEL_NAME'
 export HG_METHOD_API_KEY='YOUR_EDITOR_API_KEY'
 harnessgrad run --config experiments/method-dgm.json --check-only --check-net
 harnessgrad run --config experiments/method-dgm.json
-python3 tools/run_summary.py runs/dgm-quickstart
+python tools/run_summary.py runs/dgm-quickstart
 ```
 
 Replace the placeholders before running. The check probes endpoints but does not generate responses. The run uses five training tasks and one editing round; see the [recipe](experiments/method-dgm.json) and [experiment documentation](docs/rsi-experiments.md) for details.
@@ -155,7 +155,7 @@ Explore experiments, inspect harness versions and trajectories, and edit a candi
 
 ```bash
 export HG_CONSOLE_RUNS="$PWD/runs"  # existing run-record directory
-python3 console/server.py --port 4460
+python console/server.py --port 4460
 ```
 
 Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from the repository root after an experiment has created `runs/`, or point `HG_CONSOLE_RUNS` to another existing run-record directory. The Console binds to localhost by default.
