@@ -67,8 +67,11 @@ def _external_content(path: str) -> bool:
     if path.startswith(CONTENT_ROOTS):
         return True
     parts = path.split("/")
-    return (len(parts) >= 4 and parts[:2] == ["data", "datasets"]
-            and not parts[2].endswith(".py")) or path == "data/candidates" or path.startswith("data/local_ignored_module/")
+    # Dataset assets may be external, but source/document links are repository
+    # contracts and must never inherit a blanket asset-directory exemption.
+    asset = (len(parts) >= 4 and parts[:2] == ["data", "datasets"]
+             and not parts[2].endswith(".py") and Path(path).suffix not in ('.py', '.md', '.sh'))
+    return asset or path == "data/candidates" or path.startswith("data/local_ignored_module/")
 
 
 # These migration records describe the old data layout, not current paths.
@@ -392,6 +395,8 @@ def test_the_documentation_graph_is_covered():
     ("data/scaffolds/missing.py", False),
     ("data/datasets/missing.py", False),
     ("data/datasets/gaia/private.json", True),
+    ("data/datasets/gaia/missing.py", False),
+    ("data/datasets/gaia/missing.md", False),
     ("data/dataset.schema.json", False),
     ("reports/receipt.json", True),
 ])

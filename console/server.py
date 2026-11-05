@@ -481,8 +481,8 @@ def kind_counts(rows: list[dict]) -> dict[str, int]:
 
 # ─────────────────────────────────────────────────────── 各接口
 # ─────────────────────────────────────────────────────── 对话 / 跑实验
-#: 这是控制台**唯一的写接口**。三条纪律：① 有 driver 活着就拒绝；② run_id 由服务端生成；
-#: ③ 每次启动追加一行到 `.launch-log.jsonl`（时间、run_id、完整 argv），出事能倒查。
+#: The launcher generates a unique run ID and appends a launch record. Shared
+#: resource coordination uses the deployment's explicit slot directory/capacity.
 LAUNCH_DIR = ROOT / ".launch"
 LAUNCH_LOG = ROOT / ".launch-log.jsonl"
 # One explicitly configured external lease directory coordinates direct launches

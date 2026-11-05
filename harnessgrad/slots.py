@@ -32,7 +32,6 @@ from contextlib import contextmanager
 from pathlib import Path
 
 DEFAULT_DIR = "hg-gpu-slots"
-DEFAULT_CAPACITY = 40
 
 #: The optional host-headroom gate is separate from endpoint capacity. Deployment
 #: operators configure CPU and memory reserves for their machine; neutral defaults
