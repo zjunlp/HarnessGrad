@@ -52,7 +52,9 @@ ROOT = Path(__file__).resolve().parents[2]
 #: by the property check, so these numbers are a range and never the claim itself.
 # 2026-11-05: tau2 preparation/readiness and newer CI/Codex tooling add
 # five data and three tools sites; each matched site remains property-checked.
-EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 34}
+# AppWorld recovery adds a strict ASCII Git commit probe and a status probe using
+# surrogateescape, preserving undecodable path bytes.
+EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 36}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.

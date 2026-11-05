@@ -57,7 +57,7 @@ def current_identity(expected, bindings):
     runtime = runtime_binding(manifest, bindings.get('harness_runtimes', {}).get(expected['harness']))
     # These are explicit external provenance documents, not fetched service attestations.
     actual.update(schema=IDENTITY_SCHEMA, policy=POLICY,
-                  platform_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+                  platform_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, encoding='ascii', errors='strict').strip(),
                   source_sha256=file_hash(BUNDLE), pool_ids_sha256=digest(split_ids(BUNDLE)[expected['pool']]),
                   harness_sha256=source_identity(harness)['submission_sha256'],
                   manifest_sha256=file_hash(harness/'harness.json'), runtime_sha256=digest(runtime))
@@ -172,7 +172,7 @@ def command_for(identity, selected, receipt):
 
 
 def ensure_frozen():
-    dirty = subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=ROOT, text=True)
+    dirty = subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=ROOT, text=True, errors='surrogateescape')
     if dirty.strip():
         raise RecoveryError('execution requires a clean frozen worktree')
 
