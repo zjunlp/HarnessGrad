@@ -615,6 +615,76 @@ body[data-sidebar="collapsed"] .sidebar-toggle { left: calc(72px - 22px); }
 /* 版本条里展开的轮次：一小排圆点，不再弹窗问"第几轮"。 */
 .hg-srcbar__rounds { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; flex: 0 0 100%; }
 
+/* Console visual language: warm paper, quiet green ink, precise data.
+   The upstream semantic token sheet remains unchanged. */
+:root {
+  --n-0: #fffefa; --n-25: #f8f8f3; --n-50: #f1f4ef;
+  --n-100: #e9eee8; --n-200: #dce5de; --n-300: #c3d1c8;
+  --n-500: #586c63; --n-600: #475e54; --n-700: #344a40;
+  --n-800: #253a32; --n-900: #172c24;
+  --accent: #216d5b; --accent-ink: #195d4d;
+  --accent-soft: #e5f1e9; --accent-line: #b8d6c4;
+  --sh-bg: #f5f6ef; --sh-card: #fffefa; --sh-line: #dce5de;
+  --sh-line-2: #c3d1c8; --sh-ink: #172c24; --sh-ink-2: #475e54;
+  --sh-ink-3: #586c63; --sh-accent: #195d4d; --sh-accent-soft: #e5f1e9;
+}
+:root[data-theme="dark"] {
+  --n-0: #192722; --n-25: #1d2c26; --n-50: #263830;
+  --n-100: #2c4037; --n-200: #3a5044; --n-300: #50695a;
+  --n-500: #b0c3b7; --n-600: #c4d4ca; --n-700: #d3e0d7;
+  --n-800: #e4eee6; --n-900: #f2f7f1;
+  --accent: #8bcdb1; --accent-ink: #b2e2c9;
+  --accent-soft: #243f33; --accent-line: #426b55;
+  --sh-bg: #14211c; --sh-card: #192722; --sh-line: #3a5044;
+  --sh-line-2: #50695a; --sh-ink: #f2f7f1; --sh-ink-2: #c4d4ca;
+  --sh-ink-3: #b0c3b7; --sh-accent: #b2e2c9; --sh-accent-soft: #243f33;
+}
+body { line-height: 1.55; }
+a { color: var(--accent-ink); }
+.sh-bar { min-height: 54px; height: auto; padding: 8px 20px; gap: 18px; }
+.sh-bar .sh-logo { font-size: 14px; letter-spacing: .015em; }
+.sh-bar .sh-logo b {
+  width: 30px; height: 30px; border-radius: 10px 10px 10px 3px;
+  background: #216d5b; color: #fffefa; font-size: 11px;
+}
+.sh-modes { background: var(--n-100); padding: 4px; }
+.sh-mode { min-height: 32px; padding: 6px 14px; }
+.side { background: var(--sh-card); padding-top: 18px; }
+.side .nav { gap: 3px; }
+.sh-section { padding: 16px 14px 8px; color: var(--sh-ink-3); letter-spacing: .04em; }
+.side .nav-item { min-height: 38px; border-radius: 9px; padding: 9px 12px; }
+.side .nav-item:hover { background: var(--n-50); }
+.side .nav-item[aria-current="page"] { box-shadow: inset 3px 0 0 var(--accent); }
+.main .topbar { padding: 18px 22px; flex-wrap: wrap; }
+.main .topbar h1 { font-size: 19px; letter-spacing: 0; }
+.main .topbar .sub { color: var(--sh-ink-2); line-height: 1.5; }
+.main .filters { margin: 14px 18px; padding: 12px; gap: 8px; }
+.main .topbar .filters { margin: 0; }
+.main .chip[aria-pressed="true"] { border-color: var(--accent-line); }
+.main .col, .main .pad, .card, .wcard, .submit-card { border-color: var(--n-200); }
+.card, .wcard, .submit-card, .main .filters { box-shadow: 0 2px 8px rgba(24, 52, 38, .035); }
+.card__head, .card-head, .submit-card-head { background: var(--n-25); }
+.card__title, .card-title, .wcard h3 { color: var(--n-900); }
+.tbl th, .main table thead th, .wtable th { color: var(--n-600); letter-spacing: .02em; }
+.tbl.runs td { padding-top: 9px; padding-bottom: 9px; }
+.tbl tbody tr:hover, table.grid tbody tr:hover { background: var(--n-50); }
+.empty, .empty-state { line-height: 1.7; color: var(--n-600); }
+.empty__title, .empty-state .empty-title { color: var(--n-900); }
+.btn, .wbtn, .wrow button, .submit-btn { min-height: 36px; border-radius: 8px; }
+.btn--primary, .wrow button.primary, .wbtn.primary { background: #216d5b; border-color: #216d5b; color: #fffefa; }
+.btn--primary:hover { background: #195d4d; border-color: #195d4d; }
+.input, .select, .textarea, .submit-field input, .submit-field select { min-height: 36px; }
+:where(a, button, input, select, textarea, summary, [role="button"]):focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+.wdrop, .wlog, .wcmd { background: var(--n-25); color: var(--n-700); }
+.main .err { background: var(--bad-soft); border-color: var(--bad-line); color: var(--bad); }
+.trace-root .step-card { box-shadow: 0 2px 8px rgba(24, 52, 38, .035); }
+@media (pointer: coarse) {
+  .side .nav-item, .sh-mode, .btn, .wbtn, .wrow button, .submit-btn, .chip, .tab, .seg button { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
 /* Small-screen layout only; wide data and code scroll within their panels. */
 @media (max-width: 900px) {
   .main > div:has(> .workshop + .hg-chat) { grid-template-columns: minmax(0, 1fr) !important; }
