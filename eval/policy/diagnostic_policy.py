@@ -19,14 +19,26 @@ from eval.policy import unobserved_diagnostic
 
 SCHEMA = "harnessgrad.diagnostic-receipt.v2"
 HASH_NAMES = ("source", "split", "manifest", "model", "harness")
-#: The local endpoints a staged receipt may bind. **One entry, deliberately.** This
-#: listing is what a receipt's `endpoint` is checked against, so an entry here is a
-#: claim that the endpoint exists: leaving `8001` in after its server was retired on
-#: 2026-10-14 would let a receipt attest to a binding nothing could serve. `8002` is
-#: the one that was kept because `eval/unix_model_relay.py` routes the agent's model
-#: there, so it is the endpoint a containerised harness actually reaches. Adding a
-#: second server again means adding it back here at the same time.
-ENDPOINTS = ("http://127.0.0.1:8002/v1",)
+def _endpoint(value) -> bool:
+    """Validate a credential-free HTTP(S) identity, without asserting service health.
+
+    Actual endpoint access and authorization are deployment responsibilities; an
+    address is recorded verbatim and matched across receipts, not treated as proof
+    that a server exists or a particular model was loaded.
+    """
+    from urllib.parse import urlsplit
+    if not isinstance(value, str) or not value or value != value.strip():
+        return False
+    if any(ord(c) < 32 or ord(c) == 127 for c in value):
+        return False
+    try:
+        parts = urlsplit(value)
+        return bool(parts.scheme in ('http', 'https') and parts.hostname and
+                    parts.username is None and parts.password is None and
+                    not parts.query and not parts.fragment and
+                    (parts.port is None or 1 <= parts.port <= 65535))
+    except ValueError:
+        return False
 
 
 def _require(condition: bool, message: str) -> None:
@@ -70,7 +82,7 @@ def validate_context(context: dict) -> None:
         key in hashes and (hashes[key] is None or _sha(hashes[key])) for key in HASH_NAMES),
         "source/split/manifest/model/harness hashes must be SHA256 or null")
     _require("endpoint" in context and (context["endpoint"] is None
-             or context["endpoint"] in ENDPOINTS), "endpoint must bind one local GPU or be null")
+             or _endpoint(context["endpoint"])), "endpoint must be a credential-free HTTP(S) URL or null")
     limits = context.get("limits")
     _require(isinstance(limits, dict) and all(
         key in limits and (limits[key] is None or (
@@ -301,7 +313,7 @@ def require_review(bundle: dict, *, context: dict, eligible: list[str], run_id: 
     for key in ("dataset", "side", "metric", "hashes", "endpoint", "limits", "gates"):
         _require(receipt["context"][key] == context[key], f"diagnostic context changed: {key}")
     _require(all(_sha(context["hashes"][k]) for k in HASH_NAMES)
-             and _sha(context["metric"]["scorer_sha256"]) and context["endpoint"] in ENDPOINTS
+             and _sha(context["metric"]["scorer_sha256"]) and _endpoint(context["endpoint"])
              and all(context["limits"][k] is not None for k in ("resource", "budget")),
              "unknown provenance, endpoint or limits cannot authorize expansion")
     _require(context["gates"]["status"] == "passed" and all(
