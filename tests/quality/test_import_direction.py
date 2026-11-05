@@ -110,6 +110,14 @@ EXCEPTIONS = {
         "Control sends business actions over the shared transport.",
     ("data-eval", "data/datasets/tau3_bench/relay.py", "eval.service.tool_transport"):
         "Private environment server reuses the platform transport and model capability.",
+    ("data-eval", "data/datasets/tau2_bench/control.py", "eval.run.runner"):
+        "Dataset control validates real sandbox execution against the official scorer.",
+    ("data-eval", "data/datasets/tau2_bench/control.py", "eval.run.tool_relay"):
+        "Manual control uses the same private relay and record sealing as the runner.",
+    ("data-eval", "data/datasets/tau2_bench/control.py", "eval.service.tool_transport"):
+        "Control sends business actions over the shared transport.",
+    ("data-eval", "data/datasets/tau2_bench/control.py", "eval.service.judge"):
+        "Control starts the same verifier-only judge channel for the 58 tasks whose ALL evaluation calls one.",
     ("data-eval", "data/datasets/tau2_bench/relay.py", "eval.service.tool_transport"):
         "Private τ² environment server reuses the platform's bounded transport, as τ³'s does.",
     ("data-eval", "data/datasets/kumo/control.py", "eval.run.runner"):

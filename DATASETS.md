@@ -85,7 +85,7 @@ files in `metric test(s)` pin the metric itself, and `tests/quality/test_dataset
 runs gates 1 and 2 for every declared control. A refused dataset has no control by design:
 its refusal *is* the result.
 
-**At a glance.** 56 published datasets: 1 refused by design; 13 with a recorded metric deviation; 1 whose adapter mentions one that a reading cleared; 0 whose adapter mentions one that nobody has recorded; 19 that declare no machine-readable metric (`— undeclared`). Every row says how to get its bytes; `--host` answers the separate question of what is already here.
+**At a glance.** 56 published datasets: 0 refused by design; 13 with a recorded metric deviation; 1 whose adapter mentions one that a reading cleared; 0 whose adapter mentions one that nobody has recorded; 18 that declare no machine-readable metric (`— undeclared`). Every row says how to get its bytes; `--host` answers the separate question of what is already here.
 
 ## Readiness
 
@@ -138,7 +138,7 @@ its refusal *is* the result.
 | `supergpqa` | dataset | final_letter_v1 | yes: upstream final_letter_v1 sample-mean accuracy; not official discipline-macro/freeform evaluation | released | `python3 tools/datasets.py --fetch --dataset supergpqa` | dataset | test_native_qa_adapters.py | — |
 | `swe_bench` | dataset | swe_bench.native-adapted | no | released | `python3 tools/datasets.py --fetch --dataset swe_bench` | exempt | test_native_research.py | — |
 | `swe_bench_pro` | dataset | resolved | no | released | `python3 tools/datasets.py --fetch --dataset swe_bench_pro` | exempt | test_native_harbor.py | — |
-| `tau2_bench` | dataset | — undeclared | — | — | — no fetch lifts this refusal; its `refused` cell says why | — | test_dataset_refusals.py | tau2_bench: it is a dual-control benchmark whose second party -- an LLM **user simulator** -- does not exist on this platform, and the official… |
+| `tau2_bench` | dataset | tau2.v0.1.0.ALL.binary | no | released | `python3 tools/datasets.py --fetch --dataset tau2_bench` | dataset | test_tau2_bench_official_scorer.py | — |
 | `tau3_bench` | dataset | tau3.v1.0.1.ALL.binary | no | released | `python3 tools/datasets.py --fetch --dataset tau3_bench` | dataset | test_tau3_bench_official_scorer.py, test_tau3_bench_dataset.py | — |
 | `tau_bench` | dataset | — undeclared | yes: reward is upstream `calculate_reward` (database-hash equality, the task's `outputs`, gated on `done`) on 139 of the 165 official test tasks; 26 tasks whose ground truth leaves the database unchanged and which require no output are excluded as non-discriminating, and the user side is the task instruction, not an LLM user simulator | released | `python3 tools/datasets.py --fetch --dataset tau_bench` | exempt | — | — |
 | `terminal_bench` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset terminal_bench` | exempt | — | — |

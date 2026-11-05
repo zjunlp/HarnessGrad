@@ -93,30 +93,11 @@ SLOW = (
 )
 
 
-#: Where per-file pytest basetemps go. `/tmp` on this class of machine is often on a
-#: small, shared root filesystem; when it fills, tests fail with "No usable temporary
-#: directory found" and a nearly-full disk turns real integration tests into timeouts.
-#: A run must not depend on that filesystem having room, and must not be the thing that
-#: fills it. `HG_TEST_TMPDIR` overrides; otherwise the largest writable scratch root we
-#: can find that is not the platform tree.
-CANDIDATE_TMPDIRS = ("/mnt/20t/xubuqiang/.hg-pytest", "/mnt/8t/xubuqiang/.hg-pytest",
-                     "/var/tmp")
-
-
+#: Use Python's standard temporary directory selection (including TMPDIR).
+#: HG_TEST_TMPDIR explicitly overrides it; all roots are checked below to keep
+#: pytest's harness work directories outside the platform checkout.
 def default_basetemp_parent() -> str:
-    override = os.environ.get("HG_TEST_TMPDIR")
-    if override:
-        Path(override).mkdir(parents=True, exist_ok=True)
-        return override
-    for candidate in CANDIDATE_TMPDIRS:
-        try:
-            path = Path(candidate)
-            path.mkdir(parents=True, exist_ok=True)
-            if os.access(path, os.W_OK):
-                return candidate
-        except OSError:
-            continue
-    return tempfile.gettempdir()
+    return os.environ.get("HG_TEST_TMPDIR") or tempfile.gettempdir()
 
 
 def free_gb(path: Path) -> float:
@@ -199,7 +180,8 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="print the plan and exit")
     ap.add_argument("--basetemp-root", default="",
                     help="parent for per-file pytest basetemps; default is a fresh "
-                         "/tmp tree. It must be OUTSIDE the platform tree.")
+                         "tree under HG_TEST_TMPDIR or tempfile.gettempdir() (TMPDIR). "
+                         "It must be OUTSIDE the platform tree.")
     ap.add_argument("--allow-load-sensitive", action="store_true",
                     help="exit 0 when the only failures are files that pass when run "
                          "alone. Off by default: a test that only passes alone is a real "
@@ -249,17 +231,16 @@ def main() -> int:
     parallel.sort(key=lambda p: -cost_of(p, costs))
     exclusive.sort(key=lambda p: -cost_of(p, costs))
 
+    root = Path(args.basetemp_root or default_basetemp_parent()).resolve()
+    if root == ROOT or ROOT in root.parents:
+        print(f"refusing: basetemp root {root} is inside the platform {ROOT}; "
+              "the driver rejects a harness work root there", file=sys.stderr)
+        return 2
+    root.mkdir(parents=True, exist_ok=True)
     if args.basetemp_root:
-        root = Path(args.basetemp_root).resolve()
-        if root == ROOT or ROOT in root.parents:
-            print(f"refusing: basetemp root {root} is inside the platform {ROOT}; "
-                  "the driver rejects a harness work root there", file=sys.stderr)
-            return 2
-        root.mkdir(parents=True, exist_ok=True)
         basetemp_root = root
     else:
-        basetemp_root = Path(tempfile.mkdtemp(prefix="harnessgrad-pytest-",
-                                              dir=default_basetemp_parent()))
+        basetemp_root = Path(tempfile.mkdtemp(prefix="harnessgrad-pytest-", dir=root))
 
     plan_parallel = sum(cost_of(f, costs) for f in parallel)
     plan_exclusive = sum(cost_of(f, costs) for f in exclusive)

@@ -451,7 +451,9 @@ staged pilot policy.
 - It does not claim any withdrawn requirement was solved. Each is recorded with its
   supporting evidence and retained limits.
 - It does not touch the four permanent refusals (`api_bank`, `nestful`, `sotuqa`,
-  `tau2_bench`), whose `retain-contract-refusal` entries stay exactly as they are.
+  `tau2_bench`), whose `retain-contract-refusal` entries stay exactly as they were. (2026-11-04:
+  three were removed from the repository on 2026-11-03 and `tau2_bench` was implemented, so its
+  entry is now cleared; this decision itself is unchanged.)
 - The operator's further decision on 2026-10-15 withdraws the three runtime requirements
   above, superseding the earlier decision to leave this trio untouched. Their limits and
   historical receipts remain; `appworld` and `bfcl_v3` stay real remaining work unchanged.

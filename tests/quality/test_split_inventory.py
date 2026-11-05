@@ -44,9 +44,6 @@ ROW = re.compile(r"^\| `([a-z0-9_]+)` \|")
 #: counted at each use so that a reordered column breaks one place, not six assertions.
 STATE, SOURCE, TRAIN, EVAL, OFFICIAL = 1, 2, 3, 4, 5
 
-#: The datasets whose adapter refuses the benchmark by design (`REFUSED`).
-REFUSED = ("tau2_bench",)
-
 def _published_in(state: str) -> tuple[str, ...]:
     """Every published dataset the tool classifies as `state`, derived -- never listed.
 

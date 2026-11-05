@@ -113,7 +113,35 @@ def test_no_refused_dataset_pretends_to_have_an_evaluation_set():
             assert not hasattr(module, registry.OFFICIAL_EVAL_ATTR), name
             with pytest.raises(ValueError, match="OFFICIAL_EVAL"):
                 registry.official_split(name, [{"task_id": f"{name}/0"}])
-    assert refused, "the published catalog has no refused adapters to check"
+    if not refused:
+        # No adapter refuses today: `tau2_bench` was the last, and it became an ordinary
+        # 278-task dataset on 2026-11-04. The rule still needs a subject, so it is exercised
+        # against a synthetic refusing module below rather than left to a skip.
+        pytest.skip("no refusing adapter in the published catalog; see "
+                    "test_a_refusing_adapter_offers_no_official_evaluation_set")
+
+
+def test_a_refusing_adapter_offers_no_official_evaluation_set(monkeypatch):
+    """The rule the empty loop above used to check: `REFUSED` and `OFFICIAL_EVAL` exclude
+    each other, and `official_split` refuses a name that never declared one.
+
+    Built from a module object rather than from a file, because a refusal must not require
+    storage and no adapter may be added to the catalogue just to test it.
+    """
+    import types
+    reason = ("synthetic_refusal: the metric needs an answer channel this contract does not "
+              "carry, so no evaluation set can be reported under its name")
+    module = types.ModuleType("data.datasets.synthetic_refusal")
+    module.REFUSED = reason
+    monkeypatch.setitem(sys.modules, "data.datasets.synthetic_refusal", module)
+    assert getattr(module, registry.OFFICIAL_EVAL_ATTR, None) is None
+    with pytest.raises(ValueError, match="OFFICIAL_EVAL"):
+        registry.official_split("synthetic_refusal", [{"task_id": "synthetic_refusal/0"}])
+    # And the negative half: the same module with a declaration would have answered, so the
+    # refusal above is the declaration boundary and not an unrelated failure.
+    module.OFFICIAL_EVAL = None
+    assert registry.official_split("synthetic_refusal", [{"task_id": "synthetic_refusal/0"}]) == {
+        "train": [], "eval": ["synthetic_refusal/0"]}
 
 
 def test_every_runnable_dataset_answers_the_official_question():

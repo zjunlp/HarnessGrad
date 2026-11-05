@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -70,11 +72,22 @@ def run(cmd: list[str]) -> str:
     return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True).stdout
 
 
-def changed(base: str, head: str) -> list[str]:
+def _rev_exists(rev: str) -> bool:
+    """Is this commit object in *this* clone? A depth-1 checkout does not have the base."""
+    return subprocess.run(["git", "cat-file", "-e", f"{rev}^{{commit}}"], cwd=ROOT,
+                          capture_output=True).returncode == 0
+
+
+def changed(base: str, head: str) -> list[str] | None:
+    """The changed paths, or `None` when the base commit is not in this clone.
+
+    The two cases used to collapse: an unknown base produced the same empty list as a real
+    empty diff, so the summary said "no diff against the base" for a commit that was simply
+    not fetched. They are different facts and the caller now says which one it hit.
+    """
+    if not _rev_exists(base):
+        return None
     out = run(["git", "diff", "--name-only", base, head])
-    if not out.strip():
-        # No merge base (a shallow clone, a force-push): treat it as "everything changed".
-        return []
     return [line.strip() for line in out.splitlines() if line.strip()]
 
 
@@ -114,7 +127,13 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
         if path.startswith(("docs/", ".github/")) or path.endswith(".md"):
             reasons.append(f"{path}: documentation only")
         elif path.startswith("data/datasets/"):
-            wanted = _matching((f"test_{stem}_", "test_dataset_", "test_datasets_doc"))
+            # The dataset name, not the file name: an adapter's assets live in a directory of
+            # the same name (`data/datasets/tau2_bench/lib/runtime.py` is a change to
+            # `tau2_bench`), and keying on the file name would select `test_runtime_*`.
+            relative = path[len("data/datasets/"):]
+            wanted = _matching((f"test_{_stem(relative.split('/')[0])}_",
+                                f"test_{_stem(relative.split('/')[0])}.py",
+                                "test_dataset_", "test_datasets_doc"))
             picked.update(wanted)
             reasons.append(f"{path}: {len(wanted)} dataset tests")
         elif path.startswith("base_harness/"):
@@ -134,7 +153,13 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
                 picked.add(Path(path).name)
             reasons.append(f"{path}: itself")
         elif path.startswith("tests/fixtures/"):
-            picked.update({"test_bfclguard_reachability.py"})
+            # A fixture is only evidence through the test that drives it. `tau2_scorer_probe.py`
+            # is run by the official-scorer test because the adapter needs a 3.13 interpreter the
+            # test process does not have; `hg_bfclguard/` is the reachability fixture.
+            if path.startswith("tests/fixtures/tau2_"):
+                picked.add("test_tau2_bench_official_scorer.py")
+            else:
+                picked.update({"test_bfclguard_reachability.py"})
             reasons.append(f"{path}: fixture consumer")
         else:
             return [], [f"{path} is not mapped: running everything"]
@@ -142,6 +167,32 @@ def select(paths: list[str]) -> tuple[list[str], list[str]]:
     if len(picked) > MAX_SELECTION:
         return [], [f"{len(picked)} files selected: running everything"]
     return sorted(picked), reasons
+
+
+def load_plan(path: str) -> dict:
+    """Validate before interpreting emptiness or constructing runner arguments.
+
+    Legacy plans have only `full`: true means a deferred full fallback, never permission
+    to launch the whole suite on a push. New plans also name the execution state.
+    """
+    plan = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(plan, dict):
+        raise ValueError("plan must be an object")
+    if type(plan.get("full")) is not bool or not isinstance(plan.get("suite"), list):
+        raise ValueError("plan requires boolean full and list suite")
+    suite = plan["suite"]
+    if any(not isinstance(name, str) or not re.fullmatch(r"test_[A-Za-z0-9_]+\.py", name)
+           or not (TESTS / name).is_file() for name in suite):
+        raise ValueError("suite must contain existing quality test basenames")
+    if len(suite) != len(set(suite)):
+        raise ValueError("suite contains duplicate files")
+    state = plan.get("state", "deferred" if plan["full"] else "selected")
+    if state not in ("selected", "deferred", "full"):
+        raise ValueError("state must be selected, deferred or full")
+    if plan["full"] != (state != "selected") or (plan["full"] and suite):
+        raise ValueError("state, full and suite disagree")
+    plan["state"] = state
+    return plan
 
 
 def main() -> int:
@@ -163,11 +214,13 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.describe:
-        import json
         import os
-        plan = json.loads(Path(args.describe).read_text(encoding="utf-8"))
-        suite = plan.get("suite") or []
-        summary = [f"base={plan.get('base')} full={plan.get('full')} "
+        try:
+            plan = load_plan(args.describe)
+        except (OSError, ValueError) as exc:
+            parser.error(f"invalid plan: {exc}")
+        suite = plan["suite"]
+        summary = [f"state={plan['state']} base={plan.get('base')} full={plan['full']} "
                    f"changed={plan.get('changed')} files={len(suite)}"]
         summary += [f"  {name}" for name in suite]
         print("\n".join(summary))
@@ -179,29 +232,48 @@ def main() -> int:
                 handle.write("### Suite for this change\n\n")
                 handle.write(f"base `{plan.get('base')}` · changed {plan.get('changed')} "
                              f"file(s)\n\n")
-                if suite:
+                if plan["state"] == "full":
+                    handle.write("_full suite explicitly requested (without `--fast`)_\n")
+                elif plan["state"] == "deferred":
+                    handle.write("_this change selects everything: deferred to the full suite "
+                                 "on the nightly run or a manual dispatch_\n")
+                elif suite:
                     for name in suite:
                         handle.write(f"- `{name}`\n")
                 else:
                     handle.write("_nothing outside the guards; they ran in the checks job_\n")
-        print(f"::notice::base={plan.get('base')} files={len(suite)} "
-              f"suite={','.join(suite) or '-'}")
+        print(f"::notice::state={plan['state']} base={plan.get('base')} full={plan['full']} "
+              f"files={len(suite)} suite={','.join(suite) or '-'}")
         return 0
 
-    paths = args.paths if args.paths is not None else (
-        changed(args.base, args.head) if args.base else [])
-    picked, reasons = ([], ["full run requested"]) if args.force_full else select(paths)
+    unknown_base = False
+    if args.paths is not None:
+        paths = args.paths
+    elif args.base:
+        diff = changed(args.base, args.head)
+        unknown_base = diff is None
+        paths = diff or []
+    else:
+        paths = []
+    if args.force_full:
+        picked, reasons = [], ["full run requested"]
+    elif unknown_base:
+        picked, reasons = [], [f"the base commit {args.base} is not in this clone: "
+                              "running everything"]
+    else:
+        picked, reasons = select(paths)
 
     # `full` is a property of the *selection*, not of what is left after the guards are
     # subtracted: a documentation change selects the guards alone, which leaves an empty suite
     # and is not the same thing as "this change selects everything".
-    full = not picked and any("running everything" in reason for reason in reasons)
+    full = not picked
+    state = "full" if args.force_full else "deferred" if full else "selected"
     if args.without_guards:
         picked = [name for name in picked if name not in GUARDS]
     if args.plan:
-        import json
         Path(args.plan).write_text(json.dumps(
-            {"base": args.base or None, "changed": len(paths), "suite": picked, "full": full},
+            {"base": args.base or None, "changed": len(paths), "suite": picked,
+             "full": full, "state": state},
             indent=1) + "\n", encoding="utf-8")
         return 0
     if args.files:
@@ -211,8 +283,12 @@ def main() -> int:
     print(f"changed: {len(paths)} file(s)")
     for reason in reasons[:12]:
         print(f"  - {reason}")
-    if not picked:
-        print("selection: the full suite")
+    if state == "full":
+        print("selection: the full suite (explicitly requested, without --fast)")
+    elif not picked and full:
+        print("selection: the full suite (deferred to the nightly run; workflow_dispatch runs it)")
+    elif not picked:
+        print("selection: the guards only")
     else:
         print(f"selection: {len(picked)} file(s), guards included")
         for name in picked:

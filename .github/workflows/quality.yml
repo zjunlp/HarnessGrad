@@ -152,7 +152,7 @@ jobs:
           - No provisioned dataset bytes: files that load a corpus without a fixture skip.
           - No agent or judge endpoint: model-facing smoke tests skip.
           - No docker image cache: container tasks that pull an image are slow or skip.
-          - `--fast` drops the seven files measured at minutes each.
+          - Selected runs use `--fast`, dropping measured-slow files; nightly/manual full runs do not.
           The provisioned gate is the four-shard run in docs/release-validation.md.
           EOF
 
@@ -179,18 +179,34 @@ jobs:
           assert not real, f"adapters raise for a reason that is not a missing extra: {real}"
           PY
 
+      # `actions/checkout` fetches one commit, so the comparison base is an object this clone
+      # does not have -- and `git diff base head` then yields nothing, which the selector has to
+      # read as "everything changed" and defer. Fetching that one commit makes the selection
+      # real; when it fails (a force-push, a deleted branch) the fallback is unchanged.
+      - name: Fetch the comparison base
+        run: |
+          base='${{ github.event.pull_request.base.sha || github.event.before }}'
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "no comparison base in this event"
+          else
+            git fetch --no-tags --depth=1 origin "$base" && \
+              git cat-file -e "${base}^{commit}" && echo "base: $base" || \
+              echo "::notice::the base commit $base could not be fetched; this change selects everything"
+          fi
+
       # What this change can reach. A pull request compares against its base; a push compares
       # against the previous tip; a scheduled run has no base and measures the whole tree,
       # which is the point of running it nightly.
       - name: Plan the tests this change can reach
         run: |
           base='${{ github.event.pull_request.base.sha || github.event.before }}'
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
-            printf '{"base": null, "suite": [], "full": true, "changed": 0}\n' > plan.json
-          else
-            python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' \
-              --plan plan.json --without-guards
-          fi
+          case '${{ github.event_name }}' in
+            schedule|workflow_dispatch)
+              python3 tools/ci_select.py --force-full --plan plan.json ;;
+            *)
+              python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' \
+                --plan plan.json --without-guards ;;
+          esac
           python3 tools/ci_select.py --describe plan.json
 
       # The suite runs from the plan, and only that: the first version passed the selection
@@ -201,17 +217,20 @@ jobs:
           HG_TEST_TMPDIR: ${{ runner.temp }}/hg-pytest
           PYTHONDONTWRITEBYTECODE: '1'
         run: |
-          if [ '${{ github.event_name }}' = "schedule" ]; then
-            python3 tools/run_selected.py --plan plan.json --jobs 4 --full
-          else
-            python3 tools/run_selected.py --plan plan.json --jobs 4
-          fi
+          # The full suite is deferred off the push path, not skipped: the nightly run and a
+          # manual dispatch both ask for it explicitly. Every other event runs the selection.
+          case '${{ github.event_name }}' in
+            schedule|workflow_dispatch)
+              python3 tools/run_selected.py --plan plan.json --jobs 4 --full ;;
+            *)
+              python3 tools/run_selected.py --plan plan.json --jobs 4 ;;
+          esac
 
       # A change with no computable base (a force-push) or a core path selects everything.
       # That is the right *selection* and the wrong thing to block a push on: the full suite
-      # is a nightly job now, and the nightly job is the one that runs it.
+      # is a nightly job now, and the nightly job (or a manual dispatch) is what runs it.
       - name: Full suite deferred to the nightly run
-        if: github.event_name != 'schedule'
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
         run: |
           if python3 -c "import json,sys; sys.exit(0 if json.load(open('plan.json')).get('full') else 1)"; then
             echo "::notice::this change selects everything; the full suite runs nightly"

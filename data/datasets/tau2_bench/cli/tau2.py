@@ -19,9 +19,8 @@ def main():
         return
     payload = ({'message': args.payload} if args.operation == 'say' else
                {'tool_name': args.payload, 'arguments': json.loads(args.arguments)}
-               if args.operation == 'call' else {})
-    if args.operation == 'calls':
-        payload = {'tool_calls_json': args.payload}
+               if args.operation == 'call' else
+               {'calls': json.loads(args.payload)} if args.operation == 'calls' else {})
     print(json.dumps(call('/run/harnessgrad-tool/tool.sock', args.operation, payload,
                           timeout_s=None, max_line_bytes=None), ensure_ascii=False))
 

@@ -236,12 +236,20 @@ ROWS: dict[str, dict] = {
     },
     "fever": {"control": [], "metric_tests": ["test_qa_dataset_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
     "hotpotqa": {"control": [], "metric_tests": ["test_qa_dataset_contract.py"], "exempt": "structured evidence contract is loadable; oracle/data provisioning preflight remains before a run"},
-    "tau2_bench": {"control": [], "metric_tests": ["test_dataset_refusals.py"]},
+    "tau2_bench": {
+        # Three released tasks, one per domain, both arms: the release's own ALL scorer, its
+        # own user simulator (through a deterministic local transport fixture), and -- for the
+        # airline task, which has `nl_assertions` -- its own judge channel.
+        "control": ["data/datasets/tau2_bench/control.py"],
+        "metric_tests": ["test_tau2_bench_official_scorer.py"],
+    },
 }
 
 #: Datasets whose control is the refusal itself, so the runnable-control test skips them and
-#: the refusal test below applies instead.
-REFUSED = ("tau2_bench",)
+#: the refusal contract applies instead. Empty since 2026-11-04: `tau2_bench` was the last one,
+#: and its simulator and judge now ship here. The mechanism is tested by
+#: `test_refusal_contract.py` against a synthetic module, not by an adapter that stops refusing.
+REFUSED = ()
 
 #: Datasets whose platform control is *refused* rather than run, because their declared
 #: policy needs a trusted backend observation this checkout cannot supply: an `exec`
@@ -322,17 +330,6 @@ def test_every_declared_metric_test_exists():
     missing = [name for row in ROWS.values() for name in row["metric_tests"]
                if not (QUALITY / name).is_file()]
     assert not missing, f"declared metric tests that are not there: {sorted(set(missing))}"
-
-
-def test_the_refusals_are_where_the_refusal_contract_lives():
-    """The refusal is a first-class result, so it is declared in the file that tests it."""
-    source = (QUALITY / "test_dataset_refusals.py").read_text(encoding="utf-8")
-    match = re.search(r"REFUSING\s*=\s*\[(.*?)\]", source, re.S)
-    assert match, "test_dataset_refusals.py no longer declares REFUSING"
-    listed = set(re.findall(r'"([a-z0-9_]+)"', match.group(1)))
-    assert listed == set(REFUSED), (
-        f"the two lists disagree: this file says {sorted(REFUSED)}, "
-        f"test_dataset_refusals.py says {sorted(listed)}")
 
 
 @pytest.mark.parametrize("name", sorted(n for n, r in ROWS.items() if r["control"]))

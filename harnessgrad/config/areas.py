@@ -335,6 +335,8 @@ class JudgeConfig:
     api_key: str | None = _var("HG_JUDGE_API_KEY", None, "Verifier-only credential.", kind="opt", secret=True)
     tau3_model: str | None = _var(
         "HG_TAU3_JUDGE_MODEL", None, "Tau3 judge override; otherwise global model; no implicit default.", kind="opt")
+    tau2_model: str | None = _var(
+        "HG_TAU2_JUDGE_MODEL", None, "Tau2 judge override; otherwise global model; no implicit default.", kind="opt")
 
     memoryagentbench_model: str | None = _var(
         "HG_MAB_JUDGE_MODEL", None, "MemoryAgentBench judge override; otherwise global model, then source official default.", kind="opt")

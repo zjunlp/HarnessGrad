@@ -31,9 +31,17 @@
 # else lived there; that already happened once, which is why this points at its own.
 set -uo pipefail
 
-VENV="${HARNESSGRAD_VLLM_VENV:-/mnt/20t/xubuqiang/venvs/harnessgrad}"
+# Set HARNESSGRAD_VLLM_VENV to a dedicated, model-compatible vLLM environment.
+# Do not fall back to a system/PATH vLLM: it may have incompatible dependencies.
+VENV="${HARNESSGRAD_VLLM_VENV:-}"
 VLLM="$VENV/bin/vllm"
 LOG="${HARNESSGRAD_VLLM_LOG:-/tmp/harnessgrad_vllm.log}"
+
+configure_runtime() {
+    if [ -z "$VENV" ] || [ ! -x "$VLLM" ] || [ ! -x "$VENV/bin/python" ]; then
+        echo "Set HARNESSGRAD_VLLM_VENV to a dedicated model-compatible environment containing executable bin/vllm and bin/python." >&2
+        return 2
+    fi
 
 # The environment's own bin/ must come first on PATH, and this is not tidiness.
 #
@@ -91,6 +99,7 @@ unset _vendored_cuda
 # it skips the compile entirely. Measured: with this set, zero compile attempts and a
 # clean startup; without it, the engine core dies at warm-up.
 export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
+}
 
 # Candidate models, with the architecture recorded so the reader can tell which
 # ones this vLLM can load. Kept as data rather than prose because the answer changes
@@ -204,13 +213,7 @@ if [ -z "$MODEL" ]; then
     exit 2
 fi
 [ -d "$MODEL" ] || { echo "no such model directory: $MODEL" >&2; exit 2; }
-[ -x "$VLLM" ] || {
-    echo "no vLLM at $VLLM" >&2
-    echo "This platform expects a dedicated environment. Creating one:" >&2
-    echo "  python3 -m venv $VENV" >&2
-    echo "  $VENV/bin/pip install -U -i https://mirrors.aliyun.com/pypi/simple/ 'vllm' 'transformers>=5.10.4'" >&2
-    exit 2
-}
+configure_runtime || exit $?
 
 # What the checkpoint says it is, versus what this vLLM can load. Checked before
 # starting, because a mismatch surfaces as a long load followed by an architecture

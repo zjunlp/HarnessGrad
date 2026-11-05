@@ -8,8 +8,12 @@ kind, so a change to an adapter or a harness does pull in its own tests.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
+from types import SimpleNamespace
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -35,6 +39,20 @@ def test_an_adapter_change_pulls_in_that_dataset_and_the_contract_tests() -> Non
     assert "test_bbeh_duplicate_policy.py" in picked
     assert "test_datasets_doc.py" in picked
     assert set(ci_select.GUARDS) <= set(picked)
+
+
+def test_a_dataset_asset_change_pulls_in_that_dataset_only() -> None:
+    """`data/datasets/<name>/...` is a change to `<name>`, not to a file called `runtime`."""
+    picked, _ = ci_select.select(["data/datasets/tau2_bench/lib/runtime.py"])
+    assert "test_tau2_bench_runtime.py" in picked
+    assert "test_tau2_bench_official_scorer.py" in picked
+    assert "test_dataset_controls.py" in picked
+    assert not any("test_tau3" in name for name in picked), picked
+
+
+def test_a_tau2_fixture_change_runs_the_test_that_drives_it() -> None:
+    picked, _ = ci_select.select(["tests/fixtures/tau2_scorer_probe.py"])
+    assert "test_tau2_bench_official_scorer.py" in picked
 
 
 def test_a_harness_or_method_change_pulls_in_its_own_tests() -> None:
@@ -69,6 +87,21 @@ def test_an_unmapped_path_falls_back_to_the_full_suite() -> None:
     picked, reasons = ci_select.select(["site-redirect/index.html"])
     assert picked == [], picked
     assert any("not mapped" in reason for reason in reasons), reasons
+
+
+def test_an_unknown_base_is_not_the_same_fact_as_an_empty_diff() -> None:
+    """A depth-1 clone has no base commit; that is "everything changed", not "nothing did".
+
+    The two produced the same empty list and the same summary line once, and the CI notice then
+    read "no diff against the base" for a commit that had simply never been fetched.
+    """
+    picked, reasons = ci_select.select([])
+    assert picked == [], "a full fallback is a flag, not a list of every test file"
+    assert any("running everything" in reason for reason in reasons), reasons
+    assert not ci_select._rev_exists("0000000000000000000000000000000000000000")
+    assert ci_select._rev_exists("HEAD")
+    assert ci_select.changed("0000000000000000000000000000000000000000", "HEAD") is None
+    assert ci_select.changed("HEAD", "HEAD") == []
 
 
 def test_a_wide_change_falls_back_to_the_full_suite() -> None:
@@ -160,3 +193,147 @@ def test_a_change_to_any_test_file_selects_it() -> None:
     for name in ("test_dataset_classes.py", "test_trace_reader.py"):
         picked, _ = ci_select.select([f"tests/quality/{name}"])
         assert name in picked or set(picked) == set(ci_select.GUARDS), (name, picked)
+
+
+def test_a_full_plan_says_deferred_rather_than_listing_no_files(tmp_path, capsys, monkeypatch) -> None:
+    """The plan keeps `full` and an empty suite; the summary has to say which of the two
+    meanings that empty list carries. It read `files=0 suite=-` for a wide change once, which
+    looks exactly like a change that reaches nothing."""
+    plan = tmp_path / "plan.json"
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--base", "0" * 40, "--head", "HEAD",
+                                      "--plan", str(plan)])
+    assert ci_select.main() == 0
+    loaded = json.loads(plan.read_text())
+    assert loaded["full"] is True and loaded["suite"] == []
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--describe", str(plan)])
+    assert ci_select.main() == 0
+    printed = capsys.readouterr().out
+    assert "full=True" in printed and "suite=-" in printed
+    assert "state=deferred" in printed
+
+
+@pytest.mark.parametrize("state,suite,flags,expected", [
+    ("selected", ["test_ci_select.py", "test_ci_workflow.py"], [],
+     ["--fast", "--file", "test_ci_select.py", "--file", "test_ci_workflow.py"]),
+    ("selected", [], [], None),
+    ("deferred", [], [], None),
+    ("full", [], [], []),
+    ("selected", ["test_ci_select.py"], ["--full"], []),
+    ("selected", [], ["--full"], []),
+    ("deferred", [], ["--full"], []),
+    ("selected", [], ["--full-if-empty"], []),
+    ("deferred", [], ["--full-if-empty"], []),
+    ("selected", ["test_ci_select.py"], ["--full-if-empty"],
+     ["--fast", "--file", "test_ci_select.py"]),
+])
+def test_runner_subprocess_argv(tmp_path, monkeypatch, capsys, state, suite, flags, expected):
+    """Intercept the actual subprocess boundary, not the dry-run display string."""
+    from tools import run_selected
+
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"state": state, "full": state != "selected", "suite": suite}))
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append((command, kwargs))
+        return SimpleNamespace(returncode=7)
+
+    monkeypatch.setattr(run_selected.subprocess, "run", run)
+    monkeypatch.setattr(sys, "argv", ["run_selected.py", "--plan", str(plan),
+                                     "--jobs", "3", *flags])
+    result = run_selected.main()
+    output = capsys.readouterr().out
+    if expected is None:
+        assert result == 0
+        assert calls == []
+        if state == "deferred":
+            assert "deferred to the nightly run or a manual dispatch" in output
+            assert "nothing in the suite" not in output
+        else:
+            assert "nothing in the suite" in output
+    else:
+        assert result == 7, "propagate the runner's failure"
+        assert calls == [([sys.executable, str(run_selected.RUNNER), "--jobs", "3", *expected],
+                          {"cwd": run_selected.ROOT})]
+
+
+@pytest.mark.parametrize("state,suite,flags,expected", [
+    ("selected", ["test_ci_select.py"], [],
+     ["--jobs", "2", "--fast", "--file", "test_ci_select.py"]),
+    ("selected", [], [], None),
+    ("deferred", [], [], None),
+    ("full", [], [], ["--jobs", "2"]),
+    ("selected", ["test_ci_select.py"], ["--full"], ["--jobs", "2"]),
+])
+def test_real_child_observes_exact_argv(tmp_path, monkeypatch, state, suite, flags, expected):
+    """A harmless child records argv; this never invokes the real test runner."""
+    from tools import run_selected
+
+    receipt = tmp_path / "argv.json"
+    stub = tmp_path / "runner_stub.py"
+    stub.write_text("import json, os, pathlib, sys\n"
+                    f"pathlib.Path({str(receipt)!r}).write_text("
+                    "json.dumps({'argv': sys.argv[1:], 'cwd': os.getcwd()}))\n")
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps({"state": state, "full": state != "selected", "suite": suite}))
+    monkeypatch.setattr(run_selected, "RUNNER", stub)
+    monkeypatch.setattr(sys, "argv", ["run_selected.py", "--plan", str(plan),
+                                     "--jobs", "2", *flags])
+    assert run_selected.main() == 0
+    if expected is None:
+        assert not receipt.exists()
+    else:
+        assert json.loads(receipt.read_text()) == {"argv": expected, "cwd": str(ROOT)}
+
+
+@pytest.mark.parametrize("payload", [
+    "{", "null", "[]", "{}",
+    '{"suite": [], "full": "false"}',
+    '{"suite": "test_ci_select.py", "full": false}',
+    '{"suite": [null], "full": false}',
+    '{"suite": ["--fast"], "full": false}',
+    '{"suite": ["../test_ci_select.py"], "full": false}',
+    '{"suite": ["test_does_not_exist.py"], "full": false}',
+    '{"suite": ["test_ci_select.py", "test_ci_select.py"], "full": false}',
+    '{"suite": ["test_ci_select.py"], "full": true}',
+    '{"suite": [], "full": true, "state": "selected"}',
+    '{"suite": [], "full": false, "state": "full"}',
+    '{"suite": [], "full": false, "state": "unknown"}',
+])
+@pytest.mark.parametrize("flags", [[], ["--full"]])
+def test_malformed_plans_fail_closed(tmp_path, monkeypatch, payload, flags):
+    from tools import run_selected
+
+    plan = tmp_path / "bad.json"
+    plan.write_text(payload)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("a malformed plan must not launch tests, even with --full")
+
+    monkeypatch.setattr(run_selected.subprocess, "run", forbidden)
+    monkeypatch.setattr(sys, "argv", ["run_selected.py", "--plan", str(plan), *flags])
+    with pytest.raises(SystemExit) as exc:
+        run_selected.main()
+    assert exc.value.code == 2
+
+
+@pytest.mark.parametrize("paths,flags,state", [
+    (["docs/x.md"], ["--without-guards"], "selected"),
+    (["eval/run/runner.py"], [], "deferred"),
+    ([], ["--force-full"], "full"),
+])
+def test_plan_producer_names_execution_state(tmp_path, monkeypatch, paths, flags, state):
+    plan = tmp_path / "plan.json"
+    monkeypatch.setattr(sys, "argv", ["ci_select.py", "--paths", *paths,
+                                     "--plan", str(plan), *flags])
+    assert ci_select.main() == 0
+    payload = ci_select.load_plan(str(plan))
+    assert payload["state"] == state
+    assert payload["full"] is (state != "selected")
+    assert payload["suite"] == []
+
+
+def test_legacy_full_plan_is_deferred(tmp_path):
+    plan = tmp_path / "plan.json"
+    plan.write_text('{"full": true, "suite": []}')
+    assert ci_select.load_plan(str(plan))["state"] == "deferred"

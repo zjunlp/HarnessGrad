@@ -20,6 +20,7 @@ table is most tempting to let crash -- or to start describing one host.
 """
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from pathlib import Path
@@ -41,9 +42,29 @@ ROW = re.compile(r"^\| `([a-z0-9_]+)` \|")
 #: counted at each use so that a reordered column breaks one place, not six assertions.
 KIND, METRIC, DEVIATION, PROVISION, REFUSAL = 1, 2, 3, 5, 8
 
-#: The datasets whose adapter refuses the benchmark by design (`REFUSED`), as the refusal
-#: contract in `tests/quality/test_dataset_refusals.py` states them.
-REFUSED = ("tau2_bench",)
+def _declared_refusals() -> tuple[str, ...]:
+    """The adapters that declare `REFUSED`, read as a literal rather than imported.
+
+    Derived rather than listed: the set became empty on 2026-11-04, when `tau2_bench` -- the
+    last refusal -- became an ordinary dataset, and a hand-written tuple would have kept
+    asserting a row that no longer says that. Read with `ast` because importing every adapter
+    here would make this module need the dataset storage to be configured, which is the one
+    thing `docs/DATASETS.md` is written not to depend on.
+    """
+    found = []
+    for path in sorted((ROOT / "data" / "datasets").glob("*.py")):
+        for node in ast.parse(path.read_text(encoding="utf-8")).body:
+            targets = node.targets if isinstance(node, ast.Assign) else []
+            if not any(isinstance(t, ast.Name) and t.id == "REFUSED" for t in targets):
+                continue
+            try:
+                value = ast.literal_eval(node.value)
+            except ValueError:
+                continue
+            if isinstance(value, str) and value.strip():
+                found.append(path.stem)
+    return tuple(found)
+REFUSED = _declared_refusals()
 
 #: The three spellings a host answer takes. The header may explain them in prose; a
 #: *readiness cell* may not be one of them, because it would describe the machine that ran
@@ -206,8 +227,17 @@ def test_catalog_is_independent_of_server_storage_configuration(tmp_path, monkey
 
 
 def test_the_refused_datasets_carry_their_reason():
-    """A refusal is a result, so the row says why rather than leaving a blank cell."""
+    """A refusal is a result, so the row says why rather than leaving a blank cell.
+
+    Cross-checked in both directions: a refusal the adapters declare must be documented, and a
+    row that carries a refusal cell must be one an adapter actually refuses. The second half is
+    what catches a lifted refusal whose prose outlives it.
+    """
     text = DOC_PATH.read_text(encoding="utf-8")
+    documented = {name for name in doc._published()
+                  if _row(text, name)[REFUSAL] not in ("", "—", "-")}
+    assert documented == set(REFUSED), (
+        f"documented refusals {sorted(documented)} vs adapter refusals {sorted(REFUSED)}")
     for name in REFUSED:
         refused = _row(text, name)[REFUSAL]
         assert refused not in ("", "—", "-"), f"{name} has no refusal reason"

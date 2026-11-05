@@ -563,7 +563,7 @@
         "adapter": "data/datasets/tau2_bench.py",
         "contributor": "Xubqpanda",
         "since": "2026-11-03",
-        "note": "declared adapter \u2014 refused by contract"
+        "note": "dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer"
       },
       {
         "name": "tau3_bench",

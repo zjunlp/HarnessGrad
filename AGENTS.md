@@ -140,14 +140,18 @@ No method tuning, paid endpoints, heldout leakage, score fabrication or fake ben
 
 A dataset this platform cannot **measure** is not a shortcut and is not prohibited: it is
 refused by its adapter, with the missing piece named in `registry/dataset-blockers.json`.
-`tau2_bench` is the one that remains refused: it is dual-control, its second party — an LLM
-user simulator — does not exist on this platform, and 55 of its 278 tasks carry gold actions
-with `requestor: "user"` that no agent can perform, so the gold state is unreachable by
-construction. Its exclusion was lifted on 2026-10-22 and both facilities it needs now ship
-in this repository (`data/datasets/tau3_bench/lib/runtime.py`, `eval/service/judge.py`), so
-what remains is a v0.1.0 pin and a split, not a policy. `api_bank`, `nestful` and `sotuqa`
-were removed from the repository on 2026-11-03 — each needed an artefact this project cannot
-produce — and `docs/refusal-policy.md` keeps their reasons for older receipts.
+**No dataset is refused today.** `tau2_bench` was the last one and became an ordinary
+dual-control dataset on 2026-11-04, measured on three released tasks at oracle 1.0 / do-nothing
+0.0 through the v0.1.0 pin's own `UserSimulator`, tools and `EvaluationType.ALL` scorer: its
+second party runs in a private trusted process (`data/datasets/tau2_bench/relay.py`), and the
+judge its ALL evaluator calls for 58 of 278 tasks is declared per task instead of assumed. The
+facilities it needed already shipped here (`data/datasets/tau3_bench/lib/runtime.py`,
+`eval/service/judge.py`), which is why the remaining work was a pin, a split story and a port.
+`api_bank`, `nestful` and `sotuqa` were removed from the repository on 2026-11-03 — each needed
+an artefact this project cannot produce — and `docs/refusal-policy.md` keeps their reasons, and
+τ²'s lifted one, for older receipts. The refusal *mechanism* is still tested, against a
+synthetic module (`tests/quality/test_refusal_contract.py`), so lifting the last refusal did not
+retire the contract.
 Never substitute a proxy under the benchmark's own name — the database half or a `communicate_info` substring for τ² — and a paid-endpoint judge makes a number non-publishable. Reasoning, per-dataset exits and the recorded data: `docs/refusal-policy.md`.
 
 ## Evidence requirements

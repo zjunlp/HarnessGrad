@@ -47,8 +47,10 @@ HERE = pathlib.Path(__file__).resolve().parent
 CONSOLE = HERE.parent
 SERVER_PY = CONSOLE / "server.py"
 STATIC = CONSOLE / "static"
-DEFAULT_RUNS = pathlib.Path("/mnt/20t/xubuqiang/hg-work/rsi10/runs")
-PLATFORM = pathlib.Path("/mnt/20t/xubuqiang/Study/HarnessGrad")
+# Runs are external receipts, never repository data.  Keep an explicit CLI/env path
+# authoritative, and use the same portable per-user default as console.server otherwise.
+DEFAULT_RUNS = pathlib.Path.home() / ".local" / "share" / "harnessgrad" / "runs"
+PLATFORM = CONSOLE.parent
 
 
 # ─────────────────────────────────────────────────────── 小工具
@@ -2379,7 +2381,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="hg-console UAT 冒烟（只读实测）")
     ap.add_argument("--port", type=int, default=4470, help="自己起 console 的端口（默认 4470）")
     ap.add_argument("--url", default=None, help="测一个已经在跑的 console，例如 http://127.0.0.1:4450")
-    ap.add_argument("--runs-root", default=os.environ.get('HG_CONSOLE_RUNS',str(DEFAULT_RUNS)), help="真实 runs 目录（对照 patch/文件用）")
+    ap.add_argument("--runs-root", default=os.environ.get('HG_CONSOLE_RUNS', str(DEFAULT_RUNS)), help="真实 runs 目录（对照 patch/文件用；默认 ~/.local/share/harnessgrad/runs，必须已存在）")
     ap.add_argument('--submission-id',default=None,help='核对指定提交，不自动换成别的成功记录')
     ap.add_argument('--submissions-root',default=os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT'),help='本地永久receipt根目录')
     ap.add_argument('--_serve-readonly',action='store_true',help=argparse.SUPPRESS)

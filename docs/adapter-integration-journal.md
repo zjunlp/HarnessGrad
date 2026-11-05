@@ -6356,3 +6356,25 @@ storage and optional dependencies; actual runtime errors are reported by `load()
 Download JSON remains a list, with catalog diagnostics on stderr. Reachability
 evidence is regenerated against the integrated source tree, retaining the BFCL
 source inventory, sink reviews and independent native admission pins.
+
+
+### τ² pinned-runtime documentation and evidence correction (2026-11-04)
+
+Updated the [τ² adapter guide](../data/datasets/tau2_bench/README.md) against the
+preparation, integrity and dual-control worker reports and parent integration work.
+Official v0.1.0 supports multi-tool batches; assistant batch CLI work is parallel,
+not an upstream prohibition. Its `num_errors` never increments, so the configured
+`max_errors=10` is not an enforced tool-error budget; `tool_error_count` is diagnostic.
+ALL requires complete performed NL assertion coverage even outside the reward basis.
+The corrected control fixture returns complete false verdicts, not empty `results`;
+source criteria and default reward bases remain untouched. Actor projection removes
+host `user_tools` schemas without modifying the pinned prepared public file.
+
+Read-only check-only runs on Python 3.12 and probes the selected Python 3.13 runtime.
+Fresh generation stages and atomically publishes on Python 3.13. Source-only bundle
+pinning preserves the identical official files while retaining validation of the
+legacy cache-bearing receipt. `--reuse-bundle` proves reproducibility, never repairs
+a live payload. Production readiness invokes check-only in a subprocess; metadata
+and asset validation are not model/endpoint or binary-import health checks.
+
+Evidence is deliberately bounded: integrated production-declaration sandbox reruns measured oracle/noop 1/0 on one USER-toggle telecom task and [1,1,1]/[0,0,0] on the default three tasks. All eight executions recorded sandbox enforcement, complete relay cleanup and no fixture errors; the default airline judge returned complete 4/4 assertion coverage, excluded from reward. These deterministic fixtures do not authorize H0 or prove general model behavior. No new benchmark execution or timing claim is made here.

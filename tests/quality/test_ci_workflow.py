@@ -142,3 +142,34 @@ def test_the_interpreter_it_uses_is_one_the_project_supports() -> None:
         parsed = tuple(int(part) for part in version.split("."))
         assert parsed[:len(floor)] >= floor, (
             f"CI runs python {version}, below the declared floor {declared.group(1)}")
+
+def test_the_report_job_fetches_the_commit_it_compares_against() -> None:
+    """`actions/checkout` is one commit deep, so a diff against the base yields nothing and the
+    selector has to read that as "everything changed". The report job fetched nothing, so every
+    push deferred the whole suite and the per-change selection never ran. Fetching the one base
+    commit is what makes the selection real; the fallback stays for a force-push."""
+    text = _text()
+    assert "git fetch" in text and "--depth=1" in text, (
+        "the report job must fetch the comparison base, or every push selects everything")
+    assert "github.event.pull_request.base.sha || github.event.before" in text, (
+        "the base is the PR base or, for a push, the previous tip")
+    assert "could not be fetched" in text, "an unfetchable base must say so, not pass silently"
+
+
+def test_a_manual_dispatch_runs_the_full_suite() -> None:
+    """The full suite is deferred off the push path, not skipped: the nightly run and a manual
+    dispatch ask for it. Keying only on `schedule` made a dispatch run the deferred plan, which
+    is an empty plan, which is nothing at all."""
+    text = _text()
+    assert "schedule|workflow_dispatch" in text, "both events must request the full suite"
+    assert "github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'" in text
+    plan = text.split("- name: Plan the tests this change can reach", 1)[1].split(
+        "- name: Suite", 1)[0]
+    assert "--force-full --plan plan.json" in plan
+    assert "printf" not in plan, "all plan states must be produced by the selector"
+    suite = text.split("- name: Suite", 1)[1].split(
+        "- name: Full suite deferred", 1)[0]
+    assert re.search(r"schedule\|workflow_dispatch\)\s*"
+                     r"python3 tools/run_selected.py --plan plan.json --jobs 4 --full ;;", suite)
+    assert re.search(r"\*\)\s*python3 tools/run_selected.py --plan plan.json --jobs 4 ;;", suite)
+    assert "--full-if-empty" not in suite, "empty push selections must never expand to full"

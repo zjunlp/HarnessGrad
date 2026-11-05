@@ -165,7 +165,7 @@ uses all 150 tasks.
 | `supergpqa` | none | none | - | - | None (the pool is the scored split) |
 | `swe_bench` | undeclared | absent | - | - | absent |
 | `swe_bench_pro` | none | none | - | - | None (the pool is the scored split) |
-| `tau2_bench` | refused | - | - | - | - |
+| `tau2_bench` | none | none | - | - | None (the pool is the scored split) |
 | `tau3_bench` | declared | declared | unknown (computed) | unknown (computed) | None |
 | `tau_bench` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
 | `terminal_bench` | none | none | - | - | None (the pool is the scored split) |
@@ -179,10 +179,12 @@ uses all 150 tasks.
 
 ## What is left
 
-Nothing: every published dataset either declares the benchmark's division, declares none,
-or is refused. Counted from the table above (59 rows): **11 declared, 35 none, 9 undeclared,
-4 refused** -- the numbers in this paragraph are a reading of the table, and the table is the
-authority. The `none` group is the majority because most of these adapters load one side of
+Nothing: every published dataset either declares the benchmark's division or declares none.
+Counted from the table above (56 rows): **11 declared, 36 none, 9 undeclared, 0 refused** -- the
+numbers in this paragraph are a reading of the table, and the table is the authority. The
+`refused` state is still described above and still appears for a future refusal; it became empty
+on 2026-11-04, when `tau2_bench` -- the last one -- became a `none` row, and `api_bank`,
+`nestful` and `sotuqa` had been removed from the repository on 2026-11-03. The `none` group is the majority because most of these adapters load one side of
 their benchmark (a test, dev or validation file), and a table that *is* the evaluation set has
 no division to declare -- saying otherwise would call a third of an exam "study material",
 which is what the hash rule did until 2026-10-24.
@@ -196,7 +198,8 @@ label in the prepared manifest). They compute their sides from the adapter's poo
 declaring them literally, which is why their sizes are `unknown (computed)` in the table and
 printed by `--host`; `tau_bench`'s pool is committed to the repository (see above).
 
-Four adapters are refused (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`). The 9 `undeclared`
+No adapter is refused today; the three that were removed and the one that was lifted are recorded in
+[`docs/refusal-policy.md`](refusal-policy.md). The 9 `undeclared`
 are the upstream research adapters, whose split membership is read from a prepared manifest --
 `strongreject` used to be one of them and now declares no division at all plus `SPLIT_GROUPS`
 (see the section above). `alfworld` and `scienceworld` declare a division **only when** a study

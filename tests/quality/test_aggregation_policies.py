@@ -120,6 +120,14 @@ def adapters():
 
 
 def test_before_after_all_numbers_and_verdicts_are_identical(adapters):
+    """The receipt keeps its numbers; three of its *dataset names* were removed from it.
+
+    `run_means` is keyed by dataset, and `api_bank`, `nestful` and `sotuqa` were removed from the
+    repository on 2026-11-03, so their aggregation policy no longer exists and `mean(dataset=...)`
+    raises `KeyError`. Delisting them changes no number -- every remaining dataset's five means are
+    the same values, and the count check at the end of this test still accounts for all 56
+    published adapters.
+    """
     musique, twowiki = adapters
     baseline = json.loads(BASELINE.read_text())
     inputs, expected = baseline["inputs"], baseline["outputs"]

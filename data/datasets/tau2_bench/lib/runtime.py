@@ -1,191 +1,455 @@
-"""τ² v0.1.0 half-duplex runtime: the official loop, driven by an external actor.
+"""Harbor half-duplex state machine, pinned at 3e9f14a7c1033896cc600d27de69d6948bcb3410.
 
-The official `Orchestrator.run()` owns the loop and calls the agent itself. Here the **actor is the
-platform's harness**, so the loop is turned inside out: the actor submits one assistant message at a
-time (`say` / `call` / `calls`), and this class performs exactly the transitions τ² performs —
-assistant → user, assistant → environment — and enforces τ²'s own termination rules. Message types,
-ordering and the step/error budget are the official ones, so the verifier can hand the sealed
-messages to `evaluate_simulation` unchanged.
-
-What the actor can never do: read the user's scenario, reset the conversation, set a seed, or call
-the scorer. Those live behind the trusted boundary (see `relay.py` and `verify/check.py`).
+Derived from adapters/tau2-bench/.../runtime-server/server.py (Apache-2.0; see ../LICENSE.harbor).
+MCP exposure, actor configuration and filesystem state export are deliberately absent.
+Official domain tools and UserSimulator run unchanged in a private trusted process.
 """
 from __future__ import annotations
-
 import json
-import uuid
 from copy import deepcopy
+from pathlib import Path
+from typing import Any
 
-from tau2.data_model.message import (AssistantMessage, MultiToolMessage, ToolCall, ToolMessage,
-                                     UserMessage)
-from tau2.data_model.simulation import TerminationReason
-from tau2.data_model.tasks import Task
-from tau2.environment.environment import Environment
-from tau2.orchestrator.orchestrator import DEFAULT_FIRST_AGENT_MESSAGE, Orchestrator
-from tau2.registry import registry
-from tau2.user.user_simulator import UserSimulator
+def _require_attr(module_name: str, attr_name: str) -> Any:
+    module = __import__(module_name, fromlist=[attr_name])
+    return getattr(module, attr_name)
 
-#: The official episode budget. τ²'s defaults are 100 steps / 10 tool errors per episode, and its
-#: own `run_task` passes them straight through.
-MAX_STEPS = 100
-MAX_ERRORS = 10
-AGENT_STOP = '###STOP###'
+def _user_history_predicate(runtime: Any):
+    """v1.0.1's `is_valid_user_history_message`, which v0.1.0 does not export.
+
+    The rule is the same in both releases -- a user turn, an assistant turn that is not a tool
+    call, or a tool result answering the *user* -- so it is implemented here against the
+    message classes the loaded release actually provides.
+    """
+    UserMessage = runtime.UserMessage
+    AssistantMessage = runtime.AssistantMessage
+    ToolMessage = runtime.ToolMessage
+
+    def valid(message: Any) -> bool:
+        if isinstance(message, UserMessage):
+            return True
+        if isinstance(message, AssistantMessage):
+            return not message.is_tool_call()
+        return isinstance(message, ToolMessage) and getattr(message, "requestor", None) == "user"
+
+    return valid
 
 
-def _tool_messages(environment: Environment, tool_calls: list[ToolCall]) -> list[ToolMessage]:
-    return [environment.get_response(tc) for tc in tool_calls]
+def _get_tau2_domain_constructor(
+    domain: str, config: dict[str, Any], task_model: Any
+) -> tuple[Any, dict[str, Any]]:
+    if domain == "airline":
+        return _require_attr("tau2.domains.airline.environment", "get_environment"), {}
+    if domain == "retail":
+        return _require_attr("tau2.domains.retail.environment", "get_environment"), {}
+    if domain == "telecom":
+        # v0.1.0 ships one constructor per domain; v1.0.1's `get_environment_manual_policy`
+        # (and its banking_knowledge domain) do not exist here.
+        return _require_attr("tau2.domains.telecom.environment", "get_environment"), {}
+    raise ValueError(f"Unsupported tau2 domain: {domain}")
+
+def validate_assistant_calls(calls: Any) -> None:
+    """Validate the complete actor envelope without changing runtime state.
+
+    Domain argument/schema failures remain official tool results, not protocol
+    errors. Requestor is deliberately not actor-configurable.
+    """
+    if not isinstance(calls, list) or not calls:
+        raise ValueError("calls must be a nonempty list")
+    ids = set()
+    for call in calls:
+        if not isinstance(call, dict) or set(call) != {"id", "name", "arguments"}:
+            raise ValueError("each call must contain only id, name and arguments")
+        if not isinstance(call["id"], str) or not call["id"].strip() or call["id"] in ids:
+            raise ValueError("call ids must be nonempty unique strings")
+        if not isinstance(call["name"], str) or not call["name"].strip():
+            raise ValueError("call names must be nonempty strings")
+        if not isinstance(call["arguments"], dict):
+            raise ValueError("call arguments must be objects")
+        ids.add(call["id"])
 
 
 class Tau2Runtime:
-    """One selected task, one conversation, no actor-visible state beyond what it is told."""
+    def __init__(self, config_path: Path):
 
-    def __init__(self, config: dict, user_model: str, user_model_args: dict):
-        self.task = Task.model_validate(config['private'])
-        self.domain = config['domain']
-        self.task_id = config['task_id']
-        self.revision = config['revision']
-        self.case_sha256 = config['case_sha256']
-        self.environment = registry.get_env_constructor(self.domain)()
-        try:
-            user_tools = self.environment.get_user_tools()
-        except Exception:                                  # noqa: BLE001 - a domain may have none
-            user_tools = None
-        self.user = UserSimulator(tools=user_tools,
-                                 instructions=str(self.task.user_scenario),
-                                 llm=user_model, llm_args=dict(user_model_args))
-        self.user_state = None
-        self.messages: list = []
-        self.steps = 0
-        self.errors = 0
-        self.termination_reason = None
+        self.config = json.loads(config_path.read_text(encoding="utf-8"))
+        self.domain = str(self.config["domain"])
+
+        self.Task = _require_attr("tau2.data_model.tasks", "Task")
+        self.ToolCall = _require_attr("tau2.data_model.message", "ToolCall")
+        self.ToolMessage = _require_attr("tau2.data_model.message", "ToolMessage")
+        self.AssistantMessage = _require_attr(
+            "tau2.data_model.message", "AssistantMessage"
+        )
+        self.UserMessage = _require_attr("tau2.data_model.message", "UserMessage")
+        self.MultiToolMessage = _require_attr(
+            "tau2.data_model.message", "MultiToolMessage"
+        )
+        self.TerminationReason = _require_attr(
+            "tau2.data_model.simulation", "TerminationReason"
+        )
+        self.DEFAULT_FIRST_AGENT_MESSAGE = _require_attr(
+            "tau2.orchestrator.orchestrator", "DEFAULT_FIRST_AGENT_MESSAGE"
+        )
+        self.UserSimulator = _require_attr("tau2.user.user_simulator", "UserSimulator")
+        self.is_valid_user_history_message = _user_history_predicate(self)
+
+        self.task = self.Task.model_validate(self.config["task"])
+        self.environment_constructor, self.env_kwargs = _get_tau2_domain_constructor(
+            self.domain, self.config, self.task
+        )
+        self.environment = self.environment_constructor(
+            solo_mode=False, **self.env_kwargs
+        )
+
+        self.messages: list[Any] = []
+        self.termination_reason: str | None = None
+        self.step_count = 0
+        self.num_errors = 0
+        # v0.1.0 checks limits after every orchestrator step, including a
+        # participant emitting tool calls (before the environment executes them).
+        self.max_steps = int(self.config.get("max_steps", 200))
+        self.max_errors = int(self.config.get("max_errors", 10))
+        self.tool_error_count = 0
+        self.seed: int | None = self.config["seed"]
         self.bootstrap_complete = False
+        self.last_agent_observation: str = ""
 
-    # ---------------------------------------------------------------- actor-facing operations
-    def start_conversation(self) -> dict:
-        """Apply the task's initial state. Idempotent; the actor gets no reset afterwards."""
-        if self.bootstrap_complete:
-            return self.get_runtime_status()
-        initial = self.task.initial_state
-        history = deepcopy(initial.message_history) if (initial and initial.message_history) else []
+        initial_state = self.task.initial_state
+        initialization_data = (
+            initial_state.initialization_data if initial_state is not None else None
+        )
+        initialization_actions = (
+            initial_state.initialization_actions if initial_state is not None else None
+        )
+        message_history = (
+            deepcopy(initial_state.message_history)
+            if initial_state is not None and initial_state.message_history is not None
+            else []
+        )
         self.environment.set_state(
-            initialization_data=initial.initialization_data if initial else None,
-            initialization_actions=initial.initialization_actions if initial else None,
-            message_history=history)
-        self.messages = list(history)
-        self.user_state = self.user.get_init_state(list(history))
-        self.bootstrap_complete = True
-        return self.get_runtime_status()
+            initialization_data=initialization_data,
+            initialization_actions=initialization_actions,
+            message_history=message_history,
+        )
+        self.messages = list(message_history)
 
-    def submit_assistant_message(self, message: str) -> dict:
-        text = str(message)
-        self._require_open()
-        assistant = AssistantMessage(role='assistant', content=text)
-        self.messages.append(assistant)
-        self.steps += 1
-        if AGENT_STOP in text:
-            self.termination_reason = TerminationReason.AGENT_STOP
-            return {'agent_stop': True, 'termination_reason': self.termination_reason.value}
-        reply = self._user_turn(assistant)
-        return {'user': reply.get('content'), 'user_stop': reply.get('stop', False),
-                'termination_reason': self._termination_value()}
+        # v0.1.0's `Task` carries no `user_tools` and `get_user_tools()` takes no filter: the
+        # domain declares the user's toolkit, and the task only declares its own tools through
+        # the domain in v1.0.1. Same behaviour, one fewer parameter.
+        user_tools = (self.environment.get_user_tools() or None) if self.environment.user_tools is not None else None
 
-    def call_assistant_tool(self, tool_name: str, arguments: dict) -> dict:
-        self._require_open()
-        call = ToolCall(id=f'call_{uuid.uuid4().hex[:12]}', name=tool_name, arguments=dict(arguments))
-        self.messages.append(AssistantMessage(role='assistant', content=None, tool_calls=[call]))
-        self.steps += 1
-        tool_message = self.environment.get_response(call)
-        self.messages.append(tool_message)
-        self._count_error(tool_message)
+        self.user = self.UserSimulator(
+            llm=self.config["user_model"],
+            instructions=str(self.task.user_scenario),
+            tools=user_tools,
+            llm_args={"seed": self.config["seed"]},
+        )
+
+        self._bootstrap_mode = "fresh"
+        self._bootstrap_message: Any | None = None
+        self._initialize_user_state(message_history)
+        self._tool_call_counter = self._count_existing_tool_calls(self.messages)
         self.environment.sync_tools()
-        return {'tool': tool_message.model_dump(mode='json'),
-                'termination_reason': self._termination_value()}
 
-    def submit_assistant_tool_calls(self, tool_calls_json: str) -> dict:
-        """Several business calls in one assistant turn, as τ²'s `MultiToolMessage` allows."""
-        self._require_open()
-        batch = json.loads(tool_calls_json)
-        calls = [ToolCall(id=str(item['id']), name=str(item['name']),
-                          arguments=dict(item['arguments'])) for item in batch]
-        self.messages.append(AssistantMessage(role='assistant', content=None, tool_calls=calls))
-        self.steps += 1
-        tool_messages = _tool_messages(self.environment, calls)
-        if len(tool_messages) > 1:
-            self.messages.append(MultiToolMessage(role='tool', tool_messages=tool_messages))
+    def _count_existing_tool_calls(self, messages: list[Any]) -> int:
+        count = 0
+        for message in messages:
+            tool_calls = getattr(message, "tool_calls", None)
+            if tool_calls:
+                count += len(tool_calls)
+        return count
+
+    def _initialize_user_state(self, message_history: list[Any]) -> None:
+        if not message_history:
+            self.user_state = self.user.get_init_state()
+            self._bootstrap_mode = "fresh"
+            self._bootstrap_message = None
+            return
+
+        valid_user_history = [
+            msg for msg in message_history if self.is_valid_user_history_message(msg)
+        ]
+        valid_user_history_without_last = [
+            msg
+            for msg in message_history[:-1]
+            if self.is_valid_user_history_message(msg)
+        ]
+        last_message = message_history[-1]
+
+        if isinstance(last_message, self.AssistantMessage):
+            self._bootstrap_message = last_message
+            if last_message.is_tool_call():
+                self.user_state = self.user.get_init_state(valid_user_history)
+                self._bootstrap_mode = "assistant_tool_call"
+            else:
+                self.user_state = self.user.get_init_state(
+                    valid_user_history_without_last
+                )
+                self._bootstrap_mode = "assistant_to_user"
+            return
+
+        if isinstance(last_message, self.UserMessage):
+            self.user_state = self.user.get_init_state(valid_user_history)
+            self._bootstrap_message = last_message
+            self._bootstrap_mode = (
+                "user_tool_call"
+                if last_message.is_tool_call()
+                else "pending_user_message"
+            )
+            return
+
+        if isinstance(last_message, self.ToolMessage):
+            self._bootstrap_message = last_message
+            if last_message.requestor == "assistant":
+                self.user_state = self.user.get_init_state(valid_user_history)
+                self._bootstrap_mode = "assistant_tool_result"
+            else:
+                self.user_state = self.user.get_init_state(
+                    valid_user_history_without_last
+                )
+                self._bootstrap_mode = "user_tool_result"
+            return
+
+        raise ValueError(f"Unsupported last message type: {type(last_message)}")
+
+    def _next_tool_call_id(self) -> str:
+        self._tool_call_counter += 1
+        return f"runtime_tool_{self._tool_call_counter}"
+
+
+    def episode(self):
+        return {"domain": self.domain, "task_id": self.task.id,
+                "termination_reason": self.termination_reason,
+                "step_count": self.step_count, "num_errors": self.num_errors,
+                "tool_error_count": self.tool_error_count,
+                "seed": self.seed,
+                "messages": [m.model_dump(mode="json") for m in self.messages]}
+
+    def _require_active(self) -> None:
+        if self.termination_reason is not None:
+            raise RuntimeError(
+                f"Conversation has already ended with reason '{self.termination_reason}'."
+            )
+
+    def _check_termination(self) -> None:
+        if self.step_count >= self.max_steps:
+            self.termination_reason = self.TerminationReason.MAX_STEPS.value
+        if self.num_errors >= self.max_errors:
+            self.termination_reason = self.TerminationReason.TOO_MANY_ERRORS.value
+
+    def _finish_step(self) -> None:
+        self.step_count += 1
+        self.environment.sync_tools()
+        # Do not defer at a tool boundary: official run() checks after *each*
+        # step, and MAX_STEPS overrides STOP; TOO_MANY_ERRORS overrides both.
+        self._check_termination()
+
+    def _execute_tool_calls(self, tool_calls: list[Any]) -> list[Any]:
+        results = [self.environment.get_response(tool_call) for tool_call in tool_calls]
+        # The pinned orchestrator defines _count_errors but never calls it or
+        # increments num_errors. Preserve that release behavior, not a guessed
+        # fix; expose observed tool errors separately for diagnostics.
+        self.tool_error_count += sum(bool(getattr(result, "error", False)) for result in results)
+        self.messages.extend(results)
+        return results
+
+    def _execute_environment_step(self, tool_calls: list[Any]) -> list[Any]:
+        tool_results = self._execute_tool_calls(tool_calls)
+        self._finish_step()
+        return tool_results
+
+    def _wrap_tool_results(self, tool_results: list[Any]) -> Any:
+        if len(tool_results) == 1:
+            return tool_results[0]
+        return self.MultiToolMessage(role="tool", tool_messages=tool_results)
+
+    def _format_observation(self, message: Any) -> str:
+        if isinstance(message, self.MultiToolMessage):
+            return "\n\n".join(
+                tool_message.content or "" for tool_message in message.tool_messages
+            )
+        content = getattr(message, "content", None)
+        return "" if content is None else str(content)
+
+    def _run_user_until_agent_observation(self, incoming_message: Any) -> Any:
+        current_message = incoming_message
+        while True:
+            self._require_active()
+            user_message, self.user_state = self.user.generate_next_message(
+                current_message, self.user_state
+            )
+            user_message.validate()
+            self.messages.append(user_message)
+            if self.UserSimulator.is_stop(user_message):
+                self.termination_reason = self.TerminationReason.USER_STOP.value
+                self._finish_step()
+                return user_message
+
+            if user_message.is_tool_call():
+                self._finish_step()
+                if self.termination_reason is not None:
+                    return user_message
+                tool_results = self._execute_environment_step(user_message.tool_calls)
+                current_message = self._wrap_tool_results(tool_results)
+                if self.termination_reason is not None:
+                    return current_message
+                continue
+
+            self._finish_step()
+            return user_message
+
+    def _bootstrap(self) -> str:
+        if self.bootstrap_complete:
+            return self.last_agent_observation
+
+        mode = self._bootstrap_mode
+        observation_message: Any
+        # initialize() in the pin recognizes STOP already present in history;
+        # no step or limit check runs for an initially terminated conversation.
+        initial = self._bootstrap_message
+        if (isinstance(initial, self.UserMessage) and self.UserSimulator.is_stop(initial)):
+            self.termination_reason = self.TerminationReason.USER_STOP.value
+        elif (isinstance(initial, self.AssistantMessage) and
+              "###STOP###" in (initial.content or "")):
+            self.termination_reason = self.TerminationReason.AGENT_STOP.value
+        if self.termination_reason is not None:
+            self.bootstrap_complete = True
+            self.last_agent_observation = self._format_observation(initial)
+            return self.last_agent_observation
+
+        if mode == "fresh":
+            first_message = deepcopy(self.DEFAULT_FIRST_AGENT_MESSAGE)
+            self.messages.append(first_message)
+            observation_message = self._run_user_until_agent_observation(first_message)
+        elif mode == "pending_user_message":
+            observation_message = self._bootstrap_message
+        elif mode == "assistant_to_user":
+            observation_message = self._run_user_until_agent_observation(
+                self._bootstrap_message
+            )
+        elif mode == "user_tool_call":
+            tool_results = self._execute_environment_step(
+                self._bootstrap_message.tool_calls
+            )
+            wrapped = self._wrap_tool_results(tool_results)
+            observation_message = (wrapped if self.termination_reason is not None else
+                                   self._run_user_until_agent_observation(wrapped))
+        elif mode == "assistant_tool_call":
+            tool_results = self._execute_environment_step(
+                self._bootstrap_message.tool_calls
+            )
+            observation_message = self._wrap_tool_results(tool_results)
+        elif mode == "assistant_tool_result":
+            observation_message = self._bootstrap_message
+        elif mode == "user_tool_result":
+            observation_message = self._run_user_until_agent_observation(
+                self._bootstrap_message
+            )
         else:
-            self.messages.append(tool_messages[0])
-        for tool_message in tool_messages:
-            self._count_error(tool_message)
-        self.environment.sync_tools()
-        return {'tools': [m.model_dump(mode='json') for m in tool_messages],
-                'termination_reason': self._termination_value()}
+            raise ValueError(f"Unsupported bootstrap mode: {mode}")
 
-    def get_runtime_status(self) -> dict:
-        return {'task_id': self.task_id, 'domain': self.domain, 'steps': self.steps,
-                'errors': self.errors, 'max_steps': MAX_STEPS, 'max_errors': MAX_ERRORS,
-                'messages': len(self.messages), 'started': self.bootstrap_complete,
-                'termination_reason': self._termination_value()}
+        self.bootstrap_complete = True
+        self.last_agent_observation = self._format_observation(observation_message)
+        return self.last_agent_observation
 
-    # ---------------------------------------------------------------- internals
-    def _user_turn(self, assistant: AssistantMessage) -> dict:
-        user_message, self.user_state = self.user.generate_next_message(assistant, self.user_state)
-        user_message.validate()
-        self.messages.append(user_message)
-        self.steps += 1
-        stop = UserSimulator.is_stop(user_message)
-        if stop:
-            self.termination_reason = TerminationReason.USER_STOP
-        result = {'content': user_message.content, 'stop': stop}
-        if user_message.is_tool_call():
-            # The user may call their own tools; those results are the environment's business and
-            # are appended here, exactly as τ²'s loop does, so the trajectory stays official.
-            tool_messages = _tool_messages(self.environment, user_message.tool_calls)
-            for tool_message in tool_messages:
-                self.messages.append(tool_message)
-                self._count_error(tool_message)
-            self.environment.sync_tools()
-            result['user_tool_results'] = [m.model_dump(mode='json') for m in tool_messages]
-        self._check_budget()
+    def get_runtime_status(self) -> str:
+        return json.dumps(
+            {
+                "termination_reason": self.termination_reason,
+                "step_count": self.step_count,
+                "num_errors": self.num_errors,
+                "max_steps": self.max_steps,
+                "max_errors": self.max_errors,
+                "tool_error_count": self.tool_error_count,
+                "seed": self.seed,
+            },
+            sort_keys=True,
+        )
+
+
+    def start_conversation(self) -> str:
+        return self._bootstrap()
+
+    def submit_assistant_message(self, message: str) -> str:
+        if not message.strip():
+            raise ValueError("Message must not be empty.")
+        self._require_active()
+        if not self.bootstrap_complete:
+            raise RuntimeError("Call start_conversation before messaging the user.")
+
+        assistant_message = self.AssistantMessage(role="assistant", content=message)
+        assistant_message.validate()
+        self.messages.append(assistant_message)
+
+        if "###STOP###" in message:
+            self.termination_reason = self.TerminationReason.AGENT_STOP.value
+            self._finish_step()
+            return json.dumps(
+                {
+                    "observation": None,
+                    "termination_reason": self.termination_reason,
+                    "step_count": self.step_count,
+                    "num_errors": self.num_errors,
+                },
+                sort_keys=True,
+            )
+
+        self._finish_step()
+        if self.termination_reason is not None:
+            return json.dumps(
+                {
+                    "observation": None,
+                    "termination_reason": self.termination_reason,
+                    "step_count": self.step_count,
+                    "num_errors": self.num_errors,
+                },
+                sort_keys=True,
+            )
+
+        observation_message = self._run_user_until_agent_observation(assistant_message)
+        self.last_agent_observation = self._format_observation(observation_message)
+        return json.dumps(
+            {
+                "observation": self.last_agent_observation,
+                "termination_reason": self.termination_reason,
+                "step_count": self.step_count,
+                "num_errors": self.num_errors,
+            },
+            sort_keys=True,
+        )
+
+
+
+    def call_assistant_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
+        # Allocate only after validation; malformed requests consume no ids or steps.
+        used = {call.id for message in self.messages
+                for call in (getattr(message, "tool_calls", None) or [])}
+        counter = self._tool_call_counter + 1
+        while f"runtime_tool_{counter}" in used:
+            counter += 1
+        result = self.call_assistant_tools([
+            {"id": f"runtime_tool_{counter}", "name": tool_name, "arguments": arguments}
+        ])
+        self._tool_call_counter = counter
         return result
 
-    def _count_error(self, message: ToolMessage) -> None:
-        if getattr(message, 'error', False):
-            self.errors += 1
-
-    def _check_budget(self) -> None:
-        if self.steps >= MAX_STEPS:
-            self.termination_reason = TerminationReason.MAX_STEPS
-        elif self.errors >= MAX_ERRORS:
-            self.termination_reason = TerminationReason.TOO_MANY_ERRORS
-
-    def _termination_value(self):
-        value = self.termination_reason
-        return value.value if value is not None else None
-
-    def _require_open(self) -> None:
+    def call_assistant_tools(self, calls: list[dict[str, Any]]) -> str:
+        validate_assistant_calls(calls)
+        self._require_active()
         if not self.bootstrap_complete:
-            raise ValueError('start_conversation_first')
+            raise RuntimeError("Call start_conversation before using domain tools.")
+
+        tool_calls = [self.ToolCall(**call, requestor="assistant") for call in calls]
+        assistant_message = self.AssistantMessage(
+            role="assistant", tool_calls=tool_calls, content=None
+        )
+        assistant_message.validate()
+        self.messages.append(assistant_message)
+        self._finish_step()
         if self.termination_reason is not None:
-            raise ValueError(f'conversation_ended:{self._termination_value()}')
-
-    # ---------------------------------------------------------------- sealing
-    def episode(self) -> dict:
-        """The sealed episode: exactly what the official scorer needs, and nothing else."""
-        trajectory = []
-        for index, message in enumerate(deepcopy(self.messages)):
-            message.turn_idx = index
-            trajectory.append(message.model_dump(mode='json'))
-        return {'schema': 'hg-tau2-episode.v1', 'task_id': self.task_id, 'domain': self.domain,
-                'revision': self.revision, 'case_sha256': self.case_sha256,
-                'termination_reason': self._termination_value(), 'steps': self.steps,
-                'errors': self.errors, 'messages': trajectory}
-
-
-def agent_first_message() -> dict:
-    """τ² opens with an agent greeting; it is the official default and costs no model call."""
-    return DEFAULT_FIRST_AGENT_MESSAGE.model_dump(mode='json')
-
-
-def orchestrator_reference() -> str:
-    """Keep the reference explicit: this runtime mirrors `Orchestrator.step` (τ² v0.1.0)."""
-    return Orchestrator.__module__
+            return self.get_runtime_status()
+        tool_results = self._execute_environment_step(tool_calls)
+        observation = self._format_observation(self._wrap_tool_results(tool_results))
+        self.last_agent_observation = observation
+        return observation

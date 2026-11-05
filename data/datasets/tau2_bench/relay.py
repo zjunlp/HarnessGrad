@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Selected-task private τ² v0.1.0 runtime; actor has no reset, seed or scoring endpoint."""
+"""Selected-task private τ² runtime; actor has no reset, seed or scoring endpoint."""
 import argparse
 import hashlib
 import json
@@ -8,16 +8,18 @@ from pathlib import Path
 import signal
 import sys
 import threading
+from copy import deepcopy
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'lib'))
 from eval.service.tool_transport import Relay, call
 from bootstrap import bootstrap
+from runtime import validate_assistant_calls
 
 
 class Service:
     def __init__(self, config, state):
-        self.config = config
+        self.config = deepcopy(config)
         self.state = state
         self.failure = None
         self.lock = threading.Lock()
@@ -31,8 +33,8 @@ class Service:
                 'start': (self.state.start_conversation, set()),
                 'say': (self.state.submit_assistant_message, {'message'}),
                 'call': (self.state.call_assistant_tool, {'tool_name', 'arguments'}),
+                'calls': (lambda calls: self.state.call_assistant_tools(calls), {'calls'}),
                 'status': (self.state.get_runtime_status, set()),
-                'calls': (self.state.submit_assistant_tool_calls, {'tool_calls_json'}),
             }
             if op not in operations or set(args) != operations[op][1]:
                 return {'error': 'unsupported_operation_or_fields'}
@@ -40,19 +42,13 @@ class Service:
                 return {'error': 'conversation_ended', 'termination_reason': self.state.termination_reason}
             if op == 'say' and (not isinstance(args['message'], str) or not args['message'].strip()):
                 return {'error': 'message_must_be_text'}
-            if op == 'call' and (not isinstance(args['tool_name'], str) or not isinstance(args['arguments'], dict)):
-                return {'error': 'invalid_tool_call'}
-            if op == 'calls':
+            if op in ('call', 'calls'):
+                calls = (args['calls'] if op == 'calls' else
+                         [{'id': 'single', 'name': args['tool_name'], 'arguments': args['arguments']}])
                 try:
-                    batch = json.loads(args['tool_calls_json'])
-                    if not isinstance(batch, list) or not batch or any(
-                        not isinstance(c, dict) or set(c) != {'id', 'name', 'arguments'}
-                        or not isinstance(c['id'], str) or not isinstance(c['name'], str)
-                        or not isinstance(c['arguments'], dict) for c in batch
-                    ):
-                        raise ValueError('invalid batch')
-                except (TypeError, ValueError):
-                    return {'error': 'invalid_tool_batch'}
+                    validate_assistant_calls(calls)
+                except ValueError:
+                    return {'error': 'invalid_tool_call'}
             if op in ('say', 'call', 'calls') and not self.state.bootstrap_complete:
                 return {'error': 'start_conversation_first'}
             try:
@@ -63,8 +59,16 @@ class Service:
                 raise
 
     def episode(self):
-        return {**self.state.episode(), 'failure': self.failure,
-                'revision': self.config['revision'], 'case_sha256': self.config['case_sha256']}
+        # `task_id` stays the released id the official scorer binds to; the platform id the
+        # verdict is keyed by travels beside it, and `revision` is the release tag itself.
+        episode = self.state.episode()
+        if (episode.get('task_id') != self.config['task']['id']
+                or episode.get('domain') != self.config['domain']
+                or episode.get('seed') != self.config['seed']):
+            raise ValueError('private runtime episode identity mismatch')
+        return {**episode, 'case_task_id': self.config['task_id'],
+                'failure': self.failure, 'revision': self.config['release'],
+                'case_sha256': self.config['case_sha256']}
 
 
 def main():
@@ -80,21 +84,18 @@ def main():
     raw = Path(spec['case']).read_bytes()
     if hashlib.sha256(raw).hexdigest() != spec['sha256']:
         raise ValueError('selected private case digest mismatch')
-    private = json.loads(raw)
+    config = json.loads(raw)
     context = json.loads(Path(os.environ['HG_RELAY_CONTEXT_PATH']).read_text())
-    # Two bindings, both checked: the platform task id the caller asked for, and the upstream id
-    # inside the private row. A mismatch on either means the actor is talking to another task.
-    if spec['task_id'] != context['task_id'] or private.get('id') != spec.get('upstream_id'):
+    if config['task_id'] != context['task_id']:
         raise ValueError('relay task binding mismatch')
-    config = {'task_id': spec['task_id'], 'domain': spec['domain'],
-              'revision': spec['revision'], 'case_sha256': spec['sha256'], 'private': private}
-    bootstrap(Path(spec['bundle']))
+    config.update(seed=int(context['seed']), user_model=spec['user_model'], case_sha256=spec['sha256'])
+    bootstrap(spec['bundle'])
     from model import install
     from runtime import Tau2Runtime
     install('environment', call)
-    # The task row travels with the case spec's `case` file (`private.json`), so the runtime gets
-    # the private data directly and nothing else is written next to the case.
-    service = Service(config, Tau2Runtime(config, spec['user_model'], spec['user_model_args']))
+    private_config = args.case_spec.with_name('runtime-config.json')
+    private_config.write_text(json.dumps(config))
+    service = Service(config, Tau2Runtime(private_config))
     stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())

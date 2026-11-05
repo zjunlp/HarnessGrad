@@ -1,75 +1,92 @@
-"""The τ² runtime pieces, pinned at the source level.
+"""The τ² v0.1.0 runtime pieces, pinned at the source level.
 
-These run on the platform's Python 3.12 and never import `tau2` (that needs 3.13 and the isolated
-runtime), so they can sit in the normal gate. What they pin is the part a later edit could quietly
-break: the operation set the actor can reach, the two guards the scorer carries, and the fact that
-the judge is bound by patching a module rather than by passing a parameter.
+These run on the platform's Python 3.12 and never import `tau2` (which needs 3.13 and the isolated
+runtime), so they can sit in the normal gate. What they pin is what a later edit could quietly
+break: the operation set the actor can reach, the two task identities the relay keeps apart, the
+rule that decides which rows declare a judge, and the release identity the metric carries.
 """
 from __future__ import annotations
 
 import ast
+import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / "data" / "datasets" / "tau2_bench"
+sys.path.insert(0, str(ROOT))
+
+from data.datasets import tau2_bench as dataset  # noqa: E402
 
 
 def source(relative: str) -> str:
     return (ASSETS / relative).read_text(encoding="utf-8")
 
 
-def test_the_relay_exposes_exactly_the_five_half_duplex_operations():
-    """`show` is a file read in the CLI; the socket carries the conversation only."""
+def test_the_relay_exposes_official_batch_operations():
+    """show reads local policy; calls preserves official multi-tool assistant turns."""
     text = source("relay.py")
     for operation in ("'start'", "'say'", "'call'", "'calls'", "'status'"):
         assert operation in text, operation
     assert "unsupported_operation_or_fields" in text
+    cli = source("cli/tau2.py")
+    assert "'calls'" in cli
 
 
-def test_the_relay_checks_both_task_bindings():
-    """The platform id the caller asked for *and* the upstream id inside the private row."""
-    text = source("relay.py")
-    assert "context['task_id']" in text and "private.get('id')" in text
-    assert "relay task binding mismatch" in text
+def test_the_relay_keeps_the_two_task_identities_apart():
+    """The platform id the caller selected and the released id the official row carries.
+
+    v0.1.0's ids are per-domain strings ("3"), so binding `payload['task_id']` to the selected id
+    would compare two different values -- and `case_task_id` is what makes the difference visible.
+    """
+    relay = source("relay.py")
+    assert "context['task_id']" in relay and "relay task binding mismatch" in relay
+    assert "'case_task_id': self.config['task_id']" in relay
+    assert "'revision': self.config['release']" in relay
+    check = source("verify/check.py")
+    assert "payload.get('case_task_id') != args.task_id" in check
+    assert "config = {**private, 'case_sha256': args.case_sha256}" in check
+    assert "validate_identity(config, payload)" in check
 
 
-def test_the_scorer_refuses_a_basis_with_nothing_in_it():
-    """v0.1.0 returns 1.0 for `all([])`; the guard is the point of the module."""
-    text = source("lib/scoring.py")
-    assert "no_actionable_reward_basis" in text
-    assert "actionable_basis" in text
-    # The enum trap: `str(RewardType.DB)` is "RewardType.DB", so the value must be taken explicitly.
-    assert "getattr(entry, 'value', entry)" in text
+def test_the_verifier_scores_the_selected_task_and_installs_the_judge_channel():
+    check = source("verify/check.py")
+    assert "from scoring import score" in check
+    assert "install('judge', call)" in check
+    assert "METRIC = 'tau2.v0.1.0.ALL.binary'" in check
+    assert check.count("tau2_code/verify/check.py") == 0  # the adapter names it, not the check
 
 
-def test_an_unfinished_episode_is_scored_through_the_early_termination_rule():
-    """v0.1.0 has no AGENT_ERROR, so the substitution is recorded rather than silent."""
-    text = source("lib/scoring.py")
-    assert "incomplete_conversation_without_stop_signal" in text
-    assert "TerminationReason.MAX_STEPS.value" in text
-    assert "termination_substitution" in text
+def test_the_metric_carries_the_release_and_so_does_the_verifier():
+    assert dataset.METRIC == "tau2.v0.1.0.ALL.binary"
+    check = source("verify/check.py")
+    assert f"METRIC = '{dataset.METRIC}'" in check
+    assert "tau2.v0.1.0.ALL.binary" in source("../tau2_bench.py")
 
 
-def test_the_judge_is_bound_by_patching_a_module_not_by_a_parameter():
-    text = source("lib/model.py")
-    assert "malformed_nl_judge_result" in text
-    assert "module.generate = generate" in text
-    assert "HG_ENV_MODEL_SOCKET" in text and "HG_JUDGE_SOCKET" in text
+def test_no_v1_0_1_only_name_survives_the_port():
+    """The two releases differ in exactly these names; a leftover is an import-time `AttributeError`
+    inside the actor's episode, which reads as a harness failure rather than an adapter defect.
+
+    Comments may name them -- explaining an absence is the point of a comment -- so this reads the
+    parsed module, not the text.
+    """
+    banned = {"Tau3Runtime", "tau3_transport", "tau3_bundle", "get_environment_manual_policy",
+              "banking_knowledge", "validate_message_history", "CommunicationMode"}
+    found = []
+    for relative in ("relay.py", "lib/runtime.py", "lib/model.py", "lib/scoring.py",
+                     "lib/bootstrap.py", "verify/check.py", "cli/tau2.py", "control.py"):
+        tree = ast.parse(source(relative))
+        for node in ast.walk(tree):
+            name = node.attr if isinstance(node, ast.Attribute) else (
+                node.id if isinstance(node, ast.Name) else None)
+            if name in banned:
+                found.append(f"{relative}:{name}")
+    assert found == [], found
 
 
-def test_the_runtime_mirrors_the_official_loop_order():
-    """assistant -> user, assistant -> environment, and the official budgets."""
-    text = source("lib/runtime.py")
-    assert "MAX_STEPS = 100" in text and "MAX_ERRORS = 10" in text
-    for method in ("start_conversation", "submit_assistant_message", "call_assistant_tool",
-                   "submit_assistant_tool_calls", "get_runtime_status", "episode"):
-        assert f"def {method}" in text, method
-    assert "MultiToolMessage" in text          # several business calls in one turn
-    assert "sync_tools" in text                # tau2 resyncs after every environment call
-
-
-def test_every_new_module_parses():
-    for relative in ("relay.py", "cli/tau2.py", "lib/bootstrap.py", "lib/model.py",
-                     "lib/runtime.py", "lib/scoring.py", "verify/check.py", "prepare.py"):
-        ast.parse(source(relative), filename=relative)
-    assert not (ASSETS / "REFUSED").exists()
+def test_the_python_pin_is_the_interpreter_the_release_declares():
+    """v0.1.0's `pyproject.toml` says `requires-python = ">=3.13"`; τ³ runs on 3.12."""
+    assert "sys.version_info[:2] != (3, 13)" in source("lib/bootstrap.py")
+    adapter = (ROOT / "data/datasets/tau2_bench.py").read_text(encoding="utf-8")
+    assert 'if info["version"] != [3, 13]:' in adapter

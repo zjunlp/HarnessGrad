@@ -274,20 +274,38 @@ def test_runtime_config_can_record_unconfigured_storage(checkout):
         config.reset()
 
 
-def test_missing_storage_preserves_catalogs_and_refuses_data_access(checkout, capsys, monkeypatch):
-    from data.scaffolds import registry
-    assert len(registry.published()) == 56
-    rows = datasets.datasets_with_downloads(source_fallback=True)
-    assert len(rows) == 56
-    with pytest.raises(paths.DataRootNotConfigured, match="Set HG_DATA_ROOT"):
-        registry.load("appworld")
-    monkeypatch.setattr(datasets, "_download", lambda *args: pytest.fail("unconfigured fetch attempted network"))
-    # Avoid an adapter cached under a different test configuration.
-    monkeypatch.setattr(datasets, "_download_adapter", lambda name: type("Decl", (), {
-        "DATASET_ROOT": paths.dataset_root("kumo")})())
+def test_missing_storage_preserves_catalogs_and_refuses_data_access(checkout):
+    # Storage paths are frozen when an adapter is imported with configured storage. Other
+    # files legitimately import AppWorld first; changing the environment afterwards must not
+    # pretend to test a fresh unconfigured import. Exercise this boundary in a fresh process
+    # instead of deleting/reloading arbitrary adapters in the caller's module cache.
+    code = r'''
+import sys
+from pathlib import Path
+from unittest.mock import patch
+from harnessgrad import paths
+paths.CHECKOUT = Path(sys.argv[1])
+from data.scaffolds import registry
+from tools import datasets
+assert len(registry.published()) == 56
+assert len(datasets.datasets_with_downloads(source_fallback=True)) == 56
+try:
+    registry.load("appworld")
+except paths.DataRootNotConfigured as exc:
+    assert "Set HG_DATA_ROOT" in str(exc)
+else:
+    raise AssertionError("unconfigured AppWorld load must refuse data access")
+with patch.object(datasets, "_download", side_effect=AssertionError("network attempted")), \
+     patch.object(datasets, "_download_adapter", return_value=type("Decl", (), {
+         "DATASET_ROOT": paths.dataset_root("kumo")})()):
     assert datasets.main(["--fetch", "--dataset", "kumo"]) == 2
-    error = capsys.readouterr().err
-    assert "Set HG_DATA_ROOT" in error and "Traceback" not in error
+print("unconfigured catalog and data-access boundary: ok")
+'''
+    proc = subprocess.run([sys.executable, "-c", code, str(checkout)], cwd=ROOT,
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "unconfigured catalog and data-access boundary: ok" in proc.stdout
+    assert "Set HG_DATA_ROOT" in proc.stderr and "Traceback" not in proc.stderr
 
 
 def test_registry_defers_storage_requirements_to_actual_data_access(checkout, monkeypatch):

@@ -32,7 +32,7 @@ the artefact.
 | `api_bank / retain-contract-refusal` | external | refused by contract: the dialogue state its recorded replies need is absent (gold reproduces 262/508); not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
 | `nestful / retain-contract-refusal` | external | refused by contract: the released Win Rate does not reproduce (1857/4 then 1854/7 on gold); not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
 | `sotuqa / retain-contract-refusal` | external | refused by contract: the headline judge resolved to a retired model; not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
-| `tau2_bench / retain-contract-refusal` | code-solvable | exclusion lifted conditionally 2026-10-22 (`docs/refusal-policy.md`); the adapter still refuses in code | `REFUSED` |
+| `tau2_bench / retain-contract-refusal` | code-solvable | closed 2026-11-04: v0.1.0 pin, the release's user simulator in a private trusted process, `EvaluationType.ALL` scorer, judge declared for the 58 tasks whose ALL evaluation calls one; control measured 1.0/0.0 on three released tasks, and the adapter no longer refuses (`docs/refusal-policy.md`) | `CLEARED` |
 | `aime / dataset-journal-gap` | measurement | the operator's bounded first-five custody packet, plus a comparability statement for the Harbor port | `PENDING-INPUT`, `PRE-DIAGNOSTIC` |
 | `cooperbench / runtime-group-coverage` | measurement | all 652 pair identities stay explicit; reference controls are not full-benchmark performance | `PRE-DIAGNOSTIC` |
 | `locomo / adapter-acceptance-pending` | measurement | accept the Conda receipt and pin scope/model/budget before any model evaluation | `PRE-DIAGNOSTIC` |
@@ -76,6 +76,13 @@ conditionally (its two facilities now ship in the repository; a pin, a split spe
 remain) and `api_bank`, `nestful` and `sotuqa` stay refused for want of an artefact this repository
 cannot produce. All four adapters still return `REFUSED`, so their rows and their `REFUSED` class are
 unchanged; only their dispositions changed, from "permanent" to a named exit.
+
+**Superseded again 2026-11-04.** Three of the four were removed from the repository on 2026-11-03 and
+the fourth was implemented: `tau2_bench` now loads 278 pinned v0.1.0 tasks, runs the release's own
+user simulator in a private trusted process, scores with `EvaluationType.ALL`, and measures 1.0 / 0.0
+on three released tasks. Its row above is `CLEARED`; no adapter in the catalogue returns `REFUSED`.
+The `REFUSED` class stays defined for a future refusal, and the mechanism is tested against a
+synthetic module (`tests/quality/test_refusal_contract.py`).
 
 ## Closed under reading A, 2026-10-15 — `physicsquestions` and `sportsunderstanding`
 
