@@ -50,7 +50,9 @@ ROOT = Path(__file__).resolve().parents[2]
 #: `agent.py` each) and the scan counted their subprocess calls as if they were source. The
 #: `tools` drop is the export/dataset tool work of the same day; every remaining site is covered
 #: by the property check, so these numbers are a range and never the claim itself.
-EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 42, "harnessgrad": 7, "tools": 31}
+# 2026-11-05: tau2 preparation/readiness and newer CI/Codex tooling add
+# five data and three tools sites; each matched site remains property-checked.
+EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 34}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.
@@ -161,6 +163,15 @@ def test_the_strict_exceptions_are_still_real_sites():
             f"{site} is exempted from the decoding rule but no longer matches a strict call; "
             "review or remove the exemption")
         assert len(reason.strip()) >= 30, f"{relative}: the exemption needs a written reason"
+
+
+def test_ci_git_output_preserves_undecodable_path_bytes():
+    from tools import ci_select
+
+    text = ci_select.run([sys.executable, "-c", "import os; os.write(1, b'file-\\\\xff.py\\\\n')"])
+    assert text.encode(sys.getfilesystemencoding(), 'surrogateescape') == b'file-\\xff.py\\n'
+    # Unknown paths select the full suite rather than a guessed subset.
+    assert ci_select.select([text.strip()])[0] == []
 
 
 @pytest.mark.parametrize("mode", ["capture", "stream"])

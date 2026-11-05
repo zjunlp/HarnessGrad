@@ -337,7 +337,7 @@ def provision_status() -> dict:
         proc = subprocess.run(
             [sys.executable, "-B", str(ASSETS / "prepare.py"), "--check-only",
              "--target", root, "--runtime", runtime],
-            capture_output=True, text=True, timeout=60)
+            capture_output=True, text=True, errors="replace", timeout=60)
         if proc.returncode != 0:
             raise ValueError(proc.stderr.strip() or "tau2 preparation check failed")
         checked = json.loads(proc.stdout)
