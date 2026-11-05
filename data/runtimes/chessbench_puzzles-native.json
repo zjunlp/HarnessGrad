@@ -5423,8 +5423,8 @@
     },
     "/scorer/data/scaffolds/qa/base.py": {
       "entry": "data/scaffolds/qa/base.py:1 (trusted scorer code, separate from actor files)",
-      "sha256": "12f623f9f18b37312eaefa94247a25832ee70d31468b48037f748e7f21712402",
-      "size": 31362,
+      "sha256": "3482024468ba85bda8c3e436e088077903c731d46f9216bfd36bd1060bc1808a",
+      "size": 31352,
       "source": "data/scaffolds/qa/base.py"
     },
     "/scorer/data/scaffolds/qa/evidence_scorers.py": {
@@ -5465,14 +5465,14 @@
     },
     "/scorer/harnessgrad/env_file.py": {
       "entry": "harnessgrad/env_file.py:1 (trusted portable storage configuration; no .env files staged)",
-      "sha256": "b3ae1dd01f659d904282f8f3685a55d073c939987e8a4e1c5c0e705151cbfbc6",
-      "size": 636,
+      "sha256": "52635dadf60e52f33e7f7cd52ca78338fb1a1ce3e24e143492ff12a129a6bda8",
+      "size": 973,
       "source": "harnessgrad/env_file.py"
     },
     "/scorer/harnessgrad/paths.py": {
       "entry": "harnessgrad/paths.py:1 (trusted portable storage configuration; no .env files staged)",
-      "sha256": "a7afe3be250732149ff007df98be3893a404e0d720dd5fa515f042342b5a5137",
-      "size": 6509,
+      "sha256": "2461e31e25c64a1e35fe2dbfd744dfbe1b4cf24f28b9df951338ddfb2a668171",
+      "size": 6604,
       "source": "harnessgrad/paths.py"
     }
   },
