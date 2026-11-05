@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>提交 Harness · HarnessGrad</title>
+<title data-i18n="ls.10">提交 Harness · HarnessGrad</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/ui.css">
@@ -74,40 +74,43 @@
 </head>
 <body>
 <div class="app submit-page">
-  <aside class="side" aria-label="主导航">
-    <div class="brand"><div class="brand-mark">HG</div><div><div class="brand-name">HarnessGrad</div><div class="brand-sub">实验台 · 提交</div></div></div>
+  <aside class="side" aria-label="主导航" data-i18n-aria-label="ls.44">
+    <div class="brand"><div class="brand-mark">HG</div><div><div class="brand-name">HarnessGrad</div><div class="brand-sub" data-i18n="ls.11">实验台 · 提交</div></div></div>
     <nav class="nav">
       <!-- 侧栏由 /shell.js 按模式注入 -->
     </nav>
-    <div class="side-foot"><div class="status-line">平台 <b>提交服务 v1</b></div><a class="side-link" href="https://zjunlp.github.io/HarnessGrad/contributing/" target="_blank" rel="noreferrer">提交说明 ↗</a></div>
+    <div class="side-foot"><div class="status-line">平台 <b>提交服务 v1</b></div><a class="side-link" href="https://zjunlp.github.io/HarnessGrad/contributing/" target="_blank" rel="noreferrer" data-i18n="ls.12">提交说明 ↗</a></div>
   </aside>
   <main class="main">
     <div class="submit-wrap">
-      <div class="submit-hero"><h1>评测</h1><p>上传一个完整、可运行的 harness，在受 review 的场景里得到一个可追溯的结果。</p></div>
+      <div class="submit-hero"><h1 data-i18n="ls.13">评测</h1><p data-i18n="ls.14">上传一个完整、可运行的 harness，在受 review 的场景里得到一个可追溯的结果。</p></div>
       <div id="submit-global-error" class="submit-error" role="alert"></div>
       <div class="submit-grid">
         <section class="submit-card" aria-labelledby="submit-form-title">
-          <div class="submit-card-head"><h2 id="submit-form-title">新提交</h2><span class="spacer"></span><span class="chip">接口 v1</span></div>
+          <div class="submit-card-head"><h2 id="submit-form-title" data-i18n="ls.15">新提交</h2><span class="spacer"></span><span class="chip" data-i18n="ls.16">接口 v1</span></div>
           <div class="submit-card-body">
-            <div id="dropzone" class="submit-drop" role="button" tabindex="0" aria-describedby="upload-help"><strong>拖拽 tar.gz / tar / zip 到这里</strong><span id="upload-help">或按 Enter 选择文件 · 压缩包不超过 20 MiB</span><input id="archive" type="file" accept=".tar,.gz,.tgz,.zip,application/gzip,application/x-tar,application/zip" hidden></div>
-            <div id="file-row" class="submit-file" hidden><span aria-hidden="true">▣</span><code id="file-name"></code><span class="spacer"></span><span id="file-size" class="submit-muted"></span><button id="clear-file" class="btn" type="button">移除</button></div>
-            <div class="submit-field"><label for="scenario">评分场景</label><select id="scenario"><option value="">读取场景…</option></select><div id="scenario-note" class="submit-scenario-note">场景来自服务端清单，上传请求只提交场景名称。</div></div>
+            <div id="dropzone" class="submit-drop" role="button" tabindex="0" aria-describedby="upload-help"><strong data-i18n="ls.17">拖拽 tar.gz / tar / zip 到这里</strong><span id="upload-help" data-i18n="ls.18">或按 Enter 选择文件 · 压缩包不超过 20 MiB</span><input id="archive" type="file" accept=".tar,.gz,.tgz,.zip,application/gzip,application/x-tar,application/zip" hidden></div>
+            <div id="file-row" class="submit-file" hidden><span aria-hidden="true">▣</span><code id="file-name"></code><span class="spacer"></span><span id="file-size" class="submit-muted"></span><button id="clear-file" class="btn" type="button" data-i18n="ls.19">移除</button></div>
+            <div class="submit-field"><label for="scenario" data-i18n="ls.20">评分场景</label><select id="scenario"><option value="">读取场景…</option></select><div id="scenario-note" class="submit-scenario-note">场景来自服务端清单，上传请求只提交场景名称。</div></div>
             <div id="scenario-meta" class="submit-scenario-meta" aria-live="polite"></div>
-            <div class="submit-field"><label for="label">展示标签（可选）</label><input id="label" maxlength="64" pattern="[A-Za-z0-9._-]+" placeholder="例如 local-loop-baseline"></div>
-            <div class="submit-field"><label for="contact">联系信息（可选）</label><input id="contact" maxlength="200" placeholder="只用于人工联系，不会参与评分"></div>
-            <div class="submit-actions"><button id="submit" class="submit-btn" type="button" disabled>上传并进入队列</button><span id="submit-hint" class="submit-hint">选择一个可用场景和归档文件后继续。</span></div>
-            <div class="submit-demo" aria-label="页面状态演示"><span class="submit-muted">本地演示：</span><button type="button" data-demo="rejected">被拒</button><button type="button" data-demo="queued">排队</button><button type="button" data-demo="scored">出分</button><button type="button" data-demo="failed">失败</button></div>
+            <div class="submit-field"><label for="label" data-i18n="ls.23">展示标签（可选）</label><input id="label" maxlength="64" pattern="[A-Za-z0-9._-]+" placeholder="例如 local-loop-baseline" data-i18n-placeholder="ls.42"></div>
+            <div class="submit-field"><label for="contact" data-i18n="ls.24">联系信息（可选）</label><input id="contact" maxlength="200" placeholder="只用于人工联系，不会参与评分" data-i18n-placeholder="ls.43"></div>
+            <div class="submit-actions"><button id="submit" class="submit-btn" type="button" disabled data-i18n="ls.25">上传并进入队列</button><span id="submit-hint" class="submit-hint">选择一个可用场景和归档文件后继续。</span></div>
+            <div class="submit-demo" aria-label="页面状态演示" data-i18n-aria-label="ls.45"><span class="submit-muted" data-i18n="ls.27">本地演示：</span><button type="button" data-demo="rejected" data-i18n="ls.28">被拒</button><button type="button" data-demo="queued" data-i18n="ls.29">排队</button><button type="button" data-demo="scored" data-i18n="ls.30">出分</button><button type="button" data-demo="failed" data-i18n="ls.31">失败</button></div>
           </div>
         </section>
         <aside class="submit-card" aria-labelledby="submit-boundary-title">
-          <div class="submit-card-head"><h2 id="submit-boundary-title">边界</h2></div>
-          <div class="submit-card-body"><div class="submit-muted">平台只接受归档，不执行服务进程里的用户代码。校验、沙箱、评分和逐任务证据由 HarnessGrad 负责。</div><dl class="kv"><dt>格式</dt><dd>tar.gz / tar / zip</dd><dt>压缩上限</dt><dd>20 MiB</dd><dt>解包上限</dt><dd>200 MiB</dd><dt>入口</dt><dd><code>entrypoint --task task.json --workdir dir</code></dd><dt>评分</dt><dd>按池展示，不跨池平均</dd></dl><div class="submit-muted">服务当前仅限回环地址和内网可信来源。页面不知道的值显示为 —。</div></div>
+          <div class="submit-card-head"><h2 id="submit-boundary-title" data-i18n="ls.32">边界</h2></div>
+          <div class="submit-card-body"><div class="submit-muted" data-i18n="ls.33">平台只接受归档，不执行服务进程里的用户代码。校验、沙箱、评分和逐任务证据由 HarnessGrad 负责。</div><dl class="kv"><dt data-i18n="ls.34">格式</dt><dd>tar.gz / tar / zip</dd><dt data-i18n="ls.35">压缩上限</dt><dd>20 MiB</dd><dt data-i18n="ls.36">解包上限</dt><dd>200 MiB</dd><dt data-i18n="ls.37">入口</dt><dd><code>entrypoint --task task.json --workdir dir</code></dd><dt data-i18n="ls.38">评分</dt><dd data-i18n="ls.39">按池展示，不跨池平均</dd></dl><div class="submit-muted" data-i18n="ls.40">服务当前仅限回环地址和内网可信来源。页面不知道的值显示为 —。</div></div>
         </aside>
       </div>
-      <section id="state-card" class="submit-card submit-status" data-visible="false" aria-live="polite"><div class="submit-card-head"><h2>提交状态</h2><span class="spacer"></span><span id="state-pill" class="pill">—</span></div><div class="submit-card-body"><div id="state-title" class="state-title">—</div><div id="state-sub" class="state-sub">—</div><div id="state-progress" class="submit-progress"><i></i></div><div id="state-line" class="submit-status-line"></div><div id="state-error" class="submit-error"></div><div id="result-root"></div></div></section>
+      <section id="state-card" class="submit-card submit-status" data-visible="false" aria-live="polite"><div class="submit-card-head"><h2 data-i18n="ls.41">提交状态</h2><span class="spacer"></span><span id="state-pill" class="pill">—</span></div><div class="submit-card-body"><div id="state-title" class="state-title">—</div><div id="state-sub" class="state-sub">—</div><div id="state-progress" class="submit-progress"><i></i></div><div id="state-line" class="submit-status-line"></div><div id="state-error" class="submit-error"></div><div id="result-root"></div></div></section>
     </div>
   </main>
 </div>
+<script src="/shell-i18n.js"></script>
+<script src="/launch-i18n.js"></script>
+<script src="/i18n.js"></script>
 <script src="/submit.js"></script>
 <script src="/sidebar.js"></script>
 <script src="/shell.js" defer></script>

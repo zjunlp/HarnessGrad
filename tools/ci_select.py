@@ -77,7 +77,9 @@ MAX_SELECTION = 60
 
 
 def run(cmd: list[str]) -> str:
-    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True).stdout
+    # Git path bytes must remain distinguishable: replacement could map an unknown
+    # path to the wrong test family. Surrogateescape round-trips undecodable bytes.
+    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, errors="surrogateescape").stdout
 
 
 def _rev_exists(rev: str) -> bool:

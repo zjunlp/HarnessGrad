@@ -198,7 +198,7 @@ class QualityReceipt:
             def git(*args: str) -> str | None:
                 try:
                     p = subprocess.run(["git", *args], cwd=ROOT, capture_output=True,
-                                       text=True, timeout=5)
+                                       text=True, errors="replace", timeout=5)
                     return p.stdout.strip() if p.returncode == 0 else None
                 except (OSError, subprocess.TimeoutExpired):
                     return None

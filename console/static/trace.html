@@ -22,14 +22,14 @@
   <aside class="side">
     <div class="brand">
       <div class="brand-mark">HG</div>
-      <div><div class="brand-name">HarnessGrad</div><div class="brand-sub">轨迹</div></div>
+      <div><div class="brand-name">HarnessGrad</div><div class="brand-sub" data-i18n="轨迹">轨迹</div></div>
     </div>
     <nav class="nav">
       <!-- 侧栏由 /shell.js 按模式注入 -->
     </nav>
     <div class="side-foot">
-      <div class="status-line" id="st">读取中…</div>
-      <a class="side-link" href="https://huggingface.co/datasets/Xubqpanda/HarnessGrad" target="_blank" rel="noreferrer">数据集 ↗</a>
+      <div class="status-line" id="st" data-i18n="读取中…">读取中…</div>
+      <a class="side-link" href="https://huggingface.co/datasets/Xubqpanda/HarnessGrad" target="_blank" rel="noreferrer" data-i18n="数据集 ↗">数据集 ↗</a>
     </div>
   </aside>
 
@@ -37,6 +37,9 @@
     <div id="trace-root"></div>
   </main>
 </div>
+<script src="/shell-i18n.js"></script>
+<script src="/detail-i18n.js"></script>
+<script src="/i18n.js"></script>
 <script src="/trace-view.js"></script>
 <script>
   (() => {

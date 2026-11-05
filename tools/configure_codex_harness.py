@@ -62,7 +62,7 @@ def _version(selected: dict, *, native: bool) -> str:
                                    repo=work, env=env, network="none",
                                    runtime_paths=tuple(Path(p) for p in selected["runtime_paths"]))
         result = subprocess.run(argv, cwd=task, env=env, input="", capture_output=True,
-                                text=True, timeout=15)
+                                text=True, errors="replace", timeout=15)
         if result.returncode or not result.stdout.strip():
             where = "native sandbox" if native else "host"
             raise ValueError(f"Codex --version failed in {where}: {result.stderr.strip()[-1000:]}")

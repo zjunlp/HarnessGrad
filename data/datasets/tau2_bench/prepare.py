@@ -150,7 +150,7 @@ def check_runtime(runtime: pathlib.Path) -> dict:
     python = runtime / "bin/python"
     try:
         proc = subprocess.run([str(python), "-I", "-B", "-c", _RUNTIME_PROBE],
-                              capture_output=True, text=True, check=True, timeout=20)
+                              capture_output=True, text=True, errors="replace", check=True, timeout=20)
         info = json.loads(proc.stdout)
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         raise ValueError(f"cannot inspect tau2 runtime {python}: {exc}") from exc

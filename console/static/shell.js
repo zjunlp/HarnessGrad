@@ -9,32 +9,33 @@
 (() => {
   "use strict";
 
+  const t = (key) => window.HGI18n.t(key);
   const MODES = {
     harness: {
-      label: "优化 Harness",
+      label: t("optimize"),
       sections: [
-        ["观察", [
-          { label: "实验", href: "/#/runs" },
-          { label: "轨迹", href: "/#/trace" },
-          { label: "版本", href: "/#/version" },
+        [t("observe"), [
+          { label: t("runs"), href: "/#/runs" },
+          { label: t("trace"), href: "/#/trace" },
+          { label: t("version"), href: "/#/version" },
         ]],
-        ["动手", [
-          { label: "编辑", href: "/harness.html" },
-          { label: "启动", href: "/launch.html" },
-          { label: "评测", href: "/submit.html" },
+        [t("act"), [
+          { label: t("edit"), href: "/harness.html" },
+          { label: t("launch"), href: "/launch.html" },
+          { label: t("submit"), href: "/submit.html" },
         ]],
       ],
     },
     build: {
-      label: "构造环境",
+      label: t("build"),
       sections: [
-        ["环境", [
-          { label: "场景", href: "/author.html#/scenarios" },
-          { label: "起草", href: "/author.html#/draft" },
-          { label: "导入", href: "/author.html#/import" },
+        [t("environment"), [
+          { label: t("scenarios"), href: "/author.html#/scenarios" },
+          { label: t("draft"), href: "/author.html#/draft" },
+          { label: t("import"), href: "/author.html#/import" },
         ]],
-        ["衔接", [
-          { label: "去优化 Harness", href: "/", mode: "harness" },
+        [t("connect"), [
+          { label: t("goOptimize"), href: "/", mode: "harness" },
         ]],
       ],
     },
@@ -105,8 +106,8 @@
   /* ── 设置：左侧分节、右侧逐行。参考 deepseek-harness 的设置面板：
      左边是"去哪里"，右边是"这一项是什么、怎么改"，分隔线只画在行与行之间。 */
   const SECTIONS = [
-    ["general", "通用设置"],
-    ["models", "模型"],
+    ["general", t("general")],
+    ["models", t("models")],
   ];
 
   function dialogHtml() {
@@ -114,10 +115,10 @@
       <div class="scrim" id="sh-set" hidden>
         <div class="settings">
           <div class="settings__head">
-            <b>设置</b>
+            <b>${t("settings")}</b>
             <span class="spacer"></span>
             <span class="field__hint" id="sh-set-state"></span>
-            <button class="btn btn--ghost btn--sm" id="sh-set-close" aria-label="关闭">✕</button>
+            <button class="btn btn--ghost btn--sm" id="sh-set-close" aria-label="${t("close")}">✕</button>
           </div>
           <div class="settings__body">
             <nav class="settings__nav" id="sh-set-nav">
@@ -145,14 +146,16 @@
       const theme = localStorage.getItem("hg.theme") || "light";
       const size = localStorage.getItem("hg.font") || "13";
       pane.innerHTML =
-        row("外观", "跟随系统会读操作系统的深浅色", `
+        row(t("language"), t("languageHint"), `<select class="input" id="sh-language" aria-label="${t("language")}">${[["auto", t("auto")], ["en", "English"], ["zh", "中文"]].map(([v,l]) => `<option value="${v}"${window.HGI18n.choice === v ? " selected" : ""}>${l}</option>`).join("")}</select>`) +
+        row(t("appearance"), t("appearanceHint"), `
           <div class="seg" id="sh-theme">
-            ${[["light", "浅色"], ["dark", "深色"], ["system", "跟随系统"]].map(([v, l]) =>
+            ${[["light", t("light")], ["dark", t("dark")], ["system", t("system")]].map(([v, l]) =>
               `<button type="button" data-theme="${v}" aria-pressed="${theme === v}">${l}</button>`).join("")}
           </div>`) +
-        row("字号", "只影响控制台的正文，不影响曲线图", `
+        row(t("font"), t("fontHint"), `
           <input class="input" id="sh-font" type="number" min="11" max="17" value="${esc(size)}"
                  style="width:88px;text-align:right"> <span class="hg-muted">px</span>`);
+      pane.querySelector("#sh-language").addEventListener("change", (event) => window.HGI18n.setLanguage(event.target.value));
       pane.querySelectorAll("#sh-theme button").forEach((b) => b.addEventListener("click", () => {
         localStorage.setItem("hg.theme", b.dataset.theme); applyTheme();
         pane.querySelectorAll("#sh-theme button").forEach((x) =>
@@ -167,26 +170,26 @@
     // 实验的 task / meta 配置属于启动页；这里仅配置助手。
     let data = {};
     try { data = await (await fetch("/api/settings")).json(); } catch { /* 离线时给空表 */ }
-    const sides = [["assistant", "assistant", "造环境 / 改 harness 时帮忙的模型"]];
+    const sides = [["assistant", "assistant", t("assistantHint")]];
     pane.innerHTML = sides.map(([side, title, hint]) => row(title, hint, `
         <div class="settings__stack">
           <input class="input" id="sh-${side}-url" value="${esc((data[side] || {}).base_url || "")}" placeholder="http://127.0.0.1:8001/v1">
           <input class="input" id="sh-${side}-model" value="${esc((data[side] || {}).model || "")}" placeholder="model name">
           <input class="input" id="sh-${side}-key" type="password"
-                 placeholder="${(data[side] || {}).api_key_set ? "已配置（留空 = 不修改）" : "api_key"}">
-          <div class="hg-row"><button class="btn btn--sm" type="button" data-probe="${side}">测试连接</button>
+                 placeholder="${(data[side] || {}).api_key_set ? t("configured") : "api_key"}">
+          <div class="hg-row"><button class="btn btn--sm" type="button" data-probe="${side}">${t("test")}</button>
             <span class="field__hint" id="sh-${side}-state"></span></div>
         </div>`)).join("") +
-      `<div class="settings__foot"><button class="btn btn--primary" type="button" id="sh-save">保存</button></div>`;
+      `<div class="settings__foot"><button class="btn btn--primary" type="button" id="sh-save">${t("save")}</button></div>`;
     pane.querySelectorAll("[data-probe]").forEach((b) => b.addEventListener("click", async () => {
       const side = b.dataset.probe, state = pane.querySelector(`#sh-${side}-state`);
-      state.textContent = "测试中…";
+      state.textContent = t("testing");
       const response = await fetch("/api/settings/test", { method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ side, base_url: pane.querySelector(`#sh-${side}-url`).value.trim(),
                                api_key: pane.querySelector(`#sh-${side}-key`).value.trim() }) });
       const payload = await response.json();
-      state.textContent = payload.ok ? `可用，${payload.count} 个模型` : `失败：${payload.detail || "未知"}`;
+      state.textContent = payload.ok ? t("available").replace("{count}", payload.count) : t("failed") + (payload.detail || t("unknown"));
     }));
     pane.querySelector("#sh-save").addEventListener("click", async () => {
       const payload = {};
@@ -197,7 +200,7 @@
       }
       const response = await fetch("/api/settings", { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      document.getElementById("sh-set-state").textContent = response.ok ? "已保存" : "保存失败";
+      document.getElementById("sh-set-state").textContent = response.ok ? t("saved") : t("saveFailed");
       if (response.ok) setTimeout(() => { document.getElementById("sh-set").hidden = true; }, 600);
     });
   }
@@ -247,7 +250,7 @@
     handle.id = "sh-resize";
     handle.className = "sh-resize";
     handle.type = "button";
-    handle.setAttribute("aria-label", "拖动调整侧栏宽度");
+    handle.setAttribute("aria-label", t("resize"));
     handle.addEventListener("dblclick", () => {
       // 双击 = 回到默认宽度，并且**一定展开**：收起状态下双击只改宽度是没效果的
       // （轨道还是 72px），看起来就像双击失灵。
@@ -294,12 +297,12 @@
     bar.className = "sh-bar";
     bar.innerHTML =
       '<div class="sh-logo"><b>HG</b>HarnessGrad</div>' +
-      '<div class="sh-modes" role="group" aria-label="工作模式">' +
+      `<div class="sh-modes" role="group" aria-label="${t("modes")}">` +
       Object.entries(MODES).map(([key, spec]) =>
         `<button class="sh-mode" type="button" data-mode="${key}" aria-pressed="false">${spec.label}</button>`
       ).join("") + "</div>" +
       '<span class="sh-spacer"></span>' +
-      '<span class="sh-env" id="sh-env" title="控制台 API"><i></i><span>…</span></span>';
+      `<span class="sh-env" id="sh-env" title="${t("api")}"><i></i><span>…</span></span>`;
     document.body.insertBefore(bar, app);
 
     bar.querySelectorAll(".sh-mode").forEach((btn) => {
@@ -327,14 +330,14 @@
       link.className = "side-link";
       link.id = "shell-open-settings";
       link.href = "#";
-      link.textContent = "设置 ⚙";
+      link.textContent = t("settings") + " ⚙";
       link.addEventListener("click", (event) => { event.preventDefault(); openSettings(); });
       foot.appendChild(link);
     }
     installResize();
     render(currentMode());
     // 实验/轨迹/版本 是同一张页面的不同 hash，`pathname` 不变；只听 install 那一次，
-    // 高亮就会停在进来时那一项。实测(2026-11-02)：点"版本"后画面换了，左边仍亮"实验"。
+    // 高亮就会停在进来时那一项。实测(2026-11-02)：点t("version")后画面换了，左边仍亮t("runs")。
     window.addEventListener("hashchange", () => render(currentMode()));
     window.addEventListener("popstate", () => render(currentMode()));
 
@@ -343,12 +346,12 @@
       if (!env) return;
       const runs = health.runs_count ?? "—";
       env.querySelector("span").textContent =
-        `平台 ${String(health.platform_content_sha || "").slice(0, 8)} · ${runs} runs`;
+        `${t("platform")} ${String(health.platform_content_sha || "").slice(0, 8)} · ${runs} runs`;
       env.dataset.state = "ok";
     }).catch(() => {
       if (!env) return;
       env.dataset.state = "bad";
-      env.querySelector("span").textContent = "API 不可达";
+      env.querySelector("span").textContent = t("offline");
     });
   }
 

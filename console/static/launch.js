@@ -5,6 +5,7 @@
  */
 (() => {
   "use strict";
+  const t = (key) => window.HGI18n.t(key);
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let FORM = null, seq = 0;
@@ -32,28 +33,28 @@
     card.improver_model = card.improver_model || d.improver_model || "";
     card.method = card.method || d.method || ((FORM.methods || [])[0] || {}).name || "none";
     if (d.rounds) card.rounds = d.rounds;
-    $("preset-hint").textContent = `默认 ${FORM.datasets.length} 个数据集 · ${FORM.harnesses.length} 个 harness · ${(FORM.improvers || []).length} 个方法`;
+    $("preset-hint").textContent = t("ls.78").replace("{d}", FORM.datasets.length).replace("{h}", FORM.harnesses.length).replace("{m}", (FORM.improvers || []).length);
     const authored = FORM.datasets.filter((x) => x.name.startsWith("authored_"));
     $("fields").innerHTML = [
-      field("数据集", select("f-dataset",
-        [...authored.map((x) => ({ value: x.name, label: `${x.name}（自己造的）` })),
+      field(t("ls.46"), select("f-dataset",
+        [...authored.map((x) => ({ value: x.name, label: `${x.name}${t("ls.80")}` })),
          ...FORM.datasets.filter((x) => !x.name.startsWith("authored_"))
            .map((x) => ({ value: x.name, label: x.name }))], card.dataset)),
       field("task-harness", select("f-harness", FORM.harnesses.map((h) => ({ value: h, label: h })), card.harness)),
       field("task backend", select("f-task-backend", [{ value: "mock", label: "mock" }, { value: "openai", label: "openai" }], card.task_backend)),
       field("task-model", `<input class="input" id="f-task-model" list="task-models" value="${esc(card.task_model)}"><datalist id="task-models">${(FORM.task_models || []).map((m) => `<option value="${esc(m)}"></option>`).join("")}</datalist>`),
       field("task base URL", `<input class="input" id="f-task-base-url" value="${esc(card.task_base_url)}" placeholder="https://…/v1">`),
-      field("task API key", `<input class="input" id="f-task-api-key" type="password" autocomplete="new-password" value="${esc(card.task_api_key)}" placeholder="${d.task_api_key_set ? "已配置（留空使用已保存的密钥）" : "API key"}">`),
-      field("方法", select("f-method",
-        [{ value: "none", label: "不使用方法（只测一个点）" },
+      field("task API key", `<input class="input" id="f-task-api-key" type="password" autocomplete="new-password" value="${esc(card.task_api_key)}" placeholder="${d.task_api_key_set ? t("ls.55") : "API key"}">`),
+      field(t("ls.79"), select("f-method",
+        [{ value: "none", label: t("ls.47") },
          ...(FORM.methods || []).map((m) => ({ value: m.name, label: `${m.name} · ${m.title}` }))],
-        card.method), "怎么改；0 轮或不选方法时就是一次单点测量"),
+        card.method), t("ls.48")),
       field("meta-harness", select("f-improver", (FORM.improvers || []).map((x) => ({ value: x.name, label: x.label || x.name })), card.improver)),
       field("meta-model", `<input class="input" id="f-improver-model" list="meta-models" value="${esc(card.improver_model)}"><datalist id="meta-models">${(FORM.meta_models || []).map((m) => `<option value="${esc(m)}"></option>`).join("")}</datalist>`),
-      field("meta base URL（可选）", `<input class="input" id="f-meta-base-url" value="${esc(card.meta_base_url)}" placeholder="https://…/v1">`, "用于方法自己的 HG_METHOD 连接；若改进器是 CLI，它的模型连接仍由 CLI 自己管理。"),
-      field("meta API key（可选）", `<input class="input" id="f-meta-api-key" type="password" autocomplete="new-password" value="${esc(card.meta_api_key)}" placeholder="${d.meta_api_key_set ? "已配置（留空使用已保存的密钥）" : "API key"}">`),
-      field("轮数", `<input class="input" id="f-rounds" type="number" min="0" max="20" value="${esc(card.rounds)}">`, "0 = 直接测一个点，不做方法迭代"),
-      field("并发", `<input class="input" id="f-jobs" type="number" min="1" max="64" value="${esc(card.jobs)}">`),
+      field(t("ls.49"), `<input class="input" id="f-meta-base-url" value="${esc(card.meta_base_url)}" placeholder="https://…/v1">`, t("ls.50")),
+      field(t("ls.51"), `<input class="input" id="f-meta-api-key" type="password" autocomplete="new-password" value="${esc(card.meta_api_key)}" placeholder="${d.meta_api_key_set ? t("ls.55") : "API key"}">`),
+      field(t("ls.52"), `<input class="input" id="f-rounds" type="number" min="0" max="20" value="${esc(card.rounds)}">`, t("ls.54")),
+      field(t("ls.53"), `<input class="input" id="f-jobs" type="number" min="1" max="64" value="${esc(card.jobs)}">`),
       field("trials", `<input class="input" id="f-trials" type="number" min="1" max="3" value="${esc(card.trials)}">`),
     ].join("");
     const bind = (id, key, cast, event = "change") => {
@@ -79,11 +80,11 @@
 
   async function preview() {
     const mine = ++seq;
-    const bad = [["轮数", card.rounds, 0, 20], ["并发", card.jobs, 1, 64], ["trials", card.trials, 1, 3]]
+    const bad = [[t("ls.52"), card.rounds, 0, 20], [t("ls.53"), card.jobs, 1, 64], ["trials", card.trials, 1, 3]]
       .find(([, v, lo, hi]) => !Number.isInteger(v) || v < lo || v > hi);
     if (bad) {
-      $("cmd").textContent = "（参数有效后生成命令）";
-      state("bad", `${bad[0]} 必须是 ${bad[2]}..${bad[3]} 的整数`); $("go").disabled = true; return;
+      $("cmd").textContent = t("ls.56");
+      state("bad", `${bad[0]} ${t("ls.81")} ${bad[2]}..${bad[3]}`); $("go").disabled = true; return;
     }
     const q = new URLSearchParams({ dataset: card.dataset, harness: card.harness,
       task_backend: card.task_backend, task_model: card.task_model, task_base_url: card.task_base_url,
@@ -94,14 +95,14 @@
     try {
       const d = await (await fetch(`/api/launch/preview?${q}`)).json();
       if (mine !== seq) return;
-      $("cmd").textContent = (d.argv || []).map((a) => (/[\s"]/.test(a) ? JSON.stringify(a) : a)).join(" ") || "（生成失败）";
+      $("cmd").textContent = (d.argv || []).map((a) => (/[\s"]/.test(a) ? JSON.stringify(a) : a)).join(" ") || t("ls.57");
       const ok = Boolean(d.preflight && d.preflight.ok);
-      state(ok ? "ok" : "bad", ok ? "预检通过；密钥将在提交时验证"
-        : `预检未通过：${(d.preflight || {}).detail || (d.preflight || {}).error || "原因未返回"}`);
+      state(ok ? "ok" : "bad", ok ? t("ls.58")
+        : `${t("ls.83")}${(d.preflight || {}).detail || (d.preflight || {}).error || t("ls.59")}`);
       $("go").disabled = !ok;
     } catch (error) {
       if (mine !== seq) return;
-      state("bad", `读不到预检：${error.message}`); $("go").disabled = true;
+      state("bad", `${t("ls.82")}${error.message}`); $("go").disabled = true;
     }
   }
 
@@ -113,25 +114,26 @@
 
   async function go() {
     $("go").disabled = true;
-    const out = $("result"); out.hidden = false; out.textContent = "起跑中…";
+    const out = $("result"); out.hidden = false; out.textContent = t("ls.60");
     try {
       const response = await fetch("/api/runs", { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(card) });
       const d = await response.json();
       out.textContent = response.ok
         ? [`run: ${d.run_id}`, `log: ${d.log}`, "", (d.argv || []).join(" ")].join("\n")
-        : `起跑被拒绝：${d.detail || d.error || response.status}`;
-      if (!response.ok) state("bad", "起跑被拒绝");
+        : `${t("ls.84")}${d.detail || d.error || response.status}`;
+      if (!response.ok) state("bad", t("ls.61"));
     } catch (error) {
-      out.textContent = `请求失败：${error.message}`;
+      out.textContent = `${t("ls.85")}${error.message}`;
     } finally {
       preview();
     }
   }
 
   function bind() {
+    $("cmd").textContent = t("ls.7"); $("state").textContent = t("ls.8");
     $("go").addEventListener("click", go);
-    load().catch((error) => { $("fields").innerHTML = `<div class="empty">读不到启动表单：${esc(error.message)}</div>`; });
+    load().catch((error) => { $("fields").innerHTML = `<div class="empty">${t("ls.86")}${esc(error.message)}</div>`; });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   else bind();

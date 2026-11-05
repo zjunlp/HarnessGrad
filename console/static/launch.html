@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HarnessGrad · 启动</title>
+<title data-i18n="ls.1">HarnessGrad · 启动</title>
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/ui.css">
@@ -22,13 +22,13 @@
 
   <main class="main">
     <div class="topbar">
-      <h1>启动</h1>
-      <span class="sub">配置一次实验：数据集、harness、方法、轮数。命令由服务端生成，起跑前先预检。</span>
+      <h1 data-i18n="ls.2">启动</h1>
+      <span class="sub" data-i18n="ls.3">配置一次实验：数据集、harness、方法、轮数。命令由服务端生成，起跑前先预检。</span>
     </div>
 
     <div class="workshop" style="max-width:1080px">
       <div class="card" style="margin-bottom:14px">
-        <div class="card__head"><span class="card__title">这次跑什么</span>
+        <div class="card__head"><span class="card__title" data-i18n="ls.4">这次跑什么</span>
           <span class="card__sub" id="preset-hint"></span></div>
         <div class="card__body">
           <div class="hg-stack" id="fields"></div>
@@ -36,14 +36,14 @@
       </div>
 
       <div class="card">
-        <div class="card__head"><span class="card__title">命令</span>
-          <span class="card__sub">预检没过就不给起跑，理由写在下面</span></div>
+        <div class="card__head"><span class="card__title" data-i18n="ls.5">命令</span>
+          <span class="card__sub" data-i18n="ls.6">预检没过就不给起跑，理由写在下面</span></div>
         <div class="card__body">
           <pre class="wcmd hg-mono" id="cmd">（参数齐了以后生成）</pre>
           <div class="hg-row" style="margin-top:12px">
             <span class="badge" id="state" data-tone="wait">预检中…</span>
             <span class="spacer hg-grow"></span>
-            <button class="btn btn--primary" type="button" id="go" disabled>确认启动</button>
+            <button class="btn btn--primary" type="button" id="go" disabled data-i18n="ls.9">确认启动</button>
           </div>
           <pre class="wlog" id="result" hidden></pre>
         </div>
@@ -52,6 +52,9 @@
   </main>
 </div>
 
+<script src="/shell-i18n.js"></script>
+<script src="/launch-i18n.js"></script>
+<script src="/i18n.js"></script>
 <script src="/shell.js" defer></script>
 <script src="/launch.js" defer></script>
 </body>
