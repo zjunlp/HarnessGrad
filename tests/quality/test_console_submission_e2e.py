@@ -91,6 +91,7 @@ def console(tmp_path, monkeypatch):
     spec.loader.exec_module(module)
     # Use an isolated lease directory; never touch an operator's shared capacity stamp.
     monkeypatch.setattr(module, "BUDGET_DIR", store / "budget")
+    monkeypatch.setattr(module, "BUDGET_CAPACITY", "2")
 
     httpd = module.ConsoleServer(("127.0.0.1", 0), module.Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)

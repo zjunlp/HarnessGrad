@@ -26,7 +26,7 @@ python3 -c 'import playwright.sync_api'
 
 若自检报`Can't find source path .../harnessgrad_work`，先核对上述目录与权限；这是挂载源不存在，不能据安装脚本的通用提示推断需关闭安全功能。没有该父目录写权限时，使用已有平台`eval.containers.sandbox.self_check(platform, work_root)`并指定自己已存在的平台外工作根，保留真实结果；不要修改共享目录或内核策略。
 
-设置 `HG_CONSOLE_BUDGET_DIR` 指向平台外、已存在且可写的共享 lease 目录；Console 直接启动和提交 driver 均使用 capacity=1（`jobs` 不改变共享 capacity）。所有共享同一计算资源的 console/driver 必须使用相同目录与 capacity，否则无法实现跨进程协调。已存在的 capacity 不匹配时必须停止并由部署管理员处理；不要覆盖 stamp、删除其他运行的目录或终止其他进程。
+设置 `HG_CONSOLE_BUDGET_DIR` 指向平台外、已存在且可写的共享 lease 目录，并设置正整数 `HG_CONSOLE_BUDGET_CAPACITY`。直接启动和提交使用同一个 capacity；`jobs` 是单次运行的并行上限，不改变共享 capacity。所有共享同一计算资源的参与者必须使用相同目录与 capacity，否则无法实现跨进程协调。capacity 冲突时不得覆盖 stamp、删除其他运行的目录或终止其他进程。主机 CPU/内存预留需由部署方按实际资源显式配置。
 
 ### 1. 建立本次独立目录
 
@@ -45,6 +45,7 @@ mkdir -p "$case/runs" "$case/submissions" "$case/work" "$case/evidence" "$case/b
   printf 'export HG_CONSOLE_SUBMISSIONS_ROOT=%q\n' "$case/submissions"
   printf 'export HG_CONSOLE_SUBMISSIONS_WORK=%q\n' "$case/work"
   printf 'export HG_CONSOLE_BUDGET_DIR=%q\n' "$case/budget"
+  printf 'export HG_CONSOLE_BUDGET_CAPACITY=1\n'
   printf 'export HG_CONSOLE_UAT_OUT=%q\n' "$case/evidence/uat.md"
   printf 'export HG_AGENT_BACKEND=mock\nexport TMPDIR=/tmp\nexport PYTHONDONTWRITEBYTECODE=1\n'
 } > "$case/env.sh"

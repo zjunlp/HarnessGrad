@@ -30,22 +30,23 @@ def test_pressure_reports_an_idle_host_as_usable(monkeypatch):
 
 def test_pressure_refuses_an_overloaded_host(monkeypatch):
     _fake_host(monkeypatch, load1=384.0, free_fraction=0.5)
-    pressure = slots.host_pressure()
+    pressure = slots.host_pressure(reserved_cores=8)
     assert pressure["ok"] is False
     assert "no headroom" in pressure["reason"]
 
 
 def test_pressure_refuses_a_host_without_memory(monkeypatch):
     _fake_host(monkeypatch, load1=1.0, free_fraction=0.02)
-    pressure = slots.host_pressure()
+    pressure = slots.host_pressure(min_free_gb=16)
     assert pressure["ok"] is False
     assert "GiB free" in pressure["reason"]
 
 
-def test_a_tenth_of_the_machine_is_the_reserve_floor(monkeypatch):
-    """A big box reserves more than 8 cores: a tenth, so a login stays schedulable."""
-    assert slots._reserved_cores(144) == 14
-    assert slots._reserved_cores(32) == 8
+def test_small_machine_has_no_server_specific_default_reserve(monkeypatch):
+    monkeypatch.setattr(slots, '_read_host', lambda: (0.5, 14 * 2**30, 16 * 2**30))
+    monkeypatch.setattr(slots.os, 'cpu_count', lambda: 8)
+    assert slots.host_pressure()['ok'] is True
+    assert slots._reserved_cores(8) == 0
 
 
 def test_work_still_runs_at_48_slots_on_144_cores(monkeypatch):
@@ -58,7 +59,7 @@ def test_pressure_knobs_disable_each_half(monkeypatch):
     _fake_host(monkeypatch, load1=384.0, free_fraction=0.02)
     assert slots.host_pressure(0, 0, 0)["ok"] is True
     assert slots.host_pressure(0, 0.12, 16.0)["ok"] is False
-    assert slots.host_pressure(slots._reserved_cores(100), 0, 0)["ok"] is False
+    assert slots.host_pressure(8, 0, 0)["ok"] is False
 
 
 def test_hold_waits_for_headroom_and_takes_no_slot_while_hot(tmp_path, monkeypatch):

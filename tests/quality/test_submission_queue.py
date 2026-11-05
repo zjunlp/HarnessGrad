@@ -97,6 +97,36 @@ def admissions(service_factory,monkeypatch):
     return service_factory
 
 
+def test_unrelated_driver_does_not_block_shared_lease_queue(service_factory,tmp_path,monkeypatch):
+    from test_submission_gate import archive
+    instance=service_factory(liveness=lambda:(True, {'other': {'pid': 123}}), budget_capacity=3)
+    admissions(lambda **_: instance, monkeypatch)()
+    called=[]
+    def run(plan,env,lease_fd):
+        called.append(plan)
+        instance._update(plan['submission_id'],status='failed',error={'code':'internal-error','detail':'fixture'})
+    monkeypatch.setattr(instance,'_run',run)
+    start(instance)
+    _,ack=instance.submit(archive(tmp_path),'demo-smoke',driver_env={})
+    wait_until(lambda:bool(called))
+    argv=called[0]['argv']
+    assert argv[argv.index('--gpu-budget')+1]=='3'
+    assert called[0]['submission_id']==ack['submission_id']
+
+
+def test_queued_capacity_change_fails_before_driver_start(service_factory, monkeypatch):
+    instance=service_factory(budget_capacity=3)
+    identity='sub-20261105T000000Z-12345678'
+    seed(instance, identity, 'running')
+    plan={'submission_id':identity, 'argv':['driver.py','--gpu-budget','2',
+          '--gpu-budget-dir',str(instance.budget)]}
+    monkeypatch.setattr(backend.subprocess, 'Popen', lambda *a, **k: pytest.fail('stale plan launched'))
+    instance._run(plan, {}, -1)
+    result=instance._load(identity)
+    assert result['status']=='failed'
+    assert 'budget configuration changed' in result['error']['detail']
+
+
 def test_fifo_two_archives_same_tree_and_true_queue_full(service_factory,tmp_path,monkeypatch):
     from test_submission_gate import archive
     instance=admissions(service_factory,monkeypatch)(max_queue=2)

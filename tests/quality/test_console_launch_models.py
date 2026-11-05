@@ -25,6 +25,7 @@ def setup(tmp_path, monkeypatch):
     driver = tmp_path / 'driver.py'; driver.write_text('# synthetic')
     monkeypatch.setattr(m, 'RUNS', runs)
     monkeypatch.setattr(m, 'BUDGET_DIR', budget)
+    monkeypatch.setattr(m, 'BUDGET_CAPACITY', '2')
     monkeypatch.setattr(m, 'DRIVER', driver)
     monkeypatch.setattr(m, 'SETTINGS', tmp_path / 'settings.json')
     monkeypatch.setattr(m, 'LLM_CONFIG', tmp_path / 'absent.json')

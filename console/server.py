@@ -488,7 +488,16 @@ LAUNCH_LOG = ROOT / ".launch-log.jsonl"
 # One explicitly configured external lease directory coordinates direct launches
 # and submissions. No machine-specific path is silently selected.
 BUDGET_DIR = pathlib.Path(os.environ['HG_CONSOLE_BUDGET_DIR']).expanduser() if os.environ.get('HG_CONSOLE_BUDGET_DIR') else None
+# Deployment-wide endpoint capacity, not per-run worker count. Invalid or absent
+# configuration is rejected before launch; every sharing process must agree.
+BUDGET_CAPACITY = os.environ.get('HG_CONSOLE_BUDGET_CAPACITY', '')
 DRIVER = PLATFORM / "driver.py"
+
+
+def budget_capacity() -> int:
+    if not re.fullmatch(r'[1-9][0-9]{0,3}', str(BUDGET_CAPACITY)):
+        raise ValueError('Set HG_CONSOLE_BUDGET_CAPACITY to a positive integer (1..9999).')
+    return int(BUDGET_CAPACITY)
 
 
 def python_supported() -> bool:
@@ -818,7 +827,7 @@ def launch_argv(form: dict, run_id: str) -> list[str]:
             "--improver-model", str(form["improver_model"]),
             "--run-id", run_id,
             "--runs-root", str(RUNS),
-            "--gpu-budget", "1",
+            "--gpu-budget", str(budget_capacity()),
             "--gpu-budget-dir", str(BUDGET_DIR)]
 
 
@@ -850,21 +859,14 @@ def launch_env(form: dict) -> dict:
 def new_run_id(form: dict) -> str:
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     tag = re.sub(r"[^A-Za-z0-9]+", "_", str(form["dataset"])) or "run"
-    return f"rsi10-{stamp}-{tag}-{form['improver']}-train"
+    import uuid
+    return f"console-{stamp}-{tag}-{form['improver']}-{uuid.uuid4().hex[:8]}"
 
 
 def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_key_pending: bool = False) -> tuple[int, dict]:
     """返回 (状态码, 错误体)；200 表示可以起跑。判断顺序是有意的：先安全，再合法性。"""
-    if not procfs_readable():
-        # **Fail closed.** An unreadable /proc cannot answer "is a run in progress", and the one
-        # thing this guard must never do is start a second experiment beside a live one because
-        # it could not look. 503, not 400: the request is fine, the machine's answer is not.
-        return 503, {"error": "liveness-unknown",
-                     "detail": "读不到 /proc：无法确认是否有 driver 在跑，因此拒绝起跑"}
-    live = live_drivers_by_run()
-    if live:
-        return 409, {"error": "driver-running", "detail": "已经有一个 driver 在跑，先等它结束",
-                     "live": [{"run_id": k, **v} for k, v in live.items()]}
+    # Parallel drivers are coordinated through the shared lease; they are not
+    # globally rejected merely because another deployment is running.
     if not python_supported():
         return 400, {"error": "unsupported-python",
                      "detail": (f"当前 Python 是 {sys.version_info.major}.{sys.version_info.minor}，"
@@ -889,16 +891,19 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
                      "detail": "HG_CONSOLE_BUDGET_DIR must be an existing absolute writable directory."}
     if BUDGET_DIR.resolve().is_relative_to(PLATFORM.resolve()):
         return 400, {"error": "no-budget-dir", "detail": "HG_CONSOLE_BUDGET_DIR must be outside the platform checkout."}
-    # Submissions use one shared slot. Keep this capacity independent of the
-    # requested worker count: `jobs` is parallelism, not lease capacity.
+    try:
+        capacity = budget_capacity()
+    except ValueError as exc:
+        return 400, {"error": "budget-capacity", "detail": str(exc)}
+    # Requested jobs is per-run parallelism; capacity is a shared deployment fact.
     stamp = BUDGET_DIR / 'capacity'
     if stamp.exists():
         try:
             recorded = stamp.read_text(encoding='utf-8').strip()
         except (OSError, UnicodeError):
             return 400, {"error": "budget-capacity", "detail": "Cannot read shared budget capacity."}
-        if recorded != '1':
-            return 400, {"error": "budget-capacity", "detail": "Console and submissions require shared capacity=1; do not overwrite an existing capacity stamp."}
+        if recorded != str(capacity):
+            return 400, {"error": "budget-capacity", "detail": "Configured capacity conflicts with the shared stamp; do not overwrite it."}
     known = {a["name"] for a in adapters()}
     if form.get("dataset") not in known:
         return 400, {"error": "unknown-dataset",
@@ -3949,6 +3954,10 @@ def submission_service(httpd):
         _submission_reject('service-not-ready', 'submission service requires a 127.0.0.1 listener')
     if BUDGET_DIR is None or not BUDGET_DIR.is_absolute():
         _submission_reject('service-not-ready', 'configure HG_CONSOLE_BUDGET_DIR as an absolute shared directory outside the platform')
+    try:
+        capacity = budget_capacity()
+    except ValueError as exc:
+        _submission_reject('service-not-ready', str(exc))
     with _submission_init_lock:
         if not hasattr(httpd, '_submission_service'):
             try:
@@ -3962,7 +3971,8 @@ def submission_service(httpd):
             httpd._submission_service = _submission_backend().SubmissionService(
                 platform_root=PLATFORM, submissions_root=pathlib.Path(root), runs_root=RUNS,
                 work_root=pathlib.Path(os.environ.get('HG_CONSOLE_SUBMISSIONS_WORK','/tmp/hg-submissions-work')),
-                budget_dir=BUDGET_DIR, liveness=lambda:(procfs_readable(), live_drivers_by_run()),
+                budget_dir=BUDGET_DIR, budget_capacity=capacity,
+                liveness=lambda:(procfs_readable(), live_drivers_by_run()),
                 env_resolver=submission_env,**config)
         return httpd._submission_service
 

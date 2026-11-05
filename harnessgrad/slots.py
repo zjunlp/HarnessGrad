@@ -6,17 +6,6 @@ per-run, and it is the wrong unit as soon as more than one run shares one model 
 improver gives its reservation back to nobody, and a run that is measuring cannot use the
 slots its peers are not using.
 
-**Measured, nine methods on one local endpoint (2026-10-17).** Fit to two points — a lone run
-at `jobs=3` took 21 s per task, at `jobs=40` it took 78 s — the endpoint's per-task latency is
-`L(N) = (N+10)/40` minutes and its throughput `T(N) = 40N/(N+10)` tasks/minute, where `N` is
-**total** in-flight tasks across every run. Because each method's rounds are serial (round
-`N+1` needs round `N`'s score), all nine enter their improver phase together and all nine
-leave it together, and the GPU sits idle for the whole improver phase. Simulated with the fit
-above: nine simultaneous runs at a fixed `--jobs 6` finish in 3.36 h with **100 minutes** of
-GPU idle. The same nine under a work-conserving global budget of 40 finish in **2.21 h** with
-15-25 minutes idle — because a run whose improver is running holds no slots, and the runs that
-are ready to measure take them immediately.
-
 So the unit is a **slot**, the budget is **global**, and a run's `--jobs` becomes a ceiling
 rather than a reservation. Admission is work-conserving: a slot is granted to whoever asks
 first, and released the moment its task finishes.
@@ -45,30 +34,18 @@ from pathlib import Path
 DEFAULT_DIR = "hg-gpu-slots"
 DEFAULT_CAPACITY = 40
 
-#: Host-headroom gate. The capacity above bounds one *endpoint*; it says nothing about the
-#: machine the tasks run on, which is a different ceiling. Measured 2026-10-18: 96 slots of
-#: ALFWorld -- each task a `bwrap` sandbox plus a TextWorld process plus a relay -- put the
-#: 15-minute load at 384 on 144 cores, the host stopped answering and the model server died
-#: with it. Login and an editor lost that race, so the machine now keeps a reserve that work
-#: may not touch:
-#:
-#:   * at least `DEFAULT_RESERVED_CORES` (and never less than a tenth of the machine) must be
-#:     free, not merely "not saturated", so an SSH session and a shell command have somewhere
-#:     to run;
-#:   * `DEFAULT_MIN_FREE_MEMORY` of `MemTotal` and `DEFAULT_MIN_FREE_GB` of free memory,
-#:     whichever is larger, stay unclaimed -- the box must be able to fork and to page in
-#:     a login shell;
-#:   * a task that cannot get a slot because of either reserve waits, and after
-#:     `DEFAULT_GUARD_TIMEOUT` the run fails loudly instead of hanging forever.
-DEFAULT_RESERVED_CORES = 8
-DEFAULT_MIN_FREE_MEMORY = 0.12
-DEFAULT_MIN_FREE_GB = 16.0
+#: The optional host-headroom gate is separate from endpoint capacity. Deployment
+#: operators configure CPU and memory reserves for their machine; neutral defaults
+#: impose no host-specific threshold. Shared slot capacity remains enforced.
+DEFAULT_RESERVED_CORES = 0
+DEFAULT_MIN_FREE_MEMORY = 0.0
+DEFAULT_MIN_FREE_GB = 0.0
 DEFAULT_GUARD_TIMEOUT = 1800.0
 
 
 def _reserved_cores(cpus: int) -> int:
-    """Cores work may not use: the absolute floor, and never less than a tenth of the box."""
-    return max(DEFAULT_RESERVED_CORES, round(cpus * 0.1))
+    """Default is deployment-neutral; configure a reserve explicitly when needed."""
+    return DEFAULT_RESERVED_CORES
 
 
 def _read_host() -> tuple[float, int, int]:

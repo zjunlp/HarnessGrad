@@ -55,6 +55,7 @@ def httpd(server, tmp_path, monkeypatch):
     monkeypatch.setattr(server,'RUNS',tmp_path/'runs')
     monkeypatch.setattr(server,'PLATFORM',ROOT)
     monkeypatch.setattr(server,'BUDGET_DIR',tmp_path/'budget')
+    monkeypatch.setattr(server,'BUDGET_CAPACITY','2')
     monkeypatch.setattr(server,'api_health',lambda:{'original':'health-shape'})
     monkeypatch.setattr(server,'launch_form',lambda:{'original':'launch-form'})
     instance = server.ConsoleServer(('127.0.0.1',0),server.Handler)

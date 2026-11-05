@@ -43,6 +43,7 @@ def _prepare(module, monkeypatch, budget_dir: Path):
     runs = root / "runs"
     runs.mkdir(exist_ok=True)
     monkeypatch.setattr(module, "BUDGET_DIR", budget_dir)
+    monkeypatch.setattr(module, "BUDGET_CAPACITY", "3")
     monkeypatch.setattr(module, "DRIVER", driver)
     monkeypatch.setattr(module, "RUNS", runs)
     monkeypatch.setattr(module, "python_supported", lambda: True)
@@ -87,10 +88,10 @@ def test_shared_budget_capacity_is_independent_of_jobs(tmp_path, monkeypatch):
     form = _form(jobs=4)
     argv = module.launch_argv(form, 'synthetic')
     assert argv[argv.index('--jobs') + 1] == '4'
-    assert argv[argv.index('--gpu-budget') + 1] == '1'
-    (budget / 'capacity').write_text('3\n')
+    assert argv[argv.index('--gpu-budget') + 1] == '3'
+    (budget / 'capacity').write_text('2\n')
     assert module.guard_launch(form)[1]['error'] == 'budget-capacity'
-    assert (budget / 'capacity').read_text() == '3\n'
+    assert (budget / 'capacity').read_text() == '2\n'
 
 
 def test_preview_is_ready_only_when_the_real_guard_passes(tmp_path, monkeypatch):
@@ -132,25 +133,16 @@ def test_driver_probe_is_empty_when_proc_is_unavailable(monkeypatch):
     assert module.procfs_readable() is False
 
 
-def test_launch_is_refused_when_procfs_cannot_be_read(tmp_path, monkeypatch):
-    """**看不见 ≠ 没有。** /proc 读不到时必须拒绝起跑,而不是当作"没有 driver"放行。
-
-    这条是合入时补的:`live_drivers_by_run()` 在 /proc 不可读时返回 `{}`,而守卫原先只看那个
-    字典,于是同一个 `{}` 既表示"机器上没实验"也表示"我没法知道" —— 后者放行就等于在别人的
-    实验旁边再起一个,正好是这份守卫存在的理由。
-    """
+def test_unrelated_driver_does_not_override_shared_capacity(tmp_path, monkeypatch):
     module = _console()
     budget = tmp_path / "budget"
     budget.mkdir()
     _prepare(module, monkeypatch, budget)
-
-    def unavailable(self):
-        raise FileNotFoundError("no procfs")
-
-    monkeypatch.setattr(module.pathlib.Path, "iterdir", unavailable)
-    code, body = module.guard_launch(_form())
-    assert code == 503, body
-    assert body["error"] == "liveness-unknown"
+    monkeypatch.setattr(module, 'procfs_readable', lambda: False)
+    monkeypatch.setattr(module, 'live_drivers_by_run', lambda: {'other': {'pid': 123}})
+    assert module.guard_launch(_form()) == (200, {})
+    monkeypatch.setattr(module, 'BUDGET_CAPACITY', '')
+    assert module.guard_launch(_form())[1]['error'] == 'budget-capacity'
 
 
 def test_preview_reports_an_unsupported_python_before_launch(tmp_path, monkeypatch):

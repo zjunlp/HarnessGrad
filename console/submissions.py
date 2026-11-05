@@ -393,10 +393,10 @@ def _extract_checked(snapshot: Path, destination: Path, *, scratch_root=None, io
 
 
 def _driver_argv(root: Path, scenario: str, run_id: str, *, platform: Path,
-                 runs_root: Path, work_root: Path, budget_dir: Path) -> list[str]:
+                 runs_root: Path, work_root: Path, budget_dir: Path, budget_capacity: int = 1) -> list[str]:
     return [sys.executable, str(platform/'driver.py'), '--harness-path', str(root),
             '--scenario', scenario, '--run-id', run_id, '--runs-root', str(runs_root),
-            '--work-root', str(work_root), '--gpu-budget', '1',
+            '--work-root', str(work_root), '--gpu-budget', str(budget_capacity),
             '--gpu-budget-dir', str(budget_dir), '--improver', 'none']
 
 
@@ -427,7 +427,7 @@ def archive_sha256(path: Path, *, snapshot: Path | None = None, io_budget=None) 
 
 def plan_submission(archive: Path, scenario_name: str, *, staging_root: Path,
                     runs_root: Path, work_root: Path, budget_dir: Path,
-                    submission_id: str | None = None,
+                    budget_capacity: int = 1, submission_id: str | None = None,
                     platform_root: Path = PLATFORM_ROOT, scratch_root=None, io_budget=None) -> dict:
     """Admit one fixed upload and return a CLI plan, never launch a driver.
 
@@ -436,6 +436,8 @@ def plan_submission(archive: Path, scenario_name: str, *, staging_root: Path,
     HTTP, queueing, deduplication and run receipts belong to the service layer.
     """
     platform = Path(platform_root).resolve()
+    if type(budget_capacity) is not int or not 1 <= budget_capacity <= 9999:
+        _reject('service-not-ready', 'shared budget capacity must be an integer from 1 to 9999')
     try:
         scenario, receipt = load_scenario(scenario_name, platform/'scenarios')
     except (ValueError, OSError) as exc:
@@ -468,7 +470,8 @@ def plan_submission(archive: Path, scenario_name: str, *, staging_root: Path,
                 'harness': manifest, 'scenario': scenario_name, 'scenario_receipt': receipt,
                 'archive_sha256': digest, 'tree_sha256': tree['submission_sha256'],
                 'argv': _driver_argv(root, scenario_name, identity, platform=platform,
-                                     runs_root=runs, work_root=work, budget_dir=budget)}
+                                     runs_root=runs, work_root=work, budget_dir=budget,
+                                     budget_capacity=budget_capacity)}
     except BaseException:
         if stage is not None:
             shutil.rmtree(stage)
@@ -809,11 +812,14 @@ class SubmissionService:
 
     def __init__(self, *, platform_root: Path, submissions_root: Path,
                  runs_root: Path, work_root: Path, budget_dir: Path, liveness=None,
-                 max_queue=16, quota_bytes=5*1024**3, retention_seconds=30*86400,
+                 budget_capacity=1, max_queue=16, quota_bytes=5*1024**3, retention_seconds=30*86400,
                  sweep_seconds=1, env_resolver=None):
         self.platform = Path(platform_root).resolve()
         self.root, self.runs, self.work, self.budget = (
             Path(p).resolve() for p in (submissions_root, runs_root, work_root, budget_dir))
+        if type(budget_capacity) is not int or not 1 <= budget_capacity <= 9999:
+            raise ValueError('budget_capacity must be an integer from 1 to 9999')
+        self.budget_capacity = budget_capacity
         self._liveness = liveness
         self._lock = threading.RLock()
         self._condition = threading.Condition(self._lock)
@@ -1108,9 +1114,6 @@ class SubmissionService:
             lease_fd = None
             try:
                 self._guard()
-                if self._liveness()[1]:
-                    time.sleep(.1)
-                    continue
                 lease_fd = _lease(self.root/'.control/execute.lock')
                 if lease_fd is None:
                     time.sleep(.05)
@@ -1373,6 +1376,14 @@ class SubmissionService:
         for path in (self.root,self.runs,self.budget):
             if not path.is_dir() or not os.access(path, os.W_OK):
                 _reject('service-not-ready', f'configured directory is absent or not writable: {path}')
+        stamp = self.budget/'capacity'
+        if stamp.exists():
+            try:
+                recorded = stamp.read_text(encoding='utf-8').strip()
+            except (OSError, UnicodeError):
+                _reject('service-not-ready', 'cannot read shared budget capacity')
+            if recorded != str(self.budget_capacity):
+                _reject('service-not-ready', 'configured capacity conflicts with shared budget stamp')
         if self._liveness is None or not self._liveness()[0]:
             _reject('service-not-ready', 'cannot read /proc or no liveness guard is configured')
         if not (self.platform/'driver.py').is_file():
@@ -1486,7 +1497,8 @@ class SubmissionService:
             self._update(identity, status='validating')
             plan = plan_submission(archive, scenario_name, staging_root=directory/'staging',
                                    runs_root=self.runs, work_root=self.work/identity/'runtime',
-                                   budget_dir=self.budget, submission_id=identity, platform_root=self.platform,
+                                   budget_dir=self.budget, budget_capacity=self.budget_capacity,
+                                   submission_id=identity, platform_root=self.platform,
                                    scratch_root=self.work/identity/'scratch',
                                    io_budget=lambda delta:self._quota_reserve(token,delta))
             if plan['archive_sha256'] != digest or plan['scenario_receipt']['sha256'] != scene_receipt['sha256']:
@@ -1551,12 +1563,19 @@ class SubmissionService:
     def _run(self, plan, driver_env, lease_fd):
         identity = plan['submission_id']
         try:
-            # Legacy launch remains intact; wait for its actual driver to leave.
-            while True:
-                self._guard()
-                if not self._liveness()[1]:
-                    break
-                time.sleep(.25)
+            # Concurrent drivers coordinate via their shared slot budget. The
+            # service's own execution lease still prevents duplicate queue owners.
+            self._guard()
+            # A queued receipt survives restarts. Do not execute stale lease
+            # parameters after the operator changes deployment capacity/root.
+            argv = plan.get('argv') or []
+            try:
+                if (argv.count('--gpu-budget') != 1 or argv.count('--gpu-budget-dir') != 1
+                        or argv[argv.index('--gpu-budget') + 1] != str(self.budget_capacity)
+                        or argv[argv.index('--gpu-budget-dir') + 1] != str(self.budget)):
+                    raise ValueError('shared budget configuration changed while queued')
+            except (ValueError, IndexError):
+                _reject('service-not-ready', 'shared budget configuration changed or is invalid')
             _, scene = _scenario(plan['scenario'], self.platform)
             if scene['sha256'] != plan['scenario_receipt']['sha256'] or validator.source_identity(plan['harness_dir'])['submission_sha256'] != plan['tree_sha256']:
                 _reject('scenario-not-available', 'admitted source/scenario identity changed')
