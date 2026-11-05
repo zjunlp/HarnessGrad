@@ -135,6 +135,15 @@ def test_source_symlink_escape_is_rejected(tmp_path, monkeypatch):
         runtime.prepare(repo)
 
 
+def test_source_root_symlink_cannot_be_treated_as_owned_source(tmp_path):
+    repo = harness(tmp_path)
+    external = tmp_path / "external-engine"
+    (repo / "engine").rename(external)
+    (repo / "engine").symlink_to(external, target_is_directory=True)
+    with pytest.raises(runtime.RuntimeUnavailable, match="belong to this candidate"):
+        runtime.owned_source(repo)
+
+
 def test_runtime_identity_survives_result_cache_and_binary_change(tmp_path, monkeypatch):
     from eval.run import runner
     repo = harness(tmp_path)
@@ -179,6 +188,47 @@ def test_missing_store_cannot_reuse_previous_measurement(tmp_path, monkeypatch):
                               harness_sha="h", cache={"h:t:1": {"score": 1, "trace": ""}})
     assert not result["cached_tasks"]
     assert result["invalid"]
+
+
+def test_legacy_external_runtime_executes_without_reading_or_writing_measurement_cache(tmp_path, monkeypatch):
+    from eval.run import runner
+    repo = harness(tmp_path)
+    external = tmp_path / "installed/engine"
+    external.parent.mkdir()
+    (repo / "engine").rename(external)
+    manifest = json.loads((repo / "harness.json").read_text())
+    manifest["runtime_paths"] = [str(external)]
+    (repo / "harness.json").write_text(json.dumps(manifest))
+    bun, _, _ = fake_runtime(tmp_path, monkeypatch)
+    monkeypatch.setenv("HG_BUN_BINARY", str(bun))
+    expected = runtime.identity(repo)
+    assert expected["cacheable"] is False
+    body = external / "app/main.ts"
+    original = body.read_text()
+    calls = []
+    def run(repo, task, *args, runtime_receipt, **kwargs):
+        value = body.read_text()
+        calls.append(value)
+        runtime_receipt["bun"] = runtime.prepare(repo)
+        return {"task_id": task["task_id"], "answer": value, "trace": "", "exit_code": 0,
+                "stderr": "", "verdict": {"kind": "command", "passed": value == original},
+                "harness_runtime": {"source": "platform", "python": None}}
+    class UnusableCache(dict):
+        def get(self, *args, **kwargs):
+            pytest.fail("legacy external runtime read the measurement cache")
+        def __setitem__(self, *args, **kwargs):
+            pytest.fail("legacy external runtime populated the measurement cache")
+    monkeypatch.setattr(runner, "_run_one", run)
+    monkeypatch.setattr(runner, "snapshot", lambda root: {})
+    cache = UnusableCache({"stale measurement": {"score": 1.0}})
+    tasks = [{"task_id": "t", "prompt": "synthetic legacy dependency control"}]
+    first = runner._evaluate(repo, tasks, {}, cache=cache, harness_sha="same-source")
+    assert first["per_task"] == {"t": 1.0} and not first["cached_tasks"]
+    body.write_text("changed external dependency")
+    assert runtime.identity(repo) == expected
+    second = runner._evaluate(repo, tasks, {}, cache=cache, harness_sha="same-source")
+    assert second["per_task"] == {"t": 0.0} and not second["cached_tasks"]
+    assert len(calls) == 2
 
 
 def test_validator_cli_works_without_repository_on_pythonpath(tmp_path):

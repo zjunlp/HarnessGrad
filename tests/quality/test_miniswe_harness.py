@@ -16,8 +16,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -25,10 +27,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 HARNESS = ROOT / "base_harness" / "miniswe"
-
-needs_miniswe = pytest.mark.skipif(
-    importlib.util.find_spec("minisweagent") is None,
-    reason="mini-swe-agent is not installed on this machine")
 
 
 def _load(name: str, path: Path):
@@ -43,6 +41,32 @@ def agent():
     return _load("_miniswe_agent", HARNESS / "agent.py")
 
 
+@pytest.fixture
+def native_harness(tmp_path):
+    harness = tmp_path / "work/miniswe"
+    shutil.copytree(HARNESS, harness, ignore=shutil.ignore_patterns("__pycache__"))
+    return harness
+
+
+def _required_overlay(harness):
+    from eval.containers import harness_runtime
+
+    overlay = harness_runtime.lookup(harness, sys.executable)
+    if overlay is None:
+        pytest.skip("provision the miniSWE overlay for this Python before the native integration control")
+    return overlay
+
+
+def _native_command(harness, work, overlay, env, argv):
+    from eval.containers import harness_runtime, sandbox
+
+    return sandbox.command(
+        argv, platform=ROOT, work_root=harness.parent, task_dir=work, repo=harness,
+        env=env, network="none", runtime_paths=harness_runtime.extra_paths(overlay),
+        visible_paths=harness_runtime.surfaced_paths(
+            overlay, work_root=harness.parent, platform=ROOT))
+
+
 # ------------------------------------------------------------------ the contract ---
 
 def test_the_manifest_satisfies_the_contributor_contract():
@@ -51,21 +75,30 @@ def test_the_manifest_satisfies_the_contributor_contract():
     assert validator.validate(HARNESS, smoke=False) == []
 
 
-@needs_miniswe
-def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path):
+def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path, native_harness):
     """The whole entrypoint, as the platform invokes it: argv, cwd, exit code, artifacts."""
-    (tmp_path / "task.json").write_text(json.dumps({
+    from eval.containers import harness_runtime
+
+    if shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap is unavailable")
+    harness = native_harness
+    overlay = _required_overlay(harness)
+    work = tmp_path / "task"
+    work.mkdir()
+    (work / "task.json").write_text(json.dumps({
         "task_id": "t-mock", "goal": "Write the word alpha into answer.txt."}))
+    env = {**os.environ, **harness_runtime.env_for(overlay), "HG_AGENT_BACKEND": "mock"}
+    command = _native_command(harness, work, overlay, env,
+        [sys.executable, str(harness / "agent.py"), "--task", str(work / "task.json"),
+         "--workdir", str(work)])
     proc = subprocess.run(
-        [sys.executable, str(HARNESS / "agent.py"), "--task", str(tmp_path / "task.json"),
-         "--workdir", str(tmp_path)],
-        env={**os.environ, "HG_AGENT_BACKEND": "mock"}, cwd=tmp_path,
+        command, env=env, cwd=work,
         capture_output=True, text=True, errors="replace", timeout=300)
     assert proc.returncode == 0, proc.stderr[-1200:]
-    assert (tmp_path / "answer.txt").read_text().strip() == "MINISWE_MOCK"
+    assert (work / "answer.txt").read_text().strip() == "MINISWE_MOCK"
 
     trace = [json.loads(line) for line in
-             (tmp_path / "trace.jsonl").read_text().splitlines() if line.strip()]
+             (work / "trace.jsonl").read_text().splitlines() if line.strip()]
     identity = trace[0]["harness_identity"]
     assert identity["harness"] == "miniswe"
     assert identity["agent_backend"] == "mock", "a mock run must say so"
@@ -76,6 +109,65 @@ def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path):
     assert any("usage" in row for row in trace), "the platform counts calls from this"
     final = [row for row in trace if row.get("submitted")][-1]
     assert final["answer_source"] == "artifact", final
+
+
+def test_missing_overlay_skips_native_integration_explicitly(native_harness, tmp_path, monkeypatch):
+    from eval.containers import harness_runtime
+
+    monkeypatch.setattr(harness_runtime, "overlays_root", lambda: tmp_path / "missing-overlays")
+    with pytest.raises(pytest.skip.Exception, match="provision the miniSWE overlay for this Python"):
+        _required_overlay(native_harness)
+
+
+def test_tmp_overlay_is_surfaced_without_a_host_miniswe_install(native_harness, tmp_path, monkeypatch):
+    """Exercise the real mount plan with one dependency, without emulating mini's CLI."""
+    from eval.containers import harness_runtime
+
+    if shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap is unavailable")
+    with tempfile.TemporaryDirectory(prefix="hg-miniswe-overlay-control-", dir="/tmp") as directory:
+        monkeypatch.setattr(harness_runtime, "overlays_root", lambda: Path(directory))
+        install = harness_runtime.install_spec(native_harness)
+        version = f"{sys.version_info.major}.{sys.version_info.minor}"
+        path = harness_runtime.overlay_path(install, version)
+        package = path / "minisweagent"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text("SOURCE = 'synthetic-overlay-only'\n")
+        (path / "PROVENANCE.json").write_text(json.dumps({
+            "python": version, "install_sha256": install[0],
+            "packages": {"mini_swe_agent": {"version": "synthetic", "top_level": ["minisweagent"]}}}))
+        # Global packages must not determine whether the integration control runs.
+        with monkeypatch.context() as host:
+            host.setattr(sys, "path", [p for p in sys.path if not (Path(p) / "minisweagent").exists()])
+            host.delitem(sys.modules, "minisweagent", raising=False)
+            assert importlib.util.find_spec("minisweagent") is None
+            overlay = _required_overlay(native_harness)
+        assert overlay["path"] == path
+        work = tmp_path / "task"
+        work.mkdir()
+        monkeypatch.delenv("PYTHONPATH", raising=False)
+        env = {"PATH": os.defpath, "PYTHONDONTWRITEBYTECODE": "1", **harness_runtime.env_for(overlay)}
+        code = """import json, os, runpy, sys
+from pathlib import Path
+adapter = runpy.run_path(sys.argv[1])
+assert adapter['_site_for_child']() is None
+scratch = Path('scratch')
+scratch.mkdir()
+assert adapter['child_environment'](dict(os.environ), scratch)['PYTHONPATH'] == os.environ['PYTHONPATH']
+import minisweagent
+readonly = False
+try:
+    Path(minisweagent.__file__).write_text('unexpected mutation')
+except OSError:
+    readonly = True
+print(json.dumps({'source': minisweagent.SOURCE, 'file': minisweagent.__file__, 'readonly': readonly}))
+"""
+        command = _native_command(native_harness, work, overlay, env,
+                                  [sys.executable, "-S", "-c", code, str(native_harness / "agent.py")])
+        proc = subprocess.run(command, env=env, cwd=work, capture_output=True, text=True, timeout=30)
+        assert proc.returncode == 0, proc.stderr
+        assert json.loads(proc.stdout) == {
+            "source": "synthetic-overlay-only", "file": str(package / "__init__.py"), "readonly": True}
 
 
 # ------------------------------------------------------- what the model is told ---

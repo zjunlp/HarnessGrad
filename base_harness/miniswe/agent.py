@@ -62,31 +62,23 @@ def _manifest() -> dict:
 
 
 def _site_for_child() -> str | None:
-    """Where `minisweagent` is importable from, for the child's `PYTHONPATH`.
+    """An explicit legacy package directory, or None for the executing Python's imports.
 
-    `None` means the running interpreter already has it, which is the ordinary case
-    outside a sandbox; inside one, `HOME` is a per-task directory and the package sits
-    under the operator's real home, so the tree has to be named -- and it has to be named
-    in `runtime_paths` too, or the platform never binds it and the child finds nothing
-    there either.
+    Normally the platform has already supplied an ABI-matched overlay on PYTHONPATH.
+    A legacy manifest can declare its own package directory in runtime_paths. No
+    directory is guessed from the operator's HOME when both routes are unavailable.
     """
     if _importable("minisweagent"):
         return None
     candidates = [Path(str(entry)).expanduser()
                   for entry in (_manifest().get("runtime_paths") or [])]
-    try:
-        import site
-        candidates.append(Path(site.getusersitepackages()))
-    except Exception:                                            # noqa: BLE001
-        pass
     for candidate in candidates:
         if (candidate / "minisweagent" / "__init__.py").is_file():
             return str(candidate)
     raise SystemExit(
-        "minisweagent is not importable and no declared tree holds it. Install "
-        "`mini-swe-agent` or declare the directory that contains the `minisweagent` "
-        f"package in harness.json's runtime_paths (declared: "
-        f"{_manifest().get('runtime_paths')}).")
+        "minisweagent is not importable. Provision this Harness's requirements.txt "
+        "for the executing Python with tools/configure_harness.py, or explicitly "
+        "declare its package directory in harness.json's runtime_paths.")
 
 
 def _importable(module: str) -> bool:
@@ -97,6 +89,26 @@ def _importable(module: str) -> bool:
         return importlib.util.find_spec(module) is not None
     except (ImportError, ValueError):
         return False
+
+
+def child_environment(parent: dict, scratch: Path) -> dict:
+    """Keep the executing Python's overlay while giving this task private state."""
+    blocked = {"CODEX_HOME", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "GEMINI_API_KEY",
+               "GOOGLE_API_KEY", "OPENROUTER_API_KEY", "XAI_API_KEY", "MISTRAL_API_KEY"}
+    prefixes = ("MSWEA_", "LITELLM_", "OPENAI_", "HG_METHOD_", "HG_ENV_", "HG_JUDGE_")
+    child = {k: v for k, v in parent.items() if k not in blocked and not k.startswith(prefixes)
+             and (not k.startswith("PYTHON") or k == "PYTHONPATH")}
+    for variable, folder in {"HOME": "home", "USERPROFILE": "home", "XDG_CONFIG_HOME": "config",
+                             "XDG_DATA_HOME": "data", "XDG_CACHE_HOME": "cache", "XDG_STATE_HOME": "state",
+                             "TMPDIR": "tmp", "TEMP": "tmp", "TMP": "tmp",
+                             "MSWEA_GLOBAL_CONFIG_DIR": "mini-config"}.items():
+        target = scratch / folder
+        target.mkdir(exist_ok=True)
+        child[variable] = str(target)
+    child.update({"MSWEA_CONFIGURED": "true", "MSWEA_SILENT_STARTUP": "1",
+                  "MSWEA_COST_TRACKING": "ignore_errors", "PYTHONNOUSERSITE": "1",
+                  "PYTHONDONTWRITEBYTECODE": "1", "LITELLM_LOCAL_MODEL_COST_MAP": "True"})
+    return child
 
 
 def _model(env: dict, backend: str) -> str:
@@ -263,11 +275,7 @@ def run(task: dict, workdir: Path) -> int:
     backend = env.get("HG_AGENT_BACKEND", "mock")
     model = _model(env, backend)
     server = None
-    if backend == "mock":
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        import mock_model
-        base_url, server = mock_model.start()
-    else:
+    if backend != "mock":
         base_url = (env.get("HG_AGENT_BASE_URL") or "").strip()
         if not base_url:
             raise SystemExit("HG_AGENT_BASE_URL is empty: mini needs an OpenAI-compatible "
@@ -280,6 +288,10 @@ def run(task: dict, workdir: Path) -> int:
     else:
         timeout = float(env.get("HG_MINISWE_TIMEOUT_S", "780"))
     site = _site_for_child()
+    if backend == "mock":
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import mock_model
+        base_url, server = mock_model.start()
 
     before = _stamp(workdir)
     try:
@@ -305,7 +317,6 @@ def run(task: dict, workdir: Path) -> int:
                 "task_id": task.get("task_id")})
             with tempfile.TemporaryDirectory(prefix="hg-miniswe-") as scratch:
                 scratch_dir = Path(scratch)
-                (scratch_dir / "config").mkdir()
                 trajectory = scratch_dir / "trajectory.json"
                 argv = [sys.executable, "-m", "minisweagent.run.mini",
                         "--task", task_text(task),
@@ -319,16 +330,8 @@ def run(task: dict, workdir: Path) -> int:
                         "--config", f"model.model_kwargs.api_base={base_url}",
                         "--config", f"model.model_kwargs.api_key={api_key}",
                         "--config", f"agent.step_limit={step_limit}"]
-                child = dict(env)
+                child = child_environment(env, scratch_dir)
                 child.update({
-                    # No interactive first-run wizard: it needs a TTY and would abort.
-                    "MSWEA_CONFIGURED": "true",
-                    "MSWEA_SILENT_STARTUP": "1",
-                    # Per task, inside the scratch directory: one task must not inherit
-                    # another's settings and nothing is written to the operator's home.
-                    "MSWEA_GLOBAL_CONFIG_DIR": str(scratch_dir / "config"),
-                    # Without this the first call raises on an unpriced model (measured).
-                    "MSWEA_COST_TRACKING": "ignore_errors",
                     "OPENAI_API_KEY": api_key,
                     "OPENAI_BASE_URL": base_url,
                     "OPENAI_API_BASE": base_url,
@@ -395,7 +398,11 @@ def main() -> int:
     except (OSError, ValueError) as exc:
         print(f"miniswe: cannot read the task: {exc}", file=sys.stderr)
         return 2
-    return run(task, args.workdir)
+    try:
+        return run(task, args.workdir)
+    except (OSError, ValueError) as exc:
+        print(f"miniswe: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

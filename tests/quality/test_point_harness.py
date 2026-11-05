@@ -88,11 +88,6 @@ def test_a_clean_harness_exits_zero(tmp_path, capsys):
     assert "all resolve" in capsys.readouterr().out
 
 
-# DSH and Codex record local bindings during explicit preparation. Their portable
-# templates and relocation controls are covered by the respective runtime tests.
-@pytest.mark.parametrize("harness", ["opencode", "openclaw"])
-def test_the_node_harnesses_in_this_repository_resolve(harness):
-    """The check that would have caught a stale pin, run over the real manifests."""
-    rows = point_harness.check(ROOT / "base_harness" / harness / "harness.json")
-    assert rows, f"{harness} declares no runtime paths"
-    assert [row for row in rows if row["state"] != "ok"] == []
+# Shipped CLI templates record local bindings during explicit preparation; their
+# relocation controls live in the corresponding runtime tests. The generic legacy
+# repointing tool above is checked with synthetic installations, not user prefixes.

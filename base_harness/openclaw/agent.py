@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -20,7 +21,6 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parent
-_RUNTIME = json.loads((ROOT / "runtime-identity.json").read_text(encoding="utf-8"))
 
 
 class AdapterError(ValueError):
@@ -59,47 +59,30 @@ def task_prompt(task: dict) -> str:
     return result
 
 
-def runtime_identity() -> dict:
-    manifest = json.loads((ROOT / "harness.json").read_text(encoding="utf-8"))
-    declared = {str(Path(value).resolve()) for value in manifest.get("runtime_paths", [])}
-    if any(not isinstance(_RUNTIME.get(key), str) or not _RUNTIME[key].strip()
-           for key in ("package_root", "entrypoint", "node")):
-        raise AdapterError("OpenClaw runtime is not configured: prepare a candidate with explicit "
-                           "package_root, entrypoint, node and matching read-only runtime_paths")
-    package_root = Path(_RUNTIME["package_root"])
-    package = package_root / "package.json"
-    entry = Path(_RUNTIME["entrypoint"])
-    node = Path(_RUNTIME["node"])
-    if entry.name != "openclaw.mjs" or node.name != "node":
-        raise AdapterError("OpenClaw runtime identity names an unexpected executable")
-    if str(package_root.resolve()) not in declared or str(node.parent.resolve()) not in declared:
-        raise AdapterError("OpenClaw runtime identity is outside declared runtime_paths")
-    if entry.resolve() != (package_root / "openclaw.mjs").resolve():
-        raise AdapterError("the OpenClaw entrypoint must belong to its declared package")
-    actual = json.loads(package.read_text(encoding="utf-8"))
-    if actual.get("name") != "openclaw":
-        raise AdapterError("the declared package is not OpenClaw")
-    if actual.get("version") != _RUNTIME["version"]:
-        raise AdapterError(f"OpenClaw version mismatch: expected {_RUNTIME['version']}, found {actual.get('version')}")
-    # Package metadata and launcher are hashed cheaply. The 532 MB dependency tree is
-    # external and not copied; a full tree hash on every task would dominate execution.
-    digest = hashlib.sha256()
-    for path in [package, entry]:
-        digest.update(path.relative_to(package_root).as_posix().encode() + b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return {"source": "openclaw", "version": actual["version"],
-            "upstream_commit": _RUNTIME["upstream_commit"], "entrypoint": str(entry),
-            "launcher_package_sha256": digest.hexdigest(),
-            "node_sha256": hashlib.sha256(node.read_bytes()).hexdigest(),
-            "dependency_scope": "installed package; digest covers package.json and launcher, not transitive dependencies"}
+def runtime_identity(env: dict | None = None) -> dict:
+    # Load the helper owned by this candidate even when the platform is hidden.
+    spec = importlib.util.spec_from_file_location("_task_openclaw_runtime", ROOT / "openclaw_runtime.py")
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    prepared = helper.resolve(ROOT, dict(os.environ) if env is None else env)
+    package = Path(prepared["package_root"])
+    launcher_digest = hashlib.sha256()
+    for path in (package / "package.json", Path(prepared["entrypoint"])):
+        launcher_digest.update(path.relative_to(package).as_posix().encode() + b"\0")
+        launcher_digest.update(path.read_bytes())
+        launcher_digest.update(b"\0")
+    return {**prepared, "source": prepared["source_identity"]["source"],
+            "upstream_commit": prepared["source_identity"]["upstream_commit"],
+            "launcher_package_sha256": launcher_digest.hexdigest(),
+            "node_sha256": next(row["sha256"] for row in prepared["files"] if row["path"] == prepared["node"]),
+            "dependency_scope": "prepared Node, package.json and launcher; not a transitive dependency tree digest"}
 
 
 def child_environment(parent: dict, state: Path, config: Path, work: Path) -> dict:
-    blocked = {"HOME", "USERPROFILE", "CODEX_HOME", "NODE_OPTIONS", "BUN_OPTIONS",
+    blocked = {"HOME", "USERPROFILE", "CODEX_HOME", "NODE_OPTIONS", "NODE_PATH", "BUN_OPTIONS",
                "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "GEMINI_API_KEY",
                "GOOGLE_API_KEY", "OPENROUTER_API_KEY", "XAI_API_KEY", "MISTRAL_API_KEY"}
-    prefixes = ("OPENCLAW_", "CLAWDBOT_", "PI_", "HG_METHOD_", "HG_ENV_")
+    prefixes = ("OPENCLAW_", "CLAWDBOT_", "PI_", "OPENAI_", "CODEX_", "HG_METHOD_", "HG_ENV_", "HG_JUDGE_")
     child = {k: v for k, v in parent.items() if k not in blocked and not k.startswith(prefixes)}
     for name, folder in {"HOME": "home", "USERPROFILE": "home", "XDG_CONFIG_HOME": "config",
                          "XDG_DATA_HOME": "data", "XDG_CACHE_HOME": "cache", "XDG_STATE_HOME": "state",
@@ -354,7 +337,7 @@ def run(task: dict, work: Path) -> int:
     try:
         prompt = task_prompt(task)
         before = _answer_bytes(work)
-        runtime = runtime_identity()
+        runtime = runtime_identity(env)
         if backend == "mock":
             sys.path.insert(0, str(ROOT))
             from mock_model import start
@@ -374,8 +357,9 @@ def run(task: dict, work: Path) -> int:
             config.write_text(json.dumps(cfg), encoding="utf-8")
             config.chmod(0o600)
             child = child_environment(env, state, config, work)
+            child["PATH"] = os.pathsep.join((str(Path(runtime["node"]).parent), child.get("PATH", os.defpath)))
             session_id = "hg-" + hashlib.sha256((task_id + str(time.time_ns())).encode()).hexdigest()[:20]
-            command = [_RUNTIME["node"], _RUNTIME["entrypoint"], "agent", "--local", "--json",
+            command = [*runtime["argv"], "agent", "--local", "--json",
                        "--agent", "main", "--session-id", session_id, "--timeout", str(max(1, int(timeout))),
                        "--message", prompt]
             timed_out = False
@@ -404,7 +388,7 @@ def run(task: dict, work: Path) -> int:
             answer, source = save_answer(work, task, before, final)
             record({"submitted": True, "answer": answer, "answer_source": source})
             return 0
-    except (AdapterError, OSError, ValueError, subprocess.SubprocessError) as exc:
+    except (AdapterError, OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         if not rows:
             record({"harness_identity": {"harness": "openclaw", "agent_model": model,
                                          "agent_backend": backend}, "task_id": task_id})

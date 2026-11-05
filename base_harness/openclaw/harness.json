@@ -1,6 +1,6 @@
 {
   "name": "openclaw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
@@ -9,7 +9,7 @@
     "files"
   ],
   "runtime_paths": [],
-  "notes": "Runs the installed OpenClaw CLI with --local and an isolated per-task config/state. The OpenClaw source and Node runtime are declared read-only runtime_paths; this candidate edits only the adapter prompt/config and does not vendor the upstream package. The files environment is supported; an exec/container run needs the same declared Node/OpenClaw trees provisioned in its image.",
+  "notes": "Prepare a Harness copy with tools/configure_openclaw_harness.py before measurement. Runs the pinned external OpenClaw CLI with --local and isolated per-task config/state. The prepared manifest records Node, package identity and read-only runtime bindings together. This adapter supports files environments only.",
   "components": {
     "context": [
       "prompt.md"
@@ -24,7 +24,8 @@
       "agent.py"
     ],
     "reliability": [
-      "runtime-identity.json"
+      "runtime-identity.json",
+      "openclaw_runtime.py"
     ],
     "unattributed": [
       "README.md",

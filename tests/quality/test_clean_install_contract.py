@@ -25,6 +25,11 @@ RESOURCES = (
     "base_harness/loop/requirements.txt",
     "base_harness/miniswe/requirements.txt",
     "base_harness/miniswe/README.md",
+    "base_harness/openclaw/openclaw_runtime.py",
+    "eval/containers/openclaw_runtime.py",
+    "tools/configure_openclaw_harness.py",
+    "base_harness/opencode/opencode_runtime.py",
+    "tools/configure_opencode_harness.py",
     "scenarios/demo-smoke.json",
     "data/aggregation_policies.json",
     "data/scaffolds/qa/cli/qa",
@@ -140,6 +145,67 @@ assert aggregation_policy('demo', 'run_reward')
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
+
+
+def test_installed_openclaw_template_and_preparation_tool(installed):
+    root, env, runtime = installed
+    python = str(runtime / "bin/python")
+    assert "--openclaw" in run([python, "-m", "tools.configure_openclaw_harness", "--help"], root, env)
+    code = '''
+import json
+from pathlib import Path
+from base_harness.openclaw import openclaw_runtime
+root = Path(openclaw_runtime.__file__).parent
+assert json.loads((root / "harness.json").read_text())["runtime_paths"] == []
+assert openclaw_runtime.identity(root)["version"] == "2026.3.13"
+try:
+    openclaw_runtime.resolve(root, {})
+except ValueError as exc:
+    assert "configure_openclaw_harness.py" in str(exc)
+else:
+    raise AssertionError("unprepared installed template was accepted")
+'''
+    run([python, "-c", code], root, env)
+
+
+def test_installed_opencode_template_and_preparation_tool(installed):
+    root, env, runtime = installed
+    python = str(runtime / "bin/python")
+    assert "--source" in run([python, "-m", "tools.configure_opencode_harness", "--help"], root, env)
+    code = '''
+import json
+from pathlib import Path
+from base_harness.opencode import opencode_runtime
+root = Path(opencode_runtime.__file__).parent
+assert json.loads((root / "harness.json").read_text())["runtime_paths"] == []
+try:
+    opencode_runtime.resolve(root, {})
+except ValueError as exc:
+    assert "configure_opencode_harness.py" in str(exc)
+else:
+    raise AssertionError("unprepared installed OpenCode template was accepted")
+'''
+    run([python, "-c", code], root, env)
+
+
+def test_installed_miniswe_template_and_overlay_requirements(installed):
+    root, env, runtime = installed
+    python = str(runtime / "bin/python")
+    assert "--harness" in run([python, "-m", "tools.configure_harness", "--help"], root, env)
+    code = '''
+import json
+from pathlib import Path
+import base_harness.miniswe.agent as agent
+from eval.containers import harness_runtime
+root = Path(agent.__file__).parent
+manifest = json.loads((root / "harness.json").read_text())
+assert manifest["runtime_paths"] == []
+assert manifest["install"] == "requirements.txt"
+assert manifest["env_kinds"] == ["files", "exec"]
+assert harness_runtime.install_spec(root)[1] == "requirements.txt"
+assert (root / "requirements.txt").read_text().splitlines() == ["mini-swe-agent==2.4.6", "litellm==1.75.9"]
+'''
+    run([python, "-c", code], root, env)
 
 
 def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
