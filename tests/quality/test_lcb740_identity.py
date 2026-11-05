@@ -11,7 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tools import lcb740_identity as gate
+from tests.support.reproducibility import lcb740_identity as gate
 
 
 @pytest.fixture
@@ -188,7 +188,7 @@ def test_printable_unicode_and_maximum_custodian_are_valid(statement, custodian)
 
 
 def test_launcher_cannot_accept_caller_attestation_receipt(statement, tmp_path):
-    from tools.launch_lcb740_candidate import launch
+    from tests.support.reproducibility.launch_lcb740_candidate import launch
 
     with pytest.raises(TypeError, match="row_identity"):
         launch(agent=b"# offline fixture", statement=statement, tests=b"{}",
@@ -207,7 +207,7 @@ def test_launcher_cannot_accept_caller_attestation_receipt(statement, tmp_path):
 ])
 def test_launcher_rejects_invalid_attestation_before_relay(
         statement, tmp_path, monkeypatch, metadata, approval):
-    from tools import launch_lcb740_candidate as launcher
+    from tests.support.reproducibility import launch_lcb740_candidate as launcher
 
     def forbidden_relay(*args, **kwargs):
         raise AssertionError("identity failure must precede relay/model access")

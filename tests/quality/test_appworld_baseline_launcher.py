@@ -10,7 +10,7 @@ import pytest
 
 from tools import appworld_campaign_state as state
 from tools import launch_appworld_harness_baselines as launcher
-from tools import run_appworld_harness_campaign as campaign
+from tests.support.reproducibility import run_appworld_harness_campaign as campaign
 
 
 def write(path, value):

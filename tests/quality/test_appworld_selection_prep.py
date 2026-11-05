@@ -8,7 +8,7 @@ import pytest
 
 from tools import appworld_campaign_state as state
 from tools import prepare_appworld_selection as prep
-from tools import run_appworld_harness_campaign as campaign
+from tests.support.reproducibility import run_appworld_harness_campaign as campaign
 
 
 @pytest.fixture

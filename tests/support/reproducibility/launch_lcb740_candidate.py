@@ -16,11 +16,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from eval.service.separated_stdio import PYTHON, namespace_command, read_regular, run_bounded, score
 from eval.service.unix_model_relay import Relay
-from tools.lcb740_identity import identity
+from tests.support.reproducibility.lcb740_identity import identity
 
 
 def workspace_path(path):

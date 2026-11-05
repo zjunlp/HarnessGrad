@@ -13,7 +13,7 @@ import subprocess
 import sys
 import uuid
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.appworld_campaign_state import (POOLS, SELECTION_SCHEMA, RecoveryError,
