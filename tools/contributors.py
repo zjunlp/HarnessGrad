@@ -35,7 +35,9 @@ release, so the honest date available is the record's.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -123,9 +125,17 @@ def problems(record: dict) -> list[str]:
         path = ROOT / entry["path"]
         if not path.exists():
             found.append(f"platform/{entry.get('name')}: path does not exist: {entry['path']}")
+    try:
+        datetime.date.fromisoformat(record.get("updated", ""))
+    except (TypeError, ValueError):
+        found.append("invalid updated date")
     for entry in entries(record):
-        if not entry.get("since", "").startswith("20"):
-            found.append(f"{entry['kind']}/{entry.get('name')}: no since month")
+        try:
+            value = entry.get("since", "")
+            if len(value) != 10 or datetime.date.fromisoformat(value).isoformat() != value:
+                raise ValueError
+        except (TypeError, ValueError):
+            found.append(f"{entry['kind']}/{entry.get('name')}: invalid since date")
     for person in record.get("people") or []:
         if not person.get("handle") or not person.get("name"):
             found.append("a person has no handle or no name")
@@ -161,22 +171,37 @@ def _kind_counts(items: list[dict]) -> Counter:
     return Counter(entry["kind"] for entry in items)
 
 
-WINDOW_DAYS = 92
+WINDOW_DAYS = 30
 
 
-def _window(record: dict) -> list[str]:
-    """The last three months of days, ending at the record's own `updated` date.
+def _window(record: dict, as_of: str | None = None) -> list[str]:
+    """Thirty inclusive days ending at as_of, or the record date if unspecified.
 
     Fixed rather than data-driven: a chart whose axis ends where the data ends cannot show a
     quiet week, and a reader comparing two months needs the same window in both. Entries dated
-    before the window are counted in the total but not drawn.
+    before the window are included in the first day's cumulative value.
     """
-    import datetime
-
-    end = datetime.date.fromisoformat(record.get("updated") or "2026-11-03")
+    end = datetime.date.fromisoformat(as_of or record["updated"])
     start = end - datetime.timedelta(days=WINDOW_DAYS - 1)
     return [(start + datetime.timedelta(days=offset)).isoformat()
             for offset in range(WINDOW_DAYS)]
+
+
+def cumulative_series(items: list[dict], days: list[str]) -> dict[str, list[int]]:
+    """Cumulative credits as of each day, including credits before the window."""
+    if not days:
+        return {}
+    eligible = [entry for entry in items if entry['since'][:10] <= days[-1]]
+    result = {}
+    for handle, _ in totals(eligible):
+        dates = Counter(entry['since'][:10] for entry in eligible if entry['contributor'] == handle)
+        running = sum(count for date, count in dates.items() if date < days[0])
+        points = []
+        for date in days:
+            running += dates[date]
+            points.append(running)
+        result[handle] = points
+    return result
 
 
 def avatar_data_uri(handle: str) -> str | None:
@@ -242,7 +267,7 @@ def _label_layout(rows: list[tuple[str, float, int, str]],
     return [tuple(row) for row in placed]
 
 
-def render_svg(record: dict, board: str) -> str:
+def render_svg(record: dict, board: str, as_of: str | None = None) -> str:
     """One board as a growth curve: cumulative entries per contributor over time.
 
     A calendar says *when* something landed but reading growth out of it means counting
@@ -250,25 +275,16 @@ def render_svg(record: dict, board: str) -> str:
     and a flat segment is a true statement ("nobody added to this board for a week").
     """
     items = [entry for entry in entries(record) if entry["kind"] == board]
-    people = [handle for handle, _ in totals(items)]          # a contributor with no entry
-    if not people:                                            # on this board has no line
-        return (f'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="120">'
-                f'<text x="16" y="40" font-size="12" fill="#6e7781">No entries yet.</text></svg>')
-    days = _window(record)
-    import datetime
-
+    days = _window(record, as_of)
+    items = [entry for entry in items if entry['since'][:10] <= days[-1]]
+    series = cumulative_series(items, days)
+    people = list(series)
+    if not people:
+        return (f'<svg xmlns="http://www.w3.org/2000/svg" data-as-of="{days[-1]}" width="640" height="120">'
+                f'<text x="16" y="40" font-size="12" fill="#6e7781">No entries as of {days[-1]}.</text></svg>')
     colour = KIND_COLOURS[board]
     title = {"harness": "Harnesses", "method": "RSI methods", "benchmark": "Benchmarks"}[board]
-    series = {}
-    for handle in people:
-        running, points = 0, []
-        for day in days:
-            running += len([entry for entry in items
-                            if entry["contributor"] == handle and entry["since"][:10] == day])
-            points.append(running)
-        series[handle] = points
-    total = max(len([entry for entry in items if entry["contributor"] == handle])
-                for handle in people) or 1
+    total = max(points[-1] for points in series.values()) or 1
 
     left, top, right, bottom = 52, 58, 132, 46
     width, height = 900, 300
@@ -277,7 +293,7 @@ def render_svg(record: dict, board: str) -> str:
         return left + plot_w * (index / max(len(days) - 1, 1))
     def y_of(value: int) -> float:
         return top + plot_h * (1 - value / total)
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" data-as-of="{days[-1]}" width="{width}" height="{height}" '
              f'viewBox="0 0 {width} {height}" font-family="-apple-system,Segoe UI,Helvetica,'
              f'Arial,sans-serif" role="img" aria-label="{title} growth">',
              f'<rect width="{width}" height="{height}" fill="#ffffff"/>',
@@ -330,7 +346,7 @@ def render_svg(record: dict, board: str) -> str:
         parts.append(f'<text x="{label_x + 20}" y="{label_y + 17:.1f}" font-size="10" '
                      f'fill="#6e7781">{total} entries</text>')
     parts.append(f'<text x="16" y="{height - 8}" font-size="10" fill="#6e7781">'
-                 f'{days[0]} to {days[-1]}; the date is when an entry was adopted into the '
+                 f'30 days ending {days[-1]} (from {days[0]}); the date is when an entry was adopted into the '
                  f'record. The website has a draggable window.</text>')
     parts.append("</svg>")
     return "\n".join(parts)
@@ -385,8 +401,8 @@ def render_html(record: dict) -> str:
 <div class="bar">
   <label>Window
     <select id="win">
-      <option value="30">last 30 days</option>
-      <option value="90" selected>last 90 days</option>
+      <option value="30" selected>last 30 days</option>
+      <option value="90">last 90 days</option>
       <option value="180">last 180 days</option>
       <option value="0">everything</option>
     </select>
@@ -422,7 +438,7 @@ function windowDays() {
   const days = [...new Set(DATA.entries.map(e => e.since))].sort();
   const end = document.getElementById('end').value || days[days.length - 1];
   const last = day(end);
-  const start = span ? new Date(last.getTime() - (span - 1) * 86400000) : day(days[0]);
+  const start = span ? new Date(last.getTime() - (span - 1) * 86400000) : day(days.length && days[0] < end ? days[0] : end);
   const out = [];
   for (let d = start; d <= last; d = new Date(d.getTime() + 86400000)) out.push(iso(d));
   return out;
@@ -434,7 +450,7 @@ function draw() {
   const host = document.getElementById('panels');
   host.innerHTML = '';
   for (const [kind, title, colour] of boards) {
-    const items = DATA.entries.filter(e => e.kind === kind && e.since >= days[0] && e.since <= days[days.length - 1]);
+    const items = DATA.entries.filter(e => e.kind === kind && e.since <= days[days.length - 1]);
     const people = [...new Set(items.map(e => e.contributor))];
     const panel = document.createElement('div'); panel.className = 'panel';
     const h = document.createElement('h2'); h.textContent = title + ' — ' + items.length + ' entries'; panel.appendChild(h);
@@ -458,20 +474,20 @@ function draw() {
     }
     const labels = [];
     people.forEach((handle, row) => {
-      let running = 0;
+      let running = items.filter(e => e.contributor === handle && e.since < days[0]).length;
       const pts = [];
-      const counts = [];
+      const counts = [], cumulative = [];
       days.forEach((d, i) => { const n = items.filter(e => e.contributor === handle && e.since === d).length;
-        running += n; pts.push([X(i), Y(running)]); counts.push(n); });
+        running += n; pts.push([X(i), Y(running)]); counts.push(n); cumulative.push(running); });
       const poly = add('path', {d: pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' '),
                                 fill: 'none', stroke: colour, 'stroke-width': 2});
       if (people.length > 1) poly.setAttribute('stroke-dasharray', ['', '5 3', '2 3'][row % 3]);
-      days.forEach((d, i) => { if (counts[i]) {
+      days.forEach((d, i) => { if (counts[i] || (i === 0 && cumulative[i])) {
         const c = add('circle', {cx: pts[i][0], cy: pts[i][1], r: 3.2, fill: colour});
         const names = items.filter(e => e.contributor === handle && e.since === d).map(e => e.name);
         c.addEventListener('mousemove', ev => {
           tip.style.opacity = 1; tip.style.left = (ev.clientX + 12) + 'px'; tip.style.top = (ev.clientY + 12) + 'px';
-          tip.innerHTML = '<b>' + d + ' · @' + handle + '</b><br>' + names.length + ' entr' +
+          tip.innerHTML = '<b>' + d + ' · @' + handle + '</b><br>cumulative ' + cumulative[i] + '<br>' + names.length + ' entr' +
             (names.length === 1 ? 'y' : 'ies') + ': ' + names.slice(0, 8).join(', ') +
             (names.length > 8 ? ' and ' + (names.length - 8) + ' more' : '');
         });
@@ -513,7 +529,7 @@ function draw() {
   }
 }
 const all = [...new Set(DATA.entries.map(e => e.since))].sort();
-document.getElementById('end').value = all[all.length - 1];
+document.getElementById('end').value = new Date().toISOString().slice(0, 10);
 document.getElementById('win').addEventListener('change', draw);
 document.getElementById('board').addEventListener('change', draw);
 document.getElementById('end').addEventListener('change', draw);
@@ -523,31 +539,15 @@ draw();
 
 
 def render_block(record: dict) -> str:
-    """The whole generated block: graph, totals, and the one board that stays a ranking."""
-    items = entries(record)
-    order = totals(items)
-    rows = ["| # | contributor | contributed |", "| --- | --- | --- |"]
-    for rank, (handle, count) in enumerate(order, start=1):
-        rows.append(f"| {rank} | [@{handle}](https://github.com/{handle}) | "
-                    f"[{count}]({DETAILS.relative_to(ROOT).as_posix()}#{handle.lower()}) |")
+    """The README's generated block contains the three figures only."""
     body = "\n".join([
         f"![Harnesses: who contributed, by day]({FIGURES['harness'].relative_to(ROOT).as_posix()})",
         "",
         f"![RSI methods: who contributed, by day]({FIGURES['method'].relative_to(ROOT).as_posix()})",
         "",
         f"![Benchmarks: who contributed, by day]({FIGURES['benchmark'].relative_to(ROOT).as_posix()})",
-        "",
-        "One calendar per board: a column per day over a fixed 92-day window, a row per "
-        "contributor, and a cell whose tooltip names what landed that day. A row of zeroes is "
-        "information — this person has not contributed to this board yet — so every row is "
-        "kept. The right-hand column repeats the total. "
-        f"[Every entry, per person]({DETAILS.relative_to(ROOT).as_posix()}) is a list; "
-        f"[The interactive page]({SITE}) is the same record with a draggable window and hover "
-        "tooltips — it is published from `docs/contributors.html`.",
-        "",
-        *rows,
     ])
-    return "\n".join([BEGIN, body, "", *render_results(record), END])
+    return "\n".join([BEGIN, body, END])
 
 
 def render_details(record: dict) -> str:
@@ -622,14 +622,44 @@ def _block(text: str, begin: str, end: str) -> str | None:
     return text[text.index(begin):text.index(end) + len(end)]
 
 
+def utc_today() -> str:
+    """UTC snapshot date, factored out so tests can freeze the clock."""
+    return datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+
+
+def snapshot_date(path: Path) -> str | None:
+    """Read a valid snapshot date embedded in a generated SVG, if present."""
+    if not path.is_file():
+        return None
+    match = re.match(r'<svg\b[^>]*\bdata-as-of="(\d{4}-\d{2}-\d{2})"',
+                     path.read_text(encoding='utf-8'))
+    if not match:
+        return None
+    value = match.group(1)
+    try:
+        return value if datetime.date.fromisoformat(value).isoformat() == value else None
+    except ValueError:
+        return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--as-of", help="UTC snapshot date (YYYY-MM-DD); defaults to today on write")
     args = parser.parse_args()
-    if not (args.write or args.check):
-        parser.error("one of --write or --check is required")
+    if args.write == args.check:
+        parser.error("exactly one of --write or --check is required")
+    today = utc_today()
+    if args.as_of:
+        try:
+            if datetime.date.fromisoformat(args.as_of).isoformat() != args.as_of:
+                raise ValueError
+        except ValueError:
+            parser.error("--as-of must be a valid YYYY-MM-DD date")
+        if args.as_of > today:
+            parser.error("--as-of cannot be in the future")
 
     data = record()
     found = problems(data)
@@ -639,7 +669,17 @@ def main() -> int:
         return 2
 
     block = render_block(data)
-    svgs = {board: render_svg(data, board) for board in FIGURES}
+    snapshot = args.as_of or today
+    if args.check:
+        dates = {snapshot_date(path) for path in FIGURES.values()}
+        if len(dates) != 1 or None in dates:
+            print("stale: missing, invalid or mismatched SVG snapshot dates; run python3 tools/contributors.py --write", file=sys.stderr)
+            return 1
+        snapshot = dates.pop()
+        if snapshot > today or (args.as_of and snapshot != args.as_of):
+            print("stale: SVG snapshot date is in the future or does not match --as-of", file=sys.stderr)
+            return 1
+    svgs = {board: render_svg(data, board, snapshot) for board in FIGURES}
     details = render_details(data)
     page = render_html(data)
 
@@ -667,7 +707,8 @@ def main() -> int:
     existing = _block(readme, BEGIN, END)
     if existing is None:
         raise SystemExit(f"error: the README has no block starting with {BEGIN!r}")
-    README.write_text(readme.replace(existing, block), encoding="utf-8")
+    readme = readme.replace(existing, block)
+    README.write_text(readme, encoding="utf-8")
     for board, path in FIGURES.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(svgs[board], encoding="utf-8")

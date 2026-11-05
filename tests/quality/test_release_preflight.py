@@ -56,8 +56,12 @@ def test_live_agent_configuration_is_checked_locally_and_redacted(monkeypatch):
 
 def test_known_published_method_requires_editor_before_h0():
     rows = readiness.configuration_checks(args('dgm'))
-    assert len(rows)==1 and rows[0].name=='method' and not rows[0].ok
-    assert 'HG_METHOD_' in rows[0].detail
+    by_name = {row.name: row for row in rows}
+    assert set(by_name) == {'editor', 'method'}
+    assert by_name['editor'].required and not by_name['editor'].ok
+    assert 'HG_METHOD_' in by_name['editor'].detail
+    assert by_name['method'].ok
+    assert 'checked separately' in by_name['method'].detail
 
 
 def test_local_configuration_check_never_connects(monkeypatch):
@@ -251,9 +255,30 @@ def driver(tmp_path,method='noop',run_id='control',extra=(),env=None,rounds=2):
 def test_published_missing_editor_refuses_before_any_paid_baseline(tmp_path):
     result=driver(tmp_path,method='dgm',extra=('--fail-on-incomplete',))
     assert result.returncode==2,result.stdout+result.stderr
-    assert 'before H0' in result.stderr
-    assert not list((tmp_path/'runs').rglob('curve.jsonl'))
+    # The earlier method_checks gate refuses even before task loading, so it need
+    # not use the later gate's specific wording. Its action and timing are the contract.
+    assert 'refusing editor:' in result.stderr
+    assert 'HG_METHOD_BASE_URL' in result.stderr
+    assert not (tmp_path/'runs').exists()
     assert not (tmp_path/'work').exists()
+
+
+def test_editor_gate_precedes_task_loading_and_paid_calls(tmp_path, monkeypatch):
+    import driver as entry
+    monkeypatch.setattr(entry, 'load_env', lambda *_: {})
+    monkeypatch.setattr(entry.datasets, 'load_split',
+                        lambda *_: pytest.fail('dataset must not load before editor refusal'))
+    monkeypatch.setattr(entry, '_probe_tool_calls',
+                        lambda *_args, **_kwargs: pytest.fail('model must not be called'))
+    monkeypatch.setattr(entry, 'evaluate',
+                        lambda *_args, **_kwargs: pytest.fail('H0 must not start'))
+    monkeypatch.setattr(sys, 'argv', ['driver.py', '--dataset', 'demo', '--harness', 'loop',
+        '--sampling', 'all', '--rounds', '1', '--method-entrypoint',
+        f'{sys.executable} {ROOT}/methods/dgm/run.py', '--improver', 'none',
+        '--run-id', 'missing-editor', '--runs-root', str(tmp_path/'runs'),
+        '--work-root', str(tmp_path/'work')])
+    assert entry.main() == 2
+    assert not (tmp_path/'runs').exists() and not (tmp_path/'work').exists()
 
 
 def test_check_only_bad_endpoint_is_required_failure_and_leaves_no_run(tmp_path):

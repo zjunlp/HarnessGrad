@@ -1165,6 +1165,8 @@ def api_traces(run_id: str, n: int) -> dict | None:
                 ev = json.loads(line)
             except ValueError:
                 continue
+            if not isinstance(ev, dict):
+                continue
             step = as_int(ev.get("step"))
             if step is not None:
                 steps = max(steps, step + 1)
@@ -1193,19 +1195,28 @@ def api_trace(run_id: str, n: int, name: str) -> dict | None:
     task_id, trial = _task_of(target.stem)
     verdict = _verdict(path, task_id, n)
     events: list[dict] = []
-    for line in target.read_text(encoding="utf-8", errors="replace").splitlines():
-        line = line.strip()
-        if not line:
+    for line_no, line in enumerate(target.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if not line.strip():
             continue
         try:
             ev = json.loads(line)
         except ValueError:
-            continue
-        if "harness_identity" in ev:
+            ev = None
+            parsed = False
+        else:
+            parsed = True
+        if not parsed:
+            events.append({"kind": "raw", "line": line_no, "text": line})
+        elif not isinstance(ev, dict):
+            events.append({"kind": "structured", "line": line_no, "value": ev})
+        elif "harness_identity" in ev:
             events.append({"kind": "identity", "config": ev["harness_identity"]})
         elif "reply" in ev:
+            reply = ev.get("reply")
+            text = reply if isinstance(reply, str) else json.dumps(reply, ensure_ascii=False)
             events.append({"kind": "reply", "step": ev.get("step"), "model_ms": ev.get("model_ms"),
-                           "text": str(ev.get("reply") or "")[:8000]})
+                           "text": text[:8000], "truncated": len(text) > 8000,
+                           "note": f"显示前 8000 字符（原文 {len(text)} 字符）" if len(text) > 8000 else ""})
         elif "command" in ev:
             out = str(ev.get("output") or "")
             events.append({"kind": "command", "step": ev.get("step"), "command": ev.get("command"),
@@ -1223,6 +1234,9 @@ def api_trace(run_id: str, n: int, name: str) -> dict | None:
         elif "context_trims" in ev:
             events.append({"kind": "meta", "label": "context trims",
                            "value": f"{ev.get('context_trims')} 次（保留 {ev.get('history_kept')} 条）"})
+        else:
+            # Preserve newer harness schemas instead of silently dropping their events.
+            events.append({"kind": "structured", "line": line_no, "value": ev})
         if len(events) >= 1200:
             events.append({"kind": "meta", "label": "截断", "value": "事件超过 1200 条，只显示前 1200 条"})
             break

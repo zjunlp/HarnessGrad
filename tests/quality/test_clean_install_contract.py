@@ -25,6 +25,9 @@ RESOURCES = (
     "base_harness/loop/requirements.txt",
     "scenarios/demo-smoke.json",
     "data/aggregation_policies.json",
+    "data/scaffolds/qa/cli/qa",
+    "data/scaffolds/qa/prediction.schema.json",
+    "data/scaffolds/qa/verify/check.py",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
@@ -135,6 +138,43 @@ assert aggregation_policy('demo', 'run_reward')
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
+
+
+def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
+    """Exercise installed adapter SETUP and isolated verifier without released tasks.
+
+    Patching only the adapter's table reader gives it one synthetic record per split;
+    the production CLI, scorer, input projection and gold checks are not mocked.
+    """
+    root, env, runtime = installed
+    code = r'''
+import json, shutil, subprocess, sys
+from pathlib import Path
+from data.scaffolds.qa import base
+base.parquet_rows = lambda path: [{"question": "Synthetic: two plus three?", "answer": "#### 5"}]
+from data.datasets import gsm8k
+records, _ = gsm8k.load()
+task = records[0]
+work = Path("installed-gsm8k-test")
+work.mkdir()
+for item in gsm8k.SETUP[task["task_id"]]["files"] + gsm8k.VERIFY[task["task_id"]]["inputs"]:
+    destination = work / item["path"]
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if "content" in item:
+        destination.write_text(item["content"])
+    else:
+        shutil.copy2(item["from"], destination)
+subprocess.run([sys.executable, "qa/bin/qa", "submit", "5"], cwd=work, check=True)
+verifier = gsm8k.VERIFY[task["task_id"]]
+check = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=work,
+                       capture_output=True, text=True)
+assert check.returncode == 0, check.stdout + check.stderr
+assert float((work / "verifier/reward.txt").read_text()) == 1.0
+print("installed synthetic GSM8K SETUP and scorer: ok")
+'''
+    configured = {**env, "HG_DATA_GSM8K": str(root / "synthetic-gsm8k")}
+    output = run([str(runtime / "bin/python"), "-c", code], root, configured)
+    assert "installed synthetic GSM8K SETUP and scorer: ok" in output
 
 
 def test_installer_python_floor_diagnostic():

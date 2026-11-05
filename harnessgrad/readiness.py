@@ -280,7 +280,7 @@ def configuration_checks(args):
                 paths = [p for values in modules.values() for p in values]
                 if len(paths)!=len(set(paths)) or any(not _resource(root,p) for p in paths):
                     error = 'ModularRSI modules need disjoint existing harness files'
-        checks.append(Check('method', True, not error, error or f"{method['name']}: editor and local requirements configured"))
+        checks.append(Check('method', True, not error, error or f"{method['name']}: local requirements configured; editor checked separately"))
     except (OSError, ValueError, TypeError, AttributeError) as exc:
         checks.append(Check('method', True, False, f'method configuration is invalid ({type(exc).__name__})'))
     return checks

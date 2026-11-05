@@ -28,8 +28,8 @@
 <div class="bar">
   <label>Window
     <select id="win">
-      <option value="30">last 30 days</option>
-      <option value="90" selected>last 90 days</option>
+      <option value="30" selected>last 30 days</option>
+      <option value="90">last 90 days</option>
       <option value="180">last 180 days</option>
       <option value="0">everything</option>
     </select>
@@ -65,7 +65,7 @@ function windowDays() {
   const days = [...new Set(DATA.entries.map(e => e.since))].sort();
   const end = document.getElementById('end').value || days[days.length - 1];
   const last = day(end);
-  const start = span ? new Date(last.getTime() - (span - 1) * 86400000) : day(days[0]);
+  const start = span ? new Date(last.getTime() - (span - 1) * 86400000) : day(days.length && days[0] < end ? days[0] : end);
   const out = [];
   for (let d = start; d <= last; d = new Date(d.getTime() + 86400000)) out.push(iso(d));
   return out;
@@ -77,7 +77,7 @@ function draw() {
   const host = document.getElementById('panels');
   host.innerHTML = '';
   for (const [kind, title, colour] of boards) {
-    const items = DATA.entries.filter(e => e.kind === kind && e.since >= days[0] && e.since <= days[days.length - 1]);
+    const items = DATA.entries.filter(e => e.kind === kind && e.since <= days[days.length - 1]);
     const people = [...new Set(items.map(e => e.contributor))];
     const panel = document.createElement('div'); panel.className = 'panel';
     const h = document.createElement('h2'); h.textContent = title + ' — ' + items.length + ' entries'; panel.appendChild(h);
@@ -101,20 +101,20 @@ function draw() {
     }
     const labels = [];
     people.forEach((handle, row) => {
-      let running = 0;
+      let running = items.filter(e => e.contributor === handle && e.since < days[0]).length;
       const pts = [];
-      const counts = [];
+      const counts = [], cumulative = [];
       days.forEach((d, i) => { const n = items.filter(e => e.contributor === handle && e.since === d).length;
-        running += n; pts.push([X(i), Y(running)]); counts.push(n); });
+        running += n; pts.push([X(i), Y(running)]); counts.push(n); cumulative.push(running); });
       const poly = add('path', {d: pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' '),
                                 fill: 'none', stroke: colour, 'stroke-width': 2});
       if (people.length > 1) poly.setAttribute('stroke-dasharray', ['', '5 3', '2 3'][row % 3]);
-      days.forEach((d, i) => { if (counts[i]) {
+      days.forEach((d, i) => { if (counts[i] || (i === 0 && cumulative[i])) {
         const c = add('circle', {cx: pts[i][0], cy: pts[i][1], r: 3.2, fill: colour});
         const names = items.filter(e => e.contributor === handle && e.since === d).map(e => e.name);
         c.addEventListener('mousemove', ev => {
           tip.style.opacity = 1; tip.style.left = (ev.clientX + 12) + 'px'; tip.style.top = (ev.clientY + 12) + 'px';
-          tip.innerHTML = '<b>' + d + ' · @' + handle + '</b><br>' + names.length + ' entr' +
+          tip.innerHTML = '<b>' + d + ' · @' + handle + '</b><br>cumulative ' + cumulative[i] + '<br>' + names.length + ' entr' +
             (names.length === 1 ? 'y' : 'ies') + ': ' + names.slice(0, 8).join(', ') +
             (names.length > 8 ? ' and ' + (names.length - 8) + ' more' : '');
         });
@@ -156,7 +156,7 @@ function draw() {
   }
 }
 const all = [...new Set(DATA.entries.map(e => e.since))].sort();
-document.getElementById('end').value = all[all.length - 1];
+document.getElementById('end').value = new Date().toISOString().slice(0, 10);
 document.getElementById('win').addEventListener('change', draw);
 document.getElementById('board').addEventListener('change', draw);
 document.getElementById('end').addEventListener('change', draw);

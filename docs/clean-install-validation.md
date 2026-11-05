@@ -37,8 +37,11 @@ ship, verifies every tracked local component/entrypoint/install file declared by
 each shipped harness manifest, and checks the launcher executable bit. Absolute
 runtime paths and generated/untracked outputs are not shipping obligations. The
 build itself requires no Git; only the test uses Git to construct its fixture.
-**The supported/validated installed execution scope here is only the demo.**
-This curated list does not ship adapter assets or `data/runtimes/*-native.json`:
+**The sandboxed installed execution validated here is the demo.** A separate offline
+installed-wheel test exercises synthetic GSM8K setup, submission and scoring; it does
+not run released dataset rows or a sandboxed benchmark. See the bounded
+[adapter resource inventory](wheel-adapter-resource-inventory.md).
+This curated list does not ship all adapter assets or `data/runtimes/*-native.json`:
 the wheel cannot run affected external adapters as a complete platform deployment.
 For those, use a reviewed checkout and their own provisioning/readiness gates;
 catalog visibility is not install support or authorization. No native manifest
