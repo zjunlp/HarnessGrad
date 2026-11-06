@@ -18,10 +18,12 @@ mismatches remain measured zero. Shared, array and data-table formula groups are
 refused because their dependent caches cannot all be invalidated by this path.
 
 The [authored control](../../../tests/fixtures/hg_spreadrt/synthetic_control.py)
-creates two arithmetic formulas with stale caches `[999, 888]` and requires fresh
-values `[5, 10]`, reward 1 and verified scorer-input binding. It reads no released
-dataset records. Run it with a new external work directory as its argument,
-`openpyxl`, LibreOffice at `/usr/bin/soffice`, an isolated Linux network namespace
+creates two arithmetic formulas with stale caches `[999, 888]`. The scorer
+recalculates a private copy to compare `[5, 10]`; the control requires reward 1,
+verified scorer-input binding, and the original workbook's bytes and caches to
+remain unchanged. It reads no released dataset records. Run it with a new external
+work directory as its argument, `openpyxl`, LibreOffice at `/usr/bin/soffice`,
+an isolated Linux network namespace with loopback enabled and no external routes,
 and `SPREADRT_PARENT_NETNS` set to the launcher's network namespace identifier.
 
 Cache freshness does not establish general formula correctness or Excel/LibreOffice
