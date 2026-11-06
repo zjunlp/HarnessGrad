@@ -106,6 +106,11 @@ value:
 | `ace`, `adas`, `evoprompt`, `gepa`, `opro`, `skillopt` | `method-<name>.json` | `miniagent` | an improver **and** an instruction file: these six rewrite the harness's prompt/skill text, and `loop` ships no prompt, so the method refuses before any model call with "declare instruction_path in `HG_POLICY_CONFIG`". `miniagent` has exactly one of the four files the port looks for (`prompts/system.md`); any harness with one of `prompts/system.md`, `prompt.md`, `CLAUDE.md`, `AGENTS.md` works. |
 | `modular_rsi` | `method-modular_rsi.json` | `loop` | an improver **and** a module map: `HG_POLICY_CONFIG='{"modules": {"core": ["agent.py"]}}'` (plus `--trials >= 2`). The map is a judgement about the harness being improved, so no preset can carry it; the method refuses with a named error instead of guessing one. |
 
+The six MiniAgent recipes use its [managed CPython 3.12 environment](../base_harness/miniagent/README.md).
+Prepare its complete lock with `python tools/configure_harness.py --harness base_harness/miniagent --fetch`
+before the first run when wheels are not cached. Candidate preparation is offline;
+MiniAgent requires sandboxed native `files` tasks and refuses `--no-sandbox`.
+
 `HG_AGENT_BACKEND=mock` mocks the harness's agent model and nothing else, so **none of the
 ten reaches round 1 model-free**: nine stop at H0 with the endpoint message above,
 `modular_rsi` stops with the module-map error. `tests/quality/test_method_presets_run.py`

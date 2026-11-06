@@ -138,8 +138,10 @@ it does not seal the operating system or hash every system library.
 The current route supports **sandboxed native `files` tasks**. Container/`exec`,
 observed or cooperative workers, `agent_runtime` projections, external
 `runtime_paths` and `--no-sandbox` are refused. Existing Harnesses without
-`runtime.kind="python"` keep their legacy runtime behavior; shipped base
-Harnesses have not been migrated by this change.
+`runtime.kind="python"` keep their legacy runtime behavior.
+[MiniAgent](../base_harness/miniagent/README.md) is the first shipped base Harness
+using this route, with a complete CPython 3.12 lock and an isolated native worker.
+Other base Harnesses retain their declared runtime setup.
 
 Each measured point records `harness_runtime_identity`, including owned source
 bytes and its exact dependency artifact. The source fingerprint also covers

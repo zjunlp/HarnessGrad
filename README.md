@@ -89,7 +89,8 @@ library; a dataset, a harness or a search provider may need more, and each recip
 `./install.sh` installs missing system prerequisites and verifies the sandbox boundary.
 
 Python Harnesses can opt into [their own managed environment](docs/writing_a_harness.md#21-managed-python-dependencies)
-for sandboxed native `files` tasks. Existing base Harness recipes still use their declared legacy overlays.
+for sandboxed native `files` tasks. [MiniAgent](base_harness/miniagent/README.md)
+uses this route; other base Harness recipes retain their declared runtime setup.
 
 ```bash
 HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --check-only

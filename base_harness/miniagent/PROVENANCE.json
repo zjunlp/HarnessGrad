@@ -35,6 +35,7 @@
     "agent.py",
     "bridge.py",
     "requirements.txt",
+    "requirements.lock",
     "harness.json",
     "README.md"
   ]

@@ -94,12 +94,11 @@ def timeout_seconds(env: dict) -> float:
 
 def child_environment(parent: dict, scratch: Path) -> dict:
     excluded = {'OPENAI_API_KEY', 'OPENAI_BASE_URL', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY',
-                'PYTHONHOME', 'CODEX_HOME'}
+                'PYTHONHOME', 'PYTHONPATH', 'PYTHONUSERBASE', 'CODEX_HOME'}
     env = {k: v for k, v in parent.items()
            if not k.startswith(('HG_METHOD_', 'HG_ENV_')) and k not in excluded}
-    # The platform injects its declared dependency overlay through PYTHONPATH.
-    # Its sandbox already removes paths into the hidden platform tree. Dropping
-    # this here would silently make the native worker depend on host packages.
+    # Both processes use the bound venv. Candidate imports are added explicitly
+    # by bridge.py; ambient overlays and user packages cannot supply dependencies.
     for key, directory in {'HOME': 'home', 'XDG_CONFIG_HOME': 'config',
                            'XDG_CACHE_HOME': 'cache', 'XDG_DATA_HOME': 'data',
                            'TMPDIR': 'tmp'}.items():
@@ -145,7 +144,7 @@ def run(task: dict, work: Path) -> int:
         tag in k.upper() for tag in ('API_KEY', 'SECRET', 'PASSWORD', 'ACCESS_TOKEN'))],
         key=len, reverse=True)
     _record(trace, {'harness_identity': {
-        'harness': 'miniagent', 'harness_version': '0.1.0', 'agent_model': model,
+        'harness': 'miniagent', 'harness_version': '0.2.0', 'agent_model': model,
         'agent_backend': backend, 'flashrsi_commit': SOURCE_COMMIT,
         'config': {'base_url': base, 'step_limit': turns, 'max_tokens': tokens,
                    'context_window': context, 'runtime': 'candidate-owned Python'}},
@@ -163,7 +162,7 @@ def run(task: dict, work: Path) -> int:
                    'secrets': secrets}
         log_path = scratch / 'worker.log'
         with log_path.open('w', encoding='utf-8') as log:
-            proc = subprocess.Popen([sys.executable, '-B', str(ROOT / 'bridge.py')],
+            proc = subprocess.Popen([sys.executable, '-I', '-B', str(ROOT / 'bridge.py')],
                                     cwd=work, env=child_environment(env, scratch),
                                     stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
                                     text=True, encoding='utf-8', errors='replace',

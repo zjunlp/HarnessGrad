@@ -9,20 +9,78 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import sys
+import tempfile
 import threading
+from types import SimpleNamespace
 
 import pytest
+
+from eval.containers import sandbox
+from eval.service.native_model_route import NativeModelRoute
+from harnessgrad import config
+from harnessgrad import python_harness_runtime as runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / 'base_harness' / 'miniagent'
 
 
-def invoke(tmp_path, *, harness=HARNESS, task=None, env=None):
+@pytest.fixture(scope='module')
+def miniagent_store():
+    """Real wheels, offline only; never install SDKs in pytest's platform env."""
+    if not shutil.which('uv') or not shutil.which('bwrap'):
+        pytest.skip('MiniAgent integration requires uv and bubblewrap')
+    root = Path(tempfile.mkdtemp(prefix='hg-miniagent-test-', dir=Path.home() / '.cache'))
+    try:
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
+            patch.setenv('UV_OFFLINE', '1')
+            patch.delenv('HG_HARNESS_WHEELHOUSE', raising=False)
+            config.reset()
+            try:
+                runtime.prepare(HARNESS, root=root / 'store')
+            except runtime.RuntimeUnavailable as exc:
+                # An empty wheel cache or missing Python is a missing test
+                # prerequisite. Lock conflicts and actual preparation bugs fail.
+                if any(text in str(exc) for text in (
+                        'not found in the cache', 'not cached', 'No interpreter found',
+                        'No interpreter matching')):
+                    pytest.skip('Prepare MiniAgent with configure_harness.py --fetch first: ' + str(exc))
+                raise
+        yield root
+    finally:
+        config.reset()
+        runtime.remove_instance(root)
+
+
+@pytest.fixture
+def managed_miniagent(miniagent_store, monkeypatch, tmp_path):
+    for key in list(os.environ):
+        if key.startswith(('HG_AGENT_', 'HG_METHOD_', 'HG_HARNESS_')):
+            monkeypatch.delenv(key)
+    monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
+    monkeypatch.setenv('HG_HARNESS_RUNTIME_ROOT', str(miniagent_store / 'store'))
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    monkeypatch.setenv('HG_AGENT_MAX_STEPS', '3')
+    monkeypatch.setenv('UV_OFFLINE', '1')
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(tmp_path))
+    config.reset()
+    try:
+        yield SimpleNamespace(binding=runtime.identity(HARNESS), root=miniagent_store)
+    finally:
+        config.reset()
+
+
+@pytest.fixture
+def invoke(managed_miniagent):
+    return _invoke
+
+
+def _invoke(tmp_path, *, harness=HARNESS, task=None, env=None):
+    """Retain work artifacts while executing only inside the real sandbox."""
     work = tmp_path / 'work'
     work.mkdir(parents=True, exist_ok=True)
-    task_file = tmp_path / 'task.json'
+    task_file = work / 'task.json'
     task_file.write_text(json.dumps(task or {'task_id': 'adapter-smoke', 'goal': 'Return the requested result.'}))
     child = dict(os.environ)
     for key in list(child):
@@ -30,9 +88,26 @@ def invoke(tmp_path, *, harness=HARNESS, task=None, env=None):
             child.pop(key)
     child.update(HG_AGENT_BACKEND='mock', HG_AGENT_MAX_STEPS='3')
     child.update(env or {})
-    proc = subprocess.run([sys.executable, str(harness / 'agent.py'), '--task', str(task_file),
-                           '--workdir', str(work)], env=child, capture_output=True,
-                          text=True, encoding='utf-8', errors='replace', timeout=20)
+    binding = runtime.identity(harness)
+    artifact = binding['artifact']
+    child['PATH'] = str(Path(artifact['python']).parent) + os.pathsep + os.defpath
+    child['HOME'] = str(work)
+    work_root = tmp_path / 'run-root'
+    work_root.mkdir()
+    child['HARNESSGRAD_WORK_ROOT'] = str(work_root)
+    route = (NativeModelRoute(child['HG_AGENT_BASE_URL']).start()
+             if child['HG_AGENT_BACKEND'] != 'mock' else None)
+    try:
+        proc = sandbox.run([artifact['python'], '-I', '-B', str(harness / 'agent.py'),
+                            '--task', str(task_file), '--workdir', str(work)],
+            platform=ROOT, work_root=work_root, task_dir=work, repo=harness,
+            env=child, cwd=work, timeout_s=20, platform_interpreter=False,
+            runtime_paths=tuple(Path(p) for p in artifact['runtime_paths']),
+            network='none', model_socket=route.socket_path if route else None,
+            model_path=route.path if route else '')
+    finally:
+        if route:
+            route.stop()
     trace = work / 'trace.jsonl'
     rows = [json.loads(line) for line in trace.read_text().splitlines()] if trace.exists() else []
     return proc, work, rows
@@ -56,7 +131,7 @@ def test_pinned_native_sources_are_unmodified():
 
 
 @pytest.mark.parametrize('model', ['miniagent-mock', 'gpt-5-mini'])
-def test_mock_uses_native_model_tool_observation_round_trip(tmp_path, model):
+def test_mock_uses_native_model_tool_observation_round_trip(tmp_path, model, invoke):
     proc, work, rows = invoke(tmp_path, env={'HG_AGENT_MODEL': model})
     assert proc.returncode == 0, proc.stderr
     assert (work / 'answer.txt').read_text() == 'MINIAGENT_MOCK\n'
@@ -71,7 +146,7 @@ def test_mock_uses_native_model_tool_observation_round_trip(tmp_path, model):
     assert any(row.get('submitted') and row['answer_source'] == 'artifact' for row in rows)
 
 
-def test_candidate_runtime_and_skills_are_the_files_that_execute(tmp_path):
+def test_candidate_runtime_and_skills_are_the_files_that_execute(tmp_path, invoke):
     candidate = tmp_path / 'candidate'
     shutil.copytree(HARNESS, candidate)
     tool = candidate / 'tools' / 'shell.py'
@@ -83,7 +158,7 @@ def test_candidate_runtime_and_skills_are_the_files_that_execute(tmp_path):
     assert any('miniagent_event' in row for row in rows)
 
 
-def test_file_submission_cannot_be_replaced_by_final_chat(tmp_path):
+def test_file_submission_cannot_be_replaced_by_final_chat(tmp_path, invoke):
     proc, work, rows = invoke(tmp_path, task={'task_id': 'file-smoke', 'goal': 'Write report.json.',
                              'submission': {'kind': 'files', 'paths': ['report.json']}})
     assert proc.returncode != 0
@@ -100,22 +175,25 @@ def test_existing_answer_is_not_credited_to_new_run(tmp_path):
     assert (tmp_path / 'answer.txt').read_text() == 'NEW'
 
 
-def test_native_worker_keeps_platform_dependency_overlay(tmp_path):
+def test_native_worker_refuses_ambient_dependency_overlay(tmp_path, invoke):
     candidate = tmp_path / 'candidate'
     shutil.copytree(HARNESS, candidate)
-    overlay = tmp_path / 'dependency-overlay'
-    overlay.mkdir()
+    overlay = tmp_path / 'work' / 'dependency-overlay'
+    overlay.mkdir(parents=True)
     (overlay / 'hg_overlay_dependency.py').write_text(
         "MARKER = 'OVERLAY_DEPENDENCY_LOADED'\n", encoding='utf-8')
     tool = candidate / 'tools' / 'shell.py'
     tool.write_text(tool.read_text().replace('command = args.get("command")',
-        'from hg_overlay_dependency import MARKER\n'
+        'try:\n'
+        '        from hg_overlay_dependency import MARKER\n'
+        '    except ModuleNotFoundError:\n'
+        '        MARKER = "ISOLATED_DEPENDENCIES"\n'
         '    command = args.get("command").replace("MINIAGENT_MOCK", MARKER)'),
         encoding='utf-8')
     proc, work, rows = invoke(tmp_path, harness=candidate,
                               env={'PYTHONPATH': str(overlay)})
     assert proc.returncode == 0, proc.stderr
-    assert (work / 'answer.txt').read_text() == 'OVERLAY_DEPENDENCY_LOADED\n'
+    assert (work / 'answer.txt').read_text() == 'ISOLATED_DEPENDENCIES\n'
 
 
 def test_symlink_submission_is_refused(tmp_path):
@@ -130,10 +208,12 @@ def test_symlink_submission_is_refused(tmp_path):
 def test_child_environment_is_fresh_and_method_credentials_are_removed(tmp_path):
     adapter = load_adapter()
     env = adapter.child_environment({'HOME': '/operator', 'OPENAI_API_KEY': 'private',
-            'HG_AGENT_API_KEY': 'selected', 'HG_METHOD_SECRET': 'method', 'HG_ENV_API_KEY': 'env'}, tmp_path)
+            'HG_AGENT_API_KEY': 'selected', 'HG_METHOD_SECRET': 'method', 'HG_ENV_API_KEY': 'env',
+            'PYTHONPATH': '/overlay', 'PYTHONHOME': '/platform', 'PYTHONUSERBASE': '/user'}, tmp_path)
     assert env['HOME'] == str(tmp_path / 'home')
     assert env['HG_AGENT_API_KEY'] == 'selected'
-    assert not any(key in env for key in ('OPENAI_API_KEY', 'HG_METHOD_SECRET', 'HG_ENV_API_KEY'))
+    assert not any(key in env for key in ('OPENAI_API_KEY', 'HG_METHOD_SECRET', 'HG_ENV_API_KEY',
+                                        'PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'))
 
 
 @contextmanager
@@ -170,7 +250,7 @@ def scripted_endpoint(*, omit_usage=False):
     finally: server.shutdown(); server.server_close()
 
 
-def test_live_sdk_primary_and_side_calls_share_selected_route_and_usage(tmp_path):
+def test_live_sdk_primary_and_side_calls_share_selected_route_and_usage(tmp_path, invoke):
     candidate = tmp_path / 'candidate'
     shutil.copytree(HARNESS, candidate)
     (candidate / 'middleware').mkdir()
@@ -194,7 +274,7 @@ def test_live_sdk_primary_and_side_calls_share_selected_route_and_usage(tmp_path
     assert 'selected-test-key' not in (work / 'trace.jsonl').read_text()
 
 
-def test_missing_provider_usage_is_unknown(tmp_path):
+def test_missing_provider_usage_is_unknown(tmp_path, invoke):
     with scripted_endpoint(omit_usage=True) as (base, requests):
         proc, work, rows = invoke(tmp_path, env={'HG_AGENT_BACKEND': 'openai',
             'HG_AGENT_MODEL': 'selected-model', 'HG_AGENT_BASE_URL': base})
@@ -203,7 +283,7 @@ def test_missing_provider_usage_is_unknown(tmp_path):
     assert usage == {'calls': 2, 'tokens_complete': False}
 
 
-def test_context_budget_refusal_does_not_make_an_http_call(tmp_path):
+def test_context_budget_refusal_does_not_make_an_http_call(tmp_path, invoke):
     with scripted_endpoint() as (base, requests):
         proc, work, rows = invoke(tmp_path, env={'HG_AGENT_BACKEND': 'openai',
             'HG_AGENT_MODEL': 'selected-model', 'HG_AGENT_BASE_URL': base,
@@ -213,12 +293,12 @@ def test_context_budget_refusal_does_not_make_an_http_call(tmp_path):
     assert any(row.get('error') for row in rows)
 
 
-def test_timeout_keeps_error_and_usage(tmp_path):
+def test_timeout_keeps_error_and_usage(tmp_path, invoke):
     candidate = tmp_path / 'candidate'
     shutil.copytree(HARNESS, candidate)
     tool = candidate / 'tools' / 'shell.py'
     tool.write_text(tool.read_text().replace('command = args.get("command")', 'command = "sleep 20"'))
-    proc, work, rows = invoke(tmp_path, harness=candidate, env={'HG_AGENT_MINIAGENT_TIMEOUT_S': '1'})
+    proc, work, rows = invoke(tmp_path, harness=candidate, env={'HG_AGENT_MINIAGENT_TIMEOUT_S': '8'})
     assert proc.returncode != 0
     assert any('timed out' in row.get('error', '') for row in rows)
     assert any('usage' in row for row in rows)
@@ -236,7 +316,7 @@ def test_answer_artifact_symlink_is_refused_before_read(tmp_path):
 
 
 @pytest.mark.skipif(not sys.platform.startswith('linux'), reason='Linux subreaper /proc check')
-def test_native_detached_background_service_is_reaped(tmp_path):
+def test_native_detached_background_service_is_reaped(tmp_path, invoke):
     candidate = tmp_path / 'candidate'
     shutil.copytree(HARNESS, candidate)
     tool = candidate / 'tools' / 'shell.py'
@@ -247,18 +327,23 @@ pathlib.Path('service.pid').write_text(str(p.pid))
 pathlib.Path('answer.txt').write_text('SERVICE_STARTED')
 '''
     import shlex
-    command = shlex.quote(sys.executable) + ' -c ' + shlex.quote(script)
+    command = 'python -I -B -c ' + shlex.quote(script)
     tool.write_text(tool.read_text().replace('command = args.get("command")', f'command = {command!r}'))
+    # Check the namespace PID while the adapter is still alive in that same
+    # namespace. Host /proc uses different PIDs and cannot establish this fact.
+    entry = candidate / 'agent.py'
+    entry.write_text(entry.read_text().replace("if __name__ == '__main__':", '''
+_original_run = run
+def run(task, work):
+    status = _original_run(task, work)
+    service = int((work / 'service.pid').read_text())
+    (work / 'service-reaped.txt').write_text(str(not Path(f'/proc/{service}').exists()))
+    return status
+
+if __name__ == '__main__':'''))
     proc, work, rows = invoke(tmp_path, harness=candidate)
     assert proc.returncode == 0, proc.stderr
-    service = int((work / 'service.pid').read_text())
-    try:
-        assert not Path(f'/proc/{service}').exists(), f'detached service {service} survived completion'
-    finally:
-        if Path(f'/proc/{service}').exists():
-            import signal
-            try: os.kill(service, signal.SIGKILL)
-            except ProcessLookupError: pass
+    assert (work / 'service-reaped.txt').read_text() == 'True'
 
 
 @pytest.mark.parametrize("tool,kind", [

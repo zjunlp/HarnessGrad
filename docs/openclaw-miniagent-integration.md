@@ -43,20 +43,22 @@ OpenClaw/Node 是只读运行依赖。此版本不能表述为“OpenClaw 整个
 
 ## 依赖钉住
 
-`miniagent` 的 manifest 声明了 `requirements.txt`（`openai==2.21.0`、`PyYAML==6.0.3`、
+`miniagent` 的 `requirements.txt` 保留直接依赖（`openai==2.21.0`、`PyYAML==6.0.3`、
 `requests==2.33.0` —— 从 2.32.2 升上来，因为 2.32.2 命中两条 Dependabot 告警：
 CVE-2024-47081（`.netrc` 凭据经恶意 URL 泄漏，修补于 2.32.4）和 CVE-2026-25645
 （`extract_zipped_paths()` 复用临时文件，修补于 2.33.0）。2.33.0 要求 Python >= 3.10，
-本平台是 3.12）。`files` 运行在没有 overlay 时会退回宿主解释器的 site-packages，并在运行
-开始时打印警告；建一次 overlay 就把它钉住，曲线点上的 `env.harness_runtime` 会从
-`source: platform` 变成 `source: overlay` 并带上 `install_sha256`：
+MiniAgent 声明 CPython 3.12）。Manifest 的 `runtime` 和 `install` 现在指向完整
+`requirements.lock`，由平台在测量前准备独立的只读依赖制品。首次需要下载 wheel 时显式使用：
 
 ```bash
-python3 tools/configure_harness.py --harness base_harness/miniagent
+python tools/configure_harness.py --harness base_harness/miniagent --fetch
 ```
 
-overlay 按「`requirements.txt` 内容 + 解释器版本」做键，放在仓库之外（`~/.cache/harnessgrad/overlays`），
-所以它不随分支合入；换机器重建一次即可。
+缓存齐全时省略 `--fetch`，后续候选准备默认离线。依赖制品保存在仓库之外的
+`~/.cache/harnessgrad/harness-runtimes`；每个测量点的 `harness_runtime_identity`
+绑定源码和实际制品，`env.harness_runtime.source` 为 `managed-python`。
+适配器和原生 worker 都使用绑定解释器及 `-I`，不再回退到平台包或 overlay。
+源码修改复用依赖，lock 修改准备新制品；旧制品必须保留到引用它的历史运行不再需要。
 
 ## 运行范围
 
@@ -73,7 +75,10 @@ overlay 按「`requirements.txt` 内容 + 解释器版本」做键，放在仓�
 
 ```bash
 export PYTHONDONTWRITEBYTECODE=1
-HG_AGENT_BACKEND=mock python3 tools/validate_harness.py base_harness/miniagent --smoke
+python tools/validate_harness.py base_harness/miniagent
+HG_AGENT_BACKEND=mock python driver.py --harness miniagent --dataset demo \
+  --tasks t01 --rounds 0 --run-id miniagent-smoke --no-summary \
+  --runs-root /tmp/hg-miniagent-runs --work-root /tmp/hg-miniagent-work
 HG_AGENT_BACKEND=mock python3 tools/validate_harness.py base_harness/openclaw --smoke
 python3 -m pytest -q \
   tests/quality/test_miniagent_harness.py \
@@ -83,5 +88,8 @@ python3 -m pytest -q \
   --basetemp=/tmp/hg-two-harness-acceptance
 ```
 
-具体验收结果、解码清单基线失败和交付 commit 见 `reports/openclaw-miniagent-acceptance.md`。
+MiniAgent 的 native 测试使用已安装的 CPython 3.12 和离线 wheel 缓存，在真实沙箱中运行。
+其旧 validator `--smoke` 路径已拒绝，改用上面的 driver；mock 在 demo 的有效零分
+不能解释为能力结果。初次接入的历史验收结果见 `reports/openclaw-miniagent-acceptance.md`，
+本次环境迁移记录见 `docs/adapter-integration-journal.md`。
 本分支待人工验收，不合入主分支。

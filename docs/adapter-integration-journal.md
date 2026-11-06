@@ -375,3 +375,48 @@ resume regression checks also pass. Commands, JUnit, selected control receipts,
 source hashes and cleanup evidence are retained outside the checkout at
 `/tmp/hg-empty-source-fix-20261106-ducnxdwi`. No real model inference or main merge
 was performed.
+
+### Migrate MiniAgent to a managed Python environment (2026-11-06)
+
+MiniAgent 0.2.0 is the first shipped base Harness using the managed native
+`files` route. Its manifest selects CPython 3.12 and a complete 20-package wheel
+lock. The three direct requirements remain the resolver input; the complete lock
+is included in the component map, adapter provenance and installed wheel. All
+19 pinned upstream files and their original hashes are unchanged.
+
+The adapter launches its native worker with the same bound interpreter and
+`-I -B`, and removes ambient Python import paths from the child environment.
+It no longer expects a platform dependency overlay. The existing SDK, native
+tool, submission, usage and timeout controls now run inside real bubblewrap
+sandboxes with prepared wheels. Local scripted HTTP endpoints use the existing
+Unix model route; mock cases use HTTPX MockTransport. Neither invokes a model.
+
+Actual native-tool probes verify that the worker and shell child use the exact
+bound Python, dependency writes are denied, platform packages and the platform
+venv are absent, and concurrent tasks have separate HOME and state. A separate
+post-exit scorer sees its own private input and cannot import or read actor
+dependencies. Source edits reuse the dependency artifact; an incomplete native
+dependency lock is refused before installation or measurement.
+
+The shipped Harness also passes H0 creation and unchanged reuse, shared-H0
+training, identical-candidate reuse, and training continuation after deleting
+physical round-0/1 checkpoints. The continuation restores source-only snapshots,
+keeps old points unchanged and extends their parent chain. Eval measures the new
+retained checkpoint with the exact same artifact; eval resume reconstructs the
+point from unchanged progress without executing completed tasks again. These
+demo scores are valid mock zeros, not benchmark performance measurements.
+
+Final lanes passed 56 migration/packaging cases and 218 focused regressions,
+with no skips. Six OpenClaw-named cases and 22 broader preset/H0 cases were
+explicitly deselected in those lanes. A separate four-task preset probe also
+passes the managed sandbox route. The initial mixed lane's OpenClaw runtime-not-
+prepared failure was reproduced on clean `93d35f82`; it is outside this migration.
+No full-suite or live-model success is claimed. Commands, JUnit, raw attempts,
+selected runtime/curve/progress evidence and cleanup receipts are retained at
+`/tmp/hg-miniagent-managed-20261106-67rlf40b`.
+
+Preparation was entirely offline, using cached wheels and a task-owned tools
+environment with no OpenAI, HTTPX, PyYAML or requests installed in the platform.
+Other base Harnesses retain their declared setup. Container/exec, workers and
+unsandboxed managed actors remain unsupported. No user environment, real
+dataset, pinned scorer or main branch was modified.

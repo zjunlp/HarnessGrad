@@ -25,6 +25,8 @@ RESOURCES = (
     "base_harness/loop/requirements.txt",
     "base_harness/miniswe/requirements.txt",
     "base_harness/miniswe/README.md",
+    "base_harness/miniagent/requirements.lock",
+    "base_harness/miniagent/PROVENANCE.json",
     "base_harness/openclaw/openclaw_runtime.py",
     "eval/containers/openclaw_runtime.py",
     "tools/configure_openclaw_harness.py",
@@ -158,6 +160,26 @@ assert callable(costbench._execution().binding)
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
+
+
+def test_installed_miniagent_declares_its_own_complete_lock(installed):
+    root, env, runtime = installed
+    code = '''
+import importlib.util,json
+from pathlib import Path
+import harnessgrad
+from harnessgrad.python_harness_runtime import descriptor
+source = Path(harnessgrad.__file__).resolve().parent.parent / 'base_harness/miniagent'
+manifest = json.loads((source / 'harness.json').read_text())
+assert manifest['install'] == 'requirements.lock'
+assert manifest['runtime'] == {'kind':'python','python':'3.12','requirements':'requirements.lock'}
+assert manifest['env_kinds'] == ['files'] and manifest['runtime_paths'] == []
+pins = descriptor(source)['pins']
+assert len(pins) == 20
+assert pins['openai'] == '2.21.0' and pins['pyyaml'] == '6.0.3' and pins['requests'] == '2.33.0'
+assert all(importlib.util.find_spec(name) is None for name in ('openai','httpx','yaml','requests'))
+'''
+    run([str(runtime / 'bin/python'), '-I', '-B', '-c', code], root, env)
 
 
 def test_installed_openclaw_template_and_preparation_tool(installed):
