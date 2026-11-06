@@ -496,3 +496,6 @@ data/candidates/
 # every upstream cell names a URL and a date, and every cell about this repository names a
 # path a reader can open.
 !/docs/comparison-upstream.md
+# The reviewer-facing evidence pack: cited by the manifest format tests and by
+# README's measurement section, so a clone that lacks it has a dangling reference.
+!/docs/evidence-export.md
