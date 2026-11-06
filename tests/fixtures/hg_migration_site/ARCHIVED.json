@@ -1,0 +1,351 @@
+{
+  "backup": {
+    "bytes": 714766,
+    "custody": "Owner-only backup held by the reviewing maintainer; not distributed in this source tree. The published source_commit is the public recovery location.",
+    "format": "zip",
+    "sha256": "3f62aa7f72b96a0fc0aff9aacb57d77440cc7320d176ebf14efb21585c95031f"
+  },
+  "files": [
+    {
+      "bytes": 3614,
+      "git_blob": "88baf79f6dacf81a4985d1acfcd62c3e6c7f44dc",
+      "path": "data/datasets/kumo/validation.json",
+      "sha256": "8dc69aa51d1884bc19978322fe6e32b9a4866b2809ad842e62489c8d427b30a8"
+    },
+    {
+      "bytes": 77855,
+      "git_blob": "2a8574f0e1194c104c1fa259d100a98c10ac33f6",
+      "path": "data/datasets/spreadsheetbench/w-spreadcache-validation.txt",
+      "sha256": "59c7a3294b3e1d67f87148f0f4b48f669d9ebba7a29b933b95c4d0567e216858"
+    },
+    {
+      "bytes": 72708,
+      "git_blob": "02d2588387005f39b51a81d033317043484ee7e8",
+      "path": "data/datasets/tau_bench/PROVENANCE.json",
+      "sha256": "bbf82afc64907f98f86a1e057cf51df85707bdde4988c5606894b33d9529b0de"
+    },
+    {
+      "bytes": 18894,
+      "git_blob": "bcf08ccc2e0b93274bf4d8b2393df8efd8c8eb9c",
+      "path": "tests/fixtures/hg_migration_site/PROVENANCE.json",
+      "sha256": "05266cbe38d5c491e0ffc49f98460ba1f790df1a0f46e0313f08f5309a7fdfc0"
+    },
+    {
+      "bytes": 498256,
+      "git_blob": "e20a0c40802d473e5e200bb2addcc52a04c1f885",
+      "path": "tests/fixtures/hg_migration_site/adapter-integration-journal.md",
+      "sha256": "8b87462779cfc705b422721dc9643e5813818a80f5bd1448a76bac26d6660463"
+    },
+    {
+      "bytes": 11224,
+      "git_blob": "2734bd9b6978117faecb8ec4d572c1a75d86b400",
+      "path": "tests/fixtures/hg_migration_site/dataset-reviews/aime.md",
+      "sha256": "282ab4122a5f5d2048eb63cafc7e1328f1029a484bd267e90bb4679f94da6c7d"
+    },
+    {
+      "bytes": 516709,
+      "git_blob": "925eb58b861e1060d9b12249763038c7ba14aaa7",
+      "path": "tests/fixtures/hg_migration_site/jericho-runtime-b7.json",
+      "sha256": "c6f67ffca7f9320570829509912bbac6469b907b03b093ae4dca4f74f18e8599"
+    },
+    {
+      "bytes": 15571,
+      "git_blob": "8af56bdc2280545cc52e1c334afc3899f807afa3",
+      "path": "tests/fixtures/hg_migration_site/preserved-lifecycle-review-b8.md",
+      "sha256": "a7b97ffe86f6b24dad742689e44020523c8ef90007700ba8e364f1fbbb4f99a5"
+    },
+    {
+      "bytes": 268427,
+      "git_blob": "98cade19c0881cfd2ac58395d252f58b7094c4d3",
+      "path": "tests/fixtures/hg_migration_site/scienceworld-runtime-b7.json",
+      "sha256": "77194eb46b343a7eae5f56ec97c6b39e21c3003935ccfbe016835ee660643180"
+    },
+    {
+      "bytes": 1989,
+      "git_blob": "2e8cbf79c9720f1c8942769ac51f4982e580884d",
+      "path": "tests/fixtures/hg_migration_site/w-spread2-evidence/audit-output.txt",
+      "sha256": "792d1ff14b10cffa8e0cfd4bbb1737aa6e099494dc3e0639d37b5e9d6a18c193"
+    },
+    {
+      "bytes": 11061,
+      "git_blob": "9e35ca95ce759370925ba68f40854ae628c820d7",
+      "path": "tests/fixtures/hg_migration_site/w-spread2-reconciliation.md",
+      "sha256": "e141574d3f6bf31eee828c4de761a9f63f0dc60e83837265e28b1c49bb2de60d"
+    },
+    {
+      "bytes": 5888,
+      "git_blob": "784773199d6a18c6e454a0966a73082b1c2fdf16",
+      "path": "tests/fixtures/hg_spreadrt/additional-probes.txt",
+      "sha256": "0d5e743d29ed1320477925731137812a71bdb5ab841eff9222472bf5007fe5c8"
+    },
+    {
+      "bytes": 1121,
+      "git_blob": "3715e9df0d8b8f31ddbc957385ae1d200429db66",
+      "path": "tests/fixtures/hg_spreadrt/checker-only-tests.txt",
+      "sha256": "95585798aa8affe93164a423969107a2c5fc9ebb7c77613189819a9c6469b8b4"
+    },
+    {
+      "bytes": 40526,
+      "git_blob": "215a9e0e3b200e3f38107ffd14bd9ac0437569b6",
+      "path": "tests/fixtures/hg_spreadrt/classification-tests.txt",
+      "sha256": "1a336be616a3114b272a0771db4015322cfdd3d076b874b30d1d981a3dd2e9e4"
+    },
+    {
+      "bytes": 332326,
+      "git_blob": "18ce93c12a5704cadb0d5061cc614860af84330e",
+      "path": "tests/fixtures/hg_spreadrt/dependency-inventory.json",
+      "sha256": "f4938d7ac64512004f810512ea582f79c3b8579b3e5e0d0229fef5d4e3f65131"
+    },
+    {
+      "bytes": 44727,
+      "git_blob": "1e5c5d1fb4b700c7a7b4238619504021b40eb162",
+      "path": "tests/fixtures/hg_spreadrt/dependency-summary.txt",
+      "sha256": "552faee0d9d2b494c24978c8c023947531014a7ff69e1e56eaad520e8c4d034b"
+    },
+    {
+      "bytes": 1589,
+      "git_blob": "682f3a210a92e569445dc9f49af358adceee9864",
+      "path": "tests/fixtures/hg_spreadrt/engine-archive-search.json",
+      "sha256": "7edbbdab19422eca2faaa993799c425d4d769bb320fea7aff66baf3f170dffc1"
+    },
+    {
+      "bytes": 431251,
+      "git_blob": "8bdbe947add8851344619ce08e15ea059d406528",
+      "path": "tests/fixtures/hg_spreadrt/engine-installed-sha256.txt",
+      "sha256": "721bfe8cd8e3355df590744dc3e0d93b9eb71750452a3cefc87e3c9964d0c295"
+    },
+    {
+      "bytes": 2088,
+      "git_blob": "0eb7964b8c7a1a60285b80c12644b869771bde47",
+      "path": "tests/fixtures/hg_spreadrt/executed-artifacts.json",
+      "sha256": "1893d3f170ee1ea17476b4e4f9ac073d785a1b964488da7c0d55b6c7ae0b0004"
+    },
+    {
+      "bytes": 15399,
+      "git_blob": "a1ad002b226a5ab3f518b5d9232a7607cf0a73d3",
+      "path": "tests/fixtures/hg_spreadrt/installed-source-excerpts.txt",
+      "sha256": "daaa80661e87df82355540c33bd6d85d6b26ba1bec8ffd63e15dc95476bb2d6b"
+    },
+    {
+      "bytes": 882,
+      "git_blob": "02567d1703932d0fe9fa3788c4c48635a9509dc4",
+      "path": "tests/fixtures/hg_spreadrt/inventory-initial-output.txt",
+      "sha256": "3f3bd5029ac73a2712171a1865a3c4c8bfc19857f375a11127f47fa2a9e9ae66"
+    },
+    {
+      "bytes": 872,
+      "git_blob": "957b7daaf823d2451e89e29f57bae7e3897be3e5",
+      "path": "tests/fixtures/hg_spreadrt/inventory-output.txt",
+      "sha256": "f9ca353da5998552aea9f9bc2452a43e48d81bd91ecf5432a755fe6704d86a25"
+    },
+    {
+      "bytes": 9005,
+      "git_blob": "93d340cb590a23d574a48b913b9952c864ddebd9",
+      "path": "tests/fixtures/hg_spreadrt/inventory.py",
+      "sha256": "98f7349414ed0bcb21fa87e65d2594b697bc3b92a99529aa186983a34d12e76b"
+    },
+    {
+      "bytes": 654,
+      "git_blob": "cc542f56220b38fa56d3e25a9e6ffc1166185cfe",
+      "path": "tests/fixtures/hg_spreadrt/python-dependency-path-probes.txt",
+      "sha256": "bc08aca010ddd3d374d4281cf7409f642bfbd14b05bec23067eb34e2788ec0a3"
+    },
+    {
+      "bytes": 1856,
+      "git_blob": "7d98a257de5182a543cf85afe1c8a90c21b8b69c",
+      "path": "tests/fixtures/hg_spreadrt/retained-authored-files.txt",
+      "sha256": "9ae382b21d0e12703701fc79a3db1922eb34e92d4ad9837a5c6d486cd7d9bc85"
+    },
+    {
+      "bytes": 578,
+      "git_blob": "71f2f3e5553bfc6a2e7af6ae27198198041c244c",
+      "path": "tests/fixtures/hg_spreadrt/reward-loss-initial-output.txt",
+      "sha256": "8de2fceb47088c684d38461072143ae9221e4eb06ff4f321b193a5ac2f1587f1"
+    },
+    {
+      "bytes": 2099,
+      "git_blob": "c59090f8023620a4edb18248a79d6a83c189b111",
+      "path": "tests/fixtures/hg_spreadrt/reward-loss-output.txt",
+      "sha256": "f83d5078a7f32bae5314381eff97347320ff92101a2c4726a80705c0260c53bb"
+    },
+    {
+      "bytes": 2676,
+      "git_blob": "d85dd6b29b47670eb7f70a1d4e178f364413c422",
+      "path": "tests/fixtures/hg_spreadrt/reward_loss_control.py",
+      "sha256": "b1533d829a2eb0d74564076c3fd2e7380a42e3264e0d5e43c88272b0a4e1b3bd"
+    },
+    {
+      "bytes": 2225,
+      "git_blob": "142b934652c7267eb442653fca39d66db042dd7a",
+      "path": "tests/fixtures/hg_spreadrt/run_synthetic.py",
+      "sha256": "e088bab16ace1903107d2d3946cd4b3c9477df4d1514fcac3c4aec154e9c1239"
+    },
+    {
+      "bytes": 712,
+      "git_blob": "d7e47b09b831e27721f348cca3bdc9ce795f01ac",
+      "path": "tests/fixtures/hg_spreadrt/scorer-custody-output.txt",
+      "sha256": "a60e4d16363ea62527150491282bd47ffa12e54419dff18e5303d5411dddcfcd"
+    },
+    {
+      "bytes": 1311,
+      "git_blob": "66bf41ce6c39523c04e7699edd792b31ba92c91e",
+      "path": "tests/fixtures/hg_spreadrt/scorer_custody.py",
+      "sha256": "cfded85561179127e7a44c7866ecd8ea5e5e350cdbdfb28a131437627c5ad8d9"
+    },
+    {
+      "bytes": 3530,
+      "git_blob": "a53c38ec3da5be3d5bd6735461013554d5b8b4eb",
+      "path": "tests/fixtures/hg_spreadrt/source-requirements-scan.txt",
+      "sha256": "ffa659cc3399673678e7a76614ac69929186bab4055ca1a48004d540c24e9625"
+    },
+    {
+      "bytes": 3303,
+      "git_blob": "dc0702744b236479539b5cbcf4513da90d2f70db",
+      "path": "tests/fixtures/hg_spreadrt/stale-cache-inspection.txt",
+      "sha256": "6251fb570ad8fdff79b053acb5ba859193b8a5797d164c10a7417c9037b44eaa"
+    },
+    {
+      "bytes": 5169,
+      "git_blob": "243ab086ab0efc79648ac6bcf7a1d82a28795604",
+      "path": "tests/fixtures/hg_spreadrt/summarize.py",
+      "sha256": "aa3bd4f220c4b3eabadf6bd627cb4c7e27ad10d95e760d26f737e017094f059f"
+    },
+    {
+      "bytes": 225,
+      "git_blob": "b123df8eb69508a3aa25ee783fdfb5a824c307d2",
+      "path": "tests/fixtures/hg_spreadrt/summary-output.txt",
+      "sha256": "222ed34a16e0e817c8d41a3e56e336eabbb7804e017ce6034f852935f8a22938"
+    },
+    {
+      "bytes": 339,
+      "git_blob": "832c27b75928b03466eac5b42348d3e0f15d8736",
+      "path": "tests/fixtures/hg_spreadrt/synthetic-initial-launch-output.txt",
+      "sha256": "61f50282c686af753244ea886f068eceb948e196e746d3e2930164ea1a1242c3"
+    },
+    {
+      "bytes": 13202,
+      "git_blob": "cf869ff24f6cefd3fbf353302fefe4200b55562e",
+      "path": "tests/fixtures/hg_spreadrt/synthetic-initial-output.txt",
+      "sha256": "d568c274f65709389ec239f65ea96dffdb9472e55420f0a87cd28d75a177801f"
+    },
+    {
+      "bytes": 225,
+      "git_blob": "bcb7f8b97cf5cbebc10ca43672748fa4c93f62c0",
+      "path": "tests/fixtures/hg_spreadrt/synthetic-launch-output.txt",
+      "sha256": "7474e45fd6d8c8ce381de7b9f20f2d11fcaaa3552b62648377851002f1c37f8b"
+    },
+    {
+      "bytes": 19061,
+      "git_blob": "be994067f9fbf926ce6010bc799b8327fa6116d3",
+      "path": "tests/fixtures/hg_spreadrt/synthetic-output.txt",
+      "sha256": "c8dd36c885fa186eb7d3457663a36d3c0bc19738bd6726eb277222f0ef6a8f96"
+    },
+    {
+      "bytes": 12596,
+      "git_blob": "ea953d34481f00a3f3034c6e68cbe10021ddddee",
+      "path": "tests/fixtures/hg_spreadrt/validate_packet.py",
+      "sha256": "6b07557321f34b2e143b22c07531f8343231f2f257eb1f96f2ceb4342ba32ae7"
+    },
+    {
+      "bytes": 1486,
+      "git_blob": "947d30488f338c6d5ff421a24a7cb93bf863e06e",
+      "path": "tests/fixtures/hg_wsel/SHA256SUMS",
+      "sha256": "ca680fda5b9f66fb3d28712d9316abc6e27bbdfa005e9e6f216e05227e75c9c4"
+    },
+    {
+      "bytes": 1754,
+      "git_blob": "57b9561a9cccec4365fdfc93ad65b2e7c7733490",
+      "path": "tests/fixtures/hg_wsel/check_scope.py",
+      "sha256": "cee81bd7df147f24815a0d6e15dbdd59a1213281d31fc1ee586f3fe33ef751a2"
+    },
+    {
+      "bytes": 13150,
+      "git_blob": "320fcd2a590f60fbd3cc234b55038144c8d5583e",
+      "path": "tests/fixtures/hg_wsel/packet.py",
+      "sha256": "9b672c1c221d5113fad201480d23a8a06577baaff9ecda7e32b3f207f09d36e8"
+    },
+    {
+      "bytes": 4000,
+      "git_blob": "0c01b52eb1f5c2849113c79d25ddda7010b7f125",
+      "path": "tests/fixtures/hg_wsel/validate.py",
+      "sha256": "5d365b3e69f41e041a94736b957aff9edb7af26dedbc829ddd300f3cbed865f9"
+    },
+    {
+      "bytes": 1240,
+      "git_blob": "a0957051c88a920452c2bda206ab2e2f70f4e7f1",
+      "path": "tests/fixtures/spreadvacuous/after-tests.txt",
+      "sha256": "2c47d27f4bd4d416ab722fbcec9202afd7fb6b5189eb581c759d548eacbb816f"
+    },
+    {
+      "bytes": 6365,
+      "git_blob": "de36f655d7eef3d3a38883c93364a8851aefe9b9",
+      "path": "tests/fixtures/spreadvacuous/after.txt",
+      "sha256": "69c29a3981ad5f73e887b6d80471e2901dc7dc70640134557e37c2cfb3792561"
+    },
+    {
+      "bytes": 1240,
+      "git_blob": "7b5cead395512694037917b7ff6e5a98611d5b80",
+      "path": "tests/fixtures/spreadvacuous/before-tests.txt",
+      "sha256": "480ab823b75812a0a3b966865c8c50a7106ac3fd845f37743ea89a0aa1ae3ad9"
+    },
+    {
+      "bytes": 5534,
+      "git_blob": "2a8db501b3c05a548b3b909c9e6bb9f0beaa2575",
+      "path": "tests/fixtures/spreadvacuous/before.txt",
+      "sha256": "3c0e4145f1b462a607572c9734d413ca1e0ab8bfc7070c9f95fce2ad27e68950"
+    },
+    {
+      "bytes": 12705,
+      "git_blob": "2e8e7e79f30944c3db7c5e71c4c097c6aba58230",
+      "path": "tests/fixtures/spreadvacuous/divergence.md",
+      "sha256": "298a66ba9d264ec247857bb4c0dd1b09a0e5b8573802986745ff02bbcf691e0b"
+    },
+    {
+      "bytes": 3047,
+      "git_blob": "4b8ef5a2536959ac4e667dbc4f775511ef3b8347",
+      "path": "tests/fixtures/spreadvacuous/inherited-eligibility.txt",
+      "sha256": "41744b169e1dd992a5ae3eef0f2732a6b1c48634bb7a0fe103be8d015892c517"
+    },
+    {
+      "bytes": 5059,
+      "git_blob": "beacdabb46320f1045edb575374f9c82c2173eb2",
+      "path": "tests/fixtures/spreadvacuous/integration-initial-tests.txt",
+      "sha256": "4a1a159c39ee2df28045428b2a89b4070b77ebe3037dae422613d18ddcd2bd4a"
+    },
+    {
+      "bytes": 3003,
+      "git_blob": "69c659d3376ba92604e239825ed653011beec9b1",
+      "path": "tests/fixtures/spreadvacuous/integration-tests.txt",
+      "sha256": "073a98390b25e9b0eb2404748d87698cf00d45662d6068d857eef45fdefda6f2"
+    },
+    {
+      "bytes": 1089,
+      "git_blob": "ce2a95f598535aea82b75bebe3d479bf33cb1a99",
+      "path": "tests/fixtures/spreadvacuous/metadata-strict-initial.txt",
+      "sha256": "fb2f2a12df8d1dca585147950ecdf0dd86d2274d13ccaddb1e1904114a9a3c70"
+    },
+    {
+      "bytes": 965,
+      "git_blob": "0e8cd9b73d79c0839be373392c42d4d939d82f96",
+      "path": "tests/fixtures/spreadvacuous/metadata.txt",
+      "sha256": "cdceef41806eda07ec4567150071798299ee6e7d613520cfa8d0fa9ecae2d567"
+    },
+    {
+      "bytes": 147,
+      "git_blob": "5b33df3fc17af89f2254941573fbf8bce08c0c57",
+      "path": "tests/fixtures/spreadvacuous/proposal-dry-run.txt",
+      "sha256": "88e92b37d8a0dcdfa90fb899e6ba3a8eac5e82d116ac7fc0a538139d0524af08"
+    },
+    {
+      "bytes": 5208,
+      "git_blob": "87562660ebbf274acda2d16b8976c0aafab9814f",
+      "path": "tests/fixtures/spreadvacuous/proposal.json",
+      "sha256": "1b3e9fb01210dcb2529963d3c60f9b8526b8887cc85301bced1de581f37325c7"
+    }
+  ],
+  "repository": "https://github.com/zjunlp/HarnessGrad.git",
+  "retrieval": "git show <source_commit>:<path>; verify bytes and sha256 before use. Preserve this revision or these exact bytes before any future history purge.",
+  "schema": 1,
+  "scope": "Original bytes removed or superseded by the portable-runtime cleanup; historical evidence, not current runtime admission.",
+  "source_commit": "ddeb358b0007c19672acda3fcb02278012332b67"
+}

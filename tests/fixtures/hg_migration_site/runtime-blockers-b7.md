@@ -1,7 +1,10 @@
 # b7: two local native runtime blockers closed
 
-The separate native-runtime JSON receipts have been retired. This report retains
-the historical command examples and summarized observations.
+The separate native-runtime JSON receipts are archived outside the active checkout.
+[ARCHIVED.json](ARCHIVED.json) binds their original bytes and provenance to a
+published source commit, with retrieval instructions, sizes and SHA-256 hashes.
+The summaries below do not replace those original receipts or establish current
+runtime admission.
 
 Only Jericho and ScienceWorld registry entries change. Runtime, verifier and
 admission source is unchanged. All eight shared gates remain open for both:

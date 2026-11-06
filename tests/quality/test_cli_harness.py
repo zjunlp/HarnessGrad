@@ -53,15 +53,15 @@ def work_root(tmp_path):
 #: runner passes, and what the project's guidance recommends) puts `tmp_path` in a
 #: good place and pytest cleans it up. A plain `pytest tests/quality/test_cli_harness.py`
 #: uses pytest's default under `/tmp`, which the sandbox tmpfs-masks, so the CLI would
-#: be invisible -- the fixture then falls back to a unique directory beside the
-#: platform, which is outside both the platform and `/tmp`, and removes it afterwards.
+#: be invisible -- the fixture then falls back to a unique directory in `/var/tmp`,
+#: outside both the platform and `/tmp`, and removes it afterwards.
 @pytest.fixture
 def cli_dir(tmp_path) -> Path:
     """A unique fake CLI, visible only when its runtime path is declared."""
     root = tmp_path / "cli"
     temporary = False
     if Path("/tmp") in root.resolve().parents:
-        root = Path(tempfile.mkdtemp(dir=ROOT.parent, prefix="harnessgrad_cli-"))
+        root = Path(tempfile.mkdtemp(dir="/var/tmp", prefix="harnessgrad_cli-"))
         temporary = True
     else:
         root.mkdir()
