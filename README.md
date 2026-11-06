@@ -6,7 +6,7 @@
 
 <p align="center">An agent combines a model and a harness in an environment;<br>HarnessGrad studies how an editable harness can learn from feedback.</p>
 
-<p align="center">🚀 <a href="#quick-start">Quick start</a> · 🧩 <a href="#what-you-can-run">Integrations</a> · 📚 <a href="DATASETS.md">Datasets</a></p>
+<p align="center">🚀 <a href="#quick-start">Quick start</a> · 🧩 <a href="#what-you-can-run">Integrations</a> · 📚 <a href="DATASETS.md">Datasets</a> · 🔗 <a href="#related-work">Related work</a></p>
 
 <p align="center"><img src=".github/assets/learning-loop.svg" width="720" alt="Learning loop: tasks lead to feedback, editing the harness and evaluation, which returns to tasks."></p>
 
@@ -185,6 +185,45 @@ If the platform, the measurement protocol or a curve produced here is useful in 
   year   = {2026},
 }
 ```
+
+<a id="related-work"></a>
+
+## 🔗 Related work
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="150">
+        <a href="https://github.com/RUC-NLPIR/FlashRSI">
+          <img src="https://avatars.githubusercontent.com/u/139615285?v=4&s=200" width="80" style="border-radius:50%" alt="FlashRSI"/>
+          <br />
+          <sub><b>FlashRSI</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/simple-agent-lab/RSIHub">
+          <img src="https://avatars.githubusercontent.com/u/283423986?v=4&s=200" width="80" style="border-radius:50%" alt="RSIHub"/>
+          <br />
+          <sub><b>RSIHub</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/Prism-Shadow/penguin-harness">
+          <img src="https://avatars.githubusercontent.com/u/236323912?v=4&s=200" width="80" style="border-radius:50%" alt="PenguinHarness"/>
+          <br />
+          <sub><b>PenguinHarness</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/quqxui/RSI-Flow">
+          <img src="https://avatars.githubusercontent.com/u/41822324?v=4&s=200" width="80" style="border-radius:50%" alt="RSI-Flow"/>
+          <br />
+          <sub><b>RSI-Flow</b></sub>
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
 
 <a id="license"></a>
 
