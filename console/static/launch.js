@@ -31,7 +31,8 @@
     card.meta_base_url = card.meta_base_url || d.meta_base_url || "";
     card.improver = card.improver || d.improver || ((FORM.improvers || [])[0] || {}).name || "";
     card.improver_model = card.improver_model || d.improver_model || "";
-    card.method = card.method || d.method || ((FORM.methods || [])[0] || {}).name || "none";
+    const methodRows = window.HGLaunchMethods.rows(FORM.methods || [], t("ls.47"));
+    card.method = window.HGLaunchMethods.selected(methodRows, card.method, d.method);
     if (d.rounds) card.rounds = d.rounds;
     $("preset-hint").textContent = t("ls.78").replace("{d}", FORM.datasets.length).replace("{h}", FORM.harnesses.length).replace("{m}", (FORM.improvers || []).length);
     const authored = FORM.datasets.filter((x) => x.name.startsWith("authored_"));
@@ -45,10 +46,7 @@
       field("task-model", `<input class="input" id="f-task-model" list="task-models" value="${esc(card.task_model)}"><datalist id="task-models">${(FORM.task_models || []).map((m) => `<option value="${esc(m)}"></option>`).join("")}</datalist>`),
       field("task base URL", `<input class="input" id="f-task-base-url" value="${esc(card.task_base_url)}" placeholder="https://…/v1">`),
       field("task API key", `<input class="input" id="f-task-api-key" type="password" autocomplete="new-password" value="${esc(card.task_api_key)}" placeholder="${d.task_api_key_set ? t("ls.55") : "API key"}">`),
-      field(t("ls.79"), select("f-method",
-        [{ value: "none", label: t("ls.47") },
-         ...(FORM.methods || []).map((m) => ({ value: m.name, label: `${m.name} · ${m.title}` }))],
-        card.method), t("ls.48")),
+      field(t("ls.79"), select("f-method", methodRows, card.method), t("ls.48")),
       field("meta-harness", select("f-improver", (FORM.improvers || []).map((x) => ({ value: x.name, label: x.label || x.name })), card.improver)),
       field("meta-model", `<input class="input" id="f-improver-model" list="meta-models" value="${esc(card.improver_model)}"><datalist id="meta-models">${(FORM.meta_models || []).map((m) => `<option value="${esc(m)}"></option>`).join("")}</datalist>`),
       field(t("ls.49"), `<input class="input" id="f-meta-base-url" value="${esc(card.meta_base_url)}" placeholder="https://…/v1">`, t("ls.50")),
