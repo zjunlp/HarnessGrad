@@ -107,9 +107,10 @@ def test_snapshot_only_round_opens_from_the_snapshot(tmp_path, monkeypatch):
     assert {k: v for k, v in renamed.items() if k != "name"} == \
         {k: v for k, v in checked_out.items() if k != "name"}
 
-    # 第二次打开同一轮：复用同一份候选，并且来源仍报 snapshot（编辑屏据此显示那一行）。
+    # 第二次打开创建新候选，来源仍报 snapshot。
     code2, again = server.harness_candidate_from_round(RUN, 1)
-    assert (code2, again["reused"], again["candidate"]) == (200, True, payload["candidate"])
+    assert (code2, again["reused"]) == (201, False)
+    assert again["candidate"] != payload["candidate"]
     assert again["source"] == "snapshot"
     rows = {row["dir"]: row for row in server.harness_candidates()["rows"]}
     assert rows[payload["candidate"]]["source"] == "snapshot"
@@ -163,5 +164,5 @@ def test_a_corrupt_snapshot_is_skipped_and_named_in_the_error(tmp_path, monkeypa
     code, answer = server.harness_candidate_from_round(RUN, 1)
 
     # 没有补丁可重放，因此走不到任何一路；理由里说明快照存在但签不出来。
-    assert (code, answer["error"]) == (409, "round-not-stored")
-    assert "snapshots/round-1.json 存在但签不出来" in answer["detail"]
+    assert (code, answer["error"]) == (409, "unsafe-recovery")
+    assert "snapshots/round-1.json invalid" in answer["detail"]

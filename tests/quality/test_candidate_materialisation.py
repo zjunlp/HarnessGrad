@@ -1,14 +1,4 @@
-""""编辑这一版"每点一次就多一份副本 —— 383 KB 的 agent.py，攒到 `-r20-6`。
-
-打开某一轮本来只该得到**一份**可以改的副本：点第二次还应该是那一份。但也不能反过来覆盖
-用户已经改过的那份 —— 否则改了半天，再点一次就没了。所以判定条件是"这份副本还是不是当初
-原样复制出来的"：`data/candidates/.sources.json` 记下创建时每个文件的 sha256，指纹没变就
-复用，变了就新开一份带序号的副本。
-
-另一个方向也要保住：这个账本上线之前复制出来的同名目录（这台机器上有 `-r20` 到 `-r20-6`
-六份，除 `harness.json` 的名字外与 `state_after_round20` 逐字节相同）应当被**接管**，
-而不是再造第七份。
-"""
+"""Recovery preserves existing candidates and creates a fresh copy each time."""
 from __future__ import annotations
 
 import importlib.util
@@ -42,15 +32,15 @@ def load(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return module, candidates
 
 
-def test_same_round_twice_reuses_one_copy(tmp_path, monkeypatch):
+def test_same_round_twice_creates_fresh_copies(tmp_path, monkeypatch):
     server, candidates = load(tmp_path, monkeypatch)
     code, first = server.harness_candidate_from_round(RUN, 1)
     code2, second = server.harness_candidate_from_round(RUN, 1)
 
     assert (code, first["reused"]) == (201, False)
-    assert (code2, second["reused"]) == (200, True)
-    assert second["candidate"] == first["candidate"]
-    assert sorted(p.name for p in candidates.iterdir() if p.is_dir()) == [first["candidate"]]
+    assert (code2, second["reused"]) == (201, False)
+    assert second["candidate"] != first["candidate"]
+    assert {p.name for p in candidates.iterdir() if p.is_dir() and not p.name.startswith(".")} == {first["candidate"], second["candidate"]}
     # 账本写在候选目录之外，不混进被哈希的 harness 树。
     assert (candidates / ".sources.json").is_file()
     assert not (candidates / first["candidate"] / ".sources.json").exists()
@@ -72,8 +62,8 @@ def test_a_hand_edited_copy_is_never_overwritten(tmp_path, monkeypatch):
     assert fresh.read_text(encoding="utf-8") == "print('baseline')\n"
 
 
-def test_legacy_copies_are_adopted_not_duplicated(tmp_path, monkeypatch):
-    """账本上线前就存在的同名目录：接管它，不再造第八份。"""
+def test_legacy_copy_is_preserved(tmp_path, monkeypatch):
+    """A pre-existing directory is not adopted or overwritten."""
     server, candidates = load(tmp_path, monkeypatch)
     legacy = candidates / f"{RUN}-r1"
     legacy.mkdir(parents=True)
@@ -84,10 +74,7 @@ def test_legacy_copies_are_adopted_not_duplicated(tmp_path, monkeypatch):
 
     code, payload = server.harness_candidate_from_round(RUN, 1)
 
-    assert (code, payload["reused"]) == (200, True)
-    assert payload["candidate"] == legacy.name
-    assert [p.name for p in candidates.iterdir() if p.is_dir()] == [legacy.name]
-    # 接管之后账本里有了这条，下一次仍然稳定复用同一份。
-    assert legacy.name in json.loads((candidates / ".sources.json").read_text(encoding="utf-8"))
-    code2, again = server.harness_candidate_from_round(RUN, 1)
-    assert (code2, again["reused"], again["candidate"]) == (200, True, legacy.name)
+    assert (code, payload["reused"]) == (201, False)
+    assert payload["candidate"] != legacy.name
+    assert (legacy / "agent.py").read_text(encoding="utf-8") == "print('baseline')\n"
+    assert legacy.name not in json.loads((candidates / ".sources.json").read_text(encoding="utf-8"))

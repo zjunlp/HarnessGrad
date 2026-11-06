@@ -2470,14 +2470,24 @@ def _candidate_tree_sha(root: pathlib.Path) -> dict[str, str]:
     return out
 
 
+def _candidate_ledger_module():
+    # The console also runs directly as a script, outside a package import.
+    spec = importlib.util.spec_from_file_location("hg_round_ledger", ROOT / "round_ledger.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _candidate_sources() -> dict:
-    data = read_json(CANDIDATE_INDEX) if CANDIDATE_INDEX.is_file() else None
-    return data if isinstance(data, dict) else {}
+    if not CANDIDATES.exists():
+        return {}
+    with _candidate_ledger_module().locked(CANDIDATES) as ledger:
+        return ledger.read()
 
 
 def _remember_candidate(name: str, run_id: str, round_no: int, via: str,
                         target: pathlib.Path, *, source: str | None = None,
-                        from_path: pathlib.Path | None = None) -> None:
+                        from_path: pathlib.Path | None = None) -> bool:
     record = {"run": run_id, "round": int(round_no), "via": via,
               "created": int(time.time()), "files": _candidate_tree_sha(target)}
     # `source` 是这一版**从哪里读出来的**（state / snapshot / replay），编辑屏用它说明
@@ -2486,16 +2496,15 @@ def _remember_candidate(name: str, run_id: str, round_no: int, via: str,
         record["source"] = source
     if from_path is not None:
         record["from"] = str(from_path)
-    index = _candidate_sources()
-    index[name] = record
-    try:
-        CANDIDATES.mkdir(parents=True, exist_ok=True)
-        CANDIDATE_INDEX.write_text(
-            json.dumps(index, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
-            encoding="utf-8")
-    except OSError:
-        # 账本写不下去不影响这次复制，只影响下次能不能复用。
-        pass
+    CANDIDATES.mkdir(parents=True, exist_ok=True)
+    with _candidate_ledger_module().locked(CANDIDATES) as ledger:
+        index = ledger.read()
+        # An adoption must never overwrite provenance installed concurrently.
+        if name in index:
+            return False
+        index[name] = record
+        ledger.write(index)
+        return True
 
 
 def _candidate_record_source(record: dict) -> str:
@@ -2526,8 +2535,13 @@ def _candidate_reusable(name: str, run_id: str, round_no: int) -> bool:
         if record.get("run") != run_id or int(record.get("round", -1)) != int(round_no):
             return False
         return record.get("files") == _candidate_tree_sha(target)
-    _remember_candidate(name, run_id, round_no, "adopted", target)
-    return True
+    if _remember_candidate(name, run_id, round_no, "adopted", target):
+        return True
+    # A concurrent publisher installed provenance; evaluate it rather than adopting.
+    record = _candidate_sources().get(name)
+    return (isinstance(record, dict) and record.get("run") == run_id
+            and record.get("round") == int(round_no)
+            and record.get("files") == _candidate_tree_sha(target))
 
 
 
@@ -3102,148 +3116,83 @@ def _check_out_snapshot(snapshot_file, target) -> str | None:
     return None
 
 
+def _round_module(name):
+    spec = importlib.util.spec_from_file_location("hg_console_" + name, ROOT / (name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def harness_candidate_from_round(run_id: str, round_no: int,
                                  replay: bool = False) -> tuple[int, dict]:
-    """把某一轮的 harness 变成一个候选，按**三处来源的顺序**取第一个可用的：
+    """Recover stored state or snapshot privately; external patch replay is disabled.
 
-    1. `state_after_roundN/` —— 整棵目录已经在那儿，复制最快；
-    2. `snapshots/round-N.json` —— 自校验的单文件快照，签出即可，不需要补丁；
-    3. `diffs/round-N.patch` —— 从第 0 轮（或基线）逐轮重放。
-
-    为什么需要后两路：只有一部分 run 留了 `state_after_roundN`（这台机器上 406 个），另外
-    617 个 run 只有曲线和 `diffs/round-N.patch`。没有重放，编辑页就只能编辑"留了快照的
-    那几轮"，等于大多数进化版本不可编辑 —— 而这些 diff 本来就是为了能重放而存的。快照则
-    是这两者之间的一档：run 里只要写了这一个文件，就不必再有状态目录或补丁。
-
-    重放是**可验证**的：实测 `round-1.patch` 打在 `state_after_round0` 上，得到的 agent.py
-    与 `state_after_round1/agent.py` 逐字节相同。用了哪条路径写进返回值
-    （`source` / `reconstructed` / `applied`），读的人才知道手里这份是怎么来的。
+    Candidate root and ancestors must be trusted and all ledger writers cooperative.
+    Snapshot digest establishes content identity, not authenticity of the run.
     """
-    import subprocess
+    if replay:
+        return 409, {"error": "replay-disabled", "detail": "Patch replay is disabled until a sandbox is available."}
     run_path = find_run(run_id)
     if not run_path:
         return 404, {"error": "run-not-found", "detail": run_id}
-    round_no = int(round_no)
+    try:
+        round_no = int(round_no)
+    except (TypeError, ValueError, OverflowError):
+        return 400, {"error": "bad-round"}
     if round_no < 0:
         return 400, {"error": "bad-round", "detail": round_no}
-    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{round_no}")[:48]
-    target = CANDIDATES / base
-    # 同一个版本点第二次：复用上次原样复制的那一份，而不是再攒一个 `-1`、`-2`。
-    # 人改过（指纹变了）就还是新开一份，绝不覆盖别人的改动。
-    if not replay and _candidate_reusable(base, str(run_id), round_no):
-        manifest = read_json(target / "harness.json")
-        if isinstance(manifest, dict):
-            record = _candidate_sources().get(base) or {}
-            source = _candidate_record_source(record) if record else "state"
-            return 200, {"candidate": target.name,
-                         "from": str(record.get("from")
-                                     or run_path / f"state_after_round{round_no}"),
-                         "round": round_no, "source": source,
-                         "reconstructed": source == "replay",
-                         "applied": [], "reused": True,
-                         "files": sorted(p.name for p in target.iterdir() if p.is_file())}
-    suffix = 0
-    while target.exists():
-        suffix += 1
-        target = CANDIDATES / f"{base}-{suffix}"[:64]
-    CANDIDATES.mkdir(parents=True, exist_ok=True)
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".git", ".state")
-
-    state_dir = run_path / f"state_after_round{round_no}"
-    snapshot_file = _round_snapshot_path(run_path, round_no)
-    reconstructed = False
-    applied: list[int] = []
-    from_path = state_dir
-    source: str | None = None
-    snapshot_problem: str | None = None
-
-    if not replay and (state_dir / "harness.json").is_file():
-        # 第一路：整棵状态目录已经在那儿，直接复制。
-        shutil.copytree(state_dir, target, ignore=ignore)
-        source = "state"
-    elif not replay and snapshot_file.is_file():
-        # 第二路：单文件快照。签出会重新校验内容 id，坏文件在这里就被挡住。
-        snapshot_problem = _check_out_snapshot(snapshot_file, target)
-        if snapshot_problem is None:
-            source = "snapshot"
-            from_path = snapshot_file
-
-    if source is None:
-        # 第三路：按补丁重放。起点：同一个 run 的第 0 轮快照（同一条血脉），
-        # 否则平台自带的起点。
-        origin = run_path / "state_after_round0"
-        if (origin / "harness.json").is_file():
-            shutil.copytree(origin, target, ignore=ignore)
-            first = 1
-            from_round0 = True
-        elif BASE_HARNESS.is_dir():
-            shutil.copytree(BASE_HARNESS, target, ignore=ignore)
-            first = 1
-            from_round0 = False
-        else:
-            return 409, {"error": "no-origin",
-                         "detail": "既没有第 0 轮快照，也找不到 base_harness/loop"}
-        for n in range(first, round_no + 1):
-            patch = run_path / "diffs" / f"round-{n}.patch"
-            if not patch.is_file():
-                shutil.rmtree(target, ignore_errors=True)
-                # **说"存了 15 个补丁"就要能对上号。** 之前只列前 6 个、且按字典序排
-                # （round-1, round-10, round-11…），读者没法判断缺的是哪一轮。
-                # 这里把存在的轮次压成区间（r1–r15），并点名缺的那一轮。
-                rounds = sorted({int(p.stem.split("-")[1])
-                                 for p in (run_path / "diffs").glob("round-*.patch")
-                                 if p.stem.split("-")[1].isdigit()}) \
-                    if (run_path / "diffs").is_dir() else []
-                def spans(nums: list[int]) -> str:
-                    out, start = [], None
-                    for i, num in enumerate(nums):
-                        if start is None:
-                            start = num
-                        if i + 1 == len(nums) or nums[i + 1] != num + 1:
-                            out.append(f"r{start}" if start == num else f"r{start}–r{num}")
-                            start = None
-                    return "、".join(out)
-                # 三处都点名：说"存不下这一版"时，读者要能自己判断是哪一处缺了。
-                snapshot_clause = (
-                    f"snapshots/round-{round_no}.json 存在但签不出来（{snapshot_problem}）"
-                    if snapshot_problem else
-                    f"snapshots/round-{round_no}.json 不存在")
-                return 409, {
-                    "error": "round-not-stored",
-                    "detail": (f"这个 run 无法重建第 {round_no} 轮：没有可用的 "
-                               f"state_after_round{round_no}/，{snapshot_clause}，重放要用的 "
-                               f"diffs/round-{n}.patch 也不存在，因此无法重建这一版。"
-                               + (f" 它存了 {len(rounds)} 个补丁：{spans(rounds)}。"
-                                  if rounds else " 它没有 diffs/ 目录。")),
-                    "at_round": n, "stored_rounds": rounds}
-
-            done = subprocess.run(["patch", "-p1", "--batch", "--forward", "--silent"],
-                                  cwd=str(target), stdin=patch.open("rb"),
-                                  capture_output=True)
-            if done.returncode != 0:
-                detail = (done.stdout + done.stderr).decode("utf-8", "replace")[-400:]
-                shutil.rmtree(target, ignore_errors=True)
-                return 422, {"error": "patch-failed", "detail": detail,
-                             "at_round": n,
-                             "from_round0": from_round0}
-            applied.append(n)
-        reconstructed = True
-        source = "replay"
-    manifest = read_json(target / "harness.json")
-    if isinstance(manifest, dict):
-        manifest["name"] = target.name
-        (target / "harness.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    elif not (target / "harness.json").is_file():
-        shutil.rmtree(target, ignore_errors=True)
-        return 409, {"error": "no-manifest",
-                     "detail": f"r{round_no} 重放后仍然没有 harness.json"}
-    _remember_candidate(target.name, str(run_id), round_no, source, target,
-                        source=source, from_path=from_path)
-    return 201, {"candidate": target.name, "from": str(from_path), "round": round_no,
-                 "source": source, "reconstructed": reconstructed, "reused": False,
-                 "applied": applied,
-                 "files": sorted(p.name for p in target.iterdir() if p.is_file())}
+    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{round_no}")[:40].lstrip(".") or "round"
+    recovery, publication = _round_module("round_recovery"), _round_module("round_publish")
+    state_name = f"state_after_round{round_no}"
+    snapshot_name = f"round-{round_no}.json"
+    try:
+        CANDIDATES.mkdir(parents=True, exist_ok=True)
+        with recovery.open_run_dir(run_path) as run_fd, publication.Publisher(CANDIDATES) as publisher:
+            with publisher.stage() as stage:
+                stage_path = pathlib.Path(f"/proc/self/fd/{stage.fd}")
+                try:
+                    recovery.copy_state_into(run_path, state_name, stage.fd, run_fd=run_fd)
+                    source, from_path = "state", run_path / state_name
+                except FileNotFoundError:
+                    try:
+                        if str(ROOT.parent) not in sys.path:
+                            sys.path.insert(0, str(ROOT.parent))
+                        snapshot_materializer = _round_module("round_snapshot")
+                        with recovery.open_snapshot_fd(run_path, snapshot_name, run_fd=run_fd) as snapshot_fd:
+                            snapshot_materializer.materialize(snapshot_fd, stage.fd, run_id=str(run_id), round_no=round_no)
+                        source, from_path = "snapshot", run_path / "snapshots" / snapshot_name
+                    except FileNotFoundError:
+                        return 409, {"error": "round-not-stored", "detail": f"No state_after_round{round_no} or snapshots/{snapshot_name}; diffs/round-*.patch replay disabled until sandboxed."}
+                    except snapshot_materializer.snapshot.SnapshotInvalid as exc:
+                        return 409, {"error": "unsafe-recovery", "detail": f"snapshots/{snapshot_name} invalid: {exc}"}
+                manifest_path = stage_path / "harness.json"
+                manifest = read_json(manifest_path)
+                if (not isinstance(manifest, dict) or
+                        any(not isinstance(manifest.get(key), str) or not manifest[key].strip()
+                            for key in ("name", "version", "entrypoint"))):
+                    return 409, {"error": "no-manifest", "detail": "Missing or invalid harness.json"}
+                subpath = manifest.get("path", ".")
+                def safe_relative(value):
+                    if not isinstance(value, str) or not value or "\\" in value:
+                        return False
+                    path = pathlib.PurePosixPath(value)
+                    return not path.is_absolute() and ".." not in path.parts
+                if (not safe_relative(subpath) or not safe_relative(manifest["entrypoint"]) or
+                        not (stage_path / subpath).is_dir() or
+                        not (stage_path / subpath / manifest["entrypoint"]).is_file()):
+                    return 409, {"error": "no-manifest", "detail": "Invalid path or missing entrypoint"}
+                def finalize(name):
+                    manifest["name"] = name
+                    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+                    return {"run": str(run_id), "round": round_no, "via": source,
+                            "source": source, "from": str(from_path),
+                            "created": int(time.time()), "files": _candidate_tree_sha(stage_path)}
+                name = publisher.publish(stage, base, {}, finalize=finalize)
+                return 201, {"candidate": name, "from": str(from_path), "round": round_no,
+                             "source": source, "reconstructed": False, "reused": False,
+                             "applied": [], "files": sorted(p.name for p in stage_path.iterdir() if p.is_file())}
+    except (OSError, ValueError, publication.PublishError, recovery.RecoveryArtifactError) as exc:
+        return 409, {"error": "unsafe-recovery", "detail": str(exc)}
 
 
 CANDIDATE_FILE_MAX_BYTES = 2 * 1024 * 1024
@@ -3267,6 +3216,8 @@ def harness_candidates() -> dict:
     index = _candidate_sources()
     if CANDIDATES.is_dir():
         for path in sorted(CANDIDATES.iterdir()):
+            if path.name.startswith("."):
+                continue
             manifest = read_json(path / "harness.json")
             if not isinstance(manifest, dict) or not manifest.get("name"):
                 continue
