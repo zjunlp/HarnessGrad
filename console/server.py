@@ -2790,18 +2790,146 @@ def read_selection(name: str, path: str, first: int, last: int) -> str:
 
 
 def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
-    """把候选打成 tar.gz，供评测页一键带上。**只打包，不评测** —— 跑不跑仍是人的事。"""
+    """Build a bounded submission archive without following candidate links.
+
+    Hard-linked files are rejected: their contents may originate outside the candidate.
+    Concurrent writes to an already open regular file cannot be made into a snapshot.
+    """
     import io
     import tarfile
-    root = CANDIDATES / str(name)
-    if not CANDIDATE_NAME.fullmatch(str(name)) or not (root / "harness.json").is_file():
+    from console import submissions
+
+    class InvalidArchive(Exception):
+        pass
+
+    class ArchiveLimit(Exception):
+        pass
+
+    class CappedBuffer(io.BytesIO):
+        def write(self, data):
+            if self.tell() + len(data) > submissions.MAX_PAYLOAD:
+                raise ArchiveLimit()
+            return super().write(data)
+
+    if not valid_workbench_candidate_name(name):
         return 404, None
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
-        for path in sorted(root.rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
-                tar.add(path, arcname=str(path.relative_to(root)))
-    return 200, buffer.getvalue()
+    if (sys.platform != "linux" or not hasattr(os, "O_NOFOLLOW")
+            or not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NONBLOCK")
+            or os.open not in os.supports_dir_fd):
+        return 400, None
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    stack = []
+    root_fd = candidate_fd = None
+    try:
+        try:
+            root_fd = os.open(CANDIDATES, directory_flags)
+            candidate_fd = os.open(name, directory_flags, dir_fd=root_fd)
+        except FileNotFoundError:
+            return 404, None
+        try:
+            manifest = os.open("harness.json", file_flags, dir_fd=candidate_fd)
+        except FileNotFoundError:
+            return 404, None
+        try:
+            info = os.fstat(manifest)
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise InvalidArchive()
+        finally:
+            os.close(manifest)
+        buffer = CappedBuffer()
+        entries = expanded = metadata = path_budget = 0
+        aliases = {}
+        manifest_written = False
+        # Each frame holds an open directory and a lazy iterator, never a tree listing.
+        stack.append((candidate_fd, os.scandir(candidate_fd), ""))
+        candidate_fd = None
+        with tarfile.open(fileobj=buffer, mode="w|gz", format=tarfile.PAX_FORMAT) as tar:
+            while stack:
+                parent, iterator, prefix = stack[-1]
+                try:
+                    entry = next(iterator)
+                except StopIteration:
+                    iterator.close()
+                    os.close(parent)
+                    stack.pop()
+                    continue
+                entries += 1
+                if entries > submissions.MAX_ENTRIES:
+                    raise ArchiveLimit()
+                if entry.name in SKIP_DIRS or entry.name.endswith(".pyc"):
+                    continue
+                path = prefix + entry.name
+                path_budget += len(path.encode("utf-8"))
+                if path_budget > submissions._METADATA:
+                    raise ArchiveLimit()
+                try:
+                    if submissions._member_path(path) != path:
+                        raise InvalidArchive()
+                except submissions.SubmissionRejected as exc:
+                    raise InvalidArchive() from exc
+                alias = path.casefold()
+                if alias in aliases and aliases[alias] != path:
+                    raise InvalidArchive()
+                aliases[alias] = path
+                before = entry.stat(follow_symlinks=False)
+                if stat.S_ISDIR(before.st_mode):
+                    fd = os.open(entry.name, directory_flags, dir_fd=parent)
+                    try:
+                        after = os.fstat(fd)
+                        if (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino):
+                            raise InvalidArchive()
+                        iterator = os.scandir(fd)
+                    except BaseException:
+                        os.close(fd)
+                        raise
+                    stack.append((fd, iterator, path + "/"))
+                elif stat.S_ISREG(before.st_mode):
+                    fd = os.open(entry.name, file_flags, dir_fd=parent)
+                    try:
+                        info = os.fstat(fd)
+                        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                                or (before.st_dev, before.st_ino) != (info.st_dev, info.st_ino)):
+                            raise InvalidArchive()
+                        expanded += info.st_size
+                        if expanded > submissions.MAX_EXPANDED:
+                            raise ArchiveLimit()
+                        member = tarfile.TarInfo(path)
+                        member.size = info.st_size
+                        member.mode = info.st_mode & 0o777
+                        # Admission bounds PAX extension payloads and their cumulative size.
+                        header = member.tobuf(format=tarfile.PAX_FORMAT)
+                        if len(header) > 512:
+                            metadata += len(header) - 1024
+                            if len(header) - 1024 > submissions._CHUNK or metadata > submissions._METADATA:
+                                raise ArchiveLimit()
+                        with os.fdopen(fd, "rb") as source:
+                            fd = None
+                            tar.addfile(member, source)
+                            if path == "harness.json":
+                                if manifest_written:
+                                    raise InvalidArchive()
+                                manifest_written = True
+                    finally:
+                        if fd is not None:
+                            os.close(fd)
+                else:
+                    raise InvalidArchive()
+            if not manifest_written:
+                raise InvalidArchive()
+        return 200, buffer.getvalue()
+    except ArchiveLimit:
+        return 413, None
+    except (OSError, InvalidArchive, ValueError, UnicodeError, tarfile.TarError):
+        return 400, None
+    finally:
+        for fd, iterator, _ in reversed(stack):
+            iterator.close()
+            os.close(fd)
+        if candidate_fd is not None:
+            os.close(candidate_fd)
+        if root_fd is not None:
+            os.close(root_fd)
 
 
 
@@ -3153,6 +3281,10 @@ def harness_candidates() -> dict:
     return {"root": str(CANDIDATES), "rows": rows}
 
 
+CANDIDATE_SAVE_MAX_SOURCE_BYTES = 200 * 1024 * 1024
+CANDIDATE_SAVE_MAX_OVERLAY_BYTES = 2 * 1024 * 1024
+
+
 def harness_candidate_save(name: str, files: dict, from_base: bool = True,
                            source: str = "") -> tuple[int, dict]:
     """把编辑器里的内容写成一个新候选：`data/candidates/<name>/`。
@@ -3165,54 +3297,231 @@ def harness_candidate_save(name: str, files: dict, from_base: bool = True,
 
     `source` 为空时才退回"从 `base_harness/loop` 复制"：那是"从基线另存一份"的意思。
     """
-    if not isinstance(name, str) or not CANDIDATE_NAME.fullmatch(name):
+    if not valid_workbench_candidate_name(name):
         return 400, {"error": "bad-name", "detail": "候选名只允许字母数字与 . _ -（≤48）"}
     if not isinstance(files, dict) or not files:
         return 400, {"error": "no-files"}
-    # **先校验再落盘。** 边拷边校验会让一次被拒绝的保存留下半棵树；那棵树带着 base 的
-    # `harness.json`，于是它出现在候选清单里（用户从没成功保存过它），同一个名字再存
-    # 一次只能拿到 409。
-    for rel, body in files.items():
-        if not isinstance(rel, str) or not isinstance(body, str):
-            return 400, {"error": "bad-file", "detail": "文件名与内容都必须是字符串"}
-        rel_path = pathlib.PurePosixPath(rel)
-        if rel_path.is_absolute() or ".." in rel_path.parts:
-            return 400, {"error": "unsafe-path", "detail": rel}
-    seed = None
-    if source:
-        if (not isinstance(source, str) or not CANDIDATE_NAME.fullmatch(source)
-                or not (CANDIDATES / source / "harness.json").is_file()):
-            return 400, {"error": "bad-source", "detail": str(source)}
-        seed = CANDIDATES / source
-    target = CANDIDATES / name
-    if target.exists():
-        return 409, {"error": "duplicate-candidate", "detail": f"{target} 已存在"}
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".state", ".git")
+    if source and not valid_workbench_candidate_name(source):
+        return 400, {"error": "bad-source"}
+    if (sys.platform != "linux" or not all(hasattr(os, x) for x in
+            ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK")) or
+            os.open not in os.supports_dir_fd or os.scandir not in os.supports_fd):
+        return 503, {"error": "unsupported"}
+
+    # Bounded work: 16 levels, 4096 entries, 200 MiB/file and total
+    # including overlays, with a 2 MiB limit per overlay and manifest.
+    # The configured root ancestors and destination root
+    # are trusted/cooperative; same-UID rename/mutation there is out of scope.
+    # Source bytes can change during copying; this is not an atomic snapshot.
+    max_depth, max_entries = 16, 4096
+    max_file = max_total = CANDIDATE_SAVE_MAX_SOURCE_BYTES
+    max_overlay = CANDIDATE_SAVE_MAX_OVERLAY_BYTES
+    overlays, total = [], 0
     try:
-        if seed is not None:
-            shutil.copytree(seed, target, ignore=ignore)
-        elif from_base and BASE_HARNESS.is_dir():
-            shutil.copytree(BASE_HARNESS, target, ignore=ignore)
-        else:
-            target.mkdir(parents=True)
-        written = []
         for rel, body in files.items():
-            rel_path = pathlib.PurePosixPath(rel)
-            out = target / rel_path
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(body, encoding="utf-8")
-            written.append(str(rel_path))
-        manifest = read_json(target / "harness.json")
-        if not isinstance(manifest, dict) or not manifest.get("entrypoint"):
-            shutil.rmtree(target, ignore_errors=True)
-            return 400, {"error": "manifest-missing", "detail": "候选里没有可用的 harness.json"}
+            if not isinstance(rel, str) or not isinstance(body, str):
+                raise ValueError("bad-file")
+            parts = rel.split("/")
+            if (not rel or any(p in ("", ".", "..") or "\x00" in p for p in parts)
+                    or len(parts) > max_depth or any(len(os.fsencode(p)) > 255 for p in parts)):
+                raise ValueError("unsafe-path")
+            data = body.encode("utf-8")
+            total += len(data)
+            if len(data) > max_overlay or total > max_total or len(overlays) >= max_entries:
+                raise ValueError("resource-limit")
+            overlays.append((parts, data))
+    except (ValueError, UnicodeError) as exc:
+        return 400, {"error": str(exc) if isinstance(exc, ValueError) else "bad-file"}
+
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
+    read_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    fds = []
+    target = CANDIDATES / name
+    written = ["/".join(parts) for parts, _ in overlays]
+    count = len(overlays)
+    manifest_data = None
+    dest = None
+    published = False
+    try:
+        CANDIDATES.mkdir(parents=True, exist_ok=True)
+        root = os.open(CANDIDATES, directory_flags)
+        fds.append(root)
+        seed = None
+        if source:
+            seed = os.open(source, directory_flags, dir_fd=root)
+        elif from_base:
+            try:
+                seed = os.open(BASE_HARNESS, directory_flags)
+            except FileNotFoundError:
+                pass
+        if seed is not None:
+            fds.append(seed)
+            # A named source must have a regular, non-linked manifest.
+            if source:
+                mfd = os.open("harness.json", read_flags, dir_fd=seed)
+                try:
+                    st = os.fstat(mfd)
+                    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+                        raise ValueError("bad-source")
+                finally:
+                    os.close(mfd)
+        try:
+            os.mkdir(name, 0o700, dir_fd=root)
+        except FileExistsError:
+            return 409, {"error": "duplicate-candidate", "detail": f"{target} 已存在"}
+        dest = os.open(name, directory_flags, dir_fd=root)
+        fds.append(dest)
+        os.fchmod(dest, 0o700)
+
+        def copy_dir(src, dst, depth):
+            nonlocal count, total, manifest_data
+            with os.scandir(src) as entries:
+                for entry in entries:
+                    item = entry.name
+                    count += 1
+                    if count > max_entries or depth > max_depth:
+                        raise ValueError("resource-limit")
+                    if item in ("__pycache__", ".state", ".git") or item.endswith(".pyc"):
+                        continue
+                    fd = os.open(item, read_flags, dir_fd=src)
+                    try:
+                        st = os.fstat(fd)
+                        if stat.S_ISDIR(st.st_mode):
+                            if depth >= max_depth:
+                                raise ValueError("resource-limit")
+                            os.mkdir(item, 0o700, dir_fd=dst)
+                            sub = os.open(item, directory_flags, dir_fd=dst)
+                            try:
+                                os.fchmod(sub, 0o700)
+                                copy_dir(fd, sub, depth + 1)
+                            finally:
+                                os.close(sub)
+                        elif stat.S_ISREG(st.st_mode) and st.st_nlink == 1:
+                            is_manifest = depth == 1 and item == "harness.json"
+                            chunks, size = [], 0
+                            out = None
+                            try:
+                                if not is_manifest:
+                                    raw = os.open(item, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, st.st_mode & 0o777, dir_fd=dst)
+                                    out = os.fdopen(raw, "wb")
+                                    os.fchmod(out.fileno(), st.st_mode & 0o777)
+                                limit = max_overlay if is_manifest else max_file
+                                while True:
+                                    chunk = os.read(fd, min(65536, limit + 1 - size))
+                                    if not chunk:
+                                        break
+                                    size += len(chunk)
+                                    total += len(chunk)
+                                    if size > limit or total > max_total:
+                                        raise ValueError("resource-limit")
+                                    if is_manifest:
+                                        chunks.append(chunk)
+                                    else:
+                                        out.write(chunk)
+                                if is_manifest:
+                                    manifest_data = b"".join(chunks)
+                            finally:
+                                if out is not None:
+                                    out.close()
+                        else:
+                            raise ValueError("unsafe-source")
+                    finally:
+                        os.close(fd)
+
+        if seed is not None:
+            copy_dir(seed, dest, 1)
+        for parts, data in overlays:
+            if parts == ["harness.json"]:
+                manifest_data = data
+                continue
+            parent = os.dup(dest)
+            try:
+                for component in parts[:-1]:
+                    created = False
+                    try:
+                        os.mkdir(component, 0o700, dir_fd=parent)
+                        created = True
+                    except FileExistsError:
+                        pass
+                    child = os.open(component, directory_flags, dir_fd=parent)
+                    if created:
+                        os.fchmod(child, 0o700)
+                    os.close(parent)
+                    parent = child
+                out = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o644, dir_fd=parent)
+                try:
+                    st = os.fstat(out)
+                    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+                        raise ValueError("unsafe-target")
+                    os.ftruncate(out, 0)
+                    with os.fdopen(os.dup(out), "wb") as stream:
+                        stream.write(data)
+                finally:
+                    os.close(out)
+            finally:
+                os.close(parent)
+        try:
+            manifest = json.loads(manifest_data) if manifest_data is not None else None
+        except (ValueError, UnicodeError, RecursionError):
+            manifest = None
+        if (not isinstance(manifest, dict) or not isinstance(manifest.get("entrypoint"), str)
+                or not manifest["entrypoint"].strip()):
+            raise ValueError("manifest-missing")
         manifest["name"] = name
-        (target / "harness.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n",
-                                            encoding="utf-8")
-    except BaseException:
-        # 这个目录是本次调用建的（上面查过不存在），失败就整个收回去，别留下半个候选。
-        shutil.rmtree(target, ignore_errors=True)
-        raise
+        data = (json.dumps(manifest, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
+        if len(data) > max_overlay or total + len(data) > max_total:
+            raise ValueError("resource-limit")
+        # Publish the complete manifest atomically as the last visible step.
+        import secrets
+        temporary_manifest = ".harness-save-" + secrets.token_hex(16)
+        out = os.open(temporary_manifest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=dest)
+        with os.fdopen(out, "wb") as stream:
+            stream.write(data)
+        os.link(temporary_manifest, "harness.json", src_dir_fd=dest, dst_dir_fd=dest, follow_symlinks=False)
+        published = True
+        # Publication succeeded; cleanup failure must not turn success into failure.
+        try:
+            os.unlink(temporary_manifest, dir_fd=dest)
+        except OSError:
+            pass
+    except (OSError, ValueError, UnicodeError, RecursionError) as exc:
+        return 400, {"error": str(exc) if isinstance(exc, ValueError) else "unsafe-or-unavailable"}
+    finally:
+        if dest is not None and not published:
+            # Only remove the directory we opened after our successful mkdir.
+            # As above, same-UID mutation/rename of the trusted root is excluded.
+            # Any failed identity check or cleanup leaves the incomplete tree.
+            try:
+                owned = os.fstat(dest)
+                current = os.stat(name, dir_fd=root, follow_symlinks=False)
+                if (owned.st_dev, owned.st_ino) == (current.st_dev, current.st_ino):
+                    def clear_owned(fd):
+                        with os.scandir(fd) as entries:
+                            for entry in entries:
+                                st = entry.stat(follow_symlinks=False)
+                                if stat.S_ISDIR(st.st_mode):
+                                    child = os.open(entry.name, directory_flags, dir_fd=fd)
+                                    try:
+                                        actual = os.fstat(child)
+                                        if (actual.st_dev, actual.st_ino) != (st.st_dev, st.st_ino):
+                                            raise OSError("directory changed during cleanup")
+                                        clear_owned(child)
+                                        current_child = os.stat(entry.name, dir_fd=fd, follow_symlinks=False)
+                                        if (actual.st_dev, actual.st_ino) != (current_child.st_dev, current_child.st_ino):
+                                            raise OSError("directory changed during cleanup")
+                                        os.rmdir(entry.name, dir_fd=fd)
+                                    finally:
+                                        os.close(child)
+                                else:
+                                    os.unlink(entry.name, dir_fd=fd)
+                    clear_owned(dest)
+                    current = os.stat(name, dir_fd=root, follow_symlinks=False)
+                    if (owned.st_dev, owned.st_ino) == (current.st_dev, current.st_ino):
+                        os.rmdir(name, dir_fd=root)
+            except OSError:
+                pass
+        for fd in reversed(fds):
+            os.close(fd)
     return 201, {"candidate": name, "path": str(target), "written": written,
                  "trial": (f"python3 driver.py --harness-path {target} --dataset "
                            "authored_example_fix_bug --sampling all --rounds 0 "
@@ -3221,12 +3530,72 @@ def harness_candidate_save(name: str, files: dict, from_base: bool = True,
 
 def harness_candidate_trial(name: str, dataset: str, run_id: str = "") -> tuple[int, dict]:
     """直接用 `--harness-path` 跑一次单点：这就是"人改了、看一题"的闭环。"""
-    target = CANDIDATES / str(name)
-    if not CANDIDATE_NAME.fullmatch(str(name)) or not (target / "harness.json").is_file():
+    if (not isinstance(name, str) or name in (".", "..")
+            or not CANDIDATE_NAME.fullmatch(name)):
         return 404, {"error": "candidate-not-found", "detail": str(name)}
-    runs = pathlib.Path(os.environ.get("HG_CONSOLE_TRIAL_RUNS",
-                                       "/tmp/hg-console-trials"))
-    run_id = run_id or f"manual-{name}-{time.strftime('%Y%m%d-%H%M%S')}"
+    target = CANDIDATES / name
+    if not (target / "harness.json").is_file():
+        return 404, {"error": "candidate-not-found", "detail": name}
+    run_id = run_id or f"manual-{name[:24]}-{os.urandom(8).hex()}"
+    if (not isinstance(run_id, str) or run_id in (".", "..", "work")
+            or not CANDIDATE_NAME.fullmatch(run_id)):
+        return 400, {"error": "bad-run-id"}
+    configured = os.environ.get("HG_CONSOLE_TRIAL_RUNS")
+    if not configured or not pathlib.Path(configured).is_absolute():
+        return 503, {"error": "trial-root-not-configured"}
+    runs = pathlib.Path(configured)
+    if ".." in runs.parts:
+        return 503, {"error": "unsafe-trial-root"}
+    platform = PLATFORM_ROOT.resolve()
+    if runs == platform or runs in platform.parents or platform in runs.parents:
+        return 503, {"error": "unsafe-trial-root"}
+
+    # Walk from / with no symlink following. The administrator must own and
+    # protect this existing root and its ancestors from untrusted writers.
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    root_fd = work_fd = None
+    reserved = False
+    identity = None
+    try:
+        root_fd = os.open("/", flags)
+        for part in runs.parts[1:]:
+            next_fd = os.open(part, flags, dir_fd=root_fd)
+            os.close(root_fd)
+            root_fd = next_fd
+        try:
+            os.mkdir("work", 0o700, dir_fd=root_fd)
+        except FileExistsError:
+            pass
+        work_fd = os.open("work", flags, dir_fd=root_fd)
+        os.mkdir(run_id, 0o700, dir_fd=root_fd)
+        reserved = True
+        identity = os.stat(run_id, dir_fd=root_fd, follow_symlinks=False)
+        os.mkdir(run_id, 0o700, dir_fd=work_fd)
+    except FileExistsError:
+        # Only remove our still-empty run reservation before handoff; never
+        # remove a work reservation or anything created by the driver.
+        if reserved:
+            try:
+                current = os.stat(run_id, dir_fd=root_fd, follow_symlinks=False)
+                if identity and (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
+                    os.rmdir(run_id, dir_fd=root_fd)
+            except OSError:
+                pass
+        return 409, {"error": "trial-run-exists", "run_id": run_id}
+    except OSError:
+        if reserved:
+            try:
+                current = os.stat(run_id, dir_fd=root_fd, follow_symlinks=False)
+                if identity and (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
+                    os.rmdir(run_id, dir_fd=root_fd)
+            except OSError:
+                pass
+        return 503, {"error": "unsafe-trial-root"}
+    finally:
+        if work_fd is not None:
+            os.close(work_fd)
+        if root_fd is not None:
+            os.close(root_fd)
     argv = [sys.executable, str(PLATFORM_ROOT / "driver.py"), "--harness-path", str(target),
             "--dataset", str(dataset), "--sampling", "all", "--rounds", "0",
             "--run-id", run_id, "--runs-root", str(runs), "--work-root", str(runs / "work")]
@@ -3235,6 +3604,9 @@ def harness_candidate_trial(name: str, dataset: str, run_id: str = "") -> tuple[
                               timeout=1800, env=dict(os.environ))
     except subprocess.TimeoutExpired:
         return 504, {"error": "trial-timeout", "run_id": run_id}
+    except OSError:
+        # Preserve both identities even if launching the driver fails.
+        return 503, {"error": "trial-launch-failed", "run_id": run_id}
     curve = runs / run_id / "curve.jsonl"
     score = None
     if curve.is_file():
@@ -4305,7 +4677,8 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1:] == ["harness", "archive"]:
                 code, blob = harness_candidate_archive((query.get("candidate") or [""])[0])
                 if blob is None:
-                    return self._error("candidate not found", code)
+                    message = {404: "candidate not found", 400: "invalid or unsafe candidate archive (links, special files, or unsafe paths are not allowed)", 413: "candidate archive exceeds entry, expanded, or compressed size limits"}.get(code, "candidate archive unavailable")
+                    return self._error(message, code)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/gzip")
                 self.send_header("Content-Length", str(len(blob)))
@@ -4461,7 +4834,7 @@ class Handler(BaseHTTPRequestHandler):
             if length and len(raw) != length:
                 return None
             body = json.loads(raw.decode("utf-8") or "{}")
-        except (ValueError, UnicodeDecodeError):
+        except (ValueError, UnicodeDecodeError, RecursionError):
             return None
         return body if isinstance(body, dict) else None
 

@@ -160,6 +160,10 @@ python3 console/server.py --port 4460
 
 Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from the repository root after an experiment has created `runs/`, or point `HG_CONSOLE_RUNS` to another existing run-record directory. The Console binds to localhost by default.
 
+Candidate trials additionally require `HG_CONSOLE_TRIAL_RUNS` to name an existing **absolute**, symlink-free directory outside (and not an ancestor of) the platform checkout. An administrator must provision and protect this directory and all its ancestors against untrusted modification, and dedicate it to this service; for example, create a private directory under a suitable deployment data volume and export its absolute path before starting the Console. There is no shared `/tmp` default. The service reserves both `<root>/<run-id>` and `<root>/work/<run-id>` exclusively; existing or incomplete IDs cannot be reused, including after failures or timeouts. Choose a new ID rather than deleting historical data. Run IDs use 1–48 ASCII letters, digits, dot, underscore or hyphen, excluding `.`, `..`, and `work`. This changes compatibility for deployments relying on the former default or reusing IDs. The root must be exclusive to this service: direct driver CLI runs and other writers must not use either namespace. The reservation protects cooperating trial requests, not malicious processes running as the same OS user or administrators modifying the trusted root.
+
+A candidate trial passes `--sampling all --rounds 0`: zero optimization rounds does **not** mean one task. It can evaluate the entire selected dataset and incur corresponding model, time, and resource costs. Review the dataset and deployment limits before launching.
+
 <details>
 <summary>🖥️ See the Console</summary>
 <br>

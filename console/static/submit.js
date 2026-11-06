@@ -52,7 +52,11 @@
     if (!name) return;
     try {
       const response = await fetch(`/api/harness/archive?candidate=${encodeURIComponent(name)}`);
-      if (!response.ok) { showError(t("ls.62"), name); return; }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        showError(t("ls.62"), payload.error || `${name} (HTTP ${response.status})`);
+        return;
+      }
       const blob = await response.blob();
       const file = new File([blob], `${name}.tar.gz`, { type: "application/gzip" });
       const input = document.getElementById("archive");
