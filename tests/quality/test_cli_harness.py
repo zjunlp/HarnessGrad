@@ -173,8 +173,8 @@ def test_the_curve_point_prefers_the_declaration_and_records_the_conflict(
     monkeypatch.setenv("HG_CLI_MODEL", "fake-model-1")
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
 
-    # Declare this test's CLI rather than relying on the example manifest's
-    # machine-specific installation path. Leave the reference harness untouched.
+    # Declare this test's external CLI directory on its private fixture copy.
+    # Keep the reference fixture free of installation paths.
     repo = tmp_path / "cli-agent"
     shutil.copytree(ROOT / "tests" / "fixtures" / "base_harness" / "cli_agent", repo)
     manifest = repo / "harness.json"
