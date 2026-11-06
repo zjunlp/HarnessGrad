@@ -1,14 +1,5 @@
 [
  {
-  "reference": "/site/adapter-integration-journal.md",
-  "source_path": "docs/adapter-integration-journal.md",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 498107,
-  "sha256": "df476bbe95cc648458edadfe0d38b496c85ba146e2dd62a568f26a44c72235bf",
-  "carrier": "tests/fixtures/hg_migration_site/adapter-integration-journal.md",
-  "transform": "retired native-runtime JSON receipt links removed; retained report link corrected"
- },
- {
   "reference": "/site/agentdojo-metadata-privacy-codex180-report.md",
   "source_path": "reports/agentdojo-metadata-privacy-codex180-report.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
@@ -137,14 +128,6 @@
   "carrier": "tests/fixtures/hg_migration_site/measurement-coverage-hg-b3-review.md"
  },
  {
-  "reference": "/site/preserved-lifecycle-review-b8.md",
-  "source_path": "reports/preserved-lifecycle-review-b8.md",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 15571,
-  "sha256": "a7b97ffe86f6b24dad742689e44020523c8ef90007700ba8e364f1fbbb4f99a5",
-  "carrier": "tests/fixtures/hg_migration_site/preserved-lifecycle-review-b8.md"
- },
- {
   "reference": "/site/runtime-blockers-b7.md",
   "source_path": "reports/runtime-blockers-b7.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
@@ -248,22 +231,6 @@
   "bytes": 13844,
   "sha256": "a67f21d882ee362a75435a2341f260312ee5e1c4bb1ee685cf1cb23cbdc0080b",
   "carrier": "tests/fixtures/hg_migration_site/w-shared-verifier-review.md"
- },
- {
-  "reference": "/site/w-spread2-evidence/audit-output.txt",
-  "source_path": "reports/w-spread2-evidence/audit-output.txt",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 1989,
-  "sha256": "792d1ff14b10cffa8e0cfd4bbb1737aa6e099494dc3e0639d37b5e9d6a18c193",
-  "carrier": "tests/fixtures/hg_migration_site/w-spread2-evidence/audit-output.txt"
- },
- {
-  "reference": "/site/w-spread2-reconciliation.md",
-  "source_path": "reports/w-spread2-reconciliation.md",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 11061,
-  "sha256": "e141574d3f6bf31eee828c4de761a9f63f0dc60e83837265e28b1c49bb2de60d",
-  "carrier": "tests/fixtures/hg_migration_site/w-spread2-reconciliation.md"
  },
  {
   "reference": "/site/w-trivia-review.md",
@@ -395,14 +362,5 @@
   "bytes": 4755,
   "sha256": "d913fcdd8f8d5c4e15543dc688b13efc1d944545cabed7b034278f490a1c33e0",
   "transform": "section extracted verbatim; title line added; provenance comment added"
- },
- {
-  "reference": "/site/dataset-reviews/aime.md",
-  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/aime.md",
-  "source_path": "docs/dataset-reviews/aime.md",
-  "source_commit": "67c9a6817a8684245e9ee7620ec82c9fdb721f95",
-  "bytes": 11224,
-  "sha256": "282ab4122a5f5d2048eb63cafc7e1328f1029a484bd267e90bb4679f94da6c7d",
-  "transform": "verbatim copy of the tracked file. Unlike the six migrations above, this one is a FORWARD archive rather than a recovery: docs/dataset-reviews/aime.md is present in this repository, and its carrier exists because the /site/ citation convention requires an archived copy of every cited review. source_commit is the commit that introduced the review."
  }
 ]

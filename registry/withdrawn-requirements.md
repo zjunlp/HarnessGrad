@@ -182,12 +182,11 @@ and artifact-only export evidence, plus resolution of the frozen V2/V3 lifecycle
 "Retain policy refusal: do not provision or run GAIA." Its observed record says compatibility
 only compares supplied identities, without validating receipts or authorizing reuse;
 `eval/policy/gaia_snapshot_attestation.py` explicitly records
-`"receipt_validation": "not-performed"`. Historical citations remain
-`/site/adapter-integration-journal.md` (`## GAIA lifecycle wiring audit — Codex 165`),
-`/site/preserved-lifecycle-review-b8.md` (`## GAIA / frozen-lifecycle-receipt`),
-`/site/gaia-operator-packet-codex210.md`
-(`## Required operator deliveries, in dependency order`) and
-`/site/enforcement-proof-decision.md` (`Snapshot/cleanup uncertainty alone is not a new`).
+`"receipt_validation": "not-performed"`. The former journal and lifecycle-review
+copies have been retired; their summaries did not authenticate the underlying
+receipts. The retained [operator packet](../tests/fixtures/hg_migration_site/gaia-operator-packet-codex210.md)
+lists the required deliveries, and the [enforcement decision](../docs/enforcement-proof-decision.md)
+records the scope decision.
 **Why it cannot be advanced here:** the requirement withholds readiness pending live
 evidence while its own action forbids provisioning or running GAIA. No permitted live run
 can supply that evidence here. The operator withdraws this requirement as a standing limit;
@@ -213,12 +212,9 @@ pool (`data/datasets/tau_bench.py`, `_ALL_GT: list[dict] = _read_gt()`), both cl
 are absent in the reviewed worktree, and no independent selected runtime/lifecycle receipt
 was located in the reviewed repository metadata. The late verifier-input declaration
 (`def _verifier(record: dict) -> dict:`) is source evidence, not reset/secrecy observation.
-Historical citations remain `/site/adapter-integration-journal.md`
-(`## AppWorld / GAIA / tau-bench — local state boundaries`),
-`/site/preserved-lifecycle-review-b8.md` (`## tau_bench / local-state-lifecycle`),
-`/site/tau-bench-vendoring.md`
-(`3. **Two recorded generated databases are absent, intentionally ignored by git.**`) and
-`/site/enforcement-proof-decision.md` (`Snapshot/cleanup uncertainty alone is not a new`).
+The reviewed inventory limits remain documented in [tau-bench vendoring](../docs/tau-bench-vendoring.md),
+including the two generated databases absent from the reviewed worktree. The
+[enforcement decision](../docs/enforcement-proof-decision.md) records the scope decision.
 **Why it cannot be advanced here:** the cited source/inventory cannot establish selected-only
 custody or independently observed run/trial/manifest-bound restoration. The reviewed record
 has neither the clean database pair nor that independent receipt; repeating declarations
@@ -240,19 +236,15 @@ effects; never resume, rerun or overwrite either ID, or turn missing outcomes in
 **Evidence reviewed:** the former observed record reports 19 and 149/150 completed
 task-trials with no terminal verdict/aggregate or cleanup closure. Termination authority
 remains undetermined on the native bwrap/files path; an audit digest does not authenticate
-either external run receipt. Former citations remain `data/datasets/chessbench_puzzles.py`
-(`KIND = "dataset"`), `/site/adapter-integration-journal.md`
-(`- Interruption audit: termination authority is undetermined`),
-`/site/preserved-lifecycle-review-b8.md` (`## chessbench_puzzles / interruption-closure`),
-`/site/chess-recovery-id-conflict-codex182-report.md` (`Both historical IDs`) and
-`/site/enforcement-proof-decision.md` (`Snapshot/cleanup uncertainty alone is not a new`).
+either external run receipt. The adapter declaration remains in
+`data/datasets/chessbench_puzzles.py`. The retained
+[reused-ID review](../tests/fixtures/hg_migration_site/chess-recovery-id-conflict-codex182-report.md)
+preserves both histories without authorizing reuse; the
+[enforcement decision](../docs/enforcement-proof-decision.md) records the scope decision.
 **Why it cannot be advanced here:** the independent-approval requirement was already
-withdrawn by the operator in `docs/independent-review-deferred.md` (now cited as
-`/site/independent-review-deferred.md`). That standalone exported source is not available
-in this worktree; the existing journal's "Parent review and merge — w-trivia — 2026-10-15"
-entry corroborates that the operator withdrew the independent-approval gates and instructed
-workers not to re-impose human sign-off. Neither that decision nor source review supplies
-authentication or missing terminal/quiescence observations for frozen runs. The operator's
+withdrawn by the operator in the [deferred-review decision](../docs/independent-review-deferred.md).
+That decision removes an approval gate; it does not supply authentication or
+missing terminal/quiescence observations for frozen runs. The operator's
 new decision withdraws the remaining keep-open requirement; those unknowns remain limits.
 **Retained:** `chess-pilot-h0-20261013` and
 `chess-pilot-h0-20261013-recovery-01`, their original receipts, historical records and
