@@ -27,6 +27,24 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="module")
+def scienceworld_goldpaths_archive():
+    """Optional original source for fold/study checks; invalid bytes must fail."""
+    from harnessgrad.paths import DataRootNotConfigured
+    from tools.scienceworld_study_sample import archive_bytes, archive_path
+
+    try:
+        path = archive_path()
+    except DataRootNotConfigured as exc:
+        pytest.skip(f"ScienceWorld goldpaths archive unavailable: {exc}; place "
+                    "_src/goldpaths-all.zip under the configured ScienceWorld dataset root")
+    if not path.exists():
+        pytest.skip(f"ScienceWorld goldpaths archive missing: {path}; place "
+                    "_src/goldpaths-all.zip under the configured ScienceWorld dataset root")
+    raw, member = archive_bytes(path)
+    return path, raw, member
+
+
+@pytest.fixture(scope="module")
 def captured_native_python_manifest(tmp_path_factory):
     """Local Python/stdlib closure for authored controls; no provisioned payload."""
     import shutil

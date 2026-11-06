@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Build the 100-per-fold study setting for ScienceWorld from the benchmark's own folds.
 
-    python3 tools/scienceworld_study_sample.py --archive /tmp/goldpaths-all.zip --write
-    python3 tools/scienceworld_study_sample.py --archive ... --check
+    python3 tools/scienceworld_study_sample.py --check
+    python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip --write
 
-**Why this file exists.** `data/datasets/scienceworld.py` loads the benchmark's `test` fold
-and splits it by task-id hash, because only the test fold's identity was transcribed into
-git. Running a study on that split would train on test-fold material and then score the rest
-of the same fold — the adapter says so in its own docstring. The benchmark has three folds
+The default archive is <scienceworld dataset root>/_src/goldpaths-all.zip, using
+HG_DATA_SCIENCEWORLD or HG_DATA_ROOT/scienceworld. --archive selects an explicit file.
+
+**Why this file exists.** `data/datasets/scienceworld.py` defaults to the benchmark's whole
+`test` fold. A study needs separate training material to preserve that evaluation boundary.
+The benchmark has three folds
 (`train` 3,442 / `dev` 1,721 / `test` 1,744 gold paths) inside
 `goldpaths/goldpaths-all.zip`, and a study needs all three with the same shape as AppWorld:
 train on `train`, score every checkpoint on `dev`, and keep `test` for the exam.
@@ -32,10 +34,13 @@ import hashlib
 import io
 import json
 import pathlib
+import sys
 import zipfile
 from collections import defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
 ASSETS = ROOT / "data" / "datasets" / "scienceworld"
 OUT = ASSETS / "study_300.json"
 TEST_FOLD = ASSETS / "test_fold.json"
@@ -50,26 +55,30 @@ FOLDS = ("train", "dev", "test")
 #: `data/datasets/scienceworld.py` and its 299 over-budget test-fold paths).
 STEP_BUDGET = 100
 
-ARCHIVE_CANDIDATES = (
-    pathlib.Path("/tmp/goldpaths-all.zip"),
-    pathlib.Path("/tmp/scw/ScienceWorld-main/goldpaths/goldpaths-all.zip"),
-)
+
+def archive_path(path: pathlib.Path | None = None) -> pathlib.Path:
+    """Explicit input, or the configured dataset's source archive; no scratch search."""
+    if path is not None:
+        return pathlib.Path(path).expanduser()
+    from harnessgrad.paths import dataset_root
+    return pathlib.Path(dataset_root("scienceworld")) / "_src" / "goldpaths-all.zip"
 
 
-def archive_bytes(path: pathlib.Path | None) -> tuple[bytes, str]:
-    """The zip payload and the member that holds the gold table."""
-    candidates = [path] if path else list(ARCHIVE_CANDIDATES)
-    chosen = next((p for p in candidates if p and p.is_file()), None)
-    if chosen is None:
-        raise SystemExit("no goldpaths archive found; pass --archive (see the module docstring)")
-    raw = chosen.read_bytes()
+def archive_bytes(path: pathlib.Path | None = None) -> tuple[bytes, str]:
+    """The hash-verified zip payload and the member that holds the gold table."""
+    raw = archive_path(path).read_bytes()
     # The upstream release may ship the table directly or inside a one-member outer zip.
     if zipfile.is_zipfile(io.BytesIO(raw)):
-        outer = zipfile.ZipFile(io.BytesIO(raw))
-        inner = [n for n in outer.namelist() if n.endswith("goldpaths-all.zip")]
-        if inner:
-            raw = outer.read(inner[0])
-    member = zipfile.ZipFile(io.BytesIO(raw)).namelist()[0]
+        with zipfile.ZipFile(io.BytesIO(raw)) as outer:
+            inner = [n for n in outer.namelist() if n.endswith("goldpaths-all.zip")]
+            if inner:
+                raw = outer.read(inner[0])
+    digest = hashlib.sha256(raw).hexdigest()
+    expected = json.loads(TEST_FOLD.read_text())["archive"]["sha256"]
+    if digest != expected:
+        raise ValueError(f"archive sha256 {digest} is not the transcription's {expected}")
+    with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+        member = archive.namelist()[0]
     return raw, member
 
 
@@ -141,8 +150,6 @@ def build(archive: pathlib.Path | None) -> dict:
     raw, member = archive_bytes(archive)
     digest = hashlib.sha256(raw).hexdigest()
     recorded = json.loads(TEST_FOLD.read_text())["archive"]
-    if digest != recorded["sha256"]:
-        raise SystemExit(f"archive sha256 {digest} is not the transcription's {recorded['sha256']}")
     table = fold_table(raw, member)
     measured = {fold: len(table[fold]) for fold in FOLDS}
     if measured != recorded["folds"]:
@@ -185,14 +192,19 @@ def build(archive: pathlib.Path | None) -> dict:
     }
 
 
-def main() -> int:
+def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--archive", type=pathlib.Path, default=None)
+    ap.add_argument("--archive", type=pathlib.Path, default=None,
+                    help="override <scienceworld dataset root>/_src/goldpaths-all.zip")
     ap.add_argument("--write", action="store_true", help="write the file (default: check)")
     ap.add_argument("--check", action="store_true")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    payload = build(args.archive)
+    try:
+        payload = build(args.archive)
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        ap.error(f"{exc}; pass --archive PATH or place goldpaths-all.zip in the configured "
+                 "ScienceWorld dataset's _src directory (HG_DATA_SCIENCEWORLD or HG_DATA_ROOT)")
     text = json.dumps(payload, indent=1, sort_keys=False) + "\n"
     existing = OUT.read_text() if OUT.is_file() else None
     if args.write:

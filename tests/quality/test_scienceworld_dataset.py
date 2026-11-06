@@ -48,15 +48,6 @@ def _load_control(dataset: str):
     spec.loader.exec_module(module)
     return module
 
-#: The archive this repository's test-fold transcription came from. Present in the checkout
-#: used to onboard the dataset; the drift test below is skipped when it is absent, which is
-#: the honest thing -- a machine without the archive cannot check a transcription of it.
-ARCHIVE_CANDIDATES = [
-    Path("/tmp/scw/ScienceWorld-main/goldpaths/goldpaths-all.zip"),
-    Path("/tmp/gp_main.zip"),
-]
-
-
 @pytest.fixture(scope="module")
 def scienceworld():
     import data.datasets.scienceworld as module
@@ -165,12 +156,13 @@ def test_sealed_runtime_pins_current_shared_budget_library():
     raw = (ROOT / pin["manifest"]).read_bytes()
     assert pin["sha256"] == hashlib.sha256(raw).hexdigest()
     entry = json.loads(raw)["files"]["/scorer/scw_env.py"]
-    source = (ROOT / entry["source"]).read_bytes()
+    # Compare current source to the sealed digest without requiring an installed blob store.
+    source = (ROOT / "data/datasets/scienceworld/lib/scw_env.py").read_bytes()
     assert entry["sha256"] == hashlib.sha256(source).hexdigest()
     assert entry["size"] == len(source)
 
 
-def test_the_test_fold_file_is_the_archive():
+def test_the_test_fold_file_is_the_archive(scienceworld_goldpaths_archive):
     """A transcription nobody can check is a claim. This rebuilds it from the archive.
 
     Skipped when the archive is not on this machine: the comparison is the evidence, and
@@ -178,23 +170,12 @@ def test_the_test_fold_file_is_the_archive():
     """
     import data.datasets.scienceworld as scienceworld
 
-    archive_path = next((p for p in ARCHIVE_CANDIDATES if p.is_file()), None)
-    if archive_path is None:
-        pytest.skip("no goldpaths archive on this machine to compare against")
-    import hashlib
     import io
 
-    raw = archive_path.read_bytes()
-    if zipfile.is_zipfile(io.BytesIO(raw)):
-        outer = zipfile.ZipFile(io.BytesIO(raw))
-        member = [n for n in outer.namelist() if n.endswith("goldpaths-all.zip")]
-        if member:
-            raw = outer.read(member[0])
+    _, raw, member = scienceworld_goldpaths_archive
     payload = json.loads(scienceworld.FOLD_FILE.read_text())
-    assert hashlib.sha256(raw).hexdigest() == payload["archive"]["sha256"], (
-        "the recorded archive digest is not this archive's")
     inner = zipfile.ZipFile(io.BytesIO(raw))
-    table = json.loads(inner.read(inner.namelist()[0]))
+    table = json.loads(inner.read(member))
     rebuilt = []
     folds = {"train": 0, "dev": 0, "test": 0}
     for entry in table.values():
@@ -267,14 +248,21 @@ def test_the_goal_does_not_contain_the_reference_solution(scienceworld):
 # ---------------------------------------------------------- the JVM boundary ---
 
 
-def test_java_home_is_absolute(scienceworld):
+def test_java_home_is_absolute(scienceworld, tmp_path, monkeypatch):
     """py4j launches Java with the package's own cwd, so a relative home breaks.
 
     Measured, and it cost a control run: `JAVA_HOME=jre/...` resolved fine from the caller's
     directory and then failed inside `Popen` with `FileNotFoundError: 'java'`, because py4j
     passes `cwd=scienceworld.constants.BASEPATH`.
     """
-    assert scienceworld._LIB.java_home(Path(".")).is_absolute()
+    monkeypatch.delenv("HG_SEALED_JAVA_HOME", raising=False)
+    monkeypatch.chdir(tmp_path)
+    java = Path("jre") / scienceworld._LIB.JRE_DIRNAME / "bin/java"
+    java.parent.mkdir(parents=True)
+    java.touch()  # Location-only check; no JVM is launched.
+    home = scienceworld._LIB.java_home(Path("."))
+    assert home.is_absolute()
+    assert home == java.parent.parent.resolve()
 
 
 def test_a_missing_jvm_is_an_error_not_a_silent_downgrade(scienceworld, tmp_path):
@@ -339,7 +327,8 @@ def test_the_oracle_gold_path_for_the_eval_task_reaches_100(scienceworld, live):
     assert score == 100, f"{record['task_id']}: gold scored {score}, not 100"
 
 
-def test_the_environment_regenerates_the_fold_s_own_gold(scienceworld, live):
+def test_the_environment_regenerates_the_fold_s_own_gold(
+        scienceworld, scienceworld_goldpaths_archive, live):
     """What agrees with the archive and what does not, pinned.
 
     The fold's **identity** comes from the archive, and the JVM accepts those variation
@@ -349,18 +338,9 @@ def test_the_environment_regenerates_the_fold_s_own_gold(scienceworld, live):
     path, and this test says so instead of pretending the two are the same list.
     """
     workdir, record = live
-    archive_path = next((p for p in ARCHIVE_CANDIDATES if p.is_file()), None)
-    if archive_path is None:
-        pytest.skip("no goldpaths archive on this machine to compare against")
     import io
-    raw = archive_path.read_bytes()
-    if zipfile.is_zipfile(io.BytesIO(raw)):
-        outer = zipfile.ZipFile(io.BytesIO(raw))
-        member = [n for n in outer.namelist() if n.endswith("goldpaths-all.zip")]
-        if member:
-            raw = outer.read(member[0])
-    table = json.loads(zipfile.ZipFile(io.BytesIO(raw)).read(
-        zipfile.ZipFile(io.BytesIO(raw)).namelist()[0]))
+    _, raw, member = scienceworld_goldpaths_archive
+    table = json.loads(zipfile.ZipFile(io.BytesIO(raw)).read(member))
     entry = next(v for v in table.values() if v["taskName"] == record["task_name"])
     gold = next(g for g in entry["goldActionSequences"]
                 if int(g["variationIdx"]) == record["variation"] and g["fold"] == "test")

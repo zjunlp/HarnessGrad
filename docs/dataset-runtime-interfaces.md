@@ -334,6 +334,23 @@ ScienceWorld 的便携捕获同时将 Py4J JAR 映射到封存解释器前缀下
 NumPy wheel 的 OpenBLAS/Fortran 库从同一安装的 `numpy.libs` 采集并逐文件校验，
 不会将该宿主目录直接挂载进评分沙箱。
 
+### 5.4 ScienceWorld 任务来源归档
+
+重建 study 任务清单、核对官方任务划分时，工具和测试统一读取
+`<ScienceWorld 数据目录>/_src/goldpaths-all.zip`。数据目录沿用
+`HG_DATA_SCIENCEWORLD` 或 `HG_DATA_ROOT/scienceworld`，不再搜索固定临时目录。
+日常加载和评分使用仓库内已提交的任务清单。
+
+```bash
+python3 tools/scienceworld_study_sample.py --check
+python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip --check
+```
+
+`--archive` 可直接指定归档，支持原始 goldpaths ZIP 或包含它的上游源码 ZIP。
+读取后均校验 `test_fold.json` 中记录的原始归档 SHA256。来源核验测试在未配置
+数据目录或缺少归档时明确跳过；归档已存在但哈希不符、损坏或不可读时失败。
+该归档是可选的来源核验输入，不会由 `--fetch --dataset scienceworld` 自动下载。
+
 ## 6. 完整重复试验报告
 
 所有选中任务的 VERIFY 声明同一个协议：

@@ -11,7 +11,7 @@ curve:
    check a transcription of it);
 3. **the switch changes only what it claims** -- `HG_SCIENCEWORLD_POOL=dev|test` swaps the
    eval fold while the train side stays the same 100 tasks, and with the switch unset the
-   dataset is exactly what it was (the whole test fold, hash-split).
+   dataset uses the whole official test fold without a training division.
 
 The env-dependent cases run in a subprocess on purpose: the adapter reads the variable at
 import time, so re-importing inside one process would test a cached module rather than the
@@ -29,10 +29,6 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 ASSETS = ROOT / "data" / "datasets" / "scienceworld"
 STUDY = ASSETS / "study_300.json"
-ARCHIVE_CANDIDATES = (
-    pathlib.Path("/tmp/goldpaths-all.zip"),
-    pathlib.Path("/tmp/scw/ScienceWorld-main/goldpaths/goldpaths-all.zip"),
-)
 FOLDS = ("train", "dev", "test")
 TYPES_WITH_GOLD = 29
 
@@ -71,15 +67,10 @@ def test_setting_records_the_archive_it_came_from(payload):
                                   "folds": list(FOLDS)}
 
 
-def test_rebuild_from_the_archive_reproduces_the_file(payload):
-    archive = next((p for p in ARCHIVE_CANDIDATES if p.is_file()), None)
-    if archive is None:
-        pytest.skip("no goldpaths archive on this machine to rebuild from")
-    sys.path.insert(0, str(ROOT / "tools"))
-    try:
-        import scienceworld_study_sample as tool
-    finally:
-        sys.path.pop(0)
+def test_rebuild_from_the_archive_reproduces_the_file(payload, scienceworld_goldpaths_archive):
+    from tools import scienceworld_study_sample as tool
+
+    archive, _, _ = scienceworld_goldpaths_archive
     rebuilt = tool.build(archive)
     assert rebuilt == payload
 
