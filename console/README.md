@@ -34,6 +34,8 @@ python3 console/server.py --port 4460
 | `HG_CONSOLE_BUDGET_DIR` | 未设置 | 启动/提交使用的、平台外共享 lease 目录 |
 | `HG_CONSOLE_BUDGET_CAPACITY` | 未设置 | 部署方配置的共享正整数 capacity；同一资源的参与者必须共享目录和 capacity |
 
+旧的 `tools/serve_ui.py` 的 `/api/run` 和 `/api/stop/<id>`（GET/POST）已禁用并返回 410；请改用 Console，不要将旧服务暴露给不可信客户端。旧服务仍有其他有副作用的接口，不是安全的只读服务。Console 的共享预算配置见上表及 [提交配置](../docs/harness-submission.md)；直接运行 driver 的可选预算参数语义不变，需自行协调共享资源。
+
 如果端口已被占用，直接换 `--port 4461`；不要为了腾端口去 kill 别人的进程。
 静态文件在 `static/`，`index.html` 里的脚本标签是 `/console.js`。
 

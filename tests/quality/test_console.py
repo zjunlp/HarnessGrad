@@ -159,56 +159,6 @@ def test_no_ansi_escapes_reach_the_drivers_output(tmp_path):
     assert "\x1b[" not in proc.stderr
 
 
-# --------------------------------------------------- 启动器写日志的方式 ---
-
-def test_the_launcher_puts_model_config_in_launch_json_not_in_the_log(
-        tmp_path, monkeypatch):
-    """配置曾经以 `#` 注释整块抄进 console.log。
-
-    后果不只是丑:那段注释夹在运行的证据中间,还把配置(以及一个被打码的 key 名字)
-    变成了日志内容,而面板想把它渲染成字段就得把注释再从终端文本里反解析出来。
-    现在配置进 launch.json,日志第一行只留那条启动命令 —— 它是最直接的复现方式。
-    """
-    import tools.serve_ui as ui
-
-    monkeypatch.setattr(ui, "RUNS", tmp_path)
-    monkeypatch.setattr(ui, "model_presets", lambda: {
-        "测试预设": {"HG_AGENT_BACKEND": "mock", "HG_AGENT_MODEL": "m",
-                     "HG_AGENT_API_KEY": "sk-secret", "note": ""}})
-    spawned = {}
-
-    class _Proc:
-        pid = 4242
-
-    def _popen(argv, **kw):
-        spawned["argv"] = argv
-        spawned["env"] = kw.get("env") or {}
-        return _Proc()
-
-    monkeypatch.setattr(ui.subprocess, "Popen", _popen)
-    out = ui.start_job({"harness": "loop", "dataset": "demo", "method": "noop",
-                        "rounds": "1", "model": "测试预设",
-                        "run_id": "launcher-check", "overwrite": True})
-    assert out.get("started") == "launcher-check", out
-
-    log = (tmp_path / "launcher-check" / "console.log").read_text()
-    assert log.startswith("$ "), f"日志第一行应该是启动命令:{log[:120]!r}"
-    assert "HG_AGENT" not in log, "模型配置又漏回日志里了"
-    assert "sk-secret" not in log, "密钥进了日志"
-
-    launch = json.loads((tmp_path / "launcher-check" / "launch.json").read_text())
-    assert launch["model_preset"] == "测试预设"
-    assert launch["model_env"]["HG_AGENT_MODEL"] == "m"
-    assert launch["model_env"]["HG_AGENT_API_KEY"] == "***", \
-        "launch.json 里也要打码:它是给人看的记录,不是密钥仓库"
-
-    # 密钥本身必须仍然传给子进程,否则打码就成了把功能一起打掉
-    assert spawned["env"]["HG_AGENT_API_KEY"] == "sk-secret"
-
-
-
-# --------------------------------------------- 复用实验名不能把两次运行叠起来 ---
-
 def test_a_reused_run_id_does_not_inherit_the_previous_runs_events(tmp_path):
     """复用实验名时,`events.jsonl` 必须重来,不能续写。
 
@@ -233,49 +183,6 @@ def test_a_reused_run_id_does_not_inherit_the_previous_runs_events(tmp_path):
     seqs = [e["seq"] for e in events]
     assert seqs[0] == 1 and seqs == sorted(seqs), \
         f"seq 必须从 1 起且单调:{seqs[:6]}…"
-
-
-def test_overwriting_a_run_clears_the_previous_runs_round_artifacts(
-        tmp_path, monkeypatch):
-    """覆盖 = 真的重来。上一次的 `round3_base/` 不能留在这一次的记录里。
-
-    控制台以前只截断 `console.log`,轮次产物会留着。新的一次轮数更少时,那些残留就
-    成了本次记录的一部分,读的人分不出哪些是本次产生的。
-    """
-    import tools.serve_ui as ui
-
-    monkeypatch.setattr(ui, "RUNS", tmp_path)
-    monkeypatch.setattr(ui, "model_presets", lambda: {
-        "p": {"HG_AGENT_BACKEND": "mock", "note": ""}})
-    monkeypatch.setattr(ui.subprocess, "Popen",
-                        lambda *a, **k: type("P", (), {"pid": 1})())
-
-    stale = tmp_path / "reused" / "round3_base"
-    stale.mkdir(parents=True)
-    (stale / "agent.py").write_text("上一次运行留下的")
-    (tmp_path / "reused" / "curve.jsonl").write_text('{"round": 3}\n')
-
-    out = ui.start_job({"harness": "loop", "dataset": "demo", "method": "noop",
-                        "rounds": "1", "model": "p",
-                        "run_id": "reused", "overwrite": True})
-    assert out.get("started") == "reused", out
-    assert not stale.exists(), "上一次的轮次目录还在,这一轮的记录会混进上次的"
-    assert not (tmp_path / "reused" / "curve.jsonl").exists(), "上一次的曲线还在"
-
-
-def test_refusing_to_overwrite_still_leaves_the_old_run_alone(tmp_path, monkeypatch):
-    """没选覆盖时必须原样保留 —— 否则"拒绝"本身就成了破坏。"""
-    import tools.serve_ui as ui
-
-    monkeypatch.setattr(ui, "RUNS", tmp_path)
-    keep = tmp_path / "keep-me" / "round3_base"
-    keep.mkdir(parents=True)
-    (keep / "agent.py").write_text("要留着的")
-
-    out = ui.start_job({"harness": "loop", "dataset": "demo", "method": "noop",
-                        "rounds": "1", "model": "p", "run_id": "keep-me"})
-    assert "error" in out, out
-    assert (keep / "agent.py").read_text() == "要留着的"
 
 
 # ------------------------------------------- 记录必须在产生时就可读,不能等结束 ---

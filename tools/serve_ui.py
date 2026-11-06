@@ -15,7 +15,7 @@ Model service lifecycle belongs to the deployment operator, not this API.
 
 * `prepare_report` / `start_prepare` —— 跑之前把 docker 镜像导进来。平台在 run 进行中
   拒绝拉镜像,所以这是跑新数据集的前提;
-* `start_job` / `job_status` / `stop_job` / `driver_pid` —— 从界面起停一个 run;
+* `job_status` / `driver_pid` —— inspect a run; legacy launch and stop are disabled;
 * `model_service` —— deprecated compatibility response; no service management;
 * `promote` / `version_graph` —— 把某个候选状态提升为当前 harness,以及版本图;
 * `step_diff` / `explain_diff`、`provider_catalog` / `read_settings` / `write_settings` /
@@ -43,7 +43,6 @@ import json
 import os
 import re
 import shutil
-import signal
 import subprocess
 import sys
 import threading
@@ -90,7 +89,6 @@ def model_presets() -> dict:
             "HG_AGENT_BACKEND": "openai",
             "HG_AGENT_MODEL": env["HG_AGENT_MODEL"],
             "HG_AGENT_BASE_URL": env["HG_AGENT_BASE_URL"],
-            "HG_AGENT_API_KEY": env.get("HG_AGENT_API_KEY", ""),
             "note": "使用用户配置的服务；运行可能产生费用",
         }
     return presets
@@ -288,111 +286,15 @@ JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
 
 
+LEGACY_LAUNCH_DISABLED = (
+    "Legacy run launch and stop are disabled; use the Console with a deployment-configured "
+    "shared budget directory and capacity."
+)
+
+
 def start_job(cfg: dict) -> dict:
-    """按表单配置启动一次 driver 运行,日志写到 runs/<id>/console.log。
-
-    用子进程而不是在线程里 import driver:一次实验可能跑几分钟,而且 driver 会加载
-    .env、改环境变量、起沙箱。隔一个进程边界,这些都不会串到 UI 这边来。
-    """
-    harness = cfg.get("harness") or "loop"
-    dataset = cfg.get("dataset") or "demo"
-    method = cfg.get("method") or "noop"
-    rounds = int(cfg.get("rounds") or 1)
-    mode = cfg.get("mode") or "A"
-    model_key = cfg.get("model") or next(iter(model_presets()))
-    # A run covers one side (INTERFACE.md §2.6). An eval run measures a state a train
-    # run left behind, so it names that run and evolves nothing.
-    side = cfg.get("side") or "train"
-    if side not in ("train", "eval"):
-        return {"error": f"未知的侧别:{side}"}
-    from_run = (cfg.get("from_run") or "").strip()
-    if side == "eval" and not from_run:
-        return {"error": "eval 要指名测哪个训练状态;先在 train 侧跑一次"}
-
-    run_id = (cfg.get("run_id") or "").strip()
-
-    if not SAFE_ID.match(run_id or "x"):
-        return {"error": "实验名称只能用字母、数字、点、下划线和短横线"}
-    if not run_id:
-        run_id = f"{harness}-{dataset}-{int(time.time()) % 100000}"
-
-    run_dir = RUNS / run_id
-    if run_dir.exists():
-        if not cfg.get("overwrite"):
-            return {"error": f"实验 {run_id} 已存在,换个名字或勾选覆盖"}
-        # 覆盖 = 真的重来,不是往里续。
-        #
-        # 以前只截断 console.log(`"w"`),而 `round*_base/`、`round*_ws/`、
-        # `round*_trajectory.json`、`diffs/` 会留着上一次的。新的一次轮数更少时,那些
-        # 残留就成了这次记录的一部分,读的人分不出哪些是本次产生的 —— 那正是
-        # "我选的是 RRSI,为什么在跑 DGM" 这类困惑的来源。
-        shutil.rmtree(run_dir)
-
-    presets = model_presets()
-    if model_key not in presets:
-        return {"error": f"未知模型预设:{model_key}"}
-    model_env = presets[model_key]
-
-    method_dir = ROOT / "methods" / method
-    if not (method_dir / "run.py").exists():
-        return {"error": f"方法 {method} 没有 run.py"}
-
-    run_dir.mkdir(parents=True, exist_ok=True)
-    log_path = run_dir / "console.log"
-
-    env = dict(os.environ)
-    env.update({k: v for k, v in model_env.items() if k.startswith("HG_AGENT")})
-    env.setdefault("PYTHONUNBUFFERED", "1")
-
-    argv = [sys.executable, str(ROOT / "driver.py"),
-            "--harness", harness, "--dataset", dataset, "--mode", mode,
-            "--rounds", str(rounds), "--run-id", run_id, "--sampling", "all",
-            "--side", side,
-            "--method-entrypoint", f"{sys.executable} {method_dir / 'run.py'}"]
-    if side == "eval":
-        argv += ["--from-run", from_run]
-    # 哪个改进器 —— 命令行传,不是环境变量碰运气。driver 会把它解析出的版本与哈希
-    # 记在每个曲线点上(INTERFACE.md §4.49),所以这一格选什么必须出现在运行记录里。
-    improver = (cfg.get("improver") or "").strip()
-    improver_model = (cfg.get("improver_model") or "").strip()
-    if improver:
-        argv += ["--improver", improver]
-    if improver_model:
-        argv += ["--improver-model", improver_model]
-
-    tasks = [t for t in (cfg.get("tasks") or []) if str(t).strip()]
-    if tasks:
-        argv += ["--tasks", ",".join(str(t) for t in tasks)]
-    if cfg.get("no_sandbox"):
-        argv.append("--no-sandbox")
-
-    # 日志里只留一行命令,配置进 launch.json。
-    #
-    # 这里以前把整个模型环境变量块以 `#` 注释写进 console.log:结果是配置(以及一个
-    # 被打码的 key 名字)夹在运行的证据中间,而面板想把它渲染成字段,就得先把这段
-    # 注释从终端文本里反解析出来。命令本身还留在日志第一行,因为它是最直接的复现方式。
-    log = log_path.open("w")
-    log.write(f"$ {' '.join(argv)}\n")
-    log.flush()
-
-    (run_dir / "launch.json").write_text(json.dumps({
-        "argv": argv,
-        "model_preset": model_key,
-        "model_env": {k: ("***" if "KEY" in k else v)
-                      for k, v in sorted(model_env.items())
-                      if k.startswith("HG_AGENT")},
-        "sandbox": not cfg.get("no_sandbox"),
-        "started": time.time(),
-    }, indent=1, ensure_ascii=False))
-
-    proc = subprocess.Popen(argv, cwd=str(ROOT), stdout=log, stderr=subprocess.STDOUT,
-                            env=env, start_new_session=True)
-    with JOBS_LOCK:
-        JOBS[run_id] = {"pid": proc.pid, "log": str(log_path), "started": time.time(),
-                        "run_id": run_id, "argv": argv, "model": model_key,
-                        "harness": harness, "dataset": dataset, "method": method,
-                        "improver": improver, "improver_model": improver_model}
-    return {"started": run_id}
+    """Reject the legacy uncoordinated, side-effecting GET launcher."""
+    return {"error": LEGACY_LAUNCH_DISABLED}
 
 
 def job_status(run_id: str) -> dict:
@@ -468,24 +370,8 @@ def driver_pid(run_id: str) -> int | None:
 
 
 def stop_job(run_id: str) -> dict:
-    """停一次运行。面板重启过之后也能停 —— 靠进程表找到它。
-
-    以前只认 `JOBS` 里的 pid,于是"面板重启前启动的那次"停不掉,而它可能还要跑几小时。
-    """
-    with JOBS_LOCK:
-        job = JOBS.get(run_id)
-    pid = job.get("pid") if job else None
-    if pid is None:
-        pid = driver_pid(run_id)
-    if pid is None:
-        return {"error": "这个 run 没有在跑(或找不到它的进程)"}
-    try:
-        os.killpg(os.getpgid(pid), signal.SIGTERM)
-        return {"stopped": run_id}
-    except OSError as exc:
-        return {"error": str(exc)}
-
-
+    """Do not signal processes using the legacy fuzzy PID lookup."""
+    return {"error": LEGACY_LAUNCH_DISABLED}
 
 
 def step_diff(run_id: str, round_no: int) -> dict:
@@ -1588,16 +1474,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(list_runs())
         if path == "/api/experiments":
             return self._json(experiments())
-        if path == "/api/run":                              # 启动(用 GET 便于演示)
-            from urllib.parse import parse_qs
-            raw = parse_qs(query).get("cfg", ["{}"])[0]
-            try:
-                cfg = json.loads(raw)
-            except json.JSONDecodeError:
-                return self._json({"error": "bad cfg"}, 400)
-            return self._json(start_job(cfg))
-        if path.startswith("/api/stop/"):
-            return self._json(stop_job(path.rsplit("/", 1)[-1]))
+        if path == "/api/run" or path.startswith("/api/stop/"):
+            return self._json({"error": LEGACY_LAUNCH_DISABLED}, 410)
         if path.startswith("/api/job/"):
             return self._json(job_status(path.rsplit("/", 1)[-1]))
 
