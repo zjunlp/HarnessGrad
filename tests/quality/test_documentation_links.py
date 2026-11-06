@@ -74,11 +74,9 @@ def _external_content(path: str) -> bool:
     return asset or path == "data/candidates" or path.startswith("data/local_ignored_module/")
 
 
-# Exact non-repository citations: an upstream source and a removed historical test.
+# Exact citation of an upstream file outside this repository.
 NON_REPOSITORY_CITATIONS = {
     ("data/datasets/strongreject/README.md", "tests/test_outputs.py"),
-    ("data/datasets/spreadsheetbench/w-spreadcache.md",
-     "tests/quality/test_spreadsheetbench_classification_w_spread2.py"),
 }
 
 # These migration records describe the old data layout, not current paths.
