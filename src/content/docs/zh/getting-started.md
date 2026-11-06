@@ -1,99 +1,85 @@
 ---
 title: 快速入门
-description: 安装 HarnessGrad 并端到端运行本地演示，无需联网，也无需费用。
+description: 在 Linux 上从源码安装 HarnessGrad，用模拟控制验证并查看结果。
 ---
 
-## 环境要求
+## 在 Linux 上安装
 
-Linux、`bubblewrap`、`git` 和 **Python 3.12+**。平台本身**不依赖第三方 Python 运行时包**，所需功能均来自标准库。
-
-克隆平台仓库（不是本文档网站），然后检查本机环境：
+需要 Linux、Git、uv、CPython 3.12 和可用的 Bubblewrap 用户命名空间。平台支持
+Python 3.12 或更新版本；默认 Loop Harness 当前使用 Python 3.12。请将虚拟环境及其
+基础解释器放在仓库、结果和工作目录以及 `/tmp` 之外。
 
 ```bash
 git clone https://github.com/zjunlp/HarnessGrad.git
 cd HarnessGrad
-python3 -m venv ~/.venvs/harnessgrad
+uv venv --seed --python 3.12 ~/.venvs/harnessgrad
 source ~/.venvs/harnessgrad/bin/activate
-python3 -m pip install -e .
-./install.sh --check      # verify only; change nothing (also useful in CI)
-./install.sh              # optionally install missing dependencies, then verify
+uv pip install -e .
+./install.sh --check
 ```
 
-脚本不会仅检查“bwrap 已安装”，因为这不等于沙箱能够正常工作：如果内核禁用了非特权用户命名空间，或者 AppArmor 策略限制了它们（较新 Ubuntu 的默认设置），即使存在 `bwrap`，运行时仍会失败。因此，脚本最后会要求平台创建真实的命名空间，并在其中检查自身；如果失败，就不会认定机器已准备就绪，避免运行退回到 `--no-sandbox`，产生与其声称含义不符的数字。
+`--check` 只检查先决条件，不安装系统包。遇到 Bubblewrap 或用户命名空间错误时，
+请先按诊断修复。创建环境及安装构建工具可能需要联网；离线安装要求这些依赖已备好。
+平台运行时使用 Python 标准库，各组件可能有独立依赖。
 
-普通本地使用不需要 `sudo`、专用存储卷或 root Docker 访问权限。配额和证据后端是支持更强形式化声明的可选基础设施；普通运行不能声称具备这些保证。
-
-## 运行本地演示
-
-这是一个**脚本化的模拟测试用例**，不是模型学习结果或基准测试证据。它无需网络或模型服务费用，即可演练循环、曲线点、检查点和成本核算。有关真实实验及其先决条件，请参阅[平台 README](https://github.com/zjunlp/HarnessGrad#run-one-real-experiment) 和[研究实验指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md)。
+## 准备 Loop 并运行模拟控制
 
 ```bash
-export HG_AGENT_BACKEND=mock
-M="python $PWD/methods/echo_base/run.py"
+python tools/configure_harness.py --harness base_harness/loop --fetch
+python tools/configure_harness.py --harness base_harness/loop --list --json
 
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id control \
-    --method-entrypoint "python $PWD/methods/noop/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id treat-A \
-    --method-entrypoint "$M"
-python3 driver.py --dataset demo --sampling all --harness loop --mode B --rounds 2 --run-id treat-B \
-    --method-entrypoint "$M"
-
-python3 tools/plot_curve.py runs/control runs/treat-A runs/treat-B
+HG_INSTALL_RUN="install-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')"
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
+  --improver none --run-id "$HG_INSTALL_RUN" --fail-on-incomplete
+python tools/run_summary.py "runs/$HG_INSTALL_RUN"
 ```
 
-```
-run                            policy     conditions                         curve (one glyph per round)
-----------------------------------------------------------------------------------------------------
-control                        all        sandboxed v4 / files / training / default protocol ▁▁  0.00..0.00
-                                                                             rounds=2 tasks=4 trials=8
-treat-A                        all        sandboxed v4 / files / training / default protocol ▁██  0.00..1.00
-                                                                             rounds=3 tasks=4 trials=12
-treat-B                        all        sandboxed v4 / files / training / default protocol ▁██  0.00..1.00
-                                                                             rounds=3 tasks=4 trials=12
-```
+`--fetch` 允许将锁定的 wheel 下载到 Loop 的外部运行时；省略它则使用缓存准备。
+内置控制无需下载数据集或配置模型端点。脚本化分数只描述测试用例，不是基准或模型
+质量证据；测量失败或未完成时，应先解决原因。
 
-重点不在分数。`--sampling all` 显式选择普通演示路径；命令行默认采用分阶段的 `diagnostic`，它要求提供 `--policy-evidence`，且只使用一个任务、一次试验、一个作业和零个改进轮次。**演示不授予生产运行或 H0 的授权**，也不能证明运行时、配额、快照或清理门槛已经通过。
-
-## 第 0 步：测量一个共享的 H0
-
-每次运行都会**在运行内部**测量第 0 轮基线，因此一批启动 N 次运行就会得到 N 个基线。这些基线不能互换：跨方法比较是*配对*比较，使用两个不同基线计算出“方法 A 优于方法 B”，实际上是在回答两个不同的问题。2026-10-19 的测量中，三次 AppWorld 研究运行没有共享基线，各自重新测量了 H0。
-
-`tools/prepare_h0.py` 补上了缺失的第 0 步。它只测量一次基线，验证基线（完整研究集、没有无效任务、记录了 `h0_sha`），并打印后续每次运行都要传入的 `--h0-from`：
+准备好 Loop 后，可用以下命令通过新的合成运行检查重复 ID 保护、准备记录的消费、
+Console 观察和证据导出：
 
 ```bash
-python3 tools/prepare_h0.py --dataset appworld --side train --study-ids ids.txt --jobs 32
-# -> h0 run id, score, task count, and the exact --h0-from <id>
-python3 driver.py ... --h0-from <that id>
+python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
-如果已有配置匹配的基线，工具会**复用**它，而不是再次测量。配置包括 `(dataset, side, study-id set, agent model, endpoint)`：不同模型或不同研究集对应不同的 H0，工具会重新测量，而不会假装它们相同。有缺失的基线不会发布，拼错的 `--study-ids` 路径也会报错，而不是被当作“没有研究集”。
+该检查不安装依赖、不下载数据，也不调用模型。报告和日志保留在输出的目录中。
 
-## 测试修改的部分
+## 配置研究实验
 
-完整测试套件规模较大，因此请运行所编辑数据集的测试：
+真实实验可能需要分别配置四类模型角色：
+
+| 角色 | 用途 | 配置 |
+| --- | --- | --- |
+| Solver | 使用候选 Harness 执行任务 | `HG_AGENT_BACKEND`、`HG_AGENT_BASE_URL`、`HG_AGENT_MODEL`、`HG_AGENT_API_KEY` |
+| Editor | 提出 Harness 修改 | `HG_METHOD_BASE_URL`、`HG_METHOD_MODEL`、`HG_METHOD_API_KEY`，或所选 CLI improver 的配置 |
+| 环境模型 | 在需要时驱动模拟环境或用户 | `HG_ENV_BASE_URL`、`HG_ENV_MODEL`、`HG_ENV_API_KEY` |
+| Judge | 对需要模型裁判的任务评分 | `HG_JUDGE_BASE_URL`、`HG_JUDGE_MODEL`、`HG_JUDGE_API_KEY`，或数据集专用配置 |
+
+只需配置所选方案要求的角色；模拟 solver 不代表 editor 免费。数据和运行时须分别
+准备。先参阅 [Quick start](https://github.com/zjunlp/HarnessGrad#quick-start) 和
+[首次使用指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/getting-started.md)，
+再按[研究实验及共享 H0 指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md)
+进行受控比较。启动真实运行前检查任务范围、试验次数和预算；模型调用可能产生费用。
+
+## 重复运行、查看与导出
+
+每个新实验使用新 run ID。已有结果和工作目录（包括未完成的运行）会保留；`--resume`
+只继续兼容的记录，身份、种子、划分或运行时不一致时会拒绝。`--prepare-only` 预留 ID
+但不执行轮次；配置和目录一致的后续调用可消费一次完整预留。`--check-only` 不预留 ID。
+
+上例结果位于仓库的 `runs` 目录。将 Console 指向同一目录：
 
 ```bash
-python3 tools/run_tests.py --dataset gsm8k
+export HG_CONSOLE_RUNS="$PWD/runs"
+python console/server.py --port 4460
 ```
 
-该命令运行此数据集的测试以及核心平台测试，并跳过其他数据集的测试。如果传入 `--basetemp`，它必须位于**平台目录树之外**：运行器会拒绝位于平台目录树内的 harness 工作根目录，而且测试套件会写入数千个小文件。
+直接打开 `http://127.0.0.1:4460/`。列表为空时先检查 `HG_CONSOLE_RUNS`；端口被占用时
+换一个端口。Runs、Version 和 Trace 可查看已有结果。证据导出只下载筛选后的记录，
+包括失败或未测量的尝试，不运行实验；范围和隐私见[证据导出指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/evidence-export.md)。
 
-以上适用于只涉及一个数据集的修改。对于平台本身（`eval/`、`harnessgrad/`、`tools/`）的修改，请使用测试 lane：它会选择提及所修改内容的测试，并逐项打印选择原因：
-
-```bash
-python3 tools/test_lane.py                 # what this branch changed
-python3 tools/test_lane.py --list          # the selection, nothing run
-python3 tools/test_lane.py --full          # the whole suite: the gate for a merge
-```
-
-没有任何测试提及的修改文件会被标记为 **unmatched**，而不是被忽略——这通常是 lane 输出中最有用的一行。
-
-```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \
-    -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-quality tests/quality
-```
-
-## 接下来
-
-- [`docs/writing_a_harness.md`](https://github.com/zjunlp/HarnessGrad/blob/main/docs/writing_a_harness.md) —— harness 贡献规范。
-- [`docs/architecture.md`](https://github.com/zjunlp/HarnessGrad/blob/main/docs/architecture.md) —— 仓库结构图。
+观察无需模型或启动预算。启动实验或候选试跑需要额外的 [Console 配置](https://github.com/zjunlp/HarnessGrad/blob/main/console/README.md)。
+零改进轮次的候选试跑仍可能测量整个选定任务池；任务数量未知时，应先确认范围再决定运行和预算。

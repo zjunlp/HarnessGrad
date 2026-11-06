@@ -1,134 +1,101 @@
 ---
 title: Getting started
-description: Install HarnessGrad and run the local demo end to end, with no network and no cost.
+description: Install HarnessGrad from source on Linux, verify it with a mock control, and inspect the results.
 ---
 
-## Requirements
+## Install on Linux
 
-Linux, `bubblewrap`, `git` and **Python 3.12+**. The platform itself has **no third-party
-Python runtime packages** — everything it uses is in the standard library.
-
-Clone the platform repository (not this documentation site), then check the machine:
+Use Linux, Git, uv, CPython 3.12 and working Bubblewrap user namespaces. The
+platform supports Python 3.12 or newer; the default Loop Harness currently uses
+Python 3.12. Keep the virtual environment and its base interpreter outside the
+checkout, run and work directories, and `/tmp`.
 
 ```bash
 git clone https://github.com/zjunlp/HarnessGrad.git
 cd HarnessGrad
-python3 -m venv ~/.venvs/harnessgrad
+uv venv --seed --python 3.12 ~/.venvs/harnessgrad
 source ~/.venvs/harnessgrad/bin/activate
-python3 -m pip install -e .
-./install.sh --check      # verify only; change nothing (also useful in CI)
-./install.sh              # optionally install missing dependencies, then verify
+uv pip install -e .
+./install.sh --check
 ```
 
-The script does not stop at "bwrap is installed", because that is not the same as the
-sandbox working: a kernel with unprivileged user namespaces disabled, or an AppArmor
-policy restricting them (the default on newer Ubuntu), leaves `bwrap` present and failing
-at runtime. So it finishes by asking the platform to build a real namespace and look for
-itself inside it, and refuses to call the machine ready if that fails — rather than
-letting a run fall back to `--no-sandbox` and produce numbers that mean something other
-than what they say.
+`--check` checks prerequisites without installing system packages. Resolve any
+Bubblewrap or user-namespace failure before continuing. Creating the environment
+and installing build tools may require network access; offline installation needs
+those prerequisites already available. The platform uses the Python standard
+library at runtime, while components can have separate dependencies.
 
-Ordinary local use needs no `sudo`, no dedicated storage volume and no root Docker
-access. Quota and evidence backends are optional infrastructure for stronger formal
-claims; ordinary runs cannot claim those guarantees.
-
-## Run the local demo
-
-This is a **scripted mock fixture**, not a model-learning result or benchmark evidence.
-It exercises the loop, curve points, checkpoints and cost accounting with no network
-or model-service cost. For a real experiment and its prerequisites, follow the
-[platform README](https://github.com/zjunlp/HarnessGrad#run-one-real-experiment) and
-[research recipes](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md).
+## Prepare Loop and run the mock control
 
 ```bash
-export HG_AGENT_BACKEND=mock
-M="python $PWD/methods/echo_base/run.py"
+python tools/configure_harness.py --harness base_harness/loop --fetch
+python tools/configure_harness.py --harness base_harness/loop --list --json
 
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id control \
-    --method-entrypoint "python $PWD/methods/noop/run.py"
-python3 driver.py --dataset demo --sampling all --harness loop --mode A --rounds 2 --run-id treat-A \
-    --method-entrypoint "$M"
-python3 driver.py --dataset demo --sampling all --harness loop --mode B --rounds 2 --run-id treat-B \
-    --method-entrypoint "$M"
-
-python3 tools/plot_curve.py runs/control runs/treat-A runs/treat-B
+HG_INSTALL_RUN="install-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')"
+HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
+  --improver none --run-id "$HG_INSTALL_RUN" --fail-on-incomplete
+python tools/run_summary.py "runs/$HG_INSTALL_RUN"
 ```
 
-```
-run                            policy     conditions                         curve (one glyph per round)
-----------------------------------------------------------------------------------------------------
-control                        all        sandboxed v4 / files / training / default protocol ▁▁  0.00..0.00
-                                                                             rounds=2 tasks=4 trials=8
-treat-A                        all        sandboxed v4 / files / training / default protocol ▁██  0.00..1.00
-                                                                             rounds=3 tasks=4 trials=12
-treat-B                        all        sandboxed v4 / files / training / default protocol ▁██  0.00..1.00
-                                                                             rounds=3 tasks=4 trials=12
-```
+`--fetch` permits downloading locked wheels into Loop's external runtime. Omit it
+to prepare from cached wheels. The embedded control requires no dataset download
+or model endpoint. Its scripted scores are fixture results, not benchmark or model
+quality evidence. Resolve any failed or incomplete measurement before proceeding.
 
-The point is not the scores. `--sampling all` explicitly selects the ordinary demo path;
-the CLI default is staged `diagnostic`, which requires `--policy-evidence`, one task, one
-trial, one job and zero improvement rounds. **The demo grants no production/H0
-authorization** and is not evidence that runtime, quota, snapshot or cleanup gates have
-passed.
-
-## Step 0: measure one shared H0
-
-A round 0 baseline is measured **inside** every run, so a batch that starts N runs gets N
-baselines. Those are not interchangeable: the cross-method comparison is a *paired* one, and
-"method A beat method B" computed against two different baselines is a statement about two
-different questions. Measured 2026-10-19: three AppWorld study runs were launched without a
-shared baseline and each re-measured H0.
-
-`tools/prepare_h0.py` is the missing step 0. It measures the baseline once, verifies it (whole
-study set, no invalid task, a recorded `h0_sha`) and prints the `--h0-from` to pass to every run
-that follows:
+To check duplicate-ID protection, prepared-run consumption, Console observation
+and evidence export with a fresh synthetic run, use:
 
 ```bash
-python3 tools/prepare_h0.py --dataset appworld --side train --study-ids ids.txt --jobs 32
-# -> h0 run id, score, task count, and the exact --h0-from <id>
-python3 driver.py ... --h0-from <that id>
+python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
-It **reuses** an existing baseline whose configuration matches instead of measuring a second one.
-The configuration is `(dataset, side, study-id set, agent model, endpoint)`: a different model or
-a different study set is a different H0, and the tool measures one rather than pretending they
-are the same. A baseline with holes is not published, and a typo'd `--study-ids` path is an error
-instead of "no study set".
+This check does not install dependencies, download data or contact models. Its
+report and logs remain in the printed directory.
 
-## Test the part you changed
+## Configure a research run
 
-The full suite is large, so run the tests for the dataset you are editing:
+A real experiment may need four independently configured model roles:
+
+| Role | Purpose | Configuration |
+| --- | --- | --- |
+| Solver | Performs tasks with the candidate Harness | `HG_AGENT_BACKEND`, `HG_AGENT_BASE_URL`, `HG_AGENT_MODEL`, `HG_AGENT_API_KEY` |
+| Editor | Proposes Harness changes | `HG_METHOD_BASE_URL`, `HG_METHOD_MODEL`, `HG_METHOD_API_KEY`, or the selected CLI improver's configuration |
+| Environment model | Drives a declared simulated environment or user, when required | `HG_ENV_BASE_URL`, `HG_ENV_MODEL`, `HG_ENV_API_KEY` |
+| Judge | Scores tasks requiring a model judge | `HG_JUDGE_BASE_URL`, `HG_JUDGE_MODEL`, `HG_JUDGE_API_KEY`, or dataset-specific settings |
+
+Configure only the roles the selected recipe requires. A mock solver does not make
+an editor free. Prepare the chosen data and runtime separately. Use
+[Quick start](https://github.com/zjunlp/HarnessGrad#quick-start) and the
+[first-use guide](https://github.com/zjunlp/HarnessGrad/blob/main/docs/getting-started.md)
+for prerequisites and preflight; see the
+[research recipes and shared H0 guidance](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md)
+for controlled comparisons. Review task scope, trials and budget before a real
+run; its model calls can incur costs.
+
+## Repeat, inspect and export
+
+Use a fresh run ID for each new experiment. Existing result and work namespaces,
+including partial runs, are preserved. `--resume` continues only compatible work;
+a changed identity, seed, split or runtime is refused. `--prepare-only` reserves
+an ID without executing a round; a matching invocation can consume that intact
+reservation once. `--check-only` does not reserve an ID.
+
+Results from the example are in the checkout's `runs` directory. Point Console to
+the same root:
 
 ```bash
-python3 tools/run_tests.py --dataset gsm8k
+export HG_CONSOLE_RUNS="$PWD/runs"
+python console/server.py --port 4460
 ```
 
-It runs that dataset's tests plus the core platform tests, and skips every other
-dataset's. If you pass `--basetemp`, it must be **outside the platform tree** — the
-runner refuses a harness work root inside it, and a suite writes thousands of small files.
+Open `http://127.0.0.1:4460/`. If the list is empty, check `HG_CONSOLE_RUNS`;
+if the port is occupied, choose another port. Runs, Version and Trace show stored
+results. Evidence export downloads filtered records, including failed or unmeasured
+attempts, without running an experiment; review the
+[evidence export guide](https://github.com/zjunlp/HarnessGrad/blob/main/docs/evidence-export.md)
+for scope and privacy.
 
-That covers a change that belongs to one dataset. For a change to the platform itself
-(`eval/`, `harnessgrad/`, `tools/`) use the lane, which selects the tests that mention what you
-touched and prints one reason per selection:
-
-```bash
-python3 tools/test_lane.py                 # what this branch changed
-python3 tools/test_lane.py --list          # the selection, nothing run
-python3 tools/test_lane.py --full          # the whole suite: the gate for a merge
-```
-
-A changed file that no test mentions is printed as **unmatched** rather than dropped — that is
-usually the most useful line the lane produces.
-
-
-```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \
-    -p no:cacheprovider --basetemp=/tmp/harnessgrad-pytest-quality tests/quality
-```
-
-## Next
-
-- [`docs/writing_a_harness.md`](https://github.com/zjunlp/HarnessGrad/blob/main/docs/writing_a_harness.md)
-  — the harness contribution contract.
-- [`docs/architecture.md`](https://github.com/zjunlp/HarnessGrad/blob/main/docs/architecture.md)
-  — the repository map.
+Observation needs no model or launch budget. Starting an experiment or candidate
+trial requires additional [Console setup](https://github.com/zjunlp/HarnessGrad/blob/main/console/README.md).
+A zero-round candidate trial can still measure the entire selected pool; if the
+task count is unknown, resolve it before committing to the run and budget.
