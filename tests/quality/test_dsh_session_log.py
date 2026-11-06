@@ -172,9 +172,10 @@ def test_an_operator_home_is_refused_rather_than_silently_used(dsh, tmp_path, mo
 
     `DSH_HOME` is named from `HOME`, so a host-side run where `HOME` is a real account reads
     that account's `~/.dsh/settings.yaml`, whose saved model selection beats the `--patch`
-    the adapter generates. Measured 2026-11-01: `HOME=/home/xubuqiang` answered through a
-    real DeepSeek endpoint while the trace said `qwen3.5-9b-local` at `127.0.0.1:8001`. A
-    task container's `HOME` starts empty, so the refusal is host-only by construction.
+    the adapter generates. Measured 2026-11-01: using an operator's existing home
+    directory reached a real DeepSeek endpoint while the trace said `qwen3.5-9b-local`
+    at `127.0.0.1:8001`. A task container's `HOME` starts empty, so the refusal is
+    host-only by construction.
     """
     home = tmp_path / "account"
     (home / ".dsh").mkdir(parents=True)

@@ -3,6 +3,7 @@
 
 The manifest is a reviewed admission pin, not auto-updated during verification.
 Collection resolution is evidence only; execution sees only the captured files.
+Portable captures use /opt/hg-python for Python and its standard library.
 """
 from __future__ import annotations
 
@@ -50,22 +51,35 @@ def main():
 
     exe = Path(sys.executable).resolve()
     # A copied venv executable still needs the base stdlib layout under -I -S.
-    # Bind its selected bytes at that logical address without reopening the base
-    # executable, and collect dependencies from this venv's own purelib below.
+    # Preserve its selected bytes at the portable Python destination without
+    # reopening the base executable; collect this venv's own purelib below.
     interpreter = (Path(sys._base_executable).resolve()
                    if args.portable and sys.prefix != sys.base_prefix else exe)
-    stdlib = Path(sys.base_prefix) / 'lib' / f'python{sys.version_info.major}.{sys.version_info.minor}'
+    python_prefix = Path(sys.base_prefix)
+    stdlib = python_prefix / 'lib' / f'python{sys.version_info.major}.{sys.version_info.minor}'
     packages = Path(sysconfig.get_path('purelib'))
     package_target = Path('/opt/hg-site-packages') if args.portable else packages
     entries = {}
     queue = []
     elf = {}
 
+    def destination(path):
+        path = Path(path)
+        if args.portable:
+            if path.is_relative_to(packages):
+                return package_target / path.relative_to(packages)
+            # Move Python-owned paths, leaving system data such as /usr/lib/locale
+            # at its ordinary location even when Python's prefix is /usr.
+            if (any(path.is_relative_to(root) for root in
+                    (python_prefix / 'bin', stdlib, python_prefix / 'share/py4j'))
+                    or path.parent == python_prefix / 'lib'):
+                return Path('/opt/hg-python') / path.relative_to(python_prefix)
+        return path
+
     def add(path, site, source_override=None):
         path = Path(os.path.normpath(path))
         origin = path
-        if args.portable and path.is_relative_to(packages):
-            path = package_target / path.relative_to(packages)
+        path = destination(path)
         if str(path) in entries:
             return str(path)
         source = Path(source_override or origin).resolve(strict=True)
@@ -81,7 +95,7 @@ def main():
 
     def site(path, needle):
         lines = Path(path).read_text().splitlines()
-        return f'{path}:{next(i for i, line in enumerate(lines, 1) if needle in line)}'
+        return f'{destination(path)}:{next(i for i, line in enumerate(lines, 1) if needle in line)}'
 
     adapter = f'data/datasets/{args.dataset}.py'
     check = ('data/scaffolds/qa/verify/check.py' if args.dataset == 'chessbench_puzzles'
@@ -150,7 +164,7 @@ def main():
             # -I -S uses the sealed base prefix, while Py4J's Python package is
             # remapped separately. Keep its JAR in a directory find_jar_path()
             # searches, retaining the selected environment's exact source bytes.
-            jar_target = Path(sys.base_prefix) / 'share/py4j' / jar.name if args.portable else jar
+            jar_target = python_prefix / 'share/py4j' / jar.name if args.portable else jar
             add(jar_target, site(packages / 'py4j/java_gateway.py', 'jarpath = find_jar_path()'), jar)
             java_identity, _ = capture([str(java_home / 'bin/java'), '-version'])
             # -version writes its identity on stderr, retained by capture.
@@ -247,14 +261,17 @@ def main():
         'import sys,sysconfig,sqlite3,json,platform; print(json.dumps(dict(version=sys.version, '
         'executable=sys.executable,soabi=sysconfig.get_config_var("SOABI"),sqlite=sqlite3.sqlite_version,'
         'kernel=platform.release(),machine=platform.machine()),sort_keys=True))'])
-    manifest = {'schema': 1, 'dataset': args.dataset, 'interpreter': str(interpreter),
+    identity = json.loads(identity)
+    if args.portable:
+        identity['executable'] = str(destination(interpreter))
+    manifest = {'schema': 1, 'dataset': args.dataset, 'interpreter': str(destination(interpreter)),
                 'loader': '/lib64/ld-linux-x86-64.so.2',
                 'library_path': sorted({str(Path(p).parent) for p in entries
                                         if entries[p]['entry'].startswith(('ELF', 'PT_INTERP'))}),
-                'environment': {'PATH': str(interpreter.parent), 'HOME': '/tmp', 'TMPDIR': '/tmp',
+                'environment': {'PATH': str(destination(interpreter.parent)), 'HOME': '/tmp', 'TMPDIR': '/tmp',
                                 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'},
                 'python_flags': ['-I', '-S', '-B'],
-                'identity': json.loads(identity),
+                'identity': identity,
                 'launcher': {'path': str(bwrap), 'sha256': bwrap_hash.split()[0]},
                 'files': dict(sorted(entries.items()))}
     if helper or args.dataset == 'chessbench_puzzles':
@@ -265,7 +282,7 @@ def main():
         manifest['environment']['JAVA_HOME'] = '/opt/hg-jre'
         # This installed Py4J defaults java_path="java"; JAVA_HOME is consulted
         # only when java_path is false. Both resolutions must name sealed bytes.
-        manifest['environment']['PATH'] = '/opt/hg-jre/bin:' + str(interpreter.parent)
+        manifest['environment']['PATH'] = '/opt/hg-jre/bin:' + str(destination(interpreter.parent))
         manifest['identity']['java_release'] = (java_home / 'release').read_text()
     source_manifest = manifest
     if args.portable:

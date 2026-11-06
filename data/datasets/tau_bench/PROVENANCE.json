@@ -1,6 +1,5 @@
 {
  "base_py_sha256": "1ad0402073f0ac9ca6b527efa0706e2aa8836dd2e5c1d453ed414ecb768c6d21",
- "checkout": "/mnt/20t/xubuqiang/datasets/tau-bench",
  "checkout_commit": "59a200c6d575d595120f1cb70fea53cef0632f6b",
  "files": {
   "db/airline.json": "f212eeda89b986239ddfb1a9b3d07d2b388112869864655ec9e5cc7ab07ab41c",

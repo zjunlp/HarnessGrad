@@ -83,6 +83,7 @@ def main():
     initial = check.compare_workbooks(str(golden), str(candidate), 'synthetic', task['answer_position'])
     print('before_compare=' + repr(initial), flush=True)
     assert before == [999, 888] and initial[0] is False
+    candidate_sha256 = sha(candidate)
     files = {name: sha(work / name) for name in ('golden.xlsx', 'task.json')}
     argv = [sys.executable, str(check_path), '--workdir', str(work),
             '--reward-file', str(work / 'reward.txt'), '--evidence-file', str(work / 'evidence.json'),
@@ -100,8 +101,12 @@ def main():
     cached = openpyxl.load_workbook(candidate, data_only=True)
     after = [cached.active['B1'].value, cached.active['B2'].value]
     cached.close()
-    print('recalculated_cached_values=' + json.dumps(after), flush=True)
-    assert proc.returncode == 0 and after == [5, 10]
+    print('original_cached_values_after=' + json.dumps(after), flush=True)
+    original_unchanged = sha(candidate) == candidate_sha256
+    print('original_workbook_unchanged=' + str(original_unchanged), flush=True)
+    assert proc.returncode == 0
+    assert original_unchanged, 'scorer modified the original workbook'
+    assert after == before, 'scorer modified the original formula caches'
     assert evidence['measured'] is True and evidence['recalculated'] is True
     assert evidence['scorer_input']['verified'] is True
     assert evidence['score'] == 1.0 and (work / 'reward.txt').read_text() == '1\n'

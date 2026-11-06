@@ -1,5 +1,11 @@
 # b7: two local native runtime blockers closed
 
+The separate native-runtime JSON receipts are archived outside the active checkout.
+[ARCHIVED.json](ARCHIVED.json) binds their original bytes and provenance to a
+published source commit, with retrieval instructions, sizes and SHA-256 hashes.
+The summaries below do not replace those original receipts or establish current
+runtime admission.
+
 Only Jericho and ScienceWorld registry entries change. Runtime, verifier and
 admission source is unchanged. All eight shared gates remain open for both:
 `runtime-observations`, `paired-filesystem-quotas`, `scorer-offline-closure`,
@@ -75,8 +81,7 @@ historical 56 eligible games, one trial per noop/oracle control, jobs=1. Eligibi
 56 is inherited from the adapter's documented inventory, not freshly enumerated;
 source archive provenance is declared, not independently reverified.
 
-Exact control commands are in `reports/jericho-runtime-b7.json` at
-`controls[*].command`, with complete stdout/stderr. They invoke:
+The recorded Jericho control invocations were:
 
 ```text
 python3 /tmp/hg-b7/data/datasets/jericho/control.py --noop --task-id acorncourt --workdir <external-test-root>/noop
@@ -135,9 +140,8 @@ diagnostic requires a fresh run ID and the staged AGENTS.md policy."
 
 Probe: `os.open(path, os.O_WRONLY)` without truncate, reported as errno or
 `OPENED_WRITABLE`; actual scratch and verdict writes also prove that the entire
-process has not simply lost write permission. Parent kernel observations and
-source identities accompany these probe outputs. Exact commands/output appear
-in `reports/scienceworld-runtime-b7.json` under `positive[*]` and `negative`.
+process has not simply lost write permission. The results below summarize the
+parent kernel and source-identity observations.
 
 ```text
 harness: source=EROFS, artifact=OPENED_WRITABLE, platform_source=ENOENT, platform_driver_visible=false

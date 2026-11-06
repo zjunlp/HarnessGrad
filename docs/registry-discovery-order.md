@@ -150,18 +150,18 @@ infrastructure names and omission of import failures. End-to-end discovery to
 and check the same literal ordered expectation. No downloads or benchmark runs
 are performed. These are order tests, not dataset-readiness or H0 authorization.
 
-Historical validation ran only these individual files with bytecode writes disabled.
-The absolute basetemp paths are retained as run receipts, not portable commands;
-for a new run choose fresh, distinct temporary directories outside the checkout:
+Historical validation ran these files individually with bytecode writes disabled
+and distinct external temporary directories. The recorded results were **6 passed
+in 0.32s** for discovery order and **28 passed in 10.96s** for new-dataset checks.
+For a new run, keep `TMPDIR` outside the checkout and create fresh directories:
 
-```text
-python -m pytest -q tests/quality/test_registry_discovery_order.py \
-  --basetemp=/mnt/20t/xubuqiang/.hg-pytest/t2/registry-discovery-order
-6 passed in 0.32s
+```bash
+DISCOVERY_TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/hg-registry-order.XXXXXX")
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/quality/test_registry_discovery_order.py \
+  --basetemp="$DISCOVERY_TEST_ROOT/registry-discovery-order"
 
-python -m pytest -q tests/quality/test_new_dataset.py \
-  --basetemp=/mnt/20t/xubuqiang/.hg-pytest/t2/new-dataset
-28 passed in 10.96s
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q tests/quality/test_new_dataset.py \
+  --basetemp="$DISCOVERY_TEST_ROOT/new-dataset"
 ```
 
 For the existing generator file, a temporary `sitecustomize.py` installed an

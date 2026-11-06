@@ -27,6 +27,24 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="module")
+def scienceworld_goldpaths_archive():
+    """Optional original source for fold/study checks; invalid bytes must fail."""
+    from harnessgrad.paths import DataRootNotConfigured
+    from tools.scienceworld_study_sample import archive_bytes, archive_path
+
+    try:
+        path = archive_path()
+    except DataRootNotConfigured as exc:
+        pytest.skip(f"ScienceWorld goldpaths archive unavailable: {exc}; place "
+                    "_src/goldpaths-all.zip under the configured ScienceWorld dataset root")
+    if not path.exists():
+        pytest.skip(f"ScienceWorld goldpaths archive missing: {path}; place "
+                    "_src/goldpaths-all.zip under the configured ScienceWorld dataset root")
+    raw, member = archive_bytes(path)
+    return path, raw, member
+
+
+@pytest.fixture(scope="module")
 def captured_native_python_manifest(tmp_path_factory):
     """Local Python/stdlib closure for authored controls; no provisioned payload."""
     import shutil
@@ -120,41 +138,6 @@ def attach_synthetic_blocker():
         raise AssertionError(f"{dataset} is not a published dataset in this registry")
 
     return attach
-
-
-@pytest.fixture
-def site_archive():
-    """Optional local copy of exported site sources; never fetch external references.
-
-    `/site` citations are placeholders, not verified on-disk repository evidence.
-    Keep source-content regressions runnable with an explicitly provisioned,
-    ignored packet without making a fresh clone depend on those private records.
-    """
-    def source(reference):
-        relative = Path(reference).relative_to("/site")
-        assert ".." not in relative.parts
-        path = ROOT / "tests/fixtures/hg_migration_site" / relative
-        if not path.is_file():
-            pytest.skip(f"site source packet absent from this clone: {reference}")
-        return path
-    return source
-
-
-@pytest.fixture
-def blocker_repository_evidence():
-    """Only whole-registry checks need the ignored hg_* observation packets."""
-    import json
-
-    registry = json.loads((ROOT / "registry/dataset-blockers.json").read_text())
-    owners = registry["shared_blockers"] + [
-        blocker for row in registry["datasets"] for blocker in row["blockers"]]
-    missing = sorted({item["path"] for owner in owners for item in owner["evidence"]
-                      if item["kind"] == "repository"
-                      and item["path"].startswith("tests/fixtures/hg_")
-                      and not (ROOT / item["path"]).is_file()})
-    if missing:
-        pytest.skip("ignored blocker observation packet absent from this clone: "
-                    + ", ".join(missing))
 
 
 @pytest.fixture(scope="module")

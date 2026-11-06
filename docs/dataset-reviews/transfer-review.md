@@ -111,14 +111,14 @@ QA控制覆盖原生规则差分、hash、私有gold、12条真实bubblewrap ora
 
 ## 验收命令与已观察结果
 
-原生依赖控制使用外置隔离解释器，MathVerify与WideSearch依赖不安装到宿主；Harvey和SWE evaluator各有单独的固定环境。以下为历史运行记录，绝对路径仅标识当时的环境，不是可直接复用的配置；复核时须自行准备对应隔离运行时和来源，并在 checkout 外选择新的、互不相同的 basetemp 目录：
+原生依赖控制使用外置隔离解释器，MathVerify与WideSearch依赖不安装到宿主；Harvey和SWE evaluator各有单独的固定环境。以下保留历史测试命令和结果，`NATIVE_REVIEW_PYTHON` 代指当时依赖齐全的外置隔离解释器。临时目录和测试文件列表描述当时的运行范围；复核时须使用当前对应的测试，自行准备隔离运行时和来源，并在 checkout 外选择新的、互不相同的 basetemp 目录：
 
 ```bash
 HG_SWE_PYTHON=/tmp/hg-swebench-venv/bin/python \
 HG_SWE_SOURCE=/tmp/hg-swebench-official-02e7a74f \
 HG_HARVEY_TEST_PANDOC=/tmp/hg-harvey-pandoc/pandoc \
 PYTHONDONTWRITEBYTECODE=1 \
-/home/xubuqiang/.cache/hg-native-runtimes/widesearch/bin/python -m pytest -q \
+"$NATIVE_REVIEW_PYTHON" -m pytest -q \
   tests/quality/test_upstream_{qa_adapters,harbor,research,workbench,harvey,swe_native,travelplanner,widesearch}.py \
   tests/quality/test_{judge_model_api,native_benchmark_bridge,swe_relay_supervisor,native_relay_supervisor}.py \
   --basetemp=/tmp/hg-native-adapted-review

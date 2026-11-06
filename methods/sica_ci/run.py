@@ -154,7 +154,8 @@ def build_prompt(base, request, chosen, why):
 
 def _incumbent_fields(history: list[dict], chosen: dict) -> tuple[dict, str]:
     """Publish the existing choice only when its bound comes from an available CI."""
-    # Upstream /mnt/20t/xubuqiang/Study/methods_src/sica/runner.py:118-135
+    # Upstream runner.py:118-135 in the SICA snapshot recorded in
+    # docs/upstream-pins.md (tree fingerprint prefix 1f38073569b54563)
     # returns the selected iteration index. Map that result to the platform's round
     # number, without changing this port's _select_base comparison or its fallback.
     # Upstream runner.py:107-114 defaults to 0 without statistics; here an absent CI

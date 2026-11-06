@@ -313,10 +313,14 @@ python3 tools/prepare_native_runtime.py assemble --dataset bird_minidev \
 
 新清单及其独立 pin 需经审查后更新；捕获、导入和校验命令均不会自动改写仓库中的 pin。
 准备工具接受显式的 `--manifest` 与 `--sha256` 组合，以验证尚未发布的候选版本。
-捕获虚拟环境时使用该环境的包目录，便携捕获将其映射到 `/opt/hg-site-packages`；
-解释器保留选中文件的字节并使用基础标准库布局，运行包不再依赖原虚拟环境目录。
-ScienceWorld 的便携捕获同时将 Py4J JAR 映射到封存解释器前缀下的 `share/py4j`，
-并保留所选环境的 JAR 内容。宿主能力探针验证隔离与解释器能力；JVM Gateway 等
+捕获虚拟环境时使用该环境的包目录，便携捕获将其映射到 `/opt/hg-site-packages`。
+Python 解释器、标准库和安装前缀内的共享库统一映射到 `/opt/hg-python`，保留选中文件
+的字节；`interpreter`、`PATH`、库搜索路径和解释器身份使用沙箱内路径。来源说明中的
+Python 包路径也使用该布局，宿主文件定位信息留在本次捕获的本地记录中，
+例如 `sources.json` 和采集命令输出。
+系统库和 locale 数据保留其系统路径，运行包不依赖原 Python 或虚拟环境目录。
+ScienceWorld 的 Py4J JAR 映射到 `/opt/hg-python/share/py4j`，JRE 使用 `/opt/hg-jre`，
+两者均保留所选环境的原始内容。宿主能力探针验证隔离与解释器能力；JVM Gateway 等
 数据集依赖的启动兼容性通过对应的功能性控制单独验证。
 
 当前五份正式清单使用 **CPython 3.12.16**（自带 SQLite 3.53.1），数据集 SDK 版本如下：
@@ -333,6 +337,25 @@ ScienceWorld 的便携捕获同时将 Py4J JAR 映射到封存解释器前缀下
 补齐新清单。旧运行时的评分缓存由清单摘要隔离，新版本需要重新测量。
 NumPy wheel 的 OpenBLAS/Fortran 库从同一安装的 `numpy.libs` 采集并逐文件校验，
 不会将该宿主目录直接挂载进评分沙箱。
+统一沙箱路径后的五套包沿用这批 Python、SDK、JRE 和评分代码字节；布局改变仍会生成
+新的清单摘要和 pin，评分缓存按新运行时身份区分。
+
+### 5.4 ScienceWorld 任务来源归档
+
+重建 study 任务清单、核对官方任务划分时，工具和测试统一读取
+`<ScienceWorld 数据目录>/_src/goldpaths-all.zip`。数据目录沿用
+`HG_DATA_SCIENCEWORLD` 或 `HG_DATA_ROOT/scienceworld`，不再搜索固定临时目录。
+日常加载和评分使用仓库内已提交的任务清单。
+
+```bash
+python3 tools/scienceworld_study_sample.py --check
+python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip --check
+```
+
+`--archive` 可直接指定归档，支持原始 goldpaths ZIP 或包含它的上游源码 ZIP。
+读取后均校验 `test_fold.json` 中记录的原始归档 SHA256。来源核验测试在未配置
+数据目录或缺少归档时明确跳过；归档已存在但哈希不符、损坏或不可读时失败。
+该归档是可选的来源核验输入，不会由 `--fetch --dataset scienceworld` 自动下载。
 
 ## 6. 完整重复试验报告
 

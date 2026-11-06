@@ -254,9 +254,9 @@ def hidden_trees(work_root: Path, platform: Path) -> list[Path]:
 
     Two, and the list is this short on purpose. An earlier version hid every
     directory from the root down to the work root, on the theory that wholesale
-    erasure was tidier. It erased the interpreter too: this platform's Python lives
-    under `/mnt/8t/.../anaconda3`, so covering `/mnt` left the subject unable to
-    start and the failure read as a broken harness.
+    erasure was tidier. It erased the interpreter too when Python lived below a
+    shared ancestor, leaving the subject unable to start. The failure read as a
+    broken harness.
 
     So:
 

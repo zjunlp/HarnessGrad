@@ -11,7 +11,7 @@ curve:
    check a transcription of it);
 3. **the switch changes only what it claims** -- `HG_SCIENCEWORLD_POOL=dev|test` swaps the
    eval fold while the train side stays the same 100 tasks, and with the switch unset the
-   dataset is exactly what it was (the whole test fold, hash-split).
+   dataset uses the whole official test fold without a training division.
 
 The env-dependent cases run in a subprocess on purpose: the adapter reads the variable at
 import time, so re-importing inside one process would test a cached module rather than the
@@ -20,6 +20,7 @@ switch.
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -29,10 +30,6 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 ASSETS = ROOT / "data" / "datasets" / "scienceworld"
 STUDY = ASSETS / "study_300.json"
-ARCHIVE_CANDIDATES = (
-    pathlib.Path("/tmp/goldpaths-all.zip"),
-    pathlib.Path("/tmp/scw/ScienceWorld-main/goldpaths/goldpaths-all.zip"),
-)
 FOLDS = ("train", "dev", "test")
 TYPES_WITH_GOLD = 29
 
@@ -71,20 +68,15 @@ def test_setting_records_the_archive_it_came_from(payload):
                                   "folds": list(FOLDS)}
 
 
-def test_rebuild_from_the_archive_reproduces_the_file(payload):
-    archive = next((p for p in ARCHIVE_CANDIDATES if p.is_file()), None)
-    if archive is None:
-        pytest.skip("no goldpaths archive on this machine to rebuild from")
-    sys.path.insert(0, str(ROOT / "tools"))
-    try:
-        import scienceworld_study_sample as tool
-    finally:
-        sys.path.pop(0)
+def test_rebuild_from_the_archive_reproduces_the_file(payload, scienceworld_goldpaths_archive):
+    from tools import scienceworld_study_sample as tool
+
+    archive, _, _ = scienceworld_goldpaths_archive
     rebuilt = tool.build(archive)
     assert rebuilt == payload
 
 
-def _adapter(env: dict[str, str]) -> dict:
+def _adapter(env: dict[str, str], data_root: pathlib.Path) -> dict:
     """SPLIT/OFFICIAL_EVAL/task counts as a fresh process sees them under `env`."""
     script = (
         "import json, importlib\n"
@@ -97,27 +89,30 @@ def _adapter(env: dict[str, str]) -> dict:
         "                  'official': list(m.OFFICIAL_EVAL) if m.OFFICIAL_EVAL else None,\n"
         "                  'tasks': len(tasks), 'env': len(m.ENV), 'verify': len(m.VERIFY)}))\n"
     )
+    isolated_env = {k: v for k, v in os.environ.items()
+                    if not k.startswith("HG_DATA_") and k != "HG_SCIENCEWORLD_POOL"}
+    isolated_env.update({"HG_DATA_ROOT": str(data_root), **env})
     proc = subprocess.run([sys.executable, "-c", script], cwd=str(ROOT), capture_output=True,
-                          text=True, env={**__import__("os").environ, **env})
+                          text=True, env=isolated_env)
     assert proc.returncode == 0, proc.stderr[-800:]
     return json.loads(proc.stdout.strip().splitlines()[-1])
 
 
-def test_without_the_switch_the_whole_official_test_fold_is_the_pool():
+def test_without_the_switch_the_whole_official_test_fold_is_the_pool(tmp_path):
     """No study setting: no division, and the pool is the official `test` fold.
 
     It used to be hash-split (1175 train / 569 eval) over that same fold, which called a
     third of the benchmark's held-out material study material; removed 2026-10-24.
     """
-    got = _adapter({})
+    got = _adapter({}, tmp_path)
     assert got["split"] is None and got["source"] == "none"
     assert got["official"] is None
     assert got["tasks"] == 1744
 
 
 @pytest.mark.parametrize("pool", ["dev", "test"])
-def test_study_switch_scores_one_hundred_of_that_fold(payload, pool):
-    got = _adapter({"HG_SCIENCEWORLD_POOL": pool})
+def test_study_switch_scores_one_hundred_of_that_fold(payload, pool, tmp_path):
+    got = _adapter({"HG_SCIENCEWORLD_POOL": pool}, tmp_path)
     assert got["split"] == {"train": 100, "eval": 100}
     assert got["tasks"] == 200 and got["env"] == 200 and got["verify"] == 200
     # Order is the file's order -- sorted by (task_name, variation) as a tuple, which is *not*
@@ -129,9 +124,9 @@ def test_study_switch_scores_one_hundred_of_that_fold(payload, pool):
     assert set(got["eval_ids"]).isdisjoint(got["train_ids"])
 
 
-def test_the_two_eval_folds_are_different_and_both_backed_by_the_same_train_side(payload):
-    dev = _adapter({"HG_SCIENCEWORLD_POOL": "dev"})
-    test = _adapter({"HG_SCIENCEWORLD_POOL": "test"})
+def test_the_two_eval_folds_are_different_and_both_backed_by_the_same_train_side(payload, tmp_path):
+    dev = _adapter({"HG_SCIENCEWORLD_POOL": "dev"}, tmp_path)
+    test = _adapter({"HG_SCIENCEWORLD_POOL": "test"}, tmp_path)
     assert dev["train_ids"] == test["train_ids"]
     assert set(dev["eval_ids"]).isdisjoint(test["eval_ids"])
 

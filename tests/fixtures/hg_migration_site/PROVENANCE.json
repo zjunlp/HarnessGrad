@@ -1,13 +1,5 @@
 [
  {
-  "reference": "/site/adapter-integration-journal.md",
-  "source_path": "docs/adapter-integration-journal.md",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 498256,
-  "sha256": "8b87462779cfc705b422721dc9643e5813818a80f5bd1448a76bac26d6660463",
-  "carrier": "tests/fixtures/hg_migration_site/adapter-integration-journal.md"
- },
- {
   "reference": "/site/agentdojo-metadata-privacy-codex180-report.md",
   "source_path": "reports/agentdojo-metadata-privacy-codex180-report.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
@@ -128,14 +120,6 @@
   "carrier": "tests/fixtures/hg_migration_site/independent-review-deferred.md"
  },
  {
-  "reference": "/site/jericho-runtime-b7.json",
-  "source_path": "reports/jericho-runtime-b7.json",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 516709,
-  "sha256": "c6f67ffca7f9320570829509912bbac6469b907b03b093ae4dca4f74f18e8599",
-  "carrier": "tests/fixtures/hg_migration_site/jericho-runtime-b7.json"
- },
- {
   "reference": "/site/measurement-coverage-hg-b3-review.md",
   "source_path": "reports/measurement-coverage-hg-b3-review.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
@@ -144,28 +128,13 @@
   "carrier": "tests/fixtures/hg_migration_site/measurement-coverage-hg-b3-review.md"
  },
  {
-  "reference": "/site/preserved-lifecycle-review-b8.md",
-  "source_path": "reports/preserved-lifecycle-review-b8.md",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 15571,
-  "sha256": "a7b97ffe86f6b24dad742689e44020523c8ef90007700ba8e364f1fbbb4f99a5",
-  "carrier": "tests/fixtures/hg_migration_site/preserved-lifecycle-review-b8.md"
- },
- {
   "reference": "/site/runtime-blockers-b7.md",
   "source_path": "reports/runtime-blockers-b7.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 13078,
-  "sha256": "8d84ad31ae3f2e7efd39234488db305f13613faeb85154e976a8f627ee15a78d",
-  "carrier": "tests/fixtures/hg_migration_site/runtime-blockers-b7.md"
- },
- {
-  "reference": "/site/scienceworld-runtime-b7.json",
-  "source_path": "reports/scienceworld-runtime-b7.json",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 268427,
-  "sha256": "77194eb46b343a7eae5f56ec97c6b39e21c3003935ccfbe016835ee660643180",
-  "carrier": "tests/fixtures/hg_migration_site/scienceworld-runtime-b7.json"
+  "bytes": 13029,
+  "sha256": "9bcb118b76b6c9a0cffa0026529bb975beaaeed155de7298e92108053c606cba",
+  "carrier": "tests/fixtures/hg_migration_site/runtime-blockers-b7.md",
+  "transform": "retired native-runtime JSON receipt references removed; retirement note added"
  },
  {
   "reference": "/site/task-206-twowiki-provenance-review.md",
@@ -262,22 +231,6 @@
   "bytes": 13844,
   "sha256": "a67f21d882ee362a75435a2341f260312ee5e1c4bb1ee685cf1cb23cbdc0080b",
   "carrier": "tests/fixtures/hg_migration_site/w-shared-verifier-review.md"
- },
- {
-  "reference": "/site/w-spread2-evidence/audit-output.txt",
-  "source_path": "reports/w-spread2-evidence/audit-output.txt",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 1989,
-  "sha256": "792d1ff14b10cffa8e0cfd4bbb1737aa6e099494dc3e0639d37b5e9d6a18c193",
-  "carrier": "tests/fixtures/hg_migration_site/w-spread2-evidence/audit-output.txt"
- },
- {
-  "reference": "/site/w-spread2-reconciliation.md",
-  "source_path": "reports/w-spread2-reconciliation.md",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 11061,
-  "sha256": "e141574d3f6bf31eee828c4de761a9f63f0dc60e83837265e28b1c49bb2de60d",
-  "carrier": "tests/fixtures/hg_migration_site/w-spread2-reconciliation.md"
  },
  {
   "reference": "/site/w-trivia-review.md",
@@ -409,14 +362,5 @@
   "bytes": 4755,
   "sha256": "d913fcdd8f8d5c4e15543dc688b13efc1d944545cabed7b034278f490a1c33e0",
   "transform": "section extracted verbatim; title line added; provenance comment added"
- },
- {
-  "reference": "/site/dataset-reviews/aime.md",
-  "carrier": "tests/fixtures/hg_migration_site/dataset-reviews/aime.md",
-  "source_path": "docs/dataset-reviews/aime.md",
-  "source_commit": "67c9a6817a8684245e9ee7620ec82c9fdb721f95",
-  "bytes": 11224,
-  "sha256": "282ab4122a5f5d2048eb63cafc7e1328f1029a484bd267e90bb4679f94da6c7d",
-  "transform": "verbatim copy of the tracked file. Unlike the six migrations above, this one is a FORWARD archive rather than a recovery: docs/dataset-reviews/aime.md is present in this repository, and its carrier exists because the /site/ citation convention requires an archived copy of every cited review. source_commit is the commit that introduced the review."
  }
 ]

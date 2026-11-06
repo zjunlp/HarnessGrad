@@ -135,9 +135,8 @@ Rewrite: `data.qa` → `data.scaffolds.qa`, `data.registry` → `data.scaffolds.
 The move is mechanical but wide, and the suite must stay green at each step.
 
 **Prerequisite — establish one writer before the split.** In the historical
-migration, the main checkout (`/mnt/20t/xubuqiang/Study/HarnessGrad` on that host)
-was the only writer to the integration history; that path is not a current setup
-instruction. Choose your own integration checkout. Registered `git worktree`
+migration, the main integration checkout was the only writer to the integration
+history. Choose your own integration checkout. Registered `git worktree`
 checkouts are the supported isolated copies: agents commit there, and the parent
 reviews diffs, runs focused checks and merges safe commits into main. Avoid
 creating competing full clones.

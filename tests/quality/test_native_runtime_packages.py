@@ -85,6 +85,9 @@ def test_all_five_reviewed_manifests_have_independent_portable_pins():
         blobs = store.entries(manifest)
         assert manifest['launcher']['source'] in blobs
         assert all(not Path(entry['source']).is_absolute() for entry in manifest['files'].values())
+        assert manifest['interpreter'].startswith('/opt/hg-python/bin/')
+        assert manifest['identity']['executable'] == manifest['interpreter']
+        assert not any(prefix in json.dumps(manifest) for prefix in ('/mnt/', '/home/', '/Users/'))
 
 
 def test_store_uses_shared_storage_rules(monkeypatch, tmp_path):
@@ -279,6 +282,33 @@ def captured_portable(tmp_path_factory):
     return binding, Path(summary['payload'])
 
 
+def test_portable_python_has_no_build_host_prefix(captured_portable, tmp_path, monkeypatch):
+    binding, archive = captured_portable
+    installed = tmp_path / 'installed'
+    store.import_package(binding, archive, installed)
+    monkeypatch.setenv('HG_DATA_NATIVE_RUNTIMES', str(installed))
+    reward = tmp_path / 'verifier'
+    reward.mkdir()
+    original = str(Path(sys.executable).resolve())
+    control = '''import json, pathlib, subprocess, sys, sysconfig
+assert sys.prefix == sys.base_prefix == '/opt/hg-python'
+assert sys.executable.startswith('/opt/hg-python/bin/')
+assert sysconfig.get_path('stdlib').startswith('/opt/hg-python/lib/')
+assert not pathlib.Path(sys.argv[-1]).exists()
+child = subprocess.run([sys.executable, '-I', '-S', '-B', '-c',
+    "import sys; assert sys.prefix == '/opt/hg-python'; import sqlite3"],
+    capture_output=True, text=True, timeout=3)
+assert child.returncode == 0, child.stderr
+print(json.dumps({'python': sys.executable, 'prefix': sys.prefix, 'child': True}))
+'''
+    with native_runtime.admit(binding) as runtime:
+        proc = runtime.run(['python3', '-c', control, original], workdir=tmp_path,
+                           reward_dir=reward, timeout_s=10)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    observed = json.loads(proc.stdout)
+    assert observed['prefix'] == '/opt/hg-python' and observed['child']
+
+
 def test_real_scorer_and_cache_survive_store_move_and_refuse_missing_blob(
         captured_portable, tmp_path, monkeypatch):
     from data.scaffolds.scorer_input import bind as bind_inputs
@@ -459,7 +489,7 @@ def captured_py4j_runtime(tmp_path_factory):
                         if target.endswith('/share/py4j/' + jar.name))
     return SimpleNamespace(binding=binding, archive=archive, manifest=manifest,
         root=work / 'moved-store', captured_jar=captured_jar, original_jar=str(original_jar),
-        expected_jar=str(Path(sys.base_prefix) / 'share/py4j' / jar.name),
+        expected_jar=str(Path('/opt/hg-python/share/py4j') / jar.name),
         jar_sha256=hashlib.sha256(jar.read_bytes()).hexdigest())
 
 
@@ -505,6 +535,7 @@ def test_py4j_gateway_starts_after_removing_the_original_venv(captured_py4j_runt
                              workdir=tmp_path, reward_dir=reward, timeout_s=20)
     assert result.returncode == 0, result.stdout + result.stderr
     observed, completed = map(json.loads, result.stdout.splitlines())
+    assert observed['prefix'] == '/opt/hg-python'
     assert observed['found_jar'] == control.expected_jar and observed['captured_jar_exists']
     assert completed == {'jar_sha256': control.jar_sha256, 'java_home': '/opt/hg-jre',
                          'gateway_exited': True}

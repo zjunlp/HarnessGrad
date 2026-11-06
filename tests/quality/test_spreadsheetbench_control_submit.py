@@ -2,8 +2,12 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
+import sys
 
 import openpyxl
 import pytest
@@ -72,3 +76,42 @@ def test_failed_submission_prints_both_streams(control_record, tmp_path, capfd):
     output = capfd.readouterr()
     assert "submission stdout detail" in output.out
     assert "submission stderr detail" in output.err
+
+
+def test_authored_formula_control_preserves_input_and_scores_private_copy(tmp_path):
+    unshare = shutil.which("unshare")
+    ip = shutil.which("ip", path=os.pathsep.join((os.environ.get("PATH", os.defpath),
+                                                 "/usr/sbin", "/sbin")))
+    if not unshare or not ip or not Path("/usr/bin/soffice").is_file():
+        pytest.skip("unshare, ip and /usr/bin/soffice are required for the authored control")
+    if not Path("/proc/self/ns/net").exists():
+        pytest.skip("Linux network namespaces are required for the authored control")
+    home, temporary = tmp_path / "home", tmp_path / "tmp"
+    home.mkdir()
+    temporary.mkdir()
+    env = {**os.environ, "HOME": str(home), "TMPDIR": str(temporary),
+           "SPREADRT_PARENT_NETNS": os.readlink("/proc/self/ns/net")}
+    namespace = [unshare, "--user", "--map-root-user", "--net"]
+    probe = subprocess.run([*namespace, ip, "link", "set", "lo", "up"],
+                           env=env, capture_output=True, text=True, timeout=10)
+    if probe.returncode:
+        pytest.skip("user/network namespace setup unavailable: " + probe.stderr.strip())
+    setup = ("import os,subprocess,sys; "
+             "subprocess.run([sys.argv[1],'link','set','lo','up'],check=True); "
+             "os.execv(sys.executable,[sys.executable,*sys.argv[2:]])")
+    work = tmp_path / "authored-formulas"
+    control = ROOT / "tests/fixtures/hg_spreadrt/synthetic_control.py"
+    result = subprocess.run([*namespace, sys.executable, "-c", setup, ip,
+                             str(control), str(work)], cwd=ROOT, env=env,
+                            capture_output=True, text=True, timeout=90)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "synthetic_control=PASSED" in result.stdout
+    evidence = json.loads((work / "evidence.json").read_text())
+    assert evidence["measured"] is True and evidence["recalculated"] is True
+    assert evidence["score"] == 1.0 and evidence["scorer_input"]["verified"] is True
+    assert (work / "reward.txt").read_text() == "1\n"
+    workbook = openpyxl.load_workbook(work / "result.xlsx", data_only=True)
+    try:
+        assert [workbook.active["B1"].value, workbook.active["B2"].value] == [999, 888]
+    finally:
+        workbook.close()

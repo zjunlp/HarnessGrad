@@ -62,8 +62,8 @@ artifact, so this adapter pins the commit instead:
 `1cb676694f93ca7cfbcc4f160ace9176262f4822fcfa1acecd47ebfd9d6863c9`.
 
 Historical measurement: `python3 tools/datasets.py --fetch --dataset aime` downloaded **2,079,990 bytes**,
-reported `sha256 ok` and extracted to `/mnt/20t/xubuqiang/datasets/aime` on the review host.
-That path is a receipt, not a destination instruction. The three members
+reported `sha256 ok` and extracted into the review host's configured AIME dataset root.
+The three members
 landed at 146,233 / 6,226 / 9,426 bytes — matching the counts recorded in the adapter's own
 `downloads()` note — and `data/datasets/aime.py:127` re-checks 30/15/15 against `N_TOTAL = 60`
 on every load.
