@@ -439,12 +439,8 @@ reports/**/*.body
 # Per-worker evidence packets (see the note above): kept on disk, never in git.
 tests/fixtures/hg_*/
 
-# The 36 exported review documents the active registry cites as `/site/...`
-# external references ARE evidence, so they are tracked at their resolver path
-# (`tests/quality/conftest.py:24`). They were deleted from the working tree with
-# `reports/` and `docs/`; `git show 1825cd0e^:<path>` still carries every one of
-# them and `tests/fixtures/hg_migration_site/PROVENANCE.json` records the exact
-# source path, commit and digest for each. 1.8 MB of text, no payloads.
+# Exported review sources cited by documentation and the blocker registry.
+# PROVENANCE.json records the original source paths, commits and digests.
 !tests/fixtures/hg_migration_site/
 !tests/fixtures/hg_migration_site/**
 # `docs/experiment_noise.md` is cited by **six** modules -- `data/datasets/alfworld.py`,

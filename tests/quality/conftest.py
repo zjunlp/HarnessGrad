@@ -140,41 +140,6 @@ def attach_synthetic_blocker():
     return attach
 
 
-@pytest.fixture
-def site_archive():
-    """Optional local copy of exported site sources; never fetch external references.
-
-    `/site` citations are placeholders, not verified on-disk repository evidence.
-    Keep source-content regressions runnable with an explicitly provisioned,
-    ignored packet without making a fresh clone depend on those private records.
-    """
-    def source(reference):
-        relative = Path(reference).relative_to("/site")
-        assert ".." not in relative.parts
-        path = ROOT / "tests/fixtures/hg_migration_site" / relative
-        if not path.is_file():
-            pytest.skip(f"site source packet absent from this clone: {reference}")
-        return path
-    return source
-
-
-@pytest.fixture
-def blocker_repository_evidence():
-    """Only whole-registry checks need the ignored hg_* observation packets."""
-    import json
-
-    registry = json.loads((ROOT / "registry/dataset-blockers.json").read_text())
-    owners = registry["shared_blockers"] + [
-        blocker for row in registry["datasets"] for blocker in row["blockers"]]
-    missing = sorted({item["path"] for owner in owners for item in owner["evidence"]
-                      if item["kind"] == "repository"
-                      and item["path"].startswith("tests/fixtures/hg_")
-                      and not (ROOT / item["path"]).is_file()})
-    if missing:
-        pytest.skip("ignored blocker observation packet absent from this clone: "
-                    + ", ".join(missing))
-
-
 @pytest.fixture(scope="module")
 def synthetic_gsm8k(tmp_path_factory):
     """Build an isolated adapter using three synthetic test and five train rows.
