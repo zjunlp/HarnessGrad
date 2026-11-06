@@ -359,7 +359,7 @@ def _stdlib_paths(python: Path) -> list[str]:
     """`sys.path` with **no** site-packages: what `python -S` leaves, as data.
 
     Asked of the interpreter rather than computed from `sysconfig`, because a Python
-    under a non-standard prefix (measured here: anaconda on `/mnt/8t`) spells its
+    under a non-standard prefix (for example, an Anaconda installation) spells its
     `lib-dynload` and its stdlib zip in a way only it knows. Entries that do not exist
     are dropped, and so is `''`: `-c` puts the cwd first, and a probe that can see the
     cwd can import whatever happens to be sitting there.

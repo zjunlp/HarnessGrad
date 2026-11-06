@@ -295,11 +295,11 @@ def test_a_work_root_on_another_mount_is_supported():
 
 
 def test_the_interpreter_is_never_hidden():
-    """The bug that this test exists for: hiding /mnt erased the interpreter.
+    """Hiding a work-root ancestor must not erase the interpreter.
 
-    This machine's Python is under `/mnt/8t/.../anaconda3`, so a plan that covered
-    every parent of the work root left the subject unable to start -- and the
-    symptom was "the harness is broken".
+    A Python installation can share an ancestor with the work root. Covering every
+    parent of the work root also hid the interpreter in that layout, leaving the
+    subject unable to start. The symptom was "the harness is broken".
     """
     prefix = sandbox.interpreter_prefix()
     assert prefix is not None, "this test assumes a conda/venv interpreter"
