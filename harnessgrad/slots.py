@@ -26,6 +26,7 @@ import errno
 import fcntl
 import os
 import random
+import re
 import sys
 import time
 from contextlib import contextmanager
@@ -143,18 +144,54 @@ class SlotBudget:
         """
         stamp = self.directory / "capacity"
         mine = str(self.capacity)
+        # This persistent lock is distinct from both the stamp and slot leases. Never
+        # unlink it: a waiter may already hold an open fd to its inode.
+        lock_fd = os.open(self.directory / "capacity.lock", os.O_CREAT | os.O_RDWR, 0o644)
         try:
-            fd = os.open(stamp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
-        except FileExistsError:
-            recorded = stamp.read_text(encoding="utf-8").strip()
-            if recorded and recorded != mine:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            if os.read(lock_fd, 1):
                 raise SlotBudgetError(
-                    f"{self.directory} already has capacity {recorded}, not {mine}; "
-                    "one endpoint has one capacity, so give this run the same number or a "
-                    "different directory") from None
-            return
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(mine + "\n")
+                    f"incomplete capacity initialization in {self.directory}; stop all "
+                    "users and explicitly repair it before restarting")
+            try:
+                fd = os.open(stamp, os.O_RDONLY)
+            except FileNotFoundError:
+                # Persist an intent before creating the stamp, so even a crash after
+                # a partial but syntactically valid write cannot be mistaken for success.
+                os.write(lock_fd, b"initializing\n")
+                os.fsync(lock_fd)
+                fd = os.open(stamp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+            else:
+                os.close(fd)
+                fd = None
+            if fd is None:
+                recorded = stamp.read_bytes()
+                # Historical writers emitted a decimal and newline. Also accept the
+                # canonical decimal without a newline, but no other whitespace/signs.
+                if not re.fullmatch(rb"[1-9][0-9]*\n?", recorded):
+                    raise SlotBudgetError(
+                        f"invalid capacity stamp {stamp}; stop all users and explicitly "
+                        "repair it before restarting") from None
+                value = recorded.rstrip(b"\n").decode("ascii")
+                if value != mine:
+                    raise SlotBudgetError(
+                        f"{self.directory} already has capacity {value}, not {mine}; "
+                        "one endpoint has one capacity, so give this run the same number or a "
+                        "different directory") from None
+                return
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(mine + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            dir_fd = os.open(self.directory, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+            os.ftruncate(lock_fd, 0)
+            os.fsync(lock_fd)
+        finally:
+            os.close(lock_fd)
 
     def _slot_path(self, index: int) -> Path:
         return self.directory / f"slot-{index:03d}"

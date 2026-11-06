@@ -8,6 +8,7 @@ GPU 在整段 improver 时间里空转（模拟：9 个同时跑 3.36 h，其中
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -96,6 +97,78 @@ def test_two_runs_disagreeing_about_capacity_is_an_error(tmp_path):
 def test_the_same_capacity_may_be_configured_twice(tmp_path):
     slots.SlotBudget(tmp_path / "slots", 4)
     slots.SlotBudget(tmp_path / "slots", 4)          # 九条跑道都会走这一条
+
+
+def _initialize_capacity(directory, capacity, barrier, results):
+    barrier.wait(timeout=15)
+    try:
+        slots.SlotBudget(directory, capacity)
+    except slots.SlotBudgetError:
+        results.put((capacity, False))
+    else:
+        results.put((capacity, True))
+
+
+@pytest.mark.parametrize("capacities", [[3] * 8, [3, 7] * 4])
+def test_concurrent_capacity_initialization(tmp_path, capacities):
+    ctx = multiprocessing.get_context("spawn")
+    barrier = ctx.Barrier(len(capacities))
+    results = ctx.Queue()
+    directory = tmp_path / "fresh"
+    processes = [ctx.Process(target=_initialize_capacity,
+                             args=(directory, capacity, barrier, results))
+                 for capacity in capacities]
+    try:
+        for process in processes:
+            process.start()
+        for process in processes:
+            process.join(timeout=30)
+            assert process.exitcode == 0
+        outcomes = [results.get(timeout=5) for _ in processes]
+        winner = int((directory / "capacity").read_text())
+        assert winner in capacities
+        assert all(accepted == (capacity == winner) for capacity, accepted in outcomes)
+    finally:
+        for process in processes:
+            if process.is_alive():
+                process.terminate()
+            process.join(timeout=5)
+        results.close()
+        results.join_thread()
+
+
+@pytest.mark.parametrize("contents", [b"", b"0\n", b"01\n", b"+1\n", b"1 \n",
+                                      b"1\n\n", b"garbage", b"\xff"])
+def test_invalid_capacity_fails_closed_without_modification(tmp_path, contents):
+    stamp = tmp_path / "capacity"
+    stamp.write_bytes(contents)
+    for _ in range(2):  # A failed initializer must not retain the initialization lock.
+        with pytest.raises(slots.SlotBudgetError, match="invalid capacity stamp"):
+            slots.SlotBudget(tmp_path, 1)
+    assert stamp.read_bytes() == contents
+
+
+def test_incomplete_initialization_marker_fails_closed(tmp_path):
+    (tmp_path / "capacity.lock").write_bytes(b"initializing\n")
+    (tmp_path / "capacity").write_bytes(b"1\n")
+    for _ in range(2):
+        with pytest.raises(slots.SlotBudgetError, match="incomplete capacity"):
+            slots.SlotBudget(tmp_path, 1)
+    assert (tmp_path / "capacity").read_bytes() == b"1\n"
+    assert (tmp_path / "capacity.lock").read_bytes() == b"initializing\n"
+
+
+@pytest.mark.parametrize("contents", [b"4\n", b"4"])
+def test_existing_capacity_compatible_and_fds_closed(tmp_path, contents):
+    stamp = tmp_path / "capacity"
+    stamp.write_bytes(contents)
+    before = len(os.listdir("/proc/self/fd"))
+    for _ in range(10):
+        slots.SlotBudget(tmp_path, 4)
+        with pytest.raises(slots.SlotBudgetError):
+            slots.SlotBudget(tmp_path, 5)
+    assert len(os.listdir("/proc/self/fd")) == before
+    assert stamp.read_bytes() == contents
 
 
 def test_no_budget_means_the_old_behaviour():
