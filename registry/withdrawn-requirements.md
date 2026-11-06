@@ -357,10 +357,12 @@ binding would supersede this entry at its actual scope.
 
 **Retained:** the DECIDED twelve-declarations-versus-eight-export-routes mismatch and the exactly
 four declaration-only names; the limited 17944 stored-row observation, with **no invented
-725-member explanation**; the bound operator first-five eval-side manifest/export and
-scoring-input custody in `tests/fixtures/hg_wsel/triviaqa.json`; v2 and all historical identities
-and receipts; the source-only disclosures in `registry/w-evidence-qualification.md` and
-`registry/w-evidence-disclosure.md`. **The reported figure remains the local alias-max normalized
+725-member explanation**; v2 and all historical identities and receipts; the source-only
+disclosures in `registry/w-evidence-qualification.md` and `registry/w-evidence-disclosure.md`.
+The earlier five-row eval-side selection involved no execution; its dated selection/export
+packet has since been retired. Any future, separately authorized diagnostic needs its own
+fresh selected manifest/export bound to the actual source/code identities, split mode and
+side, and run ID. **The reported figure remains the local alias-max normalized
 row-EM instrument** — not official key-level EM/F1, with no denominator and no official
 comparability claimed. Do not infer execution, member equality, a unique-key denominator or
 HumanAnswers redundancy from ancestry, predecessor blobs, counts, filenames, ETags or converter
