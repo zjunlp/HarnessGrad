@@ -25,9 +25,9 @@ def adapter_spec(dataset, tmp_path):
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
-def test_admission_receipt_uses_selected_dataset(dataset, tmp_path):
+def test_admission_receipt_uses_selected_dataset(dataset, tmp_path, captured_native_python_manifest):
     # Admission-only control derived from BIRD; never used as a dataset scorer.
-    manifest = json.loads((ROOT / 'data/runtimes/bird_minidev-native.json').read_text())
+    manifest = json.loads(captured_native_python_manifest.read_text())
     manifest['dataset'] = dataset
     path = tmp_path / 'admission-control.json'
     path.write_text(json.dumps(manifest))
@@ -73,7 +73,7 @@ def test_route_mismatch_and_payload_refusal(dataset, tmp_path):
     path = tmp_path / 'bad-provider.json'
     path.write_text(json.dumps(manifest))
     binding.update(manifest=str(path), sha256=hashlib.sha256(path.read_bytes()).hexdigest())
-    with pytest.raises(native_runtime.NativeRuntimeUnavailable, match='payload digest mismatch'):
+    with pytest.raises(native_runtime.NativeRuntimeUnavailable, match='digest-bound'):
         with native_runtime.admit(binding):
             pytest.fail('changed provider admitted')
 

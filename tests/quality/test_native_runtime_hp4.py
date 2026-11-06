@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,6 +13,27 @@ sys.path.insert(0, str(ROOT))
 from eval.verification import native_runtime, verifier
 
 DATASETS = ['scienceworld', 'chessbench_puzzles']
+
+
+@pytest.fixture
+def authored_package_locator(tmp_path, tmp_path_factory, monkeypatch):
+    """Construct adapter declarations without requiring an installed JVM wrapper."""
+    package = tmp_path / 'authored-scienceworld'
+    package.mkdir()
+    (package / 'scienceworld.jar').write_bytes(b'authored input pin only')
+    original = importlib.util.find_spec
+
+    def find_spec(name, *args, **kwargs):
+        if name == 'scienceworld':
+            return SimpleNamespace(origin=str(package / '__init__.py'))
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib.util, 'find_spec', find_spec)
+    from data.datasets import scienceworld
+    jre = tmp_path_factory.mktemp('authored-jre')
+    (jre / 'bin').mkdir(parents=True)
+    (jre / 'bin/java').write_bytes(b'authored locator only; never executed')
+    monkeypatch.setattr(scienceworld, 'JRE_STAGED', jre)
 
 
 def adapter_spec(dataset):
@@ -32,7 +54,7 @@ def binding(dataset):
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
-def test_adapter_binds_independent_pin(dataset):
+def test_adapter_binds_independent_pin(dataset, authored_package_locator):
     selected = adapter_spec(dataset)['native_runtime']
     assert selected['dataset'] == dataset
     assert selected['sha256'] == hashlib.sha256((ROOT / selected['manifest']).read_bytes()).hexdigest()
@@ -56,7 +78,7 @@ def test_java_prefers_sealed_home_and_refuses_missing(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
-def test_route_manifest_payload_and_sandbox_refusal(dataset, tmp_path):
+def test_route_manifest_payload_and_sandbox_refusal(dataset, tmp_path, authored_package_locator):
     spec = adapter_spec(dataset)
     spec['native_runtime']['sha256'] = hashlib.sha256(b'foreign closure').hexdigest()
     got = verifier._verify(tmp_path, spec, '', sandbox=True, timeout_s=20)
@@ -77,7 +99,7 @@ def test_route_manifest_payload_and_sandbox_refusal(dataset, tmp_path):
     path.write_text(json.dumps(manifest))
     selected = {**binding(dataset), 'manifest': str(path),
                 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
-    with pytest.raises(native_runtime.NativeRuntimeUnavailable, match='payload digest mismatch'):
+    with pytest.raises(native_runtime.NativeRuntimeUnavailable, match='digest-bound'):
         with native_runtime.admit(selected):
             pytest.fail('modified provider admitted')
 

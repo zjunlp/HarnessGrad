@@ -4,6 +4,8 @@ Hash while copying into sealed memfds; execute only those snapshots in an empty
 bubblewrap root. Never hash then execute a mutable source path. Missing bytes,
 manifest drift, missing namespace support, and startup failure are unmeasured.
 The host kernel/CPU and namespace launcher remain platform compatibility/TCB.
+The captured kernel release is build metadata; admission checks Linux capabilities
+and records the actual execution host instead of requiring an identical release.
 """
 from __future__ import annotations
 
@@ -16,6 +18,7 @@ import os
 from pathlib import Path
 import platform
 import subprocess
+import tempfile
 
 from eval.containers.immutable_runtime import ImmutableRuntimeUnavailable, targets
 
@@ -30,31 +33,70 @@ class NativeRuntimeUnavailable(RuntimeError):
     """The admitted native runtime cannot be established. Never fall back."""
 
 
+def validate_route(spec: dict, *, sandbox: bool, env: dict | None = None,
+                   service_specs=None, running=None) -> dict:
+    """Validate the native scorer declaration before execution or cache reuse."""
+    from eval.verification.isolation import declared_class
+
+    if not sandbox:
+        raise NativeRuntimeUnavailable('native runtime requires sandbox=True')
+    binding = spec.get('native_runtime')
+    if not isinstance(binding, dict) or binding.get('dataset') not in SUPPORTED_DATASETS:
+        raise NativeRuntimeUnavailable('native runtime dataset is outside supported host scope')
+    if ((env or {}).get('kind', 'files') != 'files'
+            or (env or {}).get('services') or service_specs or running
+            or spec.get('kind') != 'command'
+            or declared_class(spec) not in ('unknown', 'actor-workdir')
+            or spec.get('cwd') not in (None, '.')
+            or spec.get('reward_file') != '/verifier/reward.txt'
+            or spec.get('evidence_file') != '/verifier/evidence.json'
+            or spec.get('argv', [])[:2] != ['python3', CHECK_PATHS[binding['dataset']]]):
+        raise NativeRuntimeUnavailable('native runtime binding requires the supported host check route')
+    return binding
+
+
 # Linux UAPI constants; some Conda builds omit their Python bindings. Values
 # independently captured from system Python and linux/{memfd,fcntl}.h in hg_whostpin.
 F_ADD_SEALS, F_GET_SEALS = 1033, 1034
 F_SEAL_SEAL, F_SEAL_SHRINK, F_SEAL_GROW, F_SEAL_WRITE = 1, 2, 4, 8
 
 
-def _snapshot(source: Path, expected: str) -> int:
+def _snapshot(source: Path, expected: str, expected_size: int | None = None) -> int:
     libc = ctypes.CDLL(None, use_errno=True)
-    create = libc.memfd_create
+    try:
+        create = libc.memfd_create
+    except AttributeError as exc:
+        raise NativeRuntimeUnavailable('native runtime requires Linux memfd_create support') from exc
     create.argtypes, create.restype = [ctypes.c_char_p, ctypes.c_uint], ctypes.c_int
     fd = create(b'hg-native-runtime', 3)  # MFD_CLOEXEC | MFD_ALLOW_SEALING
     if fd < 0:
-        raise OSError(ctypes.get_errno(), "memfd_create")
+        raise NativeRuntimeUnavailable(
+            f'native runtime memfd_create unavailable: {os.strerror(ctypes.get_errno())}')
     try:
         digest = hashlib.sha256()
         with source.open('rb') as stream, os.fdopen(os.dup(fd), 'wb') as output:
+            if expected_size is not None and os.fstat(stream.fileno()).st_size != expected_size:
+                raise NativeRuntimeUnavailable(f'native runtime payload size mismatch: {source}')
+            copied = 0
             for block in iter(lambda: stream.read(1024 * 1024), b''):
+                copied += len(block)
+                if expected_size is not None and copied > expected_size:
+                    raise NativeRuntimeUnavailable(f'native runtime payload size mismatch: {source}')
                 output.write(block)
                 digest.update(block)
+            if expected_size is not None and copied != expected_size:
+                raise NativeRuntimeUnavailable(f'native runtime payload size mismatch: {source}')
         if digest.hexdigest() != expected:
             raise NativeRuntimeUnavailable(f'native runtime payload digest mismatch: {source}')
         os.fchmod(fd, 0o555)
         os.lseek(fd, 0, os.SEEK_SET)
-        fcntl.fcntl(fd, F_ADD_SEALS,
-                    F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL)
+        required = F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL
+        try:
+            fcntl.fcntl(fd, F_ADD_SEALS, required)
+            if fcntl.fcntl(fd, F_GET_SEALS) & required != required:
+                raise NativeRuntimeUnavailable('native runtime file sealing is incomplete')
+        except OSError as exc:
+            raise NativeRuntimeUnavailable(f'native runtime file sealing unavailable: {exc}') from exc
         return fd
     except BaseException:
         os.close(fd)
@@ -127,6 +169,75 @@ class FrozenRuntime:
         return proc
 
 
+_HOST_NAMESPACES = ('user', 'mnt', 'pid', 'net', 'ipc', 'uts')
+# The launcher mounts the entire sealed closure before Python can probe it.
+# Keep headroom for large closures under concurrent admission.
+_HOST_PROBE_TIMEOUT_S = 30
+_HOST_PROBE = r'''
+import errno, json, os, subprocess, sys
+from pathlib import Path
+
+expected = json.loads(Path('/task/probe.json').read_text())
+if not (sys.flags.isolated and sys.flags.no_site):
+    raise RuntimeError('isolated Python startup unavailable')
+for name, inode in expected['namespaces'].items():
+    if os.stat('/proc/self/ns/' + name).st_ino == inode:
+        raise RuntimeError('host namespace retained: ' + name)
+if os.path.lexists(expected['private']):
+    raise RuntimeError('host storage visible in native root')
+for path in ('/scorer/check.py', '/task/probe.json'):
+    try:
+        fd = os.open(path, os.O_WRONLY)
+    except OSError as exc:
+        if exc.errno != errno.EROFS:
+            raise RuntimeError('read-only mount check failed: ' + path) from exc
+    else:
+        os.close(fd)
+        raise RuntimeError('writable native mount: ' + path)
+child = subprocess.run(
+    [sys.executable, '-I', '-S', '-B', '-c',
+     "import sys; sys.exit(0 if sys.flags.isolated and sys.flags.no_site else 1)"],
+    capture_output=True, text=True, timeout=3)
+if child.returncode:
+    raise RuntimeError('sealed child Python failed: ' + child.stderr)
+Path('/task/verifier/probe-output').write_text(expected['nonce'])
+print(expected['nonce'])
+'''
+
+
+def _check_host(runtime: FrozenRuntime) -> dict:
+    """Exercise the pinned launcher and userland without running a scorer/task."""
+    host = {'system': platform.system(), 'machine': platform.machine(),
+            'kernel': platform.release(), 'admission_policy': 'linux-capabilities-v1'}
+    try:
+        namespaces = {name: os.stat('/proc/self/ns/' + name).st_ino
+                      for name in _HOST_NAMESPACES}
+        with tempfile.TemporaryDirectory(prefix='hg-native-host-') as directory:
+            root = Path(directory)
+            work = root / 'task'
+            work.mkdir()
+            reward = work / 'verifier'
+            reward.mkdir()
+            private = root / 'host-private'
+            private.write_text('native host isolation probe')
+            nonce = os.urandom(16).hex()
+            (work / 'probe.json').write_text(json.dumps(
+                {'namespaces': namespaces, 'private': str(private), 'nonce': nonce}))
+            proc = runtime.run(['python3', '-c', _HOST_PROBE], workdir=work,
+                               reward_dir=reward, timeout_s=_HOST_PROBE_TIMEOUT_S)
+            if proc.returncode or proc.stdout.strip() != nonce:
+                detail = (proc.stderr or proc.stdout or 'probe confirmation missing').strip()[-2000:]
+                raise NativeRuntimeUnavailable(f'native runtime host capability check failed: {detail}')
+            if (reward / 'probe-output').read_text() != nonce:
+                raise NativeRuntimeUnavailable('native runtime host capability output mismatch')
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise NativeRuntimeUnavailable(f'native runtime host capability check failed: {exc}') from exc
+    host['capabilities'] = {'sealed_memfd': True, 'private_namespaces': list(_HOST_NAMESPACES),
+                            'read_only_runtime': True, 'read_only_task': True,
+                            'isolated_python': True, 'child_python': True}
+    return host
+
+
 @contextmanager
 def admit(binding: dict):
     """Authenticate the selected manifest and retain exact sealed bytes until exit."""
@@ -141,24 +252,39 @@ def admit(binding: dict):
         if digest != binding['sha256']:
             raise NativeRuntimeUnavailable('native runtime manifest digest mismatch')
         manifest = json.loads(raw)
-        if manifest['schema'] != 1 or manifest['dataset'] != binding['dataset']:
+        if manifest['schema'] not in (1, 2) or manifest['dataset'] != binding['dataset']:
             raise NativeRuntimeUnavailable('native runtime manifest schema/dataset mismatch')
-        if (manifest['identity']['machine'] != platform.machine()
-                or manifest['identity']['kernel'] != platform.release()):
-            raise NativeRuntimeUnavailable('native runtime kernel/machine envelope mismatch')
+        if platform.system() != 'Linux':
+            raise NativeRuntimeUnavailable('native runtime requires Linux')
+        if manifest['identity']['machine'] != platform.machine():
+            raise NativeRuntimeUnavailable('native runtime machine mismatch')
+        package = None
+        if manifest['schema'] == 2:
+            from harnessgrad.native_runtime_store import entries, selected_package, source_path
+            entries(manifest)
+            package = selected_package(manifest, digest, manifest_size=len(raw))
         for target, entry in manifest['files'].items():
             p = Path(target)
             if (not p.is_absolute() or '..' in p.parts
                     or p.parts[1] in {'task', 'tmp', 'proc', 'dev', 'etc'}):
                 raise NativeRuntimeUnavailable(f'unsafe native runtime destination: {target}')
-            source = Path(entry['source'])
-            fds[target] = _snapshot(source if source.is_absolute() else ROOT / source,
-                                    entry['sha256'])
+            if package is not None:
+                source = source_path(package, entry['source'])
+            else:
+                source = Path(entry['source'])
+                source = source if source.is_absolute() else ROOT / source
+            fds[target] = (_snapshot(source, entry['sha256'], entry['size']) if package is not None
+                           else _snapshot(source, entry['sha256']))
         for required in (manifest['interpreter'], manifest['loader'], '/scorer/check.py'):
             if required not in fds:
                 raise NativeRuntimeUnavailable(f'native runtime missing entry: {required}')
-        launcher = _snapshot(Path(manifest['launcher']['path']), manifest['launcher']['sha256'])
-        yield FrozenRuntime(manifest, digest, fds, launcher)
+        launcher_source = (source_path(package, manifest['launcher']['source']) if package is not None
+                           else Path(manifest['launcher']['path']))
+        launcher = (_snapshot(launcher_source, manifest['launcher']['sha256'], manifest['launcher']['size'])
+                    if package is not None else _snapshot(launcher_source, manifest['launcher']['sha256']))
+        runtime = FrozenRuntime(manifest, digest, fds, launcher)
+        runtime.receipt['host'] = _check_host(runtime)
+        yield runtime
     except ImmutableRuntimeUnavailable:
         raise
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:

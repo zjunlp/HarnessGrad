@@ -1417,6 +1417,23 @@ def _all_unstarted(outcomes: dict[str, dict], jobs: int) -> bool:
     return True
 
 
+def _native_cache_matches(entry: dict, expected: dict | None, trials: int) -> bool:
+    """Keep cached native measurements bound to every admitted trial receipt."""
+    if not isinstance(entry, dict):
+        return False
+    last = entry.get('verdict') or {}
+    rows = entry.get('trial_verdicts') or [last]
+    if not isinstance(rows, (list, tuple)):
+        return False
+    if expected is None:
+        # Older native cache entries used the ordinary key. They must not become
+        # measurements of a request that no longer declares a native scorer.
+        return not any(isinstance(row, dict) and 'native_runtime' in row for row in [last, *rows])
+    return (expected.get('verified') is True and len(rows) == trials
+            and isinstance(last, dict) and last.get('native_runtime') == expected
+            and all(isinstance(row, dict) and row.get('native_runtime') == expected for row in rows))
+
+
 def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               cache: dict | None = None, harness_sha: str = "",
               sandbox: bool = True, setups: dict | None = None,
@@ -1509,6 +1526,40 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # but neither read nor populate the measurement cache.
     cache_allowed = all(value.get("cacheable", True) for value in runtime_identities.values())
 
+    native_identities, native_errors, native_profiles = {}, {}, {}
+    for task in tasks:
+        tid = task['task_id']
+        spec = (verifiers or {}).get(tid) or {}
+        # The stepwise controller scores in process, bypassing the offline
+        # verifier and its native declaration. Only the executed scorer supplies
+        # an admission identity for cache keys and trial receipt checks below.
+        if (evaluation_protocols.get(tid) == chess_stepwise.STEPWISE
+                or 'native_runtime' not in spec or runtime_error is not None):
+            continue
+        from eval.verification import native_runtime
+        profile_key = None
+        try:
+            binding = native_runtime.validate_route(
+                spec, sandbox=sandbox, env=(envs or {}).get(tid))
+            profile_key = json.dumps(binding, sort_keys=True, default=str)
+            if profile_key not in native_profiles:
+                # Validate before cache lookup, once per selected declaration.
+                # Fresh scoring admits/seals again after the actor has stopped.
+                with native_runtime.admit(binding) as runtime:
+                    identity = json.loads(json.dumps(runtime.receipt))
+                if identity.get('verified') is not True:
+                    raise native_runtime.NativeRuntimeUnavailable('native runtime identity is unverified')
+                native_profiles[profile_key] = identity, None
+            identity, error = native_profiles[profile_key]
+        except (native_runtime.NativeRuntimeUnavailable, TypeError, ValueError) as exc:
+            identity, error = None, str(exc)
+            if profile_key is not None:
+                native_profiles[profile_key] = identity, error
+        if error is not None:
+            native_errors[tid] = error
+        else:
+            native_identities[tid] = identity
+
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
         if bun_identity is not None:
@@ -1522,6 +1573,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         if bundle is not None:
             key += ":scorer:" + hashlib.sha256(json.dumps(
                 bundle, sort_keys=True, default=str).encode()).hexdigest()
+        native = native_identities.get(task['task_id'])
+        if native is not None:
+            key += ':native:' + hashlib.sha256(json.dumps(
+                native, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         if evaluation_protocols.get(task["task_id"]) == chess_stepwise.STEPWISE:
             key += ":" + chess_stepwise.STEPWISE
         return key
@@ -1675,8 +1730,14 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             invalid_runtime = {"stage": "harness runtime preparation", "detail": runtime_error}
             _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
             return {"task_id": tid, "invalid": invalid_runtime}
+        if tid in native_errors:
+            invalid_runtime = {'stage': 'native runtime preparation', 'detail': native_errors[tid]}
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
+            return {'task_id': tid, 'invalid': invalid_runtime}
         key = measurement_key(task)
         hit = None if fresh_measurement(tid) or not cache_allowed else cache.get(key)
+        if hit is not None and not _native_cache_matches(hit, native_identities.get(tid), trials):
+            hit = None
         if (hit is not None and bun_identity is not None
                 and (hit.get("harness_runtime") or {}).get("bun") != bun_identity):
             hit = None
@@ -1760,6 +1821,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 # cached either: the cache key names the harness, and the reason this
                 # task failed was not the harness, so caching it would carry a dataset bug
                 # into every later round and hide the round where it was introduced.
+                native = native_identities.get(tid)
+                verdict = result.get('verdict') or {}
+                if (native is not None and not result.get('invalid') and not verdict.get('unmeasured')
+                        and verdict.get('native_runtime') != native):
+                    result['invalid'] = {'stage': 'native runtime identity',
+                        'detail': 'Native runtime changed after evaluation admission; refusing mixed measurements'}
                 if any((result.get("harness_runtime") or {}).get(kind) != expected
                        for kind, expected in runtime_identities.items()):
                     result.setdefault("invalid", {"stage": "harness runtime identity",

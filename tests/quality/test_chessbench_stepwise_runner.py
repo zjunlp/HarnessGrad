@@ -6,11 +6,17 @@ on the released ChessBench slice or production pilot authorization.
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
+import hashlib
+import os
 from pathlib import Path
+import shutil
 import socket
+import subprocess
 import sys
 import threading
 import time
+from types import SimpleNamespace
 
 import chess
 import pytest
@@ -19,6 +25,7 @@ import data.datasets.chessbench_puzzles as dataset
 from eval.run import runner
 from eval.run import chess_stepwise
 from eval.service.unix_stepwise_relay import StepwiseRelay
+from eval.verification import native_runtime
 from harnessgrad.records import _curve_point, _save_verdicts
 from tools import plot_curve
 
@@ -83,6 +90,45 @@ def case(tmp_path, monkeypatch):
     task = {"task_id": TASK_ID, "goal": "offline goal", "inputs": [],
             "interaction": dataset.STEPWISE_CONTRACT}
     return repo, task, gold, dataset.verify_for({"task_id": task["task_id"], "gold": gold})
+
+
+@pytest.fixture(scope="module")
+def local_chess_runtime(tmp_path_factory):
+    """Seal local Python plus the pinned scorer; no historical installation needed."""
+    for tool in ("bwrap", "readelf", "ldd"):
+        if shutil.which(tool) is None:
+            pytest.skip(f"{tool} is required for the local sealed-runtime control")
+    root = Path(__file__).resolve().parents[2]
+    work = tmp_path_factory.mktemp("local-chess-runtime")
+    path = work / "manifest.json"
+    # The BIRD capture supplies a local Python/stdlib/ELF closure. Attach the
+    # reviewed Chess scorer sources and the installed pure-Python chess package.
+    proc = subprocess.run(
+        [sys.executable, str(root / "tools/build_bird_native_runtime.py"),
+         "--dataset", "bird_minidev", "--out", str(work / "capture"),
+         "--manifest", str(path), "--store", str(work / "store")],
+        cwd=root, env={"PATH": os.defpath, "LANG": "C", "PYTHONDONTWRITEBYTECODE": "1"},
+        capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    manifest = json.loads(path.read_text())
+    reviewed = json.loads((root / "data/runtimes/chessbench_puzzles-native.json").read_text())
+    manifest["dataset"] = "chessbench_puzzles"
+    for target, entry in reviewed["files"].items():
+        if target.startswith("/scorer/"):
+            source = (root / "data/scaffolds/qa/verify/check.py" if target == "/scorer/check.py"
+                      else root / target.removeprefix("/scorer/"))
+            manifest["files"][target] = {**entry, "source": str(source)}
+    package = Path(chess.__file__).resolve().parent
+    for source in sorted(package.rglob("*.py")):
+        raw = source.read_bytes()
+        manifest["files"][str(source)] = {
+            "source": str(source), "sha256": hashlib.sha256(raw).hexdigest(),
+            "size": len(raw), "entry": "local Chess test dependency"}
+    manifest["python_path"] = ["/scorer", str(package.parent)]
+    raw = (json.dumps(manifest, sort_keys=True) + "\n").encode()
+    path.write_bytes(raw)
+    return {"dataset": "chessbench_puzzles", "manifest": str(path),
+            "sha256": hashlib.sha256(raw).hexdigest()}
 
 
 def execute(case, script, **kwargs):
@@ -287,8 +333,121 @@ def test_incomplete_evaluation_persists_receipt_without_score_or_cache(case, tmp
     assert saved["invalid"]["receipt"] == receipt
 
 
-def test_offline_protocol_reward_and_cache_remain_distinct_from_interactive(case, tmp_path):
+@pytest.mark.parametrize("trials", [1, 2])
+@pytest.mark.parametrize("offline_available", [False, True])
+def test_interactive_cache_uses_controller_without_offline_native_runtime(
+        case, monkeypatch, trials, offline_available):
+    repo, task, _, verifier = case
+    (repo / "actor.py").write_text(PREAMBLE + PLAY)
+    admissions, executions = [], []
+
+    @contextmanager
+    def offline_admit(binding):
+        admissions.append(binding)
+        if not offline_available:
+            raise native_runtime.NativeRuntimeUnavailable("authored unavailable offline runtime")
+        yield SimpleNamespace(receipt={"verified": True, "dataset": binding["dataset"],
+                                       "sha256": binding["sha256"]})
+
+    original_run = runner.run_one
+
+    def run(*args, **kwargs):
+        executions.append(True)
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(native_runtime, "admit", offline_admit)
+    monkeypatch.setattr(runner, "run_one", run)
+    cache = {}
+
+    def measure():
+        return runner.evaluate(repo, [task], {}, cache=cache, sandbox=True, trials=trials,
+                               verifiers={TASK_ID: verifier}, harness_sha="same")
+
+    first = measure()
+    assert first["per_task"] == {TASK_ID: 1.0} and not first["invalid"], first
+    assert not first["cached_tasks"] and len(executions) == trials
+    assert first["scorer_isolation_class"] == "in-process"
+    assert first["verdicts"][TASK_ID]["protocol"] == chess_stepwise.STEPWISE
+    assert "native_runtime" not in first["verdicts"][TASK_ID]
+    # Changing the unused offline declaration must not invalidate a controller score.
+    verifier["native_runtime"] = {"dataset": "chessbench_puzzles",
+                                  "manifest": str(repo / "unavailable-offline-runtime.json"),
+                                  "sha256": "0" * 64}
+    reused = measure()
+    assert reused["cached_tasks"] == [TASK_ID] and reused["per_task"] == {TASK_ID: 1.0}
+    assert len(executions) == trials and admissions == [] and len(cache) == 1
+    if trials > 1:
+        assert len(reused["trial_verdicts"][TASK_ID]) == trials
+        assert all(v["protocol"] == chess_stepwise.STEPWISE
+                   and "native_runtime" not in v for v in reused["trial_verdicts"][TASK_ID])
+
+
+@pytest.mark.parametrize("failure", ["sandbox", "backend", "gold"])
+def test_interactive_cache_still_requires_session_admission(case, monkeypatch, failure):
+    repo, task, _, verifier = case
+    (repo / "actor.py").write_text(PREAMBLE + PLAY)
+
+    def no_native(*args):
+        pytest.fail("interactive scoring reached offline native admission")
+
+    monkeypatch.setattr(native_runtime, "admit", no_native)
+    cache = {}
+    first = runner.evaluate(repo, [task], {}, cache=cache, sandbox=True,
+                            verifiers={TASK_ID: verifier}, harness_sha="same")
+    assert first["per_task"] == {TASK_ID: 1.0}
+
+    class NoRead(dict):
+        def get(self, *args):
+            pytest.fail("invalid session read the measurement cache")
+
+    def no_actor(*args, **kwargs):
+        pytest.fail("invalid session launched an actor")
+
+    monkeypatch.setattr(runner, "run_one", no_actor)
+    if failure == "gold":
+        verifier["inputs"] = []
+    refused = runner.evaluate(repo, [task], {}, cache=NoRead(cache),
+                              sandbox=failure != "sandbox",
+                              envs={TASK_ID: {"kind": "exec" if failure == "backend" else "files"}},
+                              verifiers={TASK_ID: verifier}, harness_sha="same")
+    assert not refused["per_task"] and not refused["cached_tasks"]
+    assert refused["invalid"][TASK_ID]["stage"] == (
+        "admission" if failure == "backend" else "stepwise admission")
+
+
+def test_offline_chess_cannot_reuse_interactive_cache_or_skip_native_admission(case, monkeypatch):
+    repo, task, _, verifier = case
+    (repo / "actor.py").write_text(PREAMBLE + PLAY)
+    cache = {}
+    first = runner.evaluate(repo, [task], {}, cache=cache, sandbox=True,
+                            verifiers={TASK_ID: verifier}, harness_sha="same")
+    assert first["per_task"] == {TASK_ID: 1.0}
+    cached = dict(cache)
+    admissions = []
+
+    @contextmanager
+    def unavailable(binding):
+        admissions.append(binding)
+        raise native_runtime.NativeRuntimeUnavailable("authored unavailable offline runtime")
+        yield  # contextmanager protocol
+
+    def no_actor(*args, **kwargs):
+        pytest.fail("unavailable offline scorer launched an actor")
+
+    monkeypatch.setattr(native_runtime, "admit", unavailable)
+    monkeypatch.setattr(runner, "run_one", no_actor)
+    offline = {k: v for k, v in task.items() if k != "interaction"}
+    refused = runner.evaluate(repo, [offline], {}, cache=cache, sandbox=True,
+                              verifiers={TASK_ID: verifier}, harness_sha="same")
+    assert not refused["per_task"] and not refused["cached_tasks"]
+    assert refused["invalid"][TASK_ID]["stage"] == "native runtime preparation"
+    assert admissions == [verifier["native_runtime"]] and cache == cached
+
+
+def test_offline_protocol_reward_and_cache_remain_distinct_from_interactive(
+        case, tmp_path, local_chess_runtime):
     repo, task, gold, verifier = case
+    verifier["native_runtime"] = local_chess_runtime
     # One harness, task ID and SHA, with both protocols exercised against one cache.
     (repo / "actor.py").write_text(PREAMBLE + '''
 if 'interaction' not in task:
@@ -304,6 +463,8 @@ else:
                                verifiers={TASK_ID: verifier}, harness_sha="same")
     batch = measure(offline)
     assert batch["per_task"] == {TASK_ID: 1.0}
+    native = batch["verdicts"][TASK_ID]["native_runtime"]
+    assert native["verified"] and native["sha256"] == local_chess_runtime["sha256"]
     assert batch["verdicts"][TASK_ID]["protocol"] == chess_stepwise.OFFLINE
     official = batch["verdicts"][TASK_ID]["evidence"]["official"]
     assert official["protocol"] == chess_stepwise.OFFLINE

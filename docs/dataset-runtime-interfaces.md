@@ -237,6 +237,103 @@ VERIFY[task_id] = {
 都必须在声明目录或沙箱已有的系统运行目录内。缺失、不可见或无效的声明保持不可测。
 解释器版本及依赖要求由适配器确定，通用平台不要求某个 Python 版本。
 
+### 5.2 封存原生评分运行时的宿主兼容性
+
+Bird、Jericho、ALFWorld、ScienceWorld 和 ChessBench 的 `native_runtime` 清单固定
+解释器、依赖、评分代码、沙箱映射及 launcher 的内容摘要。清单 `identity.kernel`
+保留生成时记录的内核版本；准入要求 Linux 和匹配的机器架构，并检查实际能力，
+不要求宿主内核版本字符串与构建时完全相同。
+
+每次准入先校验文件并封存到 memfd，确认写入、扩缩和继续加封均被锁定，然后使用
+已封存的 launcher 和解释器运行独立探针。探针检查私有 user/mount/PID/network/IPC/UTS
+命名空间、只读运行时及任务挂载、不可见的宿主临时文件、隔离 Python 和封存的子解释器启动。
+能力缺失、探针失败或超时仍按不可测处理，不回退到宿主解释器或关闭隔离。
+
+宿主能力探针使用独立的 30 秒预算，覆盖完整封存运行时的沙箱挂载与探针执行，
+为 ALFWorld 等较大运行时的并发准入预留启动时间。评分命令使用验证阶段自己的超时配置。
+
+评分回执的 `native_runtime.identity` 保留清单身份；新增 `native_runtime.host` 记录实际
+system、machine、kernel、准入策略及通过的能力检查，逐次 verdict 归档保留这些字段。
+内核与 launcher 的宿主加载环境仍属于平台可信边界；这些检查不声明所有内核行为等价。
+
+评分缓存读取前使用同一套声明校验和运行时准入，并按每个选中的声明去重检查。
+缓存键包含已验证的 native 回执（清单摘要、用户态身份及实际宿主兼容回执）；路径定位改变而
+内容身份不变可以复用，运行时或宿主回执改变则重新测量。缓存中的最后一个 verdict 和每次
+trial 的 native 回执必须全部匹配；新测量若出现不匹配则保持不可测且不写入缓存。
+旧缓存键、缺失或未验证的 native 回执均不能作为当前原生评分的结果使用。
+
+上述 native 校验仅用于实际执行原生评分器的路径。ChessBench 交互模式由进程内控制器
+评分，不使用 verifier 中为离线评分准备的 `native_runtime` 声明；交互缓存按协议区分，
+复用前仍要求通过交互会话的沙箱、环境类型及可信输入校验。
+
+### 5.3 可搬迁的原生运行时包
+
+五份受审查清单使用 schema 2。`files[*].source` 和 `launcher.source` 只引用
+`blobs/<sha256>`，宿主读取位置由外部存储配置决定。包同时包含解释器、用户态依赖、
+JRE（适用时）、锁定的评分代码和 launcher，评分代码的执行字节来自包内封存副本。
+清单中的绝对目标路径、启动参数、环境变量及构建身份记录捕获时的沙箱布局和来源；
+这些字符串不要求宿主存在同名目录。schema 1 仅保留为显式旧声明的兼容路径。
+
+默认存储根为 `HG_DATA_ROOT/native-runtimes`，可用 `HG_DATA_NATIVE_RUNTIMES` 单独覆盖。
+它沿用 `.env`、工作树、shell 优先级及相对主 checkout 的路径规则，并要求位于平台目录外。
+一个完整安装位于 `<store>/<dataset>/<manifest-sha256>/`，包含 `manifest.json` 和 `blobs/`。
+存储根和归档文件名不进入内容身份；移动整个 store 后仍可使用同一 pin 和评分缓存。
+
+导入已有便携包并检查实际宿主能力：
+
+```bash
+python3 tools/prepare_native_runtime.py import --dataset bird_minidev \
+  --archive /path/to/runtime.tar.gz --probe
+python3 tools/prepare_native_runtime.py verify --dataset bird_minidev --probe
+python3 tools/prepare_native_runtime.py export --dataset bird_minidev \
+  --output /path/to/exported-runtime.tar.gz
+```
+
+导入使用独立 pin 校验清单和所有 blob 的大小及 SHA256，拒绝多余、重复、链接或越界成员，
+校验完整后才原子发布。原生准入再次校验并封存文件；缺包、篡改或能力不足保持不可测。
+运行时不会搜索宿主 Python、JRE、系统库或当前 checkout 来补齐缺失的 blob。
+
+已有 schema 1 的来源记录或旧归档可用于恢复相同字节；旧来源记录只作为准备时的定位输入：
+
+```bash
+python3 tools/prepare_native_runtime.py assemble --dataset bird_minidev \
+  --source-manifest /path/to/legacy-sources.json \
+  --source-map /old/install=/path/to/copied-install \
+  --archive /path/to/legacy-runtime.tar.gz
+```
+
+当历史文件不可恢复时，需要从明确选择的安装捕获一个新版本，而不能将其他版本当作原包。
+维护者使用该安装的 Python 执行准备工具，`--portable` 会同时导出完整便携包和本地来源记录：
+
+```bash
+/path/to/selected-python tools/build_bird_native_runtime.py --dataset bird_minidev \
+  --portable --out /path/to/capture --manifest /path/to/reviewed-manifest.json \
+  --store /path/to/archives
+```
+
+新清单及其独立 pin 需经审查后更新；捕获、导入和校验命令均不会自动改写仓库中的 pin。
+准备工具接受显式的 `--manifest` 与 `--sha256` 组合，以验证尚未发布的候选版本。
+捕获虚拟环境时使用该环境的包目录，便携捕获将其映射到 `/opt/hg-site-packages`；
+解释器保留选中文件的字节并使用基础标准库布局，运行包不再依赖原虚拟环境目录。
+ScienceWorld 的便携捕获同时将 Py4J JAR 映射到封存解释器前缀下的 `share/py4j`，
+并保留所选环境的 JAR 内容。宿主能力探针验证隔离与解释器能力；JVM Gateway 等
+数据集依赖的启动兼容性通过对应的功能性控制单独验证。
+
+当前五份正式清单使用 **CPython 3.12.16**（自带 SQLite 3.53.1），数据集 SDK 版本如下：
+
+| 数据集 | 评分依赖 |
+| --- | --- |
+| BIRD mini-dev | Python 标准库 `sqlite3` |
+| Jericho | `jericho==3.3.1`、`numpy==1.26.4` |
+| ALFWorld | `alfworld==0.4.2`、`textworld==1.7.0`、`fast-downward-textworld==20.6.4`、`numpy==1.26.4` |
+| ScienceWorld | `scienceworld==1.2.3`、`py4j==0.10.9.9`、Temurin JRE `17.0.20.1+1` |
+| ChessBench puzzles | `chess==1.11.2` |
+
+这些清单选择新的用户态内容身份，需要导入对应新 pin 的包；旧 Python 3.12.4 的包不能用于
+补齐新清单。旧运行时的评分缓存由清单摘要隔离，新版本需要重新测量。
+NumPy wheel 的 OpenBLAS/Fortran 库从同一安装的 `numpy.libs` 采集并逐文件校验，
+不会将该宿主目录直接挂载进评分沙箱。
+
 ## 6. 完整重复试验报告
 
 所有选中任务的 VERIFY 声明同一个协议：
