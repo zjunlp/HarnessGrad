@@ -3,9 +3,10 @@
   "reference": "/site/adapter-integration-journal.md",
   "source_path": "docs/adapter-integration-journal.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 498256,
-  "sha256": "8b87462779cfc705b422721dc9643e5813818a80f5bd1448a76bac26d6660463",
-  "carrier": "tests/fixtures/hg_migration_site/adapter-integration-journal.md"
+  "bytes": 498107,
+  "sha256": "df476bbe95cc648458edadfe0d38b496c85ba146e2dd62a568f26a44c72235bf",
+  "carrier": "tests/fixtures/hg_migration_site/adapter-integration-journal.md",
+  "transform": "retired native-runtime JSON receipt links removed; retained report link corrected"
  },
  {
   "reference": "/site/agentdojo-metadata-privacy-codex180-report.md",
@@ -128,14 +129,6 @@
   "carrier": "tests/fixtures/hg_migration_site/independent-review-deferred.md"
  },
  {
-  "reference": "/site/jericho-runtime-b7.json",
-  "source_path": "reports/jericho-runtime-b7.json",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 516709,
-  "sha256": "c6f67ffca7f9320570829509912bbac6469b907b03b093ae4dca4f74f18e8599",
-  "carrier": "tests/fixtures/hg_migration_site/jericho-runtime-b7.json"
- },
- {
   "reference": "/site/measurement-coverage-hg-b3-review.md",
   "source_path": "reports/measurement-coverage-hg-b3-review.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
@@ -155,17 +148,10 @@
   "reference": "/site/runtime-blockers-b7.md",
   "source_path": "reports/runtime-blockers-b7.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 13078,
-  "sha256": "8d84ad31ae3f2e7efd39234488db305f13613faeb85154e976a8f627ee15a78d",
-  "carrier": "tests/fixtures/hg_migration_site/runtime-blockers-b7.md"
- },
- {
-  "reference": "/site/scienceworld-runtime-b7.json",
-  "source_path": "reports/scienceworld-runtime-b7.json",
-  "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 268427,
-  "sha256": "77194eb46b343a7eae5f56ec97c6b39e21c3003935ccfbe016835ee660643180",
-  "carrier": "tests/fixtures/hg_migration_site/scienceworld-runtime-b7.json"
+  "bytes": 13029,
+  "sha256": "9bcb118b76b6c9a0cffa0026529bb975beaaeed155de7298e92108053c606cba",
+  "carrier": "tests/fixtures/hg_migration_site/runtime-blockers-b7.md",
+  "transform": "retired native-runtime JSON receipt references removed; retirement note added"
  },
  {
   "reference": "/site/task-206-twowiki-provenance-review.md",

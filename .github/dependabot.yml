@@ -11,7 +11,7 @@
 #   tests/fixtures/bfcl_ast_source/*/pyproject.toml   vllm==0.8.5 (extras), 80 advisories
 #   tests/fixtures/twowikimultihopqa_upstream_codex197/requirements.txt   torch==1.1.0, 30
 #   tests/fixtures/ujson_pypi_codex226/requirements-codex226.txt          ujson==5.10.0, 4
-#   tests/fixtures/triviaqa_upstream/requirements.txt, hg_fevhub/, hg_spreadrt/  (floors)
+#   tests/fixtures/triviaqa_upstream/requirements.txt, hg_fevhub/  (floors)
 #
 # That is why GitHub still reports 61 findings on a branch whose only *runtime* pinned
 # dependency (nltk, in the locomo scorer) was just moved to a clean release. Pointing the
