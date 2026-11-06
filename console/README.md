@@ -568,3 +568,26 @@ grep -n "do_POST\|do_PUT\|do_DELETE" server.py
 
 > 注意：`static/` 是即改即生效的，`server.py` 不是。改了 `server.py` 以后，正在跑的那个
 > 实例要重启才会生效（静态文件不用）。
+
+### Evidence export API
+
+`GET /api/evidence/catalog` lists safe run identifiers, measured round scores,
+status, and declared round/trial limits from the configured `HG_CONSOLE_RUNS`
+root. `POST /api/evidence/export` accepts exactly `{"manifest": <author draft>}`
+and returns an `evidence-export.v1` JSON attachment named `evidence-export.json`.
+The server selects the root; the request cannot specify paths or output files.
+Both routes use the console Host/Origin checks; POST also uses the existing JSON
+framing and 1 MiB body limit. They do not start experiments or call models.
+
+Deployment limits (positive integer environment variables) default to
+`HG_CONSOLE_EVIDENCE_MAX_RUNS=500` directory entries,
+`HG_CONSOLE_EVIDENCE_MAX_INPUT_BYTES=67108864` receipt bytes including rechecks,
+`HG_CONSOLE_EVIDENCE_MAX_OUTPUT_BYTES=33554432`, and
+`HG_CONSOLE_EVIDENCE_MAX_CONCURRENT=2` concurrent catalog/export requests per
+process. Oversized inventories are rejected rather than truncated. Limit errors
+are HTTP 413 `{"error":"evidence-limit-exceeded"}`; a busy service returns 429
+`evidence-busy`, an invalid draft 400 `invalid-manifest`, and an unavailable
+receipt root 503 `evidence-unavailable`. Existing HTTP guard errors retain their
+usual codes. Limits are per process and should be configured before startup.
+Catalog round numbers above JavaScript's safe integer maximum (2^53 − 1) cause
+an HTTP 413 limit error instead of silently omitting a round.

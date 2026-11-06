@@ -6,7 +6,7 @@ import pytest
 playwright = pytest.importorskip("playwright.sync_api")
 STATIC = Path(__file__).resolve().parents[2] / "console" / "static"
 PAGES = ("/", "/#/trace", "/#/version", "/trace.html", "/harness.html",
-         "/launch.html", "/submit.html", "/author.html")
+         "/launch.html", "/submit.html", "/author.html", "/evidence.html")
 
 
 def test_shell_fits_mobile_in_both_languages():

@@ -228,7 +228,7 @@ def _comparison(base_run, base, run, point):
                      'code_diff': 'see patch hash descriptors; patch text withheld'}}
 
 
-def build_export(document, run_root, *, max_bytes=DEFAULT_MAX_BYTES):
+def build_export(document, run_root, *, max_bytes=DEFAULT_MAX_BYTES, max_runs=None, max_total_bytes=None):
     """Discover every immediate entry; fill observations and verify every claim."""
     if not isinstance(document, dict) or evidence._shape_problems(document):
         raise evidence.EvidenceError('invalid_manifest_shape')
@@ -246,7 +246,7 @@ def build_export(document, run_root, *, max_bytes=DEFAULT_MAX_BYTES):
         if 'status' in attempt and attempt['status'] not in evidence.STATUSES:
             raise evidence.EvidenceError('invalid_attempt_status')
         authored[run_id] = attempt
-    store = ReceiptStore(run_root, max_bytes)
+    store = ReceiptStore(run_root, max_bytes, max_runs=max_runs, max_total_bytes=max_total_bytes)
     try:
         if any(not safe_id(name) or _SECRET.search(name) for name in store.names):
             raise evidence.EvidenceError('unsafe_run_entry_name')

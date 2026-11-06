@@ -16,6 +16,7 @@
       sections: [
         [t("observe"), [
           { label: t("runs"), href: "/#/runs" },
+          { label: t("evidence"), href: "/evidence.html" },
           { label: t("trace"), href: "/#/trace" },
           { label: t("version"), href: "/#/version" },
         ]],

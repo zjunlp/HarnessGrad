@@ -1,0 +1,22 @@
+.evidence-page {max-width: 1080px; padding: 20px; display:grid; gap:16px;}
+.evidence-page p {color:var(--hg-alias-label-secondary); line-height:1.5; margin:0}
+.evidence-page form {display:grid; gap:16px; min-width:0}
+.evidence-page h2 {font-size:14px; margin:0; flex:1}
+.evidence-page .card__body {display:grid; gap:12px}
+.evidence-page .grid, .concern-grid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+.evidence-page label {display:grid; gap:5px; min-width:0}
+.evidence-page input:not([type=checkbox]), .evidence-page select, .evidence-page textarea {width:100%; min-width:0; box-sizing:border-box; padding:8px; border:1px solid var(--hg-alias-border-l2); border-radius:6px; background:var(--hg-alias-bg-layer-1); color:var(--hg-alias-label-primary); font:inherit}
+.evidence-page textarea {min-height:74px; resize:vertical}
+.evidence-page #json {min-height:220px; font-family:monospace}
+.evidence-page .wide {grid-column:1/-1}
+.evidence-page .notice {padding:12px; border:1px solid var(--hg-alias-border-l2); border-radius:8px; line-height:1.5; overflow-wrap:anywhere}
+.evidence-page .catalog {display:flex; flex-wrap:wrap; gap:6px; max-height:170px; overflow:auto}
+.evidence-page .catalog span {border:1px solid var(--hg-alias-border-l2); border-radius:5px; padding:4px 7px; overflow-wrap:anywhere}
+.evidence-page .concern {border:1px solid var(--hg-alias-border-l2); border-radius:8px; padding:12px; display:grid; gap:12px}
+.evidence-page .concern-head, .evidence-page .buttons {display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+.evidence-page .concern-head strong {flex:1}
+.evidence-page summary {cursor:pointer; padding:14px; font-weight:600}
+.evidence-page .check {display:flex; align-items:center}
+.evidence-page #message {overflow-wrap:anywhere}
+@media(max-width:700px) {.evidence-page {padding:12px}.evidence-page .grid,.concern-grid {grid-template-columns:1fr}.evidence-page .wide {grid-column:auto}}
+.evidence-page [hidden] {display:none !important}

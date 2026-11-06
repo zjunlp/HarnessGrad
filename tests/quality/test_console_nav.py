@@ -22,15 +22,15 @@ import pytest
 
 STATIC = Path(__file__).resolve().parents[2] / "console" / "static"
 PAGES = ("index.html", "trace.html", "submit.html", "author.html",
-         "harness.html", "launch.html")
+         "harness.html", "launch.html", "evidence.html")
 
 # 导入环境只在「构造环境」里有：它是造环境的一步，放在优化 Harness 里就是同一件事的
 # 第二个入口。助手页也去掉了 —— 工作区右侧已经能直接和助手对话。
-HARNESS = [("实验", "/#/runs"), ("轨迹", "/#/trace"), ("版本", "/#/version"),
+HARNESS = [("实验", "/#/runs"), ("证据导出", "/evidence.html"), ("轨迹", "/#/trace"), ("版本", "/#/version"),
            ("编辑", "/harness.html"), ("启动", "/launch.html"), ("评测", "/submit.html")]
 BUILD = [("场景", "/author.html#/scenarios"), ("起草", "/author.html#/draft"),
          ("导入", "/author.html#/import"), ("去优化 Harness", "/")]
-HARNESS_EN = [("Runs", "/#/runs"), ("Trace", "/#/trace"), ("Version", "/#/version"),
+HARNESS_EN = [("Runs", "/#/runs"), ("Evidence export", "/evidence.html"), ("Trace", "/#/trace"), ("Version", "/#/version"),
               ("Edit", "/harness.html"), ("Launch", "/launch.html"), ("Evaluate", "/submit.html")]
 BUILD_EN = [("Scenarios", "/author.html#/scenarios"), ("Draft", "/author.html#/draft"),
             ("Import", "/author.html#/import"), ("Go to Optimize Harness", "/")]

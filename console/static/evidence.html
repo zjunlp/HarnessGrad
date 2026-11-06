@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HarnessGrad · Evidence export</title>
+<link rel="stylesheet" href="/tokens.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/ui.css"><link rel="stylesheet" href="/shell.css">
+<link rel="stylesheet" href="/evidence.css"></head><body>
+<div class="app"><aside class="side"><div class="brand"><div class="brand-mark">HG</div><div><div class="brand-name">HarnessGrad</div><div class="brand-sub"></div></div></div><nav class="nav"></nav><div class="side-foot"></div></aside>
+<main class="main"><div class="topbar"><h1 data-e="title"></h1></div>
+<div class="evidence-page">
+<p data-e="intro"></p><div class="notice" id="scope" role="status"></div><div id="catalog" class="catalog"></div>
+<form id="form"><section class="card"><div class="card__head"><h2 data-e="reported"></h2></div><div class="card__body grid">
+<label><span data-e="run"></span><select id="submission-run" required></select></label><label><span data-e="round"></span><select id="submission-round" required></select></label>
+<label class="wide"><span data-e="rule"></span><textarea id="rule" required></textarea></label>
+<label><span data-e="budgetRounds"></span><input id="budget-rounds" type="number" min="0" step="1" required></label><label><span data-e="budgetTrials"></span><input id="budget-trials" type="number" min="0" step="1" required></label><label class="wide"><span data-e="budgetSource"></span><input id="budget-source" required></label>
+</div></section>
+<section class="card"><div class="card__head"><h2 data-e="concerns"></h2><button class="btn btn--sm" id="add" type="button" data-e="add"></button></div><div class="card__body" id="concerns"></div></section>
+<details class="card"><summary data-e="advanced"></summary><div class="card__body"><p data-e="advancedHint"></p><div class="buttons"><button type="button" class="btn" id="generate" data-e="generate"></button><label class="btn"><span data-e="load"></span><input type="file" id="load" accept="application/json,.json" hidden></label></div><textarea id="json" spellcheck="false" aria-label="Author manifest JSON"></textarea><label class="check"><input type="checkbox" id="use-json"> <span data-e="useJson"></span></label></div></details>
+<div class="notice" data-e="privacy"></div><div class="buttons"><button class="btn btn--primary" id="export" type="submit" data-e="download"></button><span id="message" role="alert"></span></div>
+</form></div></main></div>
+<script src="/shell-i18n.js"></script><script src="/i18n.js"></script><script src="/shell.js" defer></script><script src="/evidence.js" defer></script></body></html>

@@ -63,18 +63,30 @@ def _directory(path, *, parent=None):
         raise
 
 
-def _read_file(directory, name, limit):
+class ReceiptLimitExceeded(Exception):
+    """A configured aggregate receipt or inventory limit was exceeded."""
+
+
+def _read_file(directory, name, limit, budget=None):
     fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
     try:
         before = os.fstat(fd)
         if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
             raise ValueError("unsafe_receipt")
         if before.st_size > limit:
+            if budget is not None:
+                raise ReceiptLimitExceeded()
             raise ValueError("receipt_too_large")
         with os.fdopen(fd, "rb", closefd=False) as stream:
-            data = stream.read(limit + 1)
+            data = stream.read(min(limit, budget[0]) + 1 if budget is not None else limit + 1)
+        if budget is not None:
+            budget[0] -= len(data)
+            if budget[0] < 0:
+                raise ReceiptLimitExceeded()
         after = os.fstat(fd)
         if len(data) > limit:
+            if budget is not None:
+                raise ReceiptLimitExceeded()
             raise ValueError("receipt_too_large")
         if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
                 after.st_size, after.st_mtime_ns, after.st_ctime_ns):
@@ -117,10 +129,16 @@ class ReceiptStore:
     Unsafe/unreadable entries are inventoried, never followed or silently dropped.
     Recheck detects changes before export, but is not a live database transaction.
     """
-    def __init__(self, root, max_bytes=DEFAULT_MAX_BYTES):
+    def __init__(self, root, max_bytes=DEFAULT_MAX_BYTES, *, max_runs=None, max_total_bytes=None):
         if type(max_bytes) is not int or max_bytes <= 0:
             raise evidence.EvidenceError("invalid_receipt_limit")
+        if max_runs is not None and (type(max_runs) is not int or max_runs <= 0):
+            raise evidence.EvidenceError("invalid_run_limit")
+        if max_total_bytes is not None and (type(max_total_bytes) is not int or max_total_bytes <= 0):
+            raise evidence.EvidenceError("invalid_total_receipt_limit")
         self.limit = max_bytes
+        self.max_runs = max_runs
+        self.budget = [max_total_bytes] if max_total_bytes is not None else None
         self.fd = _directory(root)
         self.files = {}
         self.runs = {}
@@ -131,8 +149,18 @@ class ReceiptStore:
             raise
 
     def _names(self):
-        return sorted(name for name in os.listdir(self.fd)
-                      if not stat.S_ISREG(os.stat(name, dir_fd=self.fd, follow_symlinks=False).st_mode))
+        names = []
+        with os.scandir(self.fd) as entries:
+            count = 0
+            for entry in entries:
+                count += 1
+                if self.max_runs is not None and count > self.max_runs:
+                    raise ReceiptLimitExceeded()
+                if not entry.is_file(follow_symlinks=False):
+                    names.append(entry.name)
+                    if self.max_runs is not None and len(names) > self.max_runs:
+                        raise ReceiptLimitExceeded()
+        return sorted(names)
 
     def close(self):
         os.close(self.fd)
@@ -150,7 +178,7 @@ class ReceiptStore:
             return None
         try:
             try:
-                data = _read_file(fd, parts[-1], self.limit)
+                data = _read_file(fd, parts[-1], self.limit, self.budget)
             except FileNotFoundError:
                 data = None
         finally:

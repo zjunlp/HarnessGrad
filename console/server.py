@@ -4498,7 +4498,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send(self, payload, status: int = 200,
               ctype: str = "application/json; charset=utf-8",
-              cache_control: str | None = None) -> None:
+              cache_control: str | None = None, disposition: str | None = None) -> None:
         body = payload if isinstance(payload, bytes) else json.dumps(
             json_safe(payload), ensure_ascii=False, allow_nan=False,
             default=str).encode("utf-8")
@@ -4508,6 +4508,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", cache_control or "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
+            if disposition:
+                self.send_header("Content-Disposition", disposition)
             self.end_headers()
             self.wfile.write(body)
         except (BrokenPipeError, ConnectionResetError):
@@ -4666,6 +4668,15 @@ class Handler(BaseHTTPRequestHandler):
 
         if not parts or parts[0] != "api":
             return self._static(url.path)
+
+        if parts == ['api', 'evidence', 'catalog']:
+            if url.query:
+                return self._error('bad-query', 400)
+            if str(ROOT.parent) not in sys.path:
+                sys.path.insert(0, str(ROOT.parent))
+            from console import evidence_service
+            status, payload = evidence_service.execute(RUNS)
+            return self._send(payload, status)
 
         try:
             if parts[1:] == ["health"]:
@@ -4826,14 +4837,24 @@ class Handler(BaseHTTPRequestHandler):
             return self._send({"error": str(exc)}, 500)
         return self._error("unknown endpoint", 404)
 
-    def _json_body(self) -> dict | None:
+    def _json_body(self, *, strict: bool = False) -> dict | None:
         """The request body as an object, or None when it is not one."""
         try:
             length = int(self.headers.get("Content-Length") or 0)
             raw = self.rfile.read(length) if length else b"{}"
             if length and len(raw) != length:
                 return None
-            body = json.loads(raw.decode("utf-8") or "{}")
+            if strict:
+                def unique(pairs):
+                    result = {}
+                    for key, value in pairs:
+                        if key in result:
+                            raise ValueError('duplicate_json_key')
+                        result[key] = value
+                    return result
+                body = json.loads(raw.decode("utf-8") or "{}", object_pairs_hook=unique)
+            else:
+                body = json.loads(raw.decode("utf-8") or "{}")
         except (ValueError, UnicodeDecodeError, RecursionError):
             return None
         return body if isinstance(body, dict) else None
@@ -4853,6 +4874,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._submission_post()
         if not self._post_framing(archive=(route == 'api/author/import')):
             return
+        if route == 'api/evidence/export':
+            if url.query:
+                self.close_connection = True
+                return self._error('bad-query', 400)
+            body = self._json_body(strict=True)
+            if body is None or set(body) != {'manifest'} or not isinstance(body['manifest'], dict):
+                return self._error('invalid-manifest', 400)
+            if str(ROOT.parent) not in sys.path:
+                sys.path.insert(0, str(ROOT.parent))
+            from console import evidence_service
+            status, payload = evidence_service.execute(RUNS, body['manifest'], is_export=True)
+            return self._send(payload, status, disposition='attachment; filename="evidence-export.json"' if status == 200 else None)
         if route == 'api/launch/preview':
             if url.query:
                 self.close_connection = True

@@ -1801,22 +1801,15 @@
       alert(t("runs.extra36"));
       return;
     }
-    // 服务器给每一行带了 rounds_stored / diffs_stored / snapshot_rounds：状态目录、单文件
-    // 快照、补丁三者都没有的 run，曲线上的轮次在磁盘上并不存在 —— 点下去必然失败，提前说出来。
-    // 快照也是可重建的来源（snapshots/round-N.json，签出即可），所以它是第三处证据。
-    if (!(state.rows || []).length) { try { await loadRuns({ render: false }); } catch { /* 照旧 */ } }
+    // Patches alone are not a recoverable state; the server accepts saved states or snapshots.
+    if (!(state.rows || []).length) { try { await loadRuns({ render: false }); } catch { /* keep server validation */ } }
     const row = (state.rows || []).find((r) => r.id === state.hRun);
     const snapRounds = (row && Array.isArray(row.snapshot_rounds)) ? row.snapshot_rounds : [];
-    const snapPath = `snapshots/round-${state.hRound}.json`;
-    if (row && !row.rounds_stored && !row.diffs_stored && !snapRounds.includes(state.hRound)) {
+    if (row && !row.rounds_stored && !snapRounds.includes(state.hRound)) {
       const hint = document.getElementById("h-start-hint");
-      if (hint) {
-        hint.textContent = snapRounds.length
-          ? `第 ${state.hRound} 轮无法重建：没有 state_after_roundN/、diffs/round-${state.hRound}.patch；`
-            + `快照只到 snapshots/round-${Math.max(...snapRounds)}.json，没有 ${snapPath}。`
-          : `这个 run 没有留任何一轮的 state_after_roundN/、${snapPath} 或 `
-            + `diffs/round-${state.hRound}.patch：曲线上的轮次在磁盘上不存在，无法重建。`;
-      }
+      if (hint) hint.textContent = window.HGI18n.language === "zh"
+        ? `第 ${state.hRound} 轮缺少可恢复的 state 或 snapshot；补丁不能用于恢复。`
+        : `Round ${state.hRound} has no recoverable state or snapshot; patches cannot be used for recovery.`;
       return;
     }
     editButton.disabled = true;

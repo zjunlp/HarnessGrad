@@ -224,3 +224,14 @@ python3 -m pytest tests/quality/test_evidence_manifest.py tests/quality/test_evi
 ```
 
 These tests do not validate historical benchmark outcomes or authorize new measurements.
+
+### Console API
+
+The local Console exposes `GET /api/evidence/catalog` and
+`POST /api/evidence/export` with a JSON body containing only `manifest`, the
+same author draft used by the CLI. The server uses its configured runs root and
+returns the pack directly as an `evidence-export.json` attachment; it does not
+write a pack or run an experiment. The catalog is a privacy-limited selection
+of measured round scores and declared budgets, not a complete receipt view.
+The Console README documents request guards, resource limits, and error codes.
+The CLI's default receipt limits and behavior remain unchanged.
