@@ -214,6 +214,13 @@ def main():
         if args.dataset == 'scienceworld':
             ldd_argv = ['/usr/bin/env', 'LD_LIBRARY_PATH=' + str(java_home / 'lib')
                         + ':' + str(java_home / 'lib/server'), *ldd_argv]
+        elif args.dataset in {'jericho', 'alfworld'} and (packages / 'numpy.libs').is_dir():
+            # NumPy wheels keep OpenBLAS/Fortran providers beside the package.
+            # Standalone ldd lacks the importing extension's inherited RPATH.
+            # This is a collection hint; each discovered provider is still
+            # captured and authenticated before entering the sealed runtime.
+            ldd_argv = ['/usr/bin/env', 'LD_LIBRARY_PATH=' + str(packages / 'numpy.libs'),
+                        *ldd_argv]
         providers, ldd_id = capture(ldd_argv)
         if 'not found' in providers:
             raise ValueError(providers)

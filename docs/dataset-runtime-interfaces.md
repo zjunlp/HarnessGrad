@@ -268,7 +268,7 @@ trial 的 native 回执必须全部匹配；新测量若出现不匹配则保持
 五份受审查清单使用 schema 2。`files[*].source` 和 `launcher.source` 只引用
 `blobs/<sha256>`，宿主读取位置由外部存储配置决定。包同时包含解释器、用户态依赖、
 JRE（适用时）、锁定的评分代码和 launcher，评分代码的执行字节来自包内封存副本。
-清单中的绝对目标路径、启动参数、环境变量及构建身份保留原来的沙箱布局和来源记录；
+清单中的绝对目标路径、启动参数、环境变量及构建身份记录捕获时的沙箱布局和来源；
 这些字符串不要求宿主存在同名目录。schema 1 仅保留为显式旧声明的兼容路径。
 
 默认存储根为 `HG_DATA_ROOT/native-runtimes`，可用 `HG_DATA_NATIVE_RUNTIMES` 单独覆盖。
@@ -315,7 +315,21 @@ python3 tools/prepare_native_runtime.py assemble --dataset bird_minidev \
 ScienceWorld 的便携捕获同时将 Py4J JAR 映射到封存解释器前缀下的 `share/py4j`，
 并保留所选环境的 JAR 内容。宿主能力探针验证隔离与解释器能力；JVM Gateway 等
 数据集依赖的启动兼容性通过对应的功能性控制单独验证。
-本次来源格式迁移保留五份清单原有的 payload/launcher 摘要；未安装这些字节时，默认声明仍不可用。
+
+当前五份正式清单使用 **CPython 3.12.16**（自带 SQLite 3.53.1），数据集 SDK 版本如下：
+
+| 数据集 | 评分依赖 |
+| --- | --- |
+| BIRD mini-dev | Python 标准库 `sqlite3` |
+| Jericho | `jericho==3.3.1`、`numpy==1.26.4` |
+| ALFWorld | `alfworld==0.4.2`、`textworld==1.7.0`、`fast-downward-textworld==20.6.4`、`numpy==1.26.4` |
+| ScienceWorld | `scienceworld==1.2.3`、`py4j==0.10.9.9`、Temurin JRE `17.0.20.1+1` |
+| ChessBench puzzles | `chess==1.11.2` |
+
+这些清单选择新的用户态内容身份，需要导入对应新 pin 的包；旧 Python 3.12.4 的包不能用于
+补齐新清单。旧运行时的评分缓存由清单摘要隔离，新版本需要重新测量。
+NumPy wheel 的 OpenBLAS/Fortran 库从同一安装的 `numpy.libs` 采集并逐文件校验，
+不会将该宿主目录直接挂载进评分沙箱。
 
 ## 6. 完整重复试验报告
 
