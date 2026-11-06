@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """HarnessX's historical-best acceptance gate, as a HarnessGrad method.
 
-Source root: /mnt/20t/xubuqiang/Study/methods_src/harnessx/.
+Source snapshot: HarnessX, recorded tree fingerprint prefix 59466b595648c40b
+(see docs/upstream-pins.md). Source paths below are relative to that snapshot.
 The GAIA kernel in recipe/gaia_evolver/run.py:1174-1257 compares a measured
 candidate with the historical best, adjusts for relative cost increases, keeps
 the earliest best on ties, and restores best_cfg on regression (:813-820).
