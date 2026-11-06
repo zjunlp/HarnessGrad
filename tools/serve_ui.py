@@ -66,6 +66,23 @@ RUNS = ROOT / "runs"
 WORK_ROOTS = [ROOT.parent / "harnessgrad_work", ROOT / "runs"]
 SAFE_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
+def _display_url(raw: str) -> tuple[str, bool]:
+    """Return a safe display value; never echo ambiguous or credential-bearing URLs."""
+    if not raw:
+        return "", False
+    try:
+        if any(ord(c) <= 32 or ord(c) == 127 for c in raw) or any(c in raw for c in "?#\\"):
+            raise ValueError("unsafe URL")
+        parsed = urlparse(raw)
+        if (parsed.scheme not in ("http", "https") or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            raise ValueError("unsafe URL")
+        _ = parsed.port  # Reject malformed and out-of-range ports.
+    except ValueError:
+        return "", True
+    return raw, False
+
+
 #: 模型预设。键是给人看的中文名,值是 driver 需要的环境变量。
 #: 本地模型排第一 —— 它是默认值,零成本、零网络、秒级响应,演示时最可靠。
 def model_presets() -> dict:
@@ -85,10 +102,13 @@ def model_presets() -> dict:
         },
     }
     if env.get("HG_AGENT_MODEL") and env.get("HG_AGENT_BASE_URL"):
+        display_url, redacted = _display_url(env["HG_AGENT_BASE_URL"])
         presets["配置的 OpenAI 兼容模型"] = {
             "HG_AGENT_BACKEND": "openai",
             "HG_AGENT_MODEL": env["HG_AGENT_MODEL"],
-            "HG_AGENT_BASE_URL": env["HG_AGENT_BASE_URL"],
+            "HG_AGENT_BASE_URL": display_url,
+            "HG_AGENT_BASE_URL_CONFIGURED": True,
+            "HG_AGENT_BASE_URL_REDACTED": redacted,
             "note": "使用用户配置的服务；运行可能产生费用",
         }
     return presets
@@ -564,6 +584,9 @@ def read_settings() -> dict:
         raw = values.get(key, "")
         if "API_KEY" in key:
             out[key] = {"set": bool(raw), "hint": ("已设置" if raw else "未设置")}
+        elif key.endswith("_BASE_URL"):
+            value, redacted = _display_url(raw)
+            out[key] = {"set": bool(raw), "value": value, "redacted": redacted}
         else:
             out[key] = {"set": bool(raw), "value": raw}
     out["_env_exists"] = path.exists()
