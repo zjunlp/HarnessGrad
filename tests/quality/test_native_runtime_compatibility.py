@@ -1,6 +1,7 @@
 """Native host compatibility uses capabilities, with authored inputs only."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import errno
 import fcntl
 import hashlib
@@ -12,6 +13,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -95,7 +97,7 @@ def test_same_kernel_still_requires_successful_capability_probe(declaration, mon
 
     def fail_probe(self, argv, **kwargs):
         if failure == "timeout":
-            raise subprocess.TimeoutExpired(argv, 10)
+            raise subprocess.TimeoutExpired(argv, kwargs["timeout_s"])
         if failure == "launch":
             raise PermissionError("namespace launcher unavailable")
         return subprocess.CompletedProcess(argv, 1 if failure == "exit" else 0,
@@ -108,6 +110,36 @@ def test_same_kernel_still_requires_successful_capability_probe(declaration, mon
     assert verdict["score"] is None and verdict["outcome"] == "unmeasured"
     assert "host capability" in verdict["unmeasured"]
     assert verdict["native_runtime"]["verified"] is False
+
+
+def test_parallel_admission_allows_slow_namespace_startup(declaration, monkeypatch):
+    path, manifest = declaration
+    binding = bind_manifest(path, manifest)
+    simultaneous = threading.Barrier(4, timeout=5)
+
+    def slow_probe(self, argv, *, workdir, reward_dir, timeout_s, **kwargs):
+        simultaneous.wait()
+        # Model a 12-second namespace startup without sleeping. The real sealed
+        # namespace and failure controls below exercise the isolation itself.
+        if timeout_s < 12:
+            raise subprocess.TimeoutExpired(argv, timeout_s)
+        expected = json.loads((workdir / "probe.json").read_text())
+        (reward_dir / "probe-output").write_text(expected["nonce"])
+        return subprocess.CompletedProcess(argv, 0, expected["nonce"] + "\n", "")
+
+    monkeypatch.setattr(native_runtime.FrozenRuntime, "run", slow_probe)
+
+    def admit_once(_):
+        try:
+            with native_runtime.admit(binding) as runtime:
+                return runtime.receipt
+        except native_runtime.NativeRuntimeUnavailable as exc:
+            return {"verified": False, "error": str(exc)[-120:]}
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        receipts = list(pool.map(admit_once, range(4)))
+    assert all(receipt["verified"] for receipt in receipts), receipts
+    assert all(receipt["host"]["capabilities"]["child_python"] for receipt in receipts)
 
 
 @pytest.mark.parametrize("failure", ["missing-function", "add-seals", "missing-seals"])
@@ -200,6 +232,27 @@ def test_real_probe_refuses_weakened_isolation(captured_runtime, monkeypatch, we
     with pytest.raises(native_runtime.NativeRuntimeUnavailable, match=detail):
         with native_runtime.admit(binding):
             pytest.fail('weakened native isolation admitted')
+
+
+def test_real_probe_timeout_refuses_admission_and_closes_snapshots(captured_runtime, monkeypatch):
+    binding, _ = captured_runtime
+    descriptors = []
+    original = native_runtime._check_host
+
+    def record_snapshots(runtime):
+        descriptors.extend([*runtime.fds.values(), runtime.launcher])
+        return original(runtime)
+
+    monkeypatch.setattr(native_runtime, "_check_host", record_snapshots)
+    monkeypatch.setattr(native_runtime, "_HOST_PROBE_TIMEOUT_S", 0.1)
+    monkeypatch.setattr(native_runtime, "_HOST_PROBE", "import time; time.sleep(5)")
+    with pytest.raises(native_runtime.NativeRuntimeUnavailable, match="timed out"):
+        with native_runtime.admit(binding):
+            pytest.fail("timed out native probe admitted")
+    assert descriptors
+    for fd in descriptors:
+        with pytest.raises(OSError):
+            os.fstat(fd)
 
 
 def test_different_build_kernel_executes_sealed_authored_scorer(captured_runtime, tmp_path):

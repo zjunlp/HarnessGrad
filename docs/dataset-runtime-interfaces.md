@@ -249,6 +249,9 @@ Bird、Jericho、ALFWorld、ScienceWorld 和 ChessBench 的 `native_runtime` 清
 命名空间、只读运行时及任务挂载、不可见的宿主临时文件、隔离 Python 和封存的子解释器启动。
 能力缺失、探针失败或超时仍按不可测处理，不回退到宿主解释器或关闭隔离。
 
+宿主能力探针使用独立的 30 秒预算，覆盖完整封存运行时的沙箱挂载与探针执行，
+为 ALFWorld 等较大运行时的并发准入预留启动时间。评分命令使用验证阶段自己的超时配置。
+
 评分回执的 `native_runtime.identity` 保留清单身份；新增 `native_runtime.host` 记录实际
 system、machine、kernel、准入策略及通过的能力检查，逐次 verdict 归档保留这些字段。
 内核与 launcher 的宿主加载环境仍属于平台可信边界；这些检查不声明所有内核行为等价。

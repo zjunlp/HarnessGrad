@@ -170,6 +170,9 @@ class FrozenRuntime:
 
 
 _HOST_NAMESPACES = ('user', 'mnt', 'pid', 'net', 'ipc', 'uts')
+# The launcher mounts the entire sealed closure before Python can probe it.
+# Keep headroom for large closures under concurrent admission.
+_HOST_PROBE_TIMEOUT_S = 30
 _HOST_PROBE = r'''
 import errno, json, os, subprocess, sys
 from pathlib import Path
@@ -221,7 +224,7 @@ def _check_host(runtime: FrozenRuntime) -> dict:
             (work / 'probe.json').write_text(json.dumps(
                 {'namespaces': namespaces, 'private': str(private), 'nonce': nonce}))
             proc = runtime.run(['python3', '-c', _HOST_PROBE], workdir=work,
-                               reward_dir=reward, timeout_s=10)
+                               reward_dir=reward, timeout_s=_HOST_PROBE_TIMEOUT_S)
             if proc.returncode or proc.stdout.strip() != nonce:
                 detail = (proc.stderr or proc.stdout or 'probe confirmation missing').strip()[-2000:]
                 raise NativeRuntimeUnavailable(f'native runtime host capability check failed: {detail}')
