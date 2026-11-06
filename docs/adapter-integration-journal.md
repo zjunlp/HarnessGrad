@@ -507,3 +507,134 @@ source hashes and cleanup receipts are retained at
 Dataset dependency keys, artifact schemas, pinned scorer code and metric semantics
 are unchanged. All successful task controls used authored data, cached wheels
 and no model inference. No main merge was performed.
+
+### Give the default Loop Harness managed files and exec environments (2026-11-06)
+
+Loop now declares complete OpenAI SDK locks and an explicit managed Python
+contract for both environment kinds. Native files tasks use the existing CPython
+3.12 artifact. An exec image with CPython gets a separately prepared venv with a
+read-only copy of its own executable and a lock selected by Python minor version;
+its standard and system libraries remain image-owned. An image explicitly lacking
+Python uses the exact bound native artifact after compatibility admission inside
+that image. Broken discovery, unsupported versions and incompatible artifacts fail
+explicitly. Preparing an image bypasses its entrypoint and never mounts candidate
+source; actor execution preserves the image's startup behavior. Both mounted task
+directories and container-state tasks have controls for setup before startup.
+
+Candidate receipts bind native and image artifacts, pinned images, interpreter
+bytes, source and all locks. Checkpoint/cache admission cannot install, repair or
+select a newer publication. Initial evaluation of an existing checkpoint may
+explicitly prepare additional target images from its unchanged locks, while
+retaining its original native artifact, image artifacts and evaluated-from
+identity. Resume remains strict. H0 selection and configuration share the selected
+environment contract. Actor dependencies are read-only and excluded from scorer
+containers and committed container-state snapshots; task HOME, temporary files
+and state are private. A snapshot-resume control also fixes comparison of a
+restored external candidate against its generated source-ignore receipt.
+
+The focused validation union contains 540 distinct passing cases and 38 passing
+subtests. One legacy overlay-import case skips because no old-style overlays were
+prepared; managed SDK imports are exercised separately. Coverage includes an
+empty platform with neither pip nor SDK/Arrow, actual native SDK requests to an
+authored local endpoint, five native/image/fallback placements, private scoring
+inputs, repeated-task state, image entrypoints, H0 reuse, training/cache/snapshot
+resume, cross-image checkpoint evaluation and evaluation resume. Actual image
+controls used locally available CPython 3.12.8 slim and Python-absent Ubuntu 24.04;
+native controls used CPython 3.12.16. Other declared Python minors have lock
+resolution checks, not measured image execution. Container SDK controls use
+HTTPX MockTransport and authored tasks; container model-gateway connectivity and
+real inference are not established by these results. Plain-container lifecycle
+controls supply actual kernel observations without widening production backend
+admission policy. No full-suite, released-benchmark or live-model success is
+claimed. Raw attempts, commands, JUnit, final case inventory, selected receipts
+and cleanup evidence are retained at
+`/tmp/hg-loop-managed-20261106-o2dntxga`.
+
+The Quick start explicitly prepares Loop with `--fetch`; offline preparation
+uses cached wheels, and checking/listing an existing binding installs nothing.
+The platform needs neither pip nor the SDK for managed Loop. Unopted Harnesses
+retain their existing preparation paths. No user environment, pinned scorer,
+shared service or main branch was changed.
+
+### Preserve task-image Python and tool configuration (2026-11-06)
+
+The P1 against `0d6e96af` is fixed: activating the actor venv through container
+environment variables also changed Loop's task shell, hiding image packages and
+custom tools. Container actors now retain the task image's PATH and Python
+configuration, including an existing task venv. Their own absolute bound
+interpreter and `-I -B` startup continue to exclude ambient Python imports. The
+ordinary container environment allowlist still prevents host PATH/Python/venv
+configuration from being forwarded. Native files retains its managed interpreter
+path. The no-Python image fallback supplies the actor without implicitly adding
+Python to task shell commands. Harness helpers needing actor packages must use
+`sys.executable` with isolated startup.
+
+Four new authored-image controls cover system Python and an existing image venv,
+each under mount and container-state execution. Independent positive controls
+establish that image-installed modules, PYTHONPATH modules and a custom PATH tool
+work before actor preparation. The actual Loop then runs the same tools and
+imports using both python and python3, with successful shell exits and fresh
+scoring. Its SDK remains in the read-only actor artifact, task modules remain
+absent from actor imports, and task/scorer imports cannot see the SDK. Host
+environment poison values do not replace image configuration. The earlier tests
+no longer require container task commands to select the actor interpreter.
+
+Validation passed all 249 focused cases with no skips: 36 managed Loop/placement
+controls and 213 native-actor, H0, lifecycle, snapshot/resume, dataset identity and
+installed-wheel checks. Native controls used CPython 3.12.16; image controls used
+locally available CPython 3.12.8 slim, its authored derivatives and Python-absent
+Ubuntu 24.04. Dependencies came from offline caches. SDK transports used authored
+local responses or MockTransport; no real inference, released benchmark or
+full-suite result is claimed. Commands, JUnit, traces, positive controls, selected
+runtime manifests and cleanup receipts are retained at
+`/tmp/hg-loop-task-env-20261106-ghfg8iq0`. No main merge or shared service change
+was performed.
+
+### Unified cold-start acceptance of migrated environments (2026-11-06)
+
+The migrated profiles passed a unified acceptance run on rebased `9415a714`.
+The README's seeded platform venv, editable installation and sandbox check ran
+with a new HOME and initially empty installer cache. Each of the three QA
+providers, CostBench execution runtime, MiniAgent, native Loop and Loop image
+preparation then used its own initially empty uv cache and fresh artifact locations
+in external stores.
+The actual preparation CLIs downloaded dependencies; no wheelhouse or previous
+publication supplied them. Missing-runtime checks preceded preparation. Provider
+preparation initially reported data_missing after installing dependencies; authored
+Parquet was subsequently written by the provider interpreter and all three
+loading checks passed. The platform stayed free of Arrow, SDK, HTTPX, PyYAML,
+requests and numpy. A separate seedless platform exercised managed execution.
+
+The 36 distinct completed integration cases cover QA rows/private inputs and
+public checks, GSM8K plus Loop H0/cache/snapshot train and eval resume, MiniAgent
+worker/state/scorer isolation and lifecycle, and Loop's native/image/fallback
+placements, task Python and tool configuration, entrypoints and exact-binding
+cross-image evaluation. Controls for the original declarations reused the
+cold-prepared artifacts; authored image variants built from the caches populated
+in this acceptance run.
+Explicit republishing in the lifecycle control kept prior bindings intact.
+CostBench static/dynamic controls used authored no-op cases with the unchanged,
+digest-verified runtime/scorer source; both produced expected measured zeros.
+They checked actual service/scorer interpreters, read-only package origins and
+independent episode state. They do not validate released task performance or
+dynamic intervention execution.
+
+Read-only provider/Harness checks passed with an installer that refuses execution
+and a separate absent cache: no installer calls, cache creation or original
+publication changes occurred. Seven serial corruption controls changed only an
+owned artifact's pyvenv.cfg, confirmed rejection without repair, restored its
+exact bytes/mode and verified the same identity again. A cold wheel build also
+installed into a new seedless platform outside the checkout: the installed CLI,
+all three providers and both Harness declarations worked without pip or their
+runtime packages in that platform.
+
+The final case union has no failures or skips. Initial acceptance-script mistakes
+(an overwritten preparation receipt field and an absent authored work directory)
+are retained separately; only corrected completed controls count. No product
+code change was needed. Python 3.12.16, uv, bubblewrap and local CPython 3.12.8 slim
+and Python-absent Ubuntu 24.04 images were prerequisites. This measures cold Python
+dependency preparation, not OS/toolchain installation or container image pulls.
+Model responses and task data were authored; no real model or released benchmark
+trial ran. Commands, receipts, original attempts, JUnit, source provenance, runtime
+manifests and cleanup records are retained at
+`/tmp/hg-cold-accept-20261106-s25tt30e`.

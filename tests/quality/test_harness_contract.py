@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "base_harness" / "loop"

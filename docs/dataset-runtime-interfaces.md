@@ -942,7 +942,10 @@ Harness 依赖允许随方法编辑变化，因此单独记录 `harness_runtime_
 依赖构建只发生在候选准备阶段，不在每个任务里安装。任务共享只读制品，
 可写 HOME、临时目录和 `.state` 各自私有，actor 制品不会传给 scorer 或服务。
 
-当前 Harness 路线显式支持沙箱中的 native `files`。MiniAgent 已作为首个 base Harness
-迁入这条路径，使用 CPython 3.12 和完整 lock；其他无声明的 Harness 继续使用原有路径。
+Harness 默认托管路线支持沙箱中的 native `files`。MiniAgent 使用 CPython 3.12 和完整 lock。
+Loop 进一步显式声明容器 Python 小版本与 lock 的映射，支持 `files` 和 `exec`：
+镜像有 Python 时使用镜像内解释器与独立 venv，没有时使用已绑定的原生解释器制品。
+实际镜像、解释器、源码及依赖进入 Harness 身份，评分器不继承 actor 的挂载。
+其他无声明的 Harness 继续使用原有路径。
 完整声明、准备命令、限制及回执见
 [Harness Python 环境](writing_a_harness.md#21-managed-python-dependencies)。

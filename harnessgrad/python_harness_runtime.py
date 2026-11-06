@@ -283,6 +283,10 @@ def _builder(argv, *, instance, uv, base, cache, allow_downloads, timeout_s, whe
     if not allow_downloads:
         plan.append("--unshare-net")
     mounts = [Path(name) for name in ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc") if Path(name).exists()]
+    if allow_downloads:
+        resolver = Path('/etc/resolv.conf').resolve(strict=True)
+        if not resolver.is_relative_to('/etc'):
+            mounts.append(resolver)
     mounts += [uv, Path(base["base_prefix"]), Path(base["base_exec_prefix"])]
     if wheelhouse is not None:
         mounts.append(wheelhouse)

@@ -174,7 +174,8 @@ def test_h0_staging_refuses_source_aliases_before_writing_external_files(managed
 
 def test_h0_tool_does_not_reuse_another_harnesss_baseline(tmp_path):
     args = SimpleNamespace(dataset='demo', side='train', study_ids=None,
-        model='agent', endpoint='', trials=1, sampling='all')
+        model='agent', endpoint='', trials=1, sampling='all',
+        harness_path=ROOT/'tests/fixtures/base_harness/loop_plain')
     config = prepare_h0.configuration(args, env={'HG_AGENT_BACKEND': 'mock'})
     run = _write_run(tmp_path, 'h0-demo-other-source', per_task={'t01': .5}, config=config, sha='another-tree')
     assert prepare_h0.find_existing(config, tmp_path) is None
@@ -184,7 +185,8 @@ def test_h0_tool_does_not_reuse_another_harnesss_baseline(tmp_path):
 
 def test_legacy_h0_without_new_source_key_can_use_its_actual_tree_proof(tmp_path):
     args = SimpleNamespace(dataset='demo', side='train', study_ids=None,
-        model='agent', endpoint='', trials=1, sampling='all')
+        model='agent', endpoint='', trials=1, sampling='all',
+        harness_path=ROOT/'tests/fixtures/base_harness/loop_plain')
     config = prepare_h0.configuration(args, env={'HG_AGENT_BACKEND': 'mock'})
     run = _write_run(tmp_path, 'h0-demo-legacy-source', per_task={'t01': .5}, config=config)
     metadata = json.loads((run / 'run_meta.json').read_text())
@@ -211,3 +213,27 @@ def test_real_h0_cli_binds_external_candidate_and_reuses_it_without_remeasuremen
     second = subprocess.run(command, cwd=ROOT, env=dict(os.environ), capture_output=True, text=True, timeout=120)
     assert second.returncode == 0 and 'reusing' in second.stdout, second.stdout + second.stderr
     assert ((run / 'h0.json').read_bytes(), (run / 'curve.jsonl').read_bytes()) == before
+
+
+def test_external_managed_resume_keeps_generated_ignore_rules_and_original_input(managed):
+    assert not (managed.source/'.gitignore').exists()
+    original=runtime.source_fingerprint(managed.source)
+    runs,work=managed.root/'resume-runs',managed.root/'resume-work'
+    command=[sys.executable,'-B',str(ROOT/'driver.py'),'--harness-path',str(managed.source),
+        '--dataset','demo','--tasks','t01','--sampling','all','--run-id','external',
+        '--rounds','1','--jobs','1','--trials','1','--no-summary',
+        '--runs-root',str(runs),'--work-root',str(work),
+        '--method-entrypoint',f'{sys.executable} {ROOT/"methods/noop/run.py"}','--reuse-identical']
+    env=dict(os.environ)
+    first=subprocess.run(command,cwd=ROOT,env=env,capture_output=True,text=True,timeout=120)
+    assert first.returncode==0,first.stdout+first.stderr
+    run=runs/'external'
+    before=(run/'curve.jsonl').read_bytes()
+    for n in (0,1):
+        shutil.rmtree(run/f'state_after_round{n}')
+    resumed=subprocess.run([*command,'--rounds','2','--resume'],cwd=ROOT,env=env,
+                           capture_output=True,text=True,timeout=120)
+    assert resumed.returncode==0,resumed.stdout+resumed.stderr
+    assert (run/'curve.jsonl').read_bytes().startswith(before)
+    assert runtime.source_fingerprint(managed.source)==original
+    assert not (managed.source/'.gitignore').exists()

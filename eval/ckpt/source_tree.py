@@ -16,12 +16,23 @@ PYTHON_BYTECODE = (".pyc", ".pyo")
 
 def python_spec(spec, install=None):
     """Validate the data-only managed Python declaration, without imports/builds."""
-    if (not isinstance(spec, dict) or set(spec) != {"kind", "python", "requirements"}
+    if (not isinstance(spec, dict) or set(spec) not in (
+            {"kind", "python", "requirements"}, {"kind", "python", "requirements", "exec"})
             or spec.get("kind") != "python"
             or not isinstance(spec.get("python"), str)
             or not re.fullmatch(r"3\.[0-9]+", spec["python"])
             or int(spec["python"].split(".")[1]) < 8):
         raise ValueError("Python runtime requires kind, Python 3.8+ minor and requirements")
+    if "exec" in spec:
+        execution = spec["exec"]
+        if (not isinstance(execution, dict) or set(execution) != {"requirements"}
+                or not isinstance(execution["requirements"], dict) or not execution["requirements"]
+                or any(not isinstance(minor, str) or not re.fullmatch(r"3\.[0-9]+", minor)
+                       or int(minor.split('.')[1]) < 8
+                       for minor in execution["requirements"])):
+            raise ValueError("Python exec requires an explicit minor-version to lock-file map")
+        for path in execution["requirements"].values():
+            python_spec({"kind": "python", "python": spec["python"], "requirements": path})
     relative = spec["requirements"]
     if (not isinstance(relative, str) or not relative or "\\" in relative or ":" in relative
             or PurePosixPath(relative).is_absolute() or ".." in PurePosixPath(relative).parts
@@ -51,10 +62,11 @@ def runtime_spec(root: Path) -> dict | None:
         spec = python_spec(spec, manifest.get("install"))
         if manifest.get("runtime_paths") not in (None, []):
             raise ValueError("Managed Python runtime_paths must be empty; external runtime roots are not supported")
-        lock = Path(root) / spec["requirements"]
-        if (lock.is_symlink() or not lock.is_file()
-                or lock.resolve() != Path(root).resolve() / spec["requirements"]):
-            raise ValueError("Python requirements must be an owned regular file without directory aliases")
+        for relative in {spec["requirements"], *(spec.get("exec", {}).get("requirements", {}).values())}:
+            lock = Path(root) / relative
+            if (lock.is_symlink() or not lock.is_file()
+                    or lock.resolve() != Path(root).resolve() / relative):
+                raise ValueError("Python requirements must be an owned regular file without directory aliases")
         entry = manifest.get("entrypoint")
         if (not isinstance(entry, str) or not entry or "\\" in entry or ":" in entry
                 or PurePosixPath(entry).is_absolute() or ".." in PurePosixPath(entry).parts

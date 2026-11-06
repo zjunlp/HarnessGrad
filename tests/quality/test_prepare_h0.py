@@ -19,6 +19,17 @@ prepare_h0 = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(prepare_h0)
 
 
+@pytest.fixture(autouse=True)
+def authored_legacy_harness(monkeypatch):
+    """Configuration unit tests use an unopted authored Harness; Loop has real controls."""
+    original=prepare_h0.harness_source
+    def source(args):
+        if getattr(args,'harness_path',None) is None and getattr(args,'harness','loop')=='loop':
+            return ROOT/'tests/fixtures/base_harness/loop_plain'
+        return original(args)
+    monkeypatch.setattr(prepare_h0,'harness_source',source)
+
+
 
 def _mock_driver(monkeypatch, launch):
     """Double measurements while leaving source-only Git preflight real."""
@@ -232,7 +243,7 @@ def test_model_override_reaches_the_child_environment(tmp_path, monkeypatch):
 
 def test_configuration_resolves_dotenv_then_environment_then_cli(tmp_path, monkeypatch):
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
-    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "base_harness/loop")
+    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "tests/fixtures/base_harness/loop_plain")
     for name in ("HG_AGENT_MODEL", "HG_AGENT_BACKEND", "HG_AGENT_BASE_URL"):
         monkeypatch.delenv(name, raising=False)
     (tmp_path / ".env").write_text("HG_AGENT_MODEL=file-model\nHG_AGENT_BACKEND=openai\n"
@@ -309,7 +320,7 @@ def test_unverified_curve_cannot_publish_or_reuse_h0(tmp_path, measured):
 @pytest.mark.parametrize("inherited", [None, "environment-judge"])
 def test_opted_scoring_provider_keeps_dotenv_judge_precedence(tmp_path, monkeypatch, inherited):
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
-    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "base_harness/loop")
+    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "tests/fixtures/base_harness/loop_plain")
     monkeypatch.delenv("HG_JUDGE_MODEL", raising=False)
     if inherited is not None:
         monkeypatch.setenv("HG_JUDGE_MODEL", inherited)

@@ -14,6 +14,7 @@ import tempfile
 
 from eval.ckpt.source_tree import runtime_spec
 from harnessgrad import python_harness_runtime as python_runtime
+from harnessgrad import python_exec_runtime as exec_runtime
 
 KEY = "harness_runtime_identity"
 RuntimeUnavailable = python_runtime.RuntimeUnavailable
@@ -25,6 +26,8 @@ def has_python(repo):
 
 
 def validate(binding):
+    if isinstance(binding, dict) and binding.get('kind') == exec_runtime.KIND:
+        return exec_runtime.validate_binding(binding)
     return python_runtime.validate_binding(binding)
 
 
@@ -38,8 +41,10 @@ def matches_source(repo, binding):
         return False
     binding = validate(binding)
     declaration = python_runtime.descriptor(repo)
+    declared_sha = (exec_runtime.descriptor(repo)['placements_sha256']
+                    if 'exec' in declaration else declaration['declaration_sha256'])
     return (python_runtime.source_fingerprint(repo) == binding["source_sha256"]
-            and declaration["declaration_sha256"] == binding["declaration_sha256"])
+            and declared_sha == binding["declaration_sha256"])
 
 
 def problems(reference, current):
@@ -61,14 +66,14 @@ def require_same(reference, current):
         raise RuntimeUnavailable("; ".join(errors))
 
 
-def _routes(envs, setups, sandbox):
+def _routes(envs, setups, sandbox, *, allow_exec=False):
     if not sandbox:
         raise RuntimeUnavailable("Managed Python candidates require the native actor sandbox")
     for tid, spec in (envs or {}).items():
         spec = spec or {"kind": "files"}
         if spec.get("backend") is not None:
             raise RuntimeUnavailable(f"Managed Python task {tid}: observed/worker backends are not supported")
-        if spec.get("kind", "files") != "files":
+        if spec.get("kind", "files") not in ({'files', 'exec'} if allow_exec else {'files'}):
             raise RuntimeUnavailable(f"Managed Python task {tid}: exec/container placements are not supported")
         if spec.get("agent_runtime") is not None:
             raise RuntimeUnavailable(f"Managed Python task {tid}: agent package projections are not supported")
@@ -77,9 +82,9 @@ def _routes(envs, setups, sandbox):
             raise RuntimeUnavailable(f"Managed Python task {tid}: cooperative/observed workers are not supported")
 
 
-def validate_routes(envs=None, setups=None, sandbox=True):
+def validate_routes(envs=None, setups=None, sandbox=True, *, allow_exec=False):
     """Preparation tools can reject unsupported selected routes without building."""
-    _routes(envs, setups, sandbox)
+    _routes(envs, setups, sandbox, allow_exec=allow_exec)
 
 
 def _source_only(repo):
@@ -109,19 +114,25 @@ def admit(repo, binding=None, *, envs=None, setups=None, sandbox=True):
         if binding is not None:
             raise RuntimeUnavailable("harness_runtime_identity requires the original managed Python declaration")
         return None
-    _routes(envs, setups, sandbox)
+    execution = exec_runtime.descriptor(repo)
+    _routes(envs, setups, sandbox, allow_exec=execution is not None)
     _source_only(repo)
+    if execution is not None:
+        return exec_runtime.prepare(repo, binding=binding, envs=envs)['identity']
     return python_runtime.identity(Path(repo), binding=binding)
 
 
-def prepare(repo, *, binding=None, envs=None, setups=None, sandbox=True):
+def prepare(repo, *, binding=None, envs=None, setups=None, sandbox=True, extend_images=False):
     """Prepare once after source staging, using only the trusted offline cache."""
     if not has_python(repo):
         if binding is not None:
             raise RuntimeUnavailable("Managed Python candidate cannot drop its runtime declaration")
         return None
-    _routes(envs, setups, sandbox)
+    execution = exec_runtime.descriptor(repo)
+    _routes(envs, setups, sandbox, allow_exec=execution is not None)
     _source_only(repo)
+    if execution is not None:
+        return exec_runtime.prepare(repo, binding=binding, envs=envs, build=True, extend_images=extend_images)
     return python_runtime.prepare(Path(repo), binding=binding, build=True, allow_downloads=False)
 
 
@@ -235,5 +246,5 @@ def validate_resume(run_dir, metadata, points, current_source, *, envs=None,
             raise RuntimeUnavailable("Managed resume requires its original measured checkpoint")
         return {"initial": None, "current": None}
     if any(binding is not None for binding in checked):
-        _routes(envs, setups, sandbox)
+        _routes(envs, setups, sandbox, allow_exec=exec_runtime.descriptor(current_source) is not None)
     return {"initial": initial, "current": checked[-1]}

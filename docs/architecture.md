@@ -87,12 +87,17 @@ artifacts from a flat complete lock, using a wheel-only bubblewrap builder.
 It reads installed metadata as data and never executes package startup on the
 host. `harnessgrad/candidate_runtime.py` binds owned source and dependencies,
 controls per-candidate preparation, and admits cache, H0 and resume operations.
-The driver prepares after staging and committing a candidate; native files
-actors launch its exact interpreter with isolated startup, read-only runtime
+`harnessgrad/python_exec_runtime.py` adds explicitly declared image placements:
+each pinned image uses its own Python executable bytes and a separate locked venv,
+or the bound native artifact when the image explicitly has no Python. The driver
+prepares after staging and committing a candidate; native and container
+actors launch the selected exact interpreter with isolated startup, read-only runtime
 mounts and private task state. Actor paths are not passed to trusted scorers or
 services. Dependencies are editable Harness state, so their identity stays
 separate from the fixed dataset identity. Every checkpoint keeps its own actor
-binding. Legacy overlays and Bun behavior remain available to unopted Harnesses.
+binding, including all original image placements. Loop uses both routes; MiniAgent
+keeps its native-only declaration. Legacy overlays and Bun behavior remain
+available to unopted Harnesses.
 See [the Harness author contract](writing_a_harness.md#21-managed-python-dependencies)
 for supported routes and configuration.
 

@@ -4,8 +4,10 @@
 Managed Python
 --------------
 A harness.json with runtime.kind="python" selects a source-owned, fully pinned
-requirements lock and one CPython minor. This branch uses uv and bubblewrap,
-installs wheels only, and never imports installed packages on the host. The
+requirements lock and one native CPython minor. runtime.exec additionally maps
+image Python minors to locks; --image or --dataset selects local image placements.
+This branch uses uv with bubblewrap or Docker, installs wheels only, and never
+imports installed packages on the host. The
 interpreter must already be installed. Configuration is offline by default;
 --fetch explicitly allows wheel downloads. --list checks without building.
 See docs/writing_a_harness.md for the declaration and lifecycle contract.
@@ -14,11 +16,11 @@ Legacy overlays
 ---------------
 The remaining documentation below applies to harnesses without that declaration.
 
-    python3 tools/configure_harness.py --harness base_harness/loop          # the `files` half
-    python3 tools/configure_harness.py --harness base_harness/loop --dataset terminal_bench
-    python3 tools/configure_harness.py --harness base_harness/loop --python 3.13 \
+    python tools/configure_harness.py --harness base_harness/miniswe          # the `files` half
+    python tools/configure_harness.py --harness base_harness/miniswe --dataset terminal_bench
+    python tools/configure_harness.py --harness base_harness/miniswe --python 3.13 \
         --builder-image IMAGE
-    python3 tools/configure_harness.py --harness base_harness/loop --list
+    python tools/configure_harness.py --harness base_harness/miniswe --list
 
 No source flag means **this host**: the interpreter a `files` run launches. A version that is
 not this host's needs `--builder-image`, because the key is the version and a guessed key is
@@ -518,6 +520,8 @@ def main() -> int:
                      help="build for this version (repeatable)")
     ap.add_argument("--builder-image", help="build against this image's interpreter "
                                            "instead of the host's")
+    ap.add_argument('--image', action='append', default=[],
+                    help='managed Python: prepare an exact task image placement (repeatable)')
     ap.add_argument("--host-interpreter", default=DEFAULT_HOST_INTERPRETER, metavar="PATH",
                     help=f"the interpreter a `files` run launches (default: the bare name "
                          f"{DEFAULT_HOST_INTERPRETER!r}, because that is the name "
@@ -545,16 +549,33 @@ def main() -> int:
         if not math.isfinite(args.runtime_timeout_s) or args.runtime_timeout_s <= 0:
             print("--runtime-timeout-s must be finite and positive", file=sys.stderr)
             return 2
-        if (args.dataset or args.builder_image or len(args.python) > 1
+        image_contract = 'exec' in managed_spec
+        if ((not image_contract and (args.dataset or args.builder_image or args.image)) or len(args.python) > 1
                 or (args.python and args.host_interpreter != DEFAULT_HOST_INTERPRETER)
                 or (args.list and (args.fetch or args.force or args.python
                                    or args.host_interpreter != DEFAULT_HOST_INTERPRETER))):
-            print("managed Python supports one native interpreter, not dataset/image overlays; --list is read-only", file=sys.stderr)
+            print("image preparation requires runtime.exec; --list is read-only and only one native interpreter is supported", file=sys.stderr)
             return 2
         selected = args.python[0] if args.python else (
             args.host_interpreter if args.host_interpreter != DEFAULT_HOST_INTERPRETER else None)
         try:
-            receipt = managed.prepare(harness, build=not args.list, allow_downloads=args.fetch,
+            if image_contract:
+                from harnessgrad import python_exec_runtime
+                images = [*args.image, *([args.builder_image] if args.builder_image else [])]
+                envs = {}
+                if args.dataset:
+                    from data.scaffolds import registry
+                    envs = registry.load_envs(args.dataset)
+                envs = {tid: {**spec, 'image': container.resolve_digest(spec['image'])}
+                        for tid, spec in envs.items() if (spec or {}).get('kind') == 'exec'}
+                envs.update({f'image-{i}': {'kind': 'exec', 'image': container.resolve_digest(image)}
+                             for i, image in enumerate(images)})
+                receipt = python_exec_runtime.prepare(harness, envs=envs,
+                                      build=not args.list, allow_downloads=args.fetch,
+                                      python=selected if not args.list else None, root=args.runtime_root,
+                                      timeout_s=args.runtime_timeout_s, force=args.force)
+            else:
+                receipt = managed.prepare(harness, build=not args.list, allow_downloads=args.fetch,
                                       python=selected if not args.list else None, root=args.runtime_root,
                                       timeout_s=args.runtime_timeout_s, force=args.force)
         except managed.RuntimeUnavailable as exc:
@@ -566,12 +587,13 @@ def main() -> int:
         if args.json:
             print(json.dumps(receipt, indent=2))
         else:
-            artifact = receipt["identity"]["artifact"]
+            identity = receipt['identity']
+            artifact = identity.get('native', identity)['artifact']
             print(f"managed Python {managed_spec['python']}  {artifact['runtime_id']}")
             print(f"interpreter  {artifact['python']}")
             print(f"prepared in {receipt['seconds']:.3f}s; cache hit: {receipt['cache_hit']}")
         return 0
-    if args.fetch or args.runtime_root is not None or args.runtime_timeout_s != 120:
+    if args.fetch or args.runtime_root is not None or args.runtime_timeout_s != 120 or args.image:
         print("--fetch/--runtime-root/--runtime-timeout-s require a managed Python declaration", file=sys.stderr)
         return 2
     install = runtime.install_spec(harness)

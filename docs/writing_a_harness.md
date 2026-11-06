@@ -135,15 +135,50 @@ platform venv is not projected into this actor. Provider, service and scorer
 dependencies keep their separate role bindings. This isolates Python packages;
 it does not seal the operating system or hash every system library.
 
-The current route supports **sandboxed native `files` tasks**. Container/`exec`,
-observed or cooperative workers, `agent_runtime` projections, external
-`runtime_paths` and `--no-sandbox` are refused. Existing Harnesses without
-`runtime.kind="python"` keep their legacy runtime behavior.
-[MiniAgent](../base_harness/miniagent/README.md) is the first shipped base Harness
-using this route, with a complete CPython 3.12 lock and an isolated native worker.
-Other base Harnesses retain their declared runtime setup.
-`loop` and `miniswe` still support both `files` and `exec`; their migration needs
-a contract for both routes before replacing their current dependency setup.
+The base declaration supports **sandboxed native `files` tasks**. MiniAgent uses
+that route and continues to refuse `exec`. A Harness can additionally declare
+image-owned Python environments with an explicit map of minor versions to complete
+locks, for example `"exec": {"requirements": {"3.12": "requirements.lock"}}`
+inside `runtime`. Every named lock must be an owned regular source file.
+
+[Loop](../base_harness/loop/README.md), used by the default Quick start, supports
+both `files` and `exec`. An image with Python supplies its own physical base
+interpreter; its venv excludes image site-packages. Only the venv is mounted from
+the host, including a read-only copy of that image's executable bytes. Its standard
+library and system libraries remain the image's. An image without Python receives the bound native runtime and its exact
+base prefixes, with compatibility checked inside that image. Failed discovery or
+a broken image Python is never treated as absence. Both ordinary mount-state and
+container-state execution use the same selection, isolated startup and read-only
+artifact; snapshots and scorers do not inherit actor dependency mounts.
+The container actor is invoked by absolute interpreter path with `-I -B`, without
+activating that venv through `PATH` or `VIRTUAL_ENV`. Task shell commands retain
+the image's own environment, including Python dependencies, custom tools and any
+existing task venv. Image Python configuration is ignored by the isolated actor
+but remains available to task commands. Harness helpers that need actor packages
+should explicitly use `sys.executable` with isolated startup. Native `files` keeps
+its managed interpreter path; the no-Python image fallback supplies only the actor.
+
+```bash
+python tools/configure_harness.py --harness base_harness/loop --image LOCAL_IMAGE --fetch
+python tools/configure_harness.py --harness base_harness/loop --dataset DATASET --fetch
+```
+
+Images must already be imported locally. Configuration resolves their content
+addresses and prepares each selected target. Runs never pull images and candidate
+preparation stays offline. `--list` checks without installing. Image identity,
+interpreter, source, locks and immutable venv contents are part of the aggregate
+`harness_runtime_identity`; each actor receipt also names its actual placement.
+Resume and checkpoint eval retain their original exact bindings, including images
+that are not in the current subset, rather than consulting a newer publication.
+An initial checkpoint eval can explicitly prepare additional target images from
+the checkpoint's unchanged locks. It retains the original native and image
+artifacts, records the extended measurement identity separately from
+`evaluated_from`, and never extends a binding during admission, cache reuse or resume.
+
+Observed/cooperative workers, `agent_runtime` projections, external `runtime_paths`
+and `--no-sandbox` remain refused. Existing Harnesses without `runtime.kind="python"`
+keep their legacy runtime behavior. `miniswe` retains its existing `files`/`exec`
+setup and has not migrated in this phase.
 The Codex, DSH and OpenClaw wrappers use their separate external-CLI preparation
 procedures, while OpenCode declares Bun. A Python venv alone does not describe
 those external runtimes.

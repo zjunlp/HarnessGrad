@@ -2241,6 +2241,12 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     if harness_source is not None:
         try:
+            # A managed resume already admitted its retained checkpoint. Its
+            # source can include Git's generated ignore rules, while the original
+            # external input remains unchanged and keeps its separate receipt.
+            staged_receipt = (source_identity(harness_src)
+                              if getattr(args, '_resume_initial_source', None) is not None
+                              else source_receipt)
             with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
                 snapshot = Path(staging) / 'source'
                 _external_source_snapshot(harness_src, snapshot)
@@ -2264,7 +2270,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                     raise ValueError('owned harness filesystem changed during staging')
                 if source_identity(snapshot) != snapshot_identity:
                     raise ValueError('harness source snapshot changed during staging')
-            if (source_identity(harness_src) != source_receipt
+            if (source_identity(harness_src) != staged_receipt
                     or (reviewed_original is not None and source_identity(reviewed_original) != source_receipt)):
                 raise ValueError('harness source changed during staging; use a stable input directory')
             if args.expected_harness_filesystem_sha256 is not None:
@@ -2308,7 +2314,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                     rows = [json.loads(line) for line in donor_curve.read_text().splitlines() if line.strip()]
                     donor_binding = rows[0].get("harness_runtime_identity") if rows else None
             preparation = candidate_runtime.prepare(
-                work, binding=donor_binding, envs=envs, setups=setups, sandbox=args.sandbox)
+                work, binding=donor_binding, envs=envs, setups=setups, sandbox=args.sandbox,
+                **({'extend_images': True} if args.side == 'eval' and args.from_run
+                   and (donor_binding or {}).get('kind') == 'python-placements' else {}))
             selected_binding = None if preparation is None else preparation["identity"]
             selected_binding = candidate_runtime.admit(
                 work, selected_binding, envs=envs, setups=setups, sandbox=args.sandbox)

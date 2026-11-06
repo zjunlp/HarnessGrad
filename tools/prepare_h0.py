@@ -112,7 +112,7 @@ def harness_source(args):
     return source
 
 
-def harness_context(source, *, env=None):
+def harness_context(source, *, env=None, selection=None):
     """Compute the same staged source identity the driver will actually measure.
 
     Only read already prepared dependencies. Initial artifact installation belongs
@@ -129,10 +129,21 @@ def harness_context(source, *, env=None):
         # The subprocess honors the driver's effective storage settings without
         # importing caller-specific .env state into this preparation process.
         if candidate_runtime.has_python(staged):
-            program = ("import json,sys; from pathlib import Path; "
-                       "from harnessgrad import candidate_runtime as r; "
-                       "print(json.dumps(r.admit(Path(sys.argv[1]))))")
-            result = subprocess.run([sys.executable, "-B", "-c", program, str(staged)],
+            program = '''import json,sys
+from pathlib import Path
+from harnessgrad import candidate_runtime as r
+from data.scaffolds import registry
+request=json.loads(sys.argv[2])
+with registry.provider_session():
+ if request is None:
+  value=r.admit(Path(sys.argv[1]))
+ else:
+  from harnessgrad.dataset_runtime_identity import h0_selection
+  _,setups,_,envs=h0_selection(request)
+  value=r.admit(Path(sys.argv[1]),envs=envs,setups=setups)
+ print(json.dumps(value))
+'''
+            result = subprocess.run([sys.executable, "-B", "-c", program, str(staged), json.dumps(selection)],
                                     cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
             if result.returncode:
                 raise ValueError("H0 candidate runtime preflight failed: " + result.stderr[-3000:])
@@ -161,11 +172,16 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         split_fields = {"split": {"sha256": hashlib.sha256(path.read_bytes()).hexdigest()}}
     source = harness_source(args)
     managed = candidate_runtime.has_python(source)
+    image_contract = managed and 'exec' in candidate_runtime.python_runtime.descriptor(source)
     dataset_identity = dataset_runtime_identity.resolve_h0(
         args.dataset, side=args.side, task_ids=ids, split=split,
         sampling=getattr(args, "sampling", "all"), env=environment,
-        **({"managed_harness": True} if managed else {}))
-    context = harness_context(source, env=environment)
+        **({"managed_harness": True} if managed else {}),
+        **({'managed_exec': True} if image_contract else {}))
+    context = harness_context(source, env=environment,
+        **({'selection': {'dataset': args.dataset, 'side': args.side, 'task_ids': ids,
+                          'split': split, 'sampling': getattr(args, 'sampling', 'all')}}
+           if image_contract else {}))
     return {
         "dataset": args.dataset,
         "side": args.side,

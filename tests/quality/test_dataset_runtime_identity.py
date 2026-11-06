@@ -1,6 +1,7 @@
 """Exact managed artifacts and their selected task/role provenance."""
 import json
 import os
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -153,7 +154,8 @@ def test_h0_configuration_uses_effective_child_storage_and_selection(tmp_path, m
     resolve = Mock(return_value=value)
     monkeypatch.setattr(identity, 'resolve_h0', resolve)
     args = SimpleNamespace(dataset='control', side='train', study_ids=ids,
-                           model='agent', endpoint='endpoint', trials=1, sampling='random_1')
+                           model='agent', endpoint='endpoint', trials=1, sampling='random_1',
+                           harness_path=Path(__file__).resolve().parents[2]/'tests/fixtures/base_harness/loop_plain')
     config = prepare_h0.configuration(args, env={'HG_AGENT_BACKEND': 'mock', 'HG_DATA_ROOT': '/frozen/data'})
     assert config['dataset_runtime_identity'] == value
     assert resolve.call_args.kwargs['task_ids'] == ['b', 'a']

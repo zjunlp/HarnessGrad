@@ -3,6 +3,7 @@ from __future__ import annotations
 from harnessgrad import slots
 from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
 from harnessgrad import candidate_runtime
+from harnessgrad import python_exec_runtime
 
 import concurrent.futures as futures
 import hashlib
@@ -49,13 +50,6 @@ from eval.policy.unobserved_diagnostic import Authorization
 def _files_python() -> str:
     """Keep the host's python selection; python3-only hosts use this interpreter."""
     return "python" if shutil.which("python") else sys.executable
-
-
-_PYTHON_CANDIDATE_BOOTSTRAP = (
-    "import os,runpy,sys; root,entry=sys.argv[1:3]; "
-    "sys.path[:0]=[os.path.dirname(entry),root]; sys.argv=sys.argv[2:]; "
-    "runpy.run_path(entry,run_name='__main__')"
-)
 
 
 def _refuse_unobserved_policies(task: dict, env: dict | None,
@@ -539,7 +533,10 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             bun_preparation = bun_runtime.prepare(repo)
         except bun_runtime.RuntimeUnavailable as exc:
             return _invalid(task, exc, stage="harness runtime preparation", service=None)
-    python_paths = tuple(Path(path) for path in (managed_python or {}).get('artifact', {}).get('runtime_paths', []))
+    managed_placement = (python_exec_runtime.placement(managed_python, env_spec)
+                         if managed_python is not None else None)
+    managed_artifact = (managed_placement or {}).get('artifact')
+    python_paths = tuple(Path(path) for path in (managed_artifact or {}).get('runtime_paths', []))
     if managed_python is not None:
         runtime_receipt['python'] = {'identity': managed_python}
     bun_paths = tuple(Path(p) for p in (bun_preparation or {}).get("runtime_paths", []))
@@ -558,7 +555,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             timeout_s=timeout_s, verify_timeout_s=verify_timeout_s,
             run_id=run_id, run_seed=run_seed, recordings_root=recordings_root,
             runtime_paths=runtime_paths, runtime_env=bun_environment,
-            runtime_receipt=runtime_receipt)
+            runtime_receipt=runtime_receipt,
+            **({'harness_runtime_identity': managed_python} if managed_python is not None else {}))
     service_specs = list(env_spec.get("services") or [])
     web_spec = env_spec.get("web") or {}
     running = None
@@ -661,11 +659,13 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         workdir_arg = task_mount if is_exec else str(workdir)
         # The image's interpreter when it has one (§2.5.3), the platform's when it does
         # not. Preserve a files run's existing PATH selection when available.
-        image_python = container_mod.image_python(env_spec["image"]) if is_exec else None
-        python = (managed_python['artifact']['python'] if managed_python is not None else
+        if managed_placement is not None:
+            image_python = (managed_placement['base'] or {}).get('executable')
+        else:
+            image_python = container_mod.image_python(env_spec['image']) if is_exec else None
+        python = (managed_artifact['python'] if managed_python is not None else
                   image_python or (sys.executable if is_exec else _files_python()))
-        argv = ([python, '-I', '-B', '-c', _PYTHON_CANDIDATE_BOOTSTRAP,
-                 str(repo), str(repo / entry)] if managed_python is not None else
+        argv = (python_exec_runtime.actor_argv(managed_python, env_spec, repo, entry) if managed_python is not None else
                 [python, str(repo / entry)]) + ["--task", task_arg, "--workdir", workdir_arg]
 
         # The harness's own dependencies, from a directory outside the task's
@@ -688,7 +688,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # tree. Exported so a harness need not know the platform's layout, and
         # stated in the environment rather than passed as an argument because the
         # entrypoint contract (INTERFACE.md §1.2) is `--task` and `--workdir` only.
-        state_dir = repo / STATE_DIRNAME
+        state_dir = (workdir / '.harnessgrad-state' if managed_python is not None and is_exec
+                     else repo / STATE_DIRNAME)
         # Created on demand, not just at staging time: a workspace committed before
         # `.state/` existed would otherwise make every run refuse to start, and the
         # sandbox needs a real directory to mount over. Empty and gitignored, so it
@@ -737,16 +738,13 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         if worker is not None:
             child_env["HG_WORKER_ID"] = worker["id"]
         child_env["HG_AGENT_DEADLINE_S"] = str(timeout_s)
-        child_env["HARNESSGRAD_STATE"] = str(state_dir)
+        child_env["HARNESSGRAD_STATE"] = (container_mod.to_container(state_dir, workdir, task_mount)
+                                            if managed_python is not None and is_exec else str(state_dir))
         if overlay:
             child_env.update(harness_runtime.env_for(overlay))
         if managed_python is not None:
-            for key in tuple(child_env):
-                if key.startswith('PYTHON') or key in ('VIRTUAL_ENV', 'CONDA_PREFIX'):
-                    child_env.pop(key)
-            child_env.update(PATH=str(Path(python).parent) + os.pathsep + os.defpath,
-                             VIRTUAL_ENV=managed_python['artifact']['path'],
-                             PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1')
+            child_env = python_exec_runtime.actor_environment(child_env, managed_artifact,
+                                                               image=is_exec)
 
         # Publish the agent's model onto the task's network. A containerised harness
         # cannot reach a model on the host's loopback -- measured, every obvious route
@@ -800,7 +798,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # The platform's interpreter is mounted only when it is going to be used, so an
         # image that brings its own does not also get the host's Python on its disk.
         runtime = ((tuple(runtime_paths)
-                    + (() if image_python else container_mod.interpreter_paths()))
+                    + (() if image_python or managed_python is not None else container_mod.interpreter_paths()))
                    if is_exec else ())
 
         if stepwise_session is not None:
@@ -848,7 +846,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 return container_mod.run(
                     argv, image=env_spec["image"], task_dir=workdir,
                     task_mount=task_mount, harness_root=repo,
-                    state_dirs=(state_dir,), cwd=task_mount, env=child_env,
+                    state_dirs=(() if managed_python is not None else (state_dir,)), cwd=task_mount, env=child_env,
                     timeout_s=timeout_s, network=network,
                     # The declared envelope, finally reaching the launcher. Until
                     # `container_mod.run` took a `limits` keyword it had no way to pass
@@ -1054,10 +1052,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                      {"applied": False, "reason": "--no-sandbox"}),
                 "verdict": verdict, "env_usage": env_usage,
                 **candidate_runtime.fields(managed_python),
-                "harness_runtime": ({'source': 'managed-python',
-                                     'python': manifest['runtime']['python'],
-                                     'interpreter': python, 'identity': managed_python,
-                                     'host_site_packages_visible': False}
+                "harness_runtime": (python_exec_runtime.record(managed_python, env_spec,
+                                        python_minor=manifest['runtime']['python'])
                                     if managed_python is not None else harness_runtime.record(
                     overlay, platform_interpreter=(image_python is None),
                     # The `files` case runs on the host's `python` and the caller is the

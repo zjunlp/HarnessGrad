@@ -89,8 +89,9 @@ library; a dataset, a harness or a search provider may need more, and each recip
 `./install.sh` installs missing system prerequisites and verifies the sandbox boundary.
 
 Python Harnesses can opt into [their own managed environment](docs/writing_a_harness.md#21-managed-python-dependencies)
-for sandboxed native `files` tasks. [MiniAgent](base_harness/miniagent/README.md)
-uses this route; other base Harness recipes retain their declared runtime setup.
+for sandboxed tasks. The default [Loop](base_harness/loop/README.md) uses this route
+for native `files` and container `exec`; [MiniAgent](base_harness/miniagent/README.md)
+uses native `files`. Other base Harness recipes retain their declared runtime setup.
 
 ```bash
 HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --check-only
@@ -118,7 +119,7 @@ Configure the dataset and both model roles, then start a run. Use your own OpenA
 
 ```bash
 # The provided configuration uses GSM8K.
-python tools/configure_harness.py --harness base_harness/loop
+python tools/configure_harness.py --harness base_harness/loop --fetch
 python tools/datasets.py --fetch --dataset gsm8k
 python tools/prepare_dataset.py --dataset gsm8k
 python tools/datasets.py --check --dataset gsm8k
@@ -135,6 +136,11 @@ python tools/run_summary.py runs/dgm-quickstart
 ```
 
 Replace the placeholders before running. The check probes endpoints but does not generate responses. The run uses five training tasks and one editing round; see the [recipe](experiments/method-dgm.json) and [experiment documentation](docs/rsi-experiments.md) for details.
+
+Loop preparation installs its locked wheels into a separate CPython 3.12 environment;
+the platform Python does not need the OpenAI SDK. `--fetch` explicitly permits wheel
+downloads; omit it when the required wheels are cached. A candidate's actual source
+and dependency artifacts are verified before execution, cached score reuse and resume.
 
 GSM8K's preparation command installs its pinned data-loading dependencies in a separate
 environment; the platform environment does not need pyarrow. Fetching only downloads data.

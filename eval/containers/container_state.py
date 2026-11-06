@@ -25,6 +25,7 @@ import eval.service.modelgate as modelgate_mod
 import eval.observe.progress as progress_mod
 import eval.service.services as services_mod
 import tools.web_gateway as web_gateway_mod
+from harnessgrad import candidate_runtime, python_exec_runtime
 from eval.service.services import label
 from eval.ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT
@@ -38,7 +39,8 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                              recordings_root: Path | None,
                              runtime_paths: tuple[Path, ...] = (),
                              runtime_env: dict[str, str] | None = None,
-                             runtime_receipt: dict | None = None) -> dict:
+                             runtime_receipt: dict | None = None,
+                             harness_runtime_identity: dict | None = None) -> dict:
     """Run a task whose state is the container's own filesystem. INTERFACE.md §2.5.9.
 
     The order is the design, so it is spelled out here in the same steps the contract
@@ -58,6 +60,12 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
     gateway = None
     web_gateway = None
     answer = trace = ""
+    managed = harness_runtime_identity
+    def runtime_record():
+        return (python_exec_runtime.record(managed, env_spec,
+                    python_minor=json.loads((repo/'harness.json').read_bytes())['runtime']['python'])
+                if managed is not None else harness_runtime.record(
+                    overlay, platform_interpreter=(image_python_here is None)))
     #: The task this work belongs to, and the phases it reports. `None` outside a run
     #: (a unit test, a direct call), in which case every phase below is a no-op.
     held = progress_mod.task_of()
@@ -98,8 +106,9 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                 # `docker commit` records the mount target as an empty directory and
                 # nothing under it, so the check's fresh container never sees these
                 # packages. See `eval/containers/harness_runtime.py`.
-                image_python_here = container_mod.image_python(env_spec["image"])
-                overlay = harness_runtime.lookup(
+                image_python_here = (container_mod.image_python(env_spec["image"])
+                                     if managed is None else None)
+                overlay = None if managed is not None else harness_runtime.lookup(
                     repo, image_python_here or sys.executable,
                     image=env_spec["image"],
                     image_digest=env_spec.get("image_digest"))
@@ -112,7 +121,7 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                         ["--mount", f"type=bind,src={repo},dst={repo},readonly"] + capture_mounts
                         + [a for pth in (tuple(runtime_paths)
                                          + harness_runtime.extra_paths(overlay)
-                                         + (() if image_python_here
+                                         + (() if image_python_here or managed is not None
                                             else container_mod.interpreter_paths()))
                            for a in ("--mount",
                                      f"type=bind,src={pth},dst={pth},readonly")]),
@@ -127,26 +136,35 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                 container_mod.network_connect(name, "bridge")
 
             with phases("prepare"):
+                setup_root = staging / ('initial' if managed is not None else 'setup')
+                if managed is not None:
+                    setup_root.mkdir()
                 # Step 2. SETUP, copied in rather than mounted.
                 if setup and setup.get("files"):
-                    _materialize(staging / "setup", setup.get("files"), PLATFORM_ROOT)
-                    container_mod.cp_in(name, staging / "setup", task_mount,
-                                        contents=True)
+                    _materialize(setup_root, setup.get("files"), PLATFORM_ROOT)
+                    if managed is None:
+                        container_mod.cp_in(name, setup_root, task_mount, contents=True)
 
                 manifest = json.loads((repo / "harness.json").read_text())
                 entry = manifest["entrypoint"]
-                task_file = staging / "task.json"
+                task_file = (setup_root if managed is not None else staging) / 'task.json'
                 task_file.write_text(json.dumps(runtime_task(task, setup)))
-                container_mod.cp_in(name, task_file, f"{task_mount}/task.json")
+                if managed is not None:
+                    # Copying the initial directory also creates a missing task
+                    # directory, without starting the image before SETUP is ready.
+                    container_mod.cp_in(name, setup_root, task_mount, contents=True)
+                else:
+                    container_mod.cp_in(name, task_file, f"{task_mount}/task.json")
                 # No `mkdir` for the scratch or the home directory: they are `--tmpfs`
                 # mounts, and docker creates their mount points at **create** time. The
                 # first version called `mkdir_in` here, which uses `docker exec` -- and a
                 # container that has not been started cannot be exec'd. Measured:
                 # `container ... is not running`.
 
-                image_python = container_mod.image_python(env_spec["image"])
-                argv = [image_python or sys.executable, str(repo / entry), "--task",
-                        f"{task_mount}/task.json", "--workdir", task_mount]
+                image_python = container_mod.image_python(env_spec["image"]) if managed is None else None
+                argv = (python_exec_runtime.actor_argv(managed, env_spec, repo, entry)
+                        if managed is not None else [image_python or sys.executable, str(repo / entry)])
+                argv += ['--task', f'{task_mount}/task.json', '--workdir', task_mount]
 
                 child_env = container_mod.container_env(task_mount, deadline_s=timeout_s)
                 child_env.update(runtime_env or {})
@@ -154,6 +172,9 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                 # Prepended, not replacing: a harness that sets its own `PYTHONPATH` is not
                 # the platform's to overwrite.
                 child_env.update(harness_runtime.env_for(overlay))
+                if managed is not None:
+                    child_env = python_exec_runtime.actor_environment(child_env,
+                        python_exec_runtime.placement(managed, env_spec)['artifact'], image=True)
 
                 if env_spec.get("web"):
                     web_gateway = web_gateway_mod.WebGateway(
@@ -190,6 +211,8 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
             # Step 3.
             exit_code, stderr = None, ""
             with phases("agent"):
+                if managed is not None and not candidate_runtime.matches_source(repo, managed):
+                    raise ValueError('Managed candidate source changed after runtime admission')
                 try:
                     proc = container_mod.exec_in(name, argv, cwd=task_mount,
                                                  env=child_env, timeout_s=timeout_s)
@@ -211,8 +234,7 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                                         "detail": str(exc)},
                             "answer": "", "trace": trace, "exit_code": exit_code,
                             "stderr": stderr, "env_usage": {}, "identity": _last_identity(trace),
-                            "harness_runtime": harness_runtime.record(
-                                overlay, platform_interpreter=(image_python_here is None)),
+                            "harness_runtime": runtime_record(),
                             "model_gateway": None, "web_gateway": None}
 
                 # What the harness produced, read back out of the snapshot. `cp_out` is a
@@ -238,8 +260,7 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
             return {"task_id": tid, "answer": answer, "trace": trace,
                     "exit_code": exit_code, "stderr": stderr, "verdict": verdict,
                     "env_usage": {}, "identity": _last_identity(trace),
-                    "harness_runtime": harness_runtime.record(
-                        overlay, platform_interpreter=(image_python_here is None)),
+                    "harness_runtime": runtime_record(),
                     "model_gateway": ({"published": True,
                                        "target": f"{gateway.target[0]}:{gateway.target[1]}",
                                        **gateway.account()}

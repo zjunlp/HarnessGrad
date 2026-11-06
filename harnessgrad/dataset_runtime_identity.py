@@ -215,7 +215,7 @@ def for_evaluation(value, tasks, setups, verifiers):
 
 
 def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env=None,
-               managed_harness=False):
+               managed_harness=False, managed_exec=False):
     """Preflight opted-in adapters under the driver's effective environment.
 
     A subprocess prevents adapter imports and configuration caches in this tool
@@ -229,6 +229,8 @@ def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env
                "split": split, "sampling": sampling}
     if managed_harness:
         request["managed_harness"] = True
+    if managed_exec:
+        request['managed_exec'] = True
     result = subprocess.run([sys.executable, "-B", "-m", __name__],
                             cwd=Path(__file__).resolve().parents[1], env=env,
                             input=_canonical(request), capture_output=True, text=True, timeout=120)
@@ -241,31 +243,37 @@ def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env
         raise ValueError("invalid dataset runtime H0 preflight response") from exc
 
 
-def _h0_preflight(request):
+def h0_selection(request):
     from data.scaffolds import registry
     from data.scaffolds.custom_split import resolve as resolve_split
     from eval.run import metrics
     dataset, side = request["dataset"], request["side"]
+    tasks, _, split = registry.load_split(dataset)
+    split, _, _ = resolve_split(dataset, tasks, split, request["split"], side=side)
+    ids = list(split[side]) if split else [task["task_id"] for task in tasks]
+    asked = request["task_ids"]
+    if asked:
+        if len(asked) != len(set(asked)) or set(asked) - set(ids):
+            raise ValueError("H0 study tasks must be unique and on the requested side")
+        ids = [tid for tid in ids if tid in set(asked)]
+    policy = request["sampling"]
+    if policy in {"diagnostic", "pilot_10pct"} or policy.startswith("random_"):
+        ids = metrics.select_task_set({}, policy, within=ids)
+    if not ids:
+        raise ValueError("H0 has no selected tasks")
+    _, setups, verifiers = registry.load_tasks(dataset, task_ids=ids)
+    return ids, setups, verifiers, registry.load_envs(dataset, task_ids=ids)
+
+
+def _h0_preflight(request):
+    from data.scaffolds import registry
     with registry.provider_session():
-        tasks, _, split = registry.load_split(dataset)
-        split, _, _ = resolve_split(dataset, tasks, split, request["split"], side=side)
-        ids = list(split[side]) if split else [task["task_id"] for task in tasks]
-        asked = request["task_ids"]
-        if asked:
-            if len(asked) != len(set(asked)) or set(asked) - set(ids):
-                raise ValueError("H0 study tasks must be unique and on the requested side")
-            ids = [tid for tid in ids if tid in set(asked)]
-        policy = request["sampling"]
-        if policy in {"diagnostic", "pilot_10pct"} or policy.startswith("random_"):
-            ids = metrics.select_task_set({}, policy, within=ids)
-        if not ids:
-            raise ValueError("H0 has no selected tasks")
-        _, setups, verifiers = registry.load_tasks(dataset, task_ids=ids)
-        envs = registry.load_envs(dataset, task_ids=ids)
+        ids, setups, verifiers, envs = h0_selection(request)
         if request.get("managed_harness"):
             from harnessgrad import candidate_runtime
-            candidate_runtime.validate_routes(envs, setups, True)
-        return capture(dataset, ids, setups, verifiers)
+            candidate_runtime.validate_routes(envs, setups, True,
+                **({'allow_exec': True} if request.get('managed_exec') else {}))
+        return capture(request['dataset'], ids, setups, verifiers)
 
 
 if __name__ == "__main__":
