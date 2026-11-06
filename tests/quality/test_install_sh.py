@@ -120,8 +120,8 @@ def test_a_missing_bwrap_says_how_to_get_one(tmp_path):
 def test_a_broken_bwrap_is_caught_by_the_self_check(tmp_path):
     """Installed but unable to build a namespace: the failure the script exists for.
 
-    This is the case a version check would pass and a run would not. The diagnostic has
-    to point at the kernel or an LSM, because reinstalling the package cannot help.
+    This is the case a version check would pass and a run would not. Preserve the
+    probe's actual failure and make kernel/LSM guidance conditional, not definitive.
     """
     fake = tmp_path / "bwrap"
     fake.write_text("#!/bin/sh\necho 'bwrap: Creating new namespace failed' >&2\nexit 1\n")
@@ -130,8 +130,10 @@ def test_a_broken_bwrap_is_caught_by_the_self_check(tmp_path):
     scratch = tmp_path / 'scratch'; scratch.mkdir()
     proc = run_install("--check", env={"HG_BWRAP": str(fake), 'TMPDIR': str(scratch)})
     assert proc.returncode == 1, proc.stdout
-    assert "namespace did not apply" in proc.stdout, proc.stdout
-    assert "kernel" in proc.stdout or "LSM" in proc.stdout
+    assert "bwrap: Creating new namespace failed" in proc.stdout, proc.stdout
+    assert "sandbox self-check failed" in proc.stdout
+    assert "For namespace permission failures" in proc.stdout
+    assert "the cause is the kernel or an LSM" not in proc.stdout
     # And it must not pretend the sandbox is fine. `"ready."` would also match the
     # summary's own `"not ready."`, so the anchored form is the one that means anything.
     assert "  not ready." in proc.stdout

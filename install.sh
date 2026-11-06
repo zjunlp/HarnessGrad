@@ -214,7 +214,8 @@ elif ! have_bwrap; then
 else
     # The platform's own check, not a re-implementation of it: this asks bwrap to
     # build the namespace the driver will build, then looks for the platform from
-    # inside. `|| true` keeps `set -e`-style exits from hiding the message.
+    # inside. Capture its status separately from earlier prerequisite failures.
+    probe_failed=0
     detail="$("$PY" - <<'PY' 2>&1
 import sys
 from pathlib import Path
@@ -232,37 +233,16 @@ with TemporaryDirectory(prefix="hg-install-check-") as work:
 print(report["detail"])
 raise SystemExit(0 if report["ok"] else 1)
 PY
-)" || FAILED=1
+)" || { probe_failed=1; FAILED=1; }
 
-    if [ "$FAILED" = 0 ]; then
+    if [ "$probe_failed" = 0 ]; then
         ok "$detail"
     else
         bad "$detail"
         printf '\n'
-        warn "bwrap is present but the namespace did not apply."
-        warn "the cause is the kernel or an LSM here, not the package:"
-        hint=0
-        if [ -r /proc/sys/kernel/unprivileged_userns_clone ] && \
-           [ "$(cat /proc/sys/kernel/unprivileged_userns_clone)" = 0 ]; then
-            warn "  unprivileged user namespaces are disabled:"
-            NEED_SUDO+=("sysctl -w kernel.unprivileged_userns_clone=1")
-            hint=1
-        fi
-        if [ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ] && \
-           [ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" != 0 ]; then
-            warn "  AppArmor restricts unprivileged user namespaces:"
-            NEED_SUDO+=("sysctl -w kernel.apparmor_restrict_unprivileged_userns=0")
-            hint=1
-        fi
-        if [ "$hint" = 0 ]; then
-            # The switches look permissive, so the reason is elsewhere and worth
-            # naming: a container without CAP_SYS_ADMIN, a seccomp profile, or a
-            # grsecurity kernel all present this way.
-            warn "  both sysctls look permissive, so check:"
-            warn "    dmesg | tail          for a recent denial"
-            warn "    are you inside a container without CAP_SYS_ADMIN?"
-            warn "    unshare --user --pid true   as a direct test of the kernel"
-        fi
+        warn "sandbox self-check failed; see the detail above."
+        warn "For namespace permission failures, investigate kernel, container, or LSM policy."
+        warn "Do not change system security settings without understanding the failure."
         warn "you can still run with --no-sandbox, but the harness can then read"
         warn "the driver and .env, and only the hash check stands in its way."
     fi

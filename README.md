@@ -72,11 +72,17 @@ only the required runtime directories are mounted, read-only.
 ```bash
 git clone https://github.com/zjunlp/HarnessGrad.git
 cd HarnessGrad
-uv venv --python 3.12 ~/.venvs/harnessgrad
+uv venv --seed --python 3.12 ~/.venvs/harnessgrad
 source ~/.venvs/harnessgrad/bin/activate
 uv pip install -e .
 ./install.sh --check
 ```
+
+`--seed` installs pip into the environment, which harness configuration tools need for
+host dependency overlays; `uv pip install` alone does not seed pip. Seeding may download
+pip if it is not already cached, so an offline setup requires an appropriate pre-populated
+uv cache. Creating the environment or installing the project may also require downloading
+Python or build tools if they are not already available locally.
 
 The platform itself has **no third-party runtime dependencies** and imports only the standard
 library; a dataset, a harness or a search provider may need more, and each recipe names what.

@@ -1,6 +1,6 @@
 """Offline real-browser launch dropdown: all traffic is intercepted."""
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 import pytest
 
@@ -29,12 +29,13 @@ def test_launch_method_options(language, default):
         def serve(route):
             request = route.request
             requests.append((request.method, request.url))
-            assert request.method == 'GET'
             path = urlparse(request.url).path
             if path == '/api/launch/form':
                 return route.fulfill(json=fixture)
             if path == '/api/launch/preview':
-                previews.append(parse_qs(urlparse(request.url).query))
+                assert request.method == 'POST' and not urlparse(request.url).query
+                previews.append(request.post_data_json)
+                assert 'task_api_key' not in previews[-1] and 'meta_api_key' not in previews[-1]
                 return route.fulfill(json={'argv': [], 'preflight': {'ok': True}})
             if path.startswith('/api/'):
                 return route.fulfill(json={})
@@ -56,7 +57,12 @@ def test_launch_method_options(language, default):
         page.locator('#f-method').select_option('future_<"&')
         page.wait_for_function("() => document.querySelector('#f-method').value === 'future_<\"&'")
         page.wait_for_timeout(100)
-        assert previews[-1]['method'] == ['future_<"&']
-        assert all(method == 'GET' for method, _ in requests)
+        assert previews[-1]['method'] == 'future_<"&'
+        page.locator('#f-task-base-url').fill('https://user:secret@host.invalid/pathsecret?token=querysecret')
+        page.wait_for_function("() => document.querySelector('#f-task-base-url').value.includes('querysecret')")
+        page.wait_for_timeout(100)
+        assert previews[-1]['task_base_url'].endswith('querysecret')
+        assert all('secret' not in url for _, url in requests)
+        assert all(method == ('POST' if urlparse(url).path == '/api/launch/preview' else 'GET') for method, url in requests)
         context.close()
         browser.close()

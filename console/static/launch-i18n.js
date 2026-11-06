@@ -1,5 +1,7 @@
 window.HG_LAUNCH_I18N = {
   "zh": {
+    "ls.urlHidden": "已配置地址已隐藏（留空使用原地址）",
+    "ls.urlReenter": "默认地址已隐藏，请重新输入地址和 API key",
     "ls.1": "HarnessGrad · 启动",
     "ls.2": "启动",
     "ls.3": "配置一次实验：数据集、harness、方法、轮数。命令由服务端生成，起跑前先预检。",
@@ -194,6 +196,8 @@ window.HG_LAUNCH_I18N = {
     "submit.confirm": "确认上传 {file} 并在场景 {scenario} 中评分？"
   },
   "en": {
+    "ls.urlHidden": "Configured URL hidden (leave blank to use it)",
+    "ls.urlReenter": "Default URL hidden; reenter URL and API key",
     "ls.1": "HarnessGrad · Launch",
     "ls.2": "Launch",
     "ls.3": "Configure an experiment: dataset, harness, method and rounds. The server generates the command and checks it before launch.",

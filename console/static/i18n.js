@@ -1,9 +1,37 @@
 /* Only explicitly marked UI is translated; API and user content is never inspected. */
 (() => {
   'use strict';
+  // Failed writes live only for this document. Never seed storage with defaults:
+  // a temporarily inaccessible saved preference must not be overwritten.
+  const memory = new Map();
+  const storage = window.HGStorage = {
+    getItem(key) {
+      if (memory.has(key)) return memory.get(key);
+      try { return localStorage.getItem(key); } catch (_) { return null; }
+    },
+    setItem(key, value) {
+      try { localStorage.setItem(key, value); memory.delete(key); return true; }
+      catch (_) { memory.set(key, String(value)); return false; }
+    },
+    removeItem(key) {
+      try { localStorage.removeItem(key); memory.delete(key); return true; }
+      catch (_) { memory.set(key, null); return false; }
+    },
+    warn() {
+      let notice = document.getElementById('hg-storage-warning');
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'hg-storage-warning';
+        notice.setAttribute('role', 'status');
+        notice.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:9999;background:#fff3cd;color:#332600;padding:8px;border:1px solid #806600';
+        document.body.appendChild(notice);
+      }
+      notice.textContent = document.documentElement.lang === 'zh-CN' ? '浏览器存储不可用；更改仅在当前页面有效。' : 'Browser storage is unavailable; changes apply only on this page.';
+    },
+    save(key, value) { const ok = this.setItem(key, value); if (!ok) this.warn(); return ok; }
+  };
   const key = 'hg.language';
-  let saved = null;
-  try { saved = localStorage.getItem(key); } catch (_) { /* storage may be disabled */ }
+  const saved = storage.getItem(key);
   const choice = saved === 'en' || saved === 'zh' ? saved : 'auto';
   const languages = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
   const preferred = languages.find(value => /^(zh|en)(?:-|$)/i.test(value || '')) || 'en';
@@ -21,9 +49,8 @@
   }
   function setLanguage(value) {
     if (!['auto', 'en', 'zh'].includes(value)) return;
-    try {
-      if (value === 'auto') localStorage.removeItem(key); else localStorage.setItem(key, value);
-    } catch (_) {
+    const ok = value === 'auto' ? storage.removeItem(key) : storage.setItem(key, value);
+    if (!ok) {
       alert(language === 'zh' ? '无法保存语言设置：浏览器存储不可用。' : 'Cannot save language: browser storage is unavailable.');
       return;
     }

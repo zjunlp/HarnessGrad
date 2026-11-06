@@ -9,7 +9,7 @@
 3. **不缓存到磁盘**。列表只在内存里缓存 2 秒，避免边跑边看时反复读 299 个目录。
    唯一的例外是 `/api/explain` 的模型回复：它按
    `(run, round, harness_sha, model, prompt_sha)` 落在 `.cache/explain/*.json`，
-   因为一次模型调用很贵，而同样的输入应该得到同样的答案（GET 仍然幂等、可缓存）。
+   因为一次模型调用很贵；解释请求必须使用 JSON POST，HTTP 响应不缓存。
 
 主界面有三屏（实验 / 轨迹 / 版本），另有一个独立对话/启动页。下面标了
 **not surfaced** 的接口是保留但没有任何界面在用的只读端点。
@@ -31,9 +31,9 @@
     /api/adapters                   [not surfaced] data/datasets/*.py 的适配器清单（只读 KIND）
     /api/compare?method=<name>&dataset=  同一轮：train 分 vs 三个 eval 池的分（按 method+round 拼）
     /api/coverage                   round × pool 覆盖矩阵（8 个方法 × 每个已测轮次 × 3 个池）
-    /api/explain?run=<id>&round=<n>[&force=1]  [not surfaced] LLM 解释这一轮改动（只读；缓存）
 
 显式写接口（POST）：
+    /api/explain                    [not surfaced] JSON 请求 LLM 解释（服务端缓存）
     /api/runs                       经启动守卫检查后启动一次实验
 
 数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
@@ -51,6 +51,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import http.client
 import importlib.util
 import json
 import math
@@ -712,6 +713,10 @@ def save_settings(payload: dict) -> dict:
                     if canonical == side
                     for key, value in (payload.get(alias) or {}).items()}
         incoming.update(payload.get(side) or {})
+        new_url = str(incoming.get('base_url') or '').strip()
+        if (new_url and new_url != current[side]['base_url'] and current[side]['api_key']
+                and not str(incoming.get('api_key') or '').strip()):
+            raise ValueError(f'{side}: changing base_url requires an explicit API key')
         block = dict(current[side])
         for key in ("base_url", "api_key", "model"):
             value = str(incoming.get(key) or "").strip()
@@ -727,11 +732,29 @@ def save_settings(payload: dict) -> dict:
     return merged
 
 
+def display_base_url(value: str) -> str:
+    """Only display conventional endpoints; arbitrary paths can themselves be secrets."""
+    try:
+        if any(ord(c) < 32 or ord(c) == 127 for c in value):
+            return ""
+        parsed = urlparse(value)
+        if (parsed.scheme not in ("http", "https") or not parsed.hostname or
+                parsed.username is not None or parsed.password is not None or
+                parsed.query or parsed.fragment or "?" in value or "#" in value or
+                parsed.path not in ("", "/", "/v1", "/v1/")):
+            return ""
+        return value
+    except ValueError:
+        return ""
+
+
 def settings_for_ui() -> dict:
-    """What the form may see: the values, and whether a key is set -- never the key itself."""
+    """Never serialize credentials or potentially secret endpoint components."""
     data = load_settings()
-    return {side: {"base_url": data[side]["base_url"], "model": data[side]["model"],
-                   "api_key_set": bool(data[side]["api_key"])}
+    return {side: {"base_url": display_base_url(data[side]["base_url"]),
+                   "base_url_set": bool(data[side]["base_url"]),
+                   "base_url_redacted": bool(data[side]["base_url"] and not display_base_url(data[side]["base_url"])),
+                   "model": data[side]["model"], "api_key_set": bool(data[side]["api_key"])}
             for side in SETTINGS_SIDES}
 
 
@@ -740,16 +763,21 @@ def probe_endpoint(base_url: str, api_key: str) -> dict:
     if not base_url:
         return {"ok": False, "detail": "base_url 为空"}
     url = base_url.rstrip("/") + "/models"
-    request = urllib.request.Request(url, headers={
-        "Authorization": f"Bearer {api_key or 'none'}",
-        "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
     try:
-        with urllib.request.urlopen(request, timeout=12) as response:
+        request = urllib.request.Request(url, headers={
+            "Authorization": f"Bearer {api_key or 'none'}",
+            "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
+        with urllib.request.build_opener(NoRedirect()).open(request, timeout=12) as response:
             body = json.loads(response.read().decode("utf-8", "replace"))
-    except Exception as exc:  # noqa: BLE001 - the message is the answer
-        return {"ok": False, "detail": f"{type(exc).__name__}: {str(exc)[:200]}"}
+    except Exception:  # Transport exceptions may contain URLs, headers, or credentials.
+        return {"ok": False, "detail": "Endpoint probe failed; check the URL and server configuration."}
     names = [row.get("id") for row in (body.get("data") or []) if isinstance(row, dict)]
-    return {"ok": True, "models": names[:40], "count": len(names)}
+    # Provider-controlled IDs can echo credentials; the UI only needs the count.
+    return {"ok": True, "models": [], "count": len(names)}
 
 def method_catalogue() -> list[dict]:
     """`methods/*/method.json` 的清单。没有 method.json 的目录不算一个可选方法。"""
@@ -800,7 +828,10 @@ def launch_form() -> dict:
             "pools": list(POOLS),
             "defaults": {"dataset": "alfworld", "harness": "loop",
                          "task_backend": backend, "task_model": task_model if backend == "openai" else "mock",
-                         "task_base_url": task_url, "task_api_key_set": task_key_set,
+                         "task_base_url": display_base_url(task_url), "task_base_url_set": bool(task_url),
+                         "task_base_url_redacted": bool(task_url and not display_base_url(task_url)),
+                         "task_base_url_reenter": bool(task_url and not display_base_url(task_url) and not task.get("base_url")),
+                         "task_api_key_set": task_key_set,
                          # Legacy meta settings are retained on disk, not silently applied
                          # to a CLI improver that owns its own provider configuration.
                          "meta_base_url": "", "improver_model": "",
@@ -846,13 +877,15 @@ def launch_env(form: dict) -> dict:
            "HG_AGENT_BASE_URL": "", "HG_AGENT_API_KEY": ""}
     if backend == "openai":
         env["HG_AGENT_BASE_URL"] = str(form.get("task_base_url") or task.get("base_url") or "")
-        env["HG_AGENT_API_KEY"] = str(form.get("task_api_key") or task.get("api_key") or "")
+        env["HG_AGENT_API_KEY"] = str(form.get("task_api_key") or
+            (task.get("api_key") if env["HG_AGENT_BASE_URL"] == str(task.get("base_url") or "") else "") or "")
     # Method-owned editor clients consume HG_METHOD_*. Endpoint-backed improvers use
     # a per-launch registry override; CLI improvers retain their own transport.
     if form.get('meta_base_url'):
         env['HG_METHOD_BASE_URL'] = str(form['meta_base_url'])
         env['HG_METHOD_MODEL'] = str(form.get('improver_model') or '')
-        env['HG_METHOD_API_KEY'] = str(form.get('meta_api_key') or meta.get('api_key') or '')
+        env['HG_METHOD_API_KEY'] = str(form.get('meta_api_key') or
+            (meta.get('api_key') if env['HG_METHOD_BASE_URL'] == str(meta.get('base_url') or '') else '') or '')
     return env
 
 
@@ -865,6 +898,11 @@ def new_run_id(form: dict) -> str:
 
 def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_key_pending: bool = False) -> tuple[int, dict]:
     """返回 (状态码, 错误体)；200 表示可以起跑。判断顺序是有意的：先安全，再合法性。"""
+    for field in ('dataset', 'harness', 'sampling', 'improver', 'improver_model', 'method',
+                  'task_backend', 'task_model', 'task_base_url', 'meta_base_url',
+                  'task_api_key', 'meta_api_key'):
+        if field in form and not isinstance(form[field], str):
+            return 400, {"error": "bad-value", "detail": "Invalid launch field type"}
     # Parallel drivers are coordinated through the shared lease; they are not
     # globally rejected merely because another deployment is running.
     if not python_supported():
@@ -896,14 +934,13 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
     except ValueError as exc:
         return 400, {"error": "budget-capacity", "detail": str(exc)}
     # Requested jobs is per-run parallelism; capacity is a shared deployment fact.
-    stamp = BUDGET_DIR / 'capacity'
-    if stamp.exists():
-        try:
-            recorded = stamp.read_text(encoding='utf-8').strip()
-        except (OSError, UnicodeError):
-            return 400, {"error": "budget-capacity", "detail": "Cannot read shared budget capacity."}
-        if recorded != str(capacity):
-            return 400, {"error": "budget-capacity", "detail": "Configured capacity conflicts with the shared stamp; do not overwrite it."}
+    if str(ROOT.parent) not in sys.path:
+        sys.path.insert(0, str(ROOT.parent))
+    from harnessgrad.slots import inspect_capacity, SlotBudgetError
+    try:
+        inspect_capacity(BUDGET_DIR, capacity)
+    except SlotBudgetError as exc:
+        return 400, {"error": "budget-capacity", "detail": str(exc)}
     known = {a["name"] for a in adapters()}
     if form.get("dataset") not in known:
         return 400, {"error": "unknown-dataset",
@@ -923,7 +960,7 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
     if backend == "openai" and not env["HG_AGENT_BASE_URL"]:
         return 400, {"error": "no-task-url", "detail": "实时 task 模型需要填写 endpoint URL"}
     for field in ("task_base_url", "meta_base_url"):
-        value = str(form.get(field) or "")
+        value = str((env["HG_AGENT_BASE_URL"] if field == "task_base_url" and backend == "openai" else form.get(field)) or "")
         if value:
             try:
                 if any(ord(c) < 32 or ord(c) == 127 for c in value):
@@ -942,7 +979,7 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
     selected = next((row for row in improvers() if row['name'] == form.get('improver')), None)
     if not selected:
         return 400, {"error": "unknown-improver", "detail": "请选择可用的 meta-harness"}
-    if form.get('meta_api_key') and not form.get('meta_base_url'):
+    if (form.get('meta_api_key') or preview_meta_key_pending) and not form.get('meta_base_url'):
         return 400, {"error": "no-meta-url", "detail": "填写 meta API key 时也必须填写 endpoint URL"}
     if form.get('meta_base_url'):
         if not env.get('HG_METHOD_MODEL'):
@@ -954,10 +991,10 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
     if any(ord(c) < 32 or ord(c) == 127 for c in str(form.get("improver_model") or "")):
         return 400, {"error": "bad-meta-model", "detail": "meta-model 不能包含控制字符"}
     for key, lo, hi in (("rounds", 0, 20), ("jobs", 1, 64), ("trials", 1, 3)):
-        try:
-            value = int(form[key])
-        except (KeyError, TypeError, ValueError):
+        raw = form.get(key)
+        if type(raw) is not int and not (isinstance(raw, str) and re.fullmatch(r'[0-9]{1,9}', raw)):
             return 400, {"error": "bad-value", "detail": f"{key} 必须是整数"}
+        value = int(raw)
         if not lo <= value <= hi:
             return 400, {"error": "bad-value", "detail": f"{key} 必须在 {lo}..{hi}"}
     return 200, {}
@@ -1004,13 +1041,20 @@ def launch_preview(form: dict) -> dict:
         preview_meta_key_pending=form.get("meta_key_present") in (True, "true", "1"))
     try:
         argv = launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train")
-    except (KeyError, TypeError, ValueError):
+    except (KeyError, TypeError, ValueError, OverflowError):
         argv = []
         if code == 200:
             code = 400
             err = {"error": "bad-value", "detail": "运行参数不完整或格式不正确"}
-    shown_env = {key: ("***" if "KEY" in key or "key" in key else value)
+    shown_env = {key: ("***" if "KEY" in key else display_base_url(value) if key.endswith("BASE_URL") else value)
                  for key, value in launch_env(form).items()}
+    form = dict(form)
+    for field in ("task_base_url", "meta_base_url"):
+        if field in form:
+            value = str(form[field] or "")
+            form[field] = display_base_url(value)
+            form[field + "_set"] = bool(value)
+            form[field + "_redacted"] = bool(value and not form[field])
     return {
         "argv": argv,
         "env": shown_env,
@@ -3500,8 +3544,7 @@ def _chat_completion(base_url: str, model: str, api_key: str,
     url = base_url.rstrip("/") + "/chat/completions"
     # **JSON 模式,而不是希望模型自己吐 JSON。** 实测(2026-11-02,本地 qwen3.5-9b):
     # 不加这个字段时,整段解释被解析成空四块并标 degraded;vLLM 的 json_object 模式在
-    # `tools/check_local_model.py` 里是验过的,所以这里显式要。端点若拒绝这个字段,
-    # `_explain_request` 会去掉它再试一次 —— 拒绝的端点不该让解释功能整个不可用。
+    # `tools/check_local_model.py` 里是验过的,所以这里显式要。端点拒绝时不移除字段重试。
     body = json.dumps({
         "model": model,
         "messages": [{"role": "system", "content": system},
@@ -3510,25 +3553,23 @@ def _chat_completion(base_url: str, model: str, api_key: str,
         "stream": False,
         "response_format": {"type": "json_object"},
     }, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(url, data=body, method="POST", headers={
-        "Content-Type": "application/json; charset=utf-8",
-        "Accept": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    })
     try:
+        req = urllib.request.Request(url, data=body, method="POST", headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        })
         with urllib.request.urlopen(req, timeout=EXPLAIN_TIMEOUT_S) as resp:
             raw = resp.read(2_000_000)
     except urllib.error.HTTPError as exc:
-        detail = ""
-        try:
-            detail = exc.read(4000).decode("utf-8", errors="replace")
-        except OSError:
-            pass
-        raise ExplainUpstream(
-            f"模型端点 HTTP {exc.code}：{_redact(_clip(detail, 600), api_key)}") from None
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise ExplainUpstream(
-            f"模型端点请求失败：{_redact(_clip(exc, 300), api_key)}") from None
+        # Only a valid numeric HTTP status is safe to expose; neither the response
+        # body nor exception text is trusted to omit URL credentials or tokens.
+        code = exc.code
+        if type(code) is int and 100 <= code <= 599:
+            raise ExplainUpstream(f"模型端点 HTTP {code}") from None
+        raise ExplainUpstream("模型端点 HTTP 错误") from None
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, http.client.HTTPException):
+        raise ExplainUpstream("模型端点请求失败") from None
     try:
         reply = json.loads(raw.decode("utf-8", errors="replace"))
     except ValueError:
@@ -3702,7 +3743,7 @@ def explain_range_prompt(inputs: dict) -> tuple[str, str]:
 
 
 def api_explain_range(run_id: str, first: int, last: int, force: bool = False) -> tuple[int, dict]:
-    """一次区间解释：`/api/explain?run=..&from=..&to=..`。缓存键含区间两端。"""
+    """一次区间解释：POST /api/explain 的 from/to 字段。缓存键含区间两端。"""
     started = time.perf_counter()
     run_path = find_run(run_id)
     if not run_path:
@@ -3749,7 +3790,7 @@ def api_explain_range(run_id: str, first: int, last: int, force: bool = False) -
 
 
 def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
-    """(HTTP status, payload)。GET 是幂等的；缓存命中时 elapsed_ms 必须远小于一次调用。"""
+    """(HTTP status, payload)。服务端缓存命中时不再调用模型。"""
     started = time.perf_counter()
     run_path = find_run(run_id)
     if not run_path:
@@ -4026,6 +4067,61 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, message: str, status: int = 400) -> None:
         self._send({"error": message}, status)
 
+    def _guard_error(self, code: str, status: int) -> None:
+        parts = [unquote(p) for p in urlparse(self.path).path.strip('/').split('/') if p]
+        if parts[:2] == ['api', 'submissions'] or parts == ['api', 'scenarios']:
+            self._send({'api_version': '1', 'error': {'code': code, 'detail': code}}, status)
+        else:
+            self._error(code, status)
+
+    def _api_guard(self) -> bool:
+        """Reject browser cross-site requests and DNS-rebinding Host values."""
+        hosts = self.headers.get_all('Host', [])
+        address, port = self.server.server_address[:2]
+        try:
+            # Compare the literal authority, not a DNS resolution or URL parser's
+            # normalized hostname. This also rejects userinfo and ambiguous ports.
+            ip = ipaddress.ip_address(address)
+            if not ip.is_loopback:
+                raise ValueError('listener is not loopback')
+            numeric = f'[{ip}]' if ip.version == 6 else str(ip)
+            allowed = {f'{numeric}:{port}', f'localhost:{port}'}
+            if len(hosts) != 1 or hosts[0] not in allowed:
+                raise ValueError('Host must name this loopback listener and port')
+        except ValueError:
+            self.close_connection = True
+            self._guard_error('bad-host', 400)
+            return False
+        origins = self.headers.get_all('Origin', [])
+        sites = self.headers.get_all('Sec-Fetch-Site', [])
+        if (len(origins) > 1 or (origins and origins[0] != f'http://{hosts[0]}')
+                or len(sites) > 1 or (sites and sites[0] not in ('same-origin', 'none'))):
+            self.close_connection = True
+            self._guard_error('origin-forbidden', 403)
+            return False
+        return True
+
+    def _post_framing(self, *, archive: bool = False) -> bool:
+        lengths = self.headers.get_all('Content-Length', [])
+        types = self.headers.get_all('Content-Type', [])
+        if (self.headers.get_all('Transfer-Encoding') or len(lengths) != 1
+                or not re.fullmatch(r'[0-9]{1,10}', lengths[0])):
+            self.close_connection = True
+            self._error('bad-length', 400)
+            return False
+        limit = IMPORT_MAX_BYTES if archive else 1024 * 1024
+        if int(lengths[0]) > limit:
+            self.close_connection = True
+            self._error('payload-too-large', 413)
+            return False
+        if not archive and (len(types) != 1 or
+                not re.fullmatch(r'application/json(?:\s*;\s*charset\s*=\s*utf-8)?',
+                                 types[0], re.IGNORECASE)):
+            self.close_connection = True
+            self._error('unsupported-content-type', 415)
+            return False
+        return True
+
     def _submission_error(self, exc) -> None:
         if isinstance(exc, _submission_backend().SubmissionRejected):
             source = exc.problems[0]
@@ -4094,6 +4190,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802
         url = urlparse(self.path)
         parts = [unquote(p) for p in url.path.strip('/').split('/') if p]
+        if not self._api_guard():
+            return
         try:
             submission_origin(self.headers,port=self.server.server_port)
             if parts[:2] != ['api','submissions'] or len(parts) != 3:
@@ -4112,6 +4210,8 @@ class Handler(BaseHTTPRequestHandler):
         parts = [unquote(p) for p in url.path.strip("/").split("/") if p]
         query = parse_qs(url.query)
 
+        if not self._api_guard():
+            return
         if parts[:2] == ['api','submissions'] or parts == ['api','scenarios']:
             return self._submission_get(parts,parse_qs(url.query,keep_blank_values=True))
 
@@ -4218,28 +4318,9 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1:] == ["settings"]:
                 return self._send(settings_for_ui())
             if parts[1:] == ["settings", "test"]:
-                body = self._json_body() or {}
-                side = str(body.get("side") or "task")
-                if side not in SETTINGS_SIDES:
-                    return self._send({"error": "unknown-side"}, 400)
-                current = load_settings().get(side, {})
-                base_url = str(body.get("base_url") or current.get("base_url") or "")
-                api_key = str(body.get("api_key") or current.get("api_key") or "")
-                return self._send(probe_endpoint(base_url, api_key))
+                return self._error("method-not-allowed", 405)
             if parts[1:] == ["launch", "preview"]:
-                # 预览和起跑共用 launch_argv() 与 guard_launch()，只是 run_id 用占位符。
-                base = launch_form()["defaults"]
-                form = {k: (query.get(k) or [base[k]])[0] for k in
-                        ("dataset", "harness", "rounds", "jobs", "trials", "sampling")}
-                form["improver"] = (query.get("improver") or ["dsh"])[0]
-                form["improver_model"] = (query.get("improver_model") or ["deepseek-flash"])[0]
-                # 方法（怎么改）与改进器（谁去改）是两个字段；漏了前者，预览里就永远
-                # 没有 `--method-entrypoint`，而界面上的下拉却已经选好了 —— 两处不一致。
-                form["method"] = (query.get("method") or ["none"])[0]
-                for field in ("task_backend", "task_model", "task_base_url", "meta_base_url",
-                              "task_key_present", "meta_key_present"):
-                    form[field] = (query.get(field) or [""])[0]
-                return self._send(launch_preview(form))
+                return self._error("method-not-allowed", 405)
             if parts[1:] == ["methods"]:
                 return self._send({"rows": api_methods()})
             if len(parts) == 3 and parts[1] == "methods":
@@ -4287,29 +4368,7 @@ class Handler(BaseHTTPRequestHandler):
             if parts[1:] == ["coverage"]:
                 return self._send(api_coverage())
             if parts[1:] == ["explain"]:
-                run_id = (query.get("run") or [""])[0].strip()
-                raw_round = (query.get("round") or [""])[0].strip()
-                raw_from = (query.get("from") or [""])[0].strip()
-                raw_to = (query.get("to") or [""])[0].strip()
-                if not run_id:
-                    return self._error("run query parameter is required", 400)
-                force = (query.get("force") or ["0"])[0].strip().lower()
-                force = force not in ("", "0", "false", "no")
-                # 一次请求要么问"这一轮改了什么"，要么问"这一段在往哪走"；两个都问就是
-                # 两个问题混在一个响应里，读的人分不清哪句对应哪个。
-                if raw_from or raw_to:
-                    if not (re.fullmatch(r"\d{1,9}", raw_from)
-                            and re.fullmatch(r"\d{1,9}", raw_to)):
-                        return self._error("from and to must be non-negative integers", 400)
-                    status, payload = api_explain_range(run_id, int(raw_from), int(raw_to),
-                                                        force=force)
-                else:
-                    if not re.fullmatch(r"\d{1,9}", raw_round):
-                        return self._error("round must be a non-negative integer", 400)
-                    status, payload = api_explain(run_id, int(raw_round), force)
-                # 只有配置好的解释才可缓存；503 的配置状态要立刻能被看见。
-                return self._send(payload, status,
-                                  cache_control="private, max-age=300" if status == 200 else None)
+                return self._error("method-not-allowed", 405)
         except (ValueError, OSError) as exc:
             return self._send({"error": str(exc)}, 500)
         return self._error("unknown endpoint", 404)
@@ -4319,6 +4378,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length") or 0)
             raw = self.rfile.read(length) if length else b"{}"
+            if length and len(raw) != length:
+                return None
             body = json.loads(raw.decode("utf-8") or "{}")
         except (ValueError, UnicodeDecodeError):
             return None
@@ -4328,12 +4389,61 @@ class Handler(BaseHTTPRequestHandler):
         """The console's write surface: one launch, one chat, and the endpoint settings."""
         url = urlparse(self.path)
         route = url.path.strip("/")
+        parts = [unquote(p) for p in url.path.strip('/').split('/') if p]
+        if parts and parts[0] == 'api' and not self._api_guard():
+            return
         if route == 'api/submissions':
             if url.query:
                 self.close_connection = True
                 return self._submission_error(_submission_backend().SubmissionRejected([
                     {'code':'bad-query','detail':'upload does not accept query fields'}]))
             return self._submission_post()
+        if not self._post_framing(archive=(route == 'api/author/import')):
+            return
+        if route == 'api/launch/preview':
+            if url.query:
+                self.close_connection = True
+                return self._error('bad-query', 400)
+            body = self._json_body()
+            if not isinstance(body, dict):
+                return self._error('bad-json', 400)
+            fields = ('dataset', 'harness', 'rounds', 'jobs', 'trials', 'sampling',
+                      'improver', 'improver_model', 'method', 'task_backend', 'task_model',
+                      'task_base_url', 'meta_base_url', 'task_key_present', 'meta_key_present')
+            form = {key: body[key] for key in fields if key in body}
+            for key, value in form.items():
+                if key in ('task_key_present', 'meta_key_present'):
+                    valid = isinstance(value, bool) or (isinstance(value, str) and value in ('true', 'false', '1', '0', ''))
+                elif key in ('rounds', 'jobs', 'trials'):
+                    valid = isinstance(value, str) or type(value) is int
+                else:
+                    valid = isinstance(value, str)
+                if not valid:
+                    return self._error('bad-preview-fields', 400)
+            return self._send(launch_preview(form))
+        if route == 'api/explain':
+            body = self._json_body()
+            if body is None:
+                return self._error('bad-json', 400)
+            run_id = str(body.get('run') or '').strip()
+            raw_round = str(body.get('round', '')).strip()
+            raw_from = str(body.get('from', '')).strip()
+            raw_to = str(body.get('to', '')).strip()
+            if not run_id:
+                return self._error('run is required', 400)
+            force = str(body.get('force', '0')).strip().lower() not in ('', '0', 'false', 'no')
+            try:
+                if raw_from or raw_to:
+                    if not (re.fullmatch(r'\d{1,9}', raw_from) and re.fullmatch(r'\d{1,9}', raw_to)):
+                        return self._error('from and to must be non-negative integers', 400)
+                    status, payload = api_explain_range(run_id, int(raw_from), int(raw_to), force=force)
+                else:
+                    if not re.fullmatch(r'\d{1,9}', raw_round):
+                        return self._error('round must be a non-negative integer', 400)
+                    status, payload = api_explain(run_id, int(raw_round), force)
+                return self._send(payload, status)
+            except (ValueError, OSError) as exc:
+                return self._send({'error': str(exc)}, 500)
         if route == "api/harness/save":
             body = self._json_body()
             if body is None:
@@ -4397,8 +4507,11 @@ class Handler(BaseHTTPRequestHandler):
             if length <= 0 or length > IMPORT_MAX_BYTES:
                 return self._send({"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}, 413)
             import tempfile
+            raw = self.rfile.read(length)
+            if len(raw) != length:
+                return self._error('bad-length', 400)
             with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as fh:
-                fh.write(self.rfile.read(length))
+                fh.write(raw)
                 archive = pathlib.Path(fh.name)
             try:
                 code, payload = author_import(archive, slug)
@@ -4409,27 +4522,31 @@ class Handler(BaseHTTPRequestHandler):
             body = self._json_body()
             if body is None:
                 return self._send({"error": "bad-json"}, 400)
-            save_settings(body)
+            try:
+                save_settings(body)
+            except ValueError as exc:
+                return self._send({'error': 'settings-key-required', 'detail': str(exc)}, 400)
             return self._send(settings_for_ui())
         if route == "api/settings/test":
-            body = self._json_body() or {}
+            body = self._json_body()
+            if body is None:
+                return self._error('bad-json', 400)
             side = str(body.get("side") or "task")
             if side not in SETTINGS_SIDES:
                 return self._send({"error": "unknown-side"}, 400)
             current = load_settings().get(side, {})
             base_url = str(body.get("base_url") or current.get("base_url") or "")
-            api_key = str(body.get("api_key") or current.get("api_key") or "")
+            api_key = str(body.get("api_key") or "")
+            if not api_key:
+                if base_url != str(current.get("base_url") or ""):
+                    return self._error("api-key-required-for-different-base-url", 400)
+                api_key = str(current.get("api_key") or "")
             return self._send(probe_endpoint(base_url, api_key))
         if route != "api/runs":
             return self._send({"error": "unknown endpoint"}, 404)
-        try:
-            length = int(self.headers.get("Content-Length") or 0)
-            body = self.rfile.read(length) if length else b"{}"
-            form = json.loads(body.decode("utf-8") or "{}")
-            if not isinstance(form, dict):
-                raise ValueError("body must be an object")
-        except (ValueError, UnicodeDecodeError) as exc:
-            return self._send({"error": "bad-json", "detail": str(exc)}, 400)
+        form = self._json_body()
+        if form is None:
+            return self._send({"error": "bad-json"}, 400)
         try:
             code, payload = api_launch(form)
         except OSError as exc:
@@ -4476,8 +4593,10 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=4460)
     ap.add_argument("--host", default="127.0.0.1")
     args = ap.parse_args()
-    if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT') and args.host != '127.0.0.1':
-        raise SystemExit('submission service requires --host 127.0.0.1')
+    # ConsoleServer uses AF_INET; keep its listener on one explicit loopback
+    # address, never a wildcard or an externally reachable interface.
+    if args.host != '127.0.0.1':
+        raise SystemExit('console requires --host 127.0.0.1')
     if not RUNS.is_dir():
         raise SystemExit(
             f"runs root not found: {RUNS} (set HG_CONSOLE_RUNS or provide an existing "

@@ -815,7 +815,8 @@
     if (button) button.disabled = true;
     panel.innerHTML = '<div class="stack" style="padding:4px 0"><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:95%"></div><div class="skeleton" style="width:55%"></div></div>';
     try {
-      const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&round=${state.hRound}`);
+      const response = await fetch('/api/explain', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({run: state.hRun, round: state.hRound})});
       const payload = await response.json();
       if (!response.ok) {
         panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.noExplain"))}</span>${esc(payload.detail || payload.error || response.status)}</div>`;
@@ -834,7 +835,8 @@
     if (!panel || !state.hRun || state.hRound == null) return;
     panel.innerHTML = '<div class="stack" style="padding:4px 0"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:90%"></div></div>';
     try {
-      const response = await fetch(`/api/explain?run=${encodeURIComponent(state.hRun)}&from=0&to=${state.hRound}`);
+      const response = await fetch('/api/explain', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({run: state.hRun, from: 0, to: state.hRound})});
       const payload = await response.json();
       if (!response.ok) {
         panel.innerHTML = `<div class="empty"><span class="empty__title">${esc(t("version.noTrend"))}</span>${esc(payload.detail || payload.error || response.status)}</div>`;

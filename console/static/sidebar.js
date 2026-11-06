@@ -32,7 +32,7 @@
     btn.innerHTML = '<span aria-hidden="true"></span>';
     btn.addEventListener("click", () => {
       const next = root.dataset.sidebar === "collapsed" ? "expanded" : "collapsed";
-      localStorage.setItem(KEY, next);
+      window.HGStorage.save(KEY, next);
       apply(next);
     });
     side.id = "sidebar";
@@ -44,7 +44,7 @@
       item.title = label.replace(/\s+/g, " ");
     });
     document.body.appendChild(btn);
-    const saved = localStorage.getItem(KEY);
+    const saved = window.HGStorage.getItem(KEY);
     const narrow = window.matchMedia && window.matchMedia(NARROW).matches;
     apply(saved === "collapsed" || (!saved && narrow) ? "collapsed" : "expanded");
   }

@@ -25,7 +25,26 @@ python3 console/server.py --port 4460
 # 打开 http://127.0.0.1:4460/
 ```
 
-只绑 `127.0.0.1`。可选环境变量：
+只绑 `127.0.0.1`；`--host` 不再接受非该地址的监听。API 的 Host 必须是实际端口上的
+`127.0.0.1` 或字面量 `localhost`，有 Origin 时必须与 Host 完全同源；拒绝跨站
+`Sec-Fetch-Site`；静态页面 GET 也受同样检查，外站链接的跨站导航会被拒绝，
+请在地址栏直接打开。无 Origin 的本机 CLI 仍可使用。提交上传/删除保留更严格的原有
+`127.0.0.1` Origin 规则。请勿通过代理或其他域名访问 API。此检查不是身份认证，
+同一主机上的其他进程仍可访问，不能将服务暴露给不可信用户。
+
+JSON POST 需要单个 Content-Length（最多 1 MiB）、`Content-Type: application/json`
+（可带 UTF-8 charset），不支持 Transfer-Encoding；归档导入和提交上传保留各自的
+大小限制。`/api/settings/test` 仅接受 POST；若指定与已保存地址不同的 base_url，
+必须显式提供 API key，且测试不会跟随重定向。保存设置改变已配置 key 的 endpoint 时
+必须同时提供新 key；启动时覆盖 task/meta endpoint 也必须提供对应 key，否则预检查失败。
+为避免路径本身包含令牌，设置及启动预览仅显示路径为空、`/`、`/v1` 或 `/v1/` 且
+没有 userinfo、查询或片段的 HTTP(S) 地址；其他地址显示为已配置但隐藏（包括合法自定义路径）。
+留空保留原地址，不修改磁盘配置；启动 task 时留空使用原地址及其绑定 key。预检仍拒绝带
+userinfo、查询、片段或控制字符的实际地址，需重新配置；合法自定义路径仍可使用。更换已保存
+地址须同时输入新 key。连接测试失败只返回通用错误，不返回可能泄露凭据的原始异常或模型列表。
+`POST /api/explain` 可能调用模型，即使无 Origin 的本机调用也一样；仅在明确授权后使用。
+
+可选环境变量：
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
@@ -104,12 +123,15 @@ python3 console/server.py --port 4460
 ## API
 
 观察接口使用 `GET`，返回 JSON；读不到就是 `null`，不是 `0`。只有经确认的实验启动、设置、
-编辑对话与场景起草使用 `POST`。
+编辑对话、场景起草与启动预览使用 `POST`。
 
-### `GET /api/launch/form`、`GET /api/launch/preview`
+### `GET /api/launch/form`、`POST /api/launch/preview`
 
 `form` 返回平台当前可选的数据集、基线 Harness、改进器和默认参数。`preview` 生成与真正
-起跑完全相同的 argv，并运行相同的服务端守卫，但不产生副作用：
+起跑完全相同的 argv，并运行相同的服务端守卫，但不产生副作用。预览仅接受 JSON POST，
+不接受查询参数或 API key（仅接受 `task_key_present` / `meta_key_present` 布尔标记）；
+旧 GET 调用返回 405，调用方需迁移以免 URL 参数泄漏到访问日志。未保存的环境默认地址若被隐藏，
+启动页会要求重新输入地址和 key，而不承诺留空使用：
 
 ```json
 {
@@ -120,8 +142,8 @@ python3 console/server.py --port 4460
 }
 ```
 
-前端仅在 `preflight.ok=true` 时启用“确认启动”。服务端预检查 driver 占用、Python 3.12+、
-`driver.py`、可写 runs 根目录、GPU 预算目录和参数合法性；数字参数也会在浏览器中即时检查：
+前端仅在 `preflight.ok=true` 时启用“确认启动”。服务端预检查共享预算配置、Python 3.12+、
+`driver.py`、可写 runs 根目录和参数合法性；数字参数也会在浏览器中即时检查：
 轮数 `1..20`、并发 `1..64`、trials `1..3`。
 
 ### `POST /api/runs`
@@ -148,6 +170,11 @@ python3 console/server.py --port 4460
 `running` 只包含本 `runs_root` 下存在目录的 driver，读 `/proc`，不 sudo、不启停。
 `disk_free_gb` 读不到时为 `null`。`explain_*` 只说明解释功能的 env 是否齐全，
 不返回 base URL、模型名或 key。
+
+解释请求的传输错误返回通用 `explain-upstream` 502；HTTP 错误仅包含有效的上游状态码，
+不返回端点 URL、请求、header、上游错误正文或异常消息。模型返回的内容不是传输错误：
+解析失败时 degraded 响应仍会有截断的模型原文。请求始终带 `response_format=json_object`；
+端点拒绝该字段时不会移除它重试。模型内容不符合格式时则会按原有行为重问一次。
 
 ### `GET /api/runs?kind=study|eval|unknown|`
 
@@ -436,11 +463,10 @@ python3 console/server.py --port 4460
   `20261018T062351Z` 的 exam 测量（harness sha `db2aab11`，与 r6 的 seen/train 同一个）。
   （1.000，sha `db2aab11`）。`eval_index` 现在也认 exam 形式，并按"有效优先"取格。
 
-### `GET /api/explain?run=<id>&round=<n>&force=0|1`（保留，未在屏上使用）
+### `POST /api/explain`（保留，未在屏上使用）
 
-> **这一版没有任何界面调用它。** 原来版本屏右栏的「这次改动想做什么」卡已经删掉；
-> 端点留着是因为它是一个只读、可缓存、有明确输入输出的 GET，将来接解释时不必重写。
-> 下面描述的行为仍然成立。
+JSON 请求使用 `{"run":"<id>","round":1,"force":false}`，或用 `from` / `to` 替代 `round`。
+旧 GET 返回 405；POST 需要上述 JSON 内容类型和长度检查，可能产生模型调用费用。
 
 右栏 M3 面板的解释。一次 OpenAI 兼容的 `/chat/completions` 调用，输入**全部在服务端读**：
 
@@ -466,8 +492,7 @@ python3 console/server.py --port 4460
 - 模型回复必须是**只含四个键**的 JSON：`claim` 字符串、`evidence` 2–4 条字符串、
   `risk` 字符串、`next` 字符串。多键 / 缺键 / 证据条数不对都算失败，返回
   `degraded: true` + `parse_error` + `raw`，不猜、不把原文塞进四个块。
-- 仍然是 GET（幂等）；200 响应带 `Cache-Control: private, max-age=300`。
-  `/api/health` 额外给出 `explain_configured` 与 `explain_missing_env`（只有变量名），
+- 使用 POST；响应不允许 HTTP 缓存。`/api/health` 额外给出 `explain_configured` 与 `explain_missing_env`（只有变量名），
   前端据此在未配置时直接显示 setup note，不去发一个注定 503、会被浏览器记成 console error 的请求。
 
 ---
@@ -496,8 +521,8 @@ python3 console/server.py --port 4460
 ## 刻意没有的东西
 
 - **Harness / RSI 方法写入接口**：没有编辑器，也没有创建、保存或应用这些对象的 POST。
-- **观察屏里的模型调用**：实验、轨迹和版本页都不调用模型。`/api/explain` 只在版本屏上
-  由人点「解释这一轮」时调用，编辑屏的助手走 `/api/workbench/edit`（同一个 CLI 适配器）。
+- **观察屏里的模型调用**：当前实验、轨迹和版本页不调用模型。保留的 `POST /api/explain`
+  可能调用模型；编辑屏的助手走 `/api/workbench/edit`（同一个 CLI 适配器）。
 - **方法编辑 / 规则测试运行 / run 删除**：全部是写操作，不做。
 - **轨迹自动判定 / 分数重算**：只显示 `verdicts/` 里已有的判定，不在浏览器里重算。
 

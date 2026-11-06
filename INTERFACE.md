@@ -1458,6 +1458,19 @@ spread, `jobs` buys wall clock.
   ceiling. Enforced with one `flock`-ed file per slot under `--gpu-budget-dir`
   (default `$TMPDIR/hg-gpu-slots`), so a killed run cannot leak capacity and no supervisor
   process exists to die. `identity.gpu_budget` records it on every point beside `jobs`.
+  The directory is operator-owned, trusted cooperative state, not a security boundary: all
+  participants for an endpoint must share the same directory and capacity and support `flock`.
+  Stop **all old and new participants** before upgrading or repairing this protocol; mixed
+  versions do not coordinate initialization safely. Existing `capacity` stamps must contain a
+  canonical positive decimal, optionally followed by exactly one newline (no other whitespace).
+  A nonempty `capacity.lock` signals incomplete initialization; stop all users and explicitly
+  repair it rather than removing a live lock. Never unlink a lock while participants may use it.
+  For group-shared deployments an administrator must pre-provision `capacity.lock` and each
+  `slot-000` through `slot-(N-1)` (three-digit minimum) with appropriate ownership and mode
+  `0660`, and ensure the directory is accessible to the group; the default creation mode is
+  `0644` subject to umask, not automatically group-writable. The console's read-only preflight
+  is advisory, not a reservation: initialization or capacity can race after it succeeds, and
+  the driver's authoritative initialization still decides whether the run can start.
   *Reason: `--jobs` is a reservation each run makes for itself, and a batch of runs that
   alternate between measuring and proposing cannot use it. Nine methods at a fixed `jobs=6`
   spend **100 of 203 minutes** with the endpoint idle, because all nine enter their improver

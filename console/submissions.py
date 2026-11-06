@@ -32,6 +32,7 @@ if str(PLATFORM_ROOT) not in sys.path:
 
 from tools import validate_harness as validator
 from scenarios import load as load_scenario
+from harnessgrad.slots import inspect_capacity, SlotBudgetError
 MAX_PAYLOAD = 20 * 1024 * 1024
 MAX_ENTRIES = 2000
 MAX_EXPANDED = 200 * 1024 * 1024
@@ -1376,14 +1377,10 @@ class SubmissionService:
         for path in (self.root,self.runs,self.budget):
             if not path.is_dir() or not os.access(path, os.W_OK):
                 _reject('service-not-ready', f'configured directory is absent or not writable: {path}')
-        stamp = self.budget/'capacity'
-        if stamp.exists():
-            try:
-                recorded = stamp.read_text(encoding='utf-8').strip()
-            except (OSError, UnicodeError):
-                _reject('service-not-ready', 'cannot read shared budget capacity')
-            if recorded != str(self.budget_capacity):
-                _reject('service-not-ready', 'configured capacity conflicts with shared budget stamp')
+        try:
+            inspect_capacity(self.budget, self.budget_capacity)
+        except SlotBudgetError as exc:
+            _reject('service-not-ready', str(exc))
         if self._liveness is None or not self._liveness()[0]:
             _reject('service-not-ready', 'cannot read /proc or no liveness guard is configured')
         if not (self.platform/'driver.py').is_file():

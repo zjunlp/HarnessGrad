@@ -47,14 +47,14 @@
   function currentMode() {
     const fromUrl = new URLSearchParams(location.search).get("mode");
     if (fromUrl && MODES[fromUrl]) return fromUrl;
-    const saved = localStorage.getItem(KEY);
+    const saved = window.HGStorage.getItem(KEY);
     if (saved && MODES[saved]) return saved;
     // 构造环境的页面自己就是证据：作者页默认落在 build 模式。
     return location.pathname.startsWith("/author") ? "build" : "harness";
   }
 
   function setMode(mode) {
-    localStorage.setItem(KEY, mode);
+    window.HGStorage.save(KEY, mode);
     render(mode);
   }
 
@@ -143,8 +143,8 @@
       b.setAttribute("aria-current", b.dataset.section === section ? "page" : "false"));
     const pane = document.getElementById("sh-set-pane");
     if (section === "general") {
-      const theme = localStorage.getItem("hg.theme") || "light";
-      const size = localStorage.getItem("hg.font") || "13";
+      const theme = window.HGStorage.getItem("hg.theme") || "light";
+      const size = window.HGStorage.getItem("hg.font") || "13";
       pane.innerHTML =
         row(t("language"), t("languageHint"), `<select class="input" id="sh-language" aria-label="${t("language")}">${[["auto", t("auto")], ["en", "English"], ["zh", "中文"]].map(([v,l]) => `<option value="${v}"${window.HGI18n.choice === v ? " selected" : ""}>${l}</option>`).join("")}</select>`) +
         row(t("appearance"), t("appearanceHint"), `
@@ -155,15 +155,19 @@
         row(t("font"), t("fontHint"), `
           <input class="input" id="sh-font" type="number" min="11" max="17" value="${esc(size)}"
                  style="width:88px;text-align:right"> <span class="hg-muted">px</span>`);
-      pane.querySelector("#sh-language").addEventListener("change", (event) => window.HGI18n.setLanguage(event.target.value));
+      pane.querySelector("#sh-language").addEventListener("change", (event) => {
+        window.HGI18n.setLanguage(event.target.value);
+        // A failed save does not reload; keep the control consistent with the active language.
+        event.target.value = window.HGI18n.choice;
+      });
       pane.querySelectorAll("#sh-theme button").forEach((b) => b.addEventListener("click", () => {
-        localStorage.setItem("hg.theme", b.dataset.theme); applyTheme();
+        window.HGStorage.save("hg.theme", b.dataset.theme); applyTheme();
         pane.querySelectorAll("#sh-theme button").forEach((x) =>
           x.setAttribute("aria-pressed", String(x === b)));
       }));
       pane.querySelector("#sh-font").addEventListener("change", (event) => {
         const value = Math.min(17, Math.max(11, Number(event.target.value) || 13));
-        localStorage.setItem("hg.font", String(value)); applyTheme();
+        window.HGStorage.save("hg.font", String(value)); applyTheme();
       });
       return;
     }
@@ -173,7 +177,7 @@
     const sides = [["assistant", "assistant", t("assistantHint")]];
     pane.innerHTML = sides.map(([side, title, hint]) => row(title, hint, `
         <div class="settings__stack">
-          <input class="input" id="sh-${side}-url" value="${esc((data[side] || {}).base_url || "")}" placeholder="http://127.0.0.1:8001/v1">
+          <input class="input" id="sh-${side}-url" value="${esc((data[side] || {}).base_url || "")}" placeholder="${esc((data[side] || {}).base_url_redacted ? t("urlHidden") : "http://127.0.0.1:8001/v1")}">
           <input class="input" id="sh-${side}-model" value="${esc((data[side] || {}).model || "")}" placeholder="model name">
           <input class="input" id="sh-${side}-key" type="password"
                  placeholder="${(data[side] || {}).api_key_set ? t("configured") : "api_key"}">
@@ -206,7 +210,7 @@
   }
 
   function applyTheme() {
-    const choice = localStorage.getItem("hg.theme") || "light";
+    const choice = window.HGStorage.getItem("hg.theme") || "light";
     const dark = choice === "dark" || (choice === "system" &&
       window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -216,7 +220,7 @@
     if (dark) document.body.dataset.jlDark = "";
     else delete document.body.dataset.jlDark;
     document.documentElement.style.setProperty("--sh-font-size",
-      (localStorage.getItem("hg.font") || "13") + "px");
+      (window.HGStorage.getItem("hg.font") || "13") + "px");
   }
 
   function openSettings() {
@@ -243,7 +247,7 @@
    * 之前宽度写死在 app.css 里，想看长文件名的候选就得横向滚 —— 一个固定 248px 的侧栏
    * 在"实验名很长"的页面上是实打实的损失。 */
   function installResize() {
-    const saved = Number(localStorage.getItem("hg.side")) || 248;
+    const saved = Number(window.HGStorage.getItem("hg.side")) || 248;
     document.documentElement.style.setProperty("--sh-side", `${saved}px`);
     if (document.getElementById("sh-resize")) return;
     const handle = document.createElement("button");
@@ -256,8 +260,8 @@
       // （轨道还是 72px），看起来就像双击失灵。
       document.documentElement.style.setProperty("--sh-side", "248px");
       document.body.dataset.sidebar = "expanded";
-      localStorage.setItem("hg.side", "248");
-      localStorage.setItem("hg.sidebar", "expanded");
+      window.HGStorage.save("hg.side", "248");
+      window.HGStorage.save("hg.sidebar", "expanded");
     });
     handle.addEventListener("pointerdown", (event) => {
       event.preventDefault();
@@ -269,10 +273,10 @@
         // 拖到 180px 以下就收起来：再窄一点已经读不出"实验 / 轨迹"这些两个字的名字了。
         if (raw < COLLAPSE_AT && document.body.dataset.sidebar !== "collapsed") {
           document.body.dataset.sidebar = "collapsed";
-          localStorage.setItem("hg.sidebar", "collapsed");
+          window.HGStorage.save("hg.sidebar", "collapsed");
         } else if (raw >= COLLAPSE_AT + 12 && document.body.dataset.sidebar === "collapsed") {
           document.body.dataset.sidebar = "expanded";
-          localStorage.setItem("hg.sidebar", "expanded");
+          window.HGStorage.save("hg.sidebar", "expanded");
         }
         const width = Math.min(460, Math.max(COLLAPSE_AT, raw));
         document.documentElement.style.setProperty("--sh-side", `${width}px`);
@@ -280,7 +284,7 @@
       const up = () => {
         handle.dataset.dragging = "false";
         const width = document.documentElement.style.getPropertyValue("--sh-side").trim();
-        localStorage.setItem("hg.side", String(parseInt(width, 10) || 248));
+        window.HGStorage.save("hg.side", String(parseInt(width, 10) || 248));
         handle.removeEventListener("pointermove", move);
         handle.removeEventListener("pointerup", up);
       };
@@ -319,7 +323,7 @@
     document.addEventListener("click", (event) => {
       const link = event.target.closest("[data-mode]");
       if (!link) return;
-      localStorage.setItem(KEY, link.dataset.mode);
+      window.HGStorage.save(KEY, link.dataset.mode);
     });
 
     // **设置是全局的，不属于某一张页面。** 以前它挂在对话页的左下角，别的页面找不到；

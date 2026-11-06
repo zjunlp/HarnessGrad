@@ -46,7 +46,7 @@ def mode_items(mode: str, language: str = "zh") -> list[tuple[str, str]]:
     script = r'''
 const fs = require('fs'), vm = require('vm');
 const [dir, mode, language] = process.argv.slice(1);
-const window = {};
+const window = {HGStorage: {getItem() { return null; }}};
 const context = {window, location: {pathname: '/', hash: '', search: ''},
   localStorage: {getItem() { return null; }}, URLSearchParams,
   document: {readyState: 'loading', body: {dataset: {}},
@@ -110,5 +110,5 @@ def test_every_mode_entry_points_at_a_real_page():
 def test_the_two_modes_are_switchable_and_remembered():
     text = shell()
     assert 'data-mode="harness"' in text or 'aria-pressed' in text
-    assert 'localStorage.setItem(KEY, mode)' in text
+    assert 'window.HGStorage.save(KEY, mode)' in text
     assert 'const KEY = "hg.mode"' in text

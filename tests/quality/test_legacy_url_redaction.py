@@ -15,6 +15,7 @@ from tools import serve_ui
     "https://example.invalid/v1#synthetic-secret",
     "https://[synthetic-secret",
     "https://example.invalid:bad/synthetic-secret",
+    "https://proxy.invalid/synthetic-secret/v1",
 ])
 def test_http_redacts_url_and_blank_roundtrip_preserves_it(tmp_path, monkeypatch, url):
     env = tmp_path / ".env"
@@ -33,14 +34,15 @@ def test_http_redacts_url_and_blank_roundtrip_preserves_it(tmp_path, monkeypatch
             conn.request("GET", path)
             resp = conn.getresponse()
             body = resp.read().decode()
-            assert resp.status == 200
+            assert resp.status == (410 if path == "/api/options" else 200)
             assert "synthetic-secret" not in body and "synthetic-key" not in body
             data = json.loads(body)
             if path == "/api/settings":
                 for key in ("HG_AGENT_BASE_URL", "HG_METHOD_BASE_URL"):
                     assert data[key] == {"set": True, "value": "", "redacted": True}
             else:
-                preset = data["models"]["配置的 OpenAI 兼容模型"]
+                assert "Console" in data["error"]
+                preset = serve_ui.model_presets()["配置的 OpenAI 兼容模型"]
                 assert preset["HG_AGENT_BASE_URL"] == ""
                 assert preset["HG_AGENT_BASE_URL_CONFIGURED"] is True
                 assert preset["HG_AGENT_BASE_URL_REDACTED"] is True

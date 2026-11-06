@@ -118,6 +118,56 @@ class SlotBudgetError(RuntimeError):
     """A configuration that would silently hand out the wrong capacity."""
 
 
+def _check_capacity_stamp(recorded: bytes, stamp: Path, capacity: int) -> None:
+    if not re.fullmatch(rb"[1-9][0-9]*\n?", recorded):
+        raise SlotBudgetError(
+            f"invalid capacity stamp {stamp}; stop all users and explicitly repair it before restarting")
+    value = recorded.rstrip(b"\n").decode("ascii")
+    if value != str(capacity):
+        raise SlotBudgetError(
+            f"{stamp.parent} already has capacity {value}, not {capacity}; "
+            "one endpoint has one capacity, so give this run the same number or a different directory")
+
+
+def inspect_capacity(directory: os.PathLike | str, capacity: int) -> None:
+    """Read-only advisory check; success is not a reservation or initialization.
+
+    A busy initializer is reported rather than waited for. Missing files can describe a
+    fresh budget; the authoritative initializer still resolves races after this check.
+    The directory and its contents must be trusted, operator-managed state.
+    """
+    if capacity < 1:
+        raise SlotBudgetError(f"capacity must be >= 1, got {capacity!r}")
+    directory = Path(directory)
+    lock_fd = None
+    try:
+        try:
+            lock_fd = os.open(directory / "capacity.lock", os.O_RDONLY)
+        except FileNotFoundError:
+            pass
+        if lock_fd is not None:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except OSError as exc:
+                if exc.errno in (errno.EACCES, errno.EAGAIN):
+                    raise SlotBudgetError(f"capacity initialization in progress in {directory}; retry") from exc
+                raise
+            if os.read(lock_fd, 1):
+                raise SlotBudgetError(
+                    f"incomplete capacity initialization in {directory}; stop all users and explicitly repair it before restarting")
+        stamp = directory / "capacity"
+        try:
+            recorded = stamp.read_bytes()
+        except FileNotFoundError:
+            return
+        _check_capacity_stamp(recorded, stamp, capacity)
+    except OSError as exc:
+        raise SlotBudgetError(f"cannot inspect shared budget capacity in {directory}: {exc}") from exc
+    finally:
+        if lock_fd is not None:
+            os.close(lock_fd)
+
+
 class SlotBudget:
     """`capacity` locks in `directory`; holding one lock is holding one slot."""
 
@@ -168,16 +218,7 @@ class SlotBudget:
                 recorded = stamp.read_bytes()
                 # Historical writers emitted a decimal and newline. Also accept the
                 # canonical decimal without a newline, but no other whitespace/signs.
-                if not re.fullmatch(rb"[1-9][0-9]*\n?", recorded):
-                    raise SlotBudgetError(
-                        f"invalid capacity stamp {stamp}; stop all users and explicitly "
-                        "repair it before restarting") from None
-                value = recorded.rstrip(b"\n").decode("ascii")
-                if value != mine:
-                    raise SlotBudgetError(
-                        f"{self.directory} already has capacity {value}, not {mine}; "
-                        "one endpoint has one capacity, so give this run the same number or a "
-                        "different directory") from None
+                _check_capacity_stamp(recorded, stamp, self.capacity)
                 return
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 handle.write(mine + "\n")

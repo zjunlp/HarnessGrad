@@ -44,7 +44,7 @@
       field("task-harness", select("f-harness", FORM.harnesses.map((h) => ({ value: h, label: h })), card.harness)),
       field("task backend", select("f-task-backend", [{ value: "mock", label: "mock" }, { value: "openai", label: "openai" }], card.task_backend)),
       field("task-model", `<input class="input" id="f-task-model" list="task-models" value="${esc(card.task_model)}"><datalist id="task-models">${(FORM.task_models || []).map((m) => `<option value="${esc(m)}"></option>`).join("")}</datalist>`),
-      field("task base URL", `<input class="input" id="f-task-base-url" value="${esc(card.task_base_url)}" placeholder="https://…/v1">`),
+      field("task base URL", `<input class="input" id="f-task-base-url" value="${esc(card.task_base_url)}" placeholder="${esc(d.task_base_url_reenter ? t("ls.urlReenter") : d.task_base_url_redacted ? t("ls.urlHidden") : "https://…/v1")}">`),
       field("task API key", `<input class="input" id="f-task-api-key" type="password" autocomplete="new-password" value="${esc(card.task_api_key)}" placeholder="${d.task_api_key_set ? t("ls.55") : "API key"}">`),
       field(t("ls.79"), select("f-method", methodRows, card.method), t("ls.48")),
       field("meta-harness", select("f-improver", (FORM.improvers || []).map((x) => ({ value: x.name, label: x.label || x.name })), card.improver)),
@@ -84,14 +84,15 @@
       $("cmd").textContent = t("ls.56");
       state("bad", `${bad[0]} ${t("ls.81")} ${bad[2]}..${bad[3]}`); $("go").disabled = true; return;
     }
-    const q = new URLSearchParams({ dataset: card.dataset, harness: card.harness,
+    const previewBody = { dataset: card.dataset, harness: card.harness,
       task_backend: card.task_backend, task_model: card.task_model, task_base_url: card.task_base_url,
       rounds: card.rounds, jobs: card.jobs, trials: card.trials,
       improver: card.improver, improver_model: card.improver_model, meta_base_url: card.meta_base_url,
       task_key_present: Boolean(card.task_api_key), meta_key_present: Boolean(card.meta_api_key),
-      method: card.method, sampling: card.sampling });
+      method: card.method, sampling: card.sampling };
     try {
-      const d = await (await fetch(`/api/launch/preview?${q}`)).json();
+      const d = await (await fetch('/api/launch/preview', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(previewBody) })).json();
       if (mine !== seq) return;
       $("cmd").textContent = (d.argv || []).map((a) => (/[\s"]/.test(a) ? JSON.stringify(a) : a)).join(" ") || t("ls.57");
       const ok = Boolean(d.preflight && d.preflight.ok);

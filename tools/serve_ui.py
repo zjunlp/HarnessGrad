@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Legacy local API: prepare environments, manage runs, and inspect candidates.
+"""Legacy operator-only API and private offline helpers.
+
+The HTTP server is unauthenticated; do not expose it to untrusted users.
+Side-effecting HTTP routes and options are retired; use the supported Console
+or offline CLI. Retained GET routes may run local inspection or load code.
 
 Model service lifecycle belongs to the deployment operator, not this API.
 
@@ -22,10 +26,8 @@ Model service lifecycle belongs to the deployment operator, not this API.
   `test_connection`、`model_presets` / `method_catalogue` / `improver_options` /
   `scan_options` / `task_options`。
 
-SPA 的 Launch 页自己写着 "the write API does not exist yet",说的就是这些还没被搬过去。
-所以这个文件不能删;改名是另一件事,而删掉它等于删掉唯一能准备环境的入口。
-
-页面没了,`GET /` 与 `/ui/*` 返回 410 并指路到 SPA。
+These helper functions are private and are not an HTTP security boundary.
+The historical SPA is gone; `GET /` and `/ui/*` return 410 and point to Console.
 
 下面三条原设计约束对留下来的运维代码仍然成立:
 
@@ -66,6 +68,22 @@ RUNS = ROOT / "runs"
 WORK_ROOTS = [ROOT.parent / "harnessgrad_work", ROOT / "runs"]
 SAFE_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
+
+def _safe_id(value: str) -> bool:
+    return isinstance(value, str) and value not in (".", "..") and bool(SAFE_ID.fullmatch(value))
+
+
+def _within(path: Path, root: Path) -> bool:
+    """Reject paths resolving outside their configured storage root."""
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
+def _safe_run(run_id: str) -> bool:
+    return _safe_id(run_id) and _within(RUNS / run_id, RUNS)
+
 def _display_url(raw: str) -> tuple[str, bool]:
     """Return a safe display value; never echo ambiguous or credential-bearing URLs."""
     if not raw:
@@ -78,6 +96,9 @@ def _display_url(raw: str) -> tuple[str, bool]:
                 or parsed.username is not None or parsed.password is not None):
             raise ValueError("unsafe URL")
         _ = parsed.port  # Reject malformed and out-of-range ports.
+        # Arbitrary proxy paths often carry API keys or tenant tokens.
+        if parsed.path not in ("", "/", "/v1", "/v1/") or parsed.params:
+            raise ValueError("unsafe URL path")
     except ValueError:
         return "", True
     return raw, False
@@ -318,7 +339,8 @@ def start_job(cfg: dict) -> dict:
 
 
 def job_status(run_id: str) -> dict:
-    if not SAFE_ID.match(run_id):
+    if not _safe_run(run_id) or any(not _within(RUNS / run_id / name, RUNS / run_id)
+                                    for name in ("console.log", "curve.jsonl", "events.jsonl")):
         return {"error": "bad id"}
     with JOBS_LOCK:
         job = JOBS.get(run_id)
@@ -401,11 +423,13 @@ def step_diff(run_id: str, round_no: int) -> dict:
     而那些 commit 在 mode A 结束时被 `reset_hard` 变成了游离对象 —— 通常还能取到,
     直到某次 `git gc` 把它们收走。所以回退是尽力而为,持久化的才是可靠的。
     """
-    if not SAFE_ID.match(run_id):
+    if not _safe_run(run_id):
         return {"error": "bad id"}
     run = RUNS / run_id
     meta_file = run / "diffs" / f"round-{round_no}.json"
     patch_file = run / "diffs" / f"round-{round_no}.patch"
+    if not all(_within(p, run) for p in (meta_file, patch_file, run / "curve.jsonl")):
+        return {"error": "bad path"}
 
     meta, patch = {}, ""
     if meta_file.exists():
@@ -420,7 +444,7 @@ def step_diff(run_id: str, round_no: int) -> dict:
         work = None
         for base in WORK_ROOTS:
             cand = base / run_id / "workspace"
-            if (cand / ".git").exists():
+            if _within(cand, base) and (cand / ".git").exists() and _within(cand / ".git", cand):
                 work = cand
                 break
         points = _read_jsonl(run / "curve.jsonl")
@@ -447,7 +471,7 @@ def explain_diff(run_id: str, round_no: int) -> dict:
 
     模型来源依次尝试:本地服务(免费、快)> `HG_METHOD_*`(方法模型)。
     """
-    if not SAFE_ID.match(run_id):
+    if not _safe_run(run_id):
         return {"error": "bad id"}
     info = step_diff(run_id, round_no)
     if not info.get("found"):
@@ -747,6 +771,8 @@ def model_service(action: str = "status", model_dir: str = "",
 
 def _read_jsonl(path: Path) -> list[dict]:
     out = []
+    if path.is_relative_to(RUNS) and not _within(path, RUNS):
+        return out
     if not path.exists():
         return out
     for line in path.read_text().splitlines():
@@ -774,16 +800,27 @@ def promote(run_id: str, round_no: int, as_name: str, overwrite: bool = False) -
     from: replacing somebody's base harness by typing a name twice is the kind of thing
     that should take one extra sentence to confirm.
     """
-    if not SAFE_ID.match(run_id or "") or not SAFE_ID.match(as_name or ""):
-        return {"error": "运行名和目标名只能用字母、数字、点、下划线和短横线"}
+    if not _safe_run(run_id) or not _safe_id(as_name):
+        return {"error": "运行名和目标名只能用字母、数字、点、下划线和短横线，且不能是 . 或 .."}
     src = RUNS / run_id / f"state_after_round{int(round_no)}"
+    dest = ROOT / "base_harness" / as_name
+    if (not _within(ROOT / "base_harness", ROOT)
+            or not _within(src, RUNS / run_id) or not _within(src / "harness.json", src)
+            or not _within(RUNS / run_id / "curve.jsonl", RUNS / run_id)
+            or dest.is_symlink() or not _within(dest, ROOT / "base_harness")):
+        return {"error": "路径超出允许的目录"}
     if not src.is_dir():
         return {"error": f"{run_id} 没有第 {round_no} 轮的状态;"
                          f"先跑一次带轮次的 train(状态在每轮结束时保存)"}
     if not (src / "harness.json").exists():
         return {"error": f"{src} 里没有 harness.json,不是一个 harness"}
+    # copytree follows symlinks by default; never copy data from outside the state.
+    if any(p.is_symlink() and not _within(p, src) for p in src.rglob("*")):
+        return {"error": "路径超出允许的目录"}
 
     dest = ROOT / "base_harness" / as_name
+    if not _within(dest / "PROVENANCE.json", dest):
+        return {"error": "路径超出允许的目录"}
     if dest.exists() and not overwrite:
         prev = {}
         prov = dest / "PROVENANCE.json"
@@ -1196,14 +1233,14 @@ def list_runs() -> list[dict]:
 
 
 def run_detail(run_id: str) -> dict | None:
-    if not SAFE_ID.match(run_id):
+    if not _safe_run(run_id):
         return None
     points = _read_jsonl(RUNS / run_id / "curve.jsonl")
     if not points:
         return None
     meta = {}
     mp = RUNS / run_id / "run_meta.json"
-    if mp.exists():
+    if _within(mp, RUNS / run_id) and mp.exists():
         try:
             meta = json.loads(mp.read_text())
         except json.JSONDecodeError:
@@ -1223,12 +1260,12 @@ def run_detail(run_id: str) -> dict | None:
 
 
 def find_trace_dir(run_id: str) -> Path | None:
-    if not SAFE_ID.match(run_id):
+    if not _safe_run(run_id):
         return None
     for base in WORK_ROOTS:
         for candidate in (base / run_id / "workspace" / "_harnessgrad" / "traces",
                           base / run_id / "_harnessgrad" / "traces"):
-            if candidate.is_dir():
+            if _within(candidate, base / run_id) and _within(base / run_id, base) and candidate.is_dir():
                 return candidate
     return None
 
@@ -1249,7 +1286,7 @@ def task_detail(run_id: str, task_id: str) -> dict:
       * `round<N>_traces/<task>.jsonl` —— harness 每一步做了什么;
       * 曲线点的 `per_task` —— 每轮这道题得了多少分。
     """
-    if not (SAFE_ID.match(run_id) and SAFE_ID.match(task_id)):
+    if not (_safe_run(run_id) and _safe_id(task_id)):
         return {"found": False}
     events = _read_jsonl(RUNS / run_id / "events.jsonl")
     points = _read_jsonl(RUNS / run_id / "curve.jsonl")
@@ -1265,7 +1302,7 @@ def task_detail(run_id: str, task_id: str) -> dict:
             continue
         entry = {"round": rnd, "score": per.get(task_id)}
         vf = RUNS / run_id / "verdicts" / f"round-{rnd}" / f"{task_id}.json"
-        if vf.exists():
+        if _within(vf, RUNS / run_id) and vf.exists():
             try:
                 v = json.loads(vf.read_text())
                 entry.update({"kind": v.get("kind"), "passed": v.get("passed"),
@@ -1313,17 +1350,17 @@ def trace_paths(run_id: str, task_id: str) -> list[Path]:
     而存档明明就在 run 目录里。这也是"运行详情"页一直没什么可看的原因。
     """
     out = []
-    run = RUNS / run_id
-    if not SAFE_ID.match(task_id):
+    if not _safe_run(run_id) or not _safe_id(task_id):
         return out
+    run = RUNS / run_id
     for d in sorted(run.glob("round*_traces"), reverse=True):
         p = d / f"{task_id}.jsonl"
-        if p.is_file():
+        if _within(p, run) and p.is_file():
             out.append(p)
     channel = find_trace_dir(run_id)
     if channel is not None:
         p = channel / f"{task_id}.jsonl"
-        if p.is_file():
+        if _within(p, channel) and p.is_file():
             out.append(p)
     return out
 
@@ -1411,6 +1448,18 @@ def experiments() -> list[dict]:
 
 # ----------------------------------------------------------------------- 服务 ---
 
+# These unauthenticated endpoints formerly wrote files, launched processes or
+# contacted models. Options also resolves commands and dynamically loads datasets.
+RETIRED_ROUTES = frozenset({
+    "/api/run", "/api/settings/save", "/api/prepare/run", "/api/promote",
+    "/api/test-connection", "/api/explain", "/api/options",
+})
+LEGACY_API_RETIRED = (
+    "Legacy endpoint retired (410). Use the supported Console or offline CLI; "
+    "the legacy HTTP service is not an authenticated operations API."
+)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "HarnessGradUI"
 
@@ -1445,32 +1494,14 @@ class Handler(BaseHTTPRequestHandler):
                 b"  then open http://127.0.0.1:4460/\n"
                 b"This service still answers /api/settings and /api/providers; it serves no page.\n",
                 "text/plain; charset=utf-8", 410)
+        if path in RETIRED_ROUTES or path.startswith("/api/stop/"):
+            return self._json({"error": LEGACY_API_RETIRED}, 410)
         if path == "/api/settings":
             return self._json(read_settings())
         if path == "/api/providers":
             return self._json(provider_catalog())
-        if path == "/api/settings/save":
-            from urllib.parse import parse_qs
-            raw = parse_qs(query).get("cfg", ["{}"])[0]
-            try:
-                updates = json.loads(raw)
-            except json.JSONDecodeError:
-                return self._json({"error": "bad cfg"}, 400)
-            return self._json(write_settings(updates))
-        if path == "/api/test-connection":
-            from urllib.parse import parse_qs
-            which = parse_qs(query).get("which", ["agent"])[0]
-            return self._json(test_connection(which))
         if path == "/api/model-service":
             return self._json(model_service(), 410)
-        if path == "/api/promote":
-            from urllib.parse import parse_qs
-            q = parse_qs(query)
-            return self._json(promote(
-                q.get("run_id", [""])[0],
-                int(q.get("round", ["0"])[0] or 0),
-                q.get("as", [""])[0],
-                q.get("overwrite", [""])[0] in ("1", "true", "yes")))
         if path == "/api/graph":
             return self._json(version_graph())
         if path == "/api/prepare":
@@ -1478,39 +1509,21 @@ class Handler(BaseHTTPRequestHandler):
             q = parse_qs(query)
             return self._json(prepare_report(q.get("dataset", [""])[0],
                                              q.get("harness", [""])[0]))
-        if path == "/api/prepare/run":
-            from urllib.parse import parse_qs
-            raw = parse_qs(query).get("cfg", ["{}"])[0]
-            try:
-                cfg = json.loads(raw)
-            except json.JSONDecodeError:
-                return self._json({"error": "bad cfg"}, 400)
-            return self._json(start_prepare(cfg))
         if path.startswith("/api/prepare/job/"):
             return self._json(prepare_status(path.rsplit("/", 1)[-1]))
         if path == "/api/tasks":
             from urllib.parse import parse_qs
             return self._json(task_options(parse_qs(query).get("dataset", [""])[0]))
-        if path == "/api/options":
-            return self._json(scan_options())
         if path == "/api/runs":
             return self._json(list_runs())
         if path == "/api/experiments":
             return self._json(experiments())
-        if path == "/api/run" or path.startswith("/api/stop/"):
-            return self._json({"error": LEGACY_LAUNCH_DISABLED}, 410)
         if path.startswith("/api/job/"):
             return self._json(job_status(path.rsplit("/", 1)[-1]))
 
         m = re.match(r"^/api/run/([^/]+)/diff/(\d+)$", path)
         if m:
             return self._json(step_diff(m.group(1), int(m.group(2))))
-
-        if path == "/api/explain":
-            from urllib.parse import parse_qs
-            q = parse_qs(query)
-            return self._json(explain_diff(q.get("run", [""])[0],
-                                           int(q.get("round", ["0"])[0])))
 
         m = re.match(r"^/api/run/([^/]+)/task/([^/]+)$", path)
         if m:
@@ -1525,8 +1538,11 @@ class Handler(BaseHTTPRequestHandler):
         return self._json({"error": "not found"}, 404)
 
     def do_POST(self) -> None:                             # noqa: N802
-        # 表单也可以走 POST;目前前端用 GET 传 cfg,保持简单。
-        return self.do_GET()
+        # Never dispatch a POST to any GET helper, including operator-only reads.
+        path = urlparse(self.path).path
+        if path in RETIRED_ROUTES or path.startswith("/api/stop/"):
+            return self._json({"error": LEGACY_API_RETIRED}, 410)
+        return self._json({"error": "POST is not supported by the legacy API"}, 405)
 
 
 def main() -> int:
@@ -1535,12 +1551,8 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=8770)
     args = ap.parse_args()
 
-    opts = scan_options()
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"HarnessGrad 控制台  http://{args.host}:{args.port}")
-    print(f"  {len(opts['harnesses'])} 个 harness,{len(opts['datasets'])} 个任务集,"
-          f"{len(opts['methods'])} 个方法,{len(opts['models'])} 个模型预设")
-    print(f"  历史实验 {len(list_runs())} 个")
+    print(f"Legacy operator-only API  http://{args.host}:{args.port}")
     print("  Ctrl-C 停止")
     try:
         server.serve_forever()
