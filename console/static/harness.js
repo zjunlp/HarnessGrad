@@ -182,8 +182,16 @@
     wrap.disabled = false;
     const [, run, round] = m;
     try {
-      const payload = await (await fetch(
-        `/api/runs/${encodeURIComponent(run)}/history?to=${round}`)).json();
+      const response = await fetch(
+        `/api/runs/${encodeURIComponent(run)}/history?to=${round}`);
+      const payload = await response.json();
+      if (!response.ok || payload.error) {
+        wrap.disabled = true;
+        wrap.title = `${tr("历史加载失败：")}${payload.error || response.status}`;
+        $("history-hint").textContent = wrap.title;
+        return;
+      }
+      wrap.title = "";
       const rows = payload.rounds || [];
       if (!rows.length) { wrap.disabled = true; return; }
       $("history-hint").textContent = `${run} 的 r1–r${rows.length}`;

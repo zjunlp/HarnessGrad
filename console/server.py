@@ -61,6 +61,7 @@ import subprocess
 import sys
 import re
 import shlex
+import stat
 import shutil
 import threading
 import time
@@ -2608,7 +2609,8 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
     if not isinstance(instruction, str) or not instruction.strip():
         return 400, {"error": "no-instruction"}
     source = CANDIDATES / str(name)
-    if not CANDIDATE_NAME.fullmatch(str(name)) or not (source / "harness.json").is_file():
+    if (not valid_workbench_candidate_name(name) or source.is_symlink()
+            or not (source / "harness.json").is_file()):
         return 404, {"error": "candidate-not-found", "detail": str(name)}
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = CANDIDATES / f"{name}-edit-{stamp}"
@@ -2707,17 +2709,79 @@ def workbench_edit(name: str, instruction: str, selection: str = "", kind: str =
                  "stderr_tail": (done.stderr or "")[-600:]}
 
 
-def read_selection(root: pathlib.Path, path: str, first: int, last: int) -> str:
-    """把选中的行连行号一起取出来：模型看到的是"文件里第几行"，不是一段脱离上下文的片段。"""
-    rel = pathlib.PurePosixPath(str(path))
-    if rel.is_absolute() or ".." in rel.parts:
-        raise ValueError("unsafe path")
-    target = root / rel
-    if not target.is_file():
-        raise ValueError(f"{path} 不存在")
-    lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
-    first = max(1, int(first))
-    last = min(len(lines), int(last))
+SELECTION_MAX_BYTES = 1024 * 1024
+SELECTION_MAX_LINES = 10000
+
+
+def valid_workbench_candidate_name(name: str) -> bool:
+    return isinstance(name, str) and name not in (".", "..") and bool(CANDIDATE_NAME.fullmatch(name))
+
+
+class CandidateReadError(ValueError):
+    """A sanitized, typed failure from the descriptor-relative candidate reader."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+def _read_candidate_bytes(name: str, path: str, limit: int, *, require_manifest=False):
+    """Read beneath CANDIDATES on Linux without following any opened symlink.
+
+    The configured root's ancestors, hard links, and concurrent same-UID mutation
+    are trusted; this is not a sandbox against a hostile filesystem owner.
+    """
+    if not valid_workbench_candidate_name(name):
+        raise CandidateReadError("invalid-candidate", "invalid candidate")
+    if not isinstance(path, str) or not path or "\x00" in path:
+        raise CandidateReadError("unsafe-path", "unsafe path")
+    rel = pathlib.PurePosixPath(path)
+    if rel.is_absolute() or not rel.parts or ".." in rel.parts:
+        raise CandidateReadError("unsafe-path", "unsafe path")
+    if (sys.platform != "linux" or not hasattr(os, "O_NOFOLLOW")
+            or not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NONBLOCK")
+            or os.open not in os.supports_dir_fd):
+        raise CandidateReadError("unsupported", "secure candidate reads unsupported")
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fds = []
+    try:
+        fds.append(os.open(CANDIDATES, directory_flags))
+        fds.append(os.open(name, directory_flags, dir_fd=fds[-1]))
+        parent = fds[-1]
+        if require_manifest:
+            manifest = os.open("harness.json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                               dir_fd=parent)
+            fds.append(manifest)
+            if not stat.S_ISREG(os.fstat(manifest).st_mode):
+                raise CandidateReadError("invalid-candidate", "invalid candidate")
+        for component in rel.parts[:-1]:
+            parent = os.open(component, directory_flags, dir_fd=parent)
+            fds.append(parent)
+        fd = os.open(rel.parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                     dir_fd=parent)
+        fds.append(fd)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise CandidateReadError("not-regular-file", "not a regular file")
+        with os.fdopen(os.dup(fd), "rb") as stream:
+            data = stream.read(limit + 1)
+        if len(data) > limit:
+            raise CandidateReadError("file-too-large", "file exceeds size limit")
+        return rel, data
+    except OSError as exc:
+        raise CandidateReadError("file-not-found", "file unavailable or unsafe") from exc
+    finally:
+        for fd in reversed(fds):
+            os.close(fd)
+
+
+def read_selection(name: str, path: str, first: int, last: int) -> str:
+    """Read a bounded selection beneath the named candidate without following symlinks."""
+    first, last = max(1, int(first)), int(last)
+    if first > last or last - first + 1 > SELECTION_MAX_LINES:
+        raise ValueError("invalid selection range")
+    rel, data = _read_candidate_bytes(name, path, SELECTION_MAX_BYTES, require_manifest=True)
+    lines = data.decode("utf-8", errors="replace").splitlines()
+    last = min(len(lines), last)
     if first > last:
         raise ValueError("选中的范围为空")
     body = "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(first, last + 1))
@@ -2823,6 +2887,16 @@ def run_range_diff(run_id: str, first: int, last: int) -> dict:
             "added": added, "removed": removed, "diff": text[:60000]}
 
 
+HISTORY_MAX_ROUNDS = 1000
+HISTORY_MAX_ROUND_NUMBER = 999_999_999
+
+
+def _valid_history_range(since: int, upto: int) -> bool:
+    return (type(since) is int and type(upto) is int
+            and 0 <= since <= upto <= HISTORY_MAX_ROUND_NUMBER
+            and upto - since + 1 <= HISTORY_MAX_ROUNDS)
+
+
 def run_history(run_id: str, upto: int, since: int = 1) -> dict:
     """一个 run 到第 `upto` 轮为止的**历史**：每轮的改动与补丁。
 
@@ -2835,11 +2909,12 @@ def run_history(run_id: str, upto: int, since: int = 1) -> dict:
     给助手做合并时要的正是这一串：只看最新版，看不出哪些功能是同一轮加的、哪些是补丁
     摞出来的。
     """
+    if not _valid_history_range(since, upto):
+        return {"error": "bad-range", "detail": "from/to must be ordered non-negative integers spanning at most 1000 rounds"}
     run_path = find_run(run_id)
     if not run_path:
         return {"error": "run-not-found", "detail": run_id}
-    since = max(1, int(since))
-    upto = max(since, int(upto))
+    since = max(1, since)
     rows = []
     for n in range(since, upto + 1):
         patch_path = run_path / "diffs" / f"round-{n}.patch"
@@ -3043,18 +3118,20 @@ def harness_candidate_from_round(run_id: str, round_no: int,
                  "files": sorted(p.name for p in target.iterdir() if p.is_file())}
 
 
+CANDIDATE_FILE_MAX_BYTES = 2 * 1024 * 1024
+
+
 def harness_candidate_file(name: str, rel: str) -> dict:
-    """一个候选里的文件正文。只读、只在本目录内、带上行数方便算选区。"""
-    root = CANDIDATES / name
-    path = pathlib.PurePosixPath(rel)
-    if path.is_absolute() or ".." in path.parts:
-        return {"error": "unsafe-path", "detail": rel}
-    target = root / path
-    if not target.is_file():
-        return {"error": "file-not-found", "detail": rel}
-    text = target.read_text(encoding="utf-8", errors="replace")
+    """Return a bounded UTF-8 candidate file; unsafe reads fail without path details."""
+    try:
+        path, data = _read_candidate_bytes(name, rel, CANDIDATE_FILE_MAX_BYTES)
+    except CandidateReadError as exc:
+        return {"error": exc.code, "detail": str(exc)}
+    # pathlib.read_text previously used universal newline translation.
+    text = data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
     return {"candidate": name, "path": str(path), "text": text,
-            "lines": len(text.splitlines()), "size": target.stat().st_size}
+            "lines": len(text.splitlines()), "size": len(data)}
+
 
 def harness_candidates() -> dict:
     """候选清单。`source` / `from` 来自来源账本，编辑屏据此说明这一版是怎么来的。"""
@@ -4272,10 +4349,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self._error("from/to must be non-negative integers", 400)
                 return self._send(run_range_diff(parts[2], int(first), int(last)))
             if len(parts) == 4 and parts[1] == "runs" and parts[3] == "history":
-                to = (query.get("to") or ["0"])[0]
-                since = (query.get("from") or ["1"])[0]
-                if not (re.fullmatch(r"\d{1,9}", to) and re.fullmatch(r"\d{1,9}", since)):
-                    return self._error("from/to must be non-negative integers", 400)
+                history_query = parse_qs(url.query, keep_blank_values=True)
+                to = (history_query.get("to") or ["0"])[0]
+                since = (history_query.get("from") or ["1"])[0]
+                if not (re.fullmatch(r"[0-9]{1,9}", to) and re.fullmatch(r"[0-9]{1,9}", since)):
+                    return self._error("from/to must be non-negative integers of at most 9 digits", 400)
+                if not _valid_history_range(int(since), int(to)):
+                    return self._error("from/to must be ordered and span at most 1000 rounds", 400)
                 return self._send(run_history(parts[2], int(to), int(since)))
             if len(parts) == 3 and parts[1] == "runs":
                 data = api_run(parts[2])
@@ -4467,15 +4547,19 @@ class Handler(BaseHTTPRequestHandler):
             body = self._json_body()
             if body is None:
                 return self._send({"error": "bad-json"}, 400)
+            name = str(body.get("name") or "")
+            if not valid_workbench_candidate_name(name):
+                return self._send({"error": "candidate-not-found"}, 404)
             selection = ""
             sel = body.get("selection") or {}
             if sel:
+                if not isinstance(sel, dict):
+                    return self._send({"error": "bad-selection", "detail": "invalid selection"}, 400)
                 try:
-                    selection = read_selection(CANDIDATES / str(body.get("name") or ""),
-                                               str(sel.get("path") or ""),
+                    selection = read_selection(name, str(sel.get("path") or ""),
                                                int(sel.get("from") or 1),
                                                int(sel.get("to") or 1))
-                except (ValueError, OSError) as exc:
+                except (TypeError, ValueError, OSError) as exc:
                     return self._send({"error": "bad-selection", "detail": str(exc)}, 400)
             _FORCE_NEW_THREAD["value"] = bool(body.get("new_thread"))
             code, payload = workbench_edit(str(body.get("name") or ""),

@@ -139,7 +139,7 @@ not discover a default from the catalog.
 
 ## Regression evidence and limits
 
-`tests/quality/test_registry_discovery_order.py` checks a literal 28-name catalog
+`tests/quality/test_registry_discovery_order.py` checks a literal, reviewed catalog
 expectation against the real registry scan, using both the actual glob iteration
 and its reverse. It statically reads allowed literal `KIND` declarations instead
 of importing adapters. The excluded adapter's name is an explicit catalog
