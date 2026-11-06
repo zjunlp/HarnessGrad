@@ -1,57 +1,55 @@
-# MiniSWE native adapter
+# MiniSWE
 
-The adapter already invokes mini-SWE-agent 2.4.6. `requirements.txt` pins that
-version and compatible LiteLLM 1.75.9; no native prompt, context policy or strategy
-is changed. Dependencies now come from an overlay built for the executing Python
-interpreter instead of an operator's Python 3.12 user-site mount.
-
-Provision dependencies separately before a run:
+The adapter runs the actual mini-SWE-agent 2.4.6 CLI with LiteLLM 1.75.9. Its
+native prompt, planning loop, trajectory and submission sentinel stay upstream's.
+Complete locks provide immutable dependencies separately from platform Python.
 
 ```bash
-python3 tools/configure_harness.py --harness base_harness/miniswe --python 3.12
+# Native files tasks; CPython 3.12, uv and bubblewrap must already exist.
+python tools/configure_harness.py --harness base_harness/miniswe --fetch
+python tools/configure_harness.py --harness base_harness/miniswe --list --json
+
+# Task images must already be imported locally; preparation never pulls images.
+python tools/configure_harness.py --harness base_harness/miniswe --image LOCAL_IMAGE --fetch
+python tools/configure_harness.py --harness base_harness/miniswe --dataset DATASET --fetch
 ```
 
-Exec also requires an overlay for the image's interpreter (Python 3.11 for the
-pinned actor below). Overlay provenance records transitive distributions. The
-container configure verifier reads a structured import result so mini-SWE-agent's
-startup banner is accepted while actual import errors or incomplete/failed probes
-refuse. This verifier correction is supplied as a separate dependency-fix commit;
-it does not change the native agent.
+Omit `--fetch` for preparation from cached wheels. Ordinary candidate preparation
+is offline; `--list`, cache admission and resume install nothing. Use
+`--runtime-root` / `HG_HARNESS_RUNTIME_ROOT` for an external dedicated store.
+The platform needs neither pip nor mini-SWE-agent, LiteLLM, Arrow or their SDKs.
+`requirements.txt` retains the two high-level pins; `requirements.lock` is the
+complete native CPython 3.12 closure. Exec additionally declares locks for CPython
+3.10, 3.11 and 3.13. Unsupported versions and incompatible wheels fail explicitly.
 
-The manifest declares files and ordinary exec. The focused exec regression uses
-actual `run_one` in actor
-`sha256:d3a04ec8e295710347e978d8e58c663161d829e7dfa544da4d82d0d67abbd8eb`,
-a genuine Docker/kernel backend observation, network none and the ABI-matched
-read-only Python 3.11 overlay. Native mock drives upstream shell execution and
-artifact delivery; source read-only/cwd/private-input/trace/usage/tree identity
-checks accompany a fresh synthetic post-exit verifier. Native trajectory and
-runtime provenance must both identify mini-SWE-agent 2.4.6.
+Both native `files` and ordinary container `exec` are supported, including mounted
+task directories and container-state tasks. An image supplying Python gets an
+image-owned, read-only actor venv and a copy of its exact executable. Its standard
+and system libraries remain image-owned. An image explicitly without Python uses
+the exact bound native artifact after compatibility checks inside that image.
+Broken discovery never triggers a fallback. This fallback supplies the actor;
+it does not add Python to task shell commands.
 
-This proves the ordinary interface on this image/ABI. It does not measure official
-AppWorld services or scoring, every task image, observed workers, complete
-lifecycle isolation or production H0 authorization. No real model or benchmark
-is run. The terminating upstream submission sentinel remains represented as an
-unexecuted trajectory action. Changing the manifest changes submission identity;
-future experiments need a newly frozen identity.
+The adapter and the mini CLI use the same bound interpreter with `-I -B`. The
+CLI loads the distribution's own `mini.yaml` from that read-only artifact, so a
+task's cwd or Python configuration cannot replace its package or configuration.
+An inherited directory descriptor addresses this file without exposing runtime
+directory names (including `=`) to mini's configuration-override parser.
+Container task commands retain the image's PATH, Python import configuration and
+existing venv. Native files tasks use the managed interpreter path. Mini's private
+HOME, configuration, XDG directories and scratch are recreated for every task;
+ambient mini/LiteLLM settings and other model roles' credentials are removed.
 
-Each task keeps its own HOME, mini configuration and XDG configuration/cache/state
-directories. The adapter clears daily mini/LiteLLM settings and other model roles'
-credentials, then supplies the task's selected model endpoint and key. It preserves
-the platform-provided `PYTHONPATH`, so the child uses the same ABI-matched overlay
-and `sys.executable` as its parent, including inside an exec image. Legacy manifests
-may explicitly declare package directories in `runtime_paths`; the adapter does not
-guess another user's site-packages directory when dependencies are unavailable.
+The locks include Arrow through mini's declared `datasets` dependency. That is
+actor-owned Arrow, independently bound from any dataset provider's environment.
+Actor dependencies are absent from the platform and are not mounted into the
+scorer or committed container-state snapshot. Candidate source, locks, image and
+interpreter identities and actual dependency contents bind H0, caches, checkpoints
+and resume. Historical bindings do not select newer runtime publications.
 
-The shared overlay tool is the preparation entry point. There is no separate
-miniSWE Python-selection manifest or task-side installation discovery.
-
-The synthetic exec regression can select another locally provisioned Python 3.11
-image with `HG_TEST_MINISWE_EXEC_IMAGE`; the test records that image's actual
-backend observation and overlay provenance. This option changes only the test
-fixture, and does not establish AppWorld support for the selected image.
-
-The native integration test discovers the executing Python's overlay before
-deciding whether to skip; pytest itself need not have mini-swe-agent installed.
-It uses the production surfaced-path mounts so overlays under `/tmp` remain
-visible after sandbox hiding. A small overlay-only bubblewrap regression covers
-that layout and readonly dependencies without imitating mini's CLI.
+Preparation runs trusted installers and image interpreters without candidate
+source or package startup. Existing backend admission/resource policies apply.
+Observed/cooperative workers, external runtime paths and unsandboxed managed
+actors remain unsupported. Image/ABI coverage and synthetic controls do not
+establish benchmark scores, live-model connectivity or operating-system closure.
+Unopted historical Harness copies retain their legacy overlay behavior.

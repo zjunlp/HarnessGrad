@@ -95,7 +95,7 @@ actors launch the selected exact interpreter with isolated startup, read-only ru
 mounts and private task state. Actor paths are not passed to trusted scorers or
 services. Dependencies are editable Harness state, so their identity stays
 separate from the fixed dataset identity. Every checkpoint keeps its own actor
-binding, including all original image placements. Loop uses both routes; MiniAgent
+binding, including all original image placements. Loop and MiniSWE use both routes; MiniAgent
 keeps its native-only declaration. Legacy overlays and Bun behavior remain
 available to unopted Harnesses.
 See [the Harness author contract](writing_a_harness.md#21-managed-python-dependencies)

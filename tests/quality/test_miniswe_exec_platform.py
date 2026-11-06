@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import shutil
 import sys
+from test_miniswe_managed_runtime import managed_miniswe, miniswe_store, miniswe_images  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -24,7 +25,7 @@ from tools.validate_harness import source_identity
 
 
 def test_edited_candidate_runs_readonly_and_is_scored_after_private_inputs_arrive(
-        tmp_path, monkeypatch):
+        tmp_path, monkeypatch, managed_miniswe,miniswe_images):
     """The verified artifact belongs to the edited tree actually executed."""
     name, answer = "miniswe", "MINISWE_MOCK"
     source = tmp_path / 'submitted'
@@ -90,20 +91,22 @@ except OSError:
         f'assert p("private-verifier-token.txt").read_text()=={private!r}; '
         'print("artifact and isolation checked")'
     )
-    image = os.environ.get('HG_TEST_MINISWE_EXEC_IMAGE') or 'sha256:d3a04ec8e295710347e978d8e58c663161d829e7dfa544da4d82d0d67abbd8eb'
+    image = os.environ.get('HG_TEST_MINISWE_EXEC_IMAGE') or miniswe_images['3.11']
     environment = {'kind': 'exec', 'image': image,
                     'workdir': '/app', 'network': 'none'}
     from eval.service.container_observation import observe_for
     observation = observe_for(environment['image'], {'cpus': 2, 'memory_mb': 4096},
                               network='none', run_id='miniswe-native-exec-acceptance').receipt()
     assert observation['ok'] is True, observation
+    from harnessgrad import candidate_runtime
+    binding=candidate_runtime.prepare(repo,envs={'t':environment})['identity']
     result = run_one(
         repo, {'task_id': 'acceptance/' + name, 'goal': 'Write a short answer.txt.'},
         sandbox=True, timeout_s=90, verify_timeout_s=20,
         verifier={'kind': 'command', 'argv': ['python3', '-c', verifier_code],
                   'inputs': [{'path': 'private-verifier-token.txt', 'content': private}]},
         run_id='miniswe-native-exec-acceptance',
-        env=environment, observation=observation,
+        env=environment, observation=observation,harness_runtime_identity=binding,
     )
     assert not result.get('invalid'), result
     assert result['exit_code'] == 0, result.get('stderr')
@@ -128,9 +131,9 @@ except OSError:
     assert source_identity(source) == submitted_after
 
     runtime = result['harness_runtime']
-    assert runtime['source'] == 'overlay' and runtime['python'] == '3.11', runtime
-    assert runtime['packages']['mini_swe_agent']['version'] == '2.4.6', runtime
-    assert runtime['packages']['litellm']['version'] == '1.75.9', runtime
+    assert runtime['source'] == 'managed-python' and runtime['placement']=='image-python', runtime
+    packages=json.loads(Path(runtime['artifact']['manifest_path']).read_text())['packages']
+    assert packages['mini-swe-agent']=='2.4.6' and packages['litellm']=='1.75.9'
     assert runtime['host_site_packages_visible'] is False, runtime
     evidence_root = os.environ.get('HG_UAT_EVIDENCE_ROOT')
     if evidence_root:

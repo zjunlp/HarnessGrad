@@ -177,8 +177,10 @@ artifacts, records the extended measurement identity separately from
 
 Observed/cooperative workers, `agent_runtime` projections, external `runtime_paths`
 and `--no-sandbox` remain refused. Existing Harnesses without `runtime.kind="python"`
-keep their legacy runtime behavior. `miniswe` retains its existing `files`/`exec`
-setup and has not migrated in this phase.
+keep their legacy runtime behavior. [MiniSWE](../base_harness/miniswe/README.md)
+also declares both managed routes. Its native mini CLI uses the same isolated
+interpreter and the artifact's configuration, while task shell commands retain
+the task image's Python and tool environment.
 The Codex, DSH and OpenClaw wrappers use their separate external-CLI preparation
 procedures, while OpenCode declares Bun. A Python venv alone does not describe
 those external runtimes.

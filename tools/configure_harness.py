@@ -16,11 +16,11 @@ Legacy overlays
 ---------------
 The remaining documentation below applies to harnesses without that declaration.
 
-    python tools/configure_harness.py --harness base_harness/miniswe          # the `files` half
-    python tools/configure_harness.py --harness base_harness/miniswe --dataset terminal_bench
-    python tools/configure_harness.py --harness base_harness/miniswe --python 3.13 \
+    python tools/configure_harness.py --harness /path/to/legacy-harness          # `files`
+    python tools/configure_harness.py --harness /path/to/legacy-harness --dataset DATASET
+    python tools/configure_harness.py --harness /path/to/legacy-harness --python 3.13 \
         --builder-image IMAGE
-    python tools/configure_harness.py --harness base_harness/miniswe --list
+    python tools/configure_harness.py --harness /path/to/legacy-harness --list
 
 No source flag means **this host**: the interpreter a `files` run launches. A version that is
 not this host's needs `--builder-image`, because the key is the version and a guessed key is

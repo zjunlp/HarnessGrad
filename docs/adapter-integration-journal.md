@@ -638,3 +638,74 @@ Model responses and task data were authored; no real model or released benchmark
 trial ran. Commands, receipts, original attempts, JUnit, source provenance, runtime
 manifests and cleanup records are retained at
 `/tmp/hg-cold-accept-20261106-s25tt30e`.
+
+### MiniSWE managed Python migration (2026-11-06)
+
+MiniSWE now declares managed native CPython 3.12 and ordinary container exec
+placements for CPython 3.10 through 3.13. Complete wheel locks retain upstream
+mini-SWE-agent 2.4.6 and LiteLLM 1.75.9. The actual mini CLI, prompts, planning
+loop, submission sentinel and trajectory conversion remain in use. Its subprocess
+uses the bound interpreter with isolated startup and the distribution's absolute
+mini.yaml, excluding task-owned Python packages and configuration. Task shell
+commands retain image Python, existing venv, PYTHONPATH and custom tools. Mini's
+HOME, global configuration and scratch remain private to each task. The CLI's
+provider-qualified model name is recorded separately from the caller's model
+identity so H0 reuse does not invent a model conflict.
+
+Cold preparation used fresh external stores and initially empty installer caches
+for native dependencies and local image placements. Actual CLI/LiteLLM requests
+went to an authored local HTTP server. Native files and CPython 3.11, 3.12 and
+3.13 images, plus Python-absent Ubuntu 24.04 fallback, passed both mount and
+container-state controls. Authored image variants exercised system and existing
+venv task Python, PYTHONPATH-only modules and custom tools. Checks covered
+read-only dependencies, actor/task/scorer import separation, private verifier
+inputs, repeated task state, H0/cache reuse, snapshot train/eval resume and exact
+historical bindings after republishing and extending to a new evaluation image.
+
+The final focused union passed 164 distinct tests and 38 subtests, with no failures
+or skips: 18 managed integration cases, 27 MiniSWE compatibility cases and 119
+runtime/package/architecture regressions. Three existing vendored SyntaxWarnings
+remain. A wheel installed into a fresh seedless platform ran the actual CLI
+outside the checkout. Platform Python had no pip, MiniSWE, LiteLLM, SDK or Arrow;
+run/check admission invoked no installer. Missing-store admission created nothing.
+Four serial corruption controls changed only owned pyvenv.cfg files, verified
+rejection without repair, then restored exact bytes/mode and the same identities.
+Mini's transitive Arrow belongs to the actor, independently of provider Arrow.
+
+Python 3.12.16, uv, bubblewrap and preimported images were prerequisites; this
+does not measure OS installation or image pulls. The CPython 3.10 closure was
+resolved but not executed in an image. No real model, released benchmark or full
+test-suite result is claimed. Initial authored assertion/fixture mistakes are
+retained separately and excluded from the final union. Commands, logs, JUnit,
+source provenance, original test trees and runtime manifests are retained at
+`/tmp/hg-miniswe-managed-20261106-86ug1bp0`.
+
+### MiniSWE configuration paths containing equals (2026-11-06)
+
+An external runtime directory containing `=` prepared and admitted successfully,
+but mini-SWE-agent 2.4.6 interpreted its absolute mini.yaml argument as a
+configuration override. A new actual-CLI regression reproduced the missing
+configuration failure before the fix. Managed startup now opens the bound
+configuration directory read-only and inherits its descriptor into the unchanged
+`python -I -B -m minisweagent.run.mini` process. The CLI reads
+`/proc/self/fd/<descriptor>/mini.yaml`, which keeps its filename and contains no
+operator path syntax. This uses the existing Linux sandbox's proc filesystem.
+The descriptor closes on exit or failure; trace identity retains the actual bound
+configuration path. Legacy unopted startup and pinned dependency files are unchanged.
+
+All 54 selected tests passed with no skips: 18 actual-CLI placement/task-image
+controls, 27 MiniSWE compatibility checks and nine installed-package checks.
+Five new cases exercise runtime paths containing both `=` and spaces: native
+files, image Python mount/container-state and Python-absent fallback in both
+states. They also retain task-owned package/configuration poison and private-input
+isolation checks. Normal paths cover image CPython 3.11, 3.12 and 3.13; authored
+image system Python/venv, PYTHONPATH and custom tools remain available to tasks.
+Five other managed readiness/lifecycle cases were deselected. The initial package
+test tools lacked setuptools; an owned temporary tool venv supplied the build
+prerequisites and the package checks then passed. That setup error and the expected
+pre-fix regression failure are retained separately from the passing union.
+
+Only synthetic tasks and local scripted responses ran, with preimported images;
+no real model, released benchmark, CPython 3.10 image or full-suite validation is
+claimed. Commands, JUnit, original attempts, traces and source/runtime provenance
+are retained at `/tmp/hg-miniswe-config-20261106-_civffdo`.

@@ -28,6 +28,9 @@ RESOURCES = (
     "base_harness/loop/requirements-py39.lock",
     "base_harness/loop/README.md",
     "base_harness/miniswe/requirements.txt",
+    "base_harness/miniswe/requirements.lock",
+    "base_harness/miniswe/requirements-py310.lock",
+    "base_harness/miniswe/requirements-py311.lock",
     "base_harness/miniswe/README.md",
     "base_harness/miniagent/requirements.lock",
     "base_harness/miniagent/PROVENANCE.json",
@@ -232,7 +235,7 @@ else:
     run([python, "-c", code], root, env)
 
 
-def test_installed_miniswe_template_and_overlay_requirements(installed):
+def test_installed_miniswe_template_and_managed_requirements(installed):
     root, env, runtime = installed
     python = str(runtime / "bin/python")
     assert "--harness" in run([python, "-m", "tools.configure_harness", "--help"], root, env)
@@ -240,13 +243,16 @@ def test_installed_miniswe_template_and_overlay_requirements(installed):
 import json
 from pathlib import Path
 import base_harness.miniswe.agent as agent
-from eval.containers import harness_runtime
+from eval.ckpt.source_tree import python_spec
 root = Path(agent.__file__).parent
 manifest = json.loads((root / "harness.json").read_text())
 assert manifest["runtime_paths"] == []
-assert manifest["install"] == "requirements.txt"
+assert manifest["install"] == "requirements.lock"
 assert manifest["env_kinds"] == ["files", "exec"]
-assert harness_runtime.install_spec(root)[1] == "requirements.txt"
+assert python_spec(manifest['runtime'],manifest['install'])['kind']=='python'
+assert manifest['runtime']['exec']['requirements']=={'3.10':'requirements-py310.lock',
+    '3.11':'requirements-py311.lock','3.12':'requirements.lock','3.13':'requirements.lock'}
+assert all((root/name).is_file() for name in ('requirements.lock','requirements-py310.lock','requirements-py311.lock'))
 assert (root / "requirements.txt").read_text().splitlines() == ["mini-swe-agent==2.4.6", "litellm==1.75.9"]
 '''
     run([python, "-c", code], root, env)

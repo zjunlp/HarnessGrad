@@ -16,10 +16,11 @@ its own.
 Three things had to be translated, and each one is a place where a naive wrapper would
 have produced a believable wrong number:
 
-* **Dependencies.** requirements.txt pins mini and LiteLLM. The platform provides
-  an overlay for the executing interpreter instead of mounting the operator's Python
-  3.12 packages into an image with another Python ABI. Older manifests can still
-  declare a package directory for `_site_for_child`.
+* **Dependencies.** The managed declaration binds a complete lock and an immutable
+  venv for the selected native/image Python. The mini CLI uses that same absolute
+  interpreter with isolated startup; task commands retain the task image's Python
+  configuration. Older unopted manifests can still declare a package directory
+  for `_site_for_child`.
 * **Its global config.** `mini` refuses to start without `$HOME/.config/mini-swe-agent`
   and, when it is missing, opens an interactive setup wizard that aborts without a TTY.
   `MSWEA_CONFIGURED`/`MSWEA_SILENT_STARTUP`/`MSWEA_GLOBAL_CONFIG_DIR` move that config into
@@ -42,6 +43,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 #: mini's own tool-call config, named explicitly because passing any `--config` replaces
@@ -64,12 +66,16 @@ def _manifest() -> dict:
 def _site_for_child() -> str | None:
     """An explicit legacy package directory, or None for the executing Python's imports.
 
-    Normally the platform has already supplied an ABI-matched overlay on PYTHONPATH.
-    A legacy manifest can declare its own package directory in runtime_paths. No
+    Managed execution already supplies the bound venv. An unopted legacy manifest
+    can use an overlay or declare a package directory in runtime_paths. No
     directory is guessed from the operator's HOME when both routes are unavailable.
     """
     if _importable("minisweagent"):
         return None
+    if _managed_python():
+        raise SystemExit(
+            "minisweagent is not importable in the bound Python environment. "
+            "Prepare this Harness's requirements.lock with tools/configure_harness.py.")
     candidates = [Path(str(entry)).expanduser()
                   for entry in (_manifest().get("runtime_paths") or [])]
     for candidate in candidates:
@@ -91,13 +97,34 @@ def _importable(module: str) -> bool:
         return False
 
 
-def child_environment(parent: dict, scratch: Path) -> dict:
-    """Keep the executing Python's overlay while giving this task private state."""
+def _managed_python() -> bool:
+    runtime = _manifest().get("runtime")
+    return isinstance(runtime, dict) and runtime.get("kind") == "python"
+
+
+@contextmanager
+def _cli_config(config: str, *, managed: bool):
+    """Address the bound config without mini interpreting its path as key=value."""
+    if not managed:
+        yield config, ()
+        return
+    path = Path(config)
+    # Managed Linux sandboxes provide /proc. Inherit a read-only directory handle
+    # so mini's unchanged CLI gets an absolute .yaml path with no user path syntax.
+    fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        yield f"/proc/self/fd/{fd}/{path.name}", (fd,)
+    finally:
+        os.close(fd)
+
+
+def child_environment(parent: dict, scratch: Path, *, managed: bool = False) -> dict:
+    """Private mini state; managed CLI isolation leaves task Python settings intact."""
     blocked = {"CODEX_HOME", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "GEMINI_API_KEY",
                "GOOGLE_API_KEY", "OPENROUTER_API_KEY", "XAI_API_KEY", "MISTRAL_API_KEY"}
     prefixes = ("MSWEA_", "LITELLM_", "OPENAI_", "HG_METHOD_", "HG_ENV_", "HG_JUDGE_")
     child = {k: v for k, v in parent.items() if k not in blocked and not k.startswith(prefixes)
-             and (not k.startswith("PYTHON") or k == "PYTHONPATH")}
+             and (managed or not k.startswith("PYTHON") or k == "PYTHONPATH")}
     for variable, folder in {"HOME": "home", "USERPROFILE": "home", "XDG_CONFIG_HOME": "config",
                              "XDG_DATA_HOME": "data", "XDG_CACHE_HOME": "cache", "XDG_STATE_HOME": "state",
                              "TMPDIR": "tmp", "TEMP": "tmp", "TMP": "tmp",
@@ -106,8 +133,9 @@ def child_environment(parent: dict, scratch: Path) -> dict:
         target.mkdir(exist_ok=True)
         child[variable] = str(target)
     child.update({"MSWEA_CONFIGURED": "true", "MSWEA_SILENT_STARTUP": "1",
-                  "MSWEA_COST_TRACKING": "ignore_errors", "PYTHONNOUSERSITE": "1",
-                  "PYTHONDONTWRITEBYTECODE": "1", "LITELLM_LOCAL_MODEL_COST_MAP": "True"})
+                  "MSWEA_COST_TRACKING": "ignore_errors", "LITELLM_LOCAL_MODEL_COST_MAP": "True"})
+    if not managed:
+        child.update(PYTHONNOUSERSITE="1", PYTHONDONTWRITEBYTECODE="1")
     return child
 
 
@@ -288,6 +316,14 @@ def run(task: dict, workdir: Path) -> int:
     else:
         timeout = float(env.get("HG_MINISWE_TIMEOUT_S", "780"))
     site = _site_for_child()
+    managed = _managed_python()
+    declared_model = model
+    if managed:
+        declared_model = (env.get("HG_AGENT_MINISWE_MODEL") or env.get("HG_AGENT_MODEL") or "").strip() or model
+    # Select the distribution's config without importing mini's global startup.
+    # A task-owned mini.yaml in cwd must not replace the Harness's configuration.
+    config = (str(Path(importlib.util.find_spec("minisweagent").origin).parent / "config" / CONFIG)
+              if managed else CONFIG)
     if backend == "mock":
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import mock_model
@@ -304,9 +340,9 @@ def run(task: dict, workdir: Path) -> int:
                 trace.write(json.dumps(value, ensure_ascii=False) + "\n")
 
             record({"harness_identity": {
-                "harness": "miniswe", "agent_backend": backend, "agent_model": model,
-                "config": {"step_limit": step_limit, "config": CONFIG,
-                           "api_base": base_url,
+                "harness": "miniswe", "agent_backend": backend, "agent_model": declared_model,
+                "config": {"step_limit": step_limit, "config": config,
+                           "api_base": base_url, "native_model": model,
                            # `None` means the running interpreter already had the package;
                            # a path means it came from the tree this manifest declares and
                            # the platform bound. That is the difference between "the
@@ -315,10 +351,12 @@ def run(task: dict, workdir: Path) -> int:
                            "pythonpath": site},
                 "harness_version": _manifest().get("version")},
                 "task_id": task.get("task_id")})
-            with tempfile.TemporaryDirectory(prefix="hg-miniswe-") as scratch:
+            with (tempfile.TemporaryDirectory(prefix="hg-miniswe-") as scratch,
+                  _cli_config(config, managed=managed) as (cli_config, config_fds)):
                 scratch_dir = Path(scratch)
                 trajectory = scratch_dir / "trajectory.json"
-                argv = [sys.executable, "-m", "minisweagent.run.mini",
+                argv = [sys.executable, *(["-I", "-B"] if managed else []),
+                        "-m", "minisweagent.run.mini",
                         "--task", task_text(task),
                         "--model", model,
                         "--yolo", "--exit-immediately",
@@ -326,11 +364,11 @@ def run(task: dict, workdir: Path) -> int:
                         # for a local model, so a cost limit here limits nothing.
                         "--cost-limit", "0",
                         "--output", str(trajectory),
-                        "--config", CONFIG,
+                        "--config", cli_config,
                         "--config", f"model.model_kwargs.api_base={base_url}",
                         "--config", f"model.model_kwargs.api_key={api_key}",
                         "--config", f"agent.step_limit={step_limit}"]
-                child = child_environment(env, scratch_dir)
+                child = child_environment(env, scratch_dir, managed=managed)
                 child.update({
                     "OPENAI_API_KEY": api_key,
                     "OPENAI_BASE_URL": base_url,
@@ -343,7 +381,8 @@ def run(task: dict, workdir: Path) -> int:
                 log_path = scratch_dir / "mini.log"
                 with log_path.open("w") as log:
                     proc = subprocess.Popen(argv, cwd=workdir, env=child, stdout=log,
-                                            stderr=subprocess.STDOUT, text=True, errors="replace")
+                                            stderr=subprocess.STDOUT, text=True, errors="replace",
+                                            pass_fds=config_fds)
                     timed_out = False
                     try:
                         proc.wait(timeout=timeout)

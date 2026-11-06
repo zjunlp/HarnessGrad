@@ -89,7 +89,8 @@ library; a dataset, a harness or a search provider may need more, and each recip
 `./install.sh` installs missing system prerequisites and verifies the sandbox boundary.
 
 Python Harnesses can opt into [their own managed environment](docs/writing_a_harness.md#21-managed-python-dependencies)
-for sandboxed tasks. The default [Loop](base_harness/loop/README.md) uses this route
+for sandboxed tasks. The default [Loop](base_harness/loop/README.md) and
+[MiniSWE](base_harness/miniswe/README.md) use this route
 for native `files` and container `exec`; [MiniAgent](base_harness/miniagent/README.md)
 uses native `files`. Other base Harness recipes retain their declared runtime setup.
 
