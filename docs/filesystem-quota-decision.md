@@ -25,8 +25,8 @@ enforcement established before changing admission.
    the operator has not seen this happen, and does not consider it a realistic failure mode
    for the harnesses measured on this platform.
 2. **The cost is a host-level change on a shared machine.** Enforcement cannot be added from
-   inside this repository: on the historical review host, both `/` and `/mnt/20t`
-   were ext4 mounted **without** `prjquota`/`usrquota`, the quota tool-chain was
+   inside this repository: the historical review host's root and shared data
+   filesystems were ext4 mounted **without** `prjquota`/`usrquota`, the quota tool-chain was
    absent, and enabling it there would have meant
    `tune2fs -O project,quota`, an `/etc/fstab` change and a remount — as root, on a
    filesystem that also carries Docker's store and other users' work.

@@ -77,7 +77,7 @@ run files were removed after the check; the command output was retained separate
 `/tmp/hg-quality-final-clean-install.log`. This remains demo-only evidence, not support for
 external adapters or a production authorization.
 
-## Exact environment and commands
+## Historical environment and reproduction template
 
 The host's available Python 3.12.4 interpreter created fresh venvs with no system
 site packages; Python's interpreter/stdlib still originate from that host. This is
@@ -87,25 +87,37 @@ installed runtime does not import a personal checkout or user site packages.
 No package downloads, paid endpoints, model calls, or external dataset data were
 needed. `HG_DATA_ROOT` and all model credentials are absent through `env -i`.
 
+For reproduction, use a provisioned Python >=3.12 as `python3` and set `REPO`,
+`VENV` and `BUILD_WHEEL` to absolute local paths. Choose a fresh venv directory
+outside `/tmp`, the checkout and the run/work directories so the sandbox can
+mount its interpreter. Keep `TMPDIR` outside the checkout. The template below
+substitutes these local choices for the historical host locations.
+
 ```bash
-REPO=/tmp/hg-clean-install-20261104
-VENV=/mnt/20t/xubuqiang/hg-clean-install-venv-20261104
-HOME_TMP=/tmp/hg-clean-install-runtime-20261104/home
-BUILD_WHEEL=/home/xubuqiang/.cache/pip/wheels/09/c4/7e/3f12bd4f3b911f91b5e4cb2611342c6851559d353876d0251c/setuptools-84.0.0-py3-none-any.whl
+: "${REPO:?Set REPO to the absolute checkout path}"
+: "${VENV:?Set VENV to a fresh absolute environment directory outside /tmp and the checkout}"
+: "${BUILD_WHEEL:?Set BUILD_WHEEL to an absolute local setuptools wheel path}"
+INSTALL_WORK=$(mktemp -d "${TMPDIR:-/tmp}/hg-clean-install.XXXXXX")
+HOME_TMP="$INSTALL_WORK/home"
+mkdir "$HOME_TMP"
 python3 -m venv "$VENV"
 env -i HOME="$HOME_TMP" PATH="$VENV/bin:/usr/bin:/bin" \
   PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 \
   python -m pip install --no-index "$BUILD_WHEEL"
-# Run from /tmp, NOT from the source checkout.
-env -i HOME="$HOME_TMP" PATH="$VENV/bin:/usr/bin:/bin" \
-  PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 PYTHONNOUSERSITE=1 \
-  HG_AGENT_BACKEND=mock TMPDIR=/tmp /bin/bash -xc \
-  'python -m pip install --no-index --no-build-isolation --no-deps --force-reinstall /tmp/hg-clean-install-20261104 && harnessgrad run --scenario demo-smoke --harness loop --improver none --run-id clean-verified --runs-root /tmp/hg-clean-install-runtime-20261104/runs --work-root /tmp/hg-clean-install-runtime-20261104/work --fail-on-incomplete'
+# Run outside the source checkout, with fresh run and work roots.
+(
+  cd "$INSTALL_WORK"
+  env -i HOME="$HOME_TMP" PATH="$VENV/bin:/usr/bin:/bin" \
+    PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 PYTHONNOUSERSITE=1 \
+    HG_AGENT_BACKEND=mock TMPDIR="$INSTALL_WORK" \
+    REPO="$REPO" INSTALL_WORK="$INSTALL_WORK" /bin/bash -xc \
+    'python -m pip install --no-index --no-build-isolation --no-deps --force-reinstall "$REPO" && harnessgrad run --scenario demo-smoke --harness loop --improver none --run-id "clean-verified-$$" --runs-root "$INSTALL_WORK/runs" --work-root "$INSTALL_WORK/work" --fail-on-incomplete'
+)
 ```
 
 Choose a **fresh run ID** on reproduction. Provision your own Python >=3.12 and
-local setuptools wheel; the cached path above is evidence, not a dependency or a
-recommended public installation path. Offline `--no-build-isolation` requires the
+local setuptools wheel. The results above describe the historical environment;
+the template does not provision its interpreter or wheel. Offline `--no-build-isolation` requires the
 build backend to have been installed first. A plain fresh Python 3.12 venv contains
 pip but need not contain setuptools. Online build isolation was not tested.
 

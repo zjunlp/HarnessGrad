@@ -53,9 +53,7 @@ a `/tmp` string used as test *data*); those are called out per file below.
    candidate for removal.
 3. **Experiment.** A candidate was removed only after a controlled run: the file
    **serial** (alone) and the file **concurrent** with two other files, each
-   process with its own `--basetemp` under `/mnt/20t/xubuqiang/.hg-pytest/s7/`
-   on the historical test host; new runs should use distinct fresh temporary
-   directories outside their checkout.
+   process with its own fresh `--basetemp` directory outside the checkout.
    A candidate that passes concurrently — with the same failures, or none, as the
    serial run — does not need the lane. Files that *added* a lane were checked the
    same way, including two deliberately colliding copies where the resource is a
@@ -179,9 +177,8 @@ that lives in `SLOW`.
 
 ## Measurements
 
-These historical runs used a fresh `--basetemp` per process under
-`/mnt/20t/xubuqiang/.hg-pytest/s7/` on the test host; this is a receipt, not a
-required location. "Concurrent" means the target plus the
+These historical runs used a fresh external `--basetemp` directory per process.
+"Concurrent" means the target plus the
 companions named, started together; the comparison is the **failure set**, not the
 wall clock (the machine is shared, so timing is not evidence here).
 
