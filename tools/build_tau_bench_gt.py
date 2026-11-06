@@ -27,7 +27,7 @@ It reads a checkout of `sierra-research/tau-bench` (default
                           and copied in as a verifier input, so the replay hashes
                           exactly what tau-bench hashes and cannot be edited by the
                           agent it is grading.
-    PROVENANCE.json       checkout path, upstream commit, and a sha256 per staged
+    PROVENANCE.json       upstream commit and a sha256 per staged
                           file, so the assets can be re-derived from a checkout.
 
 Why the staging and not a `pip install` of tau-bench
@@ -320,7 +320,6 @@ def build(checkout: Path) -> dict:
                     for p in directory.rglob("*")
                     if p.is_file() and "__pycache__" not in p.parts)
     provenance = {
-        "checkout": str(checkout),
         "checkout_commit": _git_commit(checkout),
         "generated_by": "tools/build_tau_bench_gt.py",
         "task_files": task_files,
@@ -356,7 +355,7 @@ def main() -> int:
         print(f"  {set_name:16s} {n:4d} tasks")
     print(f"  total {sum(counts.values())} tasks; "
           f"db {DB_DIR} (one clean database per domain, shared by its splits)")
-    print(f"  checkout {provenance['checkout']} @ "
+    print(f"  checkout {checkout} @ "
           f"{provenance['checkout_commit'] or '(no git)'}")
     print(f"  staged {len(provenance['files'])} files")
 
