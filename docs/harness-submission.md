@@ -28,6 +28,8 @@ python3 -c 'import playwright.sync_api'
 
 设置 `HG_CONSOLE_BUDGET_DIR` 指向平台外、已存在且可写的共享 lease 目录，并设置正整数 `HG_CONSOLE_BUDGET_CAPACITY`。直接启动和提交使用同一个 capacity；`jobs` 是单次运行的并行上限，不改变共享 capacity。所有共享同一计算资源的参与者必须使用相同目录与 capacity，否则无法实现跨进程协调。capacity 冲突时不得覆盖 stamp、删除其他运行的目录或终止其他进程。主机 CPU/内存预留需由部署方按实际资源显式配置。
 
+共享目录必须由可信部署方控制；文件锁是协作式资源控制，不是抵御目录写入者的安全边界。升级到带 `capacity.lock` 的版本前，必须先停掉所有使用该目录的旧版本和运行中任务，再统一升级；新旧版本混用不能安全初始化 capacity。初始化中断、stamp 异常或需要修复时，先停止所有使用者，再由部署方检查和修复，运行期间不要删除或替换锁文件。
+
 ### 1. 建立本次独立目录
 
 <!-- a7:setup -->

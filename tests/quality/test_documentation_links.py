@@ -124,11 +124,12 @@ def _tracked() -> list[str]:
             return [p for p in done.stdout.split("\0") if p]
     except (OSError, subprocess.SubprocessError):
         pass
-    # No git (an extracted tarball): the documentation tree is what we can see.
+    # A source export without Git has no index. Keep the old bounded documentation
+    # fallback rather than recursively traversing provisioned data or environments.
+    # Tracked data-document and tracked-target guarantees apply only with Git.
     fallback = [p.name for p in ROOT.glob("*.md")]
-    # In an export there is no index: treat visible files as the available tree.
-    fallback += [str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file()]
-    return sorted(set(fallback))
+    fallback += [str(p.relative_to(ROOT)) for p in (ROOT / "docs").rglob("*.md")]
+    return sorted(fallback)
 
 
 def _scope(tracked: list[str]) -> list[str]:
@@ -452,6 +453,18 @@ def test_data_scope_excludes_fixtures():
     assert _scope(["data/a/README.md", "data/a/fixtures/sample.md", "data/a/code.py"]) == [
         "data/a/README.md"
     ]
+
+
+def test_no_git_fallback_does_not_walk_runtime_trees(tmp_path, monkeypatch):
+    (tmp_path / "README.md").write_text("# Root\n")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "guide.md").write_text("# Guide\n")
+    payload = tmp_path / "data" / "large-runtime"
+    payload.mkdir(parents=True)
+    (payload / "private.md").write_text("not part of the bounded fallback")
+    monkeypatch.setattr(__import__(__name__), "ROOT", tmp_path)
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: (_ for _ in ()).throw(FileNotFoundError()))
+    assert _tracked() == ["README.md", "docs/guide.md"]
 
 
 def test_relative_links_resolve():

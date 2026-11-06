@@ -52,13 +52,11 @@ original hosted judge identity or public-web task completion.
 
 ## Instrument controls
 
-The historical control `tests/quality/test_upstream_widesearch.py` is no longer
-present in this checkout. It constructed a native query and a private
-one-row CSV as authored protocol controls. It ran the real vendored evaluator and
-HG sandbox/verifier broker against localhost scripted HTTP responses: positive
-one, completed wrong-answer zero, provider HTTP failure unmeasured, malformed
-judge JSON unmeasured, and gold/key isolation. It performed no public web research,
-used no paid model, and supplied no benchmark capability or H0 authorization.
-Additional differential controls compared all metrics and exact DataFrame dtypes
-against direct native loading for 17-digit floats, tiny floats, NaNs and large
-integers; they also checked private CSV/case hash binding and a single explicit fetch.
+Earlier documentation described `tests/quality/test_upstream_widesearch.py` as an
+authored control using a native query, a private one-row CSV, the vendored evaluator,
+and localhost scripted responses. It reported checks for correct and incorrect
+answers, provider and JSON failures, and gold/key isolation. It also described
+comparisons of metrics and DataFrame dtypes against direct native loading. The test
+file is no longer present in this checkout, and its receipt has not been independently
+verified here. These descriptions do not establish public-web research capability or
+production H0 authorization.
