@@ -75,16 +75,36 @@ def test_capacity_is_enforced_across_processes(tmp_path):
     assert _max_concurrent(tmp_path / "trace.txt") <= 2
 
 
+def _hold_until_killed(directory, ready):
+    budget = slots.SlotBudget(directory, 1)
+    with budget.hold(timeout=5):
+        ready.send(True)
+        time.sleep(60)
+
+
 def test_a_crashed_holder_does_not_leak_capacity(tmp_path):
-    """进程带着槽位死掉，锁由内核释放 —— 不然一次 kill 会永久吃掉一格容量。"""
-    procs = _run_children(tmp_path, capacity=2, children=3, hold=0.2, crash_first=True)
-    for proc in procs:
-        proc.wait(timeout=120)
-    budget = slots.SlotBudget(tmp_path / "slots", 2)
-    # 两个槽位都还能拿到，说明死掉的那个没有泄漏。
-    with budget.hold():
-        with budget.hold():
+    """A killed holder's kernel lease is released, not leaked."""
+    ctx = multiprocessing.get_context("spawn")
+    recv, send = ctx.Pipe(duplex=False)
+    process = ctx.Process(target=_hold_until_killed, args=(tmp_path, send))
+    process.start()
+    send.close()
+    try:
+        assert recv.poll(15) and recv.recv()
+        budget = slots.SlotBudget(tmp_path, 1)
+        with pytest.raises(slots.SlotBudgetError, match="no free slot"):
+            with budget.hold(timeout=0.1):
+                pass
+        process.kill()
+        process.join(timeout=10)
+        assert process.exitcode == -9
+        with budget.hold(timeout=5):
             pass
+    finally:
+        if process.is_alive():
+            process.kill()
+        process.join(timeout=10)
+        recv.close()
 
 
 def test_two_runs_disagreeing_about_capacity_is_an_error(tmp_path):
@@ -146,6 +166,48 @@ def test_invalid_capacity_fails_closed_without_modification(tmp_path, contents):
         with pytest.raises(slots.SlotBudgetError, match="invalid capacity stamp"):
             slots.SlotBudget(tmp_path, 1)
     assert stamp.read_bytes() == contents
+
+
+def _initialize_until_fsync(directory, target, ready):
+    original = os.fsync
+    count = 0
+
+    def controlled_fsync(fd):
+        nonlocal count
+        original(fd)
+        count += 1
+        if count == target:
+            ready.send(True)
+            time.sleep(60)
+
+    os.fsync = controlled_fsync
+    slots.SlotBudget(directory, 12)
+
+
+@pytest.mark.parametrize("target", [1, 2])
+def test_killed_initializer_requires_repair(tmp_path, target):
+    ctx = multiprocessing.get_context("spawn")
+    recv, send = ctx.Pipe(duplex=False)
+    process = ctx.Process(target=_initialize_until_fsync, args=(tmp_path, target, send))
+    process.start()
+    send.close()
+    try:
+        assert recv.poll(15) and recv.recv()
+        process.kill()
+        process.join(timeout=10)
+        assert process.exitcode == -9
+        stamp = tmp_path / "capacity"
+        before = stamp.read_bytes() if stamp.exists() else None
+        for _ in range(2):
+            with pytest.raises(slots.SlotBudgetError, match="incomplete capacity"):
+                slots.SlotBudget(tmp_path, 12)
+        assert (stamp.read_bytes() if stamp.exists() else None) == before
+        assert (tmp_path / "capacity.lock").read_bytes() == b"initializing\n"
+    finally:
+        if process.is_alive():
+            process.kill()
+        process.join(timeout=10)
+        recv.close()
 
 
 def test_incomplete_initialization_marker_fails_closed(tmp_path):
