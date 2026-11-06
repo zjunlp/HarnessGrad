@@ -236,8 +236,9 @@ def test_avatars_are_cached_and_embedded_rather_than_linked() -> None:
     remain visible via their initial; rendering never fetches remote images.
     """
     record = _record()
-    assert contributors.avatar_data_uri("harbor-framework") is None
-    assert ">H</text>" in contributors._avatar("harbor-framework", 20, 20, 10, "#123456")
+    harbor_avatar = contributors.avatar_data_uri("harbor-framework")
+    assert harbor_avatar and harbor_avatar.startswith("data:image/png;base64,")
+    assert harbor_avatar in contributors.render_svg(record, "benchmark")
     for board in ("harness", "method", "benchmark"):
         svg = contributors.render_svg(record, board)
         for handle, _ in contributors.totals(
