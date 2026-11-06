@@ -37,8 +37,13 @@ RESOURCES = (
     "data/scaffolds/qa/cli/qa",
     "data/scaffolds/qa/prediction.schema.json",
     "data/scaffolds/qa/verify/check.py",
+    "data/scaffolds/qa/oracle_harness/harness.json",
     "data/datasets/gsm8k/runtime.json",
     "data/datasets/gsm8k/requirements-load.txt",
+    "data/datasets/hotpotqa/runtime.json",
+    "data/datasets/hotpotqa/requirements-load.txt",
+    "data/datasets/triviaqa/runtime.json",
+    "data/datasets/triviaqa/requirements-load.txt",
     "data/datasets/costbench/execution-runtime.json",
     "data/datasets/costbench/requirements.lock",
     "harnessgrad/improvers/improvers.json",
@@ -243,7 +248,8 @@ assert (root / "requirements.txt").read_text().splitlines() == ["mini-swe-agent=
     run([python, "-c", code], root, env)
 
 
-def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
+@pytest.mark.parametrize('dataset', ['gsm8k', 'triviaqa', 'hotpotqa'])
+def test_installed_parquet_qa_synthetic_setup_and_adapter_scorer(installed, dataset):
     """Exercise installed adapter SETUP and isolated verifier without released tasks.
 
     Patching only the adapter's table reader gives it one synthetic record per split;
@@ -251,16 +257,29 @@ def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
     """
     root, env, runtime = installed
     code = r'''
-import json, shutil, subprocess, sys
+import importlib, importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
 from data.scaffolds.qa import base
-base.parquet_rows = lambda path: [{"question": "Synthetic: two plus three?", "answer": "#### 5"}]
-from data.datasets import gsm8k
-records, _ = gsm8k.load()
+name = sys.argv[1]
+from harnessgrad.dataset_runtime import descriptor
+assert descriptor(name)['pins'] == {'pyarrow': '23.0.0'}
+assert importlib.util.find_spec('pyarrow') is None
+row = {'question':'Synthetic: two plus three?', 'answer': '#### 5'}
+if name == 'triviaqa':
+    row['answer'] = {'value':'5', 'normalized_aliases':['5', 'five']}
+elif name == 'hotpotqa':
+    row.update(answer='5', supporting_facts={'title':['Authored private evidence'], 'sent_id':[0]})
+    # This adapter checks file presence before calling the patched table reader.
+    path = Path(os.environ['HG_DATA_HOTPOTQA']) / 'fullwiki/validation-00000-of-00001.parquet'
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'authored reader placeholder; no released data')
+base.parquet_rows = lambda path, **kwargs: [row]
+adapter = importlib.import_module('data.datasets.' + name)
+records, _ = adapter.load()
 task = records[0]
-work = Path("installed-gsm8k-test")
+work = Path('installed-' + name + '-test')
 work.mkdir()
-for item in gsm8k.SETUP[task["task_id"]]["files"] + gsm8k.VERIFY[task["task_id"]]["inputs"]:
+for item in adapter.SETUP[task["task_id"]]["files"] + adapter.VERIFY[task["task_id"]]["inputs"]:
     destination = work / item["path"]
     destination.parent.mkdir(parents=True, exist_ok=True)
     if "content" in item:
@@ -268,16 +287,16 @@ for item in gsm8k.SETUP[task["task_id"]]["files"] + gsm8k.VERIFY[task["task_id"]
     else:
         shutil.copy2(item["from"], destination)
 subprocess.run([sys.executable, "qa/bin/qa", "submit", "5"], cwd=work, check=True)
-verifier = gsm8k.VERIFY[task["task_id"]]
+verifier = adapter.VERIFY[task["task_id"]]
 check = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=work,
                        capture_output=True, text=True)
 assert check.returncode == 0, check.stdout + check.stderr
 assert float((work / "verifier/reward.txt").read_text()) == 1.0
-print("installed synthetic GSM8K SETUP and scorer: ok")
+print('installed synthetic ' + name + ' SETUP and scorer: ok')
 '''
-    configured = {**env, "HG_DATA_GSM8K": str(root / "synthetic-gsm8k")}
-    output = run([str(runtime / "bin/python"), "-c", code], root, configured)
-    assert "installed synthetic GSM8K SETUP and scorer: ok" in output
+    configured = {**env, 'HG_DATA_' + dataset.upper(): str(root / ('synthetic-' + dataset))}
+    output = run([str(runtime / "bin/python"), "-c", code, dataset], root, configured)
+    assert 'installed synthetic ' + dataset + ' SETUP and scorer: ok' in output
 
 
 def test_installer_python_floor_diagnostic():

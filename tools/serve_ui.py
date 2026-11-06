@@ -282,6 +282,15 @@ def scan_options() -> dict:
         try:
             sys.path.insert(0, str(ROOT))
             import importlib
+            provider = registry.provider(f.stem)
+            if provider is not None:
+                inventory = provider.inventory()
+                if inventory['metadata'].get('REFUSED'):
+                    continue
+                datasets.append({'name': f.stem, 'count': inventory['tasks'],
+                    'env_kinds': inventory['env_kinds'],
+                    'sample': (inventory['sample'] or {}).get('goal', '')[:60]})
+                continue
             mod = importlib.import_module(f"data.datasets.{f.stem}")
             tasks, scorable = mod.load()
             # What this dataset needs from an environment, so the form can say which

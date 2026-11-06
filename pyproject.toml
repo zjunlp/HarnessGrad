@@ -73,7 +73,10 @@ exclude = ["data.authored*", "data.candidates*"]
 # Exact shared QA resources required by GSM8K's SETUP and verifier; the CLI is
 # extensionless and is intentionally listed rather than matched by a wildcard.
 "data.scaffolds.qa" = ["prediction.schema.json", "cli/qa"]
+"data.scaffolds.qa.oracle_harness" = ["harness.json"]
 "data.datasets.gsm8k" = ["runtime.json", "requirements-load.txt"]
+"data.datasets.hotpotqa" = ["runtime.json", "requirements-load.txt"]
+"data.datasets.triviaqa" = ["runtime.json", "requirements-load.txt"]
 "data.datasets.costbench" = ["execution-runtime.json", "requirements.lock"]
 "harnessgrad.improvers" = ["improvers.json", "launchable.json", "skill.md"]
 "harnessgrad.runtime" = ["eight_stage_protocol.schema.json"]

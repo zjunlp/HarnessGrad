@@ -6,6 +6,19 @@ import pytest
 from data.scaffolds import registry
 
 
+@pytest.mark.parametrize('name', ['gsm8k', 'triviaqa', 'hotpotqa'])
+def test_parquet_qa_provider_discovery_is_static(name, monkeypatch):
+    from harnessgrad.dataset_runtime import descriptor
+    def reject_import(*args, **kwargs):
+        raise AssertionError('provider discovery imported an adapter')
+    monkeypatch.setattr(registry.importlib, 'import_module', reject_import)
+    declaration = descriptor(name)
+    assert declaration['pins'] == {'pyarrow': '23.0.0'}
+    assert declaration['python'] == '3.12'
+    assert registry.managed_runtime(name)
+    assert registry.provider(name).name == name
+
+
 @pytest.fixture
 def remote(monkeypatch):
     tasks = [{"task_id": "gsm8k/train/0", "goal": "public train question", "inputs": []},

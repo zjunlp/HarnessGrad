@@ -7,6 +7,7 @@ remain private and must never be copied into an actor's task JSON.
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -160,6 +161,39 @@ class DatasetProvider:
                 or any(not isinstance(result.get(key), dict) for key in ("setups", "verifiers", "envs"))):
             raise DatasetProviderError(self.name, "resolve", "malformed declarations", error_type="ProtocolError")
         return result
+
+    def inventory(self, *, config_snapshot: dict | None = None) -> dict:
+        """Read host counts, metadata and one public setup without all verifiers."""
+        value = self._request('inventory', config_snapshot=config_snapshot)
+        if (not isinstance(value.get('metadata'), dict) or type(value.get('tasks')) is not int
+                or value['tasks'] < 0 or not isinstance(value.get('setup'), dict)
+                or (value.get('sample') is not None and not isinstance(value['sample'], dict))
+                or bool(value['tasks']) != (value.get('sample') is not None)
+                or any(not isinstance(value.get(key), list)
+                       or any(not isinstance(item, str) for item in value[key])
+                       for key in ('env_kinds', 'verifier_kinds'))):
+            raise DatasetProviderError(self.name, 'inventory', 'malformed inventory', error_type='ProtocolError')
+        return value
+
+    def control(self, task_id=None, *, config_snapshot: dict | None = None) -> dict:
+        """Prepare one trusted oracle/noop snapshot; reference data stays private."""
+        value = self._request('control', task_ids=None if task_id is None else [task_id],
+                              config_snapshot=config_snapshot)
+        if value.get('refused'):
+            if isinstance(value['refused'], str):
+                return value
+        elif (all(isinstance(value.get(key), dict) for key in ('record', 'task', 'setup', 'verifier', 'env'))
+                and isinstance(value['record'].get('gold'), dict)
+                and isinstance(value['record'].get('task_id'), str)
+                and bool(value['record']['task_id'])
+                and value['record']['task_id'] == value['task'].get('task_id')
+                and (task_id is None or task_id == value['record']['task_id'])
+                and all(key in value and (value[key] is None or isinstance(value[key], dict))
+                        for key in ('submission', 'prediction'))
+                and type(value.get('noop_expected')) in (int, float)
+                and math.isfinite(value['noop_expected'])):
+            return value
+        raise DatasetProviderError(self.name, 'control', 'malformed control snapshot', error_type='ProtocolError')
 
     def check(self, task_ids=None, config_snapshot: dict | None = None) -> dict:
         """Inspect the selected runtime and data; never prepare missing packages."""

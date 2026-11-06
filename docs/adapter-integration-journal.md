@@ -420,3 +420,90 @@ environment with no OpenAI, HTTPX, PyYAML or requests installed in the platform.
 Other base Harnesses retain their declared setup. Container/exec, workers and
 unsandboxed managed actors remain unsupported. No user environment, real
 dataset, pinned scorer or main branch was modified.
+
+### Extend QA provider isolation to TriviaQA and HotpotQA (2026-11-06)
+
+TriviaQA and HotpotQA now explicitly declare the QA provider, CPython 3.12 and
+`pyarrow==23.0.0`, alongside GSM8K. Registry loading uses their prepared provider
+artifacts; missing preparation cannot fall back to platform packages. Their
+runtime declarations ship in the installed wheel. Download metadata names the
+separate preparation step, including HotpotQA's previously undeclared Arrow
+dependency, and the generated inventories reflect both recipes. Existing data
+locations remain usable after preparation. Historical measurements are preserved
+and cannot acquire the new runtime identity by implicit score reuse or resume.
+
+Authored Parquet controls use a fresh platform venv without pip, Arrow or model
+SDKs and reject even attempted platform imports of the two adapters. They check
+TriviaQA's original row indices under its 2,000-row systematic train sample,
+alias preservation, HotpotQA's private supporting facts, selected task
+declarations and independent runtime receipts. Static download/doc inspection,
+target-environment package checks and loading checks work without putting Arrow
+in the platform. Missing runtime, missing data and corrupt data remain distinct;
+corruption still fails lint with `--allow-unprovisioned`.
+
+Actual sandboxed MiniAgent controls score one authored task for each dataset
+using MockTransport and the ordinary QA scorer. Runtime identities identify both
+the dataset provider and candidate artifact. Native-tool probes confirm that
+Arrow, the provider artifact and private gold are absent from the actor. The
+installed-wheel controls also execute each QA scorer without Arrow, including
+GSM8K, while pinned scorer code, data revisions and metrics remain unchanged.
+
+Validation covers 309 distinct passing tests and 38 passing subtests, with no
+skips. The first lane passed 298 cases and exposed a missing file-presence marker
+in the new installed HotpotQA fixture; adding that authored marker preserves the
+patched-reader test contract. The packaging/import rerun passed all 19 cases and
+38 subtests. Generated DATASETS.md matches its source declarations. Arrow was
+installed only in task-owned provider and test-writer environments; the empty
+platform controls stayed separate. Commands, raw attempts, JUnit, selected
+controlled traces/receipts and cleanup evidence are retained at
+`/tmp/hg-qa-provider-migration-20261106-cwxsv3m1`.
+
+The remaining base Harness inventory is documented: loop/miniswe retain both
+files and exec, and external CLI/Bun Harnesses keep their explicit preparation
+contracts. Those routes need their own migration decisions. This phase changes
+neither their supported environments nor the managed native-files boundary. All
+new controls used cached dependencies and authored data; no released benchmark
+trial, real model, shared runtime replacement or main merge was performed.
+
+### Route QA controls and host inventories through providers (2026-11-06)
+
+The public-entry finding against `fb8f32d2` is fixed for all three opted-in QA
+datasets: GSM8K, TriviaQA and HotpotQA. The shared QA oracle/noop command obtains
+one selected task and its declarations through the prepared provider, in both
+local and platform modes. The provider evaluates reference submission/evidence
+builders and callable noop expectations; the platform receives a data snapshot
+and runs the existing CLI, scorer and sandbox. Ordinary actor tasks never receive
+this private reference snapshot. Unknown control ids now retain their diagnostic
+in a checked provider response and fail before workdir creation.
+
+The options API, host split inventory and dataset classifier obtain counts,
+split metadata, environment/verifier kinds and a sample public setup through a
+separate inventory operation. It avoids constructing the entire verifier pool;
+the ordinary catalog still does not access execution declarations. Static split
+rendering reads declared QA policy from trusted source without starting the
+provider, importing its adapter or requiring Arrow/runtime preparation. Existing
+generated split and dataset inventories remain unchanged and pass their checks.
+The installed wheel now includes the oracle control Harness's manifest.
+
+Empty-platform controls reject attempted adapter/Arrow imports and exercise all
+three datasets' local and sandboxed oracle/noop modes, discovery/counts, missing
+runtime and unknown-id behavior. Installed-wheel controls also execute oracle
+and noop without Arrow. Protocol controls cover private-reference separation,
+single-task selection, malformed responses, reference identity and finite noop
+expectations. Authored TriviaQA rows now include their canonical values among
+their aliases so they satisfy the oracle contract as well as the mock alias arm.
+
+The passing focused lanes cover 252 distinct tests and 38 subtests, with no skips.
+Broader legacy classifier checks stop at AppWorld's existing external storage
+requirement; the failure was reproduced on clean `fb8f32d2`. Configuring an empty
+root instead exposes its absent cryptography dependency. Additional released-
+data 2Wiki checks also need external storage, reproduced on the same baseline;
+they do not establish a regression or a full-suite pass. Their raw failures are
+retained separately. No dependency was added to the user's platform to bypass
+these prerequisites. Commands, JUnit, baseline comparisons, controlled traces,
+source hashes and cleanup receipts are retained at
+`/tmp/hg-provider-entry-fix-20261106-7w4qjgem`.
+
+Dataset dependency keys, artifact schemas, pinned scorer code and metric semantics
+are unchanged. All successful task controls used authored data, cached wheels
+and no model inference. No main merge was performed.

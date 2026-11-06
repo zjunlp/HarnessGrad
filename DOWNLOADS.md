@@ -559,6 +559,15 @@ dataset does not read as prepared.
 
 > Trap 1: `hotpot_qa` has two configs and they are different benchmarks -- `distractor` ships ten candidate paragraphs per question, `fullwiki` ships the whole-Wikipedia setting. Trap 2: only the `fullwiki/validation` file is fetched; `fullwiki/train` alone is 330 MB and the `distractor` config another 360 MB, none of it scored. Trap 3: the `supporting_facts` column is the gold evidence a future answer contract would need -- it is here, the answer channel is what does not exist.
 
+### pyarrow
+
+- **Type:** `pip`
+- **Version (pinned):** `23.0.0`
+- **Size:** ~40 MB
+- **Package:** `pyarrow==23.0.0`
+
+> Reads the pinned Parquet task pool in the dedicated dataset provider runtime. Run `python tools/prepare_dataset.py --dataset hotpotqa` after fetching. The platform Python and JSON-input scorer do not need pyarrow or the HuggingFace `datasets` package.
+
 ## `jericho`
 
 - **Data root:** `<HG_DATA_ROOT>/jericho`
@@ -2969,7 +2978,7 @@ dataset does not read as prepared.
 - **Size:** ~40 MB
 - **Package:** `pyarrow==23.0.0`
 
-> Reads the parquet files the pinned revision ships. The check runs inside the verification namespace and must not need the HuggingFace `datasets` package.
+> Reads the pinned Parquet task pool in the dedicated dataset provider runtime. Run `python tools/prepare_dataset.py --dataset triviaqa` after fetching. The platform Python and JSON-input scorer do not need pyarrow or the HuggingFace `datasets` package.
 
 ## `twowikimultihopqa`
 

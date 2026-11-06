@@ -142,6 +142,11 @@ observed or cooperative workers, `agent_runtime` projections, external
 [MiniAgent](../base_harness/miniagent/README.md) is the first shipped base Harness
 using this route, with a complete CPython 3.12 lock and an isolated native worker.
 Other base Harnesses retain their declared runtime setup.
+`loop` and `miniswe` still support both `files` and `exec`; their migration needs
+a contract for both routes before replacing their current dependency setup.
+The Codex, DSH and OpenClaw wrappers use their separate external-CLI preparation
+procedures, while OpenCode declares Bun. A Python venv alone does not describe
+those external runtimes.
 
 Each measured point records `harness_runtime_identity`, including owned source
 bytes and its exact dependency artifact. The source fingerprint also covers

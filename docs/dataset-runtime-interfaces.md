@@ -745,7 +745,7 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 ### 8.1 独立的数据加载依赖
 
 适配器可通过 `data/datasets/<name>/runtime.json` 显式选择数据 provider。
-当前支持 QA provider，首个使用者为 GSM8K。该声明和精确依赖文件可以在平台
+当前 GSM8K、TriviaQA、HotpotQA 使用 QA provider。该声明和精确依赖文件可以在平台
 Python 中静态读取；适配器的加载依赖只安装到外部专用环境，平台不导入它们。
 
 ```bash
@@ -754,15 +754,39 @@ python tools/prepare_dataset.py --dataset gsm8k
 python tools/prepare_dataset.py --dataset gsm8k --check --json
 ```
 
+将上述数据集名替换为 `triviaqa` 或 `hotpotqa` 即可准备相应环境；三者均声明
+CPython 3.12 和 `pyarrow==23.0.0`。已有数据目录可以继续使用，但旧的直接加载
+配方也必须补做 provider 准备。平台和接收 JSON 输入的评分器不需要安装 Arrow。
+TriviaQA 的训练采样与源文件行号、HotpotQA 的 answer F1 和 evidence 诊断语义不变。
+运行时身份属于测量身份，历史记录不会自动补写新身份；旧记录不能借新环境复用得分或续跑。
+
 `--fetch` 只下载声明的数据，不安装依赖，并提示显式准备命令。`prepare_dataset.py`
 准备并验证运行时，然后检查数据能否由 provider 加载；`--check` 只检查，不安装或下载。
-此处使用默认的 `--runtime provider`；execution profile 见第 5.2 节。
+此处使用默认的 `--runtime provider`；execution profile 见第 5.4 节。
 `--python` 指定准备使用的基础解释器，`--runtime-root` 或
 `HG_DATASET_RUNTIME_ROOT` 指定仓库外的运行时存储。失败检查在 JSON 模式下同样非零退出。
 
 provider 的 catalog 返回任务及私有评分元数据；resolve 只读取选中任务的
 SETUP/VERIFY/ENV。私有元数据不得写入 actor 的任务 JSON。该加载进程使用已准备的
 解释器，属于可信的平台控制路径，不代表 actor 或评分器的沙箱已经完成执行。
+
+公共入口也使用该边界：`serve_ui` 的 `/api/options`、`split_inventory --host` 和
+`dataset_classes` 通过私有 `inventory` 操作读取实际任务数、划分、环境种类及首个任务的
+公开 setup，不在平台导入适配器，也不生成整池的 verifier。静态 split 清单仍只读源码声明，
+不启动 provider 或准备环境。
+
+`qa/control.py` 的 oracle/noop、本地及 `--platform` 路径通过私有 `control` 操作准备一个
+选中任务。provider 在自己的环境中解析参考答案、结构化 evidence、自定义提交及 noop
+期望；平台接收一次数据快照，继续使用原有 QA CLI、评分器和沙箱。参考数据只属于可信
+控制流和显式 oracle 控制臂，不会进入普通 actor 的任务 JSON。准备好数据及 provider 后，
+从平台环境执行控制命令即可，例如：
+
+```bash
+python data/scaffolds/qa/control.py --dataset gsm8k --oracle
+python data/scaffolds/qa/control.py --dataset gsm8k --noop --platform
+```
+
+两个新增操作复用现有运行时身份和协议回包校验，不改变依赖声明或要求重建已有依赖制品。
 
 `tools/datasets.py --check` 分别报告下载数据和目标运行时依赖的状态，pip 项不会从
 平台 Python 的包目录取版本。`tools/dataset_lint.py --inspect` 对此类适配器仅检查

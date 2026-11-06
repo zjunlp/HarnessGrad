@@ -18,20 +18,21 @@ from harnessgrad.paths import DataRootNotConfigured
 from tools import dataset_lint, datasets, prepare_dataset
 
 
-def test_documentation_reads_provider_metadata_without_importing_adapter(monkeypatch):
+@pytest.mark.parametrize('name', ['gsm8k', 'triviaqa', 'hotpotqa'])
+def test_documentation_reads_provider_metadata_without_importing_adapter(monkeypatch, name):
     from tools import datasets_doc
     original = datasets_doc.importlib.import_module
 
-    def forbid_adapter(name, *args, **kwargs):
-        assert name != "data.datasets.gsm8k", "documentation imported the dataset loader"
-        return original(name, *args, **kwargs)
+    def forbid_adapter(module_name, *args, **kwargs):
+        assert module_name != f"data.datasets.{name}", "documentation imported the dataset loader"
+        return original(module_name, *args, **kwargs)
 
     monkeypatch.setattr(datasets_doc.importlib, "import_module", forbid_adapter)
-    module = datasets_doc._import_adapter("gsm8k")
-    command = datasets_doc._provision("gsm8k", module, refused=False)
+    module = datasets_doc._import_adapter(name)
+    command = datasets_doc._provision(name, module, refused=False)
     assert module.KIND == "dataset"
-    assert "tools/datasets.py --fetch --dataset gsm8k" in command
-    assert "tools/prepare_dataset.py --dataset gsm8k" in command
+    assert f"tools/datasets.py --fetch --dataset {name}" in command
+    assert f"tools/prepare_dataset.py --dataset {name}" in command
 
 
 @pytest.fixture

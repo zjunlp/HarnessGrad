@@ -20,7 +20,7 @@ from harnessgrad.paths import DataRootNotConfigured, env_name
 
 
 SCHEMA = "harnessgrad.dataset-provider.v1"
-_METADATA = ("KIND", "DEFAULT_ENV", "SPLIT", "SPLIT_GROUPS", "OFFICIAL_EVAL",
+_METADATA = ("KIND", "DEFAULT_ENV", "SPLIT", "SPLIT_SOURCE", "SPLIT_GROUPS", "OFFICIAL_EVAL",
              "ORACLE_SOURCE", "ORACLE_VALIDATED_BY", "ORACLE_COVERAGE", "REFUSED")
 
 
@@ -33,7 +33,7 @@ def _request(raw: object) -> dict:
     declaration = dataset_runtime.descriptor(name)
     if declaration is None or declaration["provider"] != "qa":
         raise ValueError("dataset does not declare the QA provider")
-    if raw["operation"] not in {"catalog", "resolve", "check"}:
+    if raw["operation"] not in {"catalog", "resolve", "check", "inventory", "control"}:
         raise ValueError("unsupported provider operation")
     if (raw["descriptor_sha256"] != declaration["descriptor_sha256"]
             or not isinstance(raw["runtime_id"], str) or not raw["runtime_id"]):
@@ -52,7 +52,60 @@ def _request(raw: object) -> dict:
             or any(not isinstance(tid, str) or not tid for tid in selected)
             or len(selected) != len(set(selected))):
         raise ValueError("invalid selected task ids")
+    if raw['operation'] == 'control' and selected is not None and len(selected) != 1:
+        raise ValueError('control requires exactly one selected task or the default task')
+    if raw['operation'] == 'inventory' and selected is not None:
+        raise ValueError('inventory does not accept a task selection')
     return raw
+
+
+def _metadata(module):
+    return {key: getattr(module, key) for key in _METADATA if hasattr(module, key)}
+
+
+def _inventory(name):
+    module = importlib.import_module(module_name(name))
+    metadata = _metadata(module)
+    if metadata.get('REFUSED'):
+        return {'metadata': metadata, 'tasks': 0, 'sample': None,
+                'env_kinds': [], 'verifier_kinds': [], 'setup': {}}
+    tasks, _, split = registry.load_split(name)
+    for task in tasks:
+        registry._check_no_secrets(task, name)
+    if split is not None:
+        metadata['SPLIT'] = split
+    # Local registry routing reads only ENV here, not every task's SETUP/VERIFY.
+    envs = registry.load_envs(name)
+    sample = tasks[0] if tasks else None
+    setups, verifiers = {}, {}
+    if sample is not None:
+        _, setups, verifiers = registry.load_tasks(name, task_ids=[sample['task_id']])
+    declared = getattr(getattr(module, '_SPEC', None), 'VERIFIER_KIND', None)
+    kinds = ([declared] if declared else sorted({v['kind'] for v in getattr(module, 'VERIFY', {}).values()}))
+    return {'metadata': metadata, 'tasks': len(tasks), 'sample': sample,
+            'env_kinds': sorted({env.get('kind', 'files') for env in (envs or {}).values()}),
+            'verifier_kinds': kinds, 'setup': setups.get(sample['task_id'], {}) if sample else {}}
+
+
+def _control(name, selected):
+    from data.scaffolds.qa import control
+    module = importlib.import_module(module_name(name))
+    refused = getattr(module, 'REFUSED', None)
+    if refused:
+        return {'refused': refused}
+    try:
+        record = control._record(module, None if selected is None else selected[0])
+    except SystemExit as exc:
+        # The in-process CLI uses SystemExit for an unknown task. Preserve its
+        # diagnostic in the provider envelope instead of terminating the worker.
+        raise ValueError(str(exc)) from exc
+    task, setup, verifier, env = control.task_specs(module, record)
+    registry._check_no_secrets(task, name)
+    return {'record': {'task_id': record['task_id'], 'gold': record['gold']},
+            'task': task, 'setup': setup, 'verifier': verifier, 'env': env,
+            'submission': control._oracle_submission(module, record),
+            'prediction': control._oracle_prediction(module, record),
+            'noop_expected': control._noop_expected(module, record)}
 
 
 def _check(name, selected):
@@ -83,6 +136,10 @@ def dispatch(request: dict) -> dict:
     """Read trusted adapters locally while registry provider routing is disabled."""
     name, operation = request["dataset"], request["operation"]
     with registry._local_provider():
+        if operation == 'inventory':
+            return _inventory(name)
+        if operation == 'control':
+            return _control(name, request['task_ids'])
         if operation == "check":
             return _check(name, request["task_ids"])
         if operation == "resolve":
@@ -93,7 +150,7 @@ def dispatch(request: dict) -> dict:
         # catalog must not obtain SETUP/VERIFY/ENV: some adapters expose those
         # through properties that can prepare runtime-specific declarations.
         module = importlib.import_module(module_name(name))
-        metadata = {key: getattr(module, key) for key in _METADATA if hasattr(module, key)}
+        metadata = _metadata(module)
         if split is not None:
             metadata["SPLIT"] = split
         downloads = getattr(module, "downloads", None)

@@ -140,6 +140,8 @@ GSM8K's preparation command installs its pinned data-loading dependencies in a s
 environment; the platform environment does not need pyarrow. Fetching only downloads data.
 Use `python tools/prepare_dataset.py --dataset gsm8k --check` to check the prepared
 environment and data without installing anything. See [dataset runtimes](docs/dataset-runtime-interfaces.md#dataset-provider-runtime) for the preparation and loading contract.
+TriviaQA and HotpotQA use the same provider preparation flow; substitute their
+dataset name in the commands. Their Parquet readers also stay outside the platform environment.
 
 <a id="contributors"></a>
 

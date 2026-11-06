@@ -7,12 +7,94 @@ import json
 import os
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import pytest
 
 from harnessgrad import dataset_provider as client
 from data.scaffolds import provider_worker as worker
 from tools import dataset_lint
+
+
+def test_inventory_does_not_materialize_every_verifier_or_return_private_answers(monkeypatch):
+    from data.scaffolds import registry
+    task = {'task_id':'authored/0', 'goal':'public question'}
+    module = SimpleNamespace(KIND='dataset', SPLIT_SOURCE='none', SPLIT=None,
+                             _SPEC=SimpleNamespace(VERIFIER_KIND='command'))
+    selected=[]
+    def declarations(name, *, task_ids):
+        selected.append(task_ids)
+        return [task], {task['task_id']:{'files':[]}}, {task['task_id']:{'kind':'command','secret':'private'}}
+    monkeypatch.setattr(registry, '_local_provider', nullcontext)
+    monkeypatch.setattr(worker.importlib, 'import_module', lambda name:module)
+    monkeypatch.setattr(registry, 'load_split', lambda name:([task], {'authored/0':'private'}, None))
+    monkeypatch.setattr(registry, 'load_envs', lambda name:{'authored/0':{'kind':'files'}})
+    monkeypatch.setattr(registry, 'load_tasks', declarations)
+    value=worker.dispatch({'dataset':'authored','operation':'inventory'})
+    assert selected==[['authored/0']]
+    assert value['tasks']==1 and value['sample']==task
+    assert value['metadata']['SPLIT_SOURCE']=='none'
+    assert value['verifier_kinds']==['command'] and value['env_kinds']==['files']
+    assert 'private' not in json.dumps(value)
+
+
+def test_control_snapshot_keeps_selected_reference_callbacks_in_the_provider(monkeypatch):
+    from data.scaffolds import registry
+    record={'task_id':'authored/one', 'gold':{'answer':'private answer','supporting_facts':[['private',0]]},
+            'row':{'unused':'must not leave the worker'}}
+    module=SimpleNamespace(__name__='authored', control_task=lambda tid:record,
+        task_for=lambda rec:{'task_id':rec['task_id'],'goal':'public'},
+        setup_for=lambda rec:{'files':[]}, verify_for=lambda rec:{'kind':'command'},
+        DEFAULT_ENV={'kind':'files'}, EVIDENCE_AWARE=True,
+        ORACLE_SUBMISSION=lambda gold:{'answer':gold['answer']}, NOOP_EXPECTED=lambda rec:.25)
+    monkeypatch.setattr(registry, '_local_provider', nullcontext)
+    monkeypatch.setattr(worker.importlib, 'import_module', lambda name:module)
+    value=worker.dispatch({'dataset':'authored','operation':'control','task_ids':['authored/one']})
+    assert value['record']=={key:record[key] for key in ('task_id','gold')}
+    assert value['submission']=={'answer':'private answer'}
+    assert value['prediction']['predicted_evidence']==[['private',0]]
+    assert value['noop_expected']==.25
+    assert 'private' not in json.dumps(value['task'])
+
+
+@pytest.mark.parametrize('operation,selection', [('control',[]),('control',['one','two']),('inventory',['one'])])
+def test_public_entry_operations_refuse_ambiguous_selections(subprocess_provider, operation, selection):
+    _,_,data=subprocess_provider
+    request={'schema':worker.SCHEMA,'dataset':'gsm8k','operation':operation,
+        'descriptor_sha256':'descriptor-control','runtime_id':'runtime-control','runtime_path':sys.prefix,
+        'configuration':{'HG_DATA_GSM8K':str(data)},'task_ids':selection}
+    with pytest.raises(ValueError, match='selection|selected task'):
+        worker._request(request)
+
+
+@pytest.mark.parametrize('operation,body', [
+    ('inventory', {}),
+    ('inventory', {'metadata':{},'tasks':True,'setup':{},'sample':{},'env_kinds':[],'verifier_kinds':[]}),
+    ('inventory', {'metadata':{},'tasks':1,'setup':{},'sample':None,'env_kinds':[],'verifier_kinds':[]}),
+    ('control', {}), ('control', {'refused':True}),
+])
+def test_public_entry_clients_reject_malformed_responses(subprocess_provider, monkeypatch, operation, body):
+    provider,_,_=subprocess_provider
+    monkeypatch.setattr(provider, '_request', lambda *args,**kwargs:body)
+    with pytest.raises(client.DatasetProviderError) as caught:
+        getattr(provider,operation)()
+    assert caught.value.error_type=='ProtocolError'
+
+
+@pytest.mark.parametrize('field,value', [
+    ('noop_expected',True),('noop_expected',float('inf')),('prediction',[]),
+    ('task',{'task_id':'different'}),('record',{'task_id':'','gold':{}}),
+])
+def test_control_client_checks_reference_and_expectation_shapes(subprocess_provider, monkeypatch, field, value):
+    provider,_,_=subprocess_provider
+    body={'record':{'task_id':'one','gold':{}},'task':{'task_id':'one'},
+          'setup':{},'verifier':{},'env':{},'prediction':None,'submission':None,'noop_expected':.25}
+    monkeypatch.setattr(provider,'_request',lambda *args,**kwargs:body)
+    assert provider.control('one')['noop_expected']==.25
+    body[field]=value
+    with pytest.raises(client.DatasetProviderError) as caught:
+        provider.control('one')
+    assert caught.value.error_type=='ProtocolError'
 
 
 _RESPONSE = '''\
