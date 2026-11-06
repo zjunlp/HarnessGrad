@@ -1,6 +1,6 @@
 # 提交接口契约（v1）
 
-这份文件是**服务端与前端共同遵守的唯一契约**。它定义"上传一个 harness、在预先配置好的任务场景里评分"需要什么、返回什么、失败时说什么。写代码前后各读一遍：服务端按它实现，前端按它写 mock，两人联调只在它上面签字。
+本契约定义服务端与客户端之间的提交接口，包括上传 harness、在预先配置的任务场景中评分所需的请求、响应与错误。服务端实现和客户端集成应遵循本契约。
 
 状态：**草案**。接口不兼容时应提升 `api_version`。场景中的非空
 `limits` 尚未接入端到端执行，当前会被拒绝，不会被忽略。
@@ -285,7 +285,7 @@ received → validating → rejected
 | `sandbox-unavailable` | 503 | `failed` 时表示服务端没有可用的沙箱，因此没有产出分数 | 沙箱不可用：说明没有分数，不是 0 分 |
 | `run-refused` | 200 | `failed` 时表示平台拒绝了这次评分；线上形如 `run-refused:<driver 的原因>` | 评分被平台拒绝：按 driver 的原因修正场景或 harness |
 
-上表是三张表里最严的一张：**上传与查询阶段**的错误码。最后三行（`internal-error`、`sandbox-unavailable`、`run-refused`）出现在一次提交的 **`failed` 终态**里（§4 的 `result.error.code`，与 §1 的清单一致），不是上传被拒的响应码；`run-refused` 线上带 `:<driver 的原因>` 后缀，前端按前缀匹配。
+上表是三张表里最严的一张：**上传与查询阶段**的错误码。最后三行（`internal-error`、`sandbox-unavailable`、`run-refused`）出现在一次提交的 **`failed` 终态**里（§5.3 响应顶层的 `error.code`），不是上传被拒的响应码；`run-refused` 线上带 `:<driver 的原因>` 后缀，前端按前缀匹配。
 
 `bad-multipart` 同时用于重复/未知部件、嵌套 multipart、非法 label/contact，带具体 field。HTTP 上传 envelope 上限为 20 MiB+64 KiB，归档原字节仍独立限制为 20 MiB；仅接受单一 Content-Length，不接受 Transfer-Encoding。非法 submission ID 不进行文件路径查找，统一 submission-not-found。
 

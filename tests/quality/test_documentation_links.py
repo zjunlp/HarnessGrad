@@ -1,7 +1,7 @@
 """The documentation graph must not link to files that are not there.
 
-`README.md` and `docs/` cross-reference each other heavily, and renames land as
-directories, files and pytest modules move. Two kinds of breakage are silent:
+Root, docs and tracked data Markdown cross-reference source as directories, files
+and pytest modules move. Two kinds of breakage are silent:
 
 * a relative link `[text](docs/other.md)` whose target moved or was removed is a
   404 for every reader, but renders fine in the editor that wrote it;
@@ -74,6 +74,13 @@ def _external_content(path: str) -> bool:
     return asset or path == "data/candidates" or path.startswith("data/local_ignored_module/")
 
 
+# Exact non-repository citations: an upstream source and a removed historical test.
+NON_REPOSITORY_CITATIONS = {
+    ("data/datasets/strongreject/README.md", "tests/test_outputs.py"),
+    ("data/datasets/spreadsheetbench/w-spreadcache.md",
+     "tests/quality/test_spreadsheetbench_classification_w_spread2.py"),
+}
+
 # These migration records describe the old data layout, not current paths.
 LEGACY_DATA_DOCUMENTS = {
     "docs/data-layout-open-items.md", "docs/data-split-plan.md",
@@ -119,19 +126,20 @@ def _tracked() -> list[str]:
         pass
     # No git (an extracted tarball): the documentation tree is what we can see.
     fallback = [p.name for p in ROOT.glob("*.md")]
-    fallback += [str(p.relative_to(ROOT)) for p in (ROOT / "docs").rglob("*.md")]
-    return sorted(fallback)
+    # In an export there is no index: treat visible files as the available tree.
+    fallback += [str(p.relative_to(ROOT)) for p in ROOT.rglob("*") if p.is_file()]
+    return sorted(set(fallback))
 
 
 def _scope(tracked: list[str]) -> list[str]:
-    """Every markdown file at the repository root and under ``docs/``."""
+    """Tracked markdown at the root and under ``docs/`` or ``data/``."""
     keep = []
     for path in tracked:
         if not path.endswith(".md"):
             continue
         if "/" not in path:
             keep.append(path)
-        elif path.startswith("docs/") and "/fixtures/" not in path:
+        elif path.startswith(("docs/", "data/")) and "/fixtures/" not in path:
             keep.append(path)
     return sorted(keep)
 
@@ -241,6 +249,14 @@ class Finding:
 def _scan() -> dict[str, object]:
     tracked = _tracked()
     top = _top_level()
+    tracked_set = set(tracked)
+    tracked_dirs = {parent.as_posix() for p in tracked for parent in Path(p).parents if str(parent) != "."}
+
+    def exists(rel: str, target: str) -> bool:
+        if rel.startswith("data/"):
+            return (target in tracked_set or target in tracked_dirs) and (ROOT / target).exists()
+        return (ROOT / target).exists()
+
     documents = _scope(tracked)
     counts = {"documents": 0, "links": 0, "inline": 0, "anchors": 0, "external": 0}
     findings: list[Finding] = []
@@ -292,7 +308,7 @@ def _scan() -> dict[str, object]:
                     posixpath.join(base, file_part) if base else file_part)
                 if _external_content(resolved):
                     continue
-                if not (ROOT / resolved).exists():
+                if not exists(rel, resolved):
                     findings.append(Finding(
                         "link", rel, lineno, target, f"missing {resolved}", resolved))
                     continue
@@ -321,7 +337,7 @@ def _scan() -> dict[str, object]:
                     posixpath.join(base, file_part) if base else file_part)
                 if _external_content(resolved):
                     continue
-                if not (ROOT / resolved).exists():
+                if not exists(rel, resolved):
                     findings.append(Finding(
                         "html-link", rel, lineno, target, f"missing {resolved}", resolved))
 
@@ -333,15 +349,17 @@ def _scan() -> dict[str, object]:
                 if not _path_like(span) or not _is_repo_path(span, top) or _placeholder(span):
                     continue
                 counts["inline"] += 1
+                if (rel, LINENO.sub(r"\1", span)) in NON_REPOSITORY_CITATIONS:
+                    continue
                 resolved = next(
-                    (c for c in _candidates(rel, span) if (ROOT / c).exists()),
+                    (c for c in _candidates(rel, span) if exists(rel, c)),
                     _candidates(rel, span)[0],
                 )
                 if _external_content(resolved) or (rel in LEGACY_DATA_DOCUMENTS and resolved.startswith("data/")):
                     continue
                 absolute = ROOT / resolved
                 wants_directory = span.endswith("/")
-                if not absolute.exists():
+                if not exists(rel, resolved):
                     if paragraph is None:
                         paragraph = _paragraph(lines, lineno)
                     if ABSENCE.search(paragraph):
@@ -402,6 +420,38 @@ def test_the_documentation_graph_is_covered():
 ])
 def test_content_exemptions_are_narrow(path, exempt):
     assert _external_content(path) is exempt
+
+
+def test_data_document_scan_uses_tracked_targets_offline(tmp_path, monkeypatch):
+    document = tmp_path / "data/datasets/example/README.md"
+    document.parent.mkdir(parents=True)
+    document.write_text(
+        "# Example\n"
+        "[good](source.py) [missing](missing.py) [untracked](untracked.py)\n"
+        "<a href=\"untracked.py\">untracked</a>\n"
+        "`data/datasets/example/source.py` `data/datasets/example/untracked.py`\n"
+        "[asset](payload.json) [external](https://invalid.example/file)\n",
+        encoding="utf-8",
+    )
+    for name in ("source.py", "untracked.py"):
+        (document.parent / name).write_text("", encoding="utf-8")
+    tracked = ["data/datasets/example/README.md", "data/datasets/example/source.py"]
+    monkeypatch.setattr(__import__(__name__), "ROOT", tmp_path)
+    monkeypatch.setattr(__import__(__name__), "_tracked", lambda: tracked)
+    result = _scan()
+    findings = result["findings"]
+    assert {(f.kind, f.target) for f in findings} == {
+        ("link", "missing.py"), ("link", "untracked.py"),
+        ("html-link", "untracked.py"),
+        ("inline", "data/datasets/example/untracked.py"),
+    }
+    assert result["counts"]["external"] == 1
+
+
+def test_data_scope_excludes_fixtures():
+    assert _scope(["data/a/README.md", "data/a/fixtures/sample.md", "data/a/code.py"]) == [
+        "data/a/README.md"
+    ]
 
 
 def test_relative_links_resolve():

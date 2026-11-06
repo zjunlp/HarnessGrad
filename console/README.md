@@ -131,12 +131,14 @@ python3 console/server.py --port 4460
 
 ### `GET /api/health`
 
+以下为示例响应；`runs_root` 是示意路径，实际值取决于部署配置。
+
 ```json
 {
   "platform_content_sha": "55bde498...",
   "running": [{"run_id": "rsi10-...", "pid": 2496983, "elapsed_s": 6937800}],
   "disk_free_gb": 129.4,
-  "runs_root": "/mnt/20t/xubuqiang/hg-work/rsi10/runs",
+  "runs_root": "/path/to/your/runs",
   "runs_count": 300,
   "kinds": {"study": 62, "eval": 180, "unknown": 58},
   "explain_configured": true, "explain_missing_env": []

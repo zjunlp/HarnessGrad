@@ -69,7 +69,7 @@ model produces an unmeasured result without fallback. `provision_status()` repor
 source availability and judge configuration.
 
 Scoring uses `temperature=0`, one logical rubric call and no output-token limit.
-The 300-second request timeout follows Harbor's `tests/test_outputs.py`; the
+The 300-second request timeout follows Harbor's upstream `tests/test_outputs.py`; the
 platform verification phase also controls cancellation. The adapter declares no
 answer-size, HTTP-response or transport-frame cap. Retries default to zero;
 optional request limits and retries use the

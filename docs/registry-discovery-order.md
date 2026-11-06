@@ -150,7 +150,9 @@ infrastructure names and omission of import failures. End-to-end discovery to
 and check the same literal ordered expectation. No downloads or benchmark runs
 are performed. These are order tests, not dataset-readiness or H0 authorization.
 
-Validation ran only these individual files with bytecode writes disabled:
+Historical validation ran only these individual files with bytecode writes disabled.
+The absolute basetemp paths are retained as run receipts, not portable commands;
+for a new run choose fresh, distinct temporary directories outside the checkout:
 
 ```text
 python -m pytest -q tests/quality/test_registry_discovery_order.py \

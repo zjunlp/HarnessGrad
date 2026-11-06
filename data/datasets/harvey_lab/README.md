@@ -63,8 +63,9 @@ is not proof that the underlying model is identical to a named hosted model.
 
 ## Validation limits
 
-`tests/quality/test_upstream_harvey.py` uses the real pinned official evaluator,
-real native provider SDKs and local scripted HTTP/SSE responses. It verifies
+The historical control `tests/quality/test_upstream_harvey.py` is no longer present
+in this checkout. It used the real pinned official evaluator,
+real native provider SDKs and local scripted HTTP/SSE responses. It verified
 pass/pass -> 1, pass/fail -> 0.5, fail/fail -> 0, and the complete actor-file export
 and post-exit verification path. These are authored protocol controls, not measured
 legal-task capability and not production H0 authorization.

@@ -134,14 +134,16 @@ Rewrite: `data.qa` → `data.scaffolds.qa`, `data.registry` → `data.scaffolds.
 
 The move is mechanical but wide, and the suite must stay green at each step.
 
-**Prerequisite — establish one writer before the split.** The main checkout,
-`/mnt/20t/xubuqiang/Study/HarnessGrad`, is the only writer to the integration
-history. Registered `git worktree` checkouts are the supported isolated copies:
-agents commit there, and the parent reviews diffs, runs focused checks and merges
-safe commits into main. Do not create another full clone inside `Study/`.
+**Prerequisite — establish one writer before the split.** In the historical
+migration, the main checkout (`/mnt/20t/xubuqiang/Study/HarnessGrad` on that host)
+was the only writer to the integration history; that path is not a current setup
+instruction. Choose your own integration checkout. Registered `git worktree`
+checkouts are the supported isolated copies: agents commit there, and the parent
+reviews diffs, runs focused checks and merges safe commits into main. Avoid
+creating competing full clones.
 
-This is a concrete migration risk, not just housekeeping: the machine has multiple
-copies, and one has been a second writer. Two full clones inside `Study/`,
+The historical migration recorded a concrete risk, not just housekeeping: that host had multiple
+copies, and one had been a second writer. The following host-specific record is not an instruction to locate or modify those checkouts. Two full clones inside `Study/`,
 `HarnessGrad-appworld-controls-20261117` and
 `HarnessGrad-gaia-controls-20261117`, are stranded on pre-rewrite commits whose
 objects are absent from main. They still carry the old layout, including

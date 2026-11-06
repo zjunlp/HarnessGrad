@@ -111,7 +111,7 @@ QA控制覆盖原生规则差分、hash、私有gold、12条真实bubblewrap ora
 
 ## 验收命令与已观察结果
 
-原生依赖控制使用外置隔离解释器，MathVerify与WideSearch依赖不安装到宿主；Harvey和SWE evaluator各有单独的固定环境。复核时使用新的basetemp目录：
+原生依赖控制使用外置隔离解释器，MathVerify与WideSearch依赖不安装到宿主；Harvey和SWE evaluator各有单独的固定环境。以下为历史运行记录，绝对路径仅标识当时的环境，不是可直接复用的配置；复核时须自行准备对应隔离运行时和来源，并在 checkout 外选择新的、互不相同的 basetemp 目录：
 
 ```bash
 HG_SWE_PYTHON=/tmp/hg-swebench-venv/bin/python \

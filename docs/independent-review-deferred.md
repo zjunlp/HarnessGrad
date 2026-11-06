@@ -24,12 +24,18 @@ authorization. Consult the current registry for each dataset's actual blockers.
 Historical receipts are archived outside the public checkout; their existence and
 current applicability must be verified independently.
 
-## Kept, with the approval clause removed — these contain real work
+## Historical decision: kept with the approval clause removed
 
-Four blockers mixed acquisition with approval. The acquisition is work; only the signature is
-deferred, so these stay in the registry with their requirement narrowed:
+The following records the 2026-10-15 decision, not the current blocker list.
+In particular, the later [GAIA withdrawal](../registry/withdrawn-requirements.md#gaia--frozen-lifecycle-receipt)
+supersedes the GAIA row: the frozen-lifecycle requirement is withdrawn, while
+policy refusal remains in force and frozen receipts are not authenticated.
+Consult the current registry for all other current requirements.
 
-| Dataset | Blocker | Still required |
+At the time, four blockers mixed acquisition with approval. The decision deferred only
+the signature and retained these narrowed acquisition requirements:
+
+| Dataset | Blocker | Requirement at the time |
 | --- | --- | --- |
 | `bfcl_v3` | `simple-ast-contract` | the missing original import/initializer bodies and a reviewed Simple invocation graph |
 | `triviaqa` | `hub-export-scorer-linkage` | the public exact-revision Hub commit/tree/config/split metadata and immutable conversion provenance |
@@ -38,9 +44,9 @@ deferred, so these stay in the registry with their requirement narrowed:
 
 ## What the operator is taking on
 
-Each row above, plus anything a later review re-raises under the same heading, is now the
-operator's to accept or reject. Review remains pending; acquisition requirements may also remain open. Neither
-verification nor readiness follows from this deferral.
+The original decision assigned the rows above to the operator for acceptance or rejection.
+Later withdrawals supersede the corresponding historical requirements; consult the current
+registry for outstanding work. Neither verification nor readiness follows from this deferral.
 
 Nothing here authorizes production. `production_authorized` remains `false`, and a dataset
 whose only remaining obstacle was a signature is still not a dataset that has been reviewed.
