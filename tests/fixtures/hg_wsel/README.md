@@ -1,4 +1,4 @@
-# w-sel: operator-authorized first five in adapter order
+# w-sel: retained first-five selection records
 
 LIMIT: bounded first-N, NOT random and NOT representative. This binds only the
 40 selected tasks' selection -> export -> scorer-input bytes, not scorer execution,
@@ -10,31 +10,17 @@ committed. `run_id`/`selection_id` reserve a fresh prospective scope; runtime_ru
 is null and no trial was launched. Split mode is declared; seven selections span
 train and eval, and TriviaQA is all eval. No side-based replacement is allowed.
 
-Recompute from actual installed bytes and reject any changed/extra export file:
+Check the retained files from the repository root:
 
-    python3 tests/fixtures/hg_wsel/packet.py
     sha256sum -c tests/fixtures/hg_wsel/SHA256SUMS
-    python3 tests/fixtures/hg_wsel/check_scope.py
-    python3 tools/check_dataset_blockers.py
 
-The recomputation imports only the eight requested adapters to obtain their real
-record order and verifier input serialization. It never calls a score function,
-executes a verifier, reads an actor prediction or invokes a model/network/server.
-Adapter construction reads installed tables, including TriviaQA's declared study
-sample, but copies only the first five records to the external export. No seed
-regeneration, resampling or shuffle occurs. Historical inventory comparison checks
-only the five selected rows against preserved ignored main-checkout receipts;
-those receipts are read-only and their full file digests are recorded.
+This checks the retained README and ten JSON files. It does not revalidate the
+original installed datasets or external exports, or establish present-day scoring
+eligibility. The one-off generator and revision-specific validation scripts have
+been removed.
 
-To create a NEW packet in a separate empty packet directory/worktree, use:
-
-    python3 tests/fixtures/hg_wsel/packet.py --create --export-root /absolute/fresh/external/path
-
-Existing manifests/exports refuse overwrite. Keep the original exports; do not
-resume or repurpose their reserved IDs as evidence of an executed diagnostic.
-For the complete digest byte-domain definitions, ordering file:line citations,
-selected sides, actual external paths and exact remaining next_action clauses,
-see registry/w-sel-manifests.md and registry/w-sel-validation.txt.
+The reserved IDs remain records of selection only and must not be repurposed as
+evidence of an executed diagnostic.
 
 The baseline checker needed 11 already-existing ignored registry-cited text files
 restored from the main checkout. `restored-observations.json` records their current
