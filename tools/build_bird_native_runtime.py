@@ -14,7 +14,10 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import sysconfig
 import tarfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def main():
@@ -22,6 +25,8 @@ def main():
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--store', type=Path, required=True)
+    parser.add_argument('--portable', action='store_true',
+                        help='export schema 2 with relative blobs, scorer code and launcher')
     parser.add_argument('--dataset', choices=['bird_minidev', 'jericho', 'alfworld',
                                              'scienceworld', 'chessbench_puzzles'],
                         default='bird_minidev')
@@ -44,16 +49,26 @@ def main():
         return result.stdout, name
 
     exe = Path(sys.executable).resolve()
+    # A copied venv executable still needs the base stdlib layout under -I -S.
+    # Bind its selected bytes at that logical address without reopening the base
+    # executable, and collect dependencies from this venv's own purelib below.
+    interpreter = (Path(sys._base_executable).resolve()
+                   if args.portable and sys.prefix != sys.base_prefix else exe)
     stdlib = Path(sys.base_prefix) / 'lib' / f'python{sys.version_info.major}.{sys.version_info.minor}'
+    packages = Path(sysconfig.get_path('purelib'))
+    package_target = Path('/opt/hg-site-packages') if args.portable else packages
     entries = {}
     queue = []
     elf = {}
 
     def add(path, site, source_override=None):
         path = Path(os.path.normpath(path))
+        origin = path
+        if args.portable and path.is_relative_to(packages):
+            path = package_target / path.relative_to(packages)
         if str(path) in entries:
-            return
-        source = Path(source_override or path).resolve(strict=True)
+            return str(path)
+        source = Path(source_override or origin).resolve(strict=True)
         if not source.is_file():
             raise ValueError(source)
         data = source.read_bytes()
@@ -62,6 +77,7 @@ def main():
                               'size': len(data), 'entry': site}
         if data.startswith(b'\x7fELF'):
             queue.append(path)
+        return str(path)
 
     def site(path, needle):
         lines = Path(path).read_text().splitlines()
@@ -72,8 +88,8 @@ def main():
              else f'data/datasets/{args.dataset}/verify/check.py')
     entry = (site('data/scaffolds/qa/base.py', '"python3", "-I", f"{CHECK_DIR}/{CHECK_NAME}"')
              if args.dataset == 'chessbench_puzzles' else site(adapter, '"python3", "check.py"'))
-    add(exe, entry + ' (interpreter selected by native_runtime binding)')
-    add(exe.parent / 'python3', entry + ' (closed child PATH alias)')
+    add(interpreter, entry + ' (interpreter selected by native_runtime binding)', exe)
+    add(interpreter.parent / 'python3', entry + ' (closed child PATH alias)', exe)
     # Entire stdlib source/extension superset, excluding ambient site packages and caches.
     for directory, dirs, files in os.walk(stdlib):
         dirs[:] = sorted(d for d in dirs if d not in {'site-packages', '__pycache__'})
@@ -101,7 +117,6 @@ def main():
             trusted[f'/scorer/{source}'] = source
     for target, source in trusted.items():
         add(target, source + ':1 (trusted scorer code, separate from actor files)', source)
-    packages = stdlib / 'site-packages'
     if args.dataset in {'scienceworld', 'chessbench_puzzles'}:
         roots = (['scienceworld', 'py4j'] if args.dataset == 'scienceworld' else ['chess'])
         for package in roots:
@@ -132,7 +147,11 @@ def main():
                         + ' (closed JRE tree)', path)
             from py4j.java_gateway import find_jar_path
             jar = Path(find_jar_path()).resolve(strict=True)
-            add(jar, site(packages / 'py4j/java_gateway.py', 'jarpath = find_jar_path()'))
+            # -I -S uses the sealed base prefix, while Py4J's Python package is
+            # remapped separately. Keep its JAR in a directory find_jar_path()
+            # searches, retaining the selected environment's exact source bytes.
+            jar_target = Path(sys.base_prefix) / 'share/py4j' / jar.name if args.portable else jar
+            add(jar_target, site(packages / 'py4j/java_gateway.py', 'jarpath = find_jar_path()'), jar)
             java_identity, _ = capture([str(java_home / 'bin/java'), '-version'])
             # -version writes its identity on stderr, retained by capture.
             # glibc dlopens this at pthread_exit; it is absent from DT_NEEDED.
@@ -152,6 +171,10 @@ def main():
                              else 'import textworld')
         for package in roots:
             root = packages / package
+            if package == 'mkl' and not root.is_dir():
+                # NumPy builds backed by OpenBLAS have no Python MKL package.
+                # Their ELF providers are collected from DT_NEEDED below.
+                continue
             if not root.is_dir():
                 raise ValueError(f'missing package root: {root}')
             for directory, dirs, files in os.walk(root):
@@ -168,7 +191,7 @@ def main():
         # providers as a conservative superset, without changing NumPy builds.
         for pattern in ('libmkl*.so*', 'libiomp*.so*', 'libtbb*.so*'):
             for path in sorted((Path(sys.base_prefix) / 'lib').glob(pattern)):
-                add(path, site(packages / 'numpy/_distributor_init.py', 'import mkl')
+                add(path, package_entry
                     + ' (MKL/OpenMP dispatch provider superset)')
         # readline's native locale initializer requires the configured C.UTF-8
         # locale payload; without it this installed build dereferences NULL.
@@ -203,8 +226,7 @@ def main():
                     target = '/opt/hg-jre/' + str(Path(dep).relative_to(java_home))
                     add(target, f'ELF provider from {path}; commands/{ldd_id}.stdout.txt', dep)
                 else:
-                    target = dep
-                    add(dep, f'ELF provider from {path}; commands/{ldd_id}.stdout.txt')
+                    target = add(dep, f'ELF provider from {path}; commands/{ldd_id}.stdout.txt')
                 graph.append(target)
         interp = re.search(r'Requesting program interpreter: ([^\]]+)', dynamic)
         if interp:
@@ -218,26 +240,32 @@ def main():
         'import sys,sysconfig,sqlite3,json,platform; print(json.dumps(dict(version=sys.version, '
         'executable=sys.executable,soabi=sysconfig.get_config_var("SOABI"),sqlite=sqlite3.sqlite_version,'
         'kernel=platform.release(),machine=platform.machine()),sort_keys=True))'])
-    manifest = {'schema': 1, 'dataset': args.dataset, 'interpreter': str(exe),
+    manifest = {'schema': 1, 'dataset': args.dataset, 'interpreter': str(interpreter),
                 'loader': '/lib64/ld-linux-x86-64.so.2',
                 'library_path': sorted({str(Path(p).parent) for p in entries
                                         if entries[p]['entry'].startswith(('ELF', 'PT_INTERP'))}),
-                'environment': {'PATH': str(exe.parent), 'HOME': '/tmp', 'TMPDIR': '/tmp',
+                'environment': {'PATH': str(interpreter.parent), 'HOME': '/tmp', 'TMPDIR': '/tmp',
                                 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'},
                 'python_flags': ['-I', '-S', '-B'],
                 'identity': json.loads(identity),
                 'launcher': {'path': str(bwrap), 'sha256': bwrap_hash.split()[0]},
                 'files': dict(sorted(entries.items()))}
     if helper or args.dataset == 'chessbench_puzzles':
-        manifest['python_path'] = ['/scorer', str(packages)]
+        manifest['python_path'] = ['/scorer', str(package_target)]
         manifest['environment']['LD_LIBRARY_PATH'] = ':'.join(manifest['library_path'])
     if args.dataset == 'scienceworld':
         manifest['environment']['HG_SEALED_JAVA_HOME'] = '/opt/hg-jre'
         manifest['environment']['JAVA_HOME'] = '/opt/hg-jre'
         # This installed Py4J defaults java_path="java"; JAVA_HOME is consulted
         # only when java_path is false. Both resolutions must name sealed bytes.
-        manifest['environment']['PATH'] = '/opt/hg-jre/bin:' + str(exe.parent)
+        manifest['environment']['PATH'] = '/opt/hg-jre/bin:' + str(interpreter.parent)
         manifest['identity']['java_release'] = (java_home / 'release').read_text()
+    source_manifest = manifest
+    if args.portable:
+        from harnessgrad.native_runtime_store import portable_manifest
+        manifest = portable_manifest(source_manifest, bwrap.stat().st_size)
+        # A local recovery ledger, never used as runtime identity or execution input.
+        (args.out / 'sources.json').write_text(json.dumps(source_manifest, indent=2, sort_keys=True) + '\n')
     args.manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
     (args.out / 'manifest.json').write_bytes(args.manifest.read_bytes())
     manifest_hash, _ = capture(['/usr/bin/sha256sum', str(args.manifest)])
@@ -250,13 +278,21 @@ def main():
             assert entries[target]['source'] == source
     args.store.mkdir(parents=True, exist_ok=True)
     payload = args.store / (manifest_hash.split()[0] + '.tar.gz')
-    with tarfile.open(payload, 'w:gz', compresslevel=1) as tar:
-        for path, entry in manifest['files'].items():
-            tar.add(entry['source'], arcname=path.lstrip('/'), recursive=False)
+    if args.portable:
+        from harnessgrad.native_runtime_store import blob_name, write_archive
+        sources = {blob_name(entry['sha256']): Path(entry['source'])
+                   for entry in source_manifest['files'].values()}
+        sources[blob_name(source_manifest['launcher']['sha256'])] = bwrap
+        write_archive(args.manifest.read_bytes(), sources, payload)
+    else:
+        with tarfile.open(payload, 'w:gz', compresslevel=1) as tar:
+            for path, entry in manifest['files'].items():
+                tar.add(entry['source'], arcname=path.lstrip('/'), recursive=False)
     capture(['/usr/bin/sha256sum', str(payload)])
     (args.out / 'elf-graph.json').write_text(json.dumps(elf, indent=2, sort_keys=True) + '\n')
     (args.out / 'invocations.json').write_text(json.dumps(commands, indent=2) + '\n')
     summary = {'manifest_sha256': manifest_hash.split()[0], 'files': len(entries),
+               'schema': manifest['schema'],
                'elf': len(elf), 'bytes': sum(e['size'] for e in entries.values()),
                'payload': str(payload), 'identity': manifest['identity']}
     (args.out / 'build-summary.json').write_text(json.dumps(summary, indent=2) + '\n')

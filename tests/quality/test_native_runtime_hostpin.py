@@ -22,6 +22,11 @@ def binding():
             'sha256': hashlib.sha256(MANIFEST.read_bytes()).hexdigest()}
 
 
+@pytest.fixture
+def local_runtime(captured_native_python_manifest, monkeypatch):
+    monkeypatch.setattr(sys.modules[__name__], 'MANIFEST', captured_native_python_manifest)
+
+
 def spec():
     return {'kind': 'command', 'argv': ['python3', 'check.py'],
             'native_runtime': binding(), 'reward_file': '/verifier/reward.txt',
@@ -42,7 +47,7 @@ def test_pin_cannot_be_bypassed_by_no_sandbox(tmp_path):
     assert got.get('score') is None and 'sandbox' in got.get('unmeasured', ''), got
 
 
-def test_changed_payload_is_refused(tmp_path):
+def test_changed_payload_is_refused(tmp_path, local_runtime):
     from eval.verification import native_runtime
     manifest = json.loads(MANIFEST.read_text())
     target = manifest['interpreter']
@@ -58,7 +63,7 @@ def test_changed_payload_is_refused(tmp_path):
             pytest.fail('modified interpreter admitted')
 
 
-def test_admitted_bytes_are_sealed_and_survive_source_replacement(tmp_path):
+def test_admitted_bytes_are_sealed_and_survive_source_replacement(tmp_path, local_runtime):
     from eval.verification import native_runtime
     manifest = json.loads(MANIFEST.read_text())
     target = manifest['interpreter']
@@ -83,7 +88,7 @@ def test_admitted_bytes_are_sealed_and_survive_source_replacement(tmp_path):
         assert manifest['identity']['version'] in proc.stdout
 
 
-def test_namespace_closes_resolution_and_records_child_maps(tmp_path, monkeypatch):
+def test_namespace_closes_resolution_and_records_child_maps(tmp_path, monkeypatch, local_runtime):
     from eval.verification import native_runtime
     monkeypatch.setenv('LD_PRELOAD', '/task/evil.so')
     monkeypatch.setenv('LD_LIBRARY_PATH', '/task')
@@ -105,7 +110,8 @@ child = subprocess.run([sys.executable, '-I', '-S', '-B', '-c',
     "import sqlite3,pathlib; print(pathlib.Path('/proc/self/maps').read_text())"],
     capture_output=True, text=True, check=True)
 print(json.dumps(dict(parent=pathlib.Path('/proc/self/maps').read_text(),child=child.stdout,
-    executable=sys.executable,sqlite=sqlite3.sqlite_version)))
+    executable=sys.executable,sqlite=sqlite3.sqlite_version,
+    sqlite_provider=__import__('_sqlite3').__spec__.origin)))
 '''
     with native_runtime.admit(binding()) as runtime:
         proc = runtime.run(['python3', '-c', code], workdir=tmp_path,
@@ -117,12 +123,14 @@ print(json.dumps(dict(parent=pathlib.Path('/proc/self/maps').read_text(),child=c
                       for line in maps.splitlines() if len(line.split(maxsplit=5)) == 6
                       and line.split(maxsplit=5)[5].startswith('/')}
             assert runtime.manifest['interpreter'] in loaded
-            assert any('libsqlite3' in name for name in loaded)
+            # Standalone Python can compile SQLite directly into the interpreter.
+            if record['sqlite_provider'] != 'built-in':
+                assert record['sqlite_provider'] in loaded
             assert loaded <= runtime.fds.keys(), loaded - runtime.fds.keys()
         print(json.dumps({'closure': runtime.receipt, **record}, sort_keys=True))
 
 
-def test_actual_bound_bird_check_records_pin_and_preserves_ex_and_wal(tmp_path):
+def test_actual_bound_bird_check_records_pin_and_preserves_ex_and_wal(tmp_path, local_runtime):
     from data.scaffolds.scorer_input import bind
     work = tmp_path / 'task'
     work.mkdir()
@@ -160,7 +168,7 @@ def test_actual_bound_bird_check_records_pin_and_preserves_ex_and_wal(tmp_path):
     assert got.get('unmeasured') and not (work / 'verifier/reward.txt').exists(), got
 
 
-def test_missing_payload_cannot_fall_back_to_host(tmp_path):
+def test_missing_payload_cannot_fall_back_to_host(tmp_path, local_runtime):
     manifest = json.loads(MANIFEST.read_text())
     manifest['files'][manifest['interpreter']]['source'] = str(tmp_path / 'missing')
     path = tmp_path / 'manifest.json'

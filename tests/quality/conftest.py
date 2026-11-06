@@ -26,6 +26,27 @@ os.environ.setdefault("PYTHONDONTWRITEBYTECODE", "1")
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.fixture(scope="module")
+def captured_native_python_manifest(tmp_path_factory):
+    """Local Python/stdlib closure for authored controls; no provisioned payload."""
+    import shutil
+    import subprocess
+
+    for tool in ("bwrap", "readelf", "ldd"):
+        if shutil.which(tool) is None:
+            pytest.skip(f"{tool} is required for the local native-runtime control")
+    work = tmp_path_factory.mktemp("captured-native-python")
+    manifest = work / "manifest.json"
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "tools/build_bird_native_runtime.py"),
+         "--dataset", "bird_minidev", "--out", str(work / "capture"),
+         "--manifest", str(manifest), "--store", str(work / "store")],
+        cwd=ROOT, env={"PATH": os.defpath, "LANG": "C", "PYTHONDONTWRITEBYTECODE": "1"},
+        capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    return manifest
+
+
 def optional_storage_import():
     """Explicit import/probe scope for tests requiring external dataset storage.
 

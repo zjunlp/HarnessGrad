@@ -603,23 +603,12 @@ def _verify_dispatch(workdir: Path, verifier: dict | None, answer: str, **option
         return verify(workdir, spec, answer, **options)
     if "native_runtime" not in spec:
         return _verify_existing(workdir, verifier, answer, **options)
-    from eval.verification.native_runtime import admit, NativeRuntimeUnavailable, SUPPORTED_DATASETS, CHECK_PATHS
+    from eval.verification.native_runtime import admit, NativeRuntimeUnavailable, validate_route
     binding = spec["native_runtime"]
     receipt = {"verified": False, "sha256": binding.get("sha256") if isinstance(binding, dict) else None}
     try:
-        if not options.get("sandbox"):
-            raise NativeRuntimeUnavailable("native runtime requires sandbox=True")
-        if not isinstance(binding, dict) or binding.get('dataset') not in SUPPORTED_DATASETS:
-            raise NativeRuntimeUnavailable("native runtime dataset is outside supported host scope")
-        if ((options.get("env") or {}).get("kind", "files") != "files"
-                or options.get("service_specs") or options.get("running")
-                or spec.get("kind") != "command"
-                or declared_class(spec) not in ("unknown", "actor-workdir")
-                or spec.get("cwd") not in (None, ".")
-                or spec.get("reward_file") != "/verifier/reward.txt"
-                or spec.get("evidence_file") != "/verifier/evidence.json"
-                or spec.get("argv", [])[:2] != ["python3", CHECK_PATHS[binding['dataset']]]):
-            raise NativeRuntimeUnavailable("native runtime binding requires the supported host check route")
+        binding = validate_route(spec, sandbox=options.get('sandbox'), env=options.get('env'),
+                                 service_specs=options.get('service_specs'), running=options.get('running'))
         with admit(binding) as runtime:
             receipt = runtime.receipt
             verdict = _verify_existing(workdir, verifier, answer,
