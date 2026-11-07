@@ -23,7 +23,7 @@
 {"expression": "getattr(adapter, \"score_prediction\", None)", "function": "main", "line": 315, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
 {"expression": "getattr(adapter, \"EVIDENCE_AWARE\", False)", "function": "main", "line": 319, "path": "data/scaffolds/qa/verify/check.py", "sink": "getattr"}
 {"expression": "getattr(trusted_runner, name)", "function": "__getattr__", "line": 46, "path": "harnessgrad/__init__.py", "sink": "getattr"}
-{"expression": "getattr(self.resolve(), name)", "function": "__getattr__", "line": 131, "path": "harnessgrad/paths.py", "sink": "getattr"}
+{"expression": "getattr(self.resolve(), name)", "function": "__getattr__", "line": 133, "path": "harnessgrad/paths.py", "sink": "getattr"}
 {"expression": "ast.literal_eval(value)", "function": "convert_value", "line": 230, "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py", "sink": "ast.literal_eval"}
 {"expression": "getattr(builtins, type_str)", "function": "convert_value", "line": 234, "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py", "sink": "getattr"}
 {"expression": "ast.parse(cleaned_input, mode=\"eval\")", "function": "ast_parse", "line": 244, "path": "tests/fixtures/bfcl_ast_source/candidate-codex195/files/berkeley-function-call-leaderboard/bfcl_eval/model_handler/utils.py", "sink": "ast.parse"}

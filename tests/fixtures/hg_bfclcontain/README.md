@@ -60,6 +60,13 @@ retained packet, including the upstream uncontained-expression finding. Existing
 acquired source snapshots, cases, observations and historical registry proposals
 are preserved.
 
+The current pins include the QA module's documentation edit and the
+`HG_REVIEWED_ENVIRONMENT_ONLY` setting. With that setting enabled, storage
+configuration comes from the process environment and skips `.env` discovery.
+The launcher is responsible for selecting those variables. The trusted scoring
+context still takes precedence. The 43 reviewed call sites are unchanged apart
+from the line of the `getattr` in `DatasetPath.__getattr__`.
+
 ## Validation
 
 Run from the repository root:

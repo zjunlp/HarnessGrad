@@ -1,6 +1,8 @@
 """Scoped negative reachability evidence plus an UNWIRED decoder preflight.
 
-These controls never authorize official scoring or assert general containment.
+The static check inspects the current platform sources for known decoder
+references. The saved graph describes a historical review. Computed loaders
+remain unresolved, and these controls never authorize official scoring.
 """
 import ast
 import hashlib
@@ -49,14 +51,11 @@ def test_retained_eval_branches_are_pinned_and_excluded_by_gate():
     assert gate.preflight("fabricated_echo(value=lambda: 1)")["reason"] == "bfclguard_nonliteral_argument"
 
 
-def test_complete_named_scope_graph_and_every_source_entrypoint():
+def test_current_platform_graph_has_no_known_decoder_or_candidate_imports():
     result = analysis.analyze()
-    for key, actual in result.items():
-        expected = [json.loads(line) for line in (HERE / (key + ".jsonl")).read_text().splitlines()]
-        assert actual == expected, f"review source/graph drift in {key}"
-    assert analysis.summary(result) == json.loads((HERE / "summary.json").read_text())
     assert len(result["closures"]) == len(result["sources"])
     assert {r["entry"] for r in result["closures"]} == {r["id"] for r in result["sources"]}
+    assert not analysis.candidate_import_edges(result)
     assert not analysis.target_edges(result)
     assert not [r for r in result["mechanisms"] if r["target_mentions"]]
     # Decoder identifiers would be executable references; currently only two data strings exist.
@@ -72,19 +71,38 @@ def test_analyzer_follows_relative_imports_initializers_and_literal_dynamic_alia
         "eval/entry.py": "import importlib as il\nload = il.import_module\nload('data.leaf')\n",
         "data/leaf.py": "from bfcl_eval.model_handler.utils import resolve_ast_call\n",
         "methods/cli": "#!/usr/bin/env python3\nimport driver\n",
+        "tools/tool.py": "pass\n",
+        "harnessgrad/helper.py": "pass\n",
+        "ckpt/loader.py": "pass\n",
     }
     for name, text in files.items():
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
+    candidate = tmp_path / "data/candidates/local/agent.py"
+    candidate.parent.mkdir(parents=True)
+    candidate.write_text("from bfcl_eval.model_handler.utils import resolve_ast_call\n")
     result = analysis.analyze(tmp_path)
     ids = {r["path"]: r["id"] for r in result["sources"]}
+    assert ids.keys() == files.keys()
     closure = next(r["reachable"] for r in result["closures"] if r["entry"] == ids["driver.py"])
     assert {ids[p] for p in ("driver.py", "eval/__init__.py", "eval/boot.py", "eval/entry.py", "data/leaf.py")} <= set(closure)
     assert analysis.target_edges(result)
-    assert "methods/cli" in ids
     entry_closure = next(r["reachable"] for r in result["closures"] if r["entry"] == ids["eval/entry.py"])
     assert ids["eval/__init__.py"] in entry_closure and ids["eval/boot.py"] in entry_closure
+
+
+@pytest.mark.parametrize("candidate_present", [False, True])
+@pytest.mark.parametrize("statement", ["import data.candidates.probe", "from data import candidates"])
+def test_candidate_import_is_detected_even_when_artifact_is_absent(tmp_path, candidate_present, statement):
+    (tmp_path / "driver.py").write_text(statement + "\nimport data.candidates_extra\n")
+    if candidate_present:
+        candidate = tmp_path / "data/candidates/probe.py"
+        candidate.parent.mkdir(parents=True)
+        candidate.write_text("from bfcl_eval.model_handler.utils import resolve_ast_call\n")
+    result = analysis.analyze(tmp_path)
+    assert [row["path"] for row in result["sources"]] == ["driver.py"]
+    assert [edge["statement"] for edge in analysis.candidate_import_edges(result)] == [statement]
 
 
 @pytest.mark.parametrize("statement,category", [
