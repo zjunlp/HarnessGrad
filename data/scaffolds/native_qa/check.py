@@ -35,13 +35,13 @@ class _ScorerModules:
             loader=_ScorerSourceLoader(fullname, str(source)))
 
 
-if __name__ == '__main__':
+def load_scorer():
     package = ModuleType('native_qa')
     package.__path__ = []
     sys.modules['native_qa'] = package
     sys.meta_path.insert(0, _ScorerModules())
-
-from native_qa.scoring import score
+    from native_qa.scoring import score
+    return score
 
 
 def main():
@@ -58,12 +58,15 @@ def main():
             raise ValueError('trusted gold digest mismatch')
         answer_path = Path('answer.txt')
         prediction = answer_path.read_text(encoding='utf-8', errors='replace') if answer_path.is_file() else ''
-        result = score(name, prediction, json.loads(raw))
+        result = load_scorer()(name, prediction, json.loads(raw),
+                               _math_runtime=name in ('math', 'math500'))
         reward = result['reward']
         if type(reward) not in (int, float) or not math.isfinite(reward) or not 0 <= reward <= 1:
             raise ValueError('invalid score range')
         evidence.update(measured=True, reward=reward, correct=result['correct'],
                         official=result['official'], why=result['why'])
+        if name in ('math', 'math500'):
+            evidence['python_runtime'] = result['python_runtime']
         (out/'reward.txt').write_text(str(reward), encoding='utf-8')
     except Exception as exc:
         # Do not echo reference text, source paths, or scorer exception payloads.

@@ -10,6 +10,7 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -22,9 +23,24 @@ from data.scaffolds.native_qa import CATALOG, Dataset, parse_row
 from data.scaffolds.native_qa.prepare import prepare
 from data.scaffolds.native_qa.scoring import score
 from data.scaffolds.native_qa import bbeh_official, metrics, office_reward
+from data.scaffolds.native_qa import math_execution
+from harnessgrad import dataset_runtime
 from eval.ckpt.git_state import stage_workspace
 from eval.run.runner import run_one
 from harnessgrad.config.areas import ConfigMissing
+
+
+@pytest.fixture
+def prepared_math(monkeypatch):
+    store = os.environ.get('HG_TEST_MATH_EXECUTION_RUNTIME_ROOT')
+    if not store:
+        pytest.skip('set HG_TEST_MATH_EXECUTION_RUNTIME_ROOT to an explicitly prepared disposable store')
+    monkeypatch.setenv('HG_DATASET_RUNTIME_ROOT', str(Path(store).resolve(strict=True)))
+    math_execution.runtime.cache_clear()
+    try:
+        yield dataset_runtime.resolve_execution('math')
+    finally:
+        math_execution.runtime.cache_clear()
 
 
 def source_row(name, split='test'):
@@ -160,23 +176,31 @@ def test_math_never_falls_back_to_string_match(tmp_path,monkeypatch):
         if name=='math-verify':raise importlib.metadata.PackageNotFoundError(name)
         return real(name)
     monkeypatch.setattr(importlib.metadata,'version',absent)
-    with pytest.raises(ConfigMissing,match='exact-match is not a substitute'):adapter.load()
-    with pytest.raises(importlib.metadata.PackageNotFoundError):score('math500','1/2',{'answer':r'\boxed{\frac{1}{2}}'})
+    assert adapter.load()[0]  # Data loading does not inspect platform packages.
+    monkeypatch.setenv('HG_DATASET_RUNTIME_ROOT', str(tmp_path/'absent-runtime'))
+    math_execution.runtime.cache_clear()
+    try:
+        with pytest.raises(dataset_runtime.DatasetRuntimeUnavailable,match='--dataset math --runtime execution'):
+            adapter.verifier(adapter.records()[0])
+        with pytest.raises(dataset_runtime.DatasetRuntimeUnavailable):
+            score('math500','1/2',{'answer':r'\boxed{\frac{1}{2}}'})
+    finally:
+        math_execution.runtime.cache_clear()
 
 
 @pytest.mark.parametrize('name,answer',[('searchqa','violet'),('nq','red blue'),('bbeh','The answer is: True.'),('supergpqa','A'),('officeqa_pro','<FINAL_ANSWER>42</FINAL_ANSWER>'),
-    pytest.param('math500',r'\boxed{0.5}',marks=pytest.mark.skipif(
-        importlib.util.find_spec('math_verify') is None,
-        reason='exact Math-Verify dependency is not installed in this interpreter'))])
+    ('math',r'\boxed{0.5}'), ('math500',r'\boxed{0.5}')])
 @pytest.mark.parametrize('oracle',[True,False])
-def test_platform_independent_private_verifier(name,answer,oracle,tmp_path,monkeypatch):
+def test_platform_independent_private_verifier(name,answer,oracle,tmp_path,monkeypatch,request):
+    if name in ('math','math500'):
+        runtime=request.getfixturevalue('prepared_math')
     adapter=fixture(name,tmp_path/'data')
     task=adapter.load()[0][0]; record=adapter.records()[0]
     verifier=adapter.verifier(record)
-    if name=='math500':
+    if name in ('math','math500'):
         private_reference=json.dumps(record['gold']['answer'])[1:-1]
-        assert verifier['argv'][0]==sys.executable
-        assert verifier['runtime_paths']==list(dict.fromkeys([sys.prefix,sys.base_prefix]))
+        assert verifier['argv'][:3]==[runtime['python'], '-I', '-B']
+        assert verifier['runtime_paths']==runtime['runtime_paths']
         assert private_reference not in json.dumps(task)
         assert private_reference not in json.dumps(adapter.setup_map())
     source=tmp_path/'source';source.mkdir()
@@ -201,21 +225,25 @@ assert not (w/'gold.json').exists()
     assert not result['verdict'].get('unmeasured'),result['verdict']
     assert result['verdict']['evidence']['measured'] is True
     assert 'TAMPERED' not in json.dumps(result['verdict']['evidence'])
-    if name=='math500':
+    if name in ('math','math500'):
         assert private_reference not in json.dumps(result['verdict']['evidence'])
         assert result['verdict']['evidence']['scorer_input']['verified'] is True
+        observed=result['verdict']['evidence']['python_runtime']
+        assert observed['python']==runtime['python'] and observed['prefix']==runtime['path']
+        assert observed['isolated'] and observed['no_bytecode'] and observed['readonly']
+        assert result['verdict']['python_runtime']['runtime_id']==runtime['runtime_id']
 
 
 @pytest.mark.parametrize('name',['math','math500'])
-def test_math_verifier_rejects_hidden_tmp_runtime(name,tmp_path,monkeypatch):
+def test_math_verifier_ignores_platform_tmp_prefix(name,prepared_math,tmp_path,monkeypatch):
     monkeypatch.setattr(sys,'prefix',str(tmp_path))
     adapter=Dataset(name,tmp_path/'data')
-    with pytest.raises(ConfigMissing,match='venv outside /tmp'):
-        adapter.verifier({'task_id':name+'/test/control','gold':{'answer':r'\boxed{2}'}})
+    spec=adapter.verifier({'task_id':name+'/test/control','gold':{'answer':r'\boxed{2}'}})
+    assert spec['runtime_paths']==prepared_math['runtime_paths']
+    assert str(tmp_path) not in spec['runtime_paths']
+    assert spec['argv'][0]==prepared_math['python']
 
 
-@pytest.mark.skipif(importlib.util.find_spec('math_verify') is None,
-                    reason='exact Math-Verify dependency is not installed in this interpreter')
 @pytest.mark.parametrize('gold,prediction,want',[
     (r'\boxed{\frac{1}{2}}',r'\boxed{0.5}',1),
     (r'\boxed{2}',r'\boxed{1+1}',1),
@@ -223,5 +251,5 @@ def test_math_verifier_rejects_hidden_tmp_runtime(name,tmp_path,monkeypatch):
     (r'\boxed{2}',r'\boxed{2} then \boxed{3}',0),
     (r'\boxed{2}',r'\boxed{2} then \boxed{',0),
 ])
-def test_math_real_native_equivalence(gold,prediction,want):
+def test_math_real_native_equivalence(prepared_math,gold,prediction,want):
     assert score('math500',prediction,{'answer':gold})['reward']==want

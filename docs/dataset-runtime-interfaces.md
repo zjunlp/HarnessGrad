@@ -365,8 +365,8 @@ python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip 
 
 可信 Python 服务和评分器可显式声明 `python_runtime`，共同复用
 [`harnessgrad.dataset_runtime`](../harnessgrad/dataset_runtime.py) 的准备及内容核验机制。
-当前使用者包括 CostBench static/dynamic（服务与评分器共享制品），以及 LoCoMo
-（仅评分器使用）。它们声明各自的 Python 3.12 execution 制品，平台 Python 无须
+当前使用者包括 CostBench static/dynamic（服务与评分器共享制品）、LoCoMo
+（仅评分器使用），以及 MATH/MATH500（两者共享 `math` 评分制品）。它们声明各自的 Python 3.12 execution 制品，平台 Python 无须
 安装它们的第三方依赖。LoCoMo 的加载和证据报告只用标准库，NLTK PorterStemmer
 仅在评分时导入，无须 corpus。τ³ 保留其已有运行时路径。
 
@@ -391,6 +391,8 @@ python tools/prepare_dataset.py --dataset costbench --runtime execution
 python tools/prepare_dataset.py --dataset costbench --runtime execution --check --json
 python tools/prepare_dataset.py --dataset locomo --runtime execution
 python tools/prepare_dataset.py --dataset locomo --runtime execution --check --json
+python tools/prepare_dataset.py --dataset math --runtime execution
+python tools/prepare_dataset.py --dataset math --runtime execution --check --json
 ```
 
 `--runtime` 默认为 `provider`，因此 GSM8K 的已有准备命令保持不变。
@@ -428,6 +430,10 @@ provider 和 execution 共用存储机制，但声明、索引和制品按 profi
 失败时清除旧 reward，返回未测量；它不提供沙箱，完整隔离验收使用 `--platform`。
 制品库存覆盖 venv 与基础解释器文件，不封闭完整标准库或宿主系统库。
 这些显式管理的制品通过第 9.1 节的身份接入 H0、measurement cache 与 resume 比较。
+MATH/MATH500 的数据加载和本地 JSON/JSONL 准备用标准库；就绪检查核验共享 `math`
+制品，直接 `score()` 和 control 也在该解释器中诊断评分。实际评分仍在独立的
+15 秒子进程内调用原样保留的 `math_grade.py`，其观察值进入 scorer evidence。
+Hugging Face/Parquet 数据获取使用单独的工具环境，未计入这个评分制品。
 
 ## 6. 完整重复试验报告
 

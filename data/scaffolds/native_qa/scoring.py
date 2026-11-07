@@ -13,7 +13,7 @@ from .bbeh_official import evaluate_correctness
 from .office_reward import score_answer
 
 
-def score(name: str, prediction: str, gold: dict) -> dict:
+def score(name: str, prediction: str, gold: dict, *, _math_runtime=False) -> dict:
     if name in ('searchqa', 'nq'):
         metrics = qa_metrics(prediction, gold['answers'])
         reward = metrics['exact_match']
@@ -30,18 +30,22 @@ def score(name: str, prediction: str, gold: dict) -> dict:
         reward = float(answer == gold['answer'])
         metrics, protocol = {'accuracy': reward}, 'native-supergpqa-final-letter-v1'
     elif name in ('math', 'math500'):
+        if not _math_runtime:
+            from .math_execution import score as managed_score
+            return managed_score(name, prediction, gold)
         if importlib.metadata.version('math-verify') != '0.9.0':
             raise ValueError('math-verify==0.9.0 is required; no string-match fallback')
         # The native Math-Verify rules run in their own bounded interpreter, as
         # upstream. A timeout/error is unmeasured, never an ordinary wrong answer.
-        result = subprocess.run([sys.executable, '-I', '-X', 'utf8',
-                                 str(Path(__file__).with_name('math_grade.py'))],
+        result = subprocess.run([sys.executable, '-I', '-B', '-X', 'utf8',
+                                 str(Path(__file__).with_name('math_worker.py')), 'grade'],
                                 input=json.dumps({'gold': gold['answer'],
                                                   'prediction': prediction}).encode(),
                                 capture_output=True, timeout=15)
         if result.returncode:
             raise ValueError('Math-Verify refused the reference or failed to grade')
-        value = json.loads(result.stdout)['correct']
+        graded = json.loads(result.stdout)
+        value = graded['correct']
         if type(value) is not bool:
             raise ValueError('invalid Math-Verify result')
         reward = float(value)
@@ -51,6 +55,9 @@ def score(name: str, prediction: str, gold: dict) -> dict:
         metrics, protocol = {'accuracy': reward}, 'databricks-officeqa-7b9a3c15-tolerance-0'
     else:
         raise ValueError('unknown upstream QA adapter')
-    return {'reward': reward, 'correct': reward == 1.0,
+    result = {'reward': reward, 'correct': reward == 1.0,
             'official': {'metric_identity': protocol, 'metrics': metrics},
             'why': f'{protocol}: reward {reward:g}'}
+    if name in ('math', 'math500'):
+        result['python_runtime'] = graded['python_runtime']
+    return result

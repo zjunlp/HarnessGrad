@@ -7,6 +7,7 @@ from harnessgrad.paths import dataset_root
 from data.scaffolds.native_qa import Dataset
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "math"
 ORACLE_SOURCE = "released"
 METRIC = 'math-verify-0.9.0-last-boxed'
 DATASET_ROOT = dataset_root('math')
@@ -24,12 +25,7 @@ def score(prediction, gold):
     return native_score("math", prediction, gold)
 
 def provision_status():
-    try:
-        tasks, _ = _spec.load()
-        return {'root': str(DATASET_ROOT), 'present': True, 'tasks': len(tasks), 'metric': METRIC,
-                'scope': 'prepared native source; real-data diagnostic is a separate gate'}
-    except (OSError, ValueError) as exc:
-        return {'root': str(DATASET_ROOT), 'present': False, 'tasks': None, 'detail': str(exc)}
+    return _spec.provision_status()
 
 def __getattr__(name):
     return _spec.getattr(name)

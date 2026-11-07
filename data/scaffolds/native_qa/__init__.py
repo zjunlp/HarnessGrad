@@ -9,11 +9,9 @@ from __future__ import annotations
 import csv
 from collections import Counter
 import hashlib
-import importlib.metadata
 import json
 from pathlib import Path
 import re
-import sys
 
 #: The declared-missing-payload signal (`load()` raises it with the prepare command).
 #: Imported here as well as lazily in `missing()` because `getattr` must be able to
@@ -154,10 +152,6 @@ class Dataset:
         manifest=json.loads(path.read_text(encoding='utf-8'))
         if manifest.get('dataset')!=self.name or manifest.get('source')!=self.source['source'] or manifest.get('revision')!=self.source['revision']:
             raise ValueError(f'{self.name}: source manifest dataset/revision mismatch')
-        if self.name in ('math','math500'):
-            try: available=importlib.metadata.version('math-verify')=='0.9.0'
-            except importlib.metadata.PackageNotFoundError: available=False
-            if not available: missing(f'{self.name}: install math-verify==0.9.0 for the trusted scorer; exact-match is not a substitute')
         files=manifest.get('files')
         if not isinstance(files,list) or not files: raise ValueError('source manifest has no files')
         records=[];seen=set();splits=set()
@@ -212,6 +206,26 @@ class Dataset:
         tasks=[{'task_id':r['task_id'],'goal':r['question']+'\n\nWrite the final answer to answer.txt in your working directory.','inputs':[]}for r in self.records()]
         return tasks,{r['task_id']:'' for r in self.records()}
 
+    def provision_status(self):
+        try:
+            tasks, _ = self.load()
+        except DataRootNotConfigured as exc:
+            return {'present': False, 'status': 'config_missing', 'scope': 'native-qa-data',
+                    'detail': str(exc)}
+        except (ConfigMissing, OSError, ValueError) as exc:
+            return {'root': str(self.root), 'present': False, 'status': 'data_missing'
+                    if isinstance(exc, (ConfigMissing, FileNotFoundError)) else 'invalid',
+                    'scope': 'native-qa-data', 'detail': str(exc)}
+        if self.name not in ('math', 'math500'):
+            return {'root': str(self.root), 'present': True, 'status': 'ready',
+                    'scope': 'native-qa-data', 'tasks': len(tasks), 'metric': self.source['metric']}
+        from harnessgrad.dataset_runtime import check_execution
+        execution = check_execution('math')
+        return {'root': str(self.root), 'present': execution['present'],
+                'status': execution['status'], 'scope': 'native-qa-data-and-execution',
+                'tasks': len(tasks), 'metric': self.source['metric'],
+                'detail': execution['detail'], 'execution_runtime': execution}
+
     def corpus(self):
         corpus=Path(configured_path('HG_DATA_OFFICEQA_PRO_CORPUS',self.root/'corpus')).resolve()
         if not corpus.is_dir(): missing('officeqa_pro requires a separately prepared public corpus directory; question/answer CSV must not be inside it')
@@ -243,7 +257,10 @@ class Dataset:
     def verifier(self,r):
         gold=json.dumps(r['gold'],ensure_ascii=False,sort_keys=True);digest=hashlib.sha256(gold.encode()).hexdigest()
         inputs=[{'path':'gold.json','content':gold}]
-        for module in self.VERIFIER_MODULES:
+        modules = self.VERIFIER_MODULES
+        if self.name in ('math','math500'):
+            modules += ('math_worker.py',)
+        for module in modules:
             source=PACKAGE/module
             if not source.is_file(): missing(f'{self.name}: verifier module {module} is missing')
             inputs.append({'path':f'verifier/native_qa/{module}','from':str(source)})
@@ -252,19 +269,11 @@ class Dataset:
                 'reward_file':'/verifier/reward.txt','evidence_file':'/verifier/evidence.json',
                 'timeout_s':30,'result_contract':{'version':1,'score_range':[0,1],'require_exit_zero':True}}
         if self.name in ('math','math500'):
-            # Use the interpreter whose pinned Math-Verify dependency load has
-            # checked. Preserve the venv executable (not its base-Python target)
-            # and mount both prefixes through the existing verifier contract.
-            roots = list(dict.fromkeys([sys.prefix, sys.base_prefix]))
-            for root in roots:
-                path = Path(root)
-                if (not path.is_absolute() or path == Path('/tmp') or Path('/tmp') in path.parents
-                        or path.resolve() == Path('/tmp') or Path('/tmp') in path.resolve().parents):
-                    missing(f'{self.name}: trusted Math-Verify runtime must use absolute prefixes outside hidden /tmp; provision a venv outside /tmp')
-            if not Path(sys.executable).is_absolute():
-                missing(f'{self.name}: trusted Math-Verify runtime requires an absolute sys.executable')
-            spec['argv'][0] = sys.executable
-            spec['runtime_paths'] = roots
+            from .math_execution import binding
+            selected = binding()
+            spec['argv'] = [selected['python'], '-I', '-B', *spec['argv'][2:]]
+            spec['python_runtime'] = selected
+            spec['runtime_paths'] = list(selected['runtime_paths'])
         return spec
 
     def getattr(self,name):
@@ -303,5 +312,5 @@ class Dataset:
         for split,filename in self.source.get('files',{}).items():
             entries.append({'kind':'hf-file','name':self.name+' native '+split,'repo':self.source['source'],'file':filename,'version':self.source['revision'],'dst':'source/'+filename,'size':'native release file; see HuggingFace manifest','note':'Native source only. Run the pinned prepare command to create digest-bound JSONL; no implicit data download on load.'})
         if not entries: entries=[{'kind':'hf-dataset','name':self.name+' native records','repo':self.source['source'],'version':self.source['revision'],'dst':'source','size':'native table release','note':'The prepare CLI streams the pinned native dataset into JSONL with original source split membership. No data is downloaded on import.'}]
-        if self.name in ('math','math500'): entries.append({'kind':'pip','name':'Math-Verify trusted scorer','package':'math-verify==0.9.0','version':'0.9.0','size':'Python scorer dependencies','note':'Exact native mathematical equivalence scorer is mandatory; install separately for the verifier interpreter.'})
+        if self.name in ('math','math500'): entries.append({'kind':'pip','name':'Math-Verify trusted scorer','package':'math-verify','version':'0.9.0','size':'Python scorer dependencies','note':'Both MATH datasets use the locked math execution artifact. Prepare explicitly with python tools/prepare_dataset.py --dataset math --runtime execution; the platform does not need Math-Verify.'})
         return entries

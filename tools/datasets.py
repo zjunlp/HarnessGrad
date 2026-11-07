@@ -282,6 +282,10 @@ def check_dataset(name: str, downloads: list[dict]) -> dict:
     if dataset_runtime.descriptor(name) is not None:
         return _check_provider_downloads(name, downloads)
     module = _download_adapter(name)
+    execution = getattr(module, 'MANAGED_EXECUTION_RUNTIME', None)
+    if execution is not None:
+        return _check_runtime_downloads(name, downloads, module,
+            dataset_runtime.check_execution(execution), profile='execution')
     base = dataset_root(module)
     entries = [check_entry(entry, base) for entry in downloads]
     status = {}
@@ -300,8 +304,12 @@ def check_dataset(name: str, downloads: list[dict]) -> dict:
 def _check_provider_downloads(name: str, downloads: list[dict]) -> dict:
     """Check bytes and the declared dependency environment, never the platform's packages."""
     module = _download_adapter(name)
+    return _check_runtime_downloads(name, downloads, module, dataset_runtime.check(name), profile='provider')
+
+
+def _check_runtime_downloads(name, downloads, module, runtime_status, *, profile):
+    """Use only a verified provider or execution artifact for package inspection."""
     base = dataset_root(module)
-    runtime_status = dataset_runtime.check(name)
     packages = [entry.get("package") for entry in downloads if entry.get("kind") == "pip"]
     versions, package_error = {}, ""
     if packages and runtime_status["present"]:
@@ -341,8 +349,10 @@ def _check_provider_downloads(name: str, downloads: list[dict]) -> dict:
     data = [entry for entry in entries if entry["kind"] != "pip"]
     return {"dataset": name, "root": str(base), "entries": entries,
             "runtime": runtime_status, "data_present": bool(data) and all(e["present"] for e in data),
-            "status": {"scope": "declared-downloads-and-provider-runtime",
-                       "detail": "Downloaded bytes and dependencies only; provider loading is checked by prepare_dataset.py"},
+            "status": {"scope": f"declared-downloads-and-{profile}-runtime",
+                       "detail": ("Downloaded bytes and dependencies only; provider loading is checked by prepare_dataset.py"
+                                  if profile == 'provider' else
+                                  "Downloaded bytes and execution dependencies only; no scorer or benchmark was run")},
             "present": bool(entries) and runtime_status["present"] and all(e["present"] for e in entries)}
 
 
@@ -796,6 +806,8 @@ def _main(argv=None) -> int:
                     failed += 1
             if dataset_runtime.descriptor(name) is not None:
                 print(f"  next: python tools/prepare_dataset.py --dataset {name}")
+            elif getattr(module, 'MANAGED_EXECUTION_RUNTIME', None) is not None:
+                print(f"  next: python tools/prepare_dataset.py --dataset {module.MANAGED_EXECUTION_RUNTIME} --runtime execution")
         return 1 if failed else 0
 
     if args.check:

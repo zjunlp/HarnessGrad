@@ -58,6 +58,12 @@ RESOURCES = (
     "data/datasets/locomo/requirements-score.txt",
     "data/datasets/locomo/specs/source.json",
     "data/datasets/locomo/verify/check.py",
+    "data/datasets/math/execution-runtime.json",
+    "data/datasets/math/requirements.lock",
+    "data/scaffolds/native_qa/math_execution.py",
+    "data/scaffolds/native_qa/math_worker.py",
+    "data/scaffolds/native_qa/math_grade.py",
+    "data/scaffolds/native_qa/PROVENANCE.json",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
@@ -180,6 +186,11 @@ from data.datasets import locomo
 assert locomo._load_asset('report.py').aggregate_scores([None]) == {
     'num_failed_trials': 1, 'num_questions_scored': 0}
 assert importlib.util.find_spec('nltk') is None
+assert execution_descriptor('math')['pins']['math-verify'] == '0.9.0'
+assert registry.managed_runtime('math') and registry.managed_runtime('math500')
+assert importlib.util.find_spec('math_verify') is None
+from data.datasets import math as math_dataset, math500
+assert math_dataset.MANAGED_EXECUTION_RUNTIME == math500.MANAGED_EXECUTION_RUNTIME == 'math'
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)

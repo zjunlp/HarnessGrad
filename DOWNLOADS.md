@@ -761,9 +761,9 @@ dataset does not read as prepared.
 - **Type:** `pip`
 - **Version (pinned):** `0.9.0`
 - **Size:** Python scorer dependencies
-- **Package:** `math-verify==0.9.0==0.9.0`
+- **Package:** `math-verify==0.9.0`
 
-> Exact native mathematical equivalence scorer is mandatory; install separately for the verifier interpreter.
+> Both MATH datasets use the locked math execution artifact. Prepare explicitly with python tools/prepare_dataset.py --dataset math --runtime execution; the platform does not need Math-Verify.
 
 ## `math500`
 
@@ -785,9 +785,9 @@ dataset does not read as prepared.
 - **Type:** `pip`
 - **Version (pinned):** `0.9.0`
 - **Size:** Python scorer dependencies
-- **Package:** `math-verify==0.9.0==0.9.0`
+- **Package:** `math-verify==0.9.0`
 
-> Exact native mathematical equivalence scorer is mandatory; install separately for the verifier interpreter.
+> Both MATH datasets use the locked math execution artifact. Prepare explicitly with python tools/prepare_dataset.py --dataset math --runtime execution; the platform does not need Math-Verify.
 
 ## `memoryagentbench`
 
