@@ -131,10 +131,12 @@
   "reference": "/site/runtime-blockers-b7.md",
   "source_path": "reports/runtime-blockers-b7.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
-  "bytes": 13029,
-  "sha256": "9bcb118b76b6c9a0cffa0026529bb975beaaeed155de7298e92108053c606cba",
+  "source_bytes": 13078,
+  "source_sha256": "8d84ad31ae3f2e7efd39234488db305f13613faeb85154e976a8f627ee15a78d",
+  "bytes": 13228,
+  "sha256": "4b5b9be9acf6c179629ba9ad847f330000077143954d039194cd14f34c8b300c",
   "carrier": "tests/fixtures/hg_migration_site/runtime-blockers-b7.md",
-  "transform": "retired native-runtime JSON receipt references removed; retirement note added"
+  "transform": "replaced direct references to retired native-runtime JSON receipts with summaries and a link to ARCHIVED.json"
  },
  {
   "reference": "/site/task-206-twowiki-provenance-review.md",
@@ -242,7 +244,8 @@
  },
  {
   "reference": "reports/w-jc2-review.md",
-  "carrier": "reports/w-jc2-review.md",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-jc2-review.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 19604,
@@ -250,7 +253,8 @@
  },
  {
   "reference": "reports/w-journalcov-review.md",
-  "carrier": "reports/w-journalcov-review.md",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-journalcov-review.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 21738,
@@ -258,7 +262,7 @@
  },
  {
   "reference": "docs/enforcement-proof-decision.md",
-  "carrier": "docs/enforcement-proof-decision.md",
+  "carrier": "tests/fixtures/hg_migration_site/enforcement-proof-decision.md",
   "source_path": "docs/enforcement-proof-decision.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 5013,
@@ -266,7 +270,7 @@
  },
  {
   "reference": "docs/independent-review-deferred.md",
-  "carrier": "docs/independent-review-deferred.md",
+  "carrier": "tests/fixtures/hg_migration_site/independent-review-deferred.md",
   "source_path": "docs/independent-review-deferred.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 3430,
@@ -290,7 +294,7 @@
  },
  {
   "reference": "docs/w-shared-verifier-review.md",
-  "carrier": "docs/w-shared-verifier-review.md",
+  "carrier": "tests/fixtures/hg_migration_site/w-shared-verifier-review.md",
   "source_path": "docs/w-shared-verifier-review.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 13844,
@@ -298,7 +302,8 @@
  },
  {
   "reference": "reports/w-chess2-evidence/actor-command-line-19.sh",
-  "carrier": "reports/w-chess2-evidence/actor-command-line-19.sh",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-chess2-evidence/actor-command-line-19.sh",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 1432,
@@ -306,7 +311,8 @@
  },
  {
   "reference": "reports/w-chess3-evidence/corrected-blocker-before-run.json",
-  "carrier": "reports/w-chess3-evidence/corrected-blocker-before-run.json",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-chess3-evidence/corrected-blocker-before-run.json",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 3800,
@@ -314,7 +320,8 @@
  },
  {
   "reference": "reports/w-chess3-receipts.md",
-  "carrier": "reports/w-chess3-receipts.md",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-chess3-receipts.md",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 21600,
@@ -322,7 +329,8 @@
  },
  {
   "reference": "reports/w-fix-validation.txt",
-  "carrier": "reports/w-fix-validation.txt",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-fix-validation.txt",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 55892,
@@ -330,7 +338,8 @@
  },
  {
   "reference": "reports/w-obs-validation.txt",
-  "carrier": "reports/w-obs-validation.txt",
+  "carrier": null,
+  "availability": "git_history_only",
   "source_path": "reports/w-obs-validation.txt",
   "source_commit": "4d30de827b4b1073a65cb62643a970b917eecd2b",
   "bytes": 67005,
