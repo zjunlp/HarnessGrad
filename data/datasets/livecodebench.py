@@ -1,8 +1,8 @@
 r"""LiveCodeBench release_v6: 1,055 problems, official **pass@1** by running the released tests.
 
-    python3 data/datasets/livecodebench/prepare.py            # materialize the pool (4.5 GB read)
-    python3 data/datasets/livecodebench/control.py --oracle --platform
-    python3 tools/dataset_lint.py --dataset livecodebench
+    python data/datasets/livecodebench/prepare.py
+    python tools/prepare_dataset.py --dataset livecodebench --runtime execution
+    python data/datasets/livecodebench/control.py --oracle --task-id livecodebench/800 --platform
 
 This adapter was a **refusal** until the platform's authored-reference contract existed; the
 refusal is in the git history and in skill doc round 25. Two things changed and nothing else
@@ -55,20 +55,24 @@ and reports how much of the pool has one -- `ORACLE_COVERAGE`. The references li
 """
 from __future__ import annotations
 
-from data.scaffolds.scorer_input import bind as bind_scorer_input
-
 import base64
 import json
 import pickle
 import zlib
+from collections.abc import Mapping
+from functools import lru_cache
 from pathlib import Path
 
-import numpy as np
-
-from harnessgrad.paths import dataset_root
+from data.scaffolds.asset_module import load as load_asset
+from data.scaffolds.scorer_input import bind as bind_scorer_input
+from harnessgrad import dataset_runtime
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 
 KIND = "dataset"
+METRIC_NAME = "pass@1"
+MANAGED_EXECUTION_RUNTIME = "livecodebench"
+NUMPY_VERSION = "1.26.4"
 #: The reference solutions are **ours** and the released tests validate them; see the module
 #: docstring and `data/dataset.schema.json` (`module.oracle_about`).
 ORACLE_SOURCE = "authored"
@@ -87,6 +91,8 @@ TESTS_DIR = "tests"
 UPSTREAM = f"_src/upstream/LiveCodeBench-{UPSTREAM_COMMIT}/lcb_runner/evaluation"
 EXECUTOR = f"{UPSTREAM}/testing_util.py"
 PASS_K = f"{UPSTREAM}/pass_k_utils.py"
+EXECUTOR_SHA256 = "b7cb6a8a69807bb868150a61742e25d7bb5328bbe01d514471b6ec43c9fa9ed2"
+PASS_K_SHA256 = "6af3ee55d40f96fa06fa511bd5e43d94b19604750e82454b4b3c1f45c5199010"
 PACKAGE = Path(__file__).resolve().parent / "livecodebench"
 CHECK_FILE = PACKAGE / "verify" / "check.py"
 REFERENCES = PACKAGE / "references"
@@ -101,66 +107,6 @@ _FILES = {
     "test5.jsonl": "7f77571c2a6df0c2a72a3277650309f67e01e0008e18117e624633df53f81214",
     "test6.jsonl": "bb4c364f71921c4495a6ad15abe1a927350b720009f4933e2e71f8af0f6fd1f5",
 }
-
-
-# ---------------------------------------------------------------------------------------
-# `lcb_runner/evaluation/pass_k_utils.py` lines 4-53, byte for byte: `estimate_pass_at_k`
-# with its inner `estimator`, and `compute_metrics_from_results`. The check calls the shipped
-# copy of this file, and the test asserts both that this region is upstream's bytes and that
-# the shipped file and this transcription agree -- so the metric is pinned in the two places a
-# reader might look.
-# ---------------------------------------------------------------------------------------
-def estimate_pass_at_k(num_samples, num_correct, k):
-    """Estimates pass@k of each problem and returns them in an array."""
-
-    def estimator(n: int, c: int, k: int) -> float:
-        """Calculates 1 - comb(n - c, k) / comb(n, k)."""
-        if n - c < k:
-            return 1.0
-        return 1.0 - np.prod(1.0 - k / np.arange(n - c + 1, n + 1))
-
-    import itertools
-
-    if isinstance(num_samples, int):
-        num_samples_it = itertools.repeat(num_samples, len(num_correct))
-    else:
-        assert len(num_samples) == len(num_correct)
-        num_samples_it = iter(num_samples)
-
-    return np.array(
-        [estimator(int(n), int(c), k) for n, c in zip(num_samples_it, num_correct)]
-    )
-
-
-def compute_metrics_from_results(results, k_list=[1, 5]):
-    total = []
-    correct = []
-    task_ids = []
-    for task_id, res in results.items():
-        all_correct = []
-        for generation in res:
-            gen = np.array(generation)
-            all_correct.append(np.all(gen > 0))
-        task_ids.append(task_id)
-        total.append(len(all_correct))
-        correct.append(sum(all_correct))
-    total = np.array(total)
-    correct = np.array(correct)
-    ks = k_list
-    detail_pass_at_k = {
-        f"pass@{k}": estimate_pass_at_k(total, correct, k).tolist()
-        for k in ks
-        if (total >= k).all()
-    }
-    pass_at_k = {
-        f"pass@{k}": estimate_pass_at_k(total, correct, k).mean()
-        for k in ks
-        if (total >= k).all()
-    }
-    detail_metrics = {k: dict(zip(task_ids, v)) for k, v in detail_pass_at_k.items()}
-    pass_at_k["detail"] = detail_metrics
-    return pass_at_k
-# ---------------------------------------------------------------------------------------
 
 
 def decode_private_test_cases(value: str) -> list[dict]:
@@ -209,7 +155,7 @@ def task_id(index: int) -> str:
 
 
 def _row_for(task: dict) -> dict:
-    return _raw()[int(task["task_id"].rsplit("/", 1)[1])]
+    return _indexed()[task["task_id"]]
 
 
 def _tests_path(row: dict) -> Path:
@@ -262,10 +208,19 @@ def _setup(row: dict) -> dict:
     ]}
 
 
+@lru_cache(maxsize=1)
+def _execution_runtime():
+    return dataset_runtime.resolve_execution(MANAGED_EXECUTION_RUNTIME)
+
+
 def _verify(row: dict) -> dict:
+    binding = dataset_runtime.bind(_execution_runtime(), "verifier")
+    tid = task_id(row["index"])
     spec = {
         "kind": "command",
-        "argv": ["python3", "verify/check.py", "--tests", "tests.json",
+        "python_runtime": binding,
+        "runtime_paths": list(binding["runtime_paths"]),
+        "argv": [binding["python"], "-I", "-B", "verify/check.py", "--tests", "tests.json",
                  "--solution", "solution.py",
                  "--reward-file", "verifier/reward.txt",
                  "--evidence-file", "verifier/evidence.json"],
@@ -279,16 +234,43 @@ def _verify(row: dict) -> dict:
         ],
         "reward_file": "/verifier/reward.txt",
         "evidence_file": "/verifier/evidence.json",
+        "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
         # Leave room beyond upstream's child budget for check startup and verdict writing.
         "timeout_s": 900,
     }
-    return bind_scorer_input(spec, task_id(row["index"]), ["tests.json"])
+    expected = {"tests.json": row["tests_sha256"], "testing_util.py": EXECUTOR_SHA256,
+                "pass_k_utils.py": PASS_K_SHA256}
+    bind_scorer_input(spec, tid, list(expected))
+    for path, digest in spec["scorer_input"]["files"].items():
+        if digest != expected[path]:
+            raise ValueError(f"{tid}: {path} does not match the pinned SHA-256")
+    return spec
 
 
-_INDEXED = [{**row, "index": index} for index, row in enumerate(_raw())]
+@lru_cache(maxsize=1)
+def _indexed() -> dict[str, dict]:
+    rows = {task_id(index): {**row, "index": index} for index, row in enumerate(_raw())}
+    unknown = set(_reference_ids()) - {row["question_id"] for row in rows.values()}
+    if unknown:
+        raise ValueError(f"references/{sorted(unknown)} do not name a problem in the pool")
+    return rows
+
+
+class _Declarations(Mapping):
+    def __init__(self, build):
+        self._build = build
+
+    def __getitem__(self, tid):
+        return self._build(_indexed()[tid])
+
+    def __iter__(self):
+        return iter(_indexed())
+
+    def __len__(self):
+        return len(_indexed())
 
 DEFAULT_ENV = {"kind": "files"}
-ENV = {task_id(row["index"]): {"kind": "files"} for row in _INDEXED}
+ENV = _Declarations(lambda row: dict(DEFAULT_ENV))
 SPLIT = None
 
 #: `None`: release_v6 publishes no study split, so the pool **is** the scored split and every
@@ -301,8 +283,8 @@ OFFICIAL_EVAL = None
 #: 2026-10-24; `--split default` still names the platform's hash rule at run time.
 SPLIT_SOURCE = "none"
 
-SETUP = {task_id(row["index"]): _setup(row) for row in _INDEXED}
-VERIFY = {task_id(row["index"]): _verify(row) for row in _INDEXED}
+SETUP = _Declarations(_setup)
+VERIFY = _Declarations(_verify)
 
 
 # ----------------------------------------------------------------------------- the oracle ---
@@ -318,12 +300,12 @@ def references() -> dict[str, str]:
             for path in sorted(REFERENCES.glob("*.py"))}
 
 
+def _reference_ids() -> list[str]:
+    return sorted(path.stem for path in REFERENCES.glob("*.py"))
+
+
 def _coverage() -> str:
-    have = sorted(references())
-    known = {row["question_id"] for row in _INDEXED}
-    unknown = [qid for qid in have if qid not in known]
-    if unknown:
-        raise ValueError(f"references/{unknown} do not name a problem in the pool")
+    have = _reference_ids()
     return f"{len(have)} of {PROBLEMS} problems ({', '.join(have) if have else 'none'})"
 
 
@@ -354,9 +336,9 @@ def oracle_files(task: dict) -> dict[str, str]:
 
 
 def load() -> tuple[list[dict], dict[str, str]]:
-    tasks = [{"task_id": task_id(row["index"]), "goal": _question(row), "inputs": [],
+    tasks = [{"task_id": tid, "goal": _question(row), "inputs": [],
               "submission": {"kind": "files", "paths": ["solution.py"]}}
-             for row in _INDEXED]
+             for tid, row in _indexed().items()]
     # The scorable map is the human-readable grade slot. This dataset's grade is a program's
     # behaviour, so the value names the metric rather than pretending to be a gold answer.
     return tasks, {task["task_id"]: "pass@1 over the released tests" for task in tasks}
@@ -375,19 +357,37 @@ def downloads() -> list[dict]:
         "url": "https://codeload.github.com/LiveCodeBench/LiveCodeBench/tar.gz/" + UPSTREAM_COMMIT,
         "size": "3,361,935 bytes compressed source", "sha256": SOURCE_SHA256,
         "dst": "_src/upstream.tar.gz", "extract_to": "_src/upstream",
-        "note": "Pins `lcb_runner/evaluation/testing_util.py` (the executor, including the reliability_guard upstream warns is not a sandbox -- the platform's verification namespace is) and `pass_k_utils.py` (the aggregation). Both are copied into the verification namespace as VERIFY.inputs, so the metric runs upstream's bytes; `data/datasets/livecodebench.py` also transcribes pass_k_utils.py lines 4-53 verbatim. Never enters an agent SETUP."})
+        "note": "Pins `lcb_runner/evaluation/testing_util.py` and `pass_k_utils.py`. The verifier authenticates both files and the selected task's tests before scoring. These inputs are private to verification."})
+    entries.append({
+        "kind": "pip", "name": "LiveCodeBench scoring NumPy", "package": "numpy",
+        "version": NUMPY_VERSION, "size": "~18 MB wheel on Linux x86-64",
+        "note": "Prepare the managed scoring environment with `python tools/prepare_dataset.py --dataset livecodebench --runtime execution`. See `data/datasets/livecodebench/README.md` for the data and runtime preparation steps."})
     return entries
 
 
 def provision_status() -> dict:
-    tests = DATASET_ROOT / TESTS_DIR
-    return {"root": str(DATASET_ROOT),
-            "present": ((DATASET_ROOT / POOL).is_file()
-                        and (DATASET_ROOT / EXECUTOR).is_file()
-                        and tests.is_dir() and any(tests.glob("*.json"))),
-            "pool": str(DATASET_ROOT / POOL),
-            "tests": str(tests),
-            "tasks": len(_RAW) if _RAW else 0}
+    try:
+        root = Path(DATASET_ROOT)
+    except DataRootNotConfigured as error:
+        return {"present": False, "status": "config_missing", "detail": str(error)}
+    tests = root / TESTS_DIR
+    status = {"root": str(root), "pool": str(root / POOL), "tests": str(tests),
+              "tasks": len(_RAW) if _RAW else 0}
+    if not (all((root / path).is_file() for path in (POOL, EXECUTOR, PASS_K))
+            and any(tests.glob("*.json"))):
+        return {**status, "present": False, "status": "data_missing",
+                "detail": "fetch the pinned sources and materialize the task pool with prepare.py"}
+    execution = dataset_runtime.check_execution(MANAGED_EXECUTION_RUNTIME)
+    return {**status, "present": execution["present"], "status": execution["status"],
+            "detail": execution["detail"], "execution_runtime": execution}
+
+
+def __getattr__(name: str):
+    if name in ("estimate_pass_at_k", "compute_metrics_from_results"):
+        # The historical diagnostic API returns NumPy objects. Only explicit
+        # callers import it. Scoring uses the pinned upstream files.
+        return getattr(load_asset(PACKAGE / "pass_k_reference.py"), name)
+    raise AttributeError(name)
 
 
 __all__ = ["KIND", "ORACLE_SOURCE", "ORACLE_VALIDATED_BY", "ORACLE_COVERAGE",

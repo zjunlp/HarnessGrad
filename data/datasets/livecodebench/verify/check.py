@@ -12,8 +12,7 @@ The verdict, and where it comes from
 ------------------------------------
 `lcb_runner/evaluation/compute_code_generation_metrics.py::evaluate_generations_by_problem`
 collects the per-test values `run_test` returns and keeps only those where
-`np.all(curr_res)`; `pass_k_utils.py::compute_metrics_from_results` (lines 26-53, transcribed
-verbatim in `data/datasets/livecodebench.py`) then counts a generation as correct iff
+`np.all(curr_res)`; `pass_k_utils.py::compute_metrics_from_results` then counts a generation as correct iff
 `np.all(gen > 0)`. Over one problem with one generation, `pass@1` is therefore exactly 1.0 or
 0.0 -- which is the reward here, and why the metric is named `pass@1` in the evidence rather
 than "accuracy".
@@ -49,33 +48,16 @@ compile failure, `-1` on a timeout), and it must not look like a broken platform
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
 import json
 import multiprocessing
+import os
+import runpy
 import sys
 from pathlib import Path
 
-# Native staging supplies this dependency at the task root.
-sys.path.insert(0, str(Path.cwd()))
-from data.scaffolds.scorer_input import add_arguments, run_bound
-
 #: Upstream's per-test budget (`testing_util.run_test(..., timeout=6)`).
 PER_TEST_TIMEOUT = 6
-
-
-def _workdir_on_path() -> None:
-    """Put the workdir on `sys.path`, where the platform materialized the pinned files.
-
-    This check lives in `verify/` (so `sys.path[0]` is `verify/`) while `testing_util.py` and
-    `pass_k_utils.py` are `VERIFY.inputs` at the workdir root. DS-1000 has the same layout and
-    solves it by launching its runner from a scratch directory that holds `execution.py`; here
-    the two directories are one `sys.path` entry apart, which is cheaper. Measured, because the
-    platform arm failed on exactly this: by hand the control sets `PYTHONPATH`, and under
-    `eval.verification.verifier` it does not, so `import testing_util` raised `ModuleNotFoundError` only in
-    the sandbox run.
-    """
-    work = str(Path.cwd())
-    if work not in sys.path:
-        sys.path.insert(0, work)
 
 
 def _json_scalar(value):
@@ -85,25 +67,24 @@ def _json_scalar(value):
     return bool(value) if isinstance(value, bool) else value
 
 
-def _child(tests_text: str, solution: str, queue) -> None:
+def _child(executor: Path, tests_text: str, solution: str, queue) -> None:
     """`run_test` in its own process: it mutates process-global state (`reliability_guard`
     nulls `os.system`, `os.remove`, `builtins.quit` and `os.environ` itself) and it executes
     the candidate, so nothing it does may reach the check's own interpreter. Upstream makes the
     same choice, for the same reason, in `compute_code_generation_metrics.py`."""
-    _workdir_on_path()
     sys.set_int_max_str_digits(50000)          # upstream sets this for huge test integers
     try:
-        from testing_util import run_test
+        run_test = runpy.run_path(str(executor))["run_test"]
     except Exception as exc:                   # noqa: BLE001 - reported as unmeasurable
         queue.put({"error": f"the pinned executor will not import: {type(exc).__name__}: {exc}"})
         return
     try:
-        results, metadata = run_test({"input_output": tests_text}, test=solution, debug=False,
-                                     timeout=PER_TEST_TIMEOUT)
-        queue.put({"results": [_json_scalar(value) for value in results],
-                   "metadata": str(metadata)[:2000]})
+        with open(os.devnull, "w") as sink, redirect_stdout(sink), redirect_stderr(sink):
+            results, _ = run_test({"input_output": tests_text}, test=solution, debug=False,
+                                  timeout=PER_TEST_TIMEOUT)
+        queue.put({"results": [_json_scalar(value) for value in results]})
     except Exception as exc:                   # noqa: BLE001
-        queue.put({"error": f"run_test raised {type(exc).__name__}: {exc}"})
+        queue.put({"error": f"run_test raised {type(exc).__name__}"})
 
 
 def _positive(value) -> bool:
@@ -132,7 +113,8 @@ def _measure(args, reward: float, why: str, total: int, passed: int, results) ->
     _write(args.evidence_file, json.dumps(
         {"scorer_input": args.scorer_input_receipt, "measured": True, "metric": "pass@1 (one generation, all released tests)",
          "reward": reward, "tests": {"total": total, "passed": passed},
-         "per_test": results, "why": why}, sort_keys=True) + "\n")
+         "per_test": results, "why": why, "runtime_observation": args.runtime_observation},
+        sort_keys=True) + "\n")
     print(f"reward {reward:g}: {why}")
     return 0
 
@@ -145,20 +127,33 @@ def _cannot_measure(args, why: str) -> int:
 
 
 def main() -> int:
+    # Import only staged, trusted files by explicit path. In particular, the
+    # submission directory must not participate in dependency resolution.
+    binding = runpy.run_path("data/scaffolds/scorer_input.py")
     parser = argparse.ArgumentParser()
     parser.add_argument("--tests", required=True, help="the problem's released tests")
     parser.add_argument("--solution", required=True)
     parser.add_argument("--reward-file", default="verifier/reward.txt")
     parser.add_argument("--evidence-file", default="verifier/evidence.json")
-    add_arguments(parser)
+    binding["add_arguments"](parser)
     args = parser.parse_args()
-    return run_bound(args, {args.tests: Path(args.tests)},
-                     lambda inputs, receipt: _score(args, inputs, receipt))
+    paths = {name: Path(name) for name in (args.tests, "testing_util.py", "pass_k_utils.py")}
+    return binding["run_bound"](args, paths, lambda inputs, receipt: _score(args, inputs, receipt))
 
 
 def _score(args, inputs, receipt) -> int:
     args.scorer_input_receipt = receipt
-    _workdir_on_path()
+    executor, aggregation = inputs["testing_util.py"], inputs["pass_k_utils.py"]
+    try:
+        import numpy
+    except ImportError as exc:
+        return _cannot_measure(args, f"NumPy will not import: {type(exc).__name__}")
+    args.runtime_observation = {
+        "python": sys.executable, "prefix": sys.prefix,
+        "numpy_version": numpy.__version__, "numpy_origin": numpy.__file__,
+        "isolated": bool(sys.flags.isolated), "no_bytecode": sys.dont_write_bytecode,
+        "readonly": bool(os.statvfs(sys.prefix).f_flag & os.ST_RDONLY),
+    }
 
     tests_path = inputs[args.tests]
     if not tests_path.is_file():
@@ -182,7 +177,7 @@ def _score(args, inputs, receipt) -> int:
 
     cap = (PER_TEST_TIMEOUT + 1) * total + 5
     queue: multiprocessing.Queue = multiprocessing.Queue()
-    process = multiprocessing.Process(target=_child, args=(tests_text, solution, queue))
+    process = multiprocessing.Process(target=_child, args=(executor, tests_text, solution, queue))
     process.start()
     process.join(cap)
     if process.is_alive():                     # upstream kills and marks every test failed
@@ -204,15 +199,13 @@ def _score(args, inputs, receipt) -> int:
     # recorded beside it because a binary reward hides partial progress (the register's M4:
     # one task scored 0 in twelve measurements while passing four of five tests nine times).
     try:
-        from pass_k_utils import compute_metrics_from_results
+        compute_metrics_from_results = runpy.run_path(str(aggregation))["compute_metrics_from_results"]
         reward = float(compute_metrics_from_results({"task": [results]}, k_list=[1])["pass@1"])
     except Exception as exc:                    # noqa: BLE001
         return _cannot_measure(args, f"cannot score the executor's verdict: "
                                      f"{type(exc).__name__}: {exc}")
     why = (f"all {total} released tests passed" if reward else
            f"{passed} of {total} released tests passed")
-    if outcome.get("metadata") and not reward:
-        why += f"; executor metadata {outcome['metadata'][:200]}"
     return _measure(args, reward, why, total, passed, results)
 
 

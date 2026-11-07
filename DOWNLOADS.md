@@ -708,7 +708,16 @@ dataset does not read as prepared.
 - **Extract to:** `<HG_DATA_ROOT>/livecodebench/_src/upstream`
 - **SHA256:** `56c7c42aee979def86b69547ecd6d5a877a0e4940af8923bf4325ca0defecbaf`
 
-> Pins `lcb_runner/evaluation/testing_util.py` (the executor, including the reliability_guard upstream warns is not a sandbox -- the platform's verification namespace is) and `pass_k_utils.py` (the aggregation). Both are copied into the verification namespace as VERIFY.inputs, so the metric runs upstream's bytes; `data/datasets/livecodebench.py` also transcribes pass_k_utils.py lines 4-53 verbatim. Never enters an agent SETUP.
+> Pins `lcb_runner/evaluation/testing_util.py` and `pass_k_utils.py`. The verifier authenticates both files and the selected task's tests before scoring. These inputs are private to verification.
+
+### LiveCodeBench scoring NumPy
+
+- **Type:** `pip`
+- **Version (pinned):** `1.26.4`
+- **Size:** ~18 MB wheel on Linux x86-64
+- **Package:** `numpy==1.26.4`
+
+> Prepare the managed scoring environment with `python tools/prepare_dataset.py --dataset livecodebench --runtime execution`. See `data/datasets/livecodebench/README.md` for the data and runtime preparation steps.
 
 ## `livemathbench`
 

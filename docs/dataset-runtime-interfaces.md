@@ -366,8 +366,9 @@ python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip 
 可信 Python 服务和评分器可显式声明 `python_runtime`，共同复用
 [`harnessgrad.dataset_runtime`](../harnessgrad/dataset_runtime.py) 的准备及内容核验机制。
 当前使用者包括 CostBench static/dynamic（服务与评分器共享制品）、LoCoMo
-（仅评分器使用）、MATH/MATH500（两者共享 `math` 评分制品）和 Reasoning Gym
-（任务池生成与评分共享制品）。它们声明各自的 Python 3.12 execution 制品，平台 Python 无须
+（仅评分器使用）、MATH/MATH500（两者共享 `math` 评分制品）、Reasoning Gym
+（任务池生成与评分共享制品）和 LiveCodeBench（上游执行器与 pass@1 聚合）。
+它们声明各自的 Python 3.12 execution 制品，平台 Python 无须
 安装它们的第三方依赖。LoCoMo 的加载和证据报告只用标准库，NLTK PorterStemmer
 仅在评分时导入，无须 corpus。τ³ 保留其已有运行时路径。
 
@@ -390,6 +391,9 @@ python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip 
 `wheel_only: true` 使准备只接受 wheel。Reasoning Gym 的本地 wheelhouse 和冻结任务池
 独立准备，生成结果仅在 SHA-256 与原池一致时发布。加载冻结池仍只使用标准库。
 [Reasoning Gym 准备流程](../data/datasets/reasoning_gym/README.md)
+
+LiveCodeBench 的任务池准备和加载使用标准库，评分制品锁定 NumPy。
+[LiveCodeBench 准备流程](../data/datasets/livecodebench/README.md)
 
 ```bash
 python tools/prepare_dataset.py --dataset costbench --runtime execution

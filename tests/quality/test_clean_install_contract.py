@@ -53,6 +53,11 @@ RESOURCES = (
     "data/datasets/triviaqa/requirements-load.txt",
     "data/datasets/costbench/execution-runtime.json",
     "data/datasets/costbench/requirements.lock",
+    "data/datasets/livecodebench/execution-runtime.json",
+    "data/datasets/livecodebench/requirements.lock",
+    "data/datasets/livecodebench/verify/check.py",
+    "data/datasets/livecodebench/pass_k_reference.py",
+    "data/datasets/livecodebench/cli/lcb",
     "data/datasets/locomo/execution-runtime.json",
     "data/datasets/locomo/requirements.lock",
     "data/datasets/locomo/requirements-score.txt",
@@ -181,6 +186,7 @@ import harnessgrad
 from data.scaffolds import registry
 from data.scaffolds.aggregation import aggregation_policy
 from data.datasets import costbench, costbench_dynamic
+from data.datasets import livecodebench
 from harnessgrad.dataset_runtime import execution_descriptor
 assert not site.ENABLE_USER_SITE
 assert registry.published()
@@ -190,6 +196,10 @@ assert registry.provider('costbench') is None
 assert execution_descriptor('costbench')['python'] == '3.12'
 assert costbench._execution() is costbench_dynamic._execution()
 assert callable(costbench._execution().binding)
+assert importlib.util.find_spec('numpy') is None
+assert registry.managed_runtime('livecodebench')
+assert execution_descriptor('livecodebench')['pins'] == {'numpy': '1.26.4'}
+assert livecodebench.downloads() and livecodebench.CLI.is_file()
 assert execution_descriptor('locomo')['pins']['nltk'] == '3.10.4'
 from data.datasets import locomo
 assert locomo._load_asset('report.py').aggregate_scores([None]) == {

@@ -85,7 +85,7 @@ files in `metric test(s)` pin the metric itself, and `tests/quality/test_dataset
 runs gates 1 and 2 for every declared control. A refused dataset has no control by design:
 its refusal *is* the result.
 
-**At a glance.** 56 published datasets: 0 refused by design; 13 with a recorded metric deviation; 1 whose adapter mentions one that a reading cleared; 0 whose adapter mentions one that nobody has recorded; 18 that declare no machine-readable metric (`— undeclared`). Every row says how to get its bytes; `--host` answers the separate question of what is already here.
+**At a glance.** 56 published datasets: 0 refused by design; 13 with a recorded metric deviation; 1 whose adapter mentions one that a reading cleared; 0 whose adapter mentions one that nobody has recorded; 17 that declare no machine-readable metric (`— undeclared`). Every row says how to get its bytes; `--host` answers the separate question of what is already here.
 
 ## Readiness
 
@@ -116,7 +116,7 @@ its refusal *is* the result.
 | `jericho` | dataset | — undeclared | no | released | `python3 tools/datasets.py --fetch --dataset jericho` | dataset | test_jericho_dataset.py | — |
 | `jobbench` | dataset | reward | no | released | `python3 tools/datasets.py --fetch --dataset jobbench` | exempt | test_native_harbor.py | — |
 | `kumo` | dataset | kumo.official.consistency_accuracy.v1 | no | released | `python3 tools/datasets.py --fetch --dataset kumo` | dataset | test_kumo_official_scorer.py, test_kumo_dataset.py | — |
-| `livecodebench` | dataset | — undeclared | no | authored | `python3 tools/datasets.py --fetch --dataset livecodebench` | dataset | test_livecodebench_official_scorer.py | — |
+| `livecodebench` | dataset | pass@1 | no | authored | `python3 tools/datasets.py --fetch --dataset livecodebench` | dataset | test_livecodebench_official_scorer.py | — |
 | `livemathbench` | dataset | livemathbench.native-adapted | yes: curve is single-sample-label accuracy; native hypergeometric G-Pass/mG-Pass is a separate complete-trial report | released | `python3 tools/datasets.py --fetch --dataset livemathbench` | exempt | test_native_research.py | — |
 | `locomo` | dataset | locomo.harbor.question_micro_mean.v1 | no | released | `python3 tools/datasets.py --fetch --dataset locomo` | dataset | test_locomo_harbor_scoring.py, test_locomo_dataset.py | — |
 | `math` | dataset | math-verify-0.9.0-last-boxed | no | released | `python3 tools/datasets.py --fetch --dataset math` | dataset | test_native_qa_adapters.py, test_math_execution_runtime.py | — |
