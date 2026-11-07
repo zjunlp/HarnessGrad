@@ -11,6 +11,7 @@ from contextlib import redirect_stdout
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -73,8 +74,9 @@ class DecoderTripwire:
     Import, audit-exec and profile-call hooks are deliberately redundant. The
     hooks are test observations, not production security boundaries.
     """
-    def __init__(self):
+    def __init__(self, dataset_root):
         self.events = []
+        self.dataset_root = Path(dataset_root).resolve()
 
     @staticmethod
     def retained(filename):
@@ -97,8 +99,11 @@ class DecoderTripwire:
         if event.startswith(("socket.", "subprocess.", "os.system", "os.exec", "os.spawn", "ctypes.")):
             self.trip("external_operation", event)
         if event == "open":
-            filename = str(args[0])
-            if (filename.startswith("/dev/nvidia") or "/xubuqiang/datasets/" in filename
+            if not isinstance(args[0], (str, bytes)):
+                return  # File descriptors do not name a dataset path.
+            filename = os.fsdecode(args[0])
+            if (filename.startswith("/dev/nvidia")
+                    or Path(os.path.abspath(filename)).is_relative_to(self.dataset_root)
                     or "/tests/fixtures/bfcl_ast_source/" in filename):
                 self.trip("forbidden_open", filename)
 
@@ -116,7 +121,11 @@ def retained_modules():
 def dynamic_probe(scratch):
     """Fresh process required: assert module absence both before and after scoring."""
     assert not retained_modules()
-    tripwire = DecoderTripwire()
+    # Give the lazy adapter a controlled corpus location, never a host dataset.
+    dataset_root = (scratch / "forbidden-dataset").resolve()
+    os.environ["HG_REVIEWED_ENVIRONMENT_ONLY"] = "1"
+    os.environ["HG_DATA_BFCL_V3"] = str(dataset_root)
+    tripwire = DecoderTripwire(dataset_root)
     # Positive instrumentation controls do not import retained source or run eval.
     for kind, operation in [
         ("import", lambda: tripwire.find_spec("bfcl_eval.model_handler.utils")),
@@ -150,6 +159,7 @@ def dynamic_probe(scratch):
     from data.datasets import bfcl_v3
     from data.scaffolds.qa.verify import check
     # Real adapter imports must stay lazy; no source rows have been loaded.
+    assert bfcl_v3.DATASET_ROOT == dataset_root
     assert bfcl_v3._RECORDS == [] and bfcl_v3._LOAD_ERROR is None
     cases = [("fabricated_name", "ns.fabricated_echo", True),
              ("fabricated_expression", "fabricated_echo(value=1 + __probe__())", False),

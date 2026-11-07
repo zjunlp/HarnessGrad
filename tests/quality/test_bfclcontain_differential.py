@@ -27,6 +27,7 @@ def test_source_inventory_and_sink_frontier_have_not_drifted():
     for index, (sink, review) in enumerate(zip(sinks, reviews), 1):
         assert review["site"] == index
         assert review["source"] == f"{sink['path']}:{sink['line']}"
+        assert review["source_state"] == "FOUND"
         assert review["sink"] == sink["sink"]
         assert review["function"] == sink["function"]
 
@@ -57,6 +58,8 @@ def test_containment_controls_and_uncontained_binop_finding():
     assert actual == [row for row in OBSERVED if row["kind"] == "boundary"]
     assert actual[-1]["probe_events"] == ["entered"]
     assert actual[-1]["outcome"].startswith("UNCONTAINED_STOP")
+    assert OBSERVED[-1]["source_gate_satisfied"] is False
+    assert OBSERVED[-1]["official_scorer_executed"] is False
 
 
 @pytest.mark.parametrize("event,args", [

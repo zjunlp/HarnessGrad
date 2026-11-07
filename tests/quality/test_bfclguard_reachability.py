@@ -6,6 +6,7 @@ import ast
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -125,6 +126,32 @@ def test_existing_import_direction_policy_would_not_catch_tests_decoder_import()
     statement = ("__import__('tests.fixtures.bfcl_ast_source.candidate-codex195.files.'"
                  " 'berkeley-function-call-leaderboard.bfcl_eval.model_handler.utils')")
     assert policy._imports("data/datasets/bfcl_v3.py", statement, set()) == []
+
+
+@pytest.mark.parametrize("account", ["first-account", "another-account"])
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_dataset_tripwire_uses_the_supplied_root(tmp_path, monkeypatch, account, as_bytes):
+    monkeypatch.syspath_prepend(str(HERE))
+    controls = load("bfclguard_path_controls", HERE / "controls.py")
+    dataset = tmp_path / account / "corpus"
+    tripwire = controls.DecoderTripwire(dataset)
+    filename = str(dataset / "row.json")
+    argument = os.fsencode(filename) if as_bytes else filename
+    with pytest.raises(RuntimeError, match="forbidden_open"):
+        tripwire.audit("open", (argument, "r", 0))
+    assert tripwire.events == [{"kind": "forbidden_open", "value": filename}]
+    # A directory whose name merely shares the prefix is outside the corpus.
+    tripwire.audit("open", (str(dataset.with_name("corpus-output") / "answer.txt"), "w", 0))
+    assert len(tripwire.events) == 1
+
+
+def test_dataset_tripwire_checks_relative_paths(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(HERE))
+    monkeypatch.chdir(tmp_path)
+    controls = load("bfclguard_relative_path_controls", HERE / "controls.py")
+    tripwire = controls.DecoderTripwire(tmp_path / "corpus")
+    with pytest.raises(RuntimeError, match="forbidden_open"):
+        tripwire.audit("open", ("corpus/nested/../row.json", "r", 0))
 
 
 def test_dynamic_real_platform_adapter_and_shared_check_never_enter_decoder(tmp_path):
