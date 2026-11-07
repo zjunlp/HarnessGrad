@@ -300,9 +300,10 @@ def test_r8_edit_kind_is_recorded_but_never_interpreted():
 
 
 def test_r9_the_reference_harness_satisfies_the_contributor_contract():
-    """The spec in docs/writing_a_harness.md is only real if the validator
-    enforces it and the reference harness passes. A spec with no case that
-    satisfies it is a wish."""
+    """Validate Loop's source without preparing or launching its runtime.
+
+    test_loop_managed_runtime exercises execution through the sandboxed runner.
+    """
     import json
     import subprocess
     import sys
@@ -317,11 +318,11 @@ def test_r9_the_reference_harness_satisfies_the_contributor_contract():
 
     proc = subprocess.run(
         [sys.executable, str(ROOT / "tools" / "validate_harness.py"),
-         str(ROOT / "base_harness" / "loop"), "--smoke"],
+         str(ROOT / "base_harness" / "loop")],
         capture_output=True, text=True, timeout=180,
     )
     assert proc.returncode == 0, (
-        "the reference harness must pass its own validator:\n" + proc.stdout
+        "the reference harness must pass its own validator:\n" + proc.stdout + proc.stderr
     )
 
 
