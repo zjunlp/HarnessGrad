@@ -53,7 +53,13 @@ python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/in
 ```
 
 This check does not install dependencies, download data or contact models. Its
-report and logs remain in the printed directory.
+report and logs remain in the printed directory. A missing report or incomplete
+measurement is not a completed installation check.
+
+For installed Harness templates, `--check-runtime` checks prepared dependencies;
+it does not prove actor admission. If a template contains installer-generated
+bytecode, keep the original tree and follow the documented sandboxed `--smoke`
+procedure in the [Harness validation guide](https://github.com/zjunlp/HarnessGrad/blob/main/docs/writing_a_harness.md).
 
 ## Prepare research data separately
 
@@ -67,11 +73,28 @@ python tools/prepare_dataset.py --dataset gsm8k --check
 python tools/datasets.py --check --dataset gsm8k
 ```
 
-`prepare_dataset.py` explicitly prepares the loading environment; `--check`
-installs and downloads nothing. Other adapters have their own preparation recipes
-in [DOWNLOADS](https://github.com/zjunlp/HarnessGrad/blob/main/DOWNLOADS.md).
-A catalog entry does not establish local readiness. Container routes also require
-the selected Harness's image-specific preparation.
+`prepare_dataset.py` defaults to the provider's loading environment; `--check`
+installs and downloads nothing. Execution dependencies are a separate declared
+profile. For example, native Math grading needs:
+
+```bash
+python tools/prepare_dataset.py --dataset math --runtime execution
+python tools/prepare_dataset.py --dataset math --runtime execution --check
+```
+
+This prepares the trusted grader, not data or actor dependencies. Follow the
+[native QA preparation guide](https://github.com/zjunlp/HarnessGrad/blob/main/data/scaffolds/native_qa/README.md)
+and each adapter's recipe in
+[DOWNLOADS](https://github.com/zjunlp/HarnessGrad/blob/main/DOWNLOADS.md).
+For datasets that declare task Python, follow the
+[task-runtime contract](https://github.com/zjunlp/HarnessGrad/blob/main/docs/dataset-runtime-interfaces.md#dataset-owned-task-python-envtask_python);
+the task interpreter and Harness runtime serve different roles. The
+[dependency support matrix](https://github.com/zjunlp/HarnessGrad/blob/main/DATASETS.md#dependency-boundaries-and-validation-scope)
+states which paths have been checked. A catalog entry, prepared artifact or
+successful synthetic control does not establish full benchmark readiness.
+DS-1000 has a separate [CPU runtime preparation guide](https://github.com/zjunlp/HarnessGrad/blob/main/data/datasets/ds1000/README.md);
+preparing that profile does not prove actor execution or full benchmark readiness.
+Container routes also require the selected Harness's image-specific preparation.
 
 ## Configure a research run
 
@@ -99,7 +122,10 @@ run; its model calls can incur costs.
 
 Use a fresh run ID for each new experiment. Existing result and work namespaces,
 including partial runs, are preserved. `--resume` continues only compatible work;
-a changed identity, seed, split or runtime is refused. `--prepare-only` reserves
+a changed identity, seed, split or runtime is refused. Task inputs and external
+runtime artifacts must match the recorded identities. After an incompatible
+change, prepare the required artifact again and start a new run; do not reuse
+cached scores or add missing identity to an older record. `--prepare-only` reserves
 an ID without executing a round; a matching invocation can consume that intact
 reservation once. `--check-only` does not reserve an ID.
 

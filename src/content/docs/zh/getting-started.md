@@ -48,7 +48,12 @@ Console 观察和证据导出：
 python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
-该检查不安装依赖、不下载数据，也不调用模型。报告和日志保留在输出的目录中。
+该检查不安装依赖、不下载数据，也不调用模型。报告和日志保留在输出的目录中；
+缺少报告或测量未完成时，不能宣称安装检查已完成。
+
+对已安装的 Harness 模板，`--check-runtime` 检查已准备依赖，不能证明 actor 准入。
+模板含安装过程生成的字节码时，请保留原树，并按[Harness 验证指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/writing_a_harness.md)
+执行文档中的沙箱 `--smoke` 流程。
 
 ## 单独准备研究数据
 
@@ -62,10 +67,22 @@ python tools/prepare_dataset.py --dataset gsm8k --check
 python tools/datasets.py --check --dataset gsm8k
 ```
 
-`prepare_dataset.py` 显式准备数据加载环境；`--check` 不安装依赖，也不下载文件。
-其他适配器按 [DOWNLOADS](https://github.com/zjunlp/HarnessGrad/blob/main/DOWNLOADS.md)
-中的准备流程操作。目录中有条目不代表本地已就绪；容器路线还需按所选 Harness
-的说明完成镜像专用准备。
+`prepare_dataset.py` 默认准备 provider 的数据加载环境；`--check` 不安装依赖，
+也不下载文件。执行依赖按单独声明的 profile 准备。例如，原生 Math 评分需要：
+
+```bash
+python tools/prepare_dataset.py --dataset math --runtime execution
+python tools/prepare_dataset.py --dataset math --runtime execution --check
+```
+
+这准备的是可信评分器，不包含数据或 actor 依赖。请按[原生 QA 准备指南](https://github.com/zjunlp/HarnessGrad/blob/main/data/scaffolds/native_qa/README.md)
+及 [DOWNLOADS](https://github.com/zjunlp/HarnessGrad/blob/main/DOWNLOADS.md) 中各适配器的流程操作。
+声明 task Python 的数据集还需遵循[任务运行时约定](https://github.com/zjunlp/HarnessGrad/blob/main/docs/dataset-runtime-interfaces.md#dataset-owned-task-python-envtask_python)；
+任务解释器与 Harness 运行时承担不同角色。[依赖支持矩阵](https://github.com/zjunlp/HarnessGrad/blob/main/DATASETS.md#dependency-boundaries-and-validation-scope)
+列明已检查的路线。目录条目、已准备制品或通过合成控制，都不能证明完整基准已就绪。
+DS-1000 有单独的 [CPU 运行时准备指南](https://github.com/zjunlp/HarnessGrad/blob/main/data/datasets/ds1000/README.md)；
+准备该 profile 不能证明 actor 已执行或完整基准已就绪。
+容器路线还需按所选 Harness 的说明完成镜像专用准备。
 
 ## 配置研究实验
 
@@ -88,7 +105,9 @@ python tools/datasets.py --check --dataset gsm8k
 ## 重复运行、查看与导出
 
 每个新实验使用新 run ID。已有结果和工作目录（包括未完成的运行）会保留；`--resume`
-只继续兼容的记录，身份、种子、划分或运行时不一致时会拒绝。`--prepare-only` 预留 ID
+只继续兼容的记录，身份、种子、划分或运行时不一致时会拒绝。任务输入和外部运行时
+制品必须与记录的身份匹配；发生不兼容变更后，重新准备所需制品并开始新 run，
+不要复用缓存分数或为旧记录补造缺失身份。`--prepare-only` 预留 ID
 但不执行轮次；配置和目录一致的后续调用可消费一次完整预留。`--check-only` 不预留 ID。
 
 旧记录仍可查看和导出。测量缺少当前验证身份或使用较早的输入恢复协议时，
