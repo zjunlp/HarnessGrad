@@ -23,7 +23,8 @@ uv pip install -e .
 Bubblewrap or user-namespace failure before continuing. Creating the environment
 and installing build tools may require network access; offline installation needs
 those prerequisites already available. The platform uses the Python standard
-library at runtime, while components can have separate dependencies.
+library at runtime. Harnesses, datasets, services and scorers use their own
+declared dependencies; prepare them outside the platform environment.
 
 ## Prepare Loop and run the mock control
 
@@ -38,7 +39,9 @@ python tools/run_summary.py "runs/$HG_INSTALL_RUN"
 ```
 
 `--fetch` permits downloading locked wheels into Loop's external runtime. Omit it
-to prepare from cached wheels. The embedded control requires no dataset download
+to prepare from cached wheels. The base interpreter must already exist; use
+`--python /absolute/path/to/python` to select it and `--runtime-root` or
+`HG_HARNESS_RUNTIME_ROOT` for a custom external store. The embedded control requires no dataset download
 or model endpoint. Its scripted scores are fixture results, not benchmark or model
 quality evidence. Resolve any failed or incomplete measurement before proceeding.
 
@@ -51,6 +54,24 @@ python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/in
 
 This check does not install dependencies, download data or contact models. Its
 report and logs remain in the printed directory.
+
+## Prepare research data separately
+
+Data download and dependency preparation are separate steps. For GSM8K:
+
+```bash
+export HG_DATA_ROOT="$HOME/.local/share/harnessgrad/datasets"
+python tools/datasets.py --fetch --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k --check
+python tools/datasets.py --check --dataset gsm8k
+```
+
+`prepare_dataset.py` explicitly prepares the loading environment; `--check`
+installs and downloads nothing. Other adapters have their own preparation recipes
+in [DOWNLOADS](https://github.com/zjunlp/HarnessGrad/blob/main/DOWNLOADS.md).
+A catalog entry does not establish local readiness. Container routes also require
+the selected Harness's image-specific preparation.
 
 ## Configure a research run
 
@@ -67,7 +88,9 @@ Configure only the roles the selected recipe requires. A mock solver does not ma
 an editor free. Prepare the chosen data and runtime separately. Use
 [Quick start](https://github.com/zjunlp/HarnessGrad#quick-start) and the
 [first-use guide](https://github.com/zjunlp/HarnessGrad/blob/main/docs/getting-started.md)
-for prerequisites and preflight; see the
+for prerequisites. Preflight the selected invocation with `--check-only`; add
+`--check-net` to probe required endpoints without generating responses. These checks
+do not prove task execution. See the
 [research recipes and shared H0 guidance](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md)
 for controlled comparisons. Review task scope, trials and budget before a real
 run; its model calls can incur costs.
@@ -80,8 +103,15 @@ a changed identity, seed, split or runtime is refused. `--prepare-only` reserves
 an ID without executing a round; a matching invocation can consume that intact
 reservation once. `--check-only` does not reserve an ID.
 
+Older records remain readable and exportable. If a measurement lacks the current
+verification identity or uses an earlier input-restoration protocol, restore the
+candidate into a new run and remeasure its baseline before reuse or comparison.
+A preparation reservation contains configuration, not measurement evidence, and
+cannot supply missing identity for an old result.
+
 Results from the example are in the checkout's `runs` directory. Point Console to
-the same root:
+the same root. Use `--runs-root` and `--work-root` for custom locations and
+keep those locations when inspecting or resuming:
 
 ```bash
 export HG_CONSOLE_RUNS="$PWD/runs"
@@ -98,4 +128,6 @@ for scope and privacy.
 Observation needs no model or launch budget. Starting an experiment or candidate
 trial requires additional [Console setup](https://github.com/zjunlp/HarnessGrad/blob/main/console/README.md).
 A zero-round candidate trial can still measure the entire selected pool; if the
-task count is unknown, resolve it before committing to the run and budget.
+task count is unknown, resolve it before committing to the run and budget. Review
+the task pool, model roles and shared budget in the launch preview. Missing values
+are shown as `—` or an error, rather than a zero budget.

@@ -20,7 +20,8 @@ uv pip install -e .
 
 `--check` 只检查先决条件，不安装系统包。遇到 Bubblewrap 或用户命名空间错误时，
 请先按诊断修复。创建环境及安装构建工具可能需要联网；离线安装要求这些依赖已备好。
-平台运行时使用 Python 标准库，各组件可能有独立依赖。
+平台运行时使用 Python 标准库；Harness、数据集、服务和评分器按各自声明，
+在平台环境之外准备独立依赖。
 
 ## 准备 Loop 并运行模拟控制
 
@@ -35,6 +36,8 @@ python tools/run_summary.py "runs/$HG_INSTALL_RUN"
 ```
 
 `--fetch` 允许将锁定的 wheel 下载到 Loop 的外部运行时；省略它则使用缓存准备。
+基础解释器须已存在；可用 `--python /absolute/path/to/python` 显式选择，
+用 `--runtime-root` 或 `HG_HARNESS_RUNTIME_ROOT` 指定外部存储。
 内置控制无需下载数据集或配置模型端点。脚本化分数只描述测试用例，不是基准或模型
 质量证据；测量失败或未完成时，应先解决原因。
 
@@ -46,6 +49,23 @@ python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/in
 ```
 
 该检查不安装依赖、不下载数据，也不调用模型。报告和日志保留在输出的目录中。
+
+## 单独准备研究数据
+
+下载数据与准备依赖是两个步骤。以 GSM8K 为例：
+
+```bash
+export HG_DATA_ROOT="$HOME/.local/share/harnessgrad/datasets"
+python tools/datasets.py --fetch --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k --check
+python tools/datasets.py --check --dataset gsm8k
+```
+
+`prepare_dataset.py` 显式准备数据加载环境；`--check` 不安装依赖，也不下载文件。
+其他适配器按 [DOWNLOADS](https://github.com/zjunlp/HarnessGrad/blob/main/DOWNLOADS.md)
+中的准备流程操作。目录中有条目不代表本地已就绪；容器路线还需按所选 Harness
+的说明完成镜像专用准备。
 
 ## 配置研究实验
 
@@ -61,7 +81,8 @@ python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/in
 只需配置所选方案要求的角色；模拟 solver 不代表 editor 免费。数据和运行时须分别
 准备。先参阅 [Quick start](https://github.com/zjunlp/HarnessGrad#quick-start) 和
 [首次使用指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/getting-started.md)，
-再按[研究实验及共享 H0 指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md)
+对所选启动命令先加 `--check-only` 预检；加 `--check-net` 可探测所需端点，
+不会生成模型回复。预检通过不代表任务已执行。再按[研究实验及共享 H0 指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/rsi-experiments.md)
 进行受控比较。启动真实运行前检查任务范围、试验次数和预算；模型调用可能产生费用。
 
 ## 重复运行、查看与导出
@@ -70,7 +91,12 @@ python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/in
 只继续兼容的记录，身份、种子、划分或运行时不一致时会拒绝。`--prepare-only` 预留 ID
 但不执行轮次；配置和目录一致的后续调用可消费一次完整预留。`--check-only` 不预留 ID。
 
-上例结果位于仓库的 `runs` 目录。将 Console 指向同一目录：
+旧记录仍可查看和导出。测量缺少当前验证身份或使用较早的输入恢复协议时，
+应将候选恢复到新 run，重新测量基线后再复用或比较。准备预留只包含配置，
+不包含测量证据，也不能补足旧结果缺失的身份。
+
+上例结果位于仓库的 `runs` 目录。可用 `--runs-root` 和 `--work-root` 指定其他位置，
+查看或恢复时沿用这些位置，并将 Console 指向同一结果根目录：
 
 ```bash
 export HG_CONSOLE_RUNS="$PWD/runs"
@@ -83,3 +109,4 @@ python console/server.py --port 4460
 
 观察无需模型或启动预算。启动实验或候选试跑需要额外的 [Console 配置](https://github.com/zjunlp/HarnessGrad/blob/main/console/README.md)。
 零改进轮次的候选试跑仍可能测量整个选定任务池；任务数量未知时，应先确认范围再决定运行和预算。
+启动预览中检查任务池、模型角色和共享预算；缺失值显示为 `—` 或错误，不用零预算代替未知。
