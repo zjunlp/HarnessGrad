@@ -9,10 +9,24 @@ import pytest
 
 from data.datasets import locomo
 from data.scaffolds.command_control import materialize, solve, run_check
+from harnessgrad import dataset_runtime
 
 summarize = locomo._load_asset("report.py").summarize
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.fixture
+def prepared_runtime(monkeypatch):
+    store = os.environ.get('HG_TEST_LOCOMO_EXECUTION_RUNTIME_ROOT')
+    if not store:
+        pytest.skip('set HG_TEST_LOCOMO_EXECUTION_RUNTIME_ROOT to an explicitly prepared store')
+    monkeypatch.setenv('HG_DATASET_RUNTIME_ROOT', str(Path(store).resolve(strict=True)))
+    locomo._execution_runtime.cache_clear()
+    try:
+        yield dataset_runtime.resolve_execution('locomo')
+    finally:
+        locomo._execution_runtime.cache_clear()
 
 
 @pytest.fixture
@@ -43,7 +57,7 @@ def test_tasks_and_setup_contain_only_public_inputs(synthetic):
 
 
 @pytest.mark.parametrize('oracle,expected', [(True, 1.0), (False, 0.0)])
-def test_command_controls_and_report(synthetic, tmp_path, oracle, expected):
+def test_command_controls_and_report(synthetic, prepared_runtime, tmp_path, oracle, expected):
     materialize(locomo, synthetic, tmp_path)
     assert not (tmp_path / 'locomo_verify/gold.json').exists()
     if oracle:
@@ -52,6 +66,8 @@ def test_command_controls_and_report(synthetic, tmp_path, oracle, expected):
     assert reward == expected, detail
     evidence = json.loads((tmp_path / 'verifier/evidence.json').read_text())
     assert evidence['measured'] is True
+    assert evidence['python_runtime']['python'] == prepared_runtime['python']
+    assert evidence['python_runtime']['prefix'] == prepared_runtime['path']
     assert evidence['scorer_input'] == {**locomo.VERIFY[synthetic['task_id']]['scorer_input'],
                                        'expected_sha256': locomo.VERIFY[synthetic['task_id']]['scorer_input']['sha256'],
                                        'verified': True}
@@ -61,19 +77,19 @@ def test_command_controls_and_report(synthetic, tmp_path, oracle, expected):
     assert result['expected_questions'] == 2
 
 
-def test_malformed_answers_follow_harbor_zero(synthetic, tmp_path):
+def test_malformed_answers_follow_harbor_zero(synthetic, prepared_runtime, tmp_path):
     materialize(locomo, synthetic, tmp_path)
     (tmp_path / 'answers.json').write_text('```json\n{}\n```')
     assert run_check(locomo, synthetic, tmp_path)[0] == 0
 
 
-def test_verifier_refuses_changed_gold_and_clears_stale_reward(synthetic, tmp_path):
+def test_verifier_refuses_changed_gold_and_clears_stale_reward(synthetic, prepared_runtime, tmp_path):
     materialize(locomo, synthetic, tmp_path)
     solve(locomo, synthetic, tmp_path)
     assert run_check(locomo, synthetic, tmp_path)[0] == 1
     (tmp_path / 'locomo_verify/gold.json').write_text('{}')
     spec = locomo.VERIFY[synthetic['task_id']]
-    result = subprocess.run([sys.executable, *spec['argv'][1:]], cwd=tmp_path,
+    result = subprocess.run(spec['argv'], cwd=tmp_path,
                             capture_output=True, text=True, timeout=30)
     assert result.returncode == 3
     assert not (tmp_path / 'verifier/reward.txt').exists()
@@ -81,7 +97,7 @@ def test_verifier_refuses_changed_gold_and_clears_stale_reward(synthetic, tmp_pa
     assert evidence['measured'] is False
 
 
-def test_missing_and_duplicate_reports(synthetic, tmp_path):
+def test_missing_and_duplicate_reports(synthetic, prepared_runtime, tmp_path):
     tid = synthetic['task_id']
     result = summarize([], [tid])
     assert 'micro_avg_reward' not in result and result['unmeasured_tasks'] == 1

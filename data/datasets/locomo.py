@@ -16,9 +16,11 @@ import importlib.util
 import json
 from pathlib import Path
 
-from harnessgrad.paths import dataset_root
+from harnessgrad import dataset_runtime
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "locomo"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
 ASSETS = Path(__file__).resolve().parent / "locomo"
@@ -87,11 +89,20 @@ def gold_record(tid):
             "questions": _INPUTS.gold_questions(row)}
 
 
+@lru_cache(maxsize=1)
+def _execution_runtime():
+    """Select once; each verifier launch rechecks this exact artifact."""
+    return dataset_runtime.resolve_execution("locomo")
+
+
 def _verify(tid, row):
+    binding = dataset_runtime.bind(_execution_runtime(), "verifier")
     content = canonical(gold_record(tid))
     digest = hashlib.sha256(content.encode()).hexdigest()
     gold_path = "locomo_verify/gold.json"
-    return {"kind": "command", "argv": ["python3", "-I", "locomo_verify/check.py",
+    return {"kind": "command", "python_runtime": binding,
+            "runtime_paths": list(binding["runtime_paths"]),
+            "argv": [binding["python"], "-I", "-B", "locomo_verify/check.py",
              "--task-id", tid, "--gold-sha256", digest, "--gold", gold_path,
              "--answers", "answers.json", "--reward-file", "verifier/reward.txt",
              "--evidence-file", "verifier/evidence.json"],
@@ -100,6 +111,7 @@ def _verify(tid, row):
                        {"path": "locomo_verify/scoring.py", "from": str(ASSETS / "lib/scoring.py")}],
             "scorer_input": {"task_id": tid, "path": gold_path, "sha256": digest},
             "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
+            "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
             "timeout_s": 120}
 
 
@@ -133,10 +145,18 @@ def control_task(task_id):
 def provision_status():
     try:
         pool = rows()
-        return {"root": str(DATASET_ROOT), "present": True, "tasks": len(pool),
-                "questions": sum(len(row["qa"]) for row in pool.values())}
+    except DataRootNotConfigured as error:
+        return {"present": False, "status": "config_missing",
+                "scope": "locomo-data", "detail": str(error)}
     except (OSError, ValueError, KeyError) as error:
-        return {"root": str(DATASET_ROOT), "present": False, "detail": str(error)}
+        return {"root": str(DATASET_ROOT), "present": False,
+                "status": "data_missing" if isinstance(error, FileNotFoundError) else "invalid",
+                "scope": "locomo-data", "detail": str(error)}
+    execution = dataset_runtime.check_execution("locomo")
+    return {"root": str(DATASET_ROOT), "present": execution["present"],
+            "status": execution["status"], "scope": "locomo-data-and-execution",
+            "tasks": len(pool), "questions": sum(len(row["qa"]) for row in pool.values()),
+            "detail": execution["detail"], "execution_runtime": execution}
 
 
 def downloads():

@@ -10,12 +10,17 @@ import json
 import re
 import string
 from collections import Counter
-
-from nltk.stem.porter import PorterStemmer
+from functools import lru_cache
 
 REFUSAL_PHRASES = ("no information available", "not mentioned")
 
-_stemmer = PorterStemmer()
+
+@lru_cache(maxsize=1)
+def _stemmer():
+    # Aggregation-only reports need no NLTK. Token scoring still uses the same
+    # PorterStemmer, with its default mode, from the locked execution runtime.
+    from nltk.stem.porter import PorterStemmer
+    return PorterStemmer()
 
 
 def _normalize_answer(s: str) -> str:
@@ -27,7 +32,7 @@ def _normalize_answer(s: str) -> str:
 
 
 def _tokens(s: str) -> list[str]:
-    return [_stemmer.stem(w) for w in _normalize_answer(s).split()]
+    return [_stemmer().stem(w) for w in _normalize_answer(s).split()]
 
 
 def _f1_single(prediction: str, gold: str) -> float:

@@ -365,8 +365,10 @@ python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip 
 
 可信 Python 服务和评分器可显式声明 `python_runtime`，共同复用
 [`harnessgrad.dataset_runtime`](../harnessgrad/dataset_runtime.py) 的准备及内容核验机制。
-当前使用者是 CostBench static/dynamic：两者的服务与评分器共享一个 Python 3.12
-execution 制品，平台 Python 无须安装它的编译依赖。τ³ 保留其已有运行时路径。
+当前使用者包括 CostBench static/dynamic（服务与评分器共享制品），以及 LoCoMo
+（仅评分器使用）。它们声明各自的 Python 3.12 execution 制品，平台 Python 无须
+安装它们的第三方依赖。LoCoMo 的加载和证据报告只用标准库，NLTK PorterStemmer
+仅在评分时导入，无须 corpus。τ³ 保留其已有运行时路径。
 
 静态描述位于 `data/datasets/<name>/execution-runtime.json`，例如：
 
@@ -387,6 +389,8 @@ execution 制品，平台 Python 无须安装它的编译依赖。τ³ 保留其
 ```bash
 python tools/prepare_dataset.py --dataset costbench --runtime execution
 python tools/prepare_dataset.py --dataset costbench --runtime execution --check --json
+python tools/prepare_dataset.py --dataset locomo --runtime execution
+python tools/prepare_dataset.py --dataset locomo --runtime execution --check --json
 ```
 
 `--runtime` 默认为 `provider`，因此 GSM8K 的已有准备命令保持不变。
@@ -417,9 +421,11 @@ provider 和 execution 共用存储机制，但声明、索引和制品按 profi
 未声明 `python_runtime` 的服务与评分器沿用原路径。
 
 服务报告的 `runtime_services.tool_relay.python_runtime` 和评分结果的
-`verdict.python_runtime` 保存绑定。CostBench 还在 service receipt 和 scorer evidence
+`verdict.python_runtime` 保存绑定。LoCoMo 在 scorer evidence、CostBench 在 service receipt 和 scorer evidence
 记录实际解释器、prefix、版本、isolated/readonly 状态、site-packages 及关键包来源，
 以核对真实执行环境。该机制针对可信服务代码的依赖和状态隔离；actor 仍须经过独立沙箱边界。
+通用 `command_control.run_check` 的本地诊断也核验并使用已声明的 verifier 绑定，
+失败时清除旧 reward，返回未测量；它不提供沙箱，完整隔离验收使用 `--platform`。
 制品库存覆盖 venv 与基础解释器文件，不封闭完整标准库或宿主系统库。
 这些显式管理的制品通过第 9.1 节的身份接入 H0、measurement cache 与 resume 比较。
 

@@ -142,19 +142,45 @@ def run_check(module, task: dict, workdir: Path) -> tuple[float, str]:
                 shutil.copytree(source, target, dirs_exist_ok=True)
             else:
                 shutil.copy2(source, target)
-    env = dict(os.environ, PYTHONPATH=str(workdir) + os.pathsep
-               + os.environ.get("PYTHONPATH", ""))
-    proc = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=workdir,
-                          capture_output=True, text=True, errors="replace", env=env)
+    if "python_runtime" in verifier:
+        # A local diagnostic has no sandbox, but must still honor and re-admit
+        # the selected artifact rather than silently use the platform Python.
+        for rel in (REWARD_REL, EVIDENCE_REL):
+            (workdir / rel).unlink(missing_ok=True)
+        try:
+            from harnessgrad.dataset_runtime import admit_binding
+            argv = verifier["argv"]
+            if len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
+                raise ValueError("bound verifier requires isolated Python startup")
+            runtime = admit_binding(verifier["python_runtime"], "verifier", python=argv[0])
+            if verifier.get("runtime_paths") != runtime["runtime_paths"]:
+                raise ValueError("verifier runtime_paths differ from the bound artifact")
+        except (OSError, ValueError, RuntimeError) as error:
+            return -1.0, json.dumps({"returncode": None, "reward": None,
+                                    "measured": False, "why": str(error)})
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(workdir),
+               "LANG": os.environ.get("LANG", "C.UTF-8"), "PYTHONDONTWRITEBYTECODE": "1"}
+        launch_options = {"timeout": verifier.get("timeout_s")}
+    else:
+        argv = [sys.executable, *verifier["argv"][1:]]
+        env = dict(os.environ, PYTHONPATH=str(workdir) + os.pathsep
+                   + os.environ.get("PYTHONPATH", ""))
+        launch_options = {}
+    proc = subprocess.run(argv, cwd=workdir, capture_output=True, text=True,
+                          errors="replace", env=env, **launch_options)
     reward_path = workdir / REWARD_REL
     reward = float(reward_path.read_text().strip()) if reward_path.is_file() else -1.0
     evidence_path = workdir / EVIDENCE_REL
     evidence = (json.loads(evidence_path.read_text())
                 if evidence_path.is_file() else {})
+    measured = evidence.get("measured")
+    if "python_runtime" in verifier and (proc.returncode != 0 or measured is False):
+        reward_path.unlink(missing_ok=True)
+        reward, measured = -1.0, False
     detail = {
         "returncode": proc.returncode,
         "reward": reward,
-        "measured": evidence.get("measured"),
+        "measured": measured,
         "why": evidence.get("why") or evidence.get("error"),
         "stderr": proc.stderr[-400:],
     }

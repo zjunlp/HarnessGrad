@@ -53,6 +53,11 @@ RESOURCES = (
     "data/datasets/triviaqa/requirements-load.txt",
     "data/datasets/costbench/execution-runtime.json",
     "data/datasets/costbench/requirements.lock",
+    "data/datasets/locomo/execution-runtime.json",
+    "data/datasets/locomo/requirements.lock",
+    "data/datasets/locomo/requirements-score.txt",
+    "data/datasets/locomo/specs/source.json",
+    "data/datasets/locomo/verify/check.py",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
@@ -154,6 +159,7 @@ def test_installed_help_catalog_and_scenario(installed):
     assert "0.1.0" in run([cli, "--version"], root, env)
     run([cli, "run", "--scenario", "demo-smoke", "--show-config"], root, env)
     code = """
+import importlib.util
 import site
 from pathlib import Path
 import harnessgrad
@@ -169,6 +175,11 @@ assert registry.provider('costbench') is None
 assert execution_descriptor('costbench')['python'] == '3.12'
 assert costbench._execution() is costbench_dynamic._execution()
 assert callable(costbench._execution().binding)
+assert execution_descriptor('locomo')['pins']['nltk'] == '3.10.4'
+from data.datasets import locomo
+assert locomo._load_asset('report.py').aggregate_scores([None]) == {
+    'num_failed_trials': 1, 'num_questions_scored': 0}
+assert importlib.util.find_spec('nltk') is None
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
