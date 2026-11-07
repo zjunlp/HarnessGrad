@@ -127,7 +127,7 @@ ROWS: dict[str, dict] = {
     },
     "chessbench_puzzles": {
         "control": ["data/scaffolds/qa/control.py", "--dataset", "chessbench_puzzles"],
-        "metric_tests": ["test_chessbench_puzzles_official_scorer.py", "test_qa_dataset_contract.py"],
+        "metric_tests": ["test_chessbench_puzzles_official_scorer.py", "test_qa_dataset_contract.py", "test_chessbench_provider.py"],
     },
     "locomo": {
         "control": ["data/datasets/locomo/control.py", "--task-id", "locomo/conv-26"],

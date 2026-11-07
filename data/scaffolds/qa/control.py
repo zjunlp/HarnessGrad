@@ -52,7 +52,9 @@ def _adapter(name: str, task_id=None):
             return SimpleNamespace(__name__=registry.module_name(name), REFUSED=snapshot['refused'])
         # These callbacks read one provider data snapshot. The adapter's code
         # and reference-building callbacks execute only in its loading process.
+        from harnessgrad.dataset_runtime_identity import provider_reference
         return SimpleNamespace(__name__=registry.module_name(name),
+            _provider_runtime=provider_reference(name, snapshot['runtime']),
             control_task=lambda _id: snapshot['record'], task_for=lambda _record: snapshot['task'],
             setup_for=lambda _record: snapshot['setup'], verify_for=lambda _record: snapshot['verifier'],
             DEFAULT_ENV=snapshot['env'], NOOP_EXPECTED=snapshot['noop_expected'],
@@ -215,10 +217,21 @@ def run_check(module, record: dict, workdir: Path) -> tuple[float, str]:
     # must never become Python import search roots.
     env = dict(os.environ)
     argv = [sys.executable, *verifier["argv"][1:]]
+    selected = getattr(module, '_provider_runtime', None)
+    if selected is not None:
+        from harnessgrad.dataset_runtime import admit_provider
+        runtime = admit_provider(selected['dataset'], selected)
+        argv[0] = runtime['python']
+        for relative in (base.REWARD_REL, base.EVIDENCE_REL):
+            (workdir / relative).unlink(missing_ok=True)
+        env = {'PATH': os.defpath, 'HOME': str(workdir), 'LANG': 'C.UTF-8',
+               'PYTHONDONTWRITEBYTECODE': '1'}
     # Native runtime declarations rely on their manifest for interpreter flags.
     # The direct control uses this interpreter and must supply isolation itself.
     if "-I" not in argv[1:2]:
         argv.insert(1, "-I")
+    if selected is not None:
+        argv.insert(2, '-B')
     proc = subprocess.run(argv, cwd=workdir, capture_output=True, text=True, errors="replace", env=env)
     reward_path = workdir / base.REWARD_REL
     reward = float(reward_path.read_text().strip()) if reward_path.is_file() else -1.0

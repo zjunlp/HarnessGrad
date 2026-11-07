@@ -49,6 +49,30 @@ def _provider(value):
     return dict(value)
 
 
+def provider_reference(name, runtime):
+    """A private reference to a loading/dependency artifact, without task state."""
+    return _provider({'dataset': name, **{key: runtime[key] for key in _PROVIDER_FIELDS - {'dataset'}}})
+
+
+def validate_provider_reference(value):
+    if value is None:
+        raise ValueError('provider runtime reference is absent')
+    return _provider(value)
+
+
+def _controller_provider(task_ids, verifiers):
+    reference = None
+    for tid in task_ids:
+        spec = (verifiers or {}).get(tid) or {}
+        if 'provider_runtime' not in spec:
+            continue
+        current = validate_provider_reference(spec['provider_runtime'])
+        if reference is not None and reference != current:
+            raise ValueError('selected controllers require different provider artifacts')
+        reference = current
+    return reference
+
+
 def create(provider=None, tasks=None):
     provider = _provider(provider)
     if tasks is None:
@@ -194,6 +218,11 @@ def capture(dataset, task_ids, setups, verifiers):
         raise ValueError("provider identity must come from this run's loading session")
     provider = None if runtime is None else {"dataset": dataset, **{
         key: runtime[key] for key in _PROVIDER_FIELDS - {"dataset"}}}
+    controller = _controller_provider(task_ids, verifiers)
+    if controller is not None:
+        if provider is not None and provider != controller:
+            raise ValueError('controller artifact differs from the selected loading provider')
+        provider = controller
     value = create(provider, _bindings(task_ids, setups, verifiers))
     admit(value)
     return value
@@ -203,10 +232,13 @@ def for_evaluation(value, tasks, setups, verifiers):
     """Validate supplied bindings, including callers that bypass driver.py."""
     task_ids = [task["task_id"] for task in tasks]
     bindings = _bindings(task_ids, setups, verifiers)
+    controller = _controller_provider(task_ids, verifiers)
     if value is None:
-        selected = create(tasks=bindings)
+        selected = create(controller, tasks=bindings)
     else:
         selected = project(value, task_ids)
+        if controller is not None and controller != (selected or {}).get('provider'):
+            raise ValueError('controller artifact differs from dataset_runtime_identity')
         expected = create((selected or {}).get("provider"), bindings)
         if selected != expected:
             raise ValueError("dataset_runtime_identity does not match selected execution declarations")

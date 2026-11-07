@@ -22,7 +22,7 @@ def _kill_group(pid: int) -> None:
 
 def run(argv: list[str], *, timeout_s: float, cwd: Path | None = None,
         env: dict[str, str] | None = None,
-        input_text: str | None = None) -> subprocess.CompletedProcess:
+        input_text: str | None = None, on_process=None) -> subprocess.CompletedProcess:
     """Run in a new session; on timeout/interruption kill its whole process group.
 
     Keep communicate's original deadline and partial TimeoutExpired output. Do not
@@ -39,12 +39,17 @@ def run(argv: list[str], *, timeout_s: float, cwd: Path | None = None,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                           errors="replace", start_new_session=True, cwd=cwd, env=env) as proc:
         try:
+            if on_process is not None:
+                on_process(proc)
             stdout, stderr = proc.communicate(input_text, timeout=timeout_s)
         except BaseException:
             # Even if the direct child already exited, its orphaned descendants
             # can still belong to this group and retain the captured pipe ends.
             _kill_group(proc.pid)
             raise
+        finally:
+            if on_process is not None:
+                on_process(None)
         if termination_signal(proc.returncode) is not None:
             # A watchdog may have killed the launcher while descendants that
             # closed their pipes are still alive in its session.

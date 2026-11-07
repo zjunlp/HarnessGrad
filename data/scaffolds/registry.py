@@ -923,6 +923,9 @@ def _check_setup(spec, tid: str, name: str) -> None:
 def _check_verifier(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
+    if 'provider_runtime' in spec:
+        from harnessgrad.dataset_runtime_identity import validate_provider_reference
+        validate_provider_reference(spec['provider_runtime'])
     if "python_runtime" in spec:
         from harnessgrad.dataset_runtime import validate_binding
         argv = spec.get("argv")

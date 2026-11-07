@@ -14,6 +14,15 @@ import pytest
 
 import data.datasets.chessbench_puzzles as dataset
 from data.scaffolds.qa import control
+from data.scaffolds import registry
+
+
+@pytest.fixture(autouse=True)
+def local_adapter_controls():
+    # These unit tests patch the in-process adapter's synthetic CSV. Production
+    # entry points are exercised separately through the real provider worker.
+    with registry._local_provider():
+        yield
 
 
 @pytest.fixture(autouse=True)

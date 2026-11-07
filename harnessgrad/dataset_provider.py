@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 
 from eval.containers.process import run
 from harnessgrad import dataset_runtime
@@ -83,9 +84,11 @@ class DatasetProvider:
         self.name, self.declaration, self.timeout_s = name, declaration, timeout_s
         self.freeze_runtime = freeze_runtime
         self.runtime = None
+        self.deadline = None
+        self.on_process = None
 
-    def _request(self, operation: str, *, task_ids=None, config_snapshot=None) -> dict:
-        configuration = _configuration(self.name, config_snapshot)
+    def _request(self, operation: str, *, task_ids=None, config_snapshot=None, payload=None) -> dict:
+        configuration = {} if operation == 'stepwise' else _configuration(self.name, config_snapshot)
         runtime = (dataset_runtime.admit_provider(self.name, self.runtime)
                    if self.freeze_runtime and self.runtime is not None
                    else dataset_runtime.resolve(self.name))
@@ -99,6 +102,8 @@ class DatasetProvider:
                    "descriptor_sha256": descriptor_sha, "runtime_id": runtime["runtime_id"],
                    "runtime_path": runtime["path"], "configuration": configuration,
                    "task_ids": _selection(task_ids)}
+        if operation == 'stepwise':
+            request['payload'] = payload
         with tempfile.TemporaryDirectory(prefix="hg-dataset-provider-") as directory:
             private = Path(directory)
             (private / "home").mkdir()
@@ -108,9 +113,16 @@ class DatasetProvider:
                            "PYTHONDONTWRITEBYTECODE": "1", REVIEWED_ENVIRONMENT_ONLY: "1",
                            **configuration}
             try:
+                timeout = self.timeout_s
+                if self.deadline is not None:
+                    remaining = self.deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise subprocess.TimeoutExpired('dataset provider', 0)
+                    timeout = remaining if timeout is None else min(timeout, remaining)
                 result = run([runtime["python"], "-I", "-B", "-c", _BOOTSTRAP, str(ROOT)],
-                             timeout_s=self.timeout_s, cwd=private, env=environment,
-                             input_text=json.dumps(request, allow_nan=False))
+                             timeout_s=timeout, cwd=private, env=environment,
+                             input_text=json.dumps(request, allow_nan=False),
+                             **({'on_process': self.on_process} if self.on_process is not None else {}))
             except subprocess.TimeoutExpired as exc:
                 raise DatasetProviderError(self.name, operation, "worker exceeded the declared timeout",
                                            error_type="TimeoutExpired") from exc
@@ -145,6 +157,13 @@ class DatasetProvider:
             raise DatasetProviderError(self.name, operation, "worker result is absent or unsuccessful",
                                        error_type="ProtocolError")
         return {**value, "runtime": runtime}
+
+    def stepwise(self, payload):
+        """Replay trusted submissions in the exact selected dependency artifact."""
+        result = self._request('stepwise', payload=payload)
+        if not all(isinstance(result.get(key), dict) for key in ('observation', 'provider_observation')):
+            raise DatasetProviderError(self.name, 'stepwise', 'malformed state response', error_type='ProtocolError')
+        return result
 
     def catalog(self, *, config_snapshot: dict | None = None) -> dict:
         """Return public tasks separately from the trusted fallback answer map."""

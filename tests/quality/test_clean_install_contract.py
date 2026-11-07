@@ -64,6 +64,10 @@ RESOURCES = (
     "data/scaffolds/native_qa/math_worker.py",
     "data/scaffolds/native_qa/math_grade.py",
     "data/scaffolds/native_qa/PROVENANCE.json",
+    "data/datasets/chessbench_puzzles/runtime.json",
+    "data/datasets/chessbench_puzzles/requirements-load.txt",
+    "data/datasets/chessbench_puzzles/provider.py",
+    "data/runtimes/chessbench_puzzles-native.json",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
@@ -191,9 +195,45 @@ assert registry.managed_runtime('math') and registry.managed_runtime('math500')
 assert importlib.util.find_spec('math_verify') is None
 from data.datasets import math as math_dataset, math500
 assert math_dataset.MANAGED_EXECUTION_RUNTIME == math500.MANAGED_EXECUTION_RUNTIME == 'math'
+from harnessgrad.dataset_runtime import descriptor
+assert descriptor('chessbench_puzzles')['pins'] == {'chess': '1.11.2'}
+assert importlib.util.find_spec('chess') is None
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
+
+
+def test_installed_chess_provider_and_reviewed_native_abi(installed):
+    store = os.environ.get('HG_TEST_CHESS_PROVIDER_RUNTIME_ROOT')
+    native_store = os.environ.get('HG_DATA_NATIVE_RUNTIMES')
+    if not store or not native_store:
+        pytest.skip('explicit Chess provider and reviewed native stores required')
+    root, env, runtime = installed
+    env = {**env, 'HG_DATASET_RUNTIME_ROOT': store, 'HG_DATA_NATIVE_RUNTIMES': native_store,
+           'HG_REVIEWED_ENVIRONMENT_ONLY': '1'}
+    code = '''
+import importlib.abc, importlib.util, json
+assert importlib.util.find_spec('chess') is None
+class Guard(importlib.abc.MetaPathFinder):
+    def find_spec(self,fullname,path=None,target=None):
+        if fullname == 'chess' or fullname == 'data.datasets.chessbench_puzzles':
+            raise AssertionError('installed platform imported Chess')
+__import__('sys').meta_path.insert(0,Guard())
+from eval.run import chess_stepwise
+from eval.verification.native_runtime import admit
+from data.runtimes import NATIVE_PINS
+fen='rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+gold={'fen':fen,'moves':['e2e4','e7e5','g1f3','b8c6','f1b5'],'puzzle_id':'authored-wheel'}
+task={'task_id':'chessbench_puzzles/test/0','interaction':chess_stepwise.STEPWISE}
+session=chess_stepwise.session_for(task,{'inputs':[{'path':'gold.json','content':json.dumps(gold)}]},
+                                  sandbox=True,env={'kind':'files'})
+assert session.submit({'uci':'e7e5'})['status']=='awaiting_move'
+assert session.submit({'uci':'b8c6'})['status']=='solved'
+with admit(NATIVE_PINS['chessbench_puzzles']) as native:
+    assert native.receipt['verified']
+    assert native.receipt['host']['capabilities']['isolated_python']
+'''
+    run([str(runtime / 'bin/python'), '-I', '-B', '-c', code], root, env)
 
 
 def test_installed_miniagent_declares_its_own_complete_lock(installed):

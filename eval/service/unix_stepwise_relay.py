@@ -123,6 +123,9 @@ class StepwiseRelay:
     def start(self):
         self.deadline = time.monotonic() + self.timeout_s
         try:
+            deadline = getattr(self.session, 'set_deadline', None)
+            if callable(deadline):
+                deadline(self.deadline)
             self.thread.start()
             self.started = True
         except BaseException:
@@ -141,12 +144,17 @@ class StepwiseRelay:
                 except OSError:
                     pass
         try:
-            if self.started:
-                self.server.shutdown()
-            # Like the model relay, join every handler before scoring.
-            self.server.server_close()
-            if self.started:
-                self.thread.join()
+            try:
+                cancel = getattr(self.session, 'stop', None)
+                if callable(cancel):
+                    cancel()
+            finally:
+                if self.started:
+                    self.server.shutdown()
+                # Like the model relay, join every handler before scoring.
+                self.server.server_close()
+                if self.started:
+                    self.thread.join()
         finally:
             self.path.unlink(missing_ok=True)
             self.closed = True

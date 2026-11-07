@@ -757,7 +757,7 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 ### 8.1 独立的数据加载依赖
 
 适配器可通过 `data/datasets/<name>/runtime.json` 显式选择数据 provider。
-当前 GSM8K、TriviaQA、HotpotQA 使用 QA provider。该声明和精确依赖文件可以在平台
+当前 GSM8K、TriviaQA、HotpotQA 和 ChessBench Puzzles 使用 QA provider。该声明和精确依赖文件可以在平台
 Python 中静态读取；适配器的加载依赖只安装到外部专用环境，平台不导入它们。
 
 ```bash
@@ -771,6 +771,17 @@ CPython 3.12 和 `pyarrow==23.0.0`。已有数据目录可以继续使用，但�
 配方也必须补做 provider 准备。平台和接收 JSON 输入的评分器不需要安装 Arrow。
 TriviaQA 的训练采样与源文件行号、HotpotQA 的 answer F1 和 evidence 诊断语义不变。
 运行时身份属于测量身份，历史记录不会自动补写新身份；旧记录不能借新环境复用得分或续跑。
+
+ChessBench Puzzles 的 provider 使用 CPython 3.12 和 `chess==1.11.2`。其离线 strict
+replay 继续执行原有封存 native 制品，原适配器、manifest 和 pin 均不改写。交互式
+stepwise 保留平台拥有的历史、连接预算、公共字段白名单和 receipt 评分，仅把棋盘推进
+交给同一 provider 制品。每次请求重放平台私有历史，不读取 CSV，也不接受 actor 自报历史。
+`VERIFY.provider_runtime` 在 cache 查询前绑定确切制品，进入 `dataset_runtime_identity`
+的 provider 字段；每次推进重新准入该 manifest，改变 ready 索引不能切换正在运行的会话。
+worker 受 relay 的绝对 deadline 约束，relay 停止会终止并回收自己的 worker 进程组。
+receipt 私有地记录绑定、实际 Python/chess 来源；actor 只得到原来的五个公共棋盘字段。
+依赖子进程不改变交互成绩的 `in-process` 分类，也不声称是 native/pristine 离线成绩。
+详见 [ChessBench 环境流程](../data/datasets/chessbench_puzzles/README.md)。
 
 `--fetch` 只下载声明的数据，不安装依赖，并提示显式准备命令。`prepare_dataset.py`
 准备并验证运行时，然后检查数据能否由 provider 加载；`--check` 只检查，不安装或下载。

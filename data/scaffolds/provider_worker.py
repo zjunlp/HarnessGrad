@@ -27,13 +27,15 @@ _METADATA = ("KIND", "DEFAULT_ENV", "SPLIT", "SPLIT_SOURCE", "SPLIT_GROUPS", "OF
 def _request(raw: object) -> dict:
     required = {"schema", "dataset", "operation", "descriptor_sha256", "runtime_id",
                 "runtime_path", "configuration", "task_ids"}
+    if isinstance(raw, dict) and raw.get('operation') == 'stepwise':
+        required.add('payload')
     if not isinstance(raw, dict) or set(raw) != required or raw.get("schema") != SCHEMA:
         raise ValueError("invalid dataset provider request")
     name = raw["dataset"]
     declaration = dataset_runtime.descriptor(name)
     if declaration is None or declaration["provider"] != "qa":
         raise ValueError("dataset does not declare the QA provider")
-    if raw["operation"] not in {"catalog", "resolve", "check", "inventory", "control"}:
+    if raw["operation"] not in {"catalog", "resolve", "check", "inventory", "control", "stepwise"}:
         raise ValueError("unsupported provider operation")
     if (raw["descriptor_sha256"] != declaration["descriptor_sha256"]
             or not isinstance(raw["runtime_id"], str) or not raw["runtime_id"]):
@@ -41,7 +43,8 @@ def _request(raw: object) -> dict:
     if Path(raw["runtime_path"]).resolve() != Path(sys.prefix).resolve():
         raise ValueError("provider interpreter does not belong to the selected runtime")
     configuration = raw["configuration"]
-    if (not isinstance(configuration, dict) or set(configuration) != {env_name(name)}
+    keys = set() if raw['operation'] == 'stepwise' else {env_name(name)}
+    if (not isinstance(configuration, dict) or set(configuration) != keys
             or any(not isinstance(value, str) or not Path(value).is_absolute()
                    for value in configuration.values())):
         raise ValueError("provider requires one explicit dataset directory")
@@ -56,6 +59,13 @@ def _request(raw: object) -> dict:
         raise ValueError('control requires exactly one selected task or the default task')
     if raw['operation'] == 'inventory' and selected is not None:
         raise ValueError('inventory does not accept a task selection')
+    if raw['operation'] == 'stepwise':
+        payload = raw['payload']
+        if (selected is not None or not isinstance(payload, dict)
+                or set(payload) != {'contract', 'gold', 'answers'}
+                or not isinstance(payload['contract'], str) or not payload['contract']
+                or not isinstance(payload['gold'], dict) or not isinstance(payload['answers'], list)):
+            raise ValueError('invalid stepwise provider request')
     return raw
 
 
@@ -136,6 +146,12 @@ def dispatch(request: dict) -> dict:
     """Read trusted adapters locally while registry provider routing is disabled."""
     name, operation = request["dataset"], request["operation"]
     with registry._local_provider():
+        bridge_path = dataset_runtime.ROOT / 'data/datasets' / name / 'provider.py'
+        if operation == 'stepwise' or operation == 'resolve' and bridge_path.is_file():
+            from data.scaffolds.asset_module import load
+            bridge = load(bridge_path)
+            return (bridge.stepwise(request['payload']) if operation == 'stepwise'
+                    else bridge.resolve(request['task_ids']))
         if operation == 'inventory':
             return _inventory(name)
         if operation == 'control':

@@ -1543,9 +1543,11 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     runtime_identity, runtime_identity_error = None, None
     try:
         # Cache hits must prove the same artifacts as fresh trusted launches.
+        verifiers = chess_stepwise.bind_verifiers(tasks, verifiers,
+            provider=(dataset_runtime_identity or {}).get('provider'))
         runtime_identity = dataset_runtime_identity_mod.for_evaluation(
             dataset_runtime_identity, tasks, setups, verifiers)
-    except (OSError, TypeError, ValueError) as exc:
+    except (OSError, TypeError, ValueError, RuntimeError) as exc:
         runtime_identity_error = str(exc)
     task_runtimes = dataset_runtime_identity_mod.project_many(
         runtime_identity, [task['task_id'] for task in tasks])
@@ -1817,7 +1819,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                             diagnostic=refusal, enforcement=enforcement, **runtime_fields)
             return {"task_id": tid, "invalid": refusal["invalid"]}
         # A cache hit cannot bypass the interactive isolation/input requirements.
-        # Construction is local and lazy; it neither loads the CSV nor launches I/O.
+        # Recheck the exact provider and trusted session input before cache lookup.
+        # The board worker reads no CSV and never installs dependencies.
         if evaluation_protocols.get(tid) == chess_stepwise.STEPWISE:
             try:
                 chess_stepwise.session_for(task, (verifiers or {}).get(tid),

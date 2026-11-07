@@ -78,6 +78,10 @@ def forbid_dataset_reads(monkeypatch):
 
 @pytest.fixture
 def case(tmp_path, monkeypatch):
+    store = os.environ.get('HG_TEST_CHESS_PROVIDER_RUNTIME_ROOT')
+    if not store:
+        pytest.skip('set HG_TEST_CHESS_PROVIDER_RUNTIME_ROOT to an explicitly prepared test store')
+    monkeypatch.setenv('HG_DATASET_RUNTIME_ROOT', store)
     monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(tmp_path))
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
     repo = tmp_path / "harness"
@@ -117,7 +121,12 @@ def local_chess_runtime(tmp_path_factory):
         if target.startswith("/scorer/"):
             source = (root / "data/scaffolds/qa/verify/check.py" if target == "/scorer/check.py"
                       else root / target.removeprefix("/scorer/"))
-            manifest["files"][target] = {**entry, "source": str(source)}
+            # This disposable capture tests the current transport, whose helper
+            # bytes can differ from historical pins. Production manifests and
+            # blob expectations remain unchanged and are checked separately.
+            raw = source.read_bytes()
+            manifest["files"][target] = {**entry, "source": str(source),
+                                         "sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw)}
     package = Path(chess.__file__).resolve().parent
     for source in sorted(package.rglob("*.py")):
         raw = source.read_bytes()
@@ -220,14 +229,38 @@ trace({{'initial': initial, 'terminal': terminal}})
         assert case[2]["puzzle_id"] not in wire
 
 
+@pytest.mark.parametrize("wire", [
+    '{"uci":1e309}',
+    '{"uci":"e7e5","extra":{"value":-1e309}}',
+], ids=["overflow-uci", "overflow-extra-field"])
+def test_overflow_in_invalid_answer_is_measured_as_zero(case, wire):
+    result = execute(case, f'''
+s, f = connect()
+assert json.loads(f.readline())['status'] == 'awaiting_move'
+s.sendall({wire.encode()!r} + b'\\n')
+terminal = f.readline()
+if terminal:
+    trace(json.loads(terminal))
+''')
+    assert result["exit_code"] == 0, result["stderr"]
+    verdict = result["verdict"]
+    assert verdict.get("score") == 0.0, verdict
+    assert verdict["detail"] == "invalid_answer"
+    assert json.loads(result["trace"])["status"] == "failed"
+    receipt = verdict["evidence"]
+    assert receipt["measured"] and receipt["transport"]["status"] == "terminal"
+    assert receipt["transport"]["events"][1] == {"kind": "submission", "message": wire}
+    assert_clean(receipt)
+
+
 def test_unreviewed_public_field_is_never_delivered(case, monkeypatch):
-    original = dataset.StepwisePuzzle
+    original = chess_stepwise._Session
 
     class PollutedSession(original):
         def public_task(self):
-            return {**super().public_task(), "private_reference": self._moves}
+            return {**super().public_task(), "private_reference": self.gold['moves']}
 
-    monkeypatch.setattr(dataset, "StepwisePuzzle", PollutedSession)
+    monkeypatch.setattr(chess_stepwise, "_Session", PollutedSession)
     result = execute(case, "s, f = connect()\nassert f.readline() == b''\n")
     assert result["exit_code"] == 0, result["stderr"]
     receipt = assert_incomplete(result)
@@ -523,6 +556,24 @@ def test_mixed_protocol_aggregate_refused_before_execution(case):
     offline = {"task_id": "chessbench_puzzles/test/1", "goal": "offline", "inputs": []}
     with pytest.raises(ValueError, match="cannot aggregate"):
         runner.evaluate(repo, [task, offline], {})
+
+
+def test_relay_closes_even_when_session_cancellation_raises(tmp_path):
+    class Session:
+        def set_deadline(self, deadline):
+            self.deadline = deadline
+
+        def stop(self):
+            raise RuntimeError('cancellation failed')
+
+    session = Session()
+    relay = StepwiseRelay(tmp_path, session, contract=dataset.STEPWISE_CONTRACT,
+                          public_fields=chess_stepwise.PUBLIC_FIELDS, timeout_s=1).start()
+    assert session.deadline == relay.deadline
+    with pytest.raises(RuntimeError, match='cancellation failed'):
+        relay.stop()
+    assert all(relay.receipt()['cleanup'].values())
+    relay.stop()
 
 
 def test_reconnect_cannot_reset_session_allowance(tmp_path):
