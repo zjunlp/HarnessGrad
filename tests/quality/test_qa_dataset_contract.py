@@ -108,7 +108,8 @@ def _run_check(module, record: dict, workdir: Path, *,
                 target.write_text(entry["content"])
             else:
                 shutil.copy2(entry["from"], target)
-    argv = [sys.executable, *verifier["argv"][1:]]
+    argv = (list(verifier["argv"]) if "python_runtime" in verifier
+            else [sys.executable, *verifier["argv"][1:]])
     # Native declarations get interpreter flags from the runtime manifest. Like
     # the direct QA control, this test supplies isolation for its own interpreter.
     if "-I" not in argv[1:2]:

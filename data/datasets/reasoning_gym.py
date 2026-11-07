@@ -1,16 +1,17 @@
 r"""Reasoning Gym as a dataset: procedurally generated reasoning tasks, scored by the library.
 
-    python3 data/datasets/reasoning_gym/prepare.py          # materialize the pool (once)
+    python tools/prepare_dataset.py --dataset reasoning_gym --runtime execution
+    python data/datasets/reasoning_gym/prepare.py --import-pool /path/to/frozen/pool.jsonl
     python3 data/scaffolds/qa/control.py --dataset reasoning_gym --oracle
     python3 data/scaffolds/qa/control.py --dataset reasoning_gym --oracle --platform
     driver.py --dataset reasoning_gym ...
 
 Where the tasks come from
 -------------------------
-`open-thought/reasoning-gym`, PyPI **0.1.25**. The tasks are generated, not downloaded, so
-the pin is three numbers rather than a file digest: the package version, one seed, and an
-item count per family. `data/datasets/reasoning_gym/prepare.py` holds all three and materializes the
-pool once into `DATASET_ROOT/pool.jsonl`; this adapter only reads that file.
+`open-thought/reasoning-gym`, PyPI **0.1.25**. This adapter loads the frozen
+`DATASET_ROOT/pool.jsonl`, whose SHA-256 fixes the task bytes and order. The
+historical generation recipe remains available, but regeneration may differ
+from the frozen pool. See `data/datasets/reasoning_gym/README.md` for preparation.
 
 **Why the pool is materialized rather than generated here.** Measured: rendering all 89
 usable families at 20 items each (1,780 tasks) costs **15.6 s**, and at 5 items each (445
@@ -38,9 +39,8 @@ Two consequences worth knowing:
 * the reward is **not always 0 or 1**. Several families return partial credit for a partly
   correct answer, which is exactly the property `docs/experiment_noise.md` found missing in
   the binary-reward benchmarks: a task can move without crossing all-or-nothing.
-* the check runs inside the verification namespace, which binds the interpreter prefix, so
-  `reasoning_gym` is importable there because it is installed for the platform interpreter.
-  The pool file travels in `VERIFY.inputs` as gold; nothing else is needed.
+* the check runs with the bound execution interpreter inside the verification namespace.
+  Only the selected gold entry travels in `VERIFY.inputs`.
 
 The split
 ---------
@@ -56,21 +56,34 @@ hash rule, INTERFACE.md §2.3) or `--split <file.json>`, and the record says whi
 """
 from __future__ import annotations
 
+from functools import lru_cache
+import hashlib
+import json
+import os
+from pathlib import Path
+import signal
+import subprocess
+import sys
+import tempfile
+
 from data.scaffolds.qa import base
 
-from harnessgrad.paths import dataset_root
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "reasoning_gym"
+ASSETS = Path(__file__).resolve().parent / "reasoning_gym"
+SCORE_MODE = "reasoning-gym-execution"
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
+REDACT_EVIDENCE = True
 
 
 DATASET_ROOT = dataset_root('reasoning_gym')
 
-#: The pin. `prepare.py` writes the pool from exactly these numbers, and the test in
-#: `tests/quality/test_reasoning_gym_dataset.py` regenerates and compares.
+#: The upstream scorer release and the filename of the frozen pool.
 PACKAGE = "reasoning-gym"
 VERSION = "0.1.25"
 POOL = "pool.jsonl"
@@ -85,14 +98,22 @@ PER_FAMILY = 20
 POOL_SHA256 = "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177"
 
 
-def _rows() -> dict[str, list[dict]]:
-    """The pool, read lazily and read once. `split=` below names the key returned here."""
+def _read_pool() -> bytes:
     path = DATASET_ROOT / POOL
-    if not path.is_file():
-        raise ValueError(
-            f"reasoning_gym: no pool at {path}. Write it with "
-            f"`python3 data/datasets/reasoning_gym/prepare.py`")
-    return {"eval": base.jsonl_rows(path)}
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"reasoning_gym: no frozen pool at {path}. Import it with "
+                                "`python data/datasets/reasoning_gym/prepare.py --import-pool PATH`") from None
+    if hashlib.sha256(raw).hexdigest() != POOL_SHA256:
+        raise ValueError("reasoning_gym: frozen pool SHA-256 mismatch")
+    return raw
+
+
+def _rows() -> dict[str, list[dict]]:
+    """Parse the exact bytes whose digest was checked."""
+    return {"eval": [json.loads(line) for line in _read_pool().decode("utf-8").splitlines()
+                     if line.strip()]}
 
 
 def _question(row: dict) -> str:
@@ -111,23 +132,64 @@ def _gold(row: dict) -> dict:
             "index": row["index"], "entry": entry}
 
 
-def score(prediction: str, gold: dict) -> dict:
-    """The dataset's own scorer, called rather than copied (`prepare.py` holds the pin)."""
-    from reasoning_gym import create_dataset
+def _run_worker(operation, payload=None):
+    """Run a local diagnostic or pool generation with prepared dependencies."""
+    from harnessgrad.dataset_runtime import resolve_execution
+
+    runtime = resolve_execution(MANAGED_EXECUTION_RUNTIME)
+    argv = [runtime["python"], "-I", "-B", str(ASSETS / "worker.py"), operation]
+    with tempfile.TemporaryDirectory(prefix="hg-reasoning-gym-") as directory:
+        env = {"PATH": os.defpath, "HOME": directory, "TMPDIR": directory, "LANG": "C.UTF-8",
+               "XDG_CACHE_HOME": directory, "XDG_CONFIG_HOME": directory, "MPLCONFIGDIR": directory}
+        with subprocess.Popen(argv, cwd=directory, env=env, stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                              encoding="utf-8", start_new_session=True) as proc:
+            try:
+                stdout, _ = proc.communicate(json.dumps(payload, allow_nan=False),
+                                              timeout=180 if operation == "pool" else 30)
+            except BaseException as error:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                if isinstance(error, subprocess.TimeoutExpired):
+                    raise ValueError(f"reasoning_gym: {operation} worker timed out") from None
+                raise
+        if proc.returncode:
+            raise ValueError(f"reasoning_gym: {operation} worker failed (exit {proc.returncode})")
+    return json.loads(stdout)
+
+
+def score(prediction: str, gold: dict, *, mode=None) -> dict:
+    """Run the upstream scorer. The private QA check already uses the bound Python."""
+    if mode not in (None, SCORE_MODE):
+        raise ValueError("unknown Reasoning Gym score mode")
 
     family = str(gold.get("family") or "")
     if not family:
         return {"reward": 0.0, "correct": False,
                 "why": "no family on the gold: the gold did not come from this pool"}
-    dataset = create_dataset(family, size=PER_FAMILY, seed=SEED)
+    if mode is None:
+        return _run_worker("score", {"prediction": prediction, "gold": gold})
+
+    from importlib.metadata import version
+    import reasoning_gym
+
+    installed = version(PACKAGE)
+    if installed != VERSION:
+        raise ValueError("Reasoning Gym package version differs from the scorer pin")
+    dataset = reasoning_gym.create_dataset(family, size=PER_FAMILY, seed=SEED)
     got = float(dataset.score_answer(answer=prediction or "", entry=gold.get("entry") or {}))
     return {
         "reward": got,
         # `correct` is the all-or-nothing reading, kept beside the partial one: a reward of
         # 0.5 is a partly right answer, and calling that "correct" would hide it.
         "correct": got >= 1.0,
-        "official": {"family": family, "score_answer": got,
-                     "package": f"{PACKAGE}=={VERSION}"},
+        "official": {"family": family, "score_answer": got, "package": f"{PACKAGE}=={installed}",
+                     "runtime_observation": {"python": sys.executable, "prefix": sys.prefix,
+                         "package_origin": reasoning_gym.__file__, "isolated": bool(sys.flags.isolated),
+                         "no_bytecode": sys.dont_write_bytecode,
+                         "readonly": bool(os.statvfs(sys.prefix).f_flag & os.ST_RDONLY)}},
         "why": f"reasoning-gym {family}: score_answer({prediction!r}) -> {got:g}",
     }
 
@@ -153,12 +215,37 @@ def _downloads() -> list[dict]:
             "package": PACKAGE,
             "version": VERSION,
             "size": "~1 MB, with its own dependency tree",
-            "note": "The tasks are **generated**, so there is no dataset file to fetch: the pin is this package version plus the seed and the item count in `data/datasets/reasoning_gym/prepare.py`. Install it into the platform interpreter -- the check imports it inside the verification namespace. The pool itself is not a download either: `prepare.py` writes it from this version plus the seed, and `POOL_SHA256` in `data/datasets/reasoning_gym.py` pins the result, so the only declared dependency is this package. Trap 1: the extras (`reasoning-gym[scoring]`) pull an LLM-judge cascade; the 89 families used here are exactly the ones whose scorer is deterministic and offline in this version, measured rather than assumed (see `prepare.py`). Trap 2: installing it pins `click>=8.3`, while a `ray 2.52.1` in this interpreter wants `click!=8.3.*` -- a warning only, and nothing this platform imports uses either.",
+            "note": "Prepare the dedicated CPython 3.12 execution runtime with the locked wheels. See `data/datasets/reasoning_gym/README.md` for the three source-only dependencies.",
         },
+        {"kind": "generated", "name": "Frozen Reasoning Gym pool", "version": f"seed {SEED}",
+         "size": "3315981 bytes", "dst": POOL, "sha256": POOL_SHA256,
+         "prepare": "python data/datasets/reasoning_gym/prepare.py --import-pool /path/to/frozen/pool.jsonl",
+         "note": "Import the original pool by digest. Historical regeneration can differ; preparation refuses to publish divergent bytes."},
     ]
 
 
-_SPEC = base.QASpec(
+@lru_cache(maxsize=1)
+def _execution_runtime():
+    from harnessgrad.dataset_runtime import resolve_execution
+    return resolve_execution(MANAGED_EXECUTION_RUNTIME)
+
+
+class _ReasoningGymSpec(base.QASpec):
+    def verifier(self, record):
+        from harnessgrad.dataset_runtime import bind
+
+        spec = super().verifier(record)
+        binding = bind(_execution_runtime(), "verifier")
+        entry = f"{base.CHECK_DIR}/reasoning_gym_check.py"
+        spec["inputs"].append({"path": entry, "from": str(ASSETS / "check.py")})
+        spec.update(python_runtime=binding, runtime_paths=list(binding["runtime_paths"]),
+                    argv=[binding["python"], "-I", "-B", entry, *spec["argv"][3:],
+                          "--score-mode", SCORE_MODE, "--redact-gold"],
+                    result_contract={"version": 1, "score_range": [0, 1], "require_exit_zero": True})
+        return spec
+
+
+_SPEC = _ReasoningGymSpec(
     name="reasoning_gym",
     root=DATASET_ROOT,
     rows=_rows,
@@ -176,17 +263,16 @@ _SPEC = base.QASpec(
            f"pool sha256 {POOL_SHA256[:12]})",
 )
 
-_BUILT = _SPEC.build()
-
-DEFAULT_ENV = _BUILT["DEFAULT_ENV"]
-ENV = _BUILT["ENV"]
-SPLIT = _BUILT["SPLIT"]
-OFFICIAL_EVAL = _BUILT["OFFICIAL_EVAL"]
-SPLIT_SOURCE = _BUILT["SPLIT_SOURCE"]
+DEFAULT_ENV = {"kind": "files"}
+SPLIT = None
+OFFICIAL_EVAL = []
+SPLIT_SOURCE = "none"
 
 
 def __getattr__(name: str):
     """`SETUP`, `VERIFY`, `_RECORDS`, `_LOAD_ERROR`: built on first use, not at import."""
+    if name == "ENV":
+        return _SPEC.build()["ENV"]
     return base.module_getattr(_SPEC, name)
 
 
@@ -199,20 +285,22 @@ def downloads() -> list[dict]:
 
 
 def provision_status() -> dict:
-    """This dataset's provisioning is a **generated pool**, not a download.
+    """Report whether the frozen pool and the separately prepared scorer are ready."""
+    from harnessgrad.dataset_runtime import check_execution
 
-    `QASpec.provision_status()` answers "did `--fetch` write the declared artifact", and there
-    is no artifact to fetch here: the pin is a package version plus a seed, and the bytes are
-    derived from them. So the question is whether `prepare.py` has been run, and that is one
-    file's existence. Measured: returning the scaffold's "in memory, so present" answer made
-    `tools/dataset_lint.py` report `SKIP reasoning_gym: not provisioned` and **exit 1** -- a
-    published dataset that is skipped is not a pass, which is the gate working as intended.
-    """
-    pool = DATASET_ROOT / POOL
-    return {"root": str(DATASET_ROOT), "present": pool.is_file(),
-            "split_dir": str(pool), "files": [str(pool)],
-            "present_files": [str(pool)] if pool.is_file() else [],
-            "tasks": len(_SPEC.ensure())}
+    try:
+        pool = _read_pool()
+    except DataRootNotConfigured as error:
+        return {"present": False, "status": "config_missing", "detail": str(error)}
+    except (OSError, ValueError) as error:
+        return {"root": str(DATASET_ROOT), "present": False, "detail": str(error),
+                "status": "data_missing" if isinstance(error, FileNotFoundError) else "invalid"}
+    execution = check_execution(MANAGED_EXECUTION_RUNTIME)
+    path = str(DATASET_ROOT / POOL)
+    return {"root": str(DATASET_ROOT), "present": execution["present"],
+            "status": execution["status"], "scope": "reasoning-gym-data-and-execution",
+            "detail": execution["detail"], "split_dir": path, "files": [path],
+            "present_files": [path], "tasks": len(pool.splitlines()), "execution_runtime": execution}
 
 
 __all__ = ["KIND", "DATASET_ROOT", "PACKAGE", "VERSION", "POOL", "POOL_SHA256", "SEED",

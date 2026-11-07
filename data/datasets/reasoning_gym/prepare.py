@@ -2,8 +2,9 @@
 """Materialize the Reasoning Gym pool once, so no run pays for generating it.
 
 **Why this file exists.** Reasoning Gym generates its tasks procedurally, so there are no
-bytes to download -- only a pinned pip version and a seed. That makes the pool reproducible
-but **expensive to render on every call**: measured, rendering all 89 usable families at 20
+published data files to download. The historical recipe pins a package version and a seed,
+while the frozen digest pins the exact task bytes. It is **expensive to render on every call**:
+measured, rendering all 89 usable families at 20
 items each (1,780 tasks) costs **15.6 s**, and at 5 items each (445 tasks) still **5.1 s**.
 A dataset whose cost is per task hurts the control loop, the lint and every importing
 subprocess, never the run itself -- the lesson already paid for twice (skill doc §15.9 and
@@ -18,34 +19,30 @@ or accepted an empty answer, and `composite` cannot be built without sub-dataset
 matters because a family that accepts an empty answer would give the do-nothing control
 reward 1 -- gate 2 would be red for a reason that is the dataset's, not the harness's.
 
-    python3 data/datasets/reasoning_gym/prepare.py            # write the pool, print its digest
-    python3 data/datasets/reasoning_gym/prepare.py --check    # is the pool on disk the pinned one?
+    python data/datasets/reasoning_gym/prepare.py --import-pool /path/to/frozen/pool.jsonl
+    python data/datasets/reasoning_gym/prepare.py --check
+
+Without an option, regenerate with the prepared execution interpreter. Publish
+only if the result matches the historical frozen pool's digest.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harnessgrad.paths import dataset_root
-
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-PACKAGE = "reasoning-gym"
+from data.datasets import reasoning_gym as adapter  # noqa: E402
 
-#: The pinned version. A version, not `main`: the family list above was measured against
-#: this one, and a scorer change in a later release is a different dataset.
-VERSION = "0.1.25"
-
-#: One seed for the whole pool and one item count per family. Both are part of the pin:
-#: `create_dataset(name, size, seed)` is deterministic, so these three numbers reproduce
-#: every task and every reference answer byte-for-byte.
-SEED = 20261008
-PER_FAMILY = 20
+PACKAGE, VERSION = adapter.PACKAGE, adapter.VERSION
+SEED, PER_FAMILY = adapter.SEED, adapter.PER_FAMILY
 
 #: The 89 families whose scorer is deterministic and offline in `VERSION` (see the docstring
 #: for the rule and the measurement). Sorted, so a regeneration diff is readable.
@@ -72,8 +69,8 @@ FAMILIES = (
     "word_ladder", "word_sequence_reversal", "word_sorting", "zebra_puzzles",
 )
 
-DATASET_ROOT = dataset_root('reasoning_gym')
-POOL = DATASET_ROOT / "pool.jsonl"
+DATASET_ROOT = adapter.DATASET_ROOT
+POOL = DATASET_ROOT / adapter.POOL
 
 
 def _entry(name: str, index: int) -> dict:
@@ -99,13 +96,34 @@ def _entry(name: str, index: int) -> dict:
     }
 
 
-def build() -> tuple[str, int]:
-    """Write the pool and return `(sha256, task count)`."""
-    DATASET_ROOT.mkdir(parents=True, exist_ok=True)
+def _render_pool() -> str:
+    """Render in the managed interpreter without writing the dataset directory."""
     rows = [_entry(name, i) for name in FAMILIES for i in range(PER_FAMILY)]
-    body = "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows)
-    POOL.write_text(body, encoding="utf-8")
-    return hashlib.sha256(body.encode()).hexdigest(), len(rows)
+    return "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows)
+
+
+def _publish(raw: bytes) -> tuple[str, int]:
+    sha = hashlib.sha256(raw).hexdigest()
+    if sha != adapter.POOL_SHA256:
+        raise ValueError(f"Reasoning Gym pool SHA-256 mismatch: got {sha}, expected {adapter.POOL_SHA256}. "
+                         "Use --import-pool with a verified copy of the frozen pool.")
+    target = Path(POOL)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    staging = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".pool-", delete=False) as stream:
+            staging = Path(stream.name)
+            stream.write(raw)
+        os.replace(staging, target)
+    finally:
+        if staging is not None:
+            staging.unlink(missing_ok=True)
+    return sha, len(raw.splitlines())
+
+
+def build() -> tuple[str, int]:
+    """Generate in the bound environment and publish only the pinned bytes."""
+    return _publish(adapter._run_worker("pool").encode("utf-8"))
 
 
 def digest() -> str:
@@ -114,22 +132,22 @@ def digest() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", action="store_true",
-                        help="only report whether the pool on disk is the pinned one")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="verify the frozen pool digest without writing")
+    mode.add_argument("--import-pool", type=Path, help="import a local copy of the frozen pool by SHA-256")
     args = parser.parse_args(argv)
 
-    if args.check:
-        if not POOL.is_file():
-            print(f"missing: {POOL}")
-            return 1
-        print(f"{POOL.name}: {POOL.stat().st_size} bytes sha256={digest()}")
+    try:
+        if args.check:
+            sha = digest()
+            print(f"{POOL.name}: {POOL.stat().st_size} bytes sha256={sha}")
+            return 0 if sha == adapter.POOL_SHA256 else 1
+        sha, count = _publish(args.import_pool.read_bytes()) if args.import_pool else build()
+        print(f"wrote {POOL} ({count} tasks), sha256={sha}")
         return 0
-
-    sha, count = build()
-    print(f"wrote {POOL} ({count} tasks over {len(FAMILIES)} families)")
-    print(f"sha256={sha}")
-    print("record that digest in data/datasets/reasoning_gym.py; the test asserts it matches.")
-    return 0
+    except (OSError, RuntimeError, ValueError) as error:
+        print(error, file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

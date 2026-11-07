@@ -486,6 +486,12 @@ def _provision(name: str, module, *, refused: bool) -> str:
         return command
     if "authored" in kinds:
         return f"{DASH} the bytes ship with the repository; nothing to fetch"
+    if "generated" in kinds:
+        entry = next(entry for entry in entries if entry.get("kind") == "generated")
+        execution = getattr(module, "MANAGED_EXECUTION_RUNTIME", None)
+        prefix = (f"`python tools/prepare_dataset.py --dataset {execution} --runtime execution`; then "
+                  if execution else "")
+        return f"{prefix}`{entry['prepare']}`"
     if "pip" in kinds:
         return (f"{DASH} no bytes to fetch; `pip install` the package pinned in "
                 f"`DOWNLOADS.md`")

@@ -957,7 +957,17 @@ dataset does not read as prepared.
 - **Size:** ~1 MB, with its own dependency tree
 - **Package:** `reasoning-gym==0.1.25`
 
-> The tasks are **generated**, so there is no dataset file to fetch: the pin is this package version plus the seed and the item count in `data/datasets/reasoning_gym/prepare.py`. Install it into the platform interpreter -- the check imports it inside the verification namespace. The pool itself is not a download either: `prepare.py` writes it from this version plus the seed, and `POOL_SHA256` in `data/datasets/reasoning_gym.py` pins the result, so the only declared dependency is this package. Trap 1: the extras (`reasoning-gym[scoring]`) pull an LLM-judge cascade; the 89 families used here are exactly the ones whose scorer is deterministic and offline in this version, measured rather than assumed (see `prepare.py`). Trap 2: installing it pins `click>=8.3`, while a `ray 2.52.1` in this interpreter wants `click!=8.3.*` -- a warning only, and nothing this platform imports uses either.
+> Prepare the dedicated CPython 3.12 execution runtime with the locked wheels. See `data/datasets/reasoning_gym/README.md` for the three source-only dependencies.
+
+### Frozen Reasoning Gym pool
+
+- **Type:** `generated`
+- **Version (pinned):** `seed 20261008`
+- **Size:** 3315981 bytes
+- **Destination:** `<HG_DATA_ROOT>/reasoning_gym/pool.jsonl`
+- **SHA256:** `c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177`
+
+> Import the original pool by digest. Historical regeneration can differ; preparation refuses to publish divergent bytes.
 
 ## `scienceworld`
 

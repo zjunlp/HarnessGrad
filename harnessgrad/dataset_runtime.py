@@ -51,7 +51,7 @@ def _package(name):
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-def _descriptor(name, filename, schema, fields):
+def _descriptor(name, filename, schema, fields, *, optional_fields=frozenset()):
     if not isinstance(name, str) or not _NAME.fullmatch(name):
         raise ValueError("invalid dataset runtime name")
     folder = ROOT / "data" / "datasets" / name
@@ -63,7 +63,7 @@ def _descriptor(name, filename, schema, fields):
     raw = declaration.read_bytes()
     value = json.loads(raw)
     if (not isinstance(value, dict)
-            or set(value) != fields
+            or not fields <= set(value) <= fields | optional_fields
             or value["schema"] != schema or value["dataset"] != name
             or not isinstance(value["python"], str)
             or not re.fullmatch(r"3\.[0-9]+", value["python"])):
@@ -105,7 +105,10 @@ def descriptor(name: str) -> dict | None:
 def execution_descriptor(name: str) -> dict | None:
     """Read the separate shared service/verifier dependency declaration."""
     value = _descriptor(name, "execution-runtime.json", EXECUTION_SCHEMA,
-                        {"schema", "dataset", "python", "requirements"})
+                        {"schema", "dataset", "python", "requirements"},
+                        optional_fields={"wheel_only"})
+    if value is not None and type(value.get("wheel_only", False)) is not bool:
+        raise ValueError("execution runtime wheel_only must be a boolean")
     return None if value is None else {**value, "profile": "execution"}
 
 
@@ -358,7 +361,10 @@ def _prepare_spec(name, spec, *, python=None, root=None, timeout_s=None, executi
         try:
             selected = _physical_python(uv, spec, python, timeout_s) if execution else python or spec["python"]
             _run([uv, "venv", "--no-project", "--python", selected, venv], timeout_s=timeout_s)
-            _run([uv, "pip", "install", "--python", venv / "bin/python", "-r", spec["requirements_path"]], timeout_s=timeout_s)
+            install = [uv, "pip", "install", "--python", venv / "bin/python"]
+            if spec.get("wheel_only"):
+                install.extend(["--only-binary", ":all:"])
+            _run([*install, "-r", spec["requirements_path"]], timeout_s=timeout_s)
             probe = _probe(venv / "bin/python", timeout_s=timeout_s)
             _validate_probe(probe, spec, venv)
             _freeze(venv)

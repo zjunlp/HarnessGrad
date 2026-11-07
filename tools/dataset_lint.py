@@ -120,7 +120,7 @@ def _outside_platform(path: Path, root: Path) -> bool:
 #: rather than the dict.
 _ENTRY_KEYS = {
     "kind", "name", "version", "size", "note", "url", "repo", "file", "files",
-    "sha256", "dst", "extract_to", "package", "manifest",
+    "sha256", "dst", "extract_to", "package", "manifest", "prepare",
     # `authored` uses a repository-local bundle path.
     "path",
 }

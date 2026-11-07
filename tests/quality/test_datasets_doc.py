@@ -435,7 +435,9 @@ def test_the_provision_column_says_how_to_get_the_bytes():
     for name in REFUSED:
         assert "no fetch lifts this refusal" in _row(text, name)[PROVISION], name
     assert "ship with the repository" in _row(text, "authored_example_fix_bug")[PROVISION]
-    assert "pip install" in _row(text, "reasoning_gym")[PROVISION]
+    generated = _row(text, "reasoning_gym")[PROVISION]
+    assert "prepare_dataset.py --dataset reasoning_gym --runtime execution" in generated
+    assert "prepare.py --import-pool" in generated
 
 
 def test_an_adapter_that_raises_on_import_is_a_row_not_a_crash(monkeypatch, tmp_path):

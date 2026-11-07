@@ -204,6 +204,9 @@ def run_check(module, record: dict, workdir: Path) -> tuple[float, str]:
     """
     verifier = (module.verify_for(record) if callable(getattr(module, "verify_for", None))
                 else module.VERIFY[record["task_id"]])
+    if "python_runtime" in verifier:
+        from data.scaffolds import command_control
+        return command_control.run_check(module, record, workdir, verifier=verifier)
     for entry in verifier.get("inputs") or []:
         target = workdir / entry["path"]
         target.parent.mkdir(parents=True, exist_ok=True)

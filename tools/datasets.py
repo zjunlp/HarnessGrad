@@ -257,6 +257,9 @@ def check_entry(entry: dict, base: Path) -> dict:
     if not path.exists():
         result["detail"] = f"missing: {path}"
         return result
+    if kind == "generated" and not path.is_file():
+        result["detail"] = f"not a generated data file: {path}"
+        return result
     expected = entry.get("sha256")
     if expected and path.is_file():
         actual = _sha256(path)
@@ -499,6 +502,8 @@ def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
     name = entry.get("name")
     if kind == "pip":
         return True, f"[pip] {entry.get('package')}=={entry.get('version')} (install separately)"
+    if kind == "generated":
+        return True, f"[generated] {name}: {entry['prepare']}"
     if kind not in ("http", "hf-dataset", "hf-file"):
         return False, f"[{kind}] {name}: no fetch transport"
 
@@ -797,8 +802,12 @@ def _main(argv=None) -> int:
         for name, entries in rows:
             module = _download_adapter(name)
             base = dataset_root(module)
+            execution = getattr(module, 'MANAGED_EXECUTION_RUNTIME', None)
             print(f"== {name}  (root {base})")
             for entry in entries:
+                if execution is not None and entry.get("kind") == "pip":
+                    print(f"       [pip] {entry['package']}=={entry['version']} (managed execution runtime)")
+                    continue
                 ok, message = fetch_entry(entry, base, only=args.file,
                                           endpoint=args.endpoint, force=args.force)
                 print(f"  {'ok  ' if ok else 'FAIL'} {message}")
@@ -806,8 +815,8 @@ def _main(argv=None) -> int:
                     failed += 1
             if dataset_runtime.descriptor(name) is not None:
                 print(f"  next: python tools/prepare_dataset.py --dataset {name}")
-            elif getattr(module, 'MANAGED_EXECUTION_RUNTIME', None) is not None:
-                print(f"  next: python tools/prepare_dataset.py --dataset {module.MANAGED_EXECUTION_RUNTIME} --runtime execution")
+            elif execution is not None:
+                print(f"  next: python tools/prepare_dataset.py --dataset {execution} --runtime execution")
         return 1 if failed else 0
 
     if args.check:

@@ -1,150 +1,179 @@
-"""Reasoning Gym's official scorer: a **call**, pinned, plus the rule that chose the families.
-
-Most datasets in this repository need a scorer transcribed verbatim from upstream, because the
-only released form of the metric is source code that has to be copied into
-`data/datasets/<name>/verify/`. Reasoning Gym is the other case and it is worth naming: the metric **is**
-a method on the library's own dataset object (`Dataset.score_answer(answer, entry) -> float`),
-so the faithful port is not a copy but a call -- which is what `data/datasets/chessbench_puzzles.py`
-does with the official replay loop, and for the same reason: a copy can drift from the source,
-and this repository has already paid for one drift (skill doc §15.5, the two GSM8K filters).
-
-So this file pins four things, each of which fails on its own if the pin moves:
-
-* **the pin** -- `reasoning-gym==0.1.25`, one seed, twenty items per family;
-* **the pool** -- its digest, and that regenerating a sample reproduces the stored rows;
-* **the call** -- `score()` compared against the library called independently here, so a
-  reimplementation would have to agree with the source to pass;
-* **the family rule** -- one task per family, reference answer to 1.0 and empty answer to 0.0.
-  That rule is what selected the 89 families out of 106 (see `prepare.py`), and it is what
-  keeps gate 2 honest: a family whose scorer accepted an empty answer would hand the do-nothing
-  control reward 1.
-
-The reward is **not always 0 or 1** -- several families return partial credit -- so the
-comparisons are on floats.
-"""
-from __future__ import annotations
-
+"""Reasoning Gym controls use authored data and the prepared scoring artifact."""
+from copy import copy
 import hashlib
-import importlib.metadata
-import sys
+import json
+import os
 from pathlib import Path
+import subprocess
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "data" / "datasets" / "reasoning_gym"))
+from data.datasets import reasoning_gym as rg
+from data.scaffolds import registry
+from data.scaffolds.asset_module import load
+from data.scaffolds.qa import control
+from eval.run import runner
+from harnessgrad import dataset_runtime, dataset_runtime_identity
+from test_python_execution_launch import changed_artifact
+from tools import datasets
 
-import prepare  # noqa: E402
-from data.datasets import reasoning_gym as rg  # noqa: E402
-
-
-@pytest.fixture(scope="module")
-def rows() -> dict[tuple[str, int], dict]:
-    """`{(family, index): row}` -- the pool's own coordinate, which is what a pool row
-    carries and what `prepare._entry(family, index)` takes.
-
-    Deliberately **not** keyed by the platform's task id. The platform numbers the pool by
-    position (`reasoning_gym/eval/<n>`, from `QASpec.records()`, which sets `index` to the
-    row's file position because this reader reports no `SOURCE_INDEX`); the first version of
-    this file keyed by a `task_id` field that the pool rows used to carry, and that field
-    disagreed with the platform (`reasoning_gym/<family>/<index>`), so the lookup raised
-    `KeyError` for every sample. The field is gone -- one id in play, and it is the
-    platform's.
-
-    A **row** here is what `_rows()` yields, not the record: `records()` wraps each row in
-    `{task_id, index, split, row, question, gold}`, and `_question`/`_gold` are written
-    against the inner row.
-    """
-    if not (rg.DATASET_ROOT / rg.POOL).is_file():
-        pytest.skip("reasoning_gym: no pool; run `python3 data/datasets/reasoning_gym/prepare.py`")
-    return {(r["row"]["family"], r["row"]["index"]): r["row"] for r in rg._SPEC.ensure()}
+prepare = load(rg.ASSETS / "prepare.py")
+TASK_ID = "reasoning_gym/eval/0"
 
 
-# ------------------------------------------------------------------- the pin ---
+@pytest.fixture
+def authored_pool(tmp_path, monkeypatch):
+    root = tmp_path / "pool"
+    row = {"family": "basic_arithmetic", "index": 0, "question": "What is two plus two?",
+           "entry": {"answer": "4", "metadata": {"private": "AUTHORED_PRIVATE_REFERENCE"}}}
+    raw = (json.dumps(row) + "\n").encode()
+    source = tmp_path / "authored.jsonl"
+    source.write_bytes(raw)
+    monkeypatch.setattr(rg, "DATASET_ROOT", root)
+    monkeypatch.setattr(rg, "POOL_SHA256", hashlib.sha256(raw).hexdigest())
+    spec = copy(rg._SPEC)
+    spec._records, spec.load_error, spec._load_cause = [], None, None
+    monkeypatch.setattr(rg, "_SPEC", spec)
+    monkeypatch.setattr(prepare, "POOL", root / "pool.jsonl")
+    assert prepare.main(["--import-pool", str(source)]) == 0
+    return source
 
 
-def test_the_installed_version_is_the_pin():
-    """A scorer change in a different release is a different dataset."""
-    assert importlib.metadata.version(rg.PACKAGE) == rg.VERSION
+@pytest.fixture
+def prepared_runtime(monkeypatch):
+    root = os.environ.get("HG_TEST_REASONING_GYM_RUNTIME_ROOT")
+    if not root:
+        pytest.skip("prepare Reasoning Gym and set HG_TEST_REASONING_GYM_RUNTIME_ROOT")
+    monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", str(Path(root).resolve(strict=True)))
+    rg._execution_runtime.cache_clear()
+    try:
+        yield dataset_runtime.resolve_execution("reasoning_gym")
+    finally:
+        rg._execution_runtime.cache_clear()
 
 
-def test_the_pool_matches_its_recorded_digest():
-    """A byte of drift in the pool is a different task set under the same ids."""
-    body = (rg.DATASET_ROOT / rg.POOL).read_bytes()
-    assert hashlib.sha256(body).hexdigest() == rg.POOL_SHA256
+def test_frozen_pool_pin_and_family_inventory():
+    assert rg.POOL_SHA256 == "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177"
+    assert rg.SEED == 20261008 and rg.PER_FAMILY == 20 and len(prepare.FAMILIES) == 89
+    assert rg.SPLIT is None and rg.SPLIT_SOURCE == "none" and rg.OFFICIAL_EVAL == []
+    declaration = dataset_runtime.execution_descriptor("reasoning_gym")
+    assert declaration["pins"][rg.PACKAGE] == "0.1.25" and declaration["wheel_only"]
 
 
-def test_the_pool_regenerates_identically_on_a_sample(rows):
-    """Determinism across processes. The whole pool costs 15.6 s to regenerate -- the very
-    measurement that put it on disk -- so a sample is what a test can afford, and the digest
-    above is what covers the remaining 1,778 rows."""
-    for family in ("chain_sum", "letter_counting", "maze"):
-        for index in (0, rg.PER_FAMILY - 1):
-            fresh = prepare._entry(family, index)
-            assert fresh == rows[(family, index)], f"{family}/{index} regenerated differently"
+def test_fetch_points_to_runtime_and_frozen_pool_import(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "data"
+    monkeypatch.setattr(rg, "DATASET_ROOT", root)
+    assert datasets.main(["--fetch", "--dataset", "reasoning_gym"]) == 0
+    output = capsys.readouterr().out
+    assert "reasoning-gym==0.1.25 (managed execution runtime)" in output
+    assert "prepare_dataset.py --dataset reasoning_gym --runtime execution" in output
+    assert "prepare.py --import-pool" in output
+    assert not root.exists()
 
 
-def test_the_pool_is_the_declared_size(rows):
-    """89 families × 20: a silent shrink would be invisible in the ids alone."""
-    assert len(prepare.FAMILIES) == 89
-    assert len(rows) == len(prepare.FAMILIES) * prepare.PER_FAMILY
-    # The platform's id is the pool **position**, and the pool is family-major, so the
-    # id of `(family, index)` is arithmetic. Pinned because the fixture above no longer
-    # reads an id out of the rows: if `records()` ever stopped numbering by file position,
-    # this is where it would show up rather than in a task that silently changed meaning.
-    records = rg._SPEC.ensure()
-    for family, index in (("chain_sum", 0), ("maze", rg.PER_FAMILY - 1)):
-        position = list(prepare.FAMILIES).index(family) * rg.PER_FAMILY + index
-        assert records[position]["task_id"] == f"reasoning_gym/eval/{position}"
-        assert (records[position]["row"]["family"], records[position]["row"]["index"]) \
-            == (family, index)
+def test_loading_and_import_validate_pool_bytes_without_a_runtime(authored_pool, tmp_path, monkeypatch):
+    missing = tmp_path / "absent-runtime"
+    monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", str(missing))
+    tasks, _ = rg.load()
+    assert [task["task_id"] for task in tasks] == [TASK_ID]
+    assert "AUTHORED_PRIVATE_REFERENCE" not in json.dumps(tasks)
+    assert prepare.main(["--check"]) == 0
+    assert rg.provision_status()["status"] == "unavailable"
+    assert not missing.exists()
+
+    raw = authored_pool.read_bytes()
+    authored_pool.write_bytes(raw + b"\n")
+    assert prepare.main(["--import-pool", str(authored_pool)]) == 1
+    assert prepare.POOL.read_bytes() == raw
+    prepare.POOL.write_bytes(raw + b"\n")
+    assert prepare.main(["--check"]) == 1
+    assert rg.provision_status()["status"] == "invalid"
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        rg._rows()
 
 
-def test_the_pool_declares_no_division_and_is_not_an_evaluation_set():
-    """A generated training corpus, declared as one: no split, and no official eval set.
-
-    The adapter used to declare a hash third of it as the exam, which made a training
-    corpus look like a benchmark with a held-out split. Removed 2026-10-24.
-    """
-    assert rg.SPLIT is None and rg.SPLIT_SOURCE == "none"
-    assert rg.OFFICIAL_EVAL == []
-
-
-# ---------------------------------------------------------------- the scorer ---
-
-
-def test_the_adapter_calls_the_library_scorer_and_not_a_copy(rows):
-    """Compared against the library, called independently here."""
-    from reasoning_gym import create_dataset
-
-    for coord in list(rows)[:3]:
-        gold = rg._gold(rows[coord])
-        dataset = create_dataset(gold["family"], size=rg.PER_FAMILY, seed=rg.SEED)
-        for prediction in (gold["answer"], "", "certainly not the answer"):
-            expected = dataset.score_answer(answer=prediction, entry=gold["entry"])
-            assert rg.score(prediction, gold)["reward"] == pytest.approx(float(expected)), \
-                (coord, prediction)
+def test_the_library_accepts_reference_and_empty_for_each_generated_family(prepared_runtime, tmp_path):
+    # A freshly generated sample per family, independent of the historical pool.
+    code = '''import json, sys
+from importlib.metadata import version
+from reasoning_gym import create_dataset
+assert version('reasoning-gym') == '0.1.25'
+for family in json.load(sys.stdin):
+    dataset = create_dataset(family, size=20, seed=20261008)
+    entry = dataset[0]
+    assert dataset.score_answer(answer=entry['answer'], entry=entry) == 1.0, family
+    assert dataset.score_answer(answer='', entry=entry) == 0.0, family
+'''
+    proc = subprocess.run([prepared_runtime["python"], "-I", "-B", "-c", code],
+                          env={"HOME": str(tmp_path), "PATH": os.defpath, "MPLCONFIGDIR": str(tmp_path)},
+                          cwd=tmp_path, input=json.dumps(prepare.FAMILIES), text=True,
+                          capture_output=True, timeout=90)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
 
 
-def test_a_gold_with_no_family_is_reported_rather_than_scored():
-    """A gold that did not come from this pool must not be scored as if it had."""
-    verdict = rg.score("anything", {"answer": "x"})
-    assert verdict["reward"] == 0.0
-    assert "no family" in verdict["why"]
+def test_public_score_matches_upstream_and_uses_the_selected_python(prepared_runtime):
+    gold = {"family": "basic_arithmetic", "entry": {"answer": "4"}}
+    for prediction, expected in (("4", 1.0), ("", 0.0), ("4 apples", 0.125)):
+        result = rg.score(prediction, gold)
+        assert result["reward"] == expected and result["correct"] is (expected == 1.0)
+        observation = result["official"]["runtime_observation"]
+        assert observation["python"] == prepared_runtime["python"]
+        assert Path(observation["package_origin"]).is_relative_to(prepared_runtime["path"])
 
 
-@pytest.mark.parametrize("family", sorted(prepare.FAMILIES))
-def test_every_declared_family_scores_its_reference_answer_and_the_empty_one(family, rows):
-    """The selection rule, re-checked against the pin for every family it admitted.
+def test_a_gold_with_no_family_keeps_the_legacy_result():
+    result = rg.score("anything", {"answer": "x"})
+    assert result["reward"] == 0.0 and "no family" in result["why"]
 
-    Reference to 1.0 and empty to 0.0 is what makes gate 1 (oracle -> 1) and gate 2 (do
-    nothing -> 0) true here. A family that failed either was excluded in `prepare.py`; this
-    test is what notices if a later pin changes one of them.
-    """
-    from reasoning_gym import create_dataset
 
-    gold = rg._gold(next(r for r in rows.values() if r["family"] == family))
-    dataset = create_dataset(family, size=rg.PER_FAMILY, seed=rg.SEED)
-    assert float(dataset.score_answer(answer=gold["answer"], entry=gold["entry"])) == 1.0
-    assert float(dataset.score_answer(answer="", entry=gold["entry"])) == 0.0
+@pytest.mark.parametrize("oracle", [True, False])
+def test_local_qa_control_runs_in_the_bound_environment(authored_pool, prepared_runtime, tmp_path, oracle):
+    workdir = tmp_path / "diagnostic"
+    assert control.main(["--dataset", "reasoning_gym", "--task-id", TASK_ID,
+                         "--oracle" if oracle else "--noop", "--workdir", str(workdir)]) == 0
+    evidence = json.loads((workdir / "verifier/evidence.json").read_text())
+    assert evidence["measured"] and evidence["reward"] == float(oracle)
+    assert evidence["official"]["runtime_observation"]["python"] == prepared_runtime["python"]
+
+
+def test_sandbox_scores_partial_credit_and_refuses_a_damaged_artifact(
+        authored_pool, prepared_runtime, tmp_path, monkeypatch):
+    monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(tmp_path))
+    monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    actor = tmp_path / "actor"
+    actor.mkdir()
+    (actor / "harness.json").write_text(json.dumps({"name": "authored-reasoning-gym", "version": "1",
+                                                   "entrypoint": "agent.py"}))
+    (actor / "agent.py").write_text('''import argparse
+from pathlib import Path
+p=argparse.ArgumentParser(); p.add_argument('--task'); p.add_argument('--workdir'); a=p.parse_args()
+work=Path(a.workdir)
+assert not (work/'gold.json').exists()
+assert 'AUTHORED_PRIVATE_REFERENCE' not in Path(a.task).read_text()
+(work/'reasoning_gym.py').write_text('raise AssertionError("actor module entered scorer")')
+(work/'answer.txt').write_text('"4 apples"')
+''')
+    tasks, setups, verifiers = registry.load_tasks("reasoning_gym", task_ids=[TASK_ID])
+    identity = dataset_runtime_identity.capture("reasoning_gym", [TASK_ID], setups, verifiers)
+    cache = {}
+    def measure():
+        return runner.evaluate(actor, tasks, {}, setups=setups, verifiers=verifiers,
+                               sandbox=True, cache=cache, dataset_runtime_identity=identity,
+                               harness_sha="authored-reasoning-gym")
+    first = measure()
+    assert first["per_task"] == {TASK_ID: 0.125}, first
+    verdict = first["verdicts"][TASK_ID]
+    evidence = verdict["evidence"]
+    assert evidence["scorer_input"]["verified"] and evidence["gold"]["redacted"]
+    assert "AUTHORED_PRIVATE_REFERENCE" not in json.dumps(evidence)
+    seen = evidence["official"]["runtime_observation"]
+    assert seen["python"] == prepared_runtime["python"]
+    assert seen["isolated"] and seen["readonly"] and seen["no_bytecode"]
+    assert verdict["python_runtime"]["runtime_id"] == prepared_runtime["runtime_id"]
+    # Result contracts use fresh measurements. Admission must still precede
+    # launching the actor, even with a caller-provided cache.
+    assert not cache
+    monkeypatch.setattr(runner, "run_one", lambda *a, **kw: pytest.fail("damaged artifact launched an actor"))
+    with changed_artifact(prepared_runtime):
+        refused = measure()
+    assert not refused["cached_tasks"] and not refused["per_task"] and refused["invalid"]

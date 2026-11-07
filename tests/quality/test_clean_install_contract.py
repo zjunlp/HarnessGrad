@@ -59,6 +59,11 @@ RESOURCES = (
     "data/datasets/locomo/specs/source.json",
     "data/datasets/locomo/verify/check.py",
     "data/datasets/math/execution-runtime.json",
+    "data/datasets/reasoning_gym/execution-runtime.json",
+    "data/datasets/reasoning_gym/requirements.lock",
+    "data/datasets/reasoning_gym/prepare.py",
+    "data/datasets/reasoning_gym/worker.py",
+    "data/datasets/reasoning_gym/check.py",
     "data/datasets/math/requirements.lock",
     "data/scaffolds/native_qa/math_execution.py",
     "data/scaffolds/native_qa/math_worker.py",
@@ -201,6 +206,28 @@ assert importlib.util.find_spec('chess') is None
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
+
+
+def test_installed_reasoning_gym_scores_in_the_prepared_execution_runtime(installed):
+    store = os.environ.get("HG_TEST_REASONING_GYM_RUNTIME_ROOT")
+    if not store:
+        pytest.skip("explicit Reasoning Gym execution store required")
+    root, env, runtime = installed
+    env = {**env, "HG_DATASET_RUNTIME_ROOT": store, "HG_REVIEWED_ENVIRONMENT_ONLY": "1"}
+    code = '''
+import importlib.util
+from pathlib import Path
+from data.datasets import reasoning_gym
+from harnessgrad.dataset_runtime import resolve_execution
+assert importlib.util.find_spec('reasoning_gym') is None
+bound = resolve_execution('reasoning_gym')
+result = reasoning_gym.score('4 apples', {'family': 'basic_arithmetic', 'entry': {'answer': '4'}})
+assert result['reward'] == 0.125
+observed = result['official']['runtime_observation']
+assert observed['python'] == bound['python']
+assert Path(observed['package_origin']).is_relative_to(bound['path'])
+'''
+    run([str(runtime / "bin/python"), "-I", "-B", "-c", code], root, env)
 
 
 def test_installed_chess_provider_and_reviewed_native_abi(installed):

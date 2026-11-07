@@ -122,14 +122,15 @@ def solve(module, task: dict, workdir: Path) -> None:
         target.write_text(content)
 
 
-def run_check(module, task: dict, workdir: Path) -> tuple[float, str]:
+def run_check(module, task: dict, workdir: Path, *, verifier=None) -> tuple[float, str]:
     """Run the check the way `eval/verification/verifier.py` does, re-materializing its inputs.
 
     The verifier's inputs are written **again** here, as the platform does after the
     harness stops. That is what makes the grade independent of anything the agent did to
     the copies it could see.
     """
-    verifier = module.VERIFY[task["task_id"]]
+    if verifier is None:
+        verifier = module.VERIFY[task["task_id"]]
     for entry in verifier.get("inputs") or []:
         rel = entry.get("path") or entry.get("dst")
         target = workdir / rel.lstrip("/")

@@ -142,7 +142,7 @@ def test_execution_capture_and_cache_admission_check_exact_bytes(execution, monk
 
 @pytest.mark.parametrize('name,expected', [('gsm8k', True), ('costbench', True),
     ('costbench_dynamic', True), ('locomo', True), ('math', True), ('math500', True),
-    ('chessbench_puzzles', True), ('demo', False), ('tau3_bench', False)])
+    ('chessbench_puzzles', True), ('reasoning_gym', True), ('demo', False), ('tau3_bench', False)])
 def test_preparation_discovery_is_static(name, expected, monkeypatch):
     monkeypatch.setattr(registry.importlib, 'import_module', Mock(side_effect=AssertionError('imported adapter')))
     assert registry.managed_runtime(name) is expected
