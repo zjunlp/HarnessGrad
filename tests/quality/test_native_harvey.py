@@ -1,6 +1,7 @@
 """Harvey native file/dual-judge controls; no paid endpoints or fake grader modules.
 
-Native execution tests require a separately provisioned pinned lab-core runtime.
+Set HG_HARVEY_TEST_PYTHON and HG_HARVEY_TEST_PANDOC to the absolute paths of the
+provisioned lab-core Python interpreter and pandoc executable.
 The localhost providers return scripted verdicts to the real upstream SDKs and
 rubric evaluator; these are protocol controls, not benchmark model results.
 """
@@ -22,10 +23,12 @@ from data.scaffolds.native_research import harvey_native as native
 from eval.run.runner import harness_env
 from harnessgrad.config.areas import ConfigMissing
 
-PYTHON=Path(os.environ.get('HG_HARVEY_TEST_PYTHON','/tmp/hg-harvey-native-venv/bin/python'))
-PANDOC=Path(os.environ.get('HG_HARVEY_TEST_PANDOC','/tmp/hg-harvey-native-venv/lib/python3.12/site-packages/pypandoc/files/pandoc'))
-NATIVE_READY=PYTHON.is_file()and PANDOC.is_file()
-needs_runtime=pytest.mark.skipif(not NATIVE_READY,reason='pinned lab-core/Anthropic/pandoc runtime is not provisioned')
+PYTHON = os.environ.get('HG_HARVEY_TEST_PYTHON')
+PANDOC = os.environ.get('HG_HARVEY_TEST_PANDOC')
+needs_runtime = pytest.mark.skipif(
+    not (PYTHON and PANDOC and Path(PYTHON).is_file() and Path(PANDOC).is_file()),
+    reason='configure HG_HARVEY_TEST_PYTHON and HG_HARVEY_TEST_PANDOC for the pinned runtime',
+)
 
 
 def basic_env():

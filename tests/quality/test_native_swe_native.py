@@ -24,10 +24,12 @@ from tools.prepare_native_research import prepare
 def native_fixture(tmp_path_factory):
     if not os.environ.get('HG_SWE_SOURCE') or not os.environ.get('HG_SWE_PYTHON'):
         pytest.skip('pinned official SWE runtime not provisioned (HG_SWE_SOURCE/HG_SWE_PYTHON)')
+    wheels_dir = os.environ.get('HG_SWE_CONTROL_WHEELS')
+    if not wheels_dir or not Path(wheels_dir).is_dir():
+        pytest.skip('set HG_SWE_CONTROL_WHEELS to the directory of offline pytest wheels')
+    wheels = Path(wheels_dir)
     native.official('check')
     context = tmp_path_factory.mktemp('swe-control-image')
-    wheels = Path(os.environ.get('HG_SWE_CONTROL_WHEELS', '/tmp/hg-swe-control-wheels'))
-    if not wheels.is_dir(): pytest.skip('offline pytest wheels for tiny control image not provisioned')
     shutil.copytree(wheels, context / 'wheels')
     base = subprocess.check_output(['docker', 'image', 'inspect', 'python:3.12-bookworm', '--format', '{{.Id}}'], text=True).strip()
     (context / 'Dockerfile').write_text('FROM python:3.12-bookworm' + '''
