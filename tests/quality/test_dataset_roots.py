@@ -15,6 +15,7 @@ import hashlib
 import importlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -27,7 +28,10 @@ from data.scaffolds import registry, roots  # noqa: E402
 
 DATA = ROOT / "data"
 CONTAIN = ROOT / "tests" / "fixtures" / "hg_bfclcontain"
-HOST_LITERAL = "/mnt/20t/xubuqiang/datasets/"
+HOST_PATH = re.compile(
+    r"(?<![\w/])/(?:mnt|home|Users|media|Volumes|scratch)/[^\s/]+"
+    r"|(?i:\b[A-Z]:[\\/]Users[\\/][^\\/\s]+)"
+)
 DEFAULT_COLLECTION = Path(".local/share/harnessgrad/datasets")
 
 #: Retired variables are not aliases. Clear them along with current storage variables
@@ -101,8 +105,9 @@ def test_describe_reports_configured_and_unconfigured_paths(roots_checkout, tmp_
 def _code_constants(path: Path):
     """String constants in executable positions, with their parent nodes.
 
-    Docstrings are `Expr(Constant)` and are skipped on purpose: prose may quote the
-    operator's old path, code may not. Comments never reach the AST at all.
+    Docstrings are `Expr(Constant)` and are skipped on purpose: prose may quote
+    historical paths, code may not. Comments never reach the AST at all.
+    Container roots such as /opt/hg-python and /root/.cargo are not host homes.
     """
     tree = ast.parse(path.read_bytes(), filename=str(path))
     parent = {}
@@ -111,9 +116,40 @@ def _code_constants(path: Path):
             parent[child] = node
     for node in ast.walk(tree):
         if (isinstance(node, ast.Constant) and isinstance(node.value, str)
-                and HOST_LITERAL in node.value
+                and HOST_PATH.search(node.value)
                 and not isinstance(parent.get(node), ast.Expr)):
             yield node, parent
+
+
+@pytest.mark.parametrize("literal", [
+    "/mnt/example-volume/example-user/datasets/pool.json",
+    "/home/example-user/data/pool.json",
+    "/Users/example-user/data/pool.json",
+    "/media/example-volume/datasets/pool.json",
+    "/Volumes/example-volume/datasets/pool.json",
+    "/scratch/example-user/datasets/pool.json",
+    r"C:\Users\example-user\data\pool.json",
+    "C:/Users/example-user/data/pool.json",
+    "cat /home/example-user/data/pool.json",
+])
+def test_code_constants_reject_machine_directories(tmp_path, literal):
+    source = tmp_path / "adapter.py"
+    source.write_text(f"pool = {literal!r}\n")
+    assert [node.value for node, _ in _code_constants(source)] == [literal]
+
+
+def test_code_constants_preserve_prose_and_container_paths(tmp_path):
+    source = tmp_path / "adapter.py"
+    source.write_text('''\
+"""Historical /home/example-user/data location."""
+# Historical /mnt/example-volume/example-user/datasets location.
+python = "/opt/hg-python/bin/python3.12"
+cargo = "/root/.cargo/bin/cargo"
+pool = "/task/pool.json"
+relative = "mnt/example-volume/datasets"
+url = "https://example.invalid/home/example-user/data"
+''')
+    assert list(_code_constants(source)) == []
 
 
 def _portable_root_calls(tree) -> set[str]:

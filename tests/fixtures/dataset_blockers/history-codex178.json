@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "source": "docs/adapter-integration-journal.md",
   "records": [
     {
@@ -18,8 +18,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/101/deliverables/receipt.md",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/codex/101/deliverables/receipt.md; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -40,8 +39,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -62,8 +60,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -84,8 +81,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/chess/interruption-audit.md; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -106,8 +102,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/chess/interruption-audit.md; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -128,8 +123,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/61/report.md",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/codex/61/report.md; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -150,8 +144,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -172,8 +165,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl; Journal citation only; external receipt not opened during this review."
           }
         ]
       }
@@ -194,8 +186,7 @@
           },
           {
             "kind": "external-reference",
-            "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-incomplete-index.json",
-            "locator": "Journal citation only; external receipt not opened during this review."
+            "locator": "HarnessGrad-evidence-archive/codex/qa-h0-incomplete-index.json; Journal citation only; external receipt not opened during this review."
           }
         ]
       }

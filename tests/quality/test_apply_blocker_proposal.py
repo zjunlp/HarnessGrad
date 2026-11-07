@@ -20,6 +20,81 @@ ROOT = Path(__file__).resolve().parents[2]
 LIVE = ROOT / "registry" / "dataset-blockers.json"
 
 
+def test_external_citation_is_text_beside_checked_repository_evidence(tmp_path):
+    (tmp_path / "observation.md").write_text("# Observed limit\n")
+    evidence = [
+        {"kind": "repository", "path": "observation.md", "locator": "# Observed limit"},
+        {"kind": "external-reference", "locator": "receipt.md; journal citation only, unverified"},
+    ]
+    assert not (tmp_path / "receipt.md").exists()
+    checker._evidence(evidence, tmp_path, "observation")
+
+
+def test_external_citation_cannot_replace_repository_evidence(tmp_path):
+    evidence = [{"kind": "external-reference", "locator": "receipt.md; unverified"}]
+    with pytest.raises(checker.RegistryError, match="repository observation required"):
+        checker._evidence(evidence, tmp_path, "observation")
+
+
+def test_external_citation_rejects_the_retired_path_field(tmp_path):
+    evidence = [{"kind": "external-reference", "path": "receipt.md", "locator": "unverified"}]
+    with pytest.raises(checker.RegistryError, match="fields must be"):
+        checker._evidence(evidence, tmp_path, "observation")
+
+
+@pytest.mark.parametrize("path,locator,error", [
+    ("../outside.md", "# Observed limit", "repository evidence must stay inside root"),
+    ("/outside.md", "# Observed limit", "repository evidence must stay inside root"),
+    ("missing.md", "# Observed limit", "missing evidence"),
+    ("observation.md", "# Not observed", "stale evidence locator"),
+])
+def test_repository_evidence_keeps_its_path_and_locator_checks(tmp_path, path, locator, error):
+    (tmp_path / "observation.md").write_text("# Observed limit\n")
+    with pytest.raises(checker.RegistryError, match=error):
+        checker._evidence([{"kind": "repository", "path": path, "locator": locator}],
+                          tmp_path, "observation")
+
+
+def test_retired_registry_schema_is_rejected():
+    document = json.loads(LIVE.read_text())
+    document["schema_version"] = 1
+    with pytest.raises(checker.RegistryError, match="unsupported schema version"):
+        checker.validate(document)
+
+
+def test_historical_baseline_stays_independently_pinned(tmp_path, monkeypatch):
+    baseline = tmp_path / "history.json"
+    baseline.write_bytes(checker.HISTORY.read_bytes() + b"\n")
+    monkeypatch.setattr(checker, "HISTORY", baseline)
+    with pytest.raises(checker.RegistryError, match="historical baseline pin changed"):
+        checker.validate(json.loads(LIVE.read_text()))
+
+
+def test_frozen_historical_record_cannot_be_removed():
+    document = json.loads(LIVE.read_text())
+    checker.validate(document)
+    row = next(row for row in document["datasets"] if row["historical_runs"])
+    row["historical_runs"].pop(0)
+    with pytest.raises(checker.RegistryError, match="historical record removed or changed"):
+        checker.validate(document)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("record_id", "changed-historical-record"),
+    ("run_id", "changed-historical-run"),
+    ("status", "pending-review"),
+    ("effect", 0.5),
+    ("observation", "Changed historical observation."),
+])
+def test_frozen_historical_metadata_cannot_be_rewritten(field, value):
+    document = json.loads(LIVE.read_text())
+    checker.validate(document)
+    row = next(row for row in document["datasets"] if row["historical_runs"])
+    row["historical_runs"][0][field] = value
+    with pytest.raises(checker.RegistryError):
+        checker.validate(document)
+
+
 def test_historical_journal_reference_is_not_live_blocker_evidence(tmp_path):
     evidence = [{'kind': 'repository', 'path': 'docs/adapter-integration-journal.md',
                  'locator': 'archived locator'}]

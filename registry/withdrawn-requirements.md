@@ -88,7 +88,7 @@ lifecycle/cleanup reconciliation.
 **Searched:** an enumerated on-machine scope. `w-hotpotrec` recorded a search over
 `~/.codex/sessions/**` (722 transcripts), the repository's full object store, history, reflog and
 stashes, `runs/`, `runs_discarded_*`, `.hashstate` state, `tests/fixtures/`, the named archives and
-`/mnt/20t/xubuqiang/hg-census/`, plus adaptive existence checks on `/tmp/codex` and
+the original `hg-census/` directory, plus adaptive existence checks on `/tmp/codex` and
 `/tmp/harnessgrad-runs`. The parent re-checked on 2026-10-15: `HarnessGrad-evidence-archive/` holds
 only `chess/`, `codex/` and `qwen-baseline/`; the two stranded pre-rewrite clones hold adapter source
 only; and both `/tmp/codex` and `/tmp/harnessgrad-runs` are absent.
@@ -196,10 +196,11 @@ this does not lift the policy refusal or authenticate the frozen receipts.
 untouched: never resume, rerun or overwrite either ID. V2's 9 persisted trials versus
 10 done events and unknown API-timeout usage remain unresolved; V3's pre-verification
 snapshot exit 137 remains unresolved. Both records remain incomplete with `effect=null`;
-unknown outcomes stay unmeasured and no aggregate score is valid. Their original receipt
-citations remain in `historical_runs`:
-`/mnt/20t/xubuqiang/Study/gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json` and
-`/mnt/20t/xubuqiang/Study/gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl`.
+unknown outcomes stay unmeasured and no aggregate score is valid. Their receipt names
+remain as historical citations in `historical_runs`
+(external references, not local file locations):
+`gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json` and
+`gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl`.
 Best-effort snapshots/cleanup retain uncertainty; known failures remain recorded.
 
 ### `tau_bench / local-state-lifecycle`
@@ -247,9 +248,10 @@ That decision removes an approval gate; it does not supply authentication or
 missing terminal/quiescence observations for frozen runs. The operator's
 new decision withdraws the remaining keep-open requirement; those unknowns remain limits.
 **Retained:** `chess-pilot-h0-20261013` and
-`chess-pilot-h0-20261013-recovery-01`, their original receipts, historical records and
-`/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md`
-citation stay untouched. Never resume, rerun or overwrite either ID. Both records remain
+`chess-pilot-h0-20261013-recovery-01`, their original receipts and historical records
+stay frozen. The external audit is cited by name as
+`HarnessGrad-evidence-archive/chess/interruption-audit.md`; this does not authenticate it.
+Never resume, rerun or overwrite either ID. Both records remain
 incomplete with `effect=null`; the 19 and 149/150 coverage, missing terminal outcomes,
 undetermined termination authority and unproven cleanup remain as recorded. Unknown
 outcomes are unmeasured, not measured zeros or complete coverage. Future attempts still

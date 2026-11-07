@@ -132,6 +132,12 @@ onboarded without a way to show its grade is reachable.
 | "which datasets exist" | `data/scaffolds/registry.py::published()` — a module appears iff `KIND == "dataset"` |
 | the judgement half | the internal onboarding log (kept outside this repository) |
 
+Blocker registry schema 2 checks repository evidence using `kind`, `path` and
+`locator`. External historical citations contain only `kind` and `locator`, retaining
+the artifact name and verification limits as text rather than a filesystem location.
+They cannot replace a checked repository observation. Historical records remain
+independently hash-pinned by the registry checker.
+
 Anything that is not a dataset for a reader to run declares `KIND = "fixture"` (the
 default). That is why the platform's own scaffolding (`demo`, `probe_set`,
 `broken_service`) still exists in `data/` but is not offered in the chooser.
