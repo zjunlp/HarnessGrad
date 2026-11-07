@@ -10,22 +10,13 @@ that methods used to carry could not make an architectural change to a harness, 
 
 Three things this file exists to get right, in order of how much they cost to get wrong:
 
-**1. There can be several codex binaries on one machine, and only some work.** Measured
-on the box this was written on:
-
-    /usr/local/bin/codex                0.125.0   BROKEN (no native binary)
-    ~/.nvm/.../node/v22.16.0/.../codex  0.156.1   works
-    /opt/node-v22.22.1/.../codex        0.139.0   works
-
-`codex --version` on the broken one does not print a version, it crashes. So the
-resolver does not trust `PATH`: it enumerates candidates and *verifies each one by
-running it*, and reports what it found including what it rejected. A run that silently
-used a different codex than the operator expected is a run whose identity is wrong.
+**1. Verify Codex installations before selecting one.** The resolver checks candidates
+with `codex --version` and reports which installations passed and why others failed.
 
 **2. `latest` and reproducibility pull against each other, so record which one you got.**
 "Every experiment should name its improver" and "people should be able to use a current
 codex" cannot both be satisfied by a version string. The resolution is that **whatever
-we resolve is reported as an immutable fact** -- `codex-cli 0.156.1` plus the sha256 of
+we resolve is reported as an immutable fact** -- the resolved version plus the sha256 of
 the binary -- and that fact is what goes on the curve point. `latest` then means "do not
 pin", not "do not record". `doctor --json` is the machine-readable half of that.
 
@@ -150,10 +141,8 @@ def config_home() -> Path | None:
 def _shebang_tool(script: Path) -> Path | None:
     """The program a launcher script runs, from its first line.
 
-    An npm-installed CLI is a small JS file whose `#!` names an interpreter, and the
-    interpreter is not under `/usr` on this machine -- it is a versioned tree under
-    `$HOME`. The platform cannot guess that from the improver's name, and the script is
-    where the answer is written down.
+    An npm launcher can name an interpreter installed outside the system directories.
+    Read its shebang to find that runtime for the sandbox.
     """
     try:
         with script.open("rb") as fh:
@@ -175,10 +164,8 @@ def _shebang_tool(script: Path) -> Path | None:
 def _interpreter_prefix(exe: Path) -> Path | None:
     """The installation a `bin/`-style executable belongs to.
 
-    `…/.nvm/versions/node/v22.16.0/bin/node` -> `…/.nvm/versions/node/v22.16.0`. The
-    sandbox already binds `/usr`, `/bin`, `/lib` and the running *Python* prefix; every
-    other runtime a tool needs has to be named, and this is the first ancestor that is a
-    self-contained install rather than a directory inside one.
+    For an executable in a `bin/` directory, its installation prefix is the parent
+    of `bin/`. The sandbox can bind that prefix to expose the rest of the runtime.
     """
     try:
         exe = exe.resolve()
@@ -274,8 +261,7 @@ class Candidate:
 def _run_version(path: Path, timeout: int = 60, *, env: dict | None = None) -> tuple[bool, str, str]:
     """Run `<path> --version`. Returns (ok, version, reason).
 
-    This is the whole verification: a codex that cannot print its version cannot run a
-    session, and the broken install's failure mode is exactly this command.
+    Report a failure if the launcher cannot execute successfully.
     """
     try:
         proc = subprocess.run([str(path), "--version"], capture_output=True, text=True, errors="replace",
@@ -438,10 +424,9 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
             model_override: str = "") -> dict:
     """Pick the improver to run. Returns {ok, path, version, sha256, reason, requested}.
 
-    `version` is the operator's request: a version like `0.156.1`, the word `latest`, or
-    empty for "whatever the config says". It never silently falls back -- a request that
-    cannot be honoured is a refusal with the candidates listed, because "you asked for
-    0.156.1 and got 0.125.0" is the kind of difference that changes a measurement.
+    `version` accepts an exact version, `latest`, or an empty string to use the
+    configured value. If no candidate satisfies the request, return the failure
+    and list the candidates.
     """
     config = config if config is not None else load_config()
 
@@ -662,8 +647,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                     "candidates": [c.as_dict() for c in found]}
         chosen = match[0]
     else:
-        # `latest`: the highest version we verified. Highest rather than first on PATH:
-        # PATH here contains a broken install, and "latest" cannot mean "first found".
+        # `latest` selects the highest version among the verified candidates.
         if not usable:
             return {"ok": False, "requested": requested or "latest",
                     "reason": "no working codex on this machine",

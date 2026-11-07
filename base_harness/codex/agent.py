@@ -178,9 +178,6 @@ def run(task: dict, workdir: Path) -> int:
         config = ["approval_policy = \"never\"", "sandbox_mode = \"danger-full-access\"",
                   "model_context_window = 32768",
                   "model_auto_compact_token_limit = 16000",
-                  # Parity with the known-good local config (`~/.codex-local9b/config.toml`):
-                  # both are needed for this endpoint, and a generated config that omits them
-                  # is a second, untested configuration.
                   "model_reasoning_effort = \"low\"",
                   "disable_response_storage = true",
                   "suppress_unstable_features_warning = true"]

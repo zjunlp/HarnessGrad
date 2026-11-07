@@ -457,19 +457,9 @@ def _changed_files(candidate: Path, pristine: Path) -> list[str]:
 
 
 def _summary_of(transcript: str) -> str:
-    """The improver's own sentence: the last substantial line it printed that reads as prose.
+    """Return the last substantial prose line from the improver transcript.
 
-    Skipped: its logging (`tokens used`, timestamps, a session id), our diagnostics, anything
-    short enough to be a label rather than a reason -- and, since a measurement, **tool
-    output**. `v7-dgm` recorded a child's reason as
-
-        -rw-r--r-- 1 xubuqiang xubuqiang    12 Oct  5 15:32 requirements.txt
-
-    which is `ls -l`: 74 characters, starting with none of the prefixes the old filter knew,
-    so a directory listing reached the curve where the method's stated hypothesis belongs.
-    Prose is letters, spaces and ordinary punctuation; terminal output and source code are
-    not, and the ratio separates them cleanly (measured on that transcript: 1.000 for each
-    real diagnosis, 0.794 for the `ls -l` line, 0.584 for a line of Python).
+    Skip diagnostics, short labels and tool output such as directory listings.
     """
     for line in reversed((transcript or "").strip().splitlines()):
         text = line.strip()
