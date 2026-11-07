@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -167,3 +168,45 @@ def test_cli_reports_contract_errors_even_when_storage_is_missing(monkeypatch, c
     assert "FAIL synthetic" in output and "broken declaration" in output
     assert "missing external storage" in output
     assert "SKIP synthetic" not in output
+
+
+@pytest.mark.parametrize("field,error", [
+    ("VERIFY", FileNotFoundError("selected tests.json is missing")),
+    ("VERIFY", ValueError("selected tests.json does not match the pinned SHA-256")),
+    ("SETUP", FileNotFoundError("selected setup input is missing")),
+])
+def test_cli_reports_lazy_declaration_failure_and_keeps_checking(adapter, capsys, field, error):
+    class BrokenDeclaration(Mapping):
+        def __iter__(self):
+            return iter(("synthetic",))
+
+        def __len__(self):
+            return 1
+
+        def __getitem__(self, key):
+            raise error
+
+    declaration = BrokenDeclaration()
+    healthy = SimpleNamespace(KIND="dataset", ORACLE_SOURCE="released",
+                              load=adapter.module.load, downloads=adapter.module.downloads)
+    adapter.importer.side_effect = {
+        "data.datasets.synthetic": adapter.module,
+        "data.datasets.healthy": healthy,
+    }.__getitem__
+    setattr(adapter.module, field, declaration)
+
+    def load_tasks(name):
+        if name == "synthetic":
+            declaration["synthetic"]
+        return adapter.load(name)[0], {}, None
+
+    dataset_lint.registry.load_tasks.side_effect = load_tasks
+    assert dataset_lint.main([
+        "--dataset", "synthetic", "--dataset", "healthy", "--json", "--allow-unprovisioned",
+    ]) == 1
+    output = capsys.readouterr()
+    broken, following = json.loads(output.out)
+    assert not output.err
+    assert broken["dataset"] == "synthetic" and broken["status"] == "invalid"
+    assert f"registry.load_tasks: {type(error).__name__}: {error}" in broken["errors"]
+    assert following["dataset"] == "healthy" and following["ok"]

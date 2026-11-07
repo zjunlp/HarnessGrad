@@ -654,6 +654,7 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
     # built to avoid.
     try:
         _, setups, verifiers = registry.load_tasks(name)
+        setup_ids = set(setups)
     except ConfigMissing as exc:
         result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
         result.unprovisioned = f"needs platform configuration: {exc}"
@@ -664,17 +665,26 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
         # first structural problem, and a lint that reports one violation per run makes
         # the next reader fix one thing and run it again -- so the broken-copy test below
         # would have to be run eleven times to see eleven rules fire.
-        verifiers = {tid: dict(spec) for tid, spec in
-                     (getattr(module, "VERIFY", None) or {}).items()
-                     if isinstance(spec, dict)}
-        setups = dict(getattr(module, "SETUP", None) or {})
+        try:
+            declared = getattr(module, "VERIFY", None) or {}
+            verifiers = {tid: dict(spec) for tid, spec in declared.items()
+                         if isinstance(spec, dict)}
+        except Exception as exc:  # noqa: BLE001 - lazy values can fail to build
+            result.error(f"VERIFY inspection: {type(exc).__name__}: {exc}")
+            verifiers = None
+        try:
+            # Only the declared task IDs are needed for the SETUP check.
+            setup_ids = set(getattr(module, "SETUP", None) or {})
+        except Exception as exc:  # noqa: BLE001 - declarations can fail to enumerate
+            result.error(f"SETUP inspection: {type(exc).__name__}: {exc}")
+            setup_ids = set()
     try:
         registry.load_envs(name)
     except Exception as exc:  # noqa: BLE001
         result.error(f"registry.load_envs: {type(exc).__name__}: {exc}")
 
     known = {t["task_id"] for t in tasks}
-    unknown_setup = set(setups) - known
+    unknown_setup = setup_ids - known
     if unknown_setup:
         result.error(f"SETUP names unknown task(s) {sorted(unknown_setup)}")
     lint_verify(verifiers, known, schema, result)
