@@ -1,28 +1,13 @@
 #!/usr/bin/env python3
 """Point a harness's declared runtime paths at what this machine actually has.
 
-    python3 tools/point_harness.py base_harness/codex base_harness/openclaw   # report
-    python3 tools/point_harness.py base_harness/codex --write                 # rewrite
+    python3 tools/point_harness.py path/to/harness           # report
+    python3 tools/point_harness.py path/to/harness --write   # rewrite
 
-Why this exists
----------------
-A CLI harness declares the trees the sandbox must bind read-only (`runtime_paths`), and
-those trees are where a Node runtime and its installed packages live. On this host that
-spelling contains a Node version:
-
-    /home/<user>/.nvm/versions/node/v22.16.0/lib/node_modules/@openai/codex/...
-
-which is correct until the machine installs a different Node. The manifest is then wrong in
-a way that fails loudly but confusingly (`shutil.which` finds nothing inside the sandbox,
-`eval/containers/sandbox.py` silently skips a bind whose target does not exist, and the
-harness dies on its first exec). Measured 2026-11-01: four manifests pin `v22.16.0` or
-`v22.19.0` on a host that also has `v22.23.4`.
-
-Rewriting it by hand each time is how a wrong path survives a review. This tool does the
-one mechanical thing: find the same *tail* under a sibling version directory and say so.
-It is deliberately not a resolver the harness runs at task time -- what a subject may see
-is part of the sandbox plan, and a plan that changes with the host's Node version is a plan
-that cannot be quoted in a paper.
+The sandbox uses `runtime_paths` in `harness.json` to bind runtime trees read-only.
+For a missing path that contains a version directory, this tool looks for the same
+relative path under sibling version directories and reports the newest match.
+Pass `--write` to record the resolved paths in the manifest before running the harness.
 """
 from __future__ import annotations
 
@@ -34,7 +19,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 
-#: A version-looking path component. `v22.16.0` (nvm) and `22.16.0` both appear.
+#: A numeric version directory can start with `v`.
 _VERSION = re.compile(r"^v?\d+\.\d+\.\d+$")
 
 

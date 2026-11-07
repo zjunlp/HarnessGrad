@@ -75,8 +75,11 @@ why not. No official AST/full-call score is claimed.
 
 **`triviaqa`.** Keeps the DECIDED twelve-declarations/eight-export-routes mismatch with its four
 declaration-only names; the limited 17944 stored-row observation with **no invented 725-member
-explanation**; the bound first-five custody in `tests/fixtures/hg_wsel/triviaqa.json`; v2 and all
-historical identities. The reported figure stays the **local alias-max normalized row-EM**
+explanation**; v2 and all historical identities. Five eval-side rows were selected without
+execution; that dated selection/export packet has since been retired. Any future,
+separately authorized diagnostic must bind its own fresh selected manifest/export to
+the actual source/code identities, split mode and side, and run ID.
+The reported figure stays the **local alias-max normalized row-EM**
 instrument — no official key-level EM/F1, no denominator, no official comparability.
 
 **`appworld`.** Keeps every measured-zero, staged-null and incomplete exit-125 receipt with its

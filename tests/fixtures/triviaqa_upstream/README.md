@@ -126,31 +126,31 @@ grouping and denominator equivalence remains open. Historical receipts/results
 and the task-196 acquisition receipt are preserved with their original scope.
 Lost/corrupt fixtures fail rather than skip.
 
-`test_triviaqa_source_provenance_codex196.py` verifies the source identity chain,
-license linkage, dependency closure, and unchanged full evaluator/CLI on
-fabricated inputs, including F1, EM, missing/extra predictions, grouping,
-duplicate document keys, verified filtering, and no-document behavior. It
-imports no production adapter. A separate interpreter disables site/environment
-imports and bytecode writes and rejects network connections. The existing
-adapter differential suite suppresses pool construction and forbids payload
-reads before importing its private adapter instance.
+The historical task-196 suite checked source identity, license linkage, dependency
+closure, and the full evaluator CLI on fabricated inputs. It covered F1, EM,
+missing and extra predictions, grouping, duplicate document keys, verified
+filtering, and no-document behavior. A separate interpreter disabled site and
+environment imports and bytecode writes and rejected network connections.
 
-The task-205 suite adds separator/Unicode differential cases, matches beyond
-alias 200 (normalized aliases, human answers and their combination), and actual
-shared-verifier evidence checks on synthetic hit/miss inputs. See
-[`reports/triviaqa-scorer-review-codex205-report.md`](../../../reports/triviaqa-scorer-review-codex205-report.md).
+The historical task-205 suite added separator and Unicode differential cases,
+matches beyond alias 200 for normalized aliases and human answers, and
+shared-verifier evidence checks on synthetic hits and misses. The task-196 report
+records the acquisition-time combined failure.
 
-Run the current review from the repository root. `--basetemp` must be **OUTSIDE**
-the platform because driver-based tests use `tmp_path` as a harness work root:
+From the repository root, check the retained fixture integrity and the adapter's
+EM components against the pinned upstream definitions on synthetic inputs. If you
+set `TMPDIR`, choose a directory outside the checkout for pytest scratch space.
 
 ```sh
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 python -m pytest -q tests/quality/test_triviaqa_source_provenance_codex196.py tests/quality/test_triviaqa_official_scorer.py tests/quality/test_triviaqa_scorer_review_codex205.py --basetemp=/tmp/harnessgrad-pytest-triviaqa-codex205-review
-PYTHONDONTWRITEBYTECODE=1 python tools/check_triviaqa_provenance.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 \
+  python3 -m pytest -q -p no:cacheprovider --basetemp="$(mktemp -d)" \
+  tests/quality/test_triviaqa_official_scorer.py
+PYTHONDONTWRITEBYTECODE=1 python3 tools/check_triviaqa_provenance.py
 ```
 
-The source-only checks, integrity tool and current adapter component differentials
-pass. The acquisition-time combined failure remains recorded in the task-196
-report. No H0/model admission follows from any of these checks.
+The test uses an isolated adapter import with pool construction and dataset
+payload reads disabled. The provenance tool checks the recorded byte hashes.
+Origin and commit linkage, H0 admission, and model admission require separate review.
 
 ## Exact remaining acquisition request for Hub mapping
 

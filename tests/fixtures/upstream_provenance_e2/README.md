@@ -1,19 +1,24 @@
-# E2 metadata acquisition and comparison
+# E2 historical metadata receipts and comparison
 
-Both owned source-provenance blockers remain **external**. This fixture is public
-HTTPS acquisition plus offline comparison, with no issued custody record or
-independent approval. See [the cited review](../../../reports/e2-upstream-provenance-review.md).
+This fixture retains a historical public-HTTPS metadata review. At collection,
+both source-provenance blockers were external, with no issued custody record or
+independent approval. Current blocker status is maintained in
+[`registry/dataset-blockers.json`](../../../registry/dataset-blockers.json).
 
-`starting-blockers.json` retains the current registry next actions verbatim.
+`starting-blockers.json` retains the registry next actions from that review.
 `comparison.json` records every response/hop, failure, inherited-file digest and
-metadata comparison. `SHA256SUMS` hashes every file in this fixture except itself.
-No earlier fixture or response is overwritten. Original HTTP response entity
-bytes are unchanged; `.headers` files are Python HTTPMessage serializations of
+metadata comparison. `SHA256SUMS` inventories the files currently retained here,
+except itself. Fifteen response bodies named in the original inventory were
+already absent before the acquisition helper was retired; their recorded digests
+remain in the receipts and comparison. Byte checks do not recover those bodies
+or reproduce the complete original review. Retained receipts and response data
+are unchanged; `.headers` files are Python HTTPMessage serializations of
 parsed response headers, not original wire-format headers. Receipts retain method,
 URL, UTC acquisition time, status, byte count and SHA-256; refusals without a
 response have no invented body digest.
 
-The preexisting B6 local HTTPS egress proxy uses normal certificate validation.
+The historical collection used a B6 local HTTPS egress proxy with normal
+certificate validation.
 HTTPS origin observations are distinct from independent publisher signature or
 custodian authentication. Public metadata responses are evidence of what the
 endpoint advertised at retrieval, not signed artifact or platform custody.
@@ -21,32 +26,27 @@ The download-followup HEAD uses the exact redirect from the retained earlier
 refusal. Its empty response digest hashes zero bytes, never the advertised ZIP.
 The Dropbox ETag is retained as an opaque token, never relabeled SHA-256.
 
-No shard, pool, task/answer/alias data, heldout material, examples, tests, reference
-solution or archive body is fetched/read. The inherited statement digest is read
-from metadata; the statement itself is not opened. Acquired README and API
-metadata contain no benchmark examples. Existing original/recovery curve files
-are parsed only to compare their selection/split metadata; no score is reviewed,
-recomputed or assigned. No adapter/acquired code is imported or executed. Only
-this fixture's acquisition/verification helpers execute.
+The review recorded no shard, pool, task/answer/alias data, heldout material,
+reference solution or archive-body access. The inherited statement digest came
+from metadata. The comparison used historical original/recovery selection and
+split metadata without recomputing scores; no adapter/acquired code was executed.
 
-The inherited Apache-2.0 evaluator license remains at
-`tests/fixtures/twowikimultihopqa_upstream_codex197/LICENSE`; its SHA-256 is recorded
-in `comparison.json`. No dataset/alias redistribution license is inferred from it.
+The inherited Apache-2.0 evaluator license digest is recorded in `comparison.json`;
+its original local source is no longer retained. No dataset/alias redistribution
+license is inferred from it.
 The acquired LiveCodeBench card says `license: cc`, without specifying a variant.
 
-Offline verification (no network):
+Check the bytes of the retained files (no network):
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 tests/fixtures/upstream_provenance_e2/verify.py --check
+cd tests/fixtures/upstream_provenance_e2
+sha256sum --check SHA256SUMS
 ```
 
-`--write` deliberately regenerates derived comparisons and the hash inventory;
-use only after reviewing changes. `--check` checks all received entity/header
-hashes, exact file coverage, inherited pins, card Git-blob linkage, ID/declaration
-comparisons, historical split/selection hashes and the two-blocker registry scope.
-Neither mode creates a human approval or calls production admission.
+The original inherited inputs, response bodies and registry snapshot are no
+longer complete in this checkout. `comparison.json` remains the historical derived
+record; it has not been regenerated. Retained-file checks do not establish missing
+source custody, authenticate the comparison or authorize production admission.
 
-Acquisition helper requests use four concurrent public metadata operations,
-18-second per-hop timeouts, a 2-MiB body limit and a six-hop bound. These are
-research network limits, not benchmark budgets. Retained receipts are immutable
-inputs, not execution instructions; acquisition refuses existing output paths.
+The one-off acquisition and comparison helpers have been retired. Retained
+receipts are historical data, not instructions to repeat the requests.

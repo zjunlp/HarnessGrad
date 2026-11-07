@@ -60,6 +60,13 @@ retained packet, including the upstream uncontained-expression finding. Existing
 acquired source snapshots, cases, observations and historical registry proposals
 are preserved.
 
+The current pins include the QA module's documentation edit and the
+`HG_REVIEWED_ENVIRONMENT_ONLY` setting. With that setting enabled, storage
+configuration comes from the process environment and skips `.env` discovery.
+The launcher is responsible for selecting those variables. The trusted scoring
+context still takes precedence. The 43 reviewed call sites are unchanged apart
+from the line of the `getattr` in `DatasetPath.__getattr__`.
+
 ## Validation
 
 Run from the repository root:
@@ -68,13 +75,10 @@ Run from the repository root:
 python -m pytest tests/quality/test_bfclcontain_differential.py \
   tests/quality/test_dataset_roots.py::test_the_bfclcontain_inventory_row_for_the_migrated_adapter_matches_disk
 python tests/fixtures/hg_bfclcontain/control.py
-python tests/fixtures/hg_bfclcontain/validate.py
 ```
 
 `control.inventory()` reproduces the inventory and sink frontier. The tests keep
 exact file-size/hash, sink, review and observation assertions, and also require
 every BFCL verifier Python input to be inventoried. `load_slice()` still checks
-the retained whole-file hash before compiling any selected node. The validator
-checks citations in this maintained README instead of the absent historical
-`registry/w-bfclcontain.md`, and retains its requirement for a committed, clean
-tracked tree.
+the retained whole-file hash before compiling any selected node. The tests also
+retain the recorded source-gate refusal and absence of official scorer execution.

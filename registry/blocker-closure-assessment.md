@@ -10,11 +10,18 @@ The controlling rule is the objective's: a blocker closes only on the kind of ev
 `next_action` names. Nothing here is a claim that an obligation is met unless the record already holds
 the artefact.
 
+The dated first-five selection/export packet for eight datasets has since been
+retired. It recorded 40 selected rows and no executed trials; seven selections
+were mixed-side and TriviaQA's was eval-side only. The affected custody rows below
+describe the closure-time record, not currently available exports. Any future,
+separately authorized diagnostic needs a fresh run-specific manifest/export bound
+to its actual source/code identities, split mode and side, and fresh run ID.
+
 ## Obligation classes used below
 
 | class | meaning |
 | --- | --- |
-| `SATISFIED` | The named artefact exists in the record now (evidence file, bound hash, review document). |
+| `SATISFIED` | The named artefact existed in the record at the stated assessment date (evidence file, bound hash, review document); later retirements are noted in the affected rows. |
 | `WITHDRAWN` | The operator withdrew the requirement; it is recorded in `registry/withdrawn-requirements.md` and no longer exists as a gate. |
 | `PRE-DIAGNOSTIC` | A precondition on a *future, separately authorized* diagnostic, not a condition on closing the blocker. Recorded so it is not lost. |
 | `PENDING-WORK` | Repo-local analysis or artefact work that is genuinely obtainable and not yet done. |
@@ -97,7 +104,7 @@ At closure, every clause of each `next_action` was satisfied or withdrawn:
 | clause | class | where it stood |
 | --- | --- | --- |
 | Retain installed-to-ReWOO and ordered pinned-BIG-bench row linkage | `SATISFIED` | `tests/fixtures/hg_wprov/README.md` |
-| Retain the bounded first-five selected-only custody record | `SATISFIED` | `tests/fixtures/hg_wsel/physicsquestions.json`, `.../sportsunderstanding.json` |
+| Retain the bounded first-five selected-only custody record | `SATISFIED` | At closure: five selected rows per dataset, mixed-side, with no execution; the dated packet has since been retired |
 | Cite the dataset's own migrated review | `SATISFIED` | `docs/dataset-reviews/<dataset>.md`, provisioned as `/site/dataset-reviews/<dataset>.md` |
 | Report the local metric separately, with no upstream-equivalence claim | `SATISFIED` | `registry/w-metriccmp-comparability.md` - physicsquestions is asymmetric normalized accepted-spelling exact match, **different** from BIG-bench `exact_str_match`; sportsunderstanding is generated-text ASCII-letter-boundary label accuracy, **different** from candidate-log-probability `multiple_choice_grade` |
 | Do not infer a historical converter revision or runtime execution | constraint | recorded in the same document |
@@ -229,7 +236,7 @@ plus behavioural eligibility"*. Both halves are now discharged, and every other 
 | Retain distribution/source/installed-member custody and exact frozen-pool hash/family/order evidence, the original pool bytes, and the preserved 84-row/six-family failed-regeneration evidence | `SATISFIED` | `registry/w-journalcov-review.md`, `registry/w-recgym-receipts.md`; pool 3315981 bytes, SHA-256 `c0ff4eae...` |
 | Record the original launch/environment/clock/hash-order metadata and exact historical seed-only reproduction **as unavailable limits** | `WITHDRAWN` | `registry/withdrawn-requirements.md` -> `reasoning_gym / original-generation-process-receipt`, after the enumerated 733-session / 23773-object / 395197-file census in `registry/w-recgym-receipts.md` and `registry/w-recgym-validation.txt` |
 | Retain the independent host-package two-point behavioural eligibility record | `SATISFIED` | `registry/w-gymelig-eligibility.md`, `tests/fixtures/hg_gymelig/`: 89/89 families, 20 indices each, 1780 rows, 3560 direct `score_answer` calls, reference=1 and empty=0, zero exceptions/refusals, pool digest unchanged |
-| Retain the bounded operator first-five selected manifest/export | `SATISFIED` | `tests/fixtures/hg_wsel/reasoning_gym.json`; mixed-side, not a single-side diagnostic specification |
+| Retain the bounded operator first-five selected manifest/export | `SATISFIED` | At closure: five mixed-side rows, selection-only; the dated packet has since been retired |
 | Cite the dataset's own migrated review | `SATISFIED` | `/site/dataset-reviews/reasoning_gym.md`, `# Reasoning Gym source-only journal review` |
 | Do not require manufacturing absent original records or substituting a new seed/family/order/current environment | constraint | recorded in the withdrawal entry |
 | For any separately authorized diagnostic: resolve applicable split/side and run binding, establish deterministic transitive dependencies without scoring extras and metric identity, obtain actual selected scorer/runtime execution evidence under the declared runtime | `PRE-DIAGNOSTIC` | statement only; **no diagnostic is authorized** and none of it is waived by this closure |
@@ -298,12 +305,12 @@ this registry has already withdrawn, which is the failure mode that rule exists 
 
 | clause from the current `next_action` | class | where it stands |
 | --- | --- | --- |
-| The original v4 selected-ID/trial/error/timeout receipts, and its source/split/manifest/model/harness provenance receipts | `WITHDRAWN` | `registry/withdrawn-requirements.md` -> `hotpotqa / historical-comparison-receipts / original-v4-receipts`; enumerated scope: 722 `~/.codex/sessions` transcripts, the full object store/history/reflog/stash, `runs/`, `runs_discarded_*`, `.hashstate`, `tests/fixtures/`, the named archives and `/mnt/20t/xubuqiang/hg-census/` |
+| The original v4 selected-ID/trial/error/timeout receipts, and its source/split/manifest/model/harness provenance receipts | `WITHDRAWN` | `registry/withdrawn-requirements.md` -> `hotpotqa / historical-comparison-receipts / original-v4-receipts`; enumerated scope: 722 `~/.codex/sessions` transcripts, the full object store/history/reflog/stash, `runs/`, `runs_discarded_*`, `.hashstate`, `tests/fixtures/`, the named archives and the original `hg-census/` directory |
 | Historical measured/invalid/unmeasured counts and lifecycle/cleanup reconciliation for that run | `WITHDRAWN` | the same entry: they "go with" the receipts |
 | The candidate ID `hotpotqa-h0-10pct-v4` and its unresolved binding to the reported 94/1382/1476 coverage stay recorded as an explicit comparability limit | `LIMIT-RECORDED` | `registry/w-hotpotrec-receipts.md`, `registry/w-hotpotrec-evidence.json`; `historical_runs` keeps `run_id=null` and `effect=null` |
 | Preserve the old full-size protocol as incomplete; never resume, rerun or overwrite it | `SATISFIED` | pinned by `tests/quality/test_measurement_coverage_hg_b3.py:155-215` |
 | Timeout classification, persistence and aggregation | `SATISFIED` | synthetic closure; `/site/w-hotpot-timeout-closure.md`, cited in the blocker's evidence |
-| Retain the bounded first-five selected manifest/export and declared per-task sides | `SATISFIED` | `tests/fixtures/hg_wsel/hotpotqa.json`; mixed-side, not a diagnostic specification |
+| Retain the bounded first-five selected manifest/export and declared per-task sides | `SATISFIED` | At closure: five mixed-side rows with declared sides, selection-only; the dated packet has since been retired |
 | Current selected scorer/control admission for any separately authorized future diagnostic, with a fresh ID and the current staged policy | `PRE-DIAGNOSTIC` | statement only; **no diagnostic is authorized**, and nothing above waives it |
 | Withdrawn shared gates do not condition closure or admission | `WITHDRAWN` | `registry/withdrawn-requirements.md` |
 
@@ -323,7 +330,7 @@ that distinguishes it from the never-captured pair, and the retained `run_id=nul
 still run against the cleared dataset - the citation is now read from this closure record, which carries
 the exact `path`/`locator` pair verbatim below - so nothing was deleted to make the closure pass.
 
-Timeout-closure citation retained verbatim:
+Timeout-closure citation retained verbatim (historical schema 1):
 `{"kind": "external-reference", "path": "/site/w-hotpot-timeout-closure.md", "locator":
 "# HotpotQA timeout outcome/persistence/aggregation closure - w-hotpot"}`.
 
@@ -343,7 +350,7 @@ blocker closes on the same reading as the other four.
 | Bind the original answer Accuracy separately to `allenai/strategyqa-evaluator@49b88ed2...`, `evaluator/eval.py` SHA-256 `68c0edcd...` | `SATISFIED` | `registry/w-stratqa-receipts.md`, `tests/fixtures/hg_stratqa/`; raw Python equality over every supplied gold instance, **different** from the local normalized whole-answer EM |
 | Obtain authoritative membership IDs or a complete author-endorsed generator and bind their scope and local task mapping | `SATISFIED` | `registry/w-stratsplit-membership.md`, `tests/fixtures/hg_stratsplit/binding-summary.json`: the ZIP Train multiset equals the installed 2290 rows and the author repository's unofficial train/dev union (2061/229); the ZIP Test membership equals the official evaluator's published 490-ID key set; 0 installed rows unaccounted for |
 | Do not report local EM as original Accuracy; exclude F1 and judge accuracy | constraint | recorded in `registry/w-metriccmp-comparability.md` and the closure note |
-| Retain authenticated installed CSV/member/revision and ReWOO evaluator identity and the bounded first-five selected-only custody record | `SATISFIED` | `tests/fixtures/hg_wsel/strategyqa.json`; mixed-side, not a diagnostic specification |
+| Retain authenticated installed CSV/member/revision and ReWOO evaluator identity and the bounded first-five selected-only custody record | `SATISFIED` | The installed-source identities and five mixed-side selected rows were recorded at closure; the dated selection-only packet has since been retired |
 | Cite the dataset's own migrated review | `SATISFIED` | `/site/dataset-source-reviews-b2.md` -> `## strategyqa source-only review`, and `docs/dataset-reviews/strategyqa.md` |
 | For any separately authorized diagnostic: reconcile the run-specific manifest/export and split mode/side, establish deterministic offline dependencies and dataset-specific trusted verifier/runtime execution, and report eligible/selected/task/trial/invalid/unmeasured coverage | `PRE-DIAGNOSTIC` | statement only; **no diagnostic is authorized** and none of it is waived by this closure |
 | Preserve the shared-requirement withdrawals | `WITHDRAWN` | `registry/withdrawn-requirements.md` |
@@ -379,7 +386,7 @@ actual scope.
 | Choose and name the metric explicitly | `SATISFIED` | `fever_exported_row_conjunctive_strict_at_5` - option (a), one complete exported group per row, the pinned five-pair bound, equal measured exported-row weights, no original-claim weighting; **definition only** |
 | Bind the producing conversion revision/execution, ID assignment, split/filter/omission and NEI inputs | `WITHDRAWN` | `registry/withdrawn-requirements.md` -> `fever / producing-conversion-execution-receipt`, with the enumerated reachable scope, the two recovered objects, and the explicit statement that the absence is bounded rather than categorical |
 | Retain the 1400/9525 exposed non-NEI rows (1369 at 2-5 pairs, 31 at 6-25), the 51 omitted alternative groups across 42 IDs, and the unauthenticated NEI/omission decisions | `SATISFIED` | recorded in the withdrawal entry and in `registry/w-fevconv-receipts.md` |
-| Retain the authenticated Hub/export/installed/original-group and bounded first-five custody | `SATISFIED` | `registry/w-journalcov-review.md`, `registry/w-jc2-review.md`, `tests/fixtures/hg_wsel/fever.json` |
+| Retain the authenticated Hub/export/installed/original-group and bounded first-five custody | `SATISFIED` | `registry/w-journalcov-review.md`, `registry/w-jc2-review.md`; the first-five selection-only packet recorded at closure has since been retired |
 | Report the metric without any original-FEVER aggregate claim; do not invent a release | constraint | in the closure note and the named metric definition |
 | For any separately authorized diagnostic: resolve split/side and run binding, implement a conjunction-preserving projection, obtain actual selected scorer/runtime execution evidence, and record coverage | `PRE-DIAGNOSTIC` | statement only; **no diagnostic is authorized** and none of it is waived |
 | Preserve the shared-requirement withdrawals and the `official-scorer-identity` decision | `WITHDRAWN` | `registry/withdrawn-requirements.md` |
@@ -405,7 +412,7 @@ Every clause of the `next_action` at closure:
 | --- | --- | --- |
 | Establish authenticated row-level gradable eligibility | `SATISFIED` | `registry/w-spreadelig-eligibility.md`: 394 of 400 rows are structurally gradable without a run, 1 is retained only by the explicit official-range-zero policy (`283-32`), 5 are not gradable as installed with a per-row reason; 794/800 workbooks open in both openpyxl modes and all 800 ZIP/XML structures are readable |
 | Review/fix the synthetic stale-cache formula-conversion failure | `SATISFIED` | `w-spreadcache`: the cause was LibreOffice's own load policy (default `OOXMLRecalcMode=1` at `/usr/lib/libreoffice/share/registry/main.xcd:724`); the check now forces mode 0 in a private profile, strips scalar formula caches from a private ZIP copy, and requires regenerated caches before replacing the candidate; the opt-in real-engine control preserves the authored `[999,888] -> [5,10]` bar |
-| Complete installed workbook/mirror authentication and bounded first-five custody | `SATISFIED` | `registry/w-jc2-review.md`, `registry/w-spreadrt-runtime.md`, `tests/fixtures/hg_wsel/spreadsheetbench.json` |
+| Complete installed workbook/mirror authentication and bounded first-five custody | `SATISFIED` | `registry/w-jc2-review.md`, `registry/w-spreadrt-runtime.md`; the first-five selection-only packet recorded at closure has since been retired |
 | The one-released-variant named-cell metric statement and the official-range-zero compatibility policy | `SATISFIED` | [Adapter metric](../data/datasets/spreadsheetbench.py) and [scorer compatibility policy](../data/datasets/spreadsheetbench/verify/check.py); the dated reconciliation/audit copies have been retired |
 | Preserve failed receipts, missing engine archives and conditional runtime/replay observations as bounded limits | `SATISFIED` | `registry/w-spreadcache` / `registry/w-spreadrt-runtime.md` |
 | A reference that expands to zero cells publishes a vacuous pass | `SATISFIED` | `w-spreadvacuous`, merged as `803ef598`: `cell_level_compare` iterated `generate_cell_names(cell_range)`, which is **empty** for `'Sheet1'!BD2:308` (`parse_cell_range` gives an end column of 0), so the loop body never ran and the function returned `True` |
@@ -440,8 +447,8 @@ replaced (the tool refuses an unacknowledged drop, and it refused this one until
 never had a measured run here, no coverage count is promoted, `measured`/`selected`/`trial`/`invalid`/
 `unmeasured` and `run_id` stay null, and no diagnostic or pilot is authorized. The retained coverage
 obligation, the fresh bounded no-model regressions with real engine invocation, correct fresh cached values
-and explicit network isolation, and the reconciliation of any diagnostic manifest with the bounded
-first-five packet (`tests/fixtures/hg_wsel/spreadsheetbench.json`) all remain preconditions on a future,
+and explicit network isolation, and fresh run-specific selected-manifest/export custody bound to
+the chosen source/code identities, split mode and side all remain preconditions on a future,
 separately authorized diagnostic, which must use its own fresh run ID and the current staged policy.
 
 ## Metric-identity qualification, 2026-10-16 - 20 datasets, no closure reopened

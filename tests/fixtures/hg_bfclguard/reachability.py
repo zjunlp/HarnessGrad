@@ -1,6 +1,7 @@
 """AST-only, scoped import graph. This is not a Python whole-program proof.
 
 Every source is an entry point, including extensionless Python shebang scripts.
+The platform scope excludes local candidate artifacts under data/candidates.
 Imports inside functions/conditions count; package initializers count. Computed
 loaders, generated code and process launches are inventory, not resolved edges.
 No platform or retained upstream module is imported by this analyzer.
@@ -14,7 +15,6 @@ from pathlib import Path
 import tokenize
 
 ROOT = Path(__file__).resolve().parents[3]
-HERE = Path(__file__).resolve().parent
 SCOPES = ("eval", "data", "tools", "harnessgrad", "ckpt", "methods")
 TARGETS = ("bfcl_eval", "model_handler", "resolve_ast_call", "resolve_ast_by_type",
            "default_decode_ast_prompting")
@@ -22,17 +22,22 @@ TARGETS = ("bfcl_eval", "model_handler", "resolve_ast_call", "resolve_ast_by_typ
 
 def source_paths(root):
     paths = {root / "driver.py"}
+    candidates = root / "data" / "candidates"
     for directory in SCOPES:
-        for path in (root / directory).rglob("*"):
-            if not path.is_file() or "__pycache__" in path.parts:
-                continue
-            if path.suffix == ".py":
-                paths.add(path)
-            elif not path.suffix:
-                with path.open("rb") as stream:
-                    first = stream.readline(256)
-                if first.startswith(b"#!") and b"python" in first:
+        for folder, dirs, files in (root / directory).walk():
+            dirs[:] = [name for name in dirs
+                       if name != "__pycache__" and folder / name != candidates]
+            for name in files:
+                path = folder / name
+                if not path.is_file():
+                    continue
+                if path.suffix == ".py":
                     paths.add(path)
+                elif not path.suffix:
+                    with path.open("rb") as stream:
+                        first = stream.readline(256)
+                    if first.startswith(b"#!") and b"python" in first:
+                        paths.add(path)
     return sorted(paths)
 
 
@@ -224,6 +229,13 @@ def target_edges(result):
             if any(t in target for target in edge["targets"] for t in TARGETS)]
 
 
+def candidate_import_edges(result):
+    """Find named imports of local candidate artifacts even on a clean checkout."""
+    return [edge for edge in result["edges"]
+            if any(target == "data.candidates" or target.startswith("data.candidates.")
+                   for target in edge["targets"])]
+
+
 def summary(result):
     return dict(sources=len(result["sources"]), entry_points=len(result["closures"]),
                 import_nodes=len(result["edges"]), mechanism_nodes=len(result["mechanisms"]),
@@ -235,10 +247,5 @@ def summary(result):
 
 
 if __name__ == "__main__":
-    # Explicit artifact creation only; tests recompute and compare without writing.
-    result = analyze()
-    for key, rows in result.items():
-        (HERE / (key + ".jsonl")).write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows))
-    observed_summary = json.dumps(summary(result), sort_keys=True)
-    (HERE / "summary.json").write_text(observed_summary + "\n")
-    print(observed_summary)
+    # The checked-in graph records a historical review. Report the current tree on stdout.
+    print(json.dumps(summary(analyze()), sort_keys=True))

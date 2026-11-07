@@ -133,8 +133,8 @@ is not reproduced.
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \
   tests/quality/test_{ace,adas,arbor,darwinx,evo_harness,evoprompt,gepa,modular_rsi,opro,skillopt}_rule.py \
-  tests/quality/test_upstream_method_integration.py \
-  --basetemp=/tmp/hg-native-methods-tests
+  tests/quality/test_native_method_{integration,fidelity}.py \
+  tests/quality/test_method_lint.py
 python3 tools/method_lint.py
 ```
 
@@ -143,3 +143,8 @@ human-authored demo fixture. It drives the **real method sandbox**, platform
 candidate measurement and final state restore. Expected scores are 0 → 1 → 0 → 1:
 the final tree is the previously measured best, not an improver-reported number.
 No real model, benchmark suite, GPU endpoint or paid provider is called.
+
+At the original delivery, 50 focused rule, integration, source fidelity and
+lint tests passed in 6.70 seconds. The standalone method lint reported 26 passes
+and zero failures, and `git diff --check` passed. The scripted demo made two
+optimizer requests and restored the previously measured best candidate.

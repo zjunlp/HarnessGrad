@@ -1,9 +1,0 @@
-# Shared slot capacity initialization review
-
-The `capacity` stamp is initialized and checked under a persistent `capacity.lock` flock, separate from the kernel-flocked slot leases. The original capacity filename and historical canonical decimal-plus-newline encoding remain compatible. Canonical positive decimal without a newline is also accepted; empty, corrupt, noncanonical, or mismatched stamps fail closed without modification. Slot acquisition and release semantics are unchanged.
-
-Before creating a new stamp, the initializer writes and syncs an intent marker in the lock file. It syncs the completed stamp and its directory before clearing the marker. An interrupted initialization, including one leaving a plausible partial decimal, therefore requires explicit operator repair. Stop all users before inspecting and repairing either file; do not remove or replace the lock file while any process may have it open. No automatic repair guesses the capacity.
-
-**Mixed versions:** older versions do not acquire this lock or honor its marker and may accept an empty stamp. This change does not make mixed-version initialization safe. Stop all old users and upgrade every participant before initializing or repairing a shared directory. External deletion or replacement of these files while active likewise defeats coordination. Advisory flock and sync behavior depends on the underlying filesystem.
-
-Focused synthetic/offline validation: `python -m pytest tests/quality/test_gpu_slots.py tests/quality/test_slot_host_guard.py --basetemp /tmp/hg-slot-race-tests -q` — 33 passed in 11.15s, no skips. Controlled child processes were killed while holding a lease and after each of the first two initialization fsyncs; this exercises process death, not power-loss behavior. This is not full-system validation; no real models, GPUs, or benchmarks were used.
