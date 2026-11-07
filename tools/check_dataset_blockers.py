@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Validate the source-only blocker index; never import adapters or open receipts."""
+"""Validate the source-only blocker index; never import adapters or open receipts.
+
+Schema 2 keeps external citations as kind/locator text. Only repository evidence
+has a path, which must resolve to a checked-in observation inside the checkout.
+"""
 from __future__ import annotations
 
 import argparse
@@ -12,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "registry/dataset-blockers.json"
 HISTORY = ROOT / "tests/fixtures/dataset_blockers/history-codex178.json"
 # Pin the review baseline independently of the editable registry.
-HISTORY_SHA256 = "4c778d435f4147eb04dbcee4e37a2bac3f0ac5a55584e3adf252ab12972d1300"
+HISTORY_SHA256 = "8d1a3f81e426b7d0091b57a506a2b039633e34a9d7ca8952b0603916d9188ed7"
 STATUSES = {"code-solvable", "external", "runtime", "measurement"}
 FAMILIES = {
     "selected-only-privacy", "source-provenance", "scorer-dependency-network",
@@ -100,22 +104,25 @@ def _evidence(items, root: Path, label: str, *, archived_journal: bool = False) 
     _require(isinstance(items, list) and bool(items), f"{label}: evidence required")
     kinds = []
     for item in items:
-        _fields(item, {"kind", "path", "locator"}, label)
-        kind, path = item["kind"], item["path"]
-        _text(path, label)
+        _require(isinstance(item, dict), f"{label}: expected object")
+        kind = item.get("kind")
+        _require(kind in ("repository", "external-reference"), f"{label}: evidence kind")
+        fields = {"kind", "locator"}
+        if kind == "repository":
+            fields.add("path")
+        _fields(item, fields, label)
         _text(item["locator"], label)
-        _require(kind in {"repository", "external-reference"}, f"{label}: evidence kind")
         kinds.append(kind)
         if kind == "external-reference":
             # This is a historical citation, not a file we have verified or may open.
-            _require(Path(path).is_absolute(), f"{label}: external reference must be absolute")
             continue
+        path = item["path"]
+        _text(path, label)
         rel = Path(path)
         _require(not rel.is_absolute() and ".." not in rel.parts,
                  f"{label}: repository evidence must stay inside root")
-        # Frozen pre-cleanup records reference the archived journal by its old
-        # repository path. Preserve those records byte-for-byte; their external
-        # source is not asserted present or reinterpreted by this validator.
+        # Hash-pinned historical records retain the retired journal's locator.
+        # This exception does not assert that the old source is present or verified.
         if archived_journal and path == 'docs/adapter-integration-journal.md':
             continue
         source = root / rel
@@ -137,7 +144,7 @@ def _blocker(blocker, root: Path, label: str) -> None:
 
 def validate(document: dict, *, root: Path = ROOT) -> dict:
     _fields(document, {"schema_version", "review", "shared_blockers", "datasets"}, "registry")
-    _require(type(document["schema_version"]) is int and document["schema_version"] == 1,
+    _require(type(document["schema_version"]) is int and document["schema_version"] == 2,
              "unsupported schema version")
     _fields(document["review"], {"date", "scope", "production_authorized", "notes"}, "review")
     _text(document["review"]["date"], "review.date")

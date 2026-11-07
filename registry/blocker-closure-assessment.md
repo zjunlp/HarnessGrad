@@ -305,7 +305,7 @@ this registry has already withdrawn, which is the failure mode that rule exists 
 
 | clause from the current `next_action` | class | where it stands |
 | --- | --- | --- |
-| The original v4 selected-ID/trial/error/timeout receipts, and its source/split/manifest/model/harness provenance receipts | `WITHDRAWN` | `registry/withdrawn-requirements.md` -> `hotpotqa / historical-comparison-receipts / original-v4-receipts`; enumerated scope: 722 `~/.codex/sessions` transcripts, the full object store/history/reflog/stash, `runs/`, `runs_discarded_*`, `.hashstate`, `tests/fixtures/`, the named archives and `/mnt/20t/xubuqiang/hg-census/` |
+| The original v4 selected-ID/trial/error/timeout receipts, and its source/split/manifest/model/harness provenance receipts | `WITHDRAWN` | `registry/withdrawn-requirements.md` -> `hotpotqa / historical-comparison-receipts / original-v4-receipts`; enumerated scope: 722 `~/.codex/sessions` transcripts, the full object store/history/reflog/stash, `runs/`, `runs_discarded_*`, `.hashstate`, `tests/fixtures/`, the named archives and the original `hg-census/` directory |
 | Historical measured/invalid/unmeasured counts and lifecycle/cleanup reconciliation for that run | `WITHDRAWN` | the same entry: they "go with" the receipts |
 | The candidate ID `hotpotqa-h0-10pct-v4` and its unresolved binding to the reported 94/1382/1476 coverage stay recorded as an explicit comparability limit | `LIMIT-RECORDED` | `registry/w-hotpotrec-receipts.md`, `registry/w-hotpotrec-evidence.json`; `historical_runs` keeps `run_id=null` and `effect=null` |
 | Preserve the old full-size protocol as incomplete; never resume, rerun or overwrite it | `SATISFIED` | pinned by `tests/quality/test_measurement_coverage_hg_b3.py:155-215` |
@@ -330,7 +330,7 @@ that distinguishes it from the never-captured pair, and the retained `run_id=nul
 still run against the cleared dataset - the citation is now read from this closure record, which carries
 the exact `path`/`locator` pair verbatim below - so nothing was deleted to make the closure pass.
 
-Timeout-closure citation retained verbatim:
+Timeout-closure citation retained verbatim (historical schema 1):
 `{"kind": "external-reference", "path": "/site/w-hotpot-timeout-closure.md", "locator":
 "# HotpotQA timeout outcome/persistence/aggregation closure - w-hotpot"}`.
 
