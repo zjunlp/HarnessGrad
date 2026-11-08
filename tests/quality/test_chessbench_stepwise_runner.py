@@ -246,6 +246,24 @@ trace({{'initial': initial, 'terminal': terminal}})
         assert case[2]["puzzle_id"] not in wire
 
 
+@pytest.mark.parametrize("wire", ['{"uci":1e309}', '{"uci":"e7e5","extra":1e309}'])
+def test_overflow_in_invalid_move_scores_zero(case, wire):
+    script = f'''
+s, f = connect()
+initial = json.loads(f.readline())
+assert initial['status'] == 'awaiting_move'
+s.sendall({wire.encode()!r} + b'\\n')
+terminal = json.loads(f.readline())
+assert terminal['status'] == 'failed' and terminal['verdict'] == 'invalid_answer'
+assert not f.readline()
+'''
+    result = execute(case, script)
+    assert result["exit_code"] == 0, result["stderr"]
+    assert result["verdict"]["score"] == 0.0
+    events = result["verdict"]["evidence"]["transport"]["events"]
+    assert [event["message"] for event in events if event["kind"] == "submission"] == [wire]
+
+
 def test_unreviewed_public_field_is_never_delivered(case, monkeypatch):
     # A malformed worker response must be rejected before any actor is launched.
     def polluted(*args, **kwargs):
