@@ -40,6 +40,7 @@ usage:
   {program} run --preset quickstart ...  use a bundled experiment recipe
   {program} preset path NAME             print a bundled recipe path
   {program} split create|check ...      create or validate an experiment partition
+  {program} harness install|list ...    install or list base harness versions
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 
@@ -234,8 +235,11 @@ def main(argv: list[str] | None = None) -> int:
     if command == 'split':
         from harnessgrad.splits import main as split_main
         return split_main(rest)
+    if command == "harness":
+        from tools.install_harness import main as harness_main
+        return harness_main(rest)
     print(f"{PROGRAM}: unknown command {command!r}", file=sys.stderr)
-    print(f"Try '{PROGRAM} --help' for the commands: run, split, version.", file=sys.stderr)
+    print(f"Try '{PROGRAM} --help' for available commands.", file=sys.stderr)
     return 2
 
 

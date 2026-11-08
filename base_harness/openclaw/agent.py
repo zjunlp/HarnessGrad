@@ -19,12 +19,20 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import Callable, NamedTuple
 
 ROOT = Path(__file__).resolve().parent
 
 
 class AdapterError(ValueError):
     pass
+
+
+class AdapterProfile(NamedTuple):
+    configure: Callable[[dict, str, str, int, int], None]
+    session_option: str
+    session_prefix: str
+    read_session: Callable[[Path, str, list[str], dict, float], list[dict]]
 
 
 def submission_paths(task: dict) -> list[str] | None:
@@ -96,7 +104,30 @@ def child_environment(parent: dict, state: Path, config: Path, work: Path) -> di
     return child
 
 
-def configuration(env: dict, base_url: str, model: str, work: Path, timeout: float) -> dict:
+def _list_configuration(config: dict, model: str, workspace: str, context: int, timeout: int) -> None:
+    config["models"]["providers"]["harnessgrad"]["models"][0]["contextWindow"] = context
+    agents = config["agents"]
+    agents["defaults"].update({"models": {model: {}}, "contextTokens": context})
+    agents["list"] = [{"id": "main", "default": True, "workspace": workspace, "skills": []}]
+    execution = config["tools"]["exec"]
+    execution.setdefault("security", "full")
+    execution.setdefault("ask", "off")
+    execution["timeoutSec"] = timeout
+
+
+def _entries_configuration(config: dict, model: str, workspace: str, context: int, timeout: int) -> None:
+    config["models"]["providers"]["harnessgrad"]["models"][0]["contextTokens"] = context
+    agents = config["agents"]
+    agents["defaults"].setdefault("modelPolicy", {})["allow"] = [model]
+    agents["entries"] = {"main": {**agents.get("entries", {}).get("main", {}),
+                                  "workspace": workspace, "skills": []}}
+    execution = config["tools"]["exec"]
+    execution.setdefault("mode", "full")
+    execution["timeoutSeconds"] = timeout
+
+
+def configuration(env: dict, base_url: str, model: str, work: Path, timeout: float, *,
+                  profile: AdapterProfile | None = None) -> dict:
     config = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
     output = int(env.get("HG_AGENT_MAX_OUTPUT_TOKENS", env.get("HG_AGENT_MAX_TOKENS", "2048")))
     context = int(env.get("HG_AGENT_CONTEXT_WINDOW", "32768"))
@@ -105,7 +136,7 @@ def configuration(env: dict, base_url: str, model: str, work: Path, timeout: flo
     config.setdefault("models", {})["providers"] = {"harnessgrad": {
         "baseUrl": base_url, "apiKey": env.get("HG_AGENT_API_KEY") or "local",
         "api": "openai-completions", "models": [{"id": model, "name": model,
-        "reasoning": False, "input": ["text"], "contextWindow": context, "maxTokens": output,
+        "reasoning": False, "input": ["text"], "maxTokens": output,
         "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
         # **Usage must be asked for on a non-OpenAI endpoint.** The installed CLI's
         # `normalizeModelCompat` forces `supportsUsageInStreaming: false` for every
@@ -120,13 +151,12 @@ def configuration(env: dict, base_url: str, model: str, work: Path, timeout: flo
         "compat": {"supportsUsageInStreaming": True}}]}}
     config["models"]["mode"] = "replace"
     defaults = config.setdefault("agents", {}).setdefault("defaults", {})
-    defaults.update({"model": {"primary": "harnessgrad/" + model, "fallbacks": []},
-                     "models": {"harnessgrad/" + model: {}}, "workspace": str(work),
-                     "skipBootstrap": True, "timeoutSeconds": max(1, int(timeout)),
-                     "contextTokens": context})
-    config["agents"]["list"] = [{"id": "main", "default": True,
-                                  "workspace": str(work), "skills": []}]
-    config.setdefault("tools", {}).setdefault("exec", {})["timeoutSec"] = max(1, int(timeout))
+    model_ref = "harnessgrad/" + model
+    seconds = max(1, int(timeout))
+    defaults.update({"model": {"primary": model_ref, "fallbacks": []}, "workspace": str(work),
+                     "skipBootstrap": True, "timeoutSeconds": seconds})
+    config.setdefault("tools", {}).setdefault("exec", {})
+    (profile or _PROFILES["list"]).configure(config, model_ref, str(work), context, seconds)
     return config
 
 
@@ -200,12 +230,9 @@ def observation_kind(tool: str) -> str:
     return _OBSERVATION_KINDS.get((tool or "").lower(), "other")
 
 
-def _session_rows(state: Path, session_id: str) -> list[dict]:
-    paths = sorted(state.glob(f"agents/*/sessions/{session_id}.jsonl"))
-    if not paths:
-        return []
+def _read_jsonl(path: Path) -> list[dict]:
     rows = []
-    for line in paths[-1].read_text(encoding="utf-8", errors="replace").splitlines():
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         try:
             value = json.loads(line)
         except ValueError:
@@ -213,6 +240,39 @@ def _session_rows(state: Path, session_id: str) -> list[dict]:
         if isinstance(value, dict):
             rows.append(value)
     return rows
+
+
+def _session_rows(state: Path, session_id: str, _argv: list[str], _env: dict, _timeout: float) -> list[dict]:
+    paths = sorted(state.glob(f"agents/*/sessions/{session_id}.jsonl"))
+    return _read_jsonl(paths[-1]) if paths else []
+
+
+def _export_session_rows(state: Path, session_key: str, argv: list[str], env: dict, timeout: float) -> list[dict]:
+    if timeout <= 0:
+        raise AdapterError("OpenClaw task deadline expired before session export")
+    output = "harnessgrad"
+    command = [*argv, "sessions", "export-trajectory", "--agent", "main", "--session-key", session_key,
+               "--workspace", str(state), "--output", output, "--json"]
+    result = subprocess.run(command, cwd=state, env=env, capture_output=True, text=True,
+                            errors="replace", timeout=min(30, timeout))
+    if result.returncode:
+        raise AdapterError("OpenClaw session export failed: " + result.stderr[-2000:])
+    bundle = state / ".openclaw" / "trajectory-exports" / output
+    events = bundle / "events.jsonl"
+    if not events.resolve().is_relative_to(state):
+        raise AdapterError("OpenClaw session export escaped its private state")
+    # Runtime events duplicate transcript tool calls. Only transcript messages
+    # have the session format shared with the older JSONL reader.
+    return [event["data"] for event in _read_jsonl(events)
+            if event.get("source") == "transcript" and event.get("sessionKey") == session_key
+            and event.get("type") in ("assistant.message", "tool.result")
+            and isinstance(event.get("data"), dict) and isinstance(event["data"].get("message"), dict)]
+
+
+_PROFILES = {
+    "list": AdapterProfile(_list_configuration, "--session-id", "", _session_rows),
+    "entries": AdapterProfile(_entries_configuration, "--session-key", "agent:main:", _export_session_rows),
+}
 
 
 def _text(content) -> str:
@@ -353,17 +413,23 @@ def run(task: dict, work: Path) -> int:
         with tempfile.TemporaryDirectory(prefix="hg-openclaw-state-") as temporary:
             state = Path(temporary)
             config = state / "openclaw.json"
-            cfg = configuration(env, base, model, work, timeout)
+            profile_name = runtime["source_identity"].get("adapter_profile", "list")
+            profile = _PROFILES.get(profile_name)
+            if profile is None:
+                raise AdapterError(f"unknown OpenClaw adapter profile {profile_name!r}")
+            cfg = configuration(env, base, model, work, timeout, profile=profile)
             config.write_text(json.dumps(cfg), encoding="utf-8")
             config.chmod(0o600)
             child = child_environment(env, state, config, work)
             child["PATH"] = os.pathsep.join((str(Path(runtime["node"]).parent), child.get("PATH", os.defpath)))
             session_id = "hg-" + hashlib.sha256((task_id + str(time.time_ns())).encode()).hexdigest()[:20]
+            session = profile.session_prefix + session_id
             command = [*runtime["argv"], "agent", "--local", "--json",
-                       "--agent", "main", "--session-id", session_id, "--timeout", str(max(1, int(timeout))),
+                       "--agent", "main", profile.session_option, session, "--timeout", str(max(1, int(timeout))),
                        "--message", prompt]
             timed_out = False
             stderr = ""
+            deadline = time.monotonic() + timeout
             try:
                 proc = subprocess.Popen(command, cwd=work, env=child, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, text=True, errors="replace", start_new_session=True)
@@ -376,15 +442,20 @@ def run(task: dict, work: Path) -> int:
             finally:
                 if proc is not None:
                     stop_process(proc)
-            native = _session_rows(state, session_id)
+            try:
+                native = profile.read_session(state, session, runtime["argv"], child, deadline - time.monotonic())
+            except (OSError, ValueError, subprocess.SubprocessError):
+                if not (timed_out or proc.returncode):
+                    raise
+                native = []
             summary = translate_trace(native, record, backend=backend)
             final = summary["final"]
             if timed_out:
                 raise AdapterError(f"OpenClaw timed out after {timeout:g}s")
-            if not native:
-                raise AdapterError("OpenClaw left no session trace: " + stderr[-2000:])
             if proc.returncode:
                 raise AdapterError(f"OpenClaw exited {proc.returncode}: " + stderr[-2000:])
+            if not native:
+                raise AdapterError("OpenClaw left no session trace: " + stderr[-2000:])
             answer, source = save_answer(work, task, before, final)
             record({"submitted": True, "answer": answer, "answer_source": source})
             return 0
