@@ -37,7 +37,12 @@ and nothing is clickable.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
+
+import pytest
+
+from harnessgrad.entrypoints.run_parser import build_parser
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -163,7 +168,7 @@ def test_documented_python_scripts_exist():
 
 
 def test_documented_driver_flags_exist():
-    """(b) A documented `--flag` is a flag `driver.py` accepts.
+    """(b) A documented `--flag` is accepted by the canonical run parser.
 
     Only `--config`-bearing invocations are checked, because that is the shape a reader
     copies from `README.md` and `docs/custom-dataset-splits.md`: the experiment file plus the
@@ -171,7 +176,8 @@ def test_documented_driver_flags_exist():
     makes them legal is pinned, so the exemption cannot quietly become a blanket one.
     """
     driver = ROOT / "driver.py"
-    accepted = _argparse_flags(driver) | PRE_PARSER_FLAGS | {"--help"}
+    accepted = {option for action in build_parser()._actions
+                for option in action.option_strings} | PRE_PARSER_FLAGS
     assert "_expand_experiment_argv" in driver.read_text(encoding="utf-8"), (
         "driver.py no longer expands --config/--set before argparse; drop the exemption "
         "instead of letting it hide unknown flags")
@@ -232,3 +238,20 @@ def test_the_parser_sees_the_commands_it_is_supposed_to():
                 for _, parsed in _documents() for _, command in parsed}
     for spelling in ("python3", "harnessgrad", "./install.sh", "git", "docker"):
         assert spelling in commands, f"fence parser found no {spelling!r} command"
+
+
+def test_documented_driver_flags_reject_unknown_option(tmp_path, monkeypatch):
+    """Moving declarations must not turn an unknown README flag into an exemption."""
+    document = tmp_path / "README.md"
+    document.write_text(
+        "```sh\nharnessgrad run --config experiments/quickstart.json "
+        "--run-id authored-control --fail-on-incomplete\n```\n", encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__],
+                        "DOCUMENTS", [document])
+    monkeypatch.setattr(sys.modules[__name__],
+                        "_where", lambda path, number: f"{path.name}:{number}")
+    test_documented_driver_flags_exist()
+    document.write_text(document.read_text(encoding="utf-8").replace(
+        "--fail-on-incomplete", "--authored-unknown-release-flag"), encoding="utf-8")
+    with pytest.raises(AssertionError, match="--authored-unknown-release-flag"):
+        test_documented_driver_flags_exist()

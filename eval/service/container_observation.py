@@ -47,6 +47,7 @@ import hashlib
 import json
 import re
 import shlex
+import secrets
 import shutil
 import subprocess
 import time
@@ -79,6 +80,7 @@ class Observation:
     unobserved: list[str] = field(default_factory=list)
     probe_seconds: float = 0.0
     image_id: str | None = None
+    launch_mode: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -86,7 +88,8 @@ class Observation:
         return not self.problems and not self.unobserved
 
     def receipt(self) -> dict:
-        return {"schema": self.schema, "image": self.image, "image_id": self.image_id,
+        return {**({"launch_mode": self.launch_mode} if self.launch_mode else {}),
+                "schema": self.schema, "image": self.image, "image_id": self.image_id,
                 "declared": self.declared, "observed": self.observed,
                 "ok": self.ok, "problems": self.problems,
                 "unobserved": self.unobserved, "covers": list(COVERS),
@@ -138,7 +141,9 @@ def _inspect_fields(runner, container: str) -> dict:
             "rootfs_readonly": (host.get("ReadonlyRootfs") is True),
             "user": config.get("User"), "workdir": config.get("WorkingDir"),
             "entrypoint": config.get("Entrypoint"), "pid": (entry.get("State") or {}).get("Pid"),
-            "image_id": entry.get("Image")}
+            "image_id": entry.get("Image"), "healthcheck": config.get("Healthcheck"),
+            "networks": sorted("bridge" if name == "bridge" else row.get("NetworkID", name)
+                               for name, row in ((entry.get("NetworkSettings") or {}).get("Networks") or {}).items())}
 
 
 def _cgroup_dir(pid: int) -> Path | None:
@@ -196,16 +201,37 @@ def _default_runner(timeout_s: float):
 
 def observe(image: str, spec: dict, *, network: str | None = None,
             runner=None, timeout_s: float = DEFAULT_TIMEOUT_S,
-            read_only: bool = True) -> Observation:
+            read_only: bool = True, container_state: bool = False,
+            attach_bridge: bool = False, owner_run_id: str = "") -> Observation:
     """Start one throwaway container under `spec`'s bounds and read the bounds back."""
     runner = runner or _default_runner(timeout_s)
+    if container_state and read_only:
+        raise ObservationError("container-state observation requires the writable launcher rootfs")
     limits = limits_from(spec)
     started = time.monotonic()
     container = None
     try:
-        container = _exec(runner, _docker_argv(image, limits, network,
-                                               read_only=read_only))
+        if container_state:
+            # Use the actual state launcher's create/start policy: inherited image
+            # entrypoint/user/workdir, writable rootfs, resource flags and idle command.
+            # A readonly mount-run probe cannot authorize snapshot execution.
+            from eval.containers import container as backend
+            if not backend.looks_pinned(image):
+                raise ObservationError("container-state observation requires a pinned image")
+            container = "hg-observe-state-" + secrets.token_hex(16)
+            try:
+                backend.create(container, image=image, limits=limits, network=network or "none",
+                               run_id=owner_run_id or "observation", task_id="container-observation")
+                if attach_bridge:
+                    backend.network_connect(container, "bridge")
+                backend.start(container)
+            except backend.ContainerUnavailable as exc:
+                raise ObservationError(str(exc)) from exc
+        else:
+            container = _exec(runner, _docker_argv(image, limits, network,
+                                                   read_only=read_only))
         fields = _inspect_fields(runner, container)
+        image_defaults = (json.loads(_exec(runner, ["docker", "image", "inspect", image]))[0].get("Config") or {}) if container_state else None
         cgroup = _cgroup_dir(int(fields["pid"])) if fields.get("pid") else None
         cpu_max = _read_cgroup(cgroup, "cpu.max")
         memory_max = _read_cgroup(cgroup, "memory.max")
@@ -262,17 +288,40 @@ def observe(image: str, spec: dict, *, network: str | None = None,
     compare("rootfs_readonly", declared["rootfs_readonly"], observed["rootfs_readonly"])
     # exec_defaults: an empty User ("") in docker means root, which is what the runner asks
     # for when the spec names no user; normalise it so an absent field is not a mismatch.
-    if declared["user"] not in (None, "") or observed["user"] not in (None, ""):
+    if not container_state and (declared["user"] not in (None, "") or observed["user"] not in (None, "")):
         compare("user", declared["user"] or "", observed["user"] or "")
 
+    if container_state:
+        # The real state create inherits these image defaults. Actor exec later
+        # supplies its own task cwd; this does not authorize arbitrary user/cwd overrides.
+        for field, key in (("user", "User"), ("workdir", "WorkingDir"),
+                           ("entrypoint", "Entrypoint"), ("healthcheck", "Healthcheck")):
+            expected_default = image_defaults.get(key)
+            actual_default = fields[field]
+            # Docker image JSON may omit empty string defaults that container
+            # inspect spells "". Both mean root user / default root working dir.
+            if key in ("User", "WorkingDir"):
+                expected_default, actual_default = expected_default or "", actual_default or ""
+            if actual_default != expected_default:
+                problems.append(f"image {field}: declared {expected_default!r}, observed {actual_default!r}")
+        observed["image_defaults"] = {key: image_defaults.get(key) for key in
+                                      ("User", "WorkingDir", "Entrypoint", "Healthcheck")}
+        # Primary internal network plus the optional bridge attachment must both
+        # survive Docker's launcher; no inferred permission from the policy word.
+        actual = set(fields["networks"])
+        expected = {network or "none"} | ({"bridge"} if attach_bridge else set())
+        compare("network attachments", sorted(expected), sorted(actual))
+        observed["networks"] = fields["networks"]
+
     return Observation(schema=SCHEMA, image=image, image_id=fields.get("image_id"),
+                       launch_mode="container-state" if container_state else None,
                        declared=declared, observed=observed, problems=problems,
                        unobserved=unobserved, probe_seconds=time.monotonic() - started)
 
 
 def observe_for(image: str, spec: dict, *, network: str | None, run_id: str = "",
                 runner=None, timeout_s: float = DEFAULT_TIMEOUT_S,
-                read_only: bool = True) -> Observation:
+                read_only: bool = True, container_state: bool = False) -> Observation:
     """`observe` on the network the task will actually get, for an `exec` environment.
 
     `network` here is the declared **policy** (INTERFACE.md §2.5.2): `none`, `services` or
@@ -287,8 +336,14 @@ def observe_for(image: str, spec: dict, *, network: str | None, run_id: str = ""
 
     `read_only` is the **launcher's** value for the container being described
     (`container_mod.run` defaults it to `True`; a task whose state is the container's
-    filesystem does not pass it). It is a parameter because the rootfs in the receipt has
+    filesystem uses False). It is a parameter because the rootfs in the receipt has
     to be the rootfs the harness saw, and only the caller knows which launcher ran.
+
+    Container-state probes call the same create/start functions as the actual
+    snapshot launcher, retaining image entrypoint/user/workdir/healthcheck defaults,
+    writable rootfs and its always-internal primary network. Declared bridge adds
+    the same secondary attachment. This executes the selected pinned image just
+    as the actual launcher would; it never pulls or substitutes a different image.
 
     The probe's network is allocated exactly like a task's (`netpool.allocate`, key
     `probe-<run_id>`) and created with an explicit `--subnet`, so the probe cannot become
@@ -296,17 +351,46 @@ def observe_for(image: str, spec: dict, *, network: str | None, run_id: str = ""
     the first tasks are starting, which is the worst moment to spend a `/16`.
     """
     runner = runner or _default_runner(timeout_s)
+    if container_state and network not in ("none", "services", "bridge", None):
+        raise ObservationError("unsupported container-state network policy")
+    internal_network = network == "services" or container_state
     probe_network: str | None = None
-    if network == "services":
+    if container_state:
+        from eval.service import services
+        from eval.containers import container as backend
+        if not backend.looks_pinned(image):
+            raise ObservationError("container-state observation requires a pinned image")
+        # Same allocator/internal-network mechanism as the real state launcher;
+        # retain the unique returned Docker ID and remove only that acquisition.
+        try:
+            probe_network = services.create_network(run_id or "observation",
+                                                    "container-observation-" + secrets.token_hex(8))
+        except services.ServiceUnavailable as exc:
+            raise ObservationError(str(exc)) from exc
+    elif internal_network:
         probe_network = _probe_network_name(image, spec, run_id)
         _create_probe_network(runner, probe_network, run_id)
     else:
         probe_network = network
     try:
-        return observe(image, spec, network=probe_network, runner=runner,
-                       timeout_s=timeout_s, read_only=read_only)
+        if container_state:
+            info = json.loads(_exec(runner, ["docker", "network", "inspect", probe_network]))
+            if not info or info[0].get("Internal") is not True:
+                raise ObservationError("container-state primary network was not observed internal")
+        result = observe(image, spec, network=probe_network, runner=runner,
+                         timeout_s=timeout_s, read_only=read_only,
+                         **({"container_state": True, "attach_bridge": network == "bridge", "owner_run_id": run_id}
+                            if container_state else {}))
+        if container_state:
+            result.declared.update(state="container", network_policy=network or "none")
+            result.observed["network_internal"] = True
+        return result
     finally:
-        if network == "services" and probe_network is not None:
+        if container_state and probe_network is not None:
+            failures = services.remove_network(probe_network)
+            if failures:
+                raise ObservationError("container-state probe network cleanup failed: " + "; ".join(failures))
+        elif internal_network and probe_network is not None:
             try:                     # cleanup must never mask a probe failure
                 runner(["docker", "network", "rm", probe_network], None)
             except Exception:        # noqa: BLE001

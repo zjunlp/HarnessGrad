@@ -61,12 +61,16 @@ def fresh_cache(monkeypatch):
 def _probe(monkeypatch, receipts: dict[str, dict] | None = None, *, raises=None):
     calls: list[dict] = []
 
-    def fake_observe_for(image, spec, *, network, run_id="", read_only=True):
+    def fake_observe_for(image, spec, *, network, run_id="", read_only=True, container_state=False):
         calls.append({"image": image, "spec": dict(spec), "network": network,
                       "run_id": run_id, "read_only": read_only})
         if raises is not None:
             raise raises
         chosen = (receipts or {}).get(image) or _receipt(image, spec)
+        if container_state:
+            chosen = {**chosen, "launch_mode": "container-state",
+                      "declared": {**chosen["declared"], "rootfs_readonly": False, "network_policy": network},
+                      "observed": {**chosen["observed"], "network_internal": True}}
         return SimpleNamespace(receipt=lambda: dict(chosen))
 
     monkeypatch.setattr(co, "observe_for", fake_observe_for)
@@ -98,19 +102,32 @@ def test_the_probe_is_cached_across_rounds(monkeypatch):
     assert len(calls) == 1
 
 
-def test_only_a_service_environment_of_the_launched_state_is_probed(monkeypatch):
-    """The scope of the receipt is the declaration that was blocked: a named service.
-
-    A plain `exec` environment and a `state: "container"` one are refused today for the
-    same "nobody looked" reason, and they keep it -- widening the receipt to them would
-    admit datasets nobody has measured, which is a separate change.
-    """
+def test_mount_without_services_stays_refused_but_container_state_is_observed(monkeypatch):
     calls = _probe(monkeypatch)
     envs = {"files": {"kind": "files", "network": "none"},
-            "container_state": _env(state="container"),
+            "container_state": _env(state="container", services=[], network="none"),
             "exec_no_service": _env(services=[], network="none")}
-    assert runner._observations_for(envs, _tasks(*envs), run_id="r") == {}
-    assert calls == []
+    observations = runner._observations_for(envs, _tasks(*envs), run_id="r")
+    assert set(observations) == {"container_state"}
+    assert len(calls) == 1 and calls[0]["read_only"] is False
+    assert observations["container_state"]["launch_mode"] == "container-state"
+    assert runner._refuse_unobserved_policies({"task_id": "container_state"},
+        envs["container_state"], None, observation=observations["container_state"]) is None
+
+
+def test_mount_receipt_never_authorizes_container_state():
+    result = runner._refuse_unobserved_policies({"task_id": "state"}, _env(state="container"),
+                                               None, observation=_receipt())
+    assert result["invalid"]["receipt"]["reason"] == "backend_observation_unavailable"
+
+
+def test_mount_and_state_use_distinct_cached_observations(monkeypatch):
+    calls = _probe(monkeypatch)
+    observations = runner._observations_for({"mount": _env(), "state": _env(state="container")},
+                                           _tasks("mount", "state"), run_id="r")
+    assert len(calls) == 2
+    assert observations["mount"].get("launch_mode") is None
+    assert observations["state"]["launch_mode"] == "container-state"
 
 
 def test_a_wider_declaration_is_probed_and_its_receipt_admits_it(monkeypatch):
@@ -293,3 +310,22 @@ def test_observe_for_leaves_the_network_behind_only_on_no_path():
         co.observe_for(AGENT, {"cpus": 2, "memory_mb": 4096},
                        network="services", run_id="r", runner=fake_docker)
     assert [call[:3] for call in calls].count(["docker", "network", "rm"]) == 1
+
+
+@pytest.mark.parametrize("state", ["mount", "container"])
+@pytest.mark.parametrize("invalid_first", [False, True])
+def test_each_declaration_is_checked_before_normalized_shape_cache_reuse(monkeypatch, state, invalid_first):
+    calls = _probe(monkeypatch)
+    valid = _env(state=state, memory_mb=512)
+    invalid = _env(state=state, memory_mb=512.5)
+    ordered = [("invalid", invalid), ("valid", valid)] if invalid_first else [("valid", valid), ("invalid", invalid)]
+    envs = dict(ordered + [("valid_again", dict(valid))])
+    observed = runner._observations_for(envs, _tasks(*envs), run_id="same-normalized-shape")
+    assert set(observed) == {"valid", "valid_again"}
+    assert observed["valid"] is observed["valid_again"]
+    assert len(calls) == 1, "invalid raw declaration must neither inherit nor poison the valid receipt"
+    assert runner._refuse_unobserved_policies({"task_id": "valid"}, valid, None,
+                                             observation=observed["valid"]) is None
+    refused = runner._refuse_unobserved_policies({"task_id": "invalid"}, invalid, None,
+                                                observation=observed.get("invalid"))
+    assert refused["invalid"]["detail"] == "backend_observation_unavailable"

@@ -131,10 +131,16 @@ def _refuse_unobserved_policies(task: dict, env: dict | None,
     if not fields:
         return None
     covered = set()
-    if observation is not None and observation.get("ok") is True:
+    state_receipt = ((env_spec.get("state") != "container") or (
+        observation is not None and observation.get("launch_mode") == "container-state"
+        and observation.get("image") == env_spec.get("image")
+        and observation.get("declared", {}).get("rootfs_readonly") is False
+        and observation.get("declared", {}).get("network_policy") == env_spec.get("network", "none")
+        and observation.get("observed", {}).get("network_internal") is True))
+    if observation is not None and observation.get("ok") is True and state_receipt:
         covered = set(observation.get("covers") or ()) & fields
     remaining = fields - covered
-    if observation is not None and observation.get("ok") is True and not remaining:
+    if observation is not None and observation.get("ok") is True and state_receipt and not remaining:
         # Every declared bound was read back from the backend and the kernel. That is the
         # observation this refusal exists to demand, so there is nothing left to refuse.
         return None
@@ -188,18 +194,14 @@ def _environment_shape(env: dict) -> dict | None:
       internal network. The probe resolves it the same way
       (`eval/service/container_observation.py:observe_for`).
     """
-    # Only the launcher this module can describe. `state: "container"`
-    # (`_run_one_container_state`) has its own envelope, a writable rootfs, an
-    # always-internal network and an optional second `bridge` connection, so a probe of
-    # the launch below would put a `NetworkMode` in the receipt that that container does
-    # not have. Its receipt is a separate change, not a guess; it keeps today's refusal.
-    if env.get("state", "mount") != "mount":
+    state = env.get("state", "mount")
+    if state not in ("mount", "container"):
         return None
     if not env.get("image"):
         return None
     limits = container_mod.envelope(container_mod.limits_from(env))
     return {"image": env["image"], "cpus": limits["cpus"], "memory_mb": limits["memory_mb"],
-            "pids": limits["pids"], "read_only": True,
+            "pids": limits["pids"], "read_only": state == "mount",
             "network": env.get("network", "none")}
 
 
@@ -247,12 +249,9 @@ def _observations_for(envs: dict | None, tasks: list[dict], *,
         env = (envs or {}).get(task_id) or {}
         if env.get("kind") != "exec":
             continue
-        if not (env.get("services") or []):
-            # The refusal that does not change: a plain `exec` environment's declared
-            # bounds are still unobserved. Only the declaration whose missing observation
-            # blocked the services contract (AppWorld, 2026-10-18) is probed here;
-            # widening the receipt to every exec environment would admit datasets nobody
-            # has measured, which is a separate change with its own review.
+        if env.get("state") != "container" and not (env.get("services") or []):
+            # Preserve the mount-run scope. Container-state has its own observed
+            # writable create/start policy even when it declares no services.
             continue
         shape = _environment_shape(env)
         if shape is None:
@@ -265,28 +264,31 @@ def _observations_for(envs: dict | None, tasks: list[dict], *,
                       f"container shape -- so nothing is probed for them",
                       file=sys.stderr)
             continue
+        # Validate each raw declaration before normalized shape-cache reuse:
+        # fractional memory bounds can share an integer launch shape with a valid
+        # declaration, but cannot inherit its permission or poison its receipt.
+        problem = _declared_but_not_applied(env, shape)
+        if problem is not None:
+            print(f"  admission: no observation for {shape['image']}: {problem}",
+                  file=sys.stderr)
+            continue
         key = tuple(shape[field] for field in
                     ("image", "cpus", "memory_mb", "pids", "read_only", "network"))
         if key not in _OBSERVATIONS:
-            problem = _declared_but_not_applied(env, shape)
-            if problem is not None:
+            try:
+                _OBSERVATIONS[key] = container_observation_mod.observe_for(
+                    shape["image"],
+                    {"cpus": shape["cpus"], "memory_mb": shape["memory_mb"]},
+                    network=shape["network"], run_id=run_id,
+                    read_only=shape["read_only"],
+                    **({"container_state": True} if env.get("state") == "container" else {})).receipt()
+            except (container_observation_mod.ObservationError, OSError,
+                    subprocess.TimeoutExpired) as exc:
                 _OBSERVATIONS[key] = None
-                print(f"  admission: no observation for {shape['image']}: {problem}",
+                print(f"  admission: the observation probe could not run for "
+                      f"{shape['image']} ({type(exc).__name__}: {exc}); nothing was "
+                      f"observed, so every task that needs it stays refused",
                       file=sys.stderr)
-            else:
-                try:
-                    _OBSERVATIONS[key] = container_observation_mod.observe_for(
-                        shape["image"],
-                        {"cpus": shape["cpus"], "memory_mb": shape["memory_mb"]},
-                        network=shape["network"], run_id=run_id,
-                        read_only=shape["read_only"]).receipt()
-                except (container_observation_mod.ObservationError, OSError,
-                        subprocess.TimeoutExpired) as exc:
-                    _OBSERVATIONS[key] = None
-                    print(f"  admission: the observation probe could not run for "
-                          f"{shape['image']} ({type(exc).__name__}: {exc}); nothing was "
-                          f"observed, so every task that needs it stays refused",
-                          file=sys.stderr)
         if _OBSERVATIONS[key] is not None:
             observations[task_id] = _OBSERVATIONS[key]
     return observations
@@ -357,6 +359,8 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
         evidence_output = {'launch_attempted': False, 'trace_status': 'not_started'}
     if diagnostic_authorization is not None:
         diagnostic_authorization.require_scope(run_id, [task["task_id"]])
+    if observation is None and (env or {}).get("kind") == "exec" and (env or {}).get("state") == "container":
+        observation = _observations_for({task["task_id"]: env}, [task], run_id=run_id).get(task["task_id"])
     refusal = _refuse_unobserved_policies(
         task, env, verifier, run_id=run_id,
         diagnostic_authorization=diagnostic_authorization, observation=observation)
