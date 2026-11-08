@@ -297,7 +297,8 @@ lets its final message be the answer. Whichever it is, the adapter records which
    section 5.
 5. Trace: the five clauses of section 4 — run `tools/check_trace_contract.py` until it says
    `OK`.
-6. `python3 tools/validate_harness.py <dir> --smoke` must pass.
+6. Validate the source and run the smoke check for the declared runtime.
+   See [checking your harness](writing_a_harness.md#5-checking-your-harness-before-contributing).
 7. Record what the translation did in `harness_identity.config` when it is not obvious
    (`miniswe` records the `api_base`, the `step_limit`, and whether the dependency came from
    a declared tree).
