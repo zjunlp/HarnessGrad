@@ -35,13 +35,37 @@ def test_submission_history_is_snapshotted_and_terminal_matches_original(monkeyp
     assert session.public_task() == result
 
 
-def test_malformed_submission_never_enters_history(monkeypatch):
-    monkeypatch.setattr(chess_stepwise._ProviderSession, '_replay', lambda self, h: observation())
+@pytest.mark.parametrize('answer', [
+    {'uci': float('nan')},
+    {'uci': object()},
+    {'uci': 'e7e5', 'extra': float('inf')},
+])
+def test_malformed_move_replays_as_invalid_answer(monkeypatch, answer):
+    histories = []
+    def replay(self, history):
+        histories.append(history)
+        return observation('failed', 'invalid_answer') if history else observation()
+    monkeypatch.setattr(chess_stepwise._ProviderSession, '_replay', replay)
     session = chess_stepwise._ProviderSession({}, {})
-    for answer in ({'uci': float('nan')}, {'uci': 'x' * 4097}, {'uci': object()}):
-        with pytest.raises(ValueError, match='invalid ChessBench submission'):
-            session.submit(answer)
+    assert session.submit(answer) == observation('failed', 'invalid_answer')
+    assert session.public_task() == observation('failed', 'invalid_answer')
+    assert histories == [[], [{}]]
+    assert session._history == [{}]
+    with pytest.raises(ValueError, match='puzzle session is already terminal'):
+        session.submit({'uci': 'e7e5'})
+    assert histories == [[], [{}]]
+
+
+def test_oversized_submission_never_enters_history(monkeypatch):
+    def replay(self, history):
+        assert not history, 'oversized submission reached the worker'
+        return observation()
+    monkeypatch.setattr(chess_stepwise._ProviderSession, '_replay', replay)
+    session = chess_stepwise._ProviderSession({}, {})
+    with pytest.raises(ValueError, match='invalid ChessBench submission'):
+        session.submit({'uci': 'x' * 4097})
     assert not session._history
+    assert session.public_task() == observation()
 
 
 @pytest.mark.parametrize('response', [
