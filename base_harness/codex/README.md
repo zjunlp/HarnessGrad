@@ -1,7 +1,36 @@
 # Codex Harness installation preparation
 
 The checked-in Harness is a portable adapter template. Codex itself is an external,
-read-only installation. Copy the Harness, then prepare that copy before measurement:
+read-only installation.
+
+## Install a dedicated copy
+
+On Linux x86-64 with Bubblewrap and network access, use the HarnessGrad installer.
+It uses Node.js 24.22.2 and npm 11.19.1 to install the npm launcher and its Linux
+x64 native package into a dedicated runtime store. It checks both archive
+digests against the release recipe and installs from the npm lockfile with
+lifecycle scripts disabled.
+
+```sh
+harnessgrad harness install codex --version 0.166.0
+HARNESS_DIR=$(harnessgrad harness install codex --version 0.167.0)
+```
+
+Use the printed directory with `harnessgrad run --harness-path`. Omitting
+`--version` selects the latest verified Codex release listed by `harnessgrad
+harness list`, currently `0.167.0`, and reports the choice on stderr. Use
+`--install-root` to choose a dedicated store outside the platform checkout and
+shared temporary directories. By default the store is `harnessgrad/base-harnesses`
+under the user data directory. Each release has its own package lock and binding.
+
+An explicit unverified `X.Y.Z` release is attempted with a warning and a
+network-isolated version probe. Its npm launcher and Linux x64 payload must match
+the exact version and digests in the lockfile. Running a task also requires the
+release to work with the Codex adapter.
+
+## Bind an existing installation
+
+Copy the Harness, then prepare that copy before measurement.
 
 ```sh
 cp -a base_harness/codex /path/to/codex-harness-copy

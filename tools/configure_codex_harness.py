@@ -71,7 +71,7 @@ def _version(selected: dict, *, native: bool) -> str:
 
 def configure(harness: Path, codex: str | None = None, *, command: str | None = None,
               node: str | None = None, runtime_paths: tuple[Path, ...] = (),
-              env: dict | None = None) -> dict:
+              env: dict | None = None, sandbox_only: bool = False) -> dict:
     harness = harness.expanduser().resolve()
     path = harness / "harness.json"
     manifest = json.loads(path.read_text())
@@ -83,8 +83,8 @@ def configure(harness: Path, codex: str | None = None, *, command: str | None = 
     argv = adapter.select(selected_env, codex=codex, command=command, node=node)
     selected = adapter.installation(argv, extra=runtime_paths,
                                     forbidden=(ROOT, main_checkout(ROOT), harness))
-    version = _version(selected, native=False)
-    if _version(selected, native=True) != version:
+    version = _version(selected, native=sandbox_only)
+    if not sandbox_only and _version(selected, native=True) != version:
         raise ValueError("Codex host and native sandbox versions differ")
     record = {"schema": 1, "version": version,
               "selection": adapter.choice(selected_env, codex=codex, command=command), **selected}

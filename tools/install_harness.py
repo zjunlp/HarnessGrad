@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -17,13 +18,46 @@ from urllib.request import urlopen
 from eval.containers import sandbox
 from harnessgrad.paths import main_checkout
 from harnessgrad.python_artifacts import atomic_json, digest, locked
+from tools import configure_codex_harness as codex
 from tools import configure_openclaw_harness as openclaw
 
+ROOT = Path(__file__).resolve().parents[1]
 NODE_VERSION = "24.22.2"
 NPM_VERSION = "11.19.1"
 NODE_DIST = f"node-v{NODE_VERSION}-linux-x64"
 NODE_SHA256 = "48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75"
-TEMPLATE = openclaw.TEMPLATE
+CODEX_PACKAGE = "@openai/codex"
+CODEX_NATIVE_PACKAGE = "@openai/codex-linux-x64"
+CODEX_RELEASES = {
+    "0.166.0": (
+        "sha512-2Szlp1l1cz5TX1ccpX4Zok3DZrot9xeZe0km+6/1v8JmqxADwyJxKBJah4dBymkwtS25j/u6dipJusTOI97Z8Q==",
+        "sha512-CxDm3+D1cpbGJeHrdzINoG+3wn9BVncP4qpZaaNYkxe8iPtRJOYyCJnnPoVjWRIBvI9vPKbRoifsMSA5xDaUpw==",
+    ),
+    "0.167.0": (
+        "sha512-1FSQgbTIKAdTub5Ln6z36NT4eXDmBRkinfigzycbgn9yLZdJ3UdkQZqr0N7jnl8/D1xxT/Pz3Fl2l7S2dmRaFA==",
+        "sha512-FNc7danfUng9Sp6w+Fh7kofNHHZpA6VMyNKWsWrS3OwHly69gywTWeiuwrUPXpJSho8Df4xqRsHfHRPzj7zYQg==",
+    ),
+}
+
+
+@dataclass(frozen=True)
+class NpmRelease:
+    package: str
+    version: str
+    integrity: str | None
+    rebuild: bool = False
+    native_integrity: str | None = None
+
+
+def _recipe(name: str, version: str) -> NpmRelease:
+    if name == "codex":
+        if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version):
+            raise ValueError("Codex version must be an exact X.Y.Z release")
+        wrapper, native = CODEX_RELEASES.get(version, (None, None))
+        return NpmRelease(CODEX_PACKAGE, version, wrapper, native_integrity=native)
+    release = openclaw.RELEASES.get(version)
+    return NpmRelease("openclaw", version, release.integrity if release else None,
+                      rebuild=release is None or release.rebuild)
 
 
 def default_root() -> Path:
@@ -78,33 +112,42 @@ def _toolchain(root: Path) -> Path:
     return target
 
 
-def _locked_integrity(lockfile: Path, version: str, release: openclaw.Release | None) -> str:
-    package = json.loads(lockfile.read_text())["packages"]["node_modules/openclaw"]
+def _check_locked_package(package: dict, name: str, version: str, expected: str | None) -> str:
     integrity = package.get("integrity")
-    if release is None:
-        url = f"https://registry.npmjs.org/openclaw/-/openclaw-{version}.tgz"
+    if expected is None:
+        filename = name.rsplit("/", 1)[-1]
+        url = f"https://registry.npmjs.org/{name}/-/{filename}-{version}.tgz"
         matches = (package.get("resolved") == url and isinstance(integrity, str)
                    and re.fullmatch(r"sha512-[A-Za-z0-9+/]{86}==", integrity))
     else:
-        matches = integrity == release.integrity
+        matches = integrity == expected
     if package.get("version") != version or not matches:
-        raise ValueError(f"npm lock does not match the published openclaw@{version} package")
+        raise ValueError(f"npm lock does not match the published {name}@{version} package")
     return integrity
 
 
-def _install_package(instance: Path, node_root: Path, version: str, release: openclaw.Release | None) -> Path:
+def _locked_integrity(lockfile: Path, release: NpmRelease) -> str:
+    packages = json.loads(lockfile.read_text())["packages"]
+    integrity = _check_locked_package(packages.get(f"node_modules/{release.package}", {}),
+                                      release.package, release.version, release.integrity)
+    if release.package == CODEX_PACKAGE:
+        _check_locked_package(packages.get(f"node_modules/{CODEX_NATIVE_PACKAGE}", {}),
+                              CODEX_PACKAGE, f"{release.version}-linux-x64", release.native_integrity)
+    return integrity
+
+
+def _install_package(instance: Path, node_root: Path, release: NpmRelease) -> Path:
     project = instance / "package"
     project.mkdir()
-    manifest = {"private": True, "dependencies": {"openclaw": version}}
-    rebuild = release is None or release.rebuild
-    if rebuild:
-        manifest["allowScripts"] = {f"openclaw@{version}": True}
+    manifest = {"private": True, "dependencies": {release.package: release.version}}
+    if release.rebuild:
+        manifest["allowScripts"] = {f"{release.package}@{release.version}": True}
     (project / "package.json").write_text(
         json.dumps(manifest) + "\n",
         encoding="utf-8",
     )
     lockfile = project / "package-lock.json"
-    print(f"Installing openclaw@{version}", file=sys.stderr)
+    print(f"Installing {release.package}@{release.version}", file=sys.stderr)
     with tempfile.TemporaryDirectory(prefix=".npm-", dir=instance) as temporary:
         scratch = Path(temporary)
         work = scratch / "empty"
@@ -125,7 +168,7 @@ def _install_package(instance: Path, node_root: Path, version: str, release: ope
                "--no-audit", "--no-fund", "--no-update-notifier"]
 
         def run_npm(*arguments: str) -> None:
-            argv = sandbox.command([*npm, *arguments], platform=openclaw.ROOT,
+            argv = sandbox.command([*npm, *arguments], platform=ROOT,
                                    work_root=work, repo=work, task_dir=project, env=env,
                                    runtime_paths=(node_root,), writable_paths=(scratch,),
                                    platform_interpreter=False)
@@ -135,17 +178,17 @@ def _install_package(instance: Path, node_root: Path, version: str, release: ope
                 raise ValueError(f"npm {arguments[0]} failed with exit code {result.returncode}")
 
         run_npm("install", "--ignore-scripts", "--package-lock-only")
-        _locked_integrity(lockfile, version, release)
+        _locked_integrity(lockfile, release)
         run_npm("ci", "--ignore-scripts")
-        if rebuild:
-            run_npm("rebuild", str(project / "node_modules/openclaw"))
+        if release.rebuild:
+            run_npm("rebuild", str(project / "node_modules" / release.package))
     return lockfile
 
 
-def _existing(receipt_path: Path, version: str, node_root: Path) -> Path:
+def _existing(receipt_path: Path, release: NpmRelease) -> Path:
     receipt = json.loads(receipt_path.read_text())
     name = receipt.get("instance")
-    if (receipt.get("schema") != 1 or receipt.get("version") != version
+    if (receipt.get("schema") != 1 or receipt.get("version") != release.version
             or receipt.get("node_version") != NODE_VERSION
             or receipt.get("npm_version") != NPM_VERSION or not isinstance(name, str)
             or not name.startswith("install-") or Path(name).name != name):
@@ -154,60 +197,85 @@ def _existing(receipt_path: Path, version: str, node_root: Path) -> Path:
     harness = instance / "harness"
     manifest = harness / "harness.json"
     lockfile = instance / "package" / "package-lock.json"
-    release = openclaw.RELEASES.get(version)
     if (instance.is_symlink() or harness.is_symlink()
             or receipt.get("manifest_sha256") != digest(manifest)
             or receipt.get("lock_sha256") != digest(lockfile)
-            or receipt.get("package_integrity") != _locked_integrity(lockfile, version, release)):
-        raise ValueError(f"installed OpenClaw binding or lock changed: {instance}")
-    resolved = openclaw._helper(harness).resolve(harness, {})
-    if (resolved["node"] != str(node_root / "bin/node")
-            or resolved["version"] != version
-            or resolved["entrypoint"] != str(lockfile.parent / "node_modules/openclaw/openclaw.mjs")):
-        raise ValueError(f"installed OpenClaw binding differs from the installation receipt: {harness}")
-    if release is not None and resolved["source_identity"] != openclaw.source_identity(version):
-        raise ValueError(f"installed OpenClaw source identity differs from the verified release: {harness}")
-    openclaw.warn_unverified(resolved["source_identity"])
+            or receipt.get("package_integrity") != _locked_integrity(lockfile, release)):
+        raise ValueError(f"installed {release.package} binding or lock changed: {instance}")
     return harness
 
 
-def install_openclaw(version: str, root: Path) -> Path:
-    source = openclaw.source_identity(version)
-    recipe = openclaw.RELEASES.get(version)
+def _check_binding(record: dict, node: Path, launcher: Path, expected_version: str) -> None:
+    if record["version"] != expected_version:
+        raise ValueError(f"CLI version mismatch: expected {expected_version}, found {record['version']}")
+    if record["argv"] != [str(node), str(launcher)]:
+        raise ValueError(f"CLI binding differs from the selected Node or launcher: {launcher}")
+
+
+def install_harness(name: str, version: str, root: Path) -> Path:
+    if name not in ("codex", "openclaw"):
+        raise ValueError(f"unknown base harness {name!r}")
+    recipe = _recipe(name, version)
+    if name == "codex":
+        template = ROOT / "base_harness/codex"
+        helper, source = codex._adapter, None
+        entrypoint, expected_version = "bin/codex.js", f"codex-cli {version}"
+    else:
+        template = openclaw.TEMPLATE
+        helper, source = openclaw._helper, openclaw.source_identity(version)
+        entrypoint, expected_version = "openclaw.mjs", version
     if platform.system() != "Linux" or platform.machine() != "x86_64":
-        raise ValueError("OpenClaw installation currently supports Linux x86-64")
+        raise ValueError(f"{name} installation currently supports Linux x86-64")
     root = root.expanduser().resolve()
-    forbidden = (openclaw.ROOT, main_checkout(openclaw.ROOT))
+    forbidden = (ROOT, main_checkout(ROOT))
     if root.is_relative_to("/tmp") or any(root.is_relative_to(path) or path.is_relative_to(root)
                                          for path in forbidden):
         raise ValueError("choose an installation root outside /tmp and the platform checkout")
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    openclaw._helper(TEMPLATE).validate_binding(root, forbidden=forbidden)
+    helper(template).validate_binding(root, forbidden=forbidden)
     with locked(root, timeout_s=1800):
-        release = root / "openclaw" / version
+        release = root / name / version
         if release.resolve() != release:
-            raise ValueError(f"OpenClaw release must be stored inside the installation root: {release}")
+            raise ValueError(f"{name} release must be stored inside the installation root: {release}")
         release.mkdir(parents=True, exist_ok=True)
         receipt_path = release / "installation.json"
         if receipt_path.is_symlink():
-            raise ValueError(f"OpenClaw installation receipt must be an owned file: {receipt_path}")
+            raise ValueError(f"{name} installation receipt must be an owned file: {receipt_path}")
         node_root = _toolchain(root)
+        node = node_root / "bin/node"
+        launcher_path = Path("package/node_modules") / recipe.package / entrypoint
+        if name == "codex" and recipe.integrity is None:
+            print(f"Warning: Codex {version} is unverified. Trying the Codex adapter.", file=sys.stderr)
         if receipt_path.exists():
-            return _existing(receipt_path, version, node_root)
-        openclaw.warn_unverified(source)
+            harness = _existing(receipt_path, recipe)
+            record = helper(harness).resolve(harness, {})
+            _check_binding(record, node, harness.parent / launcher_path, expected_version)
+            if source is not None:
+                if recipe.integrity is not None and record["source_identity"] != source:
+                    raise ValueError(f"installed OpenClaw source identity differs from the verified release: {harness}")
+                openclaw.warn_unverified(record["source_identity"])
+            return harness
+        if source is not None:
+            openclaw.warn_unverified(source)
         instance = Path(tempfile.mkdtemp(prefix="install-", dir=release))
         try:
-            lockfile = _install_package(instance, node_root, version, recipe)
-            launcher = lockfile.parent / "node_modules/openclaw/openclaw.mjs"
+            lockfile = _install_package(instance, node_root, recipe)
+            launcher = instance / launcher_path
             harness = instance / "harness"
-            shutil.copytree(TEMPLATE, harness, ignore=shutil.ignore_patterns(
+            shutil.copytree(template, harness, ignore=shutil.ignore_patterns(
                 ".git", ".env", ".state", "__pycache__", "*.pyc"))
-            (harness / "runtime-identity.json").write_text(json.dumps(source, indent=2) + "\n", encoding="utf-8")
-            openclaw.configure(harness, str(launcher), node=str(node_root / "bin/node"),
-                               runtime_paths=(lockfile.parent,), env={"PATH": os.defpath}, warn=False)
+            env = {"PATH": os.defpath}
+            if source is None:
+                record = codex.configure(harness, str(launcher), node=str(node), env=env,
+                                         sandbox_only=recipe.integrity is None)
+            else:
+                (harness / "runtime-identity.json").write_text(json.dumps(source, indent=2) + "\n", encoding="utf-8")
+                record = openclaw.configure(harness, str(launcher), node=str(node),
+                                             runtime_paths=(lockfile.parent,), env=env, warn=False)
+            _check_binding(record, node, launcher, expected_version)
             atomic_json(receipt_path, {"schema": 1, "version": version, "node_version": NODE_VERSION,
                         "npm_version": NPM_VERSION, "instance": instance.name,
-                        "package_integrity": _locked_integrity(lockfile, version, recipe),
+                        "package_integrity": _locked_integrity(lockfile, recipe),
                         "lock_sha256": digest(lockfile), "manifest_sha256": digest(harness / "harness.json")})
         finally:
             if not receipt_path.exists():
@@ -220,20 +288,23 @@ def main(argv: list[str] | None = None) -> int:
     actions = parser.add_subparsers(dest="action", required=True)
     actions.add_parser("list", help="list verified harness versions")
     install = actions.add_parser("install", help="install and bind a harness version")
-    install.add_argument("harness", choices=("openclaw",))
+    catalogs = {"openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES}
+    install.add_argument("harness", choices=catalogs)
     install.add_argument("--version", help="exact release version (default: latest verified version)")
     install.add_argument("--install-root", type=Path, default=default_root())
     args = parser.parse_args(argv)
     if args.action == "list":
-        for version in openclaw.RELEASES:
-            print(f"openclaw {version} (Node.js {NODE_VERSION}, npm {NPM_VERSION}, Linux x86-64)")
+        for name, releases in catalogs.items():
+            for version in releases:
+                print(f"{name} {version} (Node.js {NODE_VERSION}, npm {NPM_VERSION}, Linux x86-64)")
         return 0
     try:
         version = args.version
         if version is None:
-            version = openclaw.latest_verified_version()
-            print(f"Using latest verified OpenClaw version {version} (--version omitted).", file=sys.stderr)
-        harness = install_openclaw(version, args.install_root)
+            version = max(catalogs[args.harness], key=lambda release: tuple(map(int, release.split("."))))
+            name = "OpenClaw" if args.harness == "openclaw" else "Codex"
+            print(f"Using latest verified {name} version {version} (--version omitted).", file=sys.stderr)
+        harness = install_harness(args.harness, version, args.install_root)
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:
         print(f"{parser.prog}: {exc}", file=sys.stderr)
         return 1

@@ -614,8 +614,8 @@ def test_install_and_reuse_explicit_unverified_version(installed, monkeypatch, c
     integrity = preparation.RELEASES["2026.11.2"].integrity
     monkeypatch.setattr(install_harness, "_toolchain", lambda _root: node.parent.parent)
 
-    def install_package(instance, _node_root, requested, release):
-        assert requested == version and release is None
+    def install_package(instance, _node_root, release):
+        assert release.version == version and release.integrity is None
         project = instance / "package"
         package(project / "node_modules/openclaw", version)
         lockfile = project / "package-lock.json"
