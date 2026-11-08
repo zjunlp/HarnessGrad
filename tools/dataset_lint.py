@@ -113,11 +113,8 @@ def _outside_platform(path: Path, root: Path) -> bool:
     return p != root.resolve() and root.resolve() not in p.parents
 
 
-#: Keys an entry may carry, by kind. Used to catch the one mistake a dict makes silently:
-#: a **duplicate key**, which Python keeps the last value of, so the entry that runs is not
-#: the entry that was read. Measured: a `--fetch` built `.../valid.jsonl/valid.jsonl` from
-#: an entry that set `dst` twice, and the 404 it produced named the far end of the URL
-#: rather than the dict.
+# Known download keys shared by the existing declarations. The schema adds
+# optional keys that belong to a single download kind.
 _ENTRY_KEYS = {
     "kind", "name", "version", "size", "note", "url", "repo", "file", "files",
     "sha256", "dst", "extract_to", "package", "manifest", "prepare",
@@ -126,14 +123,12 @@ _ENTRY_KEYS = {
 }
 
 
-def lint_entry_keys(entry: dict, where: str, result: Result) -> None:
-    """Duplicate detection needs the *source text*; `json`/Python have already collapsed
-    it. So this reads the module source for the `downloads()` return and looks for a key
-    appearing twice inside one brace group -- a heuristic, and it is reported as one."""
-    unknown = sorted(set(entry) - _ENTRY_KEYS)
+def lint_entry_keys(entry: dict, where: str, result: Result, *, optional=()) -> None:
+    allowed = _ENTRY_KEYS.union(optional)
+    unknown = sorted(set(entry) - allowed)
     if unknown:
         result.error(f"{where} has unknown key(s) {unknown}; known keys are "
-                     f"{sorted(_ENTRY_KEYS)}")
+                     f"{sorted(allowed)}")
 
 
 def lint_downloads(downloads, schema: dict, result: Result) -> None:
@@ -150,9 +145,9 @@ def lint_downloads(downloads, schema: dict, result: Result) -> None:
         if kind not in spec["kinds"]:
             result.error(f"{where} has kind {kind!r}; known kinds are {spec['kinds']}")
             continue
-        lint_entry_keys(entry, where, result)
-        required = list(spec["common_required"]) + list(
-            spec["by_kind"].get(kind, {}).get("required", []))
+        kind_spec = spec["by_kind"].get(kind, {})
+        lint_entry_keys(entry, where, result, optional=kind_spec.get("optional", ()))
+        required = list(spec["common_required"]) + list(kind_spec.get("required", []))
         missing = [key for key in required if not entry.get(key)]
         if missing:
             result.error(f"{where} ({entry.get('name')!r}) is missing {missing}")

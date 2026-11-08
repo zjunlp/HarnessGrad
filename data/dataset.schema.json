@@ -46,7 +46,12 @@
     "common_required": ["kind", "name", "version", "size", "note"],
     "manifest": "Optional repository-relative path to an existing source file and checksum inventory; used for documentation links only.",
     "by_kind": {
-      "authored": {"required": ["path", "sha256"]},
+      "authored": {
+        "required": ["path", "sha256"],
+        "optional": ["availability", "detail"],
+        "availability": "Read-only bundle state: ready, missing or invalid.",
+        "detail": "Diagnostic for a missing or invalid bundle."
+      },
       "generated": {"required": ["dst", "sha256", "prepare"]},
       "http": {"required": ["url", "dst"]},
       "hf-file": {"required": ["repo", "file", "dst"]},
