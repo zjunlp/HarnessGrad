@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Install HarnessGrad from source on Linux, verify it with a mock control, and inspect the results.
+description: Use HarnessGrad on Linux from source or an installed wheel, verify a mock control, and inspect results.
 ---
 
 ## Install on Linux
@@ -25,6 +25,14 @@ and installing build tools may require network access; offline installation need
 those prerequisites already available. The platform uses the Python standard
 library at runtime. Harnesses, datasets, services and scorers use their own
 declared dependencies; prepare them outside the platform environment.
+
+For an installed wheel in an external Python 3.12+ environment, use module
+entrypoints instead of checkout-relative scripts. Follow the
+[installed-wheel guide](https://github.com/zjunlp/HarnessGrad/blob/main/docs/wheel-console.md)
+for Loop template discovery and preparation, `python -m tools.check_first_use`,
+and `harnessgrad run --preset quickstart` with explicit external `--runs-root`
+and `--work-root`. A bundled preset does not provision its dependencies.
+The commands below use a source checkout.
 
 ## Prepare Loop and run the mock control
 
@@ -96,6 +104,16 @@ DS-1000 has a separate [CPU runtime preparation guide](https://github.com/zjunlp
 preparing that profile does not prove actor execution or full benchmark readiness.
 Container routes also require the selected Harness's image-specific preparation.
 
+`native_harbor` and `jobbench_renderer` are dependency component profiles,
+not dataset adapters. The former supplies the trusted Harbor verifier; the latter
+prepares JobBench author data and is separate from execution and judge runtimes.
+Use the [Harbor preparation and migration guide](https://github.com/zjunlp/HarnessGrad/blob/main/data/scaffolds/native_harbor_runtime/README.md)
+and [JobBench renderer guide](https://github.com/zjunlp/HarnessGrad/blob/main/data/datasets/jobbench/README.md#renderer-preparation-runtime).
+Their `check` / `--check-runtime` operations are read-only. Preparation or a probe
+is not task execution evidence; missing evidence remains missing. Old manifests
+without the current external runtime binding require explicit component and task
+repreparation, then a fresh baseline measurement; do not fabricate restored evidence.
+
 ## Configure a research run
 
 A real experiment may need four independently configured model roles:
@@ -144,6 +162,11 @@ export HG_CONSOLE_RUNS="$PWD/runs"
 python console/server.py --port 4460
 ```
 
+For an installed wheel, set `HG_CONSOLE_RUNS` to your external result root and use
+`python -m console.server --port 4460`; see the
+[wheel Console guide](https://github.com/zjunlp/HarnessGrad/blob/main/docs/wheel-console.md)
+for writable state locations and launch prerequisites.
+
 Open `http://127.0.0.1:4460/`. If the list is empty, check `HG_CONSOLE_RUNS`;
 if the port is occupied, choose another port. Runs, Version and Trace show stored
 results. Evidence export downloads filtered records, including failed or unmeasured
@@ -157,3 +180,12 @@ A zero-round candidate trial can still measure the entire selected pool; if the
 task count is unknown, resolve it before committing to the run and budget. Review
 the task pool, model roles and shared budget in the launch preview. Missing values
 are shown as `—` or an error, rather than a zero budget.
+
+Workbench editing currently supports Codex and DSH headless. OpenCode, MiniSWE,
+MiniAgent and OpenClaw remain visible but unavailable as Workbench editors;
+they do not fall back to Codex. Capability inspection does not invoke a CLI or
+model. Codex resume is scoped to candidate, driver and actual runtime binding;
+legacy sessions are retained, and binding drift cannot reuse an old thread.
+DSH uses one-shot requests without Codex session reuse. Follow the
+[Workbench setup and session guide](https://github.com/zjunlp/HarnessGrad/blob/main/console/WORKBENCH.md)
+for complete binding requirements and legacy-session migration.

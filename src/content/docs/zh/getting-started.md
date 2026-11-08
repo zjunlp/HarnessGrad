@@ -1,6 +1,6 @@
 ---
 title: 快速入门
-description: 在 Linux 上从源码安装 HarnessGrad，用模拟控制验证并查看结果。
+description: 在 Linux 上通过源码或已安装 wheel 使用 HarnessGrad，用模拟控制验证并查看结果。
 ---
 
 ## 在 Linux 上安装
@@ -22,6 +22,12 @@ uv pip install -e .
 请先按诊断修复。创建环境及安装构建工具可能需要联网；离线安装要求这些依赖已备好。
 平台运行时使用 Python 标准库；Harness、数据集、服务和评分器按各自声明，
 在平台环境之外准备独立依赖。
+
+若已在外部 Python 3.12+ 环境安装 wheel，请使用模块入口代替仓库相对路径脚本。
+按 [wheel 使用指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/wheel-console.md)
+定位并准备 Loop 模板，运行 `python -m tools.check_first_use`，并用
+`harnessgrad run --preset quickstart` 显式指定外部 `--runs-root` 和 `--work-root`。
+内置 preset 不会自动准备依赖。以下命令面向源码仓库。
 
 ## 准备 Loop 并运行模拟控制
 
@@ -84,6 +90,14 @@ DS-1000 有单独的 [CPU 运行时准备指南](https://github.com/zjunlp/Harne
 准备该 profile 不能证明 actor 已执行或完整基准已就绪。
 容器路线还需按所选 Harness 的说明完成镜像专用准备。
 
+`native_harbor` 和 `jobbench_renderer` 是依赖组件 profile，不是数据集适配器。
+前者提供可信 Harbor 验证器；后者准备 JobBench 作者数据，与执行及 judge 运行时分开。
+请按 [Harbor 准备与迁移指南](https://github.com/zjunlp/HarnessGrad/blob/main/data/scaffolds/native_harbor_runtime/README.md)
+和 [JobBench renderer 指南](https://github.com/zjunlp/HarnessGrad/blob/main/data/datasets/jobbench/README.md#renderer-preparation-runtime)
+操作。其 `check` / `--check-runtime` 只读；准备或探测不能作为任务执行证据，
+缺失证据仍是缺失。旧 manifest 缺少当前外部运行时绑定时，须显式重新准备组件及任务，
+再重新测量基线，不能补造恢复后的证据。
+
 ## 配置研究实验
 
 真实实验可能需要分别配置四类模型角色：
@@ -122,6 +136,10 @@ export HG_CONSOLE_RUNS="$PWD/runs"
 python console/server.py --port 4460
 ```
 
+已安装 wheel 时，将 `HG_CONSOLE_RUNS` 指向外部结果根目录，并使用
+`python -m console.server --port 4460`；可写状态目录和启动条件见
+[wheel Console 指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/wheel-console.md)。
+
 直接打开 `http://127.0.0.1:4460/`。列表为空时先检查 `HG_CONSOLE_RUNS`；端口被占用时
 换一个端口。Runs、Version 和 Trace 可查看已有结果。证据导出只下载筛选后的记录，
 包括失败或未测量的尝试，不运行实验；范围和隐私见[证据导出指南](https://github.com/zjunlp/HarnessGrad/blob/main/docs/evidence-export.md)。
@@ -129,3 +147,9 @@ python console/server.py --port 4460
 观察无需模型或启动预算。启动实验或候选试跑需要额外的 [Console 配置](https://github.com/zjunlp/HarnessGrad/blob/main/console/README.md)。
 零改进轮次的候选试跑仍可能测量整个选定任务池；任务数量未知时，应先确认范围再决定运行和预算。
 启动预览中检查任务池、模型角色和共享预算；缺失值显示为 `—` 或错误，不用零预算代替未知。
+
+Workbench 编辑当前支持 Codex 和 DSH headless。OpenCode、MiniSWE、MiniAgent 和
+OpenClaw 仍显示在界面中，但不能作为 Workbench 编辑器，也不会回退到 Codex。
+能力检查不调用 CLI 或模型。Codex 续接会话按候选、驱动和实际运行时绑定隔离；
+旧会话保留，绑定变化后不能复用旧线程。DSH 使用单次请求，不复用 Codex 会话。
+完整绑定要求和旧会话迁移见 [Workbench 配置与会话指南](https://github.com/zjunlp/HarnessGrad/blob/main/console/WORKBENCH.md)。
