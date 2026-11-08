@@ -135,16 +135,16 @@ It never imports or executes acquired evaluator code. Ordinary pytest runs test
 this refusal and integrity handling using inert fabricated files; their success
 does not imply that acquisition passed. No gate is skipped because source is absent.
 
-Run the fabricated source-contract, selected/privacy and registry regressions
-with pytest scratch outside the platform. `--basetemp` must be **OUTSIDE** the
-platform because driver-based tests use `tmp_path` as a harness work root:
+From the repository root, run the synthetic source-contract and selected-input
+privacy tests, then validate the blocker registry. If you set `TMPDIR`, choose
+a directory outside the checkout for pytest scratch space.
 
 ```sh
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. \
-  python3 -m pytest -q -p no:cacheprovider \
-  --basetemp=/tmp/harnessgrad-pytest-bfcl-codex184-pytest \
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 \
+  python3 -m pytest -q -p no:cacheprovider --basetemp="$(mktemp -d)" \
   tests/quality/test_bfcl_ast_source_contract.py \
-  tests/quality/test_bfcl_selected.py tests/quality/test_dataset_blockers.py
+  tests/quality/test_bfcl_selected.py
+PYTHONDONTWRITEBYTECODE=1 python3 tools/check_dataset_blockers.py
 ```
 
 Retain the current name metric as an explicitly nonofficial diagnostic. Future

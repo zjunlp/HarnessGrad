@@ -27,8 +27,6 @@ def test_vendored_sources_match_pinned_inventory():
 def test_gepa_frontier_and_prune_match_native_source_over_random_populations():
     # Execute an isolated, source-pinned copy with only its type-only Snapshot
     # import replaced. This neither imports upstream nor trusts our own selector.
-    source = Path("/tmp/native-e9c7667945f9/upstream/algorithms/gepa/_population.py")
-    # The actual source is copied into the worktree for portable tests.
     source = Path(runtime.__file__).parent / "vendor/gepa/_population.py.reference"
     # The vendored file's only dependency is a type-only import of `Snapshot`; replace it by
     # pattern, so this test does not have to spell the source package's name to run its bytes.

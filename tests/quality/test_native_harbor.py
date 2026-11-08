@@ -1,4 +1,14 @@
-"""Native Harbor protocols must not silently become answer/exit-code proxies."""
+"""Native Harbor protocols must not silently become answer/exit-code proxies.
+
+Set HG_TEST_NATIVE_HARBOR_RUNTIME_ROOT to the managed Harbor 0.23 artifact store
+for the external verifier controls. Set HG_HARBOR_TEST_SWE_PRO_REPLAY to the
+pinned patch_replay.py file for the Pro control. For the standalone JobBench
+judge control, set HG_HARBOR_TEST_JOBBENCH_SOURCE to the pinned checkout and
+HG_HARBOR_TEST_JOBBENCH_PYTHON to a separately prepared interpreter with the
+judge's dependencies, including openai and openpyxl. This is not the Harbor
+execution environment or the platform Python.
+Unset optional paths skip their controls; an explicitly supplied invalid path fails.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -10,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import uuid
 import zipfile
 
 import pytest
@@ -331,22 +342,69 @@ def test_native_public_runtime_requires_immutable_identity_and_resource_limits(m
 def test_native_case_keeps_private_collect_and_judge_out_of_public_task(tmp_path,monkeypatch):
     source_task(tmp_path)
     row=native.inventory(tmp_path,'deepswe')[0]
-    monkeypatch.setattr(native,'runtime',lambda row:{'actor':{'workdir':'/app'}})
+    venv = tmp_path / 'verifier-venv'
+    binding = {'python': str(venv / 'bin/python'), 'runtime_paths': [str(venv)]}
+    monkeypatch.setattr(native, 'runtime', lambda row: {
+        'actor': {'workdir': '/app'}, 'harbor_runtime': binding,
+    })
     spec=native.verifier(row)
     case=json.loads(spec['inputs'][0]['content'])
-    assert spec['argv']==['harnessgrad-native','deepswe']
+    assert spec['argv'] == [binding['python'], '-I', '-B', str(native.RUNTIME_ASSETS / 'harbor_entry.py')]
+    assert spec['python_runtime'] == binding
     assert spec['native_benchmark']['record_path']=='native_episode'
     assert case['collect']==row.declaration['verifier']['collect']
     assert 'collect' not in native.public_task(row)
     assert 'source_sha256' not in native.public_task(row)
 
 
-def _control_image(tmp_path, *, verifier=False):
+@pytest.fixture
+def native_image_builder(request):
+    """Build isolated test images and remove only images owned by this test."""
+    docker = shutil.which('docker')
+    label = 'org.harnessgrad.test.native-harbor=' + uuid.uuid4().hex
+    attempted = False
+
+    def cleanup():
+        if not attempted:
+            return
+        listing = subprocess.run([docker, 'image', 'ls', '--all', '--quiet', '--no-trunc',
+                                  '--filter', 'label=' + label], capture_output=True,
+                                 text=True, timeout=30)
+        assert listing.returncode == 0, listing.stderr
+        errors = []
+        for image in set(listing.stdout.split()):
+            removed = subprocess.run([docker, 'image', 'rm', image], capture_output=True,
+                                     text=True, timeout=30)
+            if removed.returncode:
+                errors.append(removed.stderr)
+            inspect = subprocess.run([docker, 'image', 'inspect', image], capture_output=True,
+                                    text=True, timeout=30)
+            if inspect.returncode == 0 or 'no such' not in inspect.stderr.lower():
+                errors.append('image absence not confirmed: ' + image)
+        assert not errors, errors
+
+    request.addfinalizer(cleanup)
+
+    def build(folder):
+        nonlocal attempted
+        if not docker:
+            pytest.skip('Docker not installed')
+        base = subprocess.run([docker, 'image', 'inspect', 'python:3.12-bookworm'],
+                              capture_output=True, timeout=30)
+        if base.returncode:
+            pytest.skip('cached Python 3.12 control image or usable Docker daemon unavailable')
+        attempted = True
+        process = subprocess.run([docker, 'build', '--network=none', '--pull=false',
+                                  '--label', label, '-q', str(folder)], capture_output=True,
+                                 text=True, errors='replace', timeout=60)
+        assert process.returncode == 0, process.stderr
+        return process.stdout.strip()
+
+    return build
+
+
+def _control_image(tmp_path, build, *, verifier=False):
     """A tiny local native fixture: no pulls, no model, no benchmark image download."""
-    docker=shutil.which('docker')
-    if not docker:pytest.skip('Docker not installed')
-    base=subprocess.run([docker,'image','inspect','python:3.12-bookworm'],capture_output=True)
-    if base.returncode:pytest.skip('local Python3.12 control base image unavailable')
     folder=tmp_path/('verifier-build' if verifier else 'actor-build');folder.mkdir()
     if verifier:
         script='''#!/bin/bash
@@ -364,17 +422,27 @@ EOF
     else:
         recipe='FROM python:3.12-bookworm\nRUN mkdir -p /app/.logs/artifacts /app/.logs/agent /workspace/output && ln -s /app/.logs /logs\nWORKDIR /app\n'
     (folder/'Dockerfile').write_text(recipe)
-    process=subprocess.run([docker,'build','--network=none','-q',str(folder)],capture_output=True,
-                           text=True,errors='replace',timeout=60)
-    assert process.returncode==0,process.stderr
-    return process.stdout.strip()
+    return build(folder)
 
 
-@pytest.mark.skipif(not Path('/tmp/hg-flash-harbor-runtime/bin/python').is_file(),reason='selected Harbor0.23 control interpreter absent')
-def test_real_observed_native_world_exec_and_sealed_patch(tmp_path):
+def _test_path(variable):
+    configured = os.environ.get(variable)
+    if not configured:
+        pytest.skip(f'{variable} is not configured')
+    return Path(configured).expanduser().absolute()
+
+
+@pytest.fixture(scope='module')
+def harbor_binding():
+    from data.scaffolds.native_harbor_runtime import python_runtime
+
+    return python_runtime.resolve(root=_test_path('HG_TEST_NATIVE_HARBOR_RUNTIME_ROOT'))
+
+
+def test_real_observed_native_world_exec_and_sealed_patch(tmp_path,native_image_builder):
     from data.scaffolds.native_harbor_runtime.session import Session
     folder=source_task(tmp_path/'native')
-    image=_control_image(tmp_path)
+    image=_control_image(tmp_path,native_image_builder)
     actor={'kind':'exec','backend':'observed-v1','image':image,'python':'/usr/local/bin/python3',
            'workdir':'/app','image_workspace':'/app','network':'none','cpus':1,'memory_mb':256,'pids':64,
            'filesystems':{p:{'bytes':64<<20,'inodes':16384} for p in ('/app','/tmp','/dev','/dev/shm')}}
@@ -383,20 +451,24 @@ def test_real_observed_native_world_exec_and_sealed_patch(tmp_path):
           'actor_timeout_s':20,'collect':[],'artifact_paths':['/logs/artifacts/model.patch']}
     binding={'adapter_id':case['task_id'],'run_id':'control','trial_id':'t','manifest_sha256':case['source_sha256']}
     session=Session(case,binding)
-    assert session.handle('exec',{'command':"printf 'PATCH_BYTES' > /logs/artifacts/model.patch"})['returncode']==0
-    assert session.handle('finish',{})['finished']
-    record=session.record()
-    assert record['actor_runtime']['cleanup']['complete'],record
-    assert record['artifacts']['/logs/artifacts/model.patch']['sha256']==hashlib.sha256(b'PATCH_BYTES').hexdigest()
-    with pytest.raises(ValueError,match='already sealed'):
-        session.handle('exec',{'command':'true'})
+    try:
+        assert session.handle('exec',{'command':"printf 'PATCH_BYTES' > /logs/artifacts/model.patch"})['returncode']==0
+        assert session.handle('finish',{})['finished']
+        record=session.record()
+        assert record['actor_runtime']['cleanup']['complete'],record
+        assert record['artifacts']['/logs/artifacts/model.patch']['sha256']==hashlib.sha256(b'PATCH_BYTES').hexdigest()
+        with pytest.raises(ValueError,match='already sealed'):
+            session.handle('exec',{'command':'true'})
+    finally:
+        session.runtime.close()
 
 
-@pytest.mark.skipif(not Path('/tmp/hg-flash-harbor-runtime/bin/python').is_file(),reason='selected Harbor0.23 control interpreter absent')
 @pytest.mark.parametrize('answer,expected',[('correct',1.0),('incorrect',0.0)])
-def test_real_native_harbor_fresh_separate_verifier(tmp_path,answer,expected):
-    actor_image=_control_image(tmp_path)
-    verifier_image=_control_image(tmp_path,verifier=True)
+def test_real_native_harbor_fresh_separate_verifier(harbor_binding,tmp_path,native_image_builder,answer,expected):
+    from harnessgrad.native_judge_identity import selection
+
+    actor_image=_control_image(tmp_path,native_image_builder)
+    verifier_image=_control_image(tmp_path,native_image_builder,verifier=True)
     folder=tmp_path/'native/control';folder.mkdir(parents=True);(folder/'tests').mkdir();(folder/'environment').mkdir()
     (folder/'instruction.md').write_text('Produce one final deliverable in /workspace/output.')
     (folder/'tests/test.sh').write_text('# native private tests exist only in verifier image')
@@ -428,9 +500,11 @@ memory_mb=256
     case={'dataset':'jobbench','task_id':'jobbench/control','directory':str(folder),
           'source_sha256':native._tree_identity(folder),'runtime':{'actor':{'workdir':'/workspace'},
           'replay_actor_image':actor_image,'verifier_image':verifier_image,
-          'harbor_python':'/tmp/hg-flash-harbor-runtime/bin/python'}}
+          'harbor_python':harbor_binding['python'],'harbor_runtime':harbor_binding}}
+    case['runtime'].update(selection({'HG_JUDGE_HARBOR_BASE_URL':'http://127.0.0.1:9/v1',
+                                      'HG_JUDGE_HARBOR_MODEL':'authored-control'}))
     request={'case':case,'artifact_root':str(exports),'task_projection':str(folder),'trial_root':str(tmp_path/'trials'),
-             'source_job':str(tmp_path/'source-job'),'verifier_env':{}}
+             'source_job':str(tmp_path/'source-job'),'verifier_env':{'JUDGE_MODEL':'authored-control'}}
     file=tmp_path/'request.json';file.write_text(json.dumps(request));result_path=tmp_path/'result.json'
     command=[case['runtime']['harbor_python'],'-I',str(ROOT/'data/scaffolds/native_harbor_runtime/harbor_entry.py'),str(file),str(result_path)]
     process=subprocess.run(command,capture_output=True,text=True,errors='replace',timeout=100)
@@ -500,12 +574,12 @@ def test_unselected_native_runtime_does_not_block_loading_other_tasks(tmp_path,m
     assert checked==[]
 
 
-@pytest.mark.skipif(not Path('/tmp/hg-flash-harbor-runtime/bin/python').is_file(),reason='selected Harbor0.23 control interpreter absent')
 @pytest.mark.parametrize('answer,expected',[('1',1.0),('0',0.0)])
-def test_official_pro_patch_replay_source_in_fresh_git_image(tmp_path,answer,expected):
+def test_official_pro_patch_replay_source_in_fresh_git_image(harbor_binding,tmp_path,native_image_builder,answer,expected):
     import base64
-    source=Path('/tmp/flash-native-upstream/swe_bench_pro/v2/tooling/patch_replay.py')
-    if not source.is_file():pytest.skip('pinned official Pro tooling not acquired')
+    source = _test_path('HG_HARBOR_TEST_SWE_PRO_REPLAY')
+    if not source.is_file():
+        pytest.fail('HG_HARBOR_TEST_SWE_PRO_REPLAY must name the pinned patch_replay.py file')
     pinned=json.loads((ROOT/'data/scaffolds/native_harbor_runtime/PROVENANCE.json').read_text())
     assert hashlib.sha256(source.read_bytes()).hexdigest()==pinned['pro_tooling_sha256']['patch_replay.py']
     folder=tmp_path/'build';folder.mkdir()
@@ -513,9 +587,7 @@ def test_official_pro_patch_replay_source_in_fresh_git_image(tmp_path,answer,exp
 RUN mkdir -p /app /tests && cd /app && git init -q && git config user.name control && git config user.email control@local && printf '0\\n' > value.txt && git add value.txt && git commit -qm base
 WORKDIR /app
 ''')
-    process=subprocess.run(['docker','build','--network=none','-q',str(folder)],capture_output=True,text=True,errors='replace',timeout=60)
-    assert process.returncode==0,process.stderr
-    image=process.stdout.strip()
+    image=native_image_builder(folder)
     native_dir=tmp_path/'native/control';(native_dir/'tests').mkdir(parents=True);(native_dir/'environment').mkdir()
     (native_dir/'instruction.md').write_text('Change value.txt to 1.')
     (native_dir/'tests/test.sh').write_text('''#!/bin/bash
@@ -548,12 +620,13 @@ timeout_sec=20
     source_job=tmp_path/'source-job';agent=source_job/'instance_control/agent';agent.mkdir(parents=True)
     shutil.copyfile(captured,agent/'model.patch');(agent.parent/'result.json').write_text(json.dumps({'task_name':'swebench-pro/control'}))
     case={'dataset':'swe_bench_pro','task_id':'swe_bench_pro/control','runtime':{
+        'harbor_python':harbor_binding['python'],'harbor_runtime':harbor_binding,
         'pro_replay_source':str(source),'pro_replay_source_sha256':hashlib.sha256(source.read_bytes()).hexdigest()}}
     request={'case':case,'artifact_root':str(exports),'task_projection':str(native_dir),
              'source_job':str(source_job),'captured_patch':str(agent/'model.patch'),
              'trial_root':str(tmp_path/'trials'),'verifier_env':{}}
     request_path=tmp_path/'request.json';request_path.write_text(json.dumps(request));result_path=tmp_path/'result.json'
-    process=subprocess.run(['/tmp/hg-flash-harbor-runtime/bin/python','-I',str(ROOT/'data/scaffolds/native_harbor_runtime/harbor_entry.py'),str(request_path),str(result_path)],capture_output=True,text=True,errors='replace',timeout=100)
+    process=subprocess.run([harbor_binding['python'],'-I',str(ROOT/'data/scaffolds/native_harbor_runtime/harbor_entry.py'),str(request_path),str(result_path)],capture_output=True,text=True,errors='replace',timeout=100)
     assert process.returncode==0,process.stderr
     result=json.loads(result_path.read_text())
     assert result['reward']==expected
@@ -565,9 +638,13 @@ def test_original_jobbench_weighted_rubric_judge_with_local_scripted_provider(tm
     """Original verify.py + judge.py do all weighting, with no paid model call."""
     from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
     import threading
-    source=Path('/tmp/flash-native-upstream/jobbench')
+    source = _test_path('HG_HARBOR_TEST_JOBBENCH_SOURCE')
     required=[source/'harbor/runtime/verify.py',source/'eval/judge.py']
-    if not all(p.is_file() for p in required):pytest.skip('pinned original JobBench verifier not acquired')
+    if not all(p.is_file() for p in required):
+        pytest.fail('HG_HARBOR_TEST_JOBBENCH_SOURCE must contain the pinned JobBench verifier files')
+    judge_python = _test_path('HG_HARBOR_TEST_JOBBENCH_PYTHON')
+    if not judge_python.is_file() or not os.access(judge_python, os.X_OK):
+        pytest.fail('HG_HARBOR_TEST_JOBBENCH_PYTHON must name an executable judge interpreter')
     pinned=json.loads((ROOT/'data/scaffolds/native_harbor_runtime/PROVENANCE.json').read_text())
     for path in required:
         assert hashlib.sha256(path.read_bytes()).hexdigest()==pinned['jobbench_verifier_sha256'][path.relative_to(source).as_posix()]
@@ -589,11 +666,14 @@ def test_original_jobbench_weighted_rubric_judge_with_local_scripted_provider(tm
     rubrics=tmp_path/'RUBRICS.json';rubrics.write_text(json.dumps({'rubrics':[
         {'rubric':'PASS_RUBRIC','weight':3,'criterion':['Has evidence']},
         {'rubric':'FAIL_RUBRIC','weight':1,'criterion':['Has missing feature']}]}))
-    env={k:v for k,v in os.environ.items() if not k.startswith(('HG_AGENT_','HG_METHOD_','HG_ENV_'))}
+    env={k:v for k,v in os.environ.items()
+         if not k.startswith(('HG_AGENT_','HG_METHOD_','HG_ENV_'))
+         and k.lower() not in ('http_proxy','https_proxy','all_proxy','no_proxy')}
     env.update(JUDGE_API_BASE=f'http://127.0.0.1:{server.server_port}/v1',JUDGE_API_KEY='local-control',
-               JUDGE_MODEL='local-scripted-judge',JUDGE_MAX_WORKERS='1',JUDGE_MAX_RETRIES='1')
+               JUDGE_MODEL='local-scripted-judge',JUDGE_MAX_WORKERS='1',JUDGE_MAX_RETRIES='1',
+               NO_PROXY='127.0.0.1,localhost',no_proxy='127.0.0.1,localhost')
     try:
-        process=subprocess.run([sys.executable,str(required[0]),'--output-dir',str(output),'--rubrics-file',str(rubrics),
+        process=subprocess.run([str(judge_python),'-I',str(required[0]),'--output-dir',str(output),'--rubrics-file',str(rubrics),
                                 '--judge-path',str(required[1]),'--logs-dir',str(tmp_path/'logs')],env=env,
                                capture_output=True,text=True,errors='replace',timeout=30)
     finally:server.shutdown();server.server_close();thread.join()
@@ -605,9 +685,8 @@ def test_original_jobbench_weighted_rubric_judge_with_local_scripted_provider(tm
     assert reward['reward'] != 0.5
 
 
-@pytest.mark.skipif(not Path('/tmp/hg-flash-harbor-runtime/bin/python').is_file(),reason='selected Harbor0.23 control interpreter absent')
 @pytest.mark.parametrize('answer,expected',[('1',1.0),('0',0.0)])
-def test_hg_sandbox_relay_collect_and_native_fresh_deepswe_verifier(tmp_path,monkeypatch,answer,expected):
+def test_hg_sandbox_relay_collect_and_native_fresh_deepswe_verifier(harbor_binding,tmp_path,monkeypatch,native_image_builder,answer,expected):
     from eval.ckpt.git_state import stage_workspace
     from eval.run.runner import run_one
     from data.scaffolds.native_harbor_runtime import verify as native_verify
@@ -625,7 +704,7 @@ def test_hg_sandbox_relay_collect_and_native_fresh_deepswe_verifier(tmp_path,mon
 RUN mkdir -p /app/.logs/artifacts /app/.logs/agent && ln -s /app/.logs /logs && cd /app && git init -q && git config user.name control && git config user.email control@local && printf '0\\n' > value.txt && git add value.txt && git commit -qm base && git tag native-base
 WORKDIR /app
 ''')
-    image=subprocess.check_output(['docker','build','--network=none','-q',str(actor_dir)],text=True).strip()
+    image=native_image_builder(actor_dir)
     verifier_dir=tmp_path/'verifier-build';verifier_dir.mkdir()
     (verifier_dir/'Dockerfile').write_text('FROM python:3.12-bookworm\nRUN mkdir -p /tests\nCOPY test.sh /tests/test.sh\n')
     (verifier_dir/'test.sh').write_text('''#!/bin/bash
@@ -637,7 +716,7 @@ p=pathlib.Path('/logs/artifacts/model.patch');s=p.read_text() if p.exists() else
 pathlib.Path('/logs/verifier/reward.txt').write_text(str(int('+1' in s and '-0' in s)))
 EOF
 ''')
-    verifier_image=subprocess.check_output(['docker','build','--network=none','-q',str(verifier_dir)],text=True).strip()
+    verifier_image=native_image_builder(verifier_dir)
     collect='cd /app && mkdir -p /logs/artifacts && git diff --binary native-base HEAD > /logs/artifacts/model.patch'
     (source/'task.toml').write_text(f'''schema_version="1.4"
 artifacts=["/logs/artifacts/model.patch"]
@@ -668,7 +747,8 @@ memory_mb=256
     row=native.inventory(tmp_path/'native','deepswe')[0]
     actor={'kind':'exec','backend':'observed-v1','image':image,'python':'/usr/local/bin/python3','workdir':'/app','image_workspace':'/app','network':'none','cpus':1,'memory_mb':256,'pids':64,'filesystems':{p:{'bytes':64<<20,'inodes':16384} for p in ('/app','/tmp','/dev','/dev/shm')}}
     config={'source_sha256':row.source_sha256,'actor':actor,'replay_actor_image':image,
-            'verifier_image':verifier_image,'harbor_python':'/tmp/hg-flash-harbor-runtime/bin/python'}
+            'verifier_image':verifier_image,'harbor_python':harbor_binding['python'],
+            'harbor_runtime':harbor_binding}
     monkeypatch.setattr(native,'runtime',lambda row:config)
     candidate=tmp_path/'candidate';candidate.mkdir()
     (candidate/'harness.json').write_text(json.dumps({'name':'native-protocol-control','version':'1','entrypoint':'agent.py','env_kinds':['files']}))

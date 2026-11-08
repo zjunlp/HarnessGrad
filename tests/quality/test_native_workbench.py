@@ -24,20 +24,26 @@ from eval.run.runner import run_one
 from tools.prepare_native_research import prepare
 
 PIN='49c7dfd00c03d384ec59ea57374f50b766aa5613'
-SOURCE=Path(os.environ.get('HG_WORKBENCH_TEST_SOURCE','/tmp/hg-workbench-upstream-49c7dfd0'))
 INVENTORY=json.loads((ROOT/'tests/fixtures/upstream_workbench/source.json').read_text())
 
 
-def require_pinned_source():
+@pytest.fixture(scope='module')
+def native_source():
+    configured = os.environ.get('HG_WORKBENCH_TEST_SOURCE')
+    if not configured:
+        pytest.skip('HG_WORKBENCH_TEST_SOURCE is not configured')
+    source = Path(configured).expanduser().absolute()
+    if not (source / 'src/evals/actions.py').is_file():
+        pytest.fail('HG_WORKBENCH_TEST_SOURCE must name the pinned WorkBench checkout')
+    return source
+
+
+def require_pinned_source(source):
     assert INVENTORY['commit']==PIN
     for relative,expected in INVENTORY['files'].items():
-        path=SOURCE/relative
+        path=source/relative
         assert path.is_file() and not path.is_symlink(),relative
         assert hashlib.sha256(path.read_bytes()).hexdigest()==expected,relative
-
-
-needs_native=pytest.mark.skipif(not (SOURCE/'src/evals/actions.py').is_file(),
-                               reason='pinned native WorkBench source is not provisioned')
 
 
 def native_action(action):
@@ -49,12 +55,11 @@ def native_action(action):
             'arguments':{kw.arg:ast.literal_eval(kw.value)for kw in call.keywords}}
 
 
-@needs_native
-def test_native_session_real_actions_grade_and_reset():
+def test_native_session_real_actions_grade_and_reset(native_source):
     # Published first calendar task: delete the first event on December 13.
-    require_pinned_source()
+    require_pinned_source(native_source)
     action='calendar.delete_event.func(event_id="00000256")'
-    first=Session(SOURCE)
+    first=Session(native_source)
     try:
         assert 'calendar.delete_event' in first.description
         observed=first.request(native_action(action))
@@ -62,7 +67,7 @@ def test_native_session_real_actions_grade_and_reset():
         graded=first.request({'operation':'grade','reference':[action]})
         assert graded['metrics']=={'correct':1.0,'exact_match':1.0,'unwanted_side_effects':0.0}
     finally:first.close()
-    fresh=Session(SOURCE)
+    fresh=Session(native_source)
     try:
         graded=fresh.request({'operation':'grade','reference':[action]})
         assert graded['metrics']['correct']==0.0
@@ -70,17 +75,15 @@ def test_native_session_real_actions_grade_and_reset():
 
 
 @pytest.fixture(scope='module')
-def prepared_native(tmp_path_factory):
-    if not (SOURCE/'src/evals/actions.py').is_file():pytest.skip('pinned WorkBench source not provisioned')
-    require_pinned_source()
+def prepared_native(tmp_path_factory,native_source):
+    require_pinned_source(native_source)
     target=tmp_path_factory.mktemp('workbench-prepared')/'prepared'
-    manifest=prepare('workbench',target,{'data_path':str(SOURCE/'data'),
-        '_prepared_root':str(SOURCE),'domains':['calendar']},fetch=False)
+    manifest=prepare('workbench',target,{'data_path':str(native_source/'data'),
+        '_prepared_root':str(native_source),'domains':['calendar']},fetch=False)
     assert len(manifest['records'])==110
     return target,manifest
 
 
-@needs_native
 @pytest.mark.parametrize('oracle',[True,False])
 def test_native_tool_relay_post_exit_state_verifier(oracle,prepared_native,tmp_path,monkeypatch):
     prepared,manifest=prepared_native
