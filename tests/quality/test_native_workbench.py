@@ -34,7 +34,7 @@ def native_source():
         pytest.skip('HG_WORKBENCH_TEST_SOURCE is not configured')
     source = Path(configured).expanduser().absolute()
     if not (source / 'src/evals/actions.py').is_file():
-        pytest.skip('HG_WORKBENCH_TEST_SOURCE must name the pinned WorkBench checkout')
+        pytest.fail('HG_WORKBENCH_TEST_SOURCE must name the pinned WorkBench checkout')
     return source
 
 

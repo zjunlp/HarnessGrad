@@ -2,8 +2,12 @@
 
 Set HG_TEST_NATIVE_HARBOR_RUNTIME_ROOT to the managed Harbor 0.23 artifact store
 for the external verifier controls. Set HG_HARBOR_TEST_SWE_PRO_REPLAY to the
-pinned patch_replay.py file and HG_HARBOR_TEST_JOBBENCH_SOURCE to the pinned
-JobBench checkout for the respective source controls.
+pinned patch_replay.py file for the Pro control. For the standalone JobBench
+judge control, set HG_HARBOR_TEST_JOBBENCH_SOURCE to the pinned checkout and
+HG_HARBOR_TEST_JOBBENCH_PYTHON to a separately prepared interpreter with the
+judge's dependencies, including openai and openpyxl. This is not the Harbor
+execution environment or the platform Python.
+Unset optional paths skip their controls; an explicitly supplied invalid path fails.
 """
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import uuid
 import zipfile
 
 import pytest
@@ -352,12 +357,54 @@ def test_native_case_keeps_private_collect_and_judge_out_of_public_task(tmp_path
     assert 'source_sha256' not in native.public_task(row)
 
 
-def _control_image(tmp_path, *, verifier=False):
+@pytest.fixture
+def native_image_builder(request):
+    """Build isolated test images and remove only images owned by this test."""
+    docker = shutil.which('docker')
+    label = 'org.harnessgrad.test.native-harbor=' + uuid.uuid4().hex
+    attempted = False
+
+    def cleanup():
+        if not attempted:
+            return
+        listing = subprocess.run([docker, 'image', 'ls', '--all', '--quiet', '--no-trunc',
+                                  '--filter', 'label=' + label], capture_output=True,
+                                 text=True, timeout=30)
+        assert listing.returncode == 0, listing.stderr
+        errors = []
+        for image in set(listing.stdout.split()):
+            removed = subprocess.run([docker, 'image', 'rm', image], capture_output=True,
+                                     text=True, timeout=30)
+            if removed.returncode:
+                errors.append(removed.stderr)
+            inspect = subprocess.run([docker, 'image', 'inspect', image], capture_output=True,
+                                    text=True, timeout=30)
+            if inspect.returncode == 0 or 'no such' not in inspect.stderr.lower():
+                errors.append('image absence not confirmed: ' + image)
+        assert not errors, errors
+
+    request.addfinalizer(cleanup)
+
+    def build(folder):
+        nonlocal attempted
+        if not docker:
+            pytest.skip('Docker not installed')
+        base = subprocess.run([docker, 'image', 'inspect', 'python:3.12-bookworm'],
+                              capture_output=True, timeout=30)
+        if base.returncode:
+            pytest.skip('cached Python 3.12 control image or usable Docker daemon unavailable')
+        attempted = True
+        process = subprocess.run([docker, 'build', '--network=none', '--pull=false',
+                                  '--label', label, '-q', str(folder)], capture_output=True,
+                                 text=True, errors='replace', timeout=60)
+        assert process.returncode == 0, process.stderr
+        return process.stdout.strip()
+
+    return build
+
+
+def _control_image(tmp_path, build, *, verifier=False):
     """A tiny local native fixture: no pulls, no model, no benchmark image download."""
-    docker=shutil.which('docker')
-    if not docker:pytest.skip('Docker not installed')
-    base=subprocess.run([docker,'image','inspect','python:3.12-bookworm'],capture_output=True)
-    if base.returncode:pytest.skip('local Python3.12 control base image unavailable')
     folder=tmp_path/('verifier-build' if verifier else 'actor-build');folder.mkdir()
     if verifier:
         script='''#!/bin/bash
@@ -375,10 +422,7 @@ EOF
     else:
         recipe='FROM python:3.12-bookworm\nRUN mkdir -p /app/.logs/artifacts /app/.logs/agent /workspace/output && ln -s /app/.logs /logs\nWORKDIR /app\n'
     (folder/'Dockerfile').write_text(recipe)
-    process=subprocess.run([docker,'build','--network=none','-q',str(folder)],capture_output=True,
-                           text=True,errors='replace',timeout=60)
-    assert process.returncode==0,process.stderr
-    return process.stdout.strip()
+    return build(folder)
 
 
 def _test_path(variable):
@@ -395,10 +439,10 @@ def harbor_binding():
     return python_runtime.resolve(root=_test_path('HG_TEST_NATIVE_HARBOR_RUNTIME_ROOT'))
 
 
-def test_real_observed_native_world_exec_and_sealed_patch(tmp_path):
+def test_real_observed_native_world_exec_and_sealed_patch(tmp_path,native_image_builder):
     from data.scaffolds.native_harbor_runtime.session import Session
     folder=source_task(tmp_path/'native')
-    image=_control_image(tmp_path)
+    image=_control_image(tmp_path,native_image_builder)
     actor={'kind':'exec','backend':'observed-v1','image':image,'python':'/usr/local/bin/python3',
            'workdir':'/app','image_workspace':'/app','network':'none','cpus':1,'memory_mb':256,'pids':64,
            'filesystems':{p:{'bytes':64<<20,'inodes':16384} for p in ('/app','/tmp','/dev','/dev/shm')}}
@@ -407,21 +451,24 @@ def test_real_observed_native_world_exec_and_sealed_patch(tmp_path):
           'actor_timeout_s':20,'collect':[],'artifact_paths':['/logs/artifacts/model.patch']}
     binding={'adapter_id':case['task_id'],'run_id':'control','trial_id':'t','manifest_sha256':case['source_sha256']}
     session=Session(case,binding)
-    assert session.handle('exec',{'command':"printf 'PATCH_BYTES' > /logs/artifacts/model.patch"})['returncode']==0
-    assert session.handle('finish',{})['finished']
-    record=session.record()
-    assert record['actor_runtime']['cleanup']['complete'],record
-    assert record['artifacts']['/logs/artifacts/model.patch']['sha256']==hashlib.sha256(b'PATCH_BYTES').hexdigest()
-    with pytest.raises(ValueError,match='already sealed'):
-        session.handle('exec',{'command':'true'})
+    try:
+        assert session.handle('exec',{'command':"printf 'PATCH_BYTES' > /logs/artifacts/model.patch"})['returncode']==0
+        assert session.handle('finish',{})['finished']
+        record=session.record()
+        assert record['actor_runtime']['cleanup']['complete'],record
+        assert record['artifacts']['/logs/artifacts/model.patch']['sha256']==hashlib.sha256(b'PATCH_BYTES').hexdigest()
+        with pytest.raises(ValueError,match='already sealed'):
+            session.handle('exec',{'command':'true'})
+    finally:
+        session.runtime.close()
 
 
 @pytest.mark.parametrize('answer,expected',[('correct',1.0),('incorrect',0.0)])
-def test_real_native_harbor_fresh_separate_verifier(harbor_binding,tmp_path,answer,expected):
+def test_real_native_harbor_fresh_separate_verifier(harbor_binding,tmp_path,native_image_builder,answer,expected):
     from harnessgrad.native_judge_identity import selection
 
-    actor_image=_control_image(tmp_path)
-    verifier_image=_control_image(tmp_path,verifier=True)
+    actor_image=_control_image(tmp_path,native_image_builder)
+    verifier_image=_control_image(tmp_path,native_image_builder,verifier=True)
     folder=tmp_path/'native/control';folder.mkdir(parents=True);(folder/'tests').mkdir();(folder/'environment').mkdir()
     (folder/'instruction.md').write_text('Produce one final deliverable in /workspace/output.')
     (folder/'tests/test.sh').write_text('# native private tests exist only in verifier image')
@@ -528,11 +575,11 @@ def test_unselected_native_runtime_does_not_block_loading_other_tasks(tmp_path,m
 
 
 @pytest.mark.parametrize('answer,expected',[('1',1.0),('0',0.0)])
-def test_official_pro_patch_replay_source_in_fresh_git_image(harbor_binding,tmp_path,answer,expected):
+def test_official_pro_patch_replay_source_in_fresh_git_image(harbor_binding,tmp_path,native_image_builder,answer,expected):
     import base64
     source = _test_path('HG_HARBOR_TEST_SWE_PRO_REPLAY')
     if not source.is_file():
-        pytest.skip('HG_HARBOR_TEST_SWE_PRO_REPLAY must name the pinned patch_replay.py file')
+        pytest.fail('HG_HARBOR_TEST_SWE_PRO_REPLAY must name the pinned patch_replay.py file')
     pinned=json.loads((ROOT/'data/scaffolds/native_harbor_runtime/PROVENANCE.json').read_text())
     assert hashlib.sha256(source.read_bytes()).hexdigest()==pinned['pro_tooling_sha256']['patch_replay.py']
     folder=tmp_path/'build';folder.mkdir()
@@ -540,9 +587,7 @@ def test_official_pro_patch_replay_source_in_fresh_git_image(harbor_binding,tmp_
 RUN mkdir -p /app /tests && cd /app && git init -q && git config user.name control && git config user.email control@local && printf '0\\n' > value.txt && git add value.txt && git commit -qm base
 WORKDIR /app
 ''')
-    process=subprocess.run(['docker','build','--network=none','-q',str(folder)],capture_output=True,text=True,errors='replace',timeout=60)
-    assert process.returncode==0,process.stderr
-    image=process.stdout.strip()
+    image=native_image_builder(folder)
     native_dir=tmp_path/'native/control';(native_dir/'tests').mkdir(parents=True);(native_dir/'environment').mkdir()
     (native_dir/'instruction.md').write_text('Change value.txt to 1.')
     (native_dir/'tests/test.sh').write_text('''#!/bin/bash
@@ -596,7 +641,10 @@ def test_original_jobbench_weighted_rubric_judge_with_local_scripted_provider(tm
     source = _test_path('HG_HARBOR_TEST_JOBBENCH_SOURCE')
     required=[source/'harbor/runtime/verify.py',source/'eval/judge.py']
     if not all(p.is_file() for p in required):
-        pytest.skip('HG_HARBOR_TEST_JOBBENCH_SOURCE must contain the pinned JobBench verifier files')
+        pytest.fail('HG_HARBOR_TEST_JOBBENCH_SOURCE must contain the pinned JobBench verifier files')
+    judge_python = _test_path('HG_HARBOR_TEST_JOBBENCH_PYTHON')
+    if not judge_python.is_file() or not os.access(judge_python, os.X_OK):
+        pytest.fail('HG_HARBOR_TEST_JOBBENCH_PYTHON must name an executable judge interpreter')
     pinned=json.loads((ROOT/'data/scaffolds/native_harbor_runtime/PROVENANCE.json').read_text())
     for path in required:
         assert hashlib.sha256(path.read_bytes()).hexdigest()==pinned['jobbench_verifier_sha256'][path.relative_to(source).as_posix()]
@@ -618,11 +666,14 @@ def test_original_jobbench_weighted_rubric_judge_with_local_scripted_provider(tm
     rubrics=tmp_path/'RUBRICS.json';rubrics.write_text(json.dumps({'rubrics':[
         {'rubric':'PASS_RUBRIC','weight':3,'criterion':['Has evidence']},
         {'rubric':'FAIL_RUBRIC','weight':1,'criterion':['Has missing feature']}]}))
-    env={k:v for k,v in os.environ.items() if not k.startswith(('HG_AGENT_','HG_METHOD_','HG_ENV_'))}
+    env={k:v for k,v in os.environ.items()
+         if not k.startswith(('HG_AGENT_','HG_METHOD_','HG_ENV_'))
+         and k.lower() not in ('http_proxy','https_proxy','all_proxy','no_proxy')}
     env.update(JUDGE_API_BASE=f'http://127.0.0.1:{server.server_port}/v1',JUDGE_API_KEY='local-control',
-               JUDGE_MODEL='local-scripted-judge',JUDGE_MAX_WORKERS='1',JUDGE_MAX_RETRIES='1')
+               JUDGE_MODEL='local-scripted-judge',JUDGE_MAX_WORKERS='1',JUDGE_MAX_RETRIES='1',
+               NO_PROXY='127.0.0.1,localhost',no_proxy='127.0.0.1,localhost')
     try:
-        process=subprocess.run([sys.executable,str(required[0]),'--output-dir',str(output),'--rubrics-file',str(rubrics),
+        process=subprocess.run([str(judge_python),'-I',str(required[0]),'--output-dir',str(output),'--rubrics-file',str(rubrics),
                                 '--judge-path',str(required[1]),'--logs-dir',str(tmp_path/'logs')],env=env,
                                capture_output=True,text=True,errors='replace',timeout=30)
     finally:server.shutdown();server.server_close();thread.join()
@@ -635,7 +686,7 @@ def test_original_jobbench_weighted_rubric_judge_with_local_scripted_provider(tm
 
 
 @pytest.mark.parametrize('answer,expected',[('1',1.0),('0',0.0)])
-def test_hg_sandbox_relay_collect_and_native_fresh_deepswe_verifier(harbor_binding,tmp_path,monkeypatch,answer,expected):
+def test_hg_sandbox_relay_collect_and_native_fresh_deepswe_verifier(harbor_binding,tmp_path,monkeypatch,native_image_builder,answer,expected):
     from eval.ckpt.git_state import stage_workspace
     from eval.run.runner import run_one
     from data.scaffolds.native_harbor_runtime import verify as native_verify
@@ -653,7 +704,7 @@ def test_hg_sandbox_relay_collect_and_native_fresh_deepswe_verifier(harbor_bindi
 RUN mkdir -p /app/.logs/artifacts /app/.logs/agent && ln -s /app/.logs /logs && cd /app && git init -q && git config user.name control && git config user.email control@local && printf '0\\n' > value.txt && git add value.txt && git commit -qm base && git tag native-base
 WORKDIR /app
 ''')
-    image=subprocess.check_output(['docker','build','--network=none','-q',str(actor_dir)],text=True).strip()
+    image=native_image_builder(actor_dir)
     verifier_dir=tmp_path/'verifier-build';verifier_dir.mkdir()
     (verifier_dir/'Dockerfile').write_text('FROM python:3.12-bookworm\nRUN mkdir -p /tests\nCOPY test.sh /tests/test.sh\n')
     (verifier_dir/'test.sh').write_text('''#!/bin/bash
@@ -665,7 +716,7 @@ p=pathlib.Path('/logs/artifacts/model.patch');s=p.read_text() if p.exists() else
 pathlib.Path('/logs/verifier/reward.txt').write_text(str(int('+1' in s and '-0' in s)))
 EOF
 ''')
-    verifier_image=subprocess.check_output(['docker','build','--network=none','-q',str(verifier_dir)],text=True).strip()
+    verifier_image=native_image_builder(verifier_dir)
     collect='cd /app && mkdir -p /logs/artifacts && git diff --binary native-base HEAD > /logs/artifacts/model.patch'
     (source/'task.toml').write_text(f'''schema_version="1.4"
 artifacts=["/logs/artifacts/model.patch"]
