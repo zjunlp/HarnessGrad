@@ -918,6 +918,13 @@ authorization permits only an explicitly unmeasured diagnostic attempt and is ne
 backend observation or production authorization. Declarations without a native
 implementation stay refused even for direct callers that bypass registry validation.
 
+Container-state admission observes the actual writable `create`/`start` launcher,
+including inherited image defaults, effective Docker/kernel limits, the internal
+primary network and any declared bridge attachment. It requires a pinned image;
+a mount-state receipt cannot authorize container-state execution. Each raw resource
+declaration is checked against the applied limits before observation-cache lookup,
+so a fractional declaration cannot borrow a receipt for an integer limit.
+
 `env.model_gateway` is `{"published": true, "target": "<host>:<port>"}`, or `null`. It is
 recorded because "the model was reachable from inside the container" is a fact about the
 measurement, not a detail — the same argument as `env.image_digest`. The ephemeral port
@@ -926,20 +933,18 @@ different for no reason.
 
 ##### The harness's `install` and the dataset's image have to meet somewhere
 
-`install` (§2.5.6) bakes a harness's dependencies into an image at import time, and this
-is now load-bearing rather than theoretical: the platform's own base harness needs the
-`openai` package, a stock `python` image does not have it, and the harness tree is
-read-only during a run so it cannot install anything itself. Measured — the containerised
-harness died with `ModuleNotFoundError: No module named 'openai'` and scored zero on
-every task, which read exactly like a weak harness.
+Harnesses that opt into managed Python dependencies prepare an immutable artifact
+for each selected image. The actor uses its bound interpreter and dependencies;
+task commands retain the image's environment. Both mount-state and container-state
+execution support this placement, and trusted verification does not inherit actor
+dependency mounts. Source, locks, image and runtime identity are checked for
+execution, reuse and resume. See the [managed Harness contract](docs/writing_a_harness.md#21-managed-python-dependencies)
+for preparation, image-owned Python and no-Python image rules.
 
-So a dataset's image must contain whatever harness will run in it. The tool exists for
-that (`tools/import_env.py --image <base> --harness <dir>`), but **there is no mechanism
-yet to reconcile "the dataset names an image" with "the harness declares dependencies"**,
-and this is recorded as an open design point rather than papered over: today the
-reconciliation is a human running the importer, and the demo datasets name an image built
-that way. Anything more general — deriving a per-`(image, harness)` environment at import
-time, with the digest recorded — is a change to this section, not a detail of it.
+Harnesses without that declaration retain the legacy `install`/image preparation
+route in §2.5.6. Use `tools/import_env.py --image <base> --harness <dir>` before a
+run when that recipe requires dependencies in the image. Runs do not pull images
+or install missing actor packages into task state.
 
 ##### Seed and cost: the two things §2.5.7 was originally deferred for
 

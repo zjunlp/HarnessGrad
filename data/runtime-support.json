@@ -25,7 +25,7 @@
       ],
       "loading_and_preparation": "Standard-library loading of pinned materialized metadata; explicit cryptography preparation runtime.",
       "trusted_execution": "Pinned actor/service/scorer images; preparation receipt is not a scorer identity.",
-      "verification_scope": "Authored encrypted-bundle preparation controls; live container execution remains unverified in this installation work."
+      "verification_scope": "Original service/scorer image SDK 0.1.3.post1 API handshake and close controls passed with zero loaded app names, zero valid task worlds and zero evaluations; missing authored world inputs refused. No valid environment/action/scoring or full service lifecycle is established; task databases, metadata and scorer fixtures remain external. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -50,7 +50,7 @@
       ],
       "loading_and_preparation": "Existing dataset-specific loading and native runtime recipes.",
       "trusted_execution": "Independently pinned native scorer closures; additional environment and binary dependencies.",
-      "verification_scope": "Per-route loader/actor/service closure and portable provisioning remain under review; native pin presence is not execution proof."
+      "verification_scope": "Original 701-blob scorer package recovered without repinning; fresh archive import/verify/probe passed. Original sealed Python 3.12.16/SQLite 3.53.1 scorer measured authored correct/wrong/extension queries 1/0/0, refused WAL as unmeasured and rejected database writes. One-record loader/privacy control does not exercise the released 500-row parser. Reviewed archive supply, released source/DB custody and broader actor lifecycle remain separate; no public download URL or fully public rebuild is promised. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -58,7 +58,7 @@
       ],
       "loading_and_preparation": "Managed service artifact actually prepared; newly resolved closure retains limited original native source/version evidence including NumPy 1.26.4.",
       "trusted_execution": "Stdlib actor client reaches trusted managed relay; original native scorer pins and algorithm remain unchanged.",
-      "verification_scope": "Five actual bubblewrap fake-engine controls and five control-wiring controls passed. Limited matching package-source hashes do not reconstruct the whole historical environment; real game/native scoring remain unrun."
+      "verification_scope": "Original ALFWorld 0.4.2/TextWorld 1.7.0/Fast Downward 20.6.4 completed an authored CC0 PDDL world through original wrappers and closed cleanly. Earlier five bubblewrap fake-engine and five wiring controls remain distinct; genuine-engine plus relay/native scoring and released worlds are not established. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -66,7 +66,7 @@
       ],
       "loading_and_preparation": "Managed ScienceWorld 1.2.3 service artifact prepared; JAR SHA matches original native pin and JRE 17 version was inspected.",
       "trusted_execution": "Stdlib client/trusted relay and isolated operator-oracle worker bind admitted artifact/JAR/Java; noop does not generate gold. Original native verifier remains unchanged.",
-      "verification_scope": "Producer scoped launcher, old/new CLI byte-parity, operator fake-engine and study controls: 27 passed, 1 skipped. No real world or native scorer execution; these are transport/operator controls."
+      "verification_scope": "Original 1.2.3/Py4J/JAR/JRE17 no-task JVM handshake and clean exit passed; 30 task names are metadata only. No valid task was loaded, reset or stepped and no gold generated. Earlier launcher/operator controls remain scoped; valid episodes and native scoring remain unverified. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -155,18 +155,39 @@
       ],
       "loading_and_preparation": "Managed CPython 3.12 execution artifact prepared; upstream source identity fixes 112 files and prepared cases remain separate.",
       "trusted_execution": "Trusted relay/scorer bind the artifact and source snapshot; read-only check covered 949 pairs.",
-      "verification_scope": "Ten native fake-evaluate/relay controls and source/read-only checks cover selected plumbing; no real upstream episode or full benchmark lifecycle."
+      "verification_scope": "Actual original SDK predicates and platform bridge measured authored correct/wrong/empty cases 1/0/0; unknown-tool and invalid-argument refusals passed with no release reads/network/runtime writes. Full actor/relay lifecycle and released predicates remain unverified; the 949-pair inventory is separate. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
-        "cooperbench",
-        "deepswe",
-        "jobbench",
+        "cooperbench"
+      ],
+      "loading_and_preparation": "Pinned pair/source preparation, per-resource-group image/dependency recipes and explicit offline HF/HTTPS mirrors; each selected runtime is prepared separately.",
+      "trusted_execution": "Native Harbor pair verifier and immutable images/resources; source, package freeze and mirror assets have separate identities.",
+      "verification_scope": "Sixteen authored tests passed without skips; their host-relocated verifier is not a prepared-image result. Separately, normal public run_one used two real observed-v1 peers and a fresh independent verifier with original check.py/pinned Harbor algorithm: correct/one-wrong 1/0, both measured. Six owned containers and one fixture image were removed; cached base preserved. Missing manifest/capacity, dependency-freeze drift and missing-image controls refused without task/model execution. This verifies the authored shared lane, not a selected original resource group or all 652 pairs; exact group source/runtime/freeze/image/resources/mirror assets remain external. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
+    },
+    {
+      "datasets": [
+        "deepswe"
+      ],
+      "loading_and_preparation": "Prepared native tasks plus shared native_harbor managed execution component. A real Harbor 0.23.0 artifact with its 90-distribution locked closure was built and read-only checked; standard execution preparation resolves the literal component alias.",
+      "trusted_execution": "Exact verifier-role python_runtime/runtime_paths bind the selected Harbor artifact and interpreter; task/source and immutable actor/replay/verifier images remain separately bound. Fixed native dispatch rejects missing, stale or unbound dependencies before fresh execution, cache and resume.",
+      "verification_scope": "Original Harbor 0.23.0 actual Trial/replay/script verifier measured a tiny authored DeepSWE-shaped task correct/wrong 1/0 through real relay/export and canonical 90-distribution binding; owned containers/networks/images were cleaned and the base image preserved. Earlier identity/import controls remain separate. Authored verification is not released grading or JobBench weighted judging; selected task/image/source custody remains external. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
+    },
+    {
+      "datasets": [
+        "jobbench"
+      ],
+      "loading_and_preparation": "The pinned author renderer uses its own managed jobbench_renderer preparation artifact (real Hub plus complete 15-package lock), admitted source/template/helper bytes and read-only checks. Harbor execution uses the separate prepared 90-distribution native_harbor component.",
+      "trusted_execution": "Canonical verifier dependency binding is re-admitted across dispatch/cache/resume and inside the child. The local judge model and normalized endpoint have a separate prepared semantic identity, excluding credentials. ModelGateway binds the selected Docker bridge and preserves API paths; actor network/image policy is unchanged.",
+      "verification_scope": "An eleven-control renderer group includes actual pinned-source/real-Hub loopback rendering plus missing-runtime, source/package drift and error checks, not released generation. Actual SDK child imports/identity and local HTTP gateway, path, startup/cleanup and judge-drift/key-rotation controls passed without Trial/Docker/model scoring. Public-network actor approval, exact images/private rubric and a live judge remain independent inputs; these controls are not official weighted-rubric scores. A separate shared Harbor actual-Trial authored DeepSWE-shaped control scored 1/0 with owned cleanup; it does not establish this adapter's official weighted-rubric judge. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
+    },
+    {
+      "datasets": [
         "swe_bench_pro"
       ],
-      "loading_and_preparation": "Prepared Harbor-backed task metadata.",
-      "trusted_execution": "External Harbor environment and task images.",
-      "verification_scope": "Source, package and image identity plus installed workflow acceptance remain pending."
+      "loading_and_preparation": "Pinned native source/tasks and original Pro replay/capture tooling; shared native_harbor execution preparation resolves a real Harbor 0.23.0 90-distribution artifact.",
+      "trusted_execution": "Exact canonical verifier binding plus task/source, immutable actor/replay/verifier images and fixed tooling hashes. Native dispatch and generic identity/cache/resume paths admit the same artifact before child imports and after return.",
+      "verification_scope": "Actual dependency/child-marker and mutation/dispatch controls do not execute a Trial or certify official Pro grading. A separate local original-command/bwrap/Git audit confirms normal or nonzero early exits can capture with remaining budget, while tool-command timeout aborts unmeasured with no fabricated zero. Full upstream timeout partial-patch capture is an explicit unsupported boundary, not an added all-parity Goal. Selected original images/tests/tooling and released/model acceptance remain separate. A shared Harbor actual-Trial authored DeepSWE-shaped control now scored 1/0 with owned cleanup; it does not certify Pro-specific grading or timeout semantics. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -175,9 +196,9 @@
         "hle",
         "livemathbench"
       ],
-      "loading_and_preparation": "Prepared records and benchmark-specific native code.",
-      "trusted_execution": "Trusted judge; selected profiles additionally use web services.",
-      "verification_scope": "Judge configuration, scorer dependency closure and failure evidence require per-dataset acceptance."
+      "loading_and_preparation": "Pinned prepared records; optional Hub/Parquet conversion runs in the admitted preparation component, not platform Python.",
+      "trusted_execution": "Actual scorer dispatch uses pinned stdlib prompts/parsers and the independent trusted judge HTTP transport. Unused upstream SDK/client functions are not called; endpoint/model/parameters and verifier-only credentials are explicit.",
+      "verification_scope": "Retained 50-case cold-stdlib authored controls cover these four routes plus StrongREJECT: correct/wrong, invalid, HTTP failure, missing usage, truncation and configuration failures using task-owned fake HTTP. These verify routing, privacy and unmeasured handling, not judge/model quality or released task scores; actual judge access needs separate authorization."
     },
     {
       "datasets": [
@@ -215,9 +236,9 @@
       "datasets": [
         "swe_bench"
       ],
-      "loading_and_preparation": "Managed CPython 3.12 official-worker recipe and exact dependency lock prepared; task/evaluator source custody remains separate.",
-      "trusted_execution": "Official worker binds the exact admitted artifact; Docker/task images remain separate dependencies. Public runtime evidence contains runtime/module identities without private case hashes or host paths.",
-      "verification_scope": "Actual swe_official check passed twice consecutively with exact artifact admission. No Docker operation, model request or benchmark task was exercised; evaluator/image custody and real container lifecycle remain pending."
+      "loading_and_preparation": "Canonical CPython 3.12 official-worker artifact with its real 75-package lock; all 602 pinned upstream source files verified. Evaluator/task/image custody remains separate.",
+      "trusted_execution": "Independent admitted official worker, sealed patch/export and fresh observed verifier containers; the original cached Python base image and original evaluator/source pins are unchanged.",
+      "verification_scope": "Fresh fixed-source 9d59de99 authored controls: six passed, zero skipped. Three actual Docker actor/relay/export/official-grader cases scored repair=1, wrong=0, empty=0 with verified inputs and actor/verifier/relay cleanup; six owned containers and two fixture images were confirmed absent, while the cached base remained. The other three are one actual missing-execution response-shape check, one injected bridge-unit check and one source/cache snapshot unit, not three more Docker runs. No released SWE score, model, pristine-offline or retrospective validation of the old README six-pass claim."
     },
     {
       "datasets": [
@@ -225,7 +246,7 @@
       ],
       "loading_and_preparation": "Prepared task metadata and local task images.",
       "trusted_execution": "Actor and verifier execute in the task image.",
-      "verification_scope": "Per-image toolchain, identity, isolation and cleanup acceptance remain pending."
+      "verification_scope": "Container-state observer/admission wiring is fixed. Original loader/public evaluate/run_one/snapshot verifier authored correct/wrong controls measured 1/0 at source f671d05e (named files match integration 63539297). Actor-preplanted reward 1/passing report could not replace absent fresh checker output: per_task empty, invalid check, no cache, unmeasured rather than 0 or 1. Every case removed exactly three containers, two networks and one snapshot image. First-red/intermediate unmeasured evidence remains historical; positive/negative receipts retain no-trace harness diagnostics. Released task/image/toolchain custody and final delivery gates remain separate; no full benchmark/Goal claim. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -239,9 +260,9 @@
       "datasets": [
         "gaia"
       ],
-      "loading_and_preparation": "Materialized records; PyArrow is used during preparation.",
+      "loading_and_preparation": "Materialized records and selected attachments are read by stdlib; Parquet conversion explicitly binds and re-admits the shared native_qa preparation artifact.",
       "trusted_execution": "Dataset-specific task and scoring route.",
-      "verification_scope": "Preparation and execution closure must be checked separately; no whole-route stdlib claim."
+      "verification_scope": "The preparation boundary is implemented separately from the task/scorer route. Gated source/attachment custody and a retained bounded preparation/route acceptance receipt remain separate; no full-release or whole-route stdlib claim."
     },
     {
       "datasets": [
@@ -280,9 +301,9 @@
       "datasets": [
         "officeqa_pro"
       ],
-      "loading_and_preparation": "Prepared records plus separately supplied corpus.",
-      "trusted_execution": "Native QA office reward and corpus access.",
-      "verification_scope": "Corpus provenance, privacy and downstream dependency closure remain under review."
+      "loading_and_preparation": "Stdlib prepared native-QA records plus a separately supplied corpus; remote/Parquet source conversion uses the preparation component.",
+      "trusted_execution": "Pinned vendored Databricks reward uses standard-library re, with selected private gold and corpus declarations. An Office application or model SDK is not a scoring dependency.",
+      "verification_scope": "Ten selected authored tests passed without skips, covering original vendored reward, public/private corpus boundaries and actual private verifier transport. A separate one-row local text import/load scored 1/0 and refused missing corpus; source_docs pointers stayed out of public task/SETUP. Corpus provenance remains external; citation quality, Office application capability and released benchmark readiness are not claimed. See [named component controls](.github/assets/component-runtime-controls-20261108.json)."
     },
     {
       "datasets": [
@@ -290,16 +311,23 @@
       ],
       "loading_and_preparation": "Prepared records.",
       "trusted_execution": "Trusted model judge and command scorer.",
-      "verification_scope": "Bind judge/scorer configuration and validate invalid/unmeasured outcomes; model access is separately required."
+      "verification_scope": "Retained cold-stdlib local HTTP controls cover authored correct/wrong, invalid, HTTP failure, missing usage, truncation and configuration refusal through the trusted judge route. They are not a live judge or released benchmark result; frozen judge/scorer identity, credentials and explicit model authorization remain required."
     },
     {
       "datasets": [
-        "kumo",
+        "kumo"
+      ],
+      "loading_and_preparation": "Pinned source preparation and prepared-record loading are standard-library Python. A cold -I -S audit hash-verified 210 original-pin env/common Python files, registered 103 environments and called load_env on an author-created datapoint; no released records, third-party packages or model/agent imports were used.",
+      "trusted_execution": "Pinned stdlib consistency engine, selected private state, socket relay and isolated command scorer; no environment/judge model or extra Python environment is required.",
+      "verification_scope": "Prepared-route actual stdlib actor/relay/scorer and failure/privacy/cleanup controls passed (23-case retained dataset receipt). The separate original-source cold audit closes the env.load_env dependency uncertainty; optional upstream agent/config clients were not called. A historical original-pin preparation log records 5290 eligible/10 excluded with the unchanged manifest hash; full release preparation was not rerun by this audit."
+    },
+    {
+      "datasets": [
         "personamem_v2"
       ],
-      "loading_and_preparation": "Prepared records and dataset-specific protocol code.",
-      "trusted_execution": "Trusted tool relay and command scorer.",
-      "verification_scope": "Cold-stdlib authored engine/scorer controls include actual relay state, selected-state startup failure, task-owned process death and cleanup, private-input refusal/stale reward removal, source-shadow refusal and read-only scorer behavior. Full upstream KUMO preparation source acquisition remains unverified; PersonaMem shares only the named controls, not a corpus-readiness claim."
+      "loading_and_preparation": "The supported text-32k MCQ preparation, authenticated storage/manifest and ordered Session use standard-library Python; external pinned CSV/history files remain separate.",
+      "trusted_execution": "Selected private history/gold, idempotent socket protocol, sealed-record MCQ scoring and read-only scorer projection; no embeddings, upstream training stack or model judge is required.",
+      "verification_scope": "Real authored preparation/actor/relay/scorer, state-startup failure, process-death cleanup, stale-reward/private-source/read-only and persistent-source-refresh controls are covered by the retained 95-pass receipt. Its one full-release inventory skip still needs the external prepared pool. This does not certify all episodes, other context lengths, multimodal/open-ended routes or model quality."
     },
     {
       "datasets": [

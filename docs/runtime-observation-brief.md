@@ -4,8 +4,19 @@
 via `eval/containers/observed.py` (`backend=observed-v1`). This route reads cgroup v2,
 mount/statvfs, privilege and network facts and calls `admit_runtime` before candidate execution.
 See [the dataset runtime contract](dataset-runtime-interfaces.md#71-docker-worker-与组合-verifier).
-The legacy single-actor exec/container-state routes remain refused. The historical analysis
-below describes those routes, not the new observed worker backend.
+At that snapshot, legacy single-actor exec/container-state routes remained refused.
+The analysis below preserves that historical design gap, not a current inventory.
+
+**Update (2026-11-08):** `eval/service/container_observation.py` now supplies
+observations for service-bearing mount execution and the actual writable
+container-state launcher. Container-state probes use canonical create/start,
+read back image defaults, Docker/kernel resource bounds and internal/bridge
+attachments, and clean up their owned resources. Admission still refuses missing
+or mismatched evidence; a mount receipt cannot authorize container-state execution.
+Raw resource declarations are checked before normalized observation-cache reuse.
+These observations do not implement arbitrary filesystem/resource/artifact policies
+or certify every image. See [the current interface](../INTERFACE.md)
+and [scoped runtime evidence](linux-runtime-remaining.md).
 
 ## The gap, precisely
 

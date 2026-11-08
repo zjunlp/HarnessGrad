@@ -1,0 +1,295 @@
+{
+  "schema": "harnessgrad.component-runtime-controls.v1",
+  "date": "2026-11-08",
+  "documentation_base_commit": "d05380cef621d0c935ca8728795058ada3255c5c",
+  "published_adapter_count": 56,
+  "scope": "Named original-software authored controls and no-task API/engine handshakes only; not full benchmark or host installation readiness.",
+  "raw_evidence_policy": "Original evidence retained by producers. Only digests, counts, fixed software identities and bounded outcomes are projected here; raw host paths, credentials and task hashes are withheld.",
+  "raw_evidence": {
+    "harbor": {
+      "sha256": "92800549d8cb0a76d04a6799f9ad28655951fd1d88adf15c4564fd9225ac211d",
+      "bytes": 4036
+    },
+    "engines": {
+      "sha256": "1893bb3ab0829495be86828745c50bcf0510ac4a0f3951836dd3410dcc7b3f30",
+      "bytes": 2929
+    },
+    "sdk_interfaces": {
+      "sha256": "4a3f85b857f008fef6e0d6278e986fd8e74c10709042a1ae4e74f4b2c2f547dd",
+      "bytes": 7225
+    },
+    "bird_office": {
+      "sha256": "52040ee36543b88a04e2303e185582089cbaaa56b3d55d1ad17f068f5cd3a78d",
+      "bytes": 3791
+    },
+    "bird_handoff": {
+      "sha256": "8b3d4505b54932b78a16411cde804f95837bf522cbbd7e5d965277e0cb741ef1",
+      "bytes": 852
+    },
+    "bird_probe": {
+      "sha256": "2b27e67fe895631a63a69d7696d81f84fd5396d4b2727bb096ad18a1df224f3f",
+      "bytes": 1307
+    },
+    "cooper_terminal_summary": {
+      "sha256": "e1d23544330e0026c92b32e33dc05f1bcbeed92b71f6f5282664da14acdc58dd",
+      "bytes": 4149
+    },
+    "cooper_observed": {
+      "sha256": "29179d954dc227ea99da34019838e5249a487c38c313c211d76edadd72377631",
+      "bytes": 6648
+    },
+    "cooper_source_lock": {
+      "sha256": "752341298730492e241c2a013091e830f0304e7296bcf525ad9514ca2ef66383",
+      "bytes": 8486
+    },
+    "cooper_missing_inputs": {
+      "sha256": "b2e0ff31f47fdd54339624c073a22cef095ef56200d6a056efb3cece40e7790e",
+      "bytes": 1062
+    },
+    "terminal_final_highlevel": {
+      "sha256": "036e83d072dbec4927a1f91b1660adbbedddde667d92c85841281fe3f33adc21",
+      "bytes": 29832
+    },
+    "terminal_stale_reward": {
+      "sha256": "534c947bbbf3028abf1ceaf6f99ba1683627e5aad1bd2bcd1c2838b2a3405727",
+      "bytes": 13546
+    }
+  },
+  "source_commits": {
+    "harbor": "4c235a22d6d978c8d30b13cfcb2f98384fd4da58",
+    "engines": "4c235a22d6d978c8d30b13cfcb2f98384fd4da58",
+    "sdk_interfaces_start": "34d0da8b0412a4cd8de44a53774086d405043f62",
+    "sdk_interfaces_finish": "d05380cef621d0c935ca8728795058ada3255c5c",
+    "bird_office": "d05380cef621d0c935ca8728795058ada3255c5c",
+    "cooper_source_lock": "34487d5c1f30f4c6cc9a1c8acec4a29b91eb717a",
+    "cooper_prior_equivalent": "d05380cef621d0c935ca8728795058ada3255c5c",
+    "terminal_first_red": "d05380cef621d0c935ca8728795058ada3255c5c"
+  },
+  "controls": {
+    "harbor": {
+      "evidence": "harbor",
+      "software": "Harbor 0.23.0; canonical 90-distribution artifact",
+      "runtime_id": "bf80109fd4e540a4652b1587682f8c0608c26c8cae1146187e951f58a41c6a1c",
+      "actual_trial": true,
+      "rewards": {
+        "correct": 1,
+        "wrong": 0
+      },
+      "measured_cases": 2,
+      "relay_export_replay": true,
+      "owned_cleanup_complete": true,
+      "base_image_preserved": true,
+      "explicit_pulls": 0,
+      "boundary": "Tiny authored DeepSWE-shaped task and script verifier; not official JobBench weighted judging, Pro-specific grading or released-task acceptance.",
+      "control_script_sha256": "9058cb7c534cf0bb054d7f9d23ca9b5133a1096d2b0ab575735bac90ffe6c6f0"
+    },
+    "alfworld": {
+      "evidence": "engines",
+      "versions": {
+        "alfworld": "0.4.2",
+        "textworld": "1.7.0",
+        "fast_downward": "20.6.4"
+      },
+      "genuine_engine": true,
+      "original_wrappers": true,
+      "authored_pddl_completed": true,
+      "close_completed": true,
+      "boundary": "Authored CC0 world only; combined platform relay/native scorer and released trajectories unverified."
+    },
+    "scienceworld": {
+      "evidence": "engines",
+      "version": "1.2.3",
+      "jar_sha256": "f4e1fdce0cdabe1bab7128a7e78ea820210d9db3c28d7272bcbbc3f3a1c5f0d7",
+      "java_sha256": "f5aed21d3a0b0f4b05d3a3f9fe71263916d5bc0d47b53aa52a3340b90f0b4805",
+      "java_version": "17.0.20.1",
+      "py4j": "0.10.9.9",
+      "genuine_no_task_jvm": true,
+      "task_names_metadata_count": 30,
+      "valid_tasks_loaded": 0,
+      "reset_or_step_calls": 0,
+      "gold_generated": false,
+      "jvm_clean_exit": true,
+      "boundary": "No valid published or authored task episode, scoring or trajectory equivalence."
+    },
+    "agentdojo": {
+      "evidence": "sdk_interfaces",
+      "source_files": 112,
+      "source_manifest_sha256": "d9fc402c7cd510ef3c766aa7c28fb70e18352b24b6d941a443bcbe60b1654826",
+      "suite_version": "v1.2.2",
+      "actual_sdk_predicates_and_bridge": true,
+      "rewards": {
+        "correct": 1,
+        "wrong": 0,
+        "empty": 0
+      },
+      "unknown_tool": "ToolNotFoundError",
+      "invalid_arguments": "ValidationError",
+      "released_reads": 0,
+      "network_calls": 0,
+      "source_runtime_writes": 0,
+      "boundary": "Authored predicates only; no full actor/relay lifecycle or released-scenario quality claim."
+    },
+    "appworld": {
+      "evidence": "sdk_interfaces",
+      "sdk_version": "0.1.3.post1",
+      "original_image_refs": [
+        "harnessgrad/appworld-service@sha256:db09e34ec90347e7d5271d95445f360222ba1aef3ca0eaa5614ce768bf23aca4",
+        "harnessgrad/appworld-service@sha256:f3cb916b9bdc297d4c73dd9646e9550befb7c6e23827d937b90a0640373e97ca"
+      ],
+      "image_api_controls": 2,
+      "valid_task_worlds": 0,
+      "official_evaluations": 0,
+      "missing_world_input_refused": true,
+      "readonly_sdk": true,
+      "owned_containers_cleaned": true,
+      "original_images_preserved": true,
+      "boundary": "Original SDK API handshake/import/close only; no valid environment actions, scoring or full task lifecycle. Task databases/schema/metadata/scorer inputs remain externally supplied."
+    },
+    "bird_minidev": {
+      "evidence": [
+        "bird_office",
+        "bird_handoff",
+        "bird_probe"
+      ],
+      "manifest_sha256": "0ecaf2a6e99b64ee035e210192fdb45789fb290e9586dc3197fc26ec06df41e0",
+      "archive_sha256": "215c8e25986b74d37d2085f4cc51ed80f1e6c09e1c16ccaaddfcb2ec13cd4681",
+      "archive_bytes": 19738111,
+      "matched_targets": 706,
+      "unique_software_blobs": 701,
+      "version": {
+        "python": "3.12.16",
+        "sqlite": "3.53.1"
+      },
+      "original_pin_unchanged": true,
+      "fresh_archive_import_verify_probe": true,
+      "sealed_scorer_rewards": {
+        "correct": 1,
+        "wrong": 0,
+        "extension_load": 0
+      },
+      "wal_unmeasured": true,
+      "readonly_database_write_refused": true,
+      "source_database_unchanged": true,
+      "loader_control_records": 1,
+      "released_500_row_parser_exercised": false,
+      "software_only_handoff": true,
+      "public_archive_url_registered": false,
+      "fully_public_rebuild_claimed": false,
+      "chess_jericho_packages_changed": false,
+      "boundary": "Authored SQLite/scorer and one in-process record loader/privacy controls; reviewed external archive supply, released DB/source custody and broader actor lifecycle remain separate."
+    },
+    "officeqa_pro": {
+      "evidence": "bird_office",
+      "selected_tests_passed": 10,
+      "selected_tests_skipped": 0,
+      "local_text_loader_records": 1,
+      "local_text_rewards": {
+        "correct": 1,
+        "wrong": 0
+      },
+      "missing_corpus_refused": true,
+      "source_docs_excluded_from_public_task_setup": true,
+      "actual_private_verifier_transport": true,
+      "original_reward_commit": "7b9a3c154ef9fb40215bb67934afc43e6799de16",
+      "reward_dependency": "stdlib re",
+      "citation_quality_scored": false,
+      "boundary": "Local authored custody only; expected source pin does not authenticate acquisition. Public corpus provenance is external; no Office SDK/application or released benchmark claim."
+    },
+    "cooperbench": {
+      "evidence": [
+        "cooper_terminal_summary",
+        "cooper_observed",
+        "cooper_source_lock",
+        "cooper_missing_inputs"
+      ],
+      "selected_authored_tests_passed": 16,
+      "selected_authored_tests_skipped": 0,
+      "pytest_verifier_placement": "host relocation; not prepared image",
+      "public_run_one_observed_v1": true,
+      "peers_per_case": 2,
+      "independent_verifiers_per_case": 1,
+      "measured_cases": 2,
+      "rewards": {
+        "correct": 1,
+        "one_wrong": 0
+      },
+      "check_py_sha256": "1f6d1e3ed079809b55e6cef691f13cb0df423ca2e8c385e5c092d6560c7b2eaf",
+      "original_scorer_sha256": "4c410f101b130a35df3a59c376a8972026ee5ba4031a704639a5149eebbd60b2",
+      "named_source_files": 75,
+      "post_source_unchanged": true,
+      "cgroup_v2_observed": true,
+      "network": "none",
+      "readonly_root": true,
+      "uid": 65534,
+      "owned_containers_removed": 6,
+      "owned_fixture_images_removed": 1,
+      "cached_base_preserved": true,
+      "missing_inputs_refused": [
+        "runtime_manifest",
+        "capacity",
+        "dependency_freeze_drift",
+        "selected_image"
+      ],
+      "missing_input_tasks_models_run": false,
+      "boundary": "Original scorer with authored repo/features/runner in shared software lane only; not a prepared original selected group or all 652 pairs. Exact group source/runtime/freeze/image/resources/mirrors remain external."
+    },
+    "terminal_bench": {
+      "status": "software_fixed_finite_authored_controls_accepted",
+      "evidence": [
+        "terminal_final_highlevel",
+        "terminal_stale_reward"
+      ],
+      "source_commit": "f671d05e793dc9ffe8d94d20de622a5068c458a8",
+      "integration_equivalent_commit": "63539297",
+      "source_hashes": {
+        "eval/run/runner.py": "375b1a4a5e04d2209c4b8dee0b0e00c5556b337b2a9f8722c297b4df4a65c952",
+        "eval/service/container_observation.py": "66338bb5eea0d774580388dc134162b39a002f5cde45d6915b6a0265f56b213a",
+        "eval/containers/container_state.py": "d35b6e14a7e5fef586f8680c05d09c74f4dce44c063be54793af23e5aac48fd3",
+        "eval/verification/verifier.py": "797f9003c521876b5c918fe6a1a83424abfd7f3833d0882866e2eeecb653cb74",
+        "data/datasets/terminal_bench.py": "98dee6530fd28c7f7974353de31e6fd984d24ff312206c19018c095841a83cc1"
+      },
+      "normal_loader_public_evaluate_run_one_snapshot_verifier": true,
+      "measured_rewards": {
+        "correct": 1,
+        "wrong": 0
+      },
+      "stale_reward_control": {
+        "actor_preplanted_reward": 1,
+        "actor_preplanted_passing_report": true,
+        "fresh_checker_new_output": false,
+        "per_task": {},
+        "invalid_stage": "check",
+        "cached_tasks": [],
+        "measured": false,
+        "score": null
+      },
+      "exact_owned_cleanup_per_case": {
+        "containers_absent": 3,
+        "networks_absent": 2,
+        "snapshot_images_absent": 1
+      },
+      "accepted_cases": 3,
+      "history": {
+        "first_red": {
+          "evidence": "cooper_terminal_summary",
+          "status": "required_software_fix_not_accepted",
+          "normal_admission": "backend_observation_unavailable",
+          "score": null,
+          "task_executed": false,
+          "authored_task_supplied": true,
+          "cached_image_supplied": true,
+          "missing_wiring": "Truthful state=container backend observer/admission for CPU/memory/network/exec-default policy",
+          "boundary": "First red at original source only; no inferred fix/rerun/final SHA. Not an external-input gap or measured zero."
+        },
+        "intermediate_unmeasured_attempts": "Retained unchanged by producer; not acceptance or a fabricated zero."
+      },
+      "boundary": "Author-only stdlib file-comparison reward/CTRF; positive/negative receipts retain no-trace harness diagnostics, so this is finite scoring/admission acceptance, not a completed research experiment. Released tasks/images/toolchains remain external scope; final delivery gates remain pending."
+    }
+  },
+  "not_run": {
+    "models": true,
+    "released_benchmark_tasks": true,
+    "system_installs": true
+  },
+  "pending": "Final-source delivery/release gates remain pending. Terminal finite authored software controls passed; released task/image/toolchain scope and Cooper original selected-group inputs/acceptance remain separate. Neither full benchmark nor Goal completion is declared."
+}
