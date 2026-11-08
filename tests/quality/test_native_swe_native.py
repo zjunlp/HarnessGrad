@@ -2,6 +2,8 @@
 
 These local-declared source rows are NOT SWE Verified benchmark measurements.
 No model is called. The full driver/relay/patch/pristine-grade path is exercised.
+HG_DATASET_RUNTIME_ROOT selects the managed evaluator; HG_SWE_CONTROL_WHEELS
+selects the offline pytest wheels for the owned control image.
 """
 import hashlib
 import json
@@ -25,9 +27,13 @@ def native_fixture(tmp_path_factory):
     if not os.environ.get('HG_SWE_SOURCE') or not os.environ.get('HG_DATASET_RUNTIME_ROOT'):
         pytest.skip('pinned official SWE runtime not provisioned (HG_SWE_SOURCE/HG_DATASET_RUNTIME_ROOT)')
     native.official('check')
+    # Keep official admission before optional-image skips: an explicitly
+    # configured but invalid evaluator must not be hidden by missing wheels.
+    wheels_dir = os.environ.get('HG_SWE_CONTROL_WHEELS')
+    if not wheels_dir or not Path(wheels_dir).is_dir():
+        pytest.skip('set HG_SWE_CONTROL_WHEELS to the directory of offline pytest wheels')
+    wheels = Path(wheels_dir)
     context = tmp_path_factory.mktemp('swe-control-image')
-    wheels = Path(os.environ.get('HG_SWE_CONTROL_WHEELS', '/tmp/hg-swe-control-wheels'))
-    if not wheels.is_dir(): pytest.skip('offline pytest wheels for tiny control image not provisioned')
     shutil.copytree(wheels, context / 'wheels')
     base = subprocess.check_output(['docker', 'image', 'inspect', 'python:3.12-bookworm', '--format', '{{.Id}}'], text=True).strip()
     (context / 'Dockerfile').write_text('FROM python:3.12-bookworm' + '''

@@ -1,0 +1,231 @@
+{
+  "schema_version": 2,
+  "source": "docs/adapter-integration-journal.md",
+  "original_sha256": "4c778d435f4147eb04dbcee4e37a2bac3f0ac5a55584e3adf252ab12972d1300",
+  "projection": "external-citation-artifact-hash-v1",
+  "records": [
+    {
+      "dataset": "appworld",
+      "record": {
+        "record_id": "appworld-initial-infrastructure-smoke",
+        "run_id": null,
+        "status": "incomplete",
+        "effect": null,
+        "observation": "Original actor launch failed with Docker exit 125. Later repaired smokes measured zero; they do not replace this incomplete attempt. Original failed run ID is not specified.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "### AppWorld real-model smoke blocker"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "receipt.md [legacy-path-sha256:f2b285072a1295b58b8b77f3e91c40197d860c6ed34032c3a5120ec3620cf686]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "bird_minidev",
+      "record": {
+        "record_id": "bird-v4-incomplete",
+        "run_id": null,
+        "status": "incomplete",
+        "effect": null,
+        "observation": "V4 stalled and remains incomplete; no later V5 record supersedes it. The journal names the v4 generation but does not provide its exact run ID.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "v4 stalled and remains incomplete"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "index.json [legacy-path-sha256:95358239703e8cb57b3e93b2f9fe92cb673f0136342a842fc2da8691f3d7540f]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "bird_minidev",
+      "record": {
+        "record_id": "bird-v5-partial-coverage",
+        "run_id": "bird-minidev-h0-10pct-v5",
+        "status": "partial-measurement",
+        "effect": null,
+        "observation": "Historical label complete, reported score 0.3214285714; only 28/34 tasks measured, 90 verify phases. Planned 34 tasks x3 is not certified full coverage.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "only 28/34 tasks were measured (90 verify phases)"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "index.json [legacy-path-sha256:95358239703e8cb57b3e93b2f9fe92cb673f0136342a842fc2da8691f3d7540f]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "chessbench_puzzles",
+      "record": {
+        "record_id": "chess-original-incomplete",
+        "run_id": "chess-pilot-h0-20261013",
+        "status": "incomplete",
+        "effect": null,
+        "observation": "19 task-trials completed, 0 failed envelopes; events stopped during test/1270 trial 2 with no final verdict or aggregate curve.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "- Pilot interruption: run `chess-pilot-h0-20261013`"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "interruption-audit.md [legacy-path-sha256:3e655c08dc72765c89c7ffebc6976dbad478ae98387a81ad9371f37b63d8c08a]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "chessbench_puzzles",
+      "record": {
+        "record_id": "chess-recovery-incomplete",
+        "run_id": "chess-pilot-h0-20261013-recovery-01",
+        "status": "incomplete",
+        "effect": null,
+        "observation": "149/150 task-trials completed, 0 failed envelopes; final test/9967 trial stopped after more than 620s with no terminal verdict/curve. Termination/cleanup closure unproven.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "- Recovery result: `chess-pilot-h0-20261013-recovery-01`"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "interruption-audit.md [legacy-path-sha256:3e655c08dc72765c89c7ffebc6976dbad478ae98387a81ad9371f37b63d8c08a]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "ds1000",
+      "record": {
+        "record_id": "ds1000-v4-pending-review",
+        "run_id": "ds1000-h0-10pct-v4",
+        "status": "pending-review",
+        "effect": null,
+        "observation": "Reported score 0.2076502732 over a 61-task/3-trial pilot on the 926/1000 host slice; sample/trial/timeout audit and archive append remain pending.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "## DS1000 — host slice and timeout evidence"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "report.md [legacy-path-sha256:618a615b9756eb1c4b42416cfba75b8d52be47d03d64d9d0755a72aea81e0644]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "gaia",
+      "record": {
+        "record_id": "gaia-v2-incomplete",
+        "run_id": "gaia-validation-pilot-h0-20261117-v2",
+        "status": "incomplete",
+        "effect": null,
+        "observation": "17 tasks x3 planned; sealed receipt reports 9 persisted trials, events contain 10 done events. API-timeout usage unknown; coverage discrepancy unresolved.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "### GAIA V2 real-model pilot attempt"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "GAIA_H0_V2_RECEIPT.json [legacy-path-sha256:369053d68b023d38fd9c15624acbff4c0ff3b21f30faa8492b31e382792f4936]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "gaia",
+      "record": {
+        "record_id": "gaia-v3-incomplete",
+        "run_id": "gaia-validation-pilot-h0-20261117-v3",
+        "status": "incomplete",
+        "effect": null,
+        "observation": "11 trials completed normally; gaia/49 third trial reached agent completion but snapshot exited 137 before verification. No aggregate score is valid.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "### GAIA V3 real-model pilot attempt"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "events.jsonl [legacy-path-sha256:9952e942b077cc640ea5a2ee050a183eedf87ec82b7acdbdd2501e6c64b68976]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "hotpotqa",
+      "record": {
+        "record_id": "hotpot-v4-incomplete",
+        "run_id": null,
+        "status": "incomplete",
+        "effect": null,
+        "observation": "User stopped the oversized 492-task/3-trial run at 94/1476 task-trials; the journal provides no exact run ID, so none is invented.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "## HotpotQA — structured evidence and time budget"
+          },
+          {
+            "kind": "external-reference",
+            "locator": "qa-h0-incomplete-index.json [legacy-path-sha256:deb8e0e650217d52212f435f05c6528319a6d517a5870b3f9da1e30a1e01882b]; Journal citation only; external receipt not opened during this review."
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "scienceworld",
+      "record": {
+        "record_id": "scienceworld-v4-incomplete",
+        "run_id": "scienceworld-h0-10pct-v4",
+        "status": "incomplete",
+        "effect": null,
+        "observation": "354/354 task-trials completed, but platform-integrity mismatch invalidates run-level completeness; diagnostic mean 0.1380508475 is not an archive effect.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "## ScienceWorld — platform integrity"
+          }
+        ]
+      }
+    },
+    {
+      "dataset": "twowikimultihopqa",
+      "record": {
+        "record_id": "twowiki-original-invalid-pilot",
+        "run_id": null,
+        "status": "partial-measurement",
+        "effect": null,
+        "observation": "Original 50-task pilot had 48 scored tasks, two malformed-output invalids and mixed legacy Answer F1/structured Joint F1. Reported original curve 0.5081597292 is not full comparable coverage. Exact original run ID not specified.",
+        "evidence": [
+          {
+            "kind": "repository",
+            "path": "docs/adapter-integration-journal.md",
+            "locator": "- Local results: MuSiQue capped train pilot"
+          }
+        ]
+      }
+    }
+  ]
+}

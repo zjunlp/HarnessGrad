@@ -76,8 +76,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/101/deliverables/receipt.md"
+       "locator": "receipt.md [legacy-path-sha256:f2b285072a1295b58b8b77f3e91c40197d860c6ed34032c3a5120ec3620cf686]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "Original actor launch failed with Docker exit 125. Later repaired smokes measured zero; they do not replace this incomplete attempt. Original failed run ID is not specified.",
@@ -159,8 +158,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json"
+       "locator": "index.json [legacy-path-sha256:95358239703e8cb57b3e93b2f9fe92cb673f0136342a842fc2da8691f3d7540f]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "V4 stalled and remains incomplete; no later V5 record supersedes it. The journal names the v4 generation but does not provide its exact run ID.",
@@ -178,8 +176,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-archive-v4/index.json"
+       "locator": "index.json [legacy-path-sha256:95358239703e8cb57b3e93b2f9fe92cb673f0136342a842fc2da8691f3d7540f]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "Historical label complete, reported score 0.3214285714; only 28/34 tasks measured, 90 verify phases. Planned 34 tasks x3 is not certified full coverage.",
@@ -238,8 +235,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md"
+       "locator": "interruption-audit.md [legacy-path-sha256:3e655c08dc72765c89c7ffebc6976dbad478ae98387a81ad9371f37b63d8c08a]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "19 task-trials completed, 0 failed envelopes; events stopped during test/1270 trial 2 with no final verdict or aggregate curve.",
@@ -257,8 +253,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/chess/interruption-audit.md"
+       "locator": "interruption-audit.md [legacy-path-sha256:3e655c08dc72765c89c7ffebc6976dbad478ae98387a81ad9371f37b63d8c08a]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "149/150 task-trials completed, 0 failed envelopes; final test/9967 trial stopped after more than 620s with no terminal verdict/curve. Termination/cleanup closure unproven.",
@@ -428,13 +423,12 @@
      "evidence": [
       {
        "kind": "repository",
-       "locator": "## DS1000 \u2014 host slice and timeout evidence",
+       "locator": "## DS1000 — host slice and timeout evidence",
        "path": "docs/adapter-integration-journal.md"
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/61/report.md"
+       "locator": "report.md [legacy-path-sha256:618a615b9756eb1c4b42416cfba75b8d52be47d03d64d9d0755a72aea81e0644]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "Reported score 0.2076502732 over a 61-task/3-trial pilot on the 926/1000 host slice; sample/trial/timeout audit and archive append remain pending.",
@@ -477,8 +471,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v2-evidence/GAIA_H0_V2_RECEIPT.json"
+       "locator": "GAIA_H0_V2_RECEIPT.json [legacy-path-sha256:369053d68b023d38fd9c15624acbff4c0ff3b21f30faa8492b31e382792f4936]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "17 tasks x3 planned; sealed receipt reports 9 persisted trials, events contain 10 done events. API-timeout usage unknown; coverage discrepancy unresolved.",
@@ -496,8 +489,7 @@
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/gaia-h0-launch-v3/runs/gaia-validation-pilot-h0-20261117-v3/events.jsonl"
+       "locator": "events.jsonl [legacy-path-sha256:9952e942b077cc640ea5a2ee050a183eedf87ec82b7acdbdd2501e6c64b68976]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "11 trials completed normally; gaia/49 third trial reached agent completion but snapshot exited 137 before verification. No aggregate score is valid.",
@@ -590,13 +582,12 @@
      "evidence": [
       {
        "kind": "repository",
-       "locator": "## HotpotQA \u2014 structured evidence and time budget",
+       "locator": "## HotpotQA — structured evidence and time budget",
        "path": "docs/adapter-integration-journal.md"
       },
       {
        "kind": "external-reference",
-       "locator": "Journal citation only; external receipt not opened during this review.",
-       "path": "/mnt/20t/xubuqiang/Study/HarnessGrad-evidence-archive/codex/qa-h0-incomplete-index.json"
+       "locator": "qa-h0-incomplete-index.json [legacy-path-sha256:deb8e0e650217d52212f435f05c6528319a6d517a5870b3f9da1e30a1e01882b]; Journal citation only; external receipt not opened during this review."
       }
      ],
      "observation": "User stopped the oversized 492-task/3-trial run at 94/1476 task-trials; the journal provides no exact run ID, so none is invented.",
@@ -973,7 +964,7 @@
      "evidence": [
       {
        "kind": "repository",
-       "locator": "## ScienceWorld \u2014 platform integrity",
+       "locator": "## ScienceWorld — platform integrity",
        "path": "docs/adapter-integration-journal.md"
       }
      ],
@@ -1418,6 +1409,6 @@
   "production_authorized": false,
   "scope": "repository-source-and-journal-only"
  },
- "schema_version": 1,
+ "schema_version": 2,
  "shared_blockers": []
 }

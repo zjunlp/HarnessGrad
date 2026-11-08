@@ -1,9 +1,10 @@
 """Portable adapter declarations and the retained root-diagnostic utility.
 
-Adapters must call harnessgrad.paths.dataset_root and must not carry executable
-host-path literals. The actual storage precedence, .env and worktree behavior are
-covered by test_data_paths.py. Tests of the older roots utility below describe its
-diagnostic API, which shares the same explicit configuration rules.
+Adapters must call harnessgrad.paths.dataset_root. A separate literal guard covers
+the known Linux mounted-storage paths; it is not a general path parser. Storage
+precedence, .env and worktree behavior are covered by test_data_paths.py. Tests of
+the older roots utility below describe its diagnostic API, which shares the same
+explicit configuration rules.
 
 Provisioned-data loading and the independently pinned BFCL source row remain
 integration checks; neither is replaced by a source-spelling assertion.
@@ -27,7 +28,9 @@ from data.scaffolds import registry, roots  # noqa: E402
 
 DATA = ROOT / "data"
 CONTAIN = ROOT / "tests" / "fixtures" / "hg_bfclcontain"
-HOST_LITERAL = "/mnt/20t/xubuqiang/datasets/"
+# The original host stored datasets under /mnt. Any dataset root, including a
+# home-directory default, must independently use the canonical resolver below.
+HOST_STORAGE_PREFIX = "/mnt/"
 DEFAULT_COLLECTION = Path(".local/share/harnessgrad/datasets")
 
 #: Retired variables are not aliases. Clear them along with current storage variables
@@ -99,10 +102,12 @@ def test_describe_reports_configured_and_unconfigured_paths(roots_checkout, tmp_
 
 
 def _code_constants(path: Path):
-    """String constants in executable positions, with their parent nodes.
+    """Known mounted-storage literals in executable positions.
 
-    Docstrings are `Expr(Constant)` and are skipped on purpose: prose may quote the
-    operator's old path, code may not. Comments never reach the AST at all.
+    Docstrings are `Expr(Constant)` and are skipped on purpose: prose may quote
+    historical paths, code may not. Comments never reach the AST at all.
+    Standalone HTTP URLs are remote references. Substring matching preserves the
+    guard for local file URIs and command arguments without parsing either form.
     """
     tree = ast.parse(path.read_bytes(), filename=str(path))
     parent = {}
@@ -111,9 +116,37 @@ def _code_constants(path: Path):
             parent[child] = node
     for node in ast.walk(tree):
         if (isinstance(node, ast.Constant) and isinstance(node.value, str)
-                and HOST_LITERAL in node.value
+                and not node.value.startswith(("http://", "https://"))
+                and HOST_STORAGE_PREFIX in node.value
                 and not isinstance(parent.get(node), ast.Expr)):
             yield node, parent
+
+
+@pytest.mark.parametrize("literal", [
+    "/mnt/example-volume/example-user/datasets/pool.json",
+    "file:///mnt/example-volume/example-user/datasets/pool.json",
+    "cc -I/mnt/example-volume/example-user/datasets/include",
+])
+def test_code_constants_reject_mounted_storage_literals(tmp_path, literal):
+    source = tmp_path / "adapter.py"
+    source.write_text(f"pool = {literal!r}\n")
+    assert [node.value for node, _ in _code_constants(source)] == [literal]
+
+
+def test_code_constants_preserve_prose_and_container_paths(tmp_path):
+    source = tmp_path / "adapter.py"
+    source.write_text('''\
+"""Historical /mnt/example-volume/example-user/data location."""
+# Historical /mnt/example-volume/example-user/datasets location.
+python = "/opt/hg-python/bin/python3.12"
+cargo = "/root/.cargo/bin/cargo"
+pool = "/task/pool.json"
+home = "/home/agent/work"
+relative = "mnt/example-volume/datasets"
+url = "https://example.invalid/mnt/example-volume/data"
+query = "https://example.invalid/?next=/mnt/example-volume/data"
+''')
+    assert list(_code_constants(source)) == []
 
 
 def _portable_root_calls(tree) -> set[str]:
@@ -133,7 +166,7 @@ def _portable_root_calls(tree) -> set[str]:
 
 
 def test_no_data_module_assigns_a_host_path_to_dataset_root():
-    """Require the canonical resolver and reject host literals in executable code."""
+    """Require the canonical resolver and reject known mounted-storage literals."""
     problems = []
     for path in sorted(DATA.rglob("*.py")):
         relative = path.relative_to(ROOT).as_posix()

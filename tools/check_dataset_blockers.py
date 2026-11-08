@@ -6,13 +6,65 @@ import argparse
 import ast
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "registry/dataset-blockers.json"
 HISTORY = ROOT / "tests/fixtures/dataset_blockers/history-codex178.json"
 # Pin the review baseline independently of the editable registry.
 HISTORY_SHA256 = "4c778d435f4147eb04dbcee4e37a2bac3f0ac5a55584e3adf252ab12972d1300"
+PORTABLE_HISTORY = HISTORY.with_name("history-codex178.portable-v2.json")
+PORTABLE_ORIGIN = HISTORY.with_name("history-codex178.portable-v2-origin.json")
+PORTABLE_HISTORY_SHA256 = "d4e9f791c642ed3b7c15b99966845d8269adf292040d25382455c46b0e4eb644"
+PORTABLE_ORIGIN_SHA256 = "16999d27b0028bbfa73637c51a28aab12853c42af3b6a52f344c3ba1952cf00d"
+
+
+def portable_citations(value):
+    """Deterministic text view; never stat/open the original external location."""
+    if isinstance(value, list):
+        return [portable_citations(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if value.get('kind') == 'external-reference':
+        _fields(value, {'kind', 'path', 'locator'}, 'legacy citation')
+        path = value['path']
+        _text(path, 'legacy citation path')
+        name = PurePosixPath(path).name
+        identity = hashlib.sha256(path.encode('utf-8')).hexdigest()
+        return {'kind': 'external-reference',
+                'locator': f'{name} [legacy-path-sha256:{identity}]; {value["locator"]}'}
+    return {key: portable_citations(item) for key, item in value.items()}
+
+
+def historical_baseline(schema_version):
+    raw = HISTORY.read_bytes()
+    _require(hashlib.sha256(raw).hexdigest() == HISTORY_SHA256, 'historical baseline pin changed')
+    original = json.loads(raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    if schema_version == 1:
+        return original
+    try:
+        derived_raw, origin_raw = PORTABLE_HISTORY.read_bytes(), PORTABLE_ORIGIN.read_bytes()
+    except FileNotFoundError as exc:
+        raise RegistryError('portable historical view missing; no automatic regeneration') from exc
+    _require(hashlib.sha256(derived_raw).hexdigest() == PORTABLE_HISTORY_SHA256,
+             'portable historical view pin changed')
+    _require(hashlib.sha256(origin_raw).hexdigest() == PORTABLE_ORIGIN_SHA256,
+             'portable historical origin pin changed')
+    derived = json.loads(derived_raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    origin = json.loads(origin_raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    expected = {'schema_version': 2, 'source': original['source'],
+                'original_sha256': HISTORY_SHA256, 'projection': 'external-citation-artifact-hash-v1',
+                'records': portable_citations(original['records'])}
+    _require(derived == expected, 'portable historical view is not the original projection')
+    _require(origin == {'schema': 'harnessgrad.historical-view-origin.v1',
+        'original': {'path': HISTORY.name, 'sha256': HISTORY_SHA256},
+        'derived': {'path': PORTABLE_HISTORY.name, 'sha256': PORTABLE_HISTORY_SHA256},
+        'projection': expected['projection'],
+        'claim': 'Citation text projection only; no trial, status, effect or custody upgrade.'},
+        'portable historical origin relation changed')
+    return derived
+
+
 STATUSES = {"code-solvable", "external", "runtime", "measurement"}
 FAMILIES = {
     "selected-only-privacy", "source-provenance", "scorer-dependency-network",
@@ -96,20 +148,25 @@ def _unique_strings(values, label: str) -> None:
     _require(len(set(values)) == len(values), f"{label}: duplicates")
 
 
-def _evidence(items, root: Path, label: str, *, archived_journal: bool = False) -> None:
+def _evidence(items, root: Path, label: str, *, archived_journal: bool = False, schema_version: int = 1) -> None:
     _require(isinstance(items, list) and bool(items), f"{label}: evidence required")
     kinds = []
     for item in items:
-        _fields(item, {"kind", "path", "locator"}, label)
-        kind, path = item["kind"], item["path"]
-        _text(path, label)
+        _require(isinstance(item, dict), f'{label}: expected object')
+        kind = item.get('kind')
+        fields = {'kind', 'locator'} if schema_version == 2 and kind == 'external-reference' else {'kind', 'path', 'locator'}
+        _fields(item, fields, label)
         _text(item["locator"], label)
         _require(kind in {"repository", "external-reference"}, f"{label}: evidence kind")
         kinds.append(kind)
         if kind == "external-reference":
             # This is a historical citation, not a file we have verified or may open.
-            _require(Path(path).is_absolute(), f"{label}: external reference must be absolute")
+            if schema_version == 1:
+                _text(item['path'], label)
+                _require(Path(item['path']).is_absolute(), f'{label}: external reference must be absolute')
             continue
+        path = item["path"]
+        _text(path, label)
         rel = Path(path)
         _require(not rel.is_absolute() and ".." not in rel.parts,
                  f"{label}: repository evidence must stay inside root")
@@ -126,18 +183,18 @@ def _evidence(items, root: Path, label: str, *, archived_journal: bool = False) 
     _require("repository" in kinds, f"{label}: repository observation required")
 
 
-def _blocker(blocker, root: Path, label: str) -> None:
+def _blocker(blocker, root: Path, label: str, *, schema_version: int = 1) -> None:
     _fields(blocker, {"id", "family", "status", "observed", "evidence", "next_action"}, label)
     for field in ("id", "observed", "next_action"):
         _text(blocker[field], f"{label}.{field}")
     _require(blocker["family"] in FAMILIES, f"{label}: unknown blocker family")
     _require(blocker["status"] in STATUSES, f"{label}: unknown status")
-    _evidence(blocker["evidence"], root, label)
+    _evidence(blocker["evidence"], root, label, schema_version=schema_version)
 
 
 def validate(document: dict, *, root: Path = ROOT) -> dict:
     _fields(document, {"schema_version", "review", "shared_blockers", "datasets"}, "registry")
-    _require(type(document["schema_version"]) is int and document["schema_version"] == 1,
+    _require(type(document["schema_version"]) is int and document["schema_version"] in (1, 2),
              "unsupported schema version")
     _fields(document["review"], {"date", "scope", "production_authorized", "notes"}, "review")
     _text(document["review"]["date"], "review.date")
@@ -145,6 +202,7 @@ def validate(document: dict, *, root: Path = ROOT) -> dict:
     _require(document["review"]["production_authorized"] is False, "registry cannot authorize production")
     _unique_strings(document["review"]["notes"], "review.notes")
 
+    schema_version = document["schema_version"]
     taxonomy = literal_declarations(root / "tools/dataset_classes.py", {"CAPABILITY", "EXERCISES"})
     published = set(published_declarations(root))
     _require(set(taxonomy["CAPABILITY"]) == published, "taxonomy/published declarations differ")
@@ -152,13 +210,11 @@ def validate(document: dict, *, root: Path = ROOT) -> dict:
     _require(isinstance(document["shared_blockers"], list), "shared_blockers: expected list")
     shared = set()
     for blocker in document["shared_blockers"]:
-        _blocker(blocker, root, "shared blocker")
+        _blocker(blocker, root, "shared blocker", schema_version=schema_version)
         _require(blocker["id"] not in shared, "duplicate shared blocker")
         shared.add(blocker["id"])
 
-    raw = HISTORY.read_bytes()
-    _require(hashlib.sha256(raw).hexdigest() == HISTORY_SHA256, "historical baseline pin changed")
-    baseline = json.loads(raw, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    baseline = historical_baseline(schema_version)
     frozen_history = {row['record']['record_id']: row for row in baseline['records']}
     _require(len(frozen_history) == len(baseline['records']), 'duplicate historical baseline record')
     _require(isinstance(document["datasets"], list), "datasets: expected list")
@@ -193,7 +249,7 @@ def validate(document: dict, *, root: Path = ROOT) -> dict:
                  f"{name}: blockers must be a list")
         ids = set()
         for blocker in row["blockers"]:
-            _blocker(blocker, root, name)
+            _blocker(blocker, root, name, schema_version=schema_version)
             _require(blocker["id"] not in ids, f"{name}: duplicate blocker")
             ids.add(blocker["id"])
         _require(isinstance(row["historical_runs"], list), f"{name}: history must be a list")
@@ -211,7 +267,7 @@ def validate(document: dict, *, root: Path = ROOT) -> dict:
             # Only an exact record from the hash-pinned baseline can retain a
             # reference to the archived journal without local locator validation.
             frozen = frozen_history.get(run['record_id']) == {'dataset': name, 'record': run}
-            _evidence(run["evidence"], root, f"{name}: historical evidence", archived_journal=frozen)
+            _evidence(run["evidence"], root, f"{name}: historical evidence", archived_journal=frozen, schema_version=schema_version)
             key = run["record_id"]
             _require(key not in history, f"duplicate historical record: {key}")
             history[key] = {"dataset": name, "record": run}

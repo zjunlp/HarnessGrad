@@ -1,0 +1,13 @@
+{
+  "schema": "harnessgrad.historical-view-origin.v1",
+  "original": {
+    "path": "history-codex178.json",
+    "sha256": "4c778d435f4147eb04dbcee4e37a2bac3f0ac5a55584e3adf252ab12972d1300"
+  },
+  "derived": {
+    "path": "history-codex178.portable-v2.json",
+    "sha256": "d4e9f791c642ed3b7c15b99966845d8269adf292040d25382455c46b0e4eb644"
+  },
+  "projection": "external-citation-artifact-hash-v1",
+  "claim": "Citation text projection only; no trial, status, effect or custody upgrade."
+}

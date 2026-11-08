@@ -1,0 +1,215 @@
+{
+  "schema": "harnessgrad.inactive-historical-evidence.v1",
+  "original_snapshot": "b87be212e901d26262a1d3cc1b6356847899d19e",
+  "retention_snapshot": "4c235a22d6d978c8d30b13cfcb2f98384fd4da58",
+  "claim": "Classification only; original files, experiments, provenance and licenses are not erased or reinterpreted.",
+  "inactive_helpers": [
+    "tests/fixtures/hg_bfclcontain/validate.py",
+    "tests/fixtures/upstream_provenance_e2/acquire.py",
+    "tests/fixtures/upstream_provenance_e2/verify.py"
+  ],
+  "limits": [
+    "The eight hg_wsel manifests record 40 selections, zero executed trials and zero measured scores.",
+    "Some original E2 response bodies/source inputs were already missing; no missing evidence is reconstructed.",
+    "Use current versioned authored controls for current source; old helpers are not automated current gates.",
+    "No archive is published and no dataset/alias redistribution license is inferred."
+  ],
+  "files": [
+    {
+      "path": "methods/policy_ports/VALIDATION.md",
+      "sha256": "baa2e3e0be6c84a01fa55bea5596903229899f63a2b0d33f47dc64b60f0bccf7",
+      "bytes": 3966,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/candidate-trial-boundary-review.md",
+      "sha256": "d8a3b6bbf8c2afe2cd34cfb42577ba9873620d2c5c55dd90c0d73cf43eacfdc5",
+      "bytes": 2134,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/console-explain-redaction-review.md",
+      "sha256": "646b7920c9ce67638186fcf6e25f07919bfa9353b6348bcf7a62bc47228314d0",
+      "bytes": 1971,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/console-history-bound-review.md",
+      "sha256": "d4853e8b4188168aad06006d54580448d0563d1be3b1d1f654acaf9b7eae0c00",
+      "bytes": 1921,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/legacy-api-boundary-review.md",
+      "sha256": "3f963a415c1aa4410c2a2f6ae6211d5f4996c8b647b2d235469299a1306e4aff",
+      "bytes": 2378,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/public-console-url-redaction-review.md",
+      "sha256": "9d8439a29f01ac95562e9698722c7498ae6a972cb40b03215b4674641622f8d9",
+      "bytes": 3267,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/public-doc-portability-review.md",
+      "sha256": "a528d48a71595fe38445fc64efa14bbd1d3ea4cd11f8c7d5400a2604eddf1443",
+      "bytes": 1753,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/public-legacy-launch-review.md",
+      "sha256": "ec75dc7e25c221e605bce5c8d7fcc2cb8ec14539741673ee09cba4dda3ba6405",
+      "bytes": 2567,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/public-slot-race-review.md",
+      "sha256": "b3c8a1187cb6e843427119c7a30f8be5dd3fbd567e0c3307365fbd2753f7563e",
+      "bytes": 1859,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/public-uv-bootstrap-review.md",
+      "sha256": "3049bd987503586ed4eb45e4fc0e8026d8349baa2e3f2f3157e5ac3be6ab5e1a",
+      "bytes": 1901,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/registry-current-doc-review.md",
+      "sha256": "5266123994dd79425c9dc8b83266c9e68a0cb019de87ef5c85ca68877e965cd2",
+      "bytes": 584,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "reports/workbench-selection-boundary-review.md",
+      "sha256": "ec758c56a9f4000d87ae5e244be60796ce9a3a70590fc0d40217831bbb4e3b24",
+      "bytes": 3342,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_bfclcontain/validate.py",
+      "sha256": "8356e57108980d6987c601a84d42198803b8dc104f7bbe28f810aee1a2eed3a6",
+      "bytes": 3128,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/README.md",
+      "sha256": "d7c1c572cf9c7cc11cd685a4847368694e1d42b007748d85277082691c575647",
+      "bytes": 1420,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/SHA256SUMS",
+      "sha256": "c93d669b102e799da702cbc39f6e1820fb19f943c71c2beb7a68c6d437555753",
+      "bytes": 1182,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/fever.json",
+      "sha256": "e5f9db6059b464e215b39ce076132bfa1f9a69dbf160d5e5f31801dd2efd4750",
+      "bytes": 7972,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/hotpotqa.json",
+      "sha256": "6572f67a087d11aa014f8f75676f8ed1c3b6ce483a9e384c99368a3ef66bf829",
+      "bytes": 8027,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/physicsquestions.json",
+      "sha256": "6209432a27daf63a7e6d7b4bf2217b12f03aa348a0603583d1e939475c1852cb",
+      "bytes": 9309,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/preserved-custody.json",
+      "sha256": "e397a6b7e118b0b60c8efe6a0c6030a9403d503878a0d2f99e2ed829f4ecc2b3",
+      "bytes": 2009,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/reasoning_gym.json",
+      "sha256": "279cecd1953b89f47c040c12cad7b786e72dd264d9949b1ab19e2cd02adedf3a",
+      "bytes": 9439,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/restored-observations.json",
+      "sha256": "251715c3592c16098b6c670fe3c811fd2e684ca7d8ea933f6094e7e003cc10b6",
+      "bytes": 3145,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/sportsunderstanding.json",
+      "sha256": "776f24abf92abe4d541120176a41f06c614c665e0f32ed7ed380e81df27fbcfb",
+      "bytes": 9395,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/spreadsheetbench.json",
+      "sha256": "49525db0ff326942597aeeaa5f8cfd0d1754ad0077cdad5f921cff09687c5e72",
+      "bytes": 12812,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/strategyqa.json",
+      "sha256": "980f178d4581f667fb5d9bdc289745e47714eacabaf6e0618a11d2e62fe87cf0",
+      "bytes": 9145,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/hg_wsel/triviaqa.json",
+      "sha256": "1ffd8cbd5319043f7120b05572682f6b170f860804c324e957d79600bb476c07",
+      "bytes": 7773,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/ujson_pypi_codex226/offline-install-initial-report.json",
+      "sha256": "2ac49d5d6f3463439e6e3bb11fdad626ca2050998e70a4aac31e567f7a6ab9e1",
+      "bytes": 10931,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/upstream_provenance_e2/acquire.py",
+      "sha256": "422428fd8786c5d7eed7463c01d633839da9ae415ba2f1aa4d8ca724ac8eb03c",
+      "bytes": 6108,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    },
+    {
+      "path": "tests/fixtures/upstream_provenance_e2/verify.py",
+      "sha256": "3d52940b038ddea45b5882952d9e4573b44e9b34b911dc4f13b675a73372d18e",
+      "bytes": 12480,
+      "scope": "inactive for current admission; retained original historical record or reconstruction helper",
+      "limits": "Not a fresh runtime/benchmark validation; no implied execution authorization."
+    }
+  ]
+}
