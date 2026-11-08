@@ -108,15 +108,9 @@ def test_prompt_renders_public_file_contract_without_text_requirement(adapter):
 def run_replay(adapter, tmp_path, monkeypatch, *, task, final="", artifact=True,
                finish="stop", outcome="succeeded", provider_error=False):
     """Replace only the external CLI; run the actual wrapper and filesystem writes."""
-    harness = tmp_path / "harness"
-    source = harness / "opencode/packages/cli/src"
-    source.mkdir(parents=True)
-    (source / "index.ts").write_text("// CLI boundary replaced in this offline test")
-    (harness / "harness.json").write_text(json.dumps({"runtime": {
-        "kind": "bun", "source": "opencode", "entrypoint": "packages/cli/src/index.ts"}}))
     work = tmp_path / "task"
     work.mkdir()
-    monkeypatch.setattr(adapter, "ROOT", harness)
+    monkeypatch.setattr(adapter, "prepared_installation", lambda env: {"argv": ["/fixture/opencode"], "profile": "2"})
     tokens = {"input": 80, "output": 10, "reasoning": 2, "cache": {"read": 5, "write": 0}}
     snapshot = {"info": {"id": "s1", "outcome": outcome, "tokens": tokens}, "messages": [
         {"id": "m1", "type": "assistant", "finish": finish, "tokens": tokens,

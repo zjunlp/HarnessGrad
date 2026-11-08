@@ -81,12 +81,6 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
             # Bounded writer logs directly into this task-owned bind. Do not use
             # unbounded docker cp to extract provider output from the container.
             capture_mounts = ["--mount", f"type=bind,src={staging / '.responses'},dst={task_mount}/.responses"]
-            # Supplemental adapter diagnostics are outside the graded snapshot and
-            # collected with independent byte limits, also on timeout/failure.
-            from eval.containers.responses_overlay import ARTIFACTS
-            for filename in ARTIFACTS[2:]:
-                (staging / filename).touch()
-                capture_mounts.extend(["--mount", f"type=bind,src={staging / filename},dst={task_mount}/{filename}"])
             runtime_env = {**runtime_env, "HG_RESPONSES_ARTIFACT_DIR": f"{task_mount}/.responses"}
         try:
             # Step 1. The harness tree read-only at its own host path, and its scratch

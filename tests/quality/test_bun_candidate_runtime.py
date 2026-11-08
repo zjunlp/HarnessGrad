@@ -1,6 +1,7 @@
 """Candidate preparation controls; no model, training or released dataset."""
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -12,16 +13,16 @@ from methods.apply import apply
 def source(root):
     root.mkdir()
     (root / "harness.json").write_text(json.dumps({
-        "name": "opencode-agent", "version": "0.1.0", "path": ".",
+        "name": "bun-fixture", "version": "0.1.0", "path": ".",
         "entrypoint": "agent.py", "backend": "cli", "env_kinds": ["files"],
-        "runtime": {"kind": "bun", "source": "opencode", "entrypoint": "packages/cli/src/index.ts", "package": "@opencode/cli"},
+        "runtime": {"kind": "bun", "source": "engine", "entrypoint": "packages/cli/src/index.ts", "package": "@sample/cli"},
     }))
     (root / "agent.py").write_text("print('owned')\n")
     for name, text in [
-        ("opencode/packages/cli/src/index.ts", "export const value = 1"),
-        ("opencode/packages/core/src/example.ts", 'export const value = "parent"'),
-        ("opencode/node_modules/dep/index.js", "third party"),
-        ("opencode/packages/core/node_modules/dep/index.js", "third party"),
+        ("engine/packages/cli/src/index.ts", "export const value = 1"),
+        ("engine/packages/core/src/example.ts", 'export const value = "parent"'),
+        ("engine/node_modules/dep/index.js", "third party"),
+        ("engine/packages/core/node_modules/dep/index.js", "third party"),
         (".state/session.txt", "old session"),
     ]:
         p = root / name
@@ -36,7 +37,7 @@ def test_formal_staging_copies_source_without_dependencies_or_sessions(tmp_path)
     stage_workspace(parent, child)
     assert not list(child.rglob("node_modules"))
     assert not (child / ".state/session.txt").exists()
-    target = child / "opencode/packages/core/src/example.ts"
+    target = child / "engine/packages/core/src/example.ts"
     target.write_text('export const value = "child"')
     assert '"parent"' in (parent / target.relative_to(child)).read_text()
 
@@ -54,7 +55,7 @@ def test_preparing_dependencies_cannot_change_candidate_source_identity(tmp_path
     child = tmp_path / "child"
     stage_workspace(parent, child)
     before = content_sha(child)
-    dependency = child / "opencode/packages/core/node_modules/dep/index.js"
+    dependency = child / "engine/packages/core/node_modules/dep/index.js"
     dependency.parent.mkdir(parents=True)
     dependency.write_text("installed package")
     assert commit_state(child, "prepared runtime") == before
@@ -62,7 +63,7 @@ def test_preparing_dependencies_cannot_change_candidate_source_identity(tmp_path
 
 def test_dependency_identity_includes_manifest_runtime_and_lock(tmp_path):
     from eval.containers.bun_runtime import dependency_identity
-    root = source(tmp_path / "parent") / "opencode"
+    root = source(tmp_path / "parent") / "engine"
     (root / "package.json").write_text('{"name":"fixture"}')
     (root / "bun.lock").write_text("lock A")
     original = dependency_identity(root, "1.4.2", "Linux", "x86_64")
@@ -103,7 +104,7 @@ def test_reusing_layout_leaves_live_links_untouched(tmp_path):
 
 def test_patch_bytes_change_dependency_identity(tmp_path):
     from eval.containers.bun_runtime import dependency_identity
-    root = source(tmp_path / "parent") / "opencode"
+    root = source(tmp_path / "parent") / "engine"
     (root / "package.json").write_text(json.dumps({
         "patchedDependencies": {"example@1.0.0": "patches/example.patch"}}))
     patch = root / "patches/example.patch"
@@ -117,7 +118,7 @@ def test_patch_bytes_change_dependency_identity(tmp_path):
 @pytest.mark.parametrize("spec", ["file:./local", "link:./local", "../outside", "/outside"])
 def test_local_dependency_forms_refuse_instead_of_reusing_stale_store(tmp_path, spec):
     from eval.containers.bun_runtime import dependency_identity, RuntimeUnavailable
-    root = source(tmp_path / "parent") / "opencode"
+    root = source(tmp_path / "parent") / "engine"
     (root / "package.json").write_text(json.dumps({"dependencies": {"example": spec}}))
     with pytest.raises(RuntimeUnavailable, match="local dependency"):
         dependency_identity(root, "1.4.2", "Linux", "x86_64")
@@ -126,7 +127,7 @@ def test_local_dependency_forms_refuse_instead_of_reusing_stale_store(tmp_path, 
 @pytest.mark.parametrize("patch", ["../outside.patch", "missing.patch"])
 def test_patch_inputs_must_exist_inside_source(tmp_path, patch):
     from eval.containers.bun_runtime import dependency_identity, RuntimeUnavailable
-    root = source(tmp_path / "parent") / "opencode"
+    root = source(tmp_path / "parent") / "engine"
     (root.parent / "outside.patch").write_text("outside")
     (root / "package.json").write_text(json.dumps({"patchedDependencies": {"example": patch}}))
     with pytest.raises(RuntimeUnavailable, match="patch"):
@@ -135,21 +136,21 @@ def test_patch_inputs_must_exist_inside_source(tmp_path, patch):
 
 def test_trusted_parser_does_not_execute_candidate_preload(tmp_path, monkeypatch):
     from eval.containers.bun_runtime import validate_source
-    bun = os.environ.get("HG_AGENT_OPENCODE_BUN")
+    bun = os.environ.get("HG_BUN_BINARY") or shutil.which("bun")
     if not bun:
-        pytest.skip("Set HG_AGENT_OPENCODE_BUN for the real Bun boundary control")
+        pytest.skip("Set HG_BUN_BINARY for the real Bun boundary control")
     repo = source(tmp_path / "candidate")
-    entry = repo / "opencode/packages/cli/src/index.ts"
+    entry = repo / "engine/packages/cli/src/index.ts"
     entry.parent.mkdir(parents=True, exist_ok=True)
     entry.write_text("export const value = 1")
     marker = tmp_path / "preload-executed"
-    (repo / "opencode/preload.ts").write_text(
+    (repo / "engine/preload.ts").write_text(
         "require('fs').writeFileSync(" + json.dumps(str(marker)) + ", 'executed')")
-    (repo / "opencode/bunfig.toml").write_text('preload = ["./preload.ts"]\n')
+    (repo / "engine/bunfig.toml").write_text('preload = ["./preload.ts"]\n')
     cache = tmp_path / "cache"
     cache.mkdir()
-    monkeypatch.setenv("BUN_INSTALL_CACHE_DIR", str(cache))
-    monkeypatch.delenv("HG_OPENCODE_DEPENDENCY_CACHE", raising=False)
+    monkeypatch.setenv("HG_BUN_BINARY", bun)
+    monkeypatch.setenv("HG_BUN_CACHE", str(cache))
     assert validate_source(repo) == []
     assert not marker.exists(), "Trusted parsing executed candidate code outside its sandbox"
 
@@ -159,7 +160,7 @@ def test_preparation_errors_are_unmeasured_in_formal_runner(tmp_path, monkeypatc
     from eval.containers import bun_runtime as runtime
     from eval.run.runner import run_one
     repo = source(tmp_path / "candidate")
-    (repo / "opencode/bun.lock").write_text("fixture")
+    (repo / "engine/bun.lock").write_text("fixture")
     cache = tmp_path / "cache"
     cache.mkdir()
     store = tmp_path / "store"
@@ -179,7 +180,7 @@ def test_preparation_errors_are_unmeasured_in_formal_runner(tmp_path, monkeypatc
     assert "verdict" not in result and result["exit_code"] is None
 
 
-def test_observed_workers_refuse_opencode_before_launch(tmp_path, monkeypatch):
+def test_observed_workers_refuse_bun_before_launch(tmp_path, monkeypatch):
     from eval.run import cooperative
     repo = source(tmp_path / "candidate")
     workers = [{"id": "peer", "goal": "unused", "artifacts": ["answer.txt"],
@@ -191,7 +192,7 @@ def test_observed_workers_refuse_opencode_before_launch(tmp_path, monkeypatch):
     workers.append({**workers[0], "id": "peer2"})
     # Admission must finish before any worker state or container is created.
     def no_launch(*args, **kwargs):
-        pytest.fail("OpenCode observed worker reached runtime creation")
+        pytest.fail("Bun observed worker reached runtime creation")
     monkeypatch.setattr(cooperative.tempfile, "mkdtemp", no_launch)
     result = cooperative.run(repo, {"task_id": "parent"}, setup={"workers": workers},
                              verifier={"kind": "command", "command": ["true"]}, env=None,

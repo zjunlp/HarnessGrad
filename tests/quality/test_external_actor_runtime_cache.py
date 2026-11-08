@@ -8,6 +8,7 @@ import tempfile
 import pytest
 
 from base_harness.codex import codex_runtime
+from base_harness.opencode import opencode_runtime
 from eval.containers import external_runtime as external
 from eval.run import runner
 from harnessgrad.loops import eval_side, mode_a
@@ -91,6 +92,67 @@ def test_missing_cached_identity_forces_fresh_measurement(installed, monkeypatch
     measure()
     next(iter(cache.values())).pop('harness_runtime')
     assert measure()['cached_tasks'] == [] and calls == ['t', 't']
+
+
+@pytest.mark.parametrize('profile,version', [('1', '1.19.5'), ('2', '2.2.6')])
+def test_opencode_wire_is_part_of_measurement_reuse(tmp_path, monkeypatch, profile, version):
+    variable = 'HG_AGENT_OPENCODE_WIRE'
+    monkeypatch.delenv(variable, raising=False)
+    with tempfile.TemporaryDirectory(prefix='hg-opencode-wire-', dir='/var/tmp') as directory:
+        package = Path(directory) / 'package'
+        program = package / 'bin/opencode'
+        program.parent.mkdir(parents=True)
+        shutil.copyfile('/bin/true', program)
+        program.chmod(0o755)
+        (package / 'package.json').write_text(json.dumps({
+            'name': opencode_runtime.PACKAGES[profile], 'version': version,
+        }))
+        record = opencode_runtime.installation(program)
+        repo = tmp_path / 'candidate'
+        repo.mkdir()
+        (repo / 'harness.json').write_text(json.dumps({
+            'name': 'opencode', 'entrypoint': 'agent.py', 'version': '0.3.0',
+            'runtime_paths': record['runtime_paths'], opencode_runtime.RECORD: record,
+        }))
+        progress = tmp_path / 'progress'
+        observed_wires = []
+        measure, _, cache = evaluate(repo, monkeypatch, progress_dir=progress,
+                                    action=lambda: observed_wires.append(os.environ.get(variable, 'chat')))
+        first = measure()
+        chat = external.identities(repo)
+        assert not first['cached_tasks'] and chat['opencode']['wire'] == 'chat'
+        prior = eval_side._progress_results(progress)
+        context = first['verification_context']
+        point = {'round': 0, 'identity': {'harness_sha': 'same-owned-source'},
+                 'env': external.fields(chat), 'verification_context': context}
+
+        monkeypatch.setenv(variable, 'chat')
+        assert external.identities(repo) == chat
+        assert measure()['cached_tasks'] == ['t']
+        assert eval_side._resume_runtime_mismatch(repo, prior, verification_context=context) is None
+        assert mode_a._identical_prior([point], 'same-owned-source', 1, repo=repo,
+                                      verification_context=context) is point
+        assert external.admit_checkpoint(progress, point, fallback=repo) == chat
+        without_wire = {'opencode': {key: value for key, value in chat['opencode'].items() if key != 'wire'}}
+        with pytest.raises(external.RuntimeUnavailable, match='missing or changed'):
+            external.admit_reuse(repo, external.fields(without_wire))
+
+        monkeypatch.setenv(variable, 'responses')
+        responses = external.identities(repo)
+        assert responses == {'opencode': {**chat['opencode'], 'wire': 'responses'}}
+        assert 'missing or changed' in eval_side._resume_runtime_mismatch(repo, prior, verification_context=context)
+        assert mode_a._identical_prior([point], 'same-owned-source', 1, repo=repo,
+                                      verification_context=context) is None
+        with pytest.raises(external.RuntimeUnavailable, match='missing or changed'):
+            external.admit_checkpoint(progress, point, fallback=repo)
+        assert not measure()['cached_tasks']
+        assert observed_wires == ['chat', 'responses'] and len(cache) == 2
+
+        monkeypatch.setenv(variable, 'invalid')
+        refused = measure()
+        assert not refused['cached_tasks']
+        assert 'HG_AGENT_OPENCODE_WIRE' in refused['invalid']['t']['detail']
+        assert observed_wires == ['chat', 'responses'] and len(cache) == 2
 
 
 def test_missing_provider_flag_is_fresh_only(installed, monkeypatch):

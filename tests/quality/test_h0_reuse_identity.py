@@ -14,16 +14,32 @@ def _donor(tmp_path):
     return agent, metadata, point
 
 
-def _problems(run, agent):
+def _problems(run, agent, *, env=None):
     from harnessgrad.h0_identity import agent_problems
     point = json.loads((run / "curve.jsonl").read_text(encoding="utf-8"))
     return agent_problems(run, point, model=agent["model"], backend=agent["backend"],
-                          endpoint=agent["base_url"])
+                          endpoint=agent["base_url"], env=env)
 
 
 def test_matching_recorded_and_measured_agent_identity_can_be_reused(tmp_path):
     agent, _, _ = _donor(tmp_path)
     assert _problems(tmp_path, agent) == []
+
+
+@pytest.mark.parametrize("wire,env", [("chat", {}), ("responses", {"HG_AGENT_OPENCODE_WIRE": "responses"})])
+def test_opencode_npm_backend_alias_requires_matching_wire_and_trace_evidence(tmp_path, wire, env):
+    agent, _, point = _donor(tmp_path)
+    point["identity"].update(harness_name="opencode", agent_backend="opencode", harness_identity={
+        "harness": "opencode-agent", "agent_backend": "opencode", "runtime": {"schema": 3}, "wire": wire,
+    })
+    curve = tmp_path / "curve.jsonl"
+    curve.write_text(json.dumps(point) + "\n")
+    assert _problems(tmp_path, agent, env=env) == []
+    other_wire = "responses" if wire == "chat" else "chat"
+    assert _problems(tmp_path, agent, env={"HG_AGENT_OPENCODE_WIRE": other_wire})
+    point["identity"]["harness_identity"]["runtime"]["schema"] = 2
+    curve.write_text(json.dumps(point) + "\n")
+    assert _problems(tmp_path, agent, env=env)
 
 
 @pytest.mark.parametrize("field,value", [("model", "agent-b"), ("backend", "mock"),

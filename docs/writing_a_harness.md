@@ -58,11 +58,17 @@ The [Codex preparation procedure](../base_harness/codex/README.md) fixes one CLI
 its runtime bindings in a Harness copy; [DSH preparation](../base_harness/deepseek-harness/README.md)
 also validates its plugin link targets. [OpenClaw preparation](../base_harness/openclaw/README.md)
 fixes its supported package, Node executable and bindings together.
-[OpenCode preparation](../base_harness/opencode/README.md) selects an installed v1
-source tree and Bun without copying that tree into checkpoints.
+[OpenCode preparation](../base_harness/opencode/README.md) binds an installed
+native npm release and records its executable and package metadata.
 [miniSWE preparation](../base_harness/miniswe/README.md) provisions its declared
 dependencies for each executing Python version, including task images. Run preparation
 before recording the candidate identity, and repeat it when selecting another installation.
+
+A Harness that declares `runtime.kind = "bun"` can prepare its owned workspace
+with `python3 tools/configure_bun_harness.py "$HARNESS_DIR"`. Use `HG_BUN_BINARY`
+to select Bun and `HG_BUN_CACHE` to point to a populated offline dependency cache.
+At task launch the platform supplies the admitted `HG_HARNESS_BUN`,
+`HG_HARNESS_SOURCE` and `HG_HARNESS_ENTRYPOINT` paths.
 
 **`name` and `version` are the harness's identity and a method may not change
 them.** Everything else in the directory is yours, and a method that improves
@@ -182,7 +188,7 @@ also declares both managed routes. Its native mini CLI uses the same isolated
 interpreter and the artifact's configuration, while task shell commands retain
 the task image's Python and tool environment.
 The Codex, DSH and OpenClaw wrappers use their separate external-CLI preparation
-procedures, while OpenCode declares Bun. A Python venv alone does not describe
+procedures, while OpenCode binds an external native CLI. A Python venv alone does not describe
 those external runtimes.
 
 Each measured point records `harness_runtime_identity`, including owned source

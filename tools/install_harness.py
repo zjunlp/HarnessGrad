@@ -19,6 +19,7 @@ from eval.containers import sandbox
 from harnessgrad.paths import main_checkout
 from harnessgrad.python_artifacts import atomic_json, digest, locked
 from tools import configure_codex_harness as codex
+from tools import configure_opencode_harness as opencode
 from tools import configure_openclaw_harness as openclaw
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +39,12 @@ CODEX_RELEASES = {
         "sha512-FNc7danfUng9Sp6w+Fh7kofNHHZpA6VMyNKWsWrS3OwHly69gywTWeiuwrUPXpJSho8Df4xqRsHfHRPzj7zYQg==",
     ),
 }
+OPENCODE_PACKAGES = {"1": "opencode-linux-x64", "2": "@opencode/cli-linux-x64"}
+OPENCODE_RELEASES = {
+    "1.19.5": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
+    "2.2.6": "sha512-g1NShGt+20y/7nzQvqAnO7bQshC8nZGaz8WC7J8vjgXIOZ1uzoxz5OiLnCbUWertf2CM3Dlh9tzrmZJf0ic9Aw==",
+}
+LABELS = {"openclaw": "OpenClaw", "codex": "Codex", "opencode": "OpenCode"}
 
 
 @dataclass(frozen=True)
@@ -55,6 +62,11 @@ def _recipe(name: str, version: str) -> NpmRelease:
             raise ValueError("Codex version must be an exact X.Y.Z release")
         wrapper, native = CODEX_RELEASES.get(version, (None, None))
         return NpmRelease(CODEX_PACKAGE, version, wrapper, native_integrity=native)
+    if name == "opencode":
+        if not re.fullmatch(r"[12]\.[0-9]+\.[0-9]+", version):
+            raise ValueError("OpenCode version must be an exact v1 or v2 release")
+        package = OPENCODE_PACKAGES[version.split(".", 1)[0]]
+        return NpmRelease(package, version, OPENCODE_RELEASES.get(version))
     release = openclaw.RELEASES.get(version)
     return NpmRelease("openclaw", version, release.integrity if release else None,
                       rebuild=release is None or release.rebuild)
@@ -205,21 +217,25 @@ def _existing(receipt_path: Path, release: NpmRelease) -> Path:
     return harness
 
 
-def _check_binding(record: dict, node: Path, launcher: Path, expected_version: str) -> None:
+def _check_binding(record: dict, argv: list[str], expected_version: str) -> None:
     if record["version"] != expected_version:
         raise ValueError(f"CLI version mismatch: expected {expected_version}, found {record['version']}")
-    if record["argv"] != [str(node), str(launcher)]:
-        raise ValueError(f"CLI binding differs from the selected Node or launcher: {launcher}")
+    if record["argv"] != argv:
+        raise ValueError(f"CLI binding differs from the selected launch command: {argv}")
 
 
 def install_harness(name: str, version: str, root: Path) -> Path:
-    if name not in ("codex", "openclaw"):
+    if name not in LABELS:
         raise ValueError(f"unknown base harness {name!r}")
     recipe = _recipe(name, version)
     if name == "codex":
         template = ROOT / "base_harness/codex"
         helper, source = codex._adapter, None
         entrypoint, expected_version = "bin/codex.js", f"codex-cli {version}"
+    elif name == "opencode":
+        template = ROOT / "base_harness/opencode"
+        helper, source = opencode._helper, None
+        entrypoint, expected_version = "bin/opencode", version
     else:
         template = openclaw.TEMPLATE
         helper, source = openclaw._helper, openclaw.source_identity(version)
@@ -244,12 +260,13 @@ def install_harness(name: str, version: str, root: Path) -> Path:
         node_root = _toolchain(root)
         node = node_root / "bin/node"
         launcher_path = Path("package/node_modules") / recipe.package / entrypoint
-        if name == "codex" and recipe.integrity is None:
-            print(f"Warning: Codex {version} is unverified. Trying the Codex adapter.", file=sys.stderr)
+        prefix = [] if name == "opencode" else [str(node)]
+        if source is None and recipe.integrity is None:
+            print(f"Warning: {LABELS[name]} {version} is unverified. Trying its adapter.", file=sys.stderr)
         if receipt_path.exists():
             harness = _existing(receipt_path, recipe)
             record = helper(harness).resolve(harness, {})
-            _check_binding(record, node, harness.parent / launcher_path, expected_version)
+            _check_binding(record, [*prefix, str(harness.parent / launcher_path)], expected_version)
             if source is not None:
                 if recipe.integrity is not None and record["source_identity"] != source:
                     raise ValueError(f"installed OpenClaw source identity differs from the verified release: {harness}")
@@ -265,14 +282,16 @@ def install_harness(name: str, version: str, root: Path) -> Path:
             shutil.copytree(template, harness, ignore=shutil.ignore_patterns(
                 ".git", ".env", ".state", "__pycache__", "*.pyc"))
             env = {"PATH": os.defpath}
-            if source is None:
+            if name == "opencode":
+                record = opencode.configure(harness, launcher, expected_version=version)
+            elif source is None:
                 record = codex.configure(harness, str(launcher), node=str(node), env=env,
                                          sandbox_only=recipe.integrity is None)
             else:
                 (harness / "runtime-identity.json").write_text(json.dumps(source, indent=2) + "\n", encoding="utf-8")
                 record = openclaw.configure(harness, str(launcher), node=str(node),
                                              runtime_paths=(lockfile.parent,), env=env, warn=False)
-            _check_binding(record, node, launcher, expected_version)
+            _check_binding(record, [*prefix, str(launcher)], expected_version)
             atomic_json(receipt_path, {"schema": 1, "version": version, "node_version": NODE_VERSION,
                         "npm_version": NPM_VERSION, "instance": instance.name,
                         "package_integrity": _locked_integrity(lockfile, recipe),
@@ -288,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
     actions = parser.add_subparsers(dest="action", required=True)
     actions.add_parser("list", help="list verified harness versions")
     install = actions.add_parser("install", help="install and bind a harness version")
-    catalogs = {"openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES}
+    catalogs = {"openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES, "opencode": OPENCODE_RELEASES}
     install.add_argument("harness", choices=catalogs)
     install.add_argument("--version", help="exact release version (default: latest verified version)")
     install.add_argument("--install-root", type=Path, default=default_root())
@@ -302,7 +321,7 @@ def main(argv: list[str] | None = None) -> int:
         version = args.version
         if version is None:
             version = max(catalogs[args.harness], key=lambda release: tuple(map(int, release.split("."))))
-            name = "OpenClaw" if args.harness == "openclaw" else "Codex"
+            name = LABELS[args.harness]
             print(f"Using latest verified {name} version {version} (--version omitted).", file=sys.stderr)
         harness = install_harness(args.harness, version, args.install_root)
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:

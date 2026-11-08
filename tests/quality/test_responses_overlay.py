@@ -118,15 +118,15 @@ def test_mixed_or_missing_overlay_identities_refuse_comparison(tmp_path):
 def test_capture_collection_keeps_failure_evidence_and_bounds_untrusted_files(tmp_path):
     out=tmp_path/".responses"; out.mkdir()
     (out/"http.jsonl").write_text('{"kind":"fetch_error","message":"offline failure"}\n')
-    (tmp_path/"opencode.stderr.log").write_text("provider failed")
+    (out/"status.json").write_text('{"truncated":false}')
     result=overlay.collect_capture(tmp_path)
     assert result["artifacts"][".responses/http.jsonl"]["status"]=="submitted"
     assert result["complete"] is False
     (out/"http.jsonl").unlink()
-    (out/"http.jsonl").symlink_to(tmp_path/"opencode.stderr.log")
+    (out/"http.jsonl").symlink_to(out/"status.json")
     result=overlay.collect_capture(tmp_path)
     assert result["artifacts"][".responses/http.jsonl"]["status"]=="invalid"
-    assert result["artifacts"]["opencode.stderr.log"]["status"]=="submitted"
+    assert result["artifacts"][".responses/status.json"]["status"]=="submitted"
 
 
 @pytest.mark.parametrize("log,status", [("null\n", '{"truncated":false}'), ('{"kind":"request","request_id":"r"}\n', "[]")])
@@ -154,7 +154,6 @@ def test_formal_failure_keeps_capture_after_task_cleanup(tmp_path,monkeypatch,ti
         capture=Path(env["HG_RESPONSES_ARTIFACT_DIR"])
         (capture/"http.jsonl").write_text('{"kind":"request","request_id":"r"}\n')
         (capture/"status.json").write_text('{"truncated":false}')
-        (Path(cwd)/"opencode.stderr.log").write_text("preserved failure")
         if timeout: raise subprocess.TimeoutExpired(argv,timeout_s)
         return SimpleNamespace(returncode=1,stderr="provider failure")
     monkeypatch.setattr(runner,"run_process",execute)
@@ -163,7 +162,7 @@ def test_formal_failure_keeps_capture_after_task_cleanup(tmp_path,monkeypatch,ti
     assert result["exit_code"]==(-1 if timeout else 1)
     assert not seen["work"].exists()
     capture=result["runtime_services"]["responses_capture"]
-    assert capture["artifacts"]["opencode.stderr.log"]["status"]=="submitted"
+    assert capture["artifacts"][".responses/http.jsonl"]["status"]=="submitted"
     assert capture["complete"] is False
     assert result["harness_runtime"]["bun"]["responses_overlay"]==prepared["identity"]
 

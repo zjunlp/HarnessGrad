@@ -146,7 +146,7 @@ def runtime_binding(manifest, binding):
         raise RecoveryError('runtime needs reviewed file inventory and environment')
     files, environment = binding['files'], binding['environment']
     allowed = {'HG_BUN_BINARY', 'HG_BUN_CACHE', 'HG_OVERLAY_ROOT', 'HG_AGENT_NODE',
-               'HG_AGENT_DSH', 'HG_AGENT_OPENCODE_BUN', 'HG_AGENT_CODEX',
+               'HG_AGENT_DSH', 'HG_AGENT_CODEX',
                'HG_EGRESS_PROXY', 'HG_EGRESS_BIND', 'HG_EGRESS_PORT', 'HG_EGRESS_UPSTREAM'}
     if not isinstance(environment, dict) or set(environment) - allowed or any(not isinstance(v, str) or not v for v in environment.values()):
         raise RecoveryError('runtime environment must use explicitly reviewed runtime/proxy keys')
@@ -171,7 +171,7 @@ def runtime_binding(manifest, binding):
     if manifest.get('install') and not any(Path(item['path']).name == 'PROVENANCE.json' for item in observed):
         raise RecoveryError('dependency overlay requires its reviewed PROVENANCE.json inventory entry')
     for key, value in environment.items():
-        if key in {'HG_BUN_BINARY', 'HG_AGENT_NODE', 'HG_AGENT_DSH', 'HG_AGENT_OPENCODE_BUN', 'HG_AGENT_CODEX'}:
+        if key in {'HG_BUN_BINARY', 'HG_AGENT_NODE', 'HG_AGENT_DSH', 'HG_AGENT_CODEX'}:
             if not any(Path(item['resolved_path']) == Path(value).expanduser().resolve() for item in observed):
                 raise RecoveryError(f'configured runtime executable is outside the inventory: {key}')
     return {'scope': 'reviewed-runtime-files-v1; transitive closure not asserted',

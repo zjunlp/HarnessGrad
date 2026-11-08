@@ -1,66 +1,43 @@
-# OpenCode Harness installation preparation
+# OpenCode Harness
 
-The shipped Harness is a portable adapter for an external, prepared OpenCode v1
-source tree and Bun executable. It does not vendor the monorepo or install packages
-during measurement. Copy the adapter, then prepare that copy:
+The adapter runs the released OpenCode CLI from a prepared Harness copy.
+On Linux x86-64 with Bubblewrap, install the verified npm releases with:
 
 ```sh
-cp -a base_harness/opencode /path/to/opencode-harness-copy
-python3 tools/configure_opencode_harness.py /path/to/opencode-harness-copy \
-  --source /path/to/opencode --bun /path/to/bun
+harnessgrad harness install opencode --version 1.19.5
+HARNESS_DIR=$(harnessgrad harness install opencode --version 2.2.6)
 ```
 
-The source can also be selected with `HG_AGENT_OPENCODE_SOURCE`. Bun selection is
-explicit `--bun`, then `HG_AGENT_OPENCODE_BUN`, `HG_BUN_BINARY`, then discovery on
-PATH during preparation. The tool reads the main checkout `.env`, a worktree
-`.env` if present, and the process environment in that order; arguments win.
-Source and executable aliases select their physical installations once.
+Use the printed directory with `harnessgrad run --harness-path`. Omitting
+`--version` selects the latest verified release, currently `2.2.6`.
+`--install-root` selects the dedicated store, which defaults to
+`harnessgrad/base-harnesses` under the user data directory.
 
-Preparation checks the installed v1 package and lockfile, hashes source and all
-bound dependency contents, permissions and link layout, and runs version and
-projection checks inside a network-isolated native sandbox with private HOME/XDG/configuration. It never
-imports candidate Python or executes source code in the host namespace. It
-requires bubblewrap and an already installed dependency tree. It does not upgrade
-OpenCode, populate caches or run package lifecycle scripts.
+The installer uses Node.js 24.22.2 and npm 11.19.1 to install the exact native
+package. It checks the npm archive digest and retains the lockfile.
+`1.19.5` uses `opencode-linux-x64`; `2.2.6` uses `@opencode/cli-linux-x64`.
+Tasks invoke the native executable directly. The prepared manifest records
+the executable and its package metadata as read-only bindings, together with
+their hashes and modes. Preparation checks the version in a network-isolated
+sandbox. Explicit unverified v1 or v2 releases are attempted with a warning.
 
-`harness.json` atomically records `_opencode_runtime` and `runtime_paths`. The
-source directory and exact Bun executable are mounted read-only; the tool never
-infers a binding of the executable's bin directory or a shared installation parent.
-Use repeatable `--runtime /path/to/dedicated-dependency` for external dependency
-links. Installations hidden under `/tmp`, broad HOME/system/shared temporary
-directories and overlap with the platform or Harness copy are refused.
+To bind an existing npm native installation, copy the Harness and run
+`python3 tools/configure_opencode_harness.py "$HARNESS_DIR" --opencode "$OPENCODE_BIN"`.
+`OPENCODE_BIN` points to the Linux x86-64 ELF executable at `bin/opencode` inside
+its native npm package, with `package.json` at the package root. Prepare a fresh
+copy for a different installation to keep the original binding available for
+earlier experiments.
 
-Tasks and the platform's Bun admission/cache checks use the same fixed source,
-binary and identity. Changing PATH does not select another installation; a
-conflicting override or changed prepared source requires preparing again. Native
-and container-state execution continue to use the existing Bun runtime contract.
-Task HOME/XDG/configuration and session state remain private.
+Both release series use `run --format json` for tool events. The adapter uses
+each series' provider configuration and session export to record the final
+answer and usage. It keeps OpenCode's configuration and state local to the
+task and passes the task's model endpoint and credential. Set
+`HG_AGENT_OPENCODE_WIRE` to `responses` for a Responses endpoint. The default
+transport is Chat Completions (`chat`). The platform records the effective
+transport in the measurement's runtime identity. Cache reuse, H0 reuse, and
+resume require a matching transport. If the recorded runtime identity omits
+the transport, start a new run and measure again.
 
-Candidates that carry editable source in their own `opencode/` directory retain
-the existing offline preparation route, `tools/configure_bun_harness.py`. Their
-workspace links belong to that candidate and dependencies stay out of checkpoints.
-The external-installation tool refuses candidate/installation overlap instead of
-copying a large external tree into every checkpoint. An unprepared shipped
-template cannot run until an installation is selected.
-
-Legacy Harnesses with manually declared external source retain the existing Bun
-route. Their dependency contents are unverified, so they neither read nor populate
-the measurement cache. Use explicit preparation to obtain a verified installation
-identity and cache reuse. Standalone interface diagnostics may select an undeclared external tree with
-`HG_AGENT_OPENCODE_EXTERNAL_SOURCE=1`; the trace marks that mode and formal
-admission rejects it. This flag does not authorize a measured run.
-
-Schema 2 fingerprints every file, directory, permission mode and symlink in the
-bound installation, including `node_modules`, native modules, data and extra
-runtime directories. Cache/VCS-named directories are included. Content is read
-again during admission and execution; unchanged sizes or timestamps do not bypass
-the check. The installation must remain unchanged after preparation. A changed
-dependency invalidates the old record before measurement-cache lookup; preparing
-again records a new identity and cannot reuse the old score.
-
-Schema 1 metadata-only records are refused. Existing prepared copies need the
-updated adapter helper and must be prepared again.
-
-The version probe establishes startup, not model-backed task quality. Selecting
-another major OpenCode release needs an adapter compatibility change; the runtime
-selection tool does not silently upgrade the v1 adapter.
+To resume an experiment with a schema 2 OpenCode source binding, use the
+original platform revision and source binding. Start a new run when moving
+that experiment to an npm release.

@@ -29,11 +29,13 @@ def test_invalid_version_never_creates_installation(tmp_path, capsys):
 @pytest.mark.parametrize("name, latest, earlier, label", [
     ("openclaw", "2026.11.2", "2026.3.13", "OpenClaw"),
     ("codex", "0.167.0", "0.166.0", "Codex"),
+    ("opencode", "2.2.6", "1.19.5", "OpenCode"),
 ])
 @pytest.mark.parametrize("explicit", [False, True])
 def test_install_selects_latest_verified_version_only_when_omitted(tmp_path, capsys, monkeypatch,
                                                                 name, latest, earlier, label, explicit):
-    owner, key = (install_harness.openclaw, "RELEASES") if name == "openclaw" else (install_harness, "CODEX_RELEASES")
+    owner, key = (install_harness.openclaw, "RELEASES") if name == "openclaw" else (
+        install_harness, f"{name.upper()}_RELEASES")
     releases = getattr(owner, key)
     monkeypatch.setattr(owner, key, {latest: releases[latest], earlier: releases[earlier]})
     prepared = tmp_path / "harness"

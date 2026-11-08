@@ -376,7 +376,7 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
         point = curve[0] if curve else {}
         problems.extend(h0_identity.agent_problems(
             run, point, model=configuration.get("agent_model"),
-            backend=configuration.get("agent_backend"), endpoint=configuration.get("endpoint")))
+            backend=configuration.get("agent_backend"), endpoint=configuration.get("endpoint"), env=env))
         sampling = configuration.get("sampling")
         for source, recorded in (
                 ("curve", (point.get("sampling") or {}).get("policy")),

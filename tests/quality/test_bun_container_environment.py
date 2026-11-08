@@ -10,9 +10,9 @@ from eval.containers import bun_runtime, container_state
 from eval.run import runner
 
 
-@pytest.mark.parametrize("legacy_bun", [None, "/ambient/other-bun"])
+@pytest.mark.parametrize("ambient_bun", [None, "/ambient/other-bun"])
 @pytest.mark.parametrize("transport", [False, True])
-def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkeypatch, legacy_bun, transport):
+def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkeypatch, ambient_bun, transport):
     repo = tmp_path / "candidate"
     source = repo / "engine"
     source.mkdir(parents=True)
@@ -38,15 +38,12 @@ def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkey
         preparation["runtime_paths"].append(str(overlay))
     monkeypatch.setattr(bun_runtime, "prepare", lambda _: preparation)
     monkeypatch.setenv("HG_BUN_BINARY", str(binary))
-    monkeypatch.delenv("HG_HARNESS_BUN", raising=False)
     monkeypatch.delenv("HG_HARNESS_SOURCE", raising=False)
     monkeypatch.delenv("HG_HARNESS_ENTRYPOINT", raising=False)
-    monkeypatch.delenv("HG_AGENT_OPENCODE_SOURCE", raising=False)
-    monkeypatch.delenv("HG_AGENT_OPENCODE_EXTERNAL_SOURCE", raising=False)
-    if legacy_bun:
-        monkeypatch.setenv("HG_AGENT_OPENCODE_BUN", legacy_bun)
+    if ambient_bun:
+        monkeypatch.setenv("HG_HARNESS_BUN", ambient_bun)
     else:
-        monkeypatch.delenv("HG_AGENT_OPENCODE_BUN", raising=False)
+        monkeypatch.delenv("HG_HARNESS_BUN", raising=False)
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
     monkeypatch.delenv("HG_AGENT_BASE_URL", raising=False)
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("unexpected process"))
@@ -82,11 +79,6 @@ def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkey
             assert env["HG_RESPONSES_ARTIFACT_DIR"] == f"{cwd}/.responses"
             (capture / "http.jsonl").write_text('{"kind":"request","request_id":"r"}\n')
             (capture / "status.json").write_text('{"truncated":false}')
-            for filename in ("opencode.events.jsonl", "opencode.stderr.log", "opencode.session.json"):
-                mount = next(m for m in observed["mounts"] if f"dst={cwd}/{filename}" in m)
-                path = Path(mount.split("src=", 1)[1].split(",dst=", 1)[0])
-                assert path.is_file() and "readonly" not in mount
-                path.write_text("retained diagnostic")
         return SimpleNamespace(returncode=0, stderr="")
 
     monkeypatch.setattr(docker, "exec_in", execute)
@@ -98,7 +90,6 @@ def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkey
     assert result["exit_code"] == 0
     assert receipt["bun"]["identity"] == preparation["identity"]
     assert observed["env"]["HG_HARNESS_BUN"] == preparation.get("execution_binary", str(binary))
-    assert observed["env"]["HG_AGENT_OPENCODE_BUN"] == preparation.get("execution_binary", str(binary))
     assert observed["env"]["HG_HARNESS_SOURCE"] == str(source.resolve())
     assert observed["env"]["HG_HARNESS_ENTRYPOINT"] == str(entry.resolve())
     assert f"type=bind,src={binary.parent},dst={binary.parent},readonly" in observed["mounts"]
@@ -107,4 +98,4 @@ def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkey
         assert f"type=bind,src={overlay},dst={overlay},readonly" in observed["mounts"]
         assert receipt["responses_capture"]["artifacts"][".responses/http.jsonl"]["status"] == "submitted"
         assert receipt["responses_capture"]["complete"] is False
-        assert receipt["responses_capture"]["artifacts"]["opencode.stderr.log"]["bytes"] == 19
+        assert receipt["responses_capture"]["artifacts"][".responses/status.json"]["status"] == "submitted"

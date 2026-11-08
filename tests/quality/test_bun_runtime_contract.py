@@ -91,15 +91,15 @@ def test_invalid_declaration_is_rejected(tmp_path, field, value):
         runtime_spec(repo)
 
 
-def test_external_diagnostic_source_is_rejected_before_formal_preparation(tmp_path, monkeypatch):
+@pytest.mark.parametrize("variable", ["HG_HARNESS_SOURCE", "HG_HARNESS_ENTRYPOINT"])
+def test_conflicting_bun_path_is_rejected_before_formal_preparation(tmp_path, monkeypatch, variable):
     from eval.run.runner import run_one
     repo = harness(tmp_path)
-    monkeypatch.setenv("HG_AGENT_OPENCODE_EXTERNAL_SOURCE", "1")
-    monkeypatch.setenv("HG_AGENT_OPENCODE_SOURCE", str(tmp_path / "external"))
+    monkeypatch.setenv(variable, str(tmp_path / "external"))
     monkeypatch.setattr(runtime, "prepare", lambda repo: pytest.fail("must reject before preparing"))
     result = run_one(repo, {"task_id": "ownership", "prompt": "unused"})
     assert result["invalid"]["stage"] == "harness runtime preparation"
-    assert "diagnostic" in result["invalid"]["detail"].lower()
+    assert f"{variable} differs from the declared Bun runtime" in result["invalid"]["detail"]
 
 
 def test_changed_binary_cannot_reuse_runtime_identity(tmp_path, monkeypatch):
@@ -265,13 +265,14 @@ def test_store_permissions_are_part_of_verified_identity(tmp_path, monkeypatch, 
         runtime.identity(repo)
 
 
-def test_formal_legacy_manifest_cannot_use_external_diagnostic(tmp_path):
+def test_bun_paths_do_not_select_bun_without_a_runtime_declaration(tmp_path, monkeypatch):
     repo = harness(tmp_path)
     manifest = json.loads((repo / "harness.json").read_text())
     manifest.pop("runtime")
     (repo / "harness.json").write_text(json.dumps(manifest))
-    with pytest.raises(runtime.RuntimeUnavailable, match="diagnostic"):
-        runtime.admit(repo, {"HG_AGENT_OPENCODE_EXTERNAL_SOURCE": "1"})
+    monkeypatch.setattr(runtime, "runtime_settings", lambda: pytest.fail("Bun was selected"))
+    assert runtime.admit(repo, {"HG_HARNESS_SOURCE": str(repo / "engine")}) == {}
+    assert runtime.prepare(repo) is None and runtime.identity(repo) is None
 
 
 def test_container_state_receives_verified_bun_runtime(tmp_path, monkeypatch):
@@ -279,7 +280,7 @@ def test_container_state_receives_verified_bun_runtime(tmp_path, monkeypatch):
     repo = harness(tmp_path)
     bun, _, _ = fake_runtime(tmp_path, monkeypatch)
     configured = runtime.configure(repo)
-    monkeypatch.setenv("HG_AGENT_OPENCODE_BUN", "/ambient/other-bun")
+    monkeypatch.setenv("HG_HARNESS_BUN", "/ambient/other-bun")
     observed = {}
     def dispatch(repo, task, **kwargs):
         observed.update(kwargs)
@@ -290,5 +291,4 @@ def test_container_state_receives_verified_bun_runtime(tmp_path, monkeypatch):
                     env={"kind": "exec", "image": "fixture", "state": "container"}, runtime_receipt=receipt)
     assert receipt["bun"]["identity"] == configured["identity"]
     assert observed["runtime_env"]["HG_HARNESS_BUN"] == str(bun)
-    assert observed["runtime_env"]["HG_AGENT_OPENCODE_BUN"] == str(bun)
     assert observed["runtime_env"]["HG_HARNESS_SOURCE"] == str(repo / "engine")

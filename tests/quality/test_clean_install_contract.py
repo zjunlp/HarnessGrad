@@ -234,7 +234,7 @@ else:
 def test_installed_opencode_template_and_preparation_tool(installed):
     root, env, runtime = installed
     python = str(runtime / "bin/python")
-    assert "--source" in run([python, "-m", "tools.configure_opencode_harness", "--help"], root, env)
+    assert "--opencode" in run([python, "-m", "tools.configure_opencode_harness", "--help"], root, env)
     code = '''
 import json
 from pathlib import Path

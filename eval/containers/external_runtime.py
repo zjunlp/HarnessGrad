@@ -16,7 +16,7 @@ from harnessgrad.paths import main_checkout
 from eval.containers import bun_runtime, openclaw_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
-KINDS = frozenset({'bun', 'openclaw', 'codex', 'dsh', 'external'})
+KINDS = frozenset({'bun', 'openclaw', 'codex', 'opencode', 'dsh', 'external'})
 
 
 class RuntimeUnavailable(ValueError):
@@ -65,6 +65,7 @@ def identities(repo, env=None):
             values['openclaw'] = claw
         for kind, key, name, relative in (
                 ('codex', '_codex_runtime', 'codex', 'codex/codex_runtime.py'),
+                ('opencode', '_opencode_runtime', 'opencode', 'opencode/opencode_runtime.py'),
                 ('dsh', '_dsh_runtime', 'deepseek-harness', 'deepseek-harness/dsh_runtime.py')):
             if key in manifest:
                 helper = _provider(relative)
@@ -73,6 +74,8 @@ def identities(repo, env=None):
                 # Old receipts without the flag remain diagnostic only.
                 complete = record.get('cacheable') is True
                 values[kind] = _summary(kind, record, complete)
+                if kind == 'opencode':
+                    values[kind]['wire'] = helper.execution_wire(environment)
             elif manifest.get('name') == name and (manifest.get('runtime') or {}).get('kind') != 'python':
                 values[kind] = {'kind': kind, 'complete': False, 'cacheable': False}
         if (not values and (manifest.get('runtime') or {}).get('kind') != 'python'
