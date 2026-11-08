@@ -152,6 +152,10 @@ Current measurements also record a private `verification_context` covering selec
 task/scoring declarations and their source inputs. Changed inputs invalidate cached
 measurements and prevent a comparable label. Historical records without this
 evidence remain readable, but their verification context is unknown.
+New pre-execution candidate refusals retain their planned input context for
+recovery. They remain unmeasured and cannot supply reusable scores. A real
+measurement missing its context is never repaired from that plan; old records
+without context continue to fail the recovery checks.
 
 Those fingerprints can encode low-entropy private answers, so the exporter never
 publishes the fingerprints or their task mapping. Instead it assigns opaque
@@ -191,6 +195,15 @@ before a point, provider charges and missing usage may add spend. Method totals 
 when multi-candidate submissions or missing submission identity make deduplication ambiguous.
 Reused measurements with nonzero copied costs are not summed as new spending. Raw per-round
 cost projections remain available for inspection.
+The driver and local summary also distinguish shared-H0 reference costs from
+current-run spend. New shared H0 points preserve the donor's historical `cost`
+and `cumulative`, and add a versioned `current_run_cost` projection. Only a valid
+round-zero shared reference with the declared fields establishes zero new H0
+execution; missing or malformed projections remain unknown. This local summary
+projection does not relax the exporter's conservative reused-cost rules.
+When a final context check rejects an executed task, its reported actor usage,
+environment attempts and filtered runtime diagnostics remain recorded while its
+score and cache entry are refused. Unreported usage remains unknown.
 
 Variation uses sample variance (`ddof=1`) and distinguishes two units:
 

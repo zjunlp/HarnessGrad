@@ -1,0 +1,27 @@
+{
+  "source": "https://github.com/Job-Bench/job-bench-eval",
+  "revision": "660b33a86ed032559df0b2fdc1ad38cf7ceb83f3",
+  "files": {
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "eval/calc-runtime/Dockerfile": "9d0f6057dec5ba9b3e2a64d0723c0b75e1cd2f3a783a7ebd0894103727a5e00c",
+    "eval/jobbench_eval/__init__.py": "1b86980d9587f817239f5e653c5422555936212fa3e632b57f3d5c04f4960dde",
+    "eval/jobbench_eval/calc.py": "15179890f7ebc470be87ac021d04a8bed6ab5b9d1f16bf78a40d74d4342e635f",
+    "eval/jobbench_eval/calc_worker.py": "e42d91e77a3d20bbe034d3fb6fce835397697683be79d01e8bf4578513f02b0c",
+    "eval/jobbench_eval/excel.py": "d8453d135961142aebb5a33eec58625be52cf0670f42d292c5f9c8fb74577e32",
+    "eval/jobbench_eval/excel_text.py": "199b1a175c71be248a9c0c6fddb5113690a07e9832da7014e9c00695e45ea688",
+    "eval/jobbench_eval/rich_text.py": "422b042361ae4cae561056e2824620f9e897b9a9bb53743dc132e84a920ff93e",
+    "eval/judge.py": "956203dfb679276447913c59bfc2b3c28a762a4946e4258e0b41875b500b7215",
+    "harbor/jobbench_harbor/__init__.py": "75e867d0b366cb2428040648ef0b70bb2bd42388f68887273cf373eba6163011",
+    "harbor/jobbench_harbor/evaluate.py": "3643467cbefb8d46eb7061a3f57a0e7028b68143b4930b1d27fa9cc38ad7d705",
+    "harbor/jobbench_harbor/hf_source.py": "3e923e9121b3b685c364f0ee0cc8dc8e8182c91c83f161c4221d6637d04a5123",
+    "harbor/jobbench_harbor/prepare.py": "3e816fbb1d425620c4c168596983ac8a470d160ee2600a4debe7c70d06775dbb",
+    "harbor/jobbench_harbor/render.py": "8468fc41015c9dafbca330aefa85f1e742fa8127c19185d45f262f2e881bc011",
+    "harbor/pyproject.toml": "81f34279a1bbe2288f36c00010e356bc51a151dc0555a402a4aa5281e1043724",
+    "harbor/runtime/verify.py": "82fe3d601e18a63e8b6ed1d457cde92b3f39d157b6b1bc452d84fe935d87fb6b",
+    "harbor/templates/environment-requirements.txt": "64aa0ed2ab5e6fe1b0102b28508c6b378b0fbe18217d9692679ed10bd99b440a",
+    "harbor/templates/environment.Dockerfile": "24466ac896b59145e688bea0285dcca0751b375c5b43810d499049ab5d59cf85",
+    "harbor/templates/test.sh": "d7d1195badcf7c9fa0d89b3ba6540f55ef28b91916d9078279e6a1e74aa59e0c",
+    "harbor/templates/verifier-requirements.txt": "01617fba15f6055a49d18a43ce3aa7b9eedd8e97397f4dfa7066528e230e72fd",
+    "harbor/templates/verifier.Dockerfile": "d1801e06fdb1ae4144998bd736bceb9c473b96a4151d2b08e45d2bcdd4cc31bc"
+  }
+}

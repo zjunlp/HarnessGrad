@@ -250,6 +250,48 @@ def _sum_field(points: list[dict], group: str, field: str):
     return sum(values), len(values)
 
 
+def _shared_h0_current_cost(point):
+    """A new writer explicitly records no H0 execution; old absence is unknown.
+
+    This is a descriptive projection, never a replacement admission/budget receipt.
+    The evidence exporter continues to use the original conservative cost rules.
+    """
+    if type(point.get("round")) is not int or point["round"] != 0:
+        return None
+    reference = point.get("shared_from")
+    if not isinstance(reference, dict) or any(
+            not isinstance(reference.get(key), str) or not reference[key].strip()
+            for key in ("run_id", "path", "h0_sha")):
+        return None
+    measured = reference.get("measured_with")
+    if (not isinstance(measured, dict) or not {"jobs", "gpu_budget"} <= measured.keys()
+            or any(value is not None and (type(value) is not int or value < 0)
+                   for value in (measured["jobs"], measured["gpu_budget"]))):
+        return None
+    zero_fields = {"evaluation_trials", "harness_tokens", "harness_model_calls", "env_generation_tokens"}
+    required = zero_fields | {"version", "source", "wall_clock_s"}
+    optional = {"harness_preparation_wall_clock_s"}
+    cost = point.get("current_run_cost")
+    if (not isinstance(cost, dict) or not required <= cost.keys()
+            or not cost.keys() <= required | optional
+            or type(cost.get("version")) is not int or cost["version"] != 1
+            or type(cost.get("source")) is not str or cost["source"] != "shared_h0_no_execution"
+            or any(type(cost[key]) is not int or cost[key] != 0 for key in zero_fields)):
+        return None
+    for field in {"wall_clock_s"} | (optional & cost.keys()):
+        if type(cost[field]) not in (int, float):
+            return None
+        try:
+            number = _num(cost[field])
+        except OverflowError:
+            return None
+        if number is None or number < 0:
+            return None
+    # Pass only the v1 declared fields into cost aggregation, never arbitrary
+    # caller-supplied method/provider cost fields. This does not admit a run.
+    return {key: cost[key] for key in required | optional if key in cost}
+
+
 def cost_totals(points: list[dict], side: str | None, notes: list[str]) -> dict:
     """Model calls and tokens, with the coverage of each total stated.
 
@@ -257,6 +299,25 @@ def cost_totals(points: list[dict], side: str | None, notes: list[str]) -> dict:
     exam run the method is not supposed to run at all -- so the total is exposed together
     with `cost_scope` instead of being presented as one number with no boundary.
     """
+    references, projected, legacy_shared = [], [], False
+    for point in points:
+        if "shared_from" not in point and "current_run_cost" not in point:
+            projected.append(point)
+            continue
+        reference = point.get("shared_from")
+        donor = reference.get("run_id") if isinstance(reference, dict) else None
+        references.append({"round": point.get("round"),
+            "donor_run_id": donor if isinstance(donor, str) else None,
+            "cost": point.get("cost"), "cumulative": point.get("cumulative")})
+        current = _shared_h0_current_cost(point)
+        legacy_shared |= current is None
+        projected.append({**point, "cost": current or {}})
+    points = projected
+    if references:
+        notes.append("cost: shared H0 historical reference costs are retained in cost_provenance; "
+                     "current-run totals exclude that reference spend")
+    if legacy_shared:
+        notes.append("cost: legacy or invalid shared H0 has no verified incremental cost evidence; current-run spend is unknown")
     harness_calls, hc_rounds = _sum_field(points, "cost", "harness_model_calls")
     method_calls, mc_rounds = _sum_field(points, "cost", "method_model_calls")
     harness_tokens, ht_rounds = _sum_field(points, "cost", "harness_tokens")
@@ -290,7 +351,7 @@ def cost_totals(points: list[dict], side: str | None, notes: list[str]) -> dict:
     if tokens is not None and ht_rounds and ht_rounds < total_rounds:
         notes.append(f"cost: harness token counts cover {ht_rounds} of {total_rounds} rounds, "
                      "so the tokens total is a lower bound")
-    if tokens is None and not explicit_unknown_tokens:
+    if tokens is None and not explicit_unknown_tokens and not legacy_shared:
         cumulative = _num(_dig(points[-1], "cumulative", "generation_tokens"))
         if cumulative is not None:
             tokens = cumulative
@@ -320,13 +381,27 @@ def cost_totals(points: list[dict], side: str | None, notes: list[str]) -> dict:
         if harness_calls is None and harness_tokens is None:
             notes.append("cost: no harness call/token counts are recorded")
 
+    lower_bounds = {"calls": calls, "tokens": tokens}
+    if legacy_shared:
+        calls = tokens = None
+        scope = None
     if calls is None and tokens is None:
-        notes.append("cost: curve.jsonl records no model-call or token counts")
-    return {"calls": calls, "tokens": tokens, "cost_scope": scope}
+        notes.append("cost: curve.jsonl records no complete current-run model-call or token counts")
+    return {"calls": calls, "tokens": tokens, "cost_scope": scope,
+            "cost_provenance": {"scope": ("current_run_coverage_unknown" if legacy_shared else
+                "current_run_incremental" if references else "recorded_curve_cost"),
+                "historical_references": references, "reported_lower_bounds": lower_bounds}}
 
 
 def duration_seconds(points: list[dict], meta: dict, notes: list[str]):
     """`(seconds, source)`; the source is kept so a reader can tell a Sum from a clock."""
+    if "shared_from" in points[-1] or "current_run_cost" in points[-1]:
+        current = _shared_h0_current_cost(points[-1])
+        seconds = _num((current or {}).get("wall_clock_s"))
+        if seconds is not None:
+            return seconds, "current_run_cost.wall_clock_s"
+        notes.append("duration: legacy or invalid shared H0 preserves reference history but current-run wall time is unknown")
+        return None, None
     cumulative = _num(_dig(points[-1], "cumulative", "wall_clock_s"))
     if cumulative is not None:
         return cumulative, "cumulative.wall_clock_s"
@@ -561,6 +636,7 @@ def summarise(run_dir: Path) -> dict:
         "calls": cost["calls"],
         "tokens": cost["tokens"],
         "cost_scope": cost["cost_scope"],
+        "cost_provenance": cost["cost_provenance"],
         "duration_s": None if duration is None else round(duration, 3),
         "duration_source": duration_source,
         "changed_files": files,

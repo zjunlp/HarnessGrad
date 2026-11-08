@@ -434,6 +434,45 @@ def _dsh_installation(entry: dict, launcher: Path) -> tuple[dict, dict, dict]:
     return effective, execution_env, identity
 
 
+def declared_editor_binding(requested: str, *, model_override: str = "", config: dict | None = None,
+                            environment: dict | None = None) -> dict:
+    """Read an existing CLI editor declaration without probes, builds or downloads.
+
+    Unlike resolve(), this does not claim a verified version or select the highest
+    executable version. The Console driver admits the selected command's actual
+    content; authentication/model availability is not probed here.
+    """
+    config = load_config() if config is None else config
+    env = os.environ if environment is None else environment
+    entry = (config.get('improvers') or {}).get(requested) or {}
+    if entry.get('kind') != 'cli':
+        return {'ok': False, 'reason': f'{requested}: configure a declared CLI editor entry'}
+    try:
+        launcher = str(entry.get('launcher') or '')
+        style = str(entry.get('argv_style') or 'codex')
+        if launcher:
+            path = (ROOT / launcher).expanduser()
+            if not path.is_file() or not os.access(path, os.X_OK):
+                raise ValueError('declared editor launcher is missing or not executable')
+            effective, _, runtime = _dsh_installation(entry, path)
+        else:
+            selected = str(entry.get('path') or 'codex')
+            found = shutil.which(str(Path(selected).expanduser()), path=env.get('PATH', os.defpath))
+            if not found:
+                raise ValueError('declared editor executable is missing; configure its path')
+            path, effective, runtime = Path(found).absolute(), entry, {}
+        if not path.is_file():
+            raise ValueError('declared editor executable must be a regular file')
+        return {'ok': True, 'name': requested, 'kind': 'cli', 'path': str(path),
+                'argv_style': style, 'sha256': Candidate(path).sha256(),
+                'model': model_override or declared_model(config, source=config_home(), entry=effective),
+                **{key: str(effective.get(key) or '') for key in
+                   ('home', 'api_key_env', 'provider', 'profile', 'base_url', 'wire')},
+                **({'dsh_runtime': runtime} if runtime else {}), 'read_only': True}
+    except (OSError, ValueError) as exc:
+        return {'ok': False, 'name': requested, 'kind': 'cli', 'reason': str(exc)}
+
+
 def resolve(config: dict | None = None, *, version: str = "", requested: str = "",
             model_override: str = "") -> dict:
     """Pick the improver to run. Returns {ok, path, version, sha256, reason, requested}.

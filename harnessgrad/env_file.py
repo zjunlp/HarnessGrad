@@ -28,3 +28,21 @@ def read_env_file(path: Path) -> dict[str, str]:
         if key:
             values[key] = value.strip().strip("'\"")
     return values
+
+
+def install_env_file(path: Path) -> dict[str, str]:
+    """Fold runtime dotenv values in without replacing explicit process values.
+
+    The reviewed launcher supplies the complete environment. In either mode the
+    config snapshot is invalidated after installation, even when no file is read.
+    No automatic restoration is performed: these are process configuration outputs.
+    """
+    from harnessgrad import config
+    if reviewed_environment_only():
+        config.reset()
+        return {}
+    loaded = read_env_file(path)
+    for key, value in loaded.items():
+        os.environ.setdefault(key, value)
+    config.reset()
+    return loaded

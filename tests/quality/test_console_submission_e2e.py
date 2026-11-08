@@ -267,11 +267,35 @@ def test_submitted_harness_is_the_version_that_gets_opened_and_saved(console):
     row = candidate_row(httpd, candidate)
     assert row["source"] == "state", f"候选清单要说明这一版怎么来的，实际 {row}"
 
-    # 同一点第二次打开：复用同一份，不再攒 `-1`（`_candidate_reusable` 的承诺）。
+    # b87be21 switched recovery to private staging and no-replace publication:
+    # reopening creates a separate candidate, preserving any editor changes.
+    original_path = console.candidates / candidate
+    (original_path / "editor-only.txt").write_text("keep this local edit\n")
+    original_files = {p.relative_to(original_path).as_posix(): p.read_bytes()
+                      for p in original_path.rglob("*") if p.is_file()}
+    ledger_path = console.candidates / ".sources.json"
+    original_provenance = json.loads(ledger_path.read_text())[candidate]
     status, again = json_request(httpd, "POST", "/api/harness/from-round",
                                  {"run": identity, "round": 0})
-    assert status == 200 and again["reused"] is True and again["candidate"] == candidate, \
-        f"同一轮第二次打开应该复用同一份（200 + reused），实际 {status}: {again}"
+    assert status == 201 and again["reused"] is False and again["candidate"] != candidate, \
+        f"reopening must publish a separate candidate, got {status}: {again}"
+    assert again["source"] == "state" and again["from"] == opened["from"]
+    assert set(again["files"]) == set(opened["files"])
+    assert original_files == {p.relative_to(original_path).as_posix(): p.read_bytes()
+                              for p in original_path.rglob("*") if p.is_file()}
+    ledger = json.loads(ledger_path.read_text())
+    assert ledger[candidate] == original_provenance
+    assert ledger[again["candidate"]]["run"] == identity
+    assert ledger[again["candidate"]]["round"] == 0
+    reopened = console.candidates / again["candidate"]
+    assert not (reopened / "editor-only.txt").exists()
+    for path, body in uploaded.items():
+        if path == "harness.json":
+            manifest_again = json.loads((reopened / path).read_text())
+            assert manifest_again.pop("name") == again["candidate"]
+            assert manifest_again == {k: v for k, v in json.loads(body).items() if k != "name"}
+        else:
+            assert (reopened / path).read_bytes() == body.encode()
 
     # ── 6. 改一行，另存为一个新版本（和 harness.js 发出的请求同形）────────────
     status, saved = json_request(httpd, "POST", "/api/harness/save",

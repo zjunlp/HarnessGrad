@@ -144,10 +144,9 @@ def verify(workdir, spec, *, sandbox, task_id, run_id=None, trial_id=None,
         name = declaration['dataset']
         if name not in ROUTES or not sandbox or (env or {}).get('kind', 'files') != 'files':
             raise ValueError('native benchmark requires a supported sandboxed files route')
-        if (service_specs or running is not None or spec.get('judge') or spec.get('native_runtime')
-                or spec.get('container_runtime') or spec.get('scorer_bundle')
-                or spec.get('kind') != 'command' or spec.get('argv') != ['harnessgrad-native', name]
-                or spec.get('result_contract') != {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}):
+        # The pure fixed-dispatch contract above owns argv, binding and spec
+        # conflicts; keep only live execution-state restrictions at this layer.
+        if service_specs or running is not None:
             raise ValueError('native benchmark cannot combine with another execution route')
         binding = spec['scorer_input']
         if not task_id or binding['task_id'] != task_id or binding['sha256'] != declaration['case_sha256']:

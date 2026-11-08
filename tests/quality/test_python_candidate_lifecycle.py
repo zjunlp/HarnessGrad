@@ -20,7 +20,7 @@ import pytest
 from eval.ckpt.source_tree import copy_harness
 from eval.observe.tracing import _write_progress
 from harnessgrad import candidate_runtime
-from harnessgrad import python_harness_runtime
+from harnessgrad import python_harness_runtime, verification_context
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -59,6 +59,11 @@ def session(tmp_path, monkeypatch):
         value = options.get("harness_runtime_identity")
         assert value is not None
         candidate_runtime.admit(repo, value)
+        context = verification_context.project(options["verification_context"],
+                                               [task["task_id"] for task in tasks])
+        assert context == verification_context.capture(
+            tasks, scorable, options.get("setups"), options.get("verifiers"),
+            options.get("envs"), sandbox=options["sandbox"])
         scores = {}
         for task in tasks:
             tid = task["task_id"]
@@ -70,10 +75,12 @@ def session(tmp_path, monkeypatch):
                       "verdict": {"kind": "answer", "score": 1, "passed": True,
                                   "scorer_isolation_class": "actor-workdir"}}
             _write_progress(options.get("progress_dir"), options.get("round_no", 0), tid,
-                            [result], None, harness_runtime_identity=value)
+                            [result], None, harness_runtime_identity=value,
+                            verification_context=verification_context.project(context, [tid]))
         return {"per_task": scores, "invalid": {}, "trials": 1,
                 "per_task_scorer_isolation": {tid: "actor-workdir" for tid in scores},
-                "traces": {}, "trial_traces": {}, **candidate_runtime.fields(value)}
+                "traces": {}, "trial_traces": {}, **candidate_runtime.fields(value),
+                **verification_context.fields(context)}
 
     measurement = Mock(side_effect=evaluate)
     monkeypatch.setattr(driver, "evaluate", measurement)
@@ -140,6 +147,12 @@ def test_initial_preparation_occurs_once_for_multiple_tasks_and_cost_is_recorded
     value = point["harness_runtime_identity"]
     assert meta["harness_runtime_identity"] == payload["harness_runtime_identity"] == value
     assert payload["base"]["harness_runtime_identity"] == value
+    context = meta["verification_context"]
+    assert point["verification_context"] == payload["verification_context"] == context
+    assert payload["base"]["verification_context"] == context
+    for tid in ("t01", "t02"):
+        progress = json.loads((run / f"progress/round-0/{tid}.json").read_text())
+        assert progress["verification_context"] == verification_context.project(context, [tid])
     assert session.prepare.call_count == 1 and len(session.measured) == 2
     receipts = list((run / "harness-preparation/round-0").glob("attempt-*.json"))
     assert len(receipts) == 1
@@ -158,6 +171,7 @@ def test_h0_reuses_its_exact_artifact_without_remeasurement(session):
     current = curve(session.root / "consumer")[0]
     assert current["harness_runtime_identity"] == donor["harness_runtime_identity"]
     assert current["shared_from"]["run_id"] == "donor"
+    assert current["verification_context"] == donor["verification_context"]
     assert len(session.measured) == before
     assert session.prepare.call_args.kwargs["binding"] == donor["harness_runtime_identity"]
 
@@ -311,12 +325,18 @@ def test_managed_candidate_cannot_drop_its_runtime_and_can_repair_after_resume(s
     assert session.run("study", 1) == 0
     points = curve(session.root / "study")
     assert points[-1]["unmeasured"] and not points[-1]["measured_by_platform"]
+    assert not points[-1]["per_task"] and points[-1]["n_scored"] == 0
+    assert points[-1]["cost"]["evaluation_trials"] == 0
+    assert points[-1]["verification_context"] == verification_context.project(
+        points[0]["verification_context"], points[-1]["sampling"]["task_ids"])
     assert len(session.measured) == 1
     # Repair uses a valid new candidate derived from the recorded H0.
     session.edits[0] = "repair-runtime"
     assert session.run("study", 2, "--resume") == 0
     repaired = curve(session.root / "study")
     assert len(repaired) == 3 and repaired[-1]["measured_by_platform"]
+    assert repaired[:2] == points
+    assert "reused_from" not in repaired[-1]
     assert len(session.measured) == 2
 
 
@@ -447,6 +467,9 @@ def test_partial_eval_resume_preserves_progress_and_does_not_prepare_again(sessi
     directory = session.root / "exam"
     progress = directory / "progress/round-0/t05.json"
     before = progress.read_bytes()
+    metadata = json.loads((directory / "run_meta.json").read_text())
+    assert json.loads(before)["verification_context"] == verification_context.project(
+        metadata["verification_context"], ["t05"])
     prepares = session.prepare.call_count
     session.pause[0] = None
     assert session.run("exam", 0, *extra, "--resume", tasks="t05,t06") == 0
@@ -480,3 +503,68 @@ def test_eval_progress_identity_is_checked_before_old_metadata_is_rewritten(sess
     assert session.run("exam", 0, *extra, "--resume", tasks="t05,t06") == 2
     assert before == (metadata.read_bytes(), progress.read_bytes())
     assert sentinel.read_text() == "unchanged"
+
+
+@pytest.mark.parametrize("round_index", [0, 1])
+def test_resume_never_invents_context_for_existing_measured_or_rejected_points(session, round_index, capsys):
+    session.edits[0] = "drop-runtime"
+    assert session.run("study", 1) == 0
+    directory = session.root / "study"
+    points = curve(directory)
+    assert points[0]["measured_by_platform"] and points[1]["unmeasured"]
+    points[round_index].pop("verification_context")
+    path = directory / "curve.jsonl"
+    path.write_text("".join(json.dumps(point) + "\n" for point in points))
+    metadata = directory / "run_meta.json"
+    workspace = Path(json.loads(metadata.read_text())["workspace"])
+    sentinel = workspace / "preserve-on-missing-context"
+    sentinel.write_text("original")
+    before = metadata.read_bytes(), path.read_bytes()
+    prepares, measurements = session.prepare.call_count, session.measurement.call_count
+    session.edits[0] = "repair-runtime"
+    assert session.run("study", 2, "--resume") == 2
+    assert "verification context is missing" in capsys.readouterr().err
+    assert (metadata.read_bytes(), path.read_bytes()) == before
+    assert sentinel.read_text() == "original"
+    assert (session.prepare.call_count, session.measurement.call_count) == (prepares, measurements)
+
+
+@pytest.mark.parametrize("refusal", ["unmeasured", "measured_by_platform"])
+def test_planned_context_cannot_turn_a_rejected_point_into_reusable_scores(refusal):
+    from harnessgrad.loops.mode_a import _matching_verification_context, _identical_prior
+    context = verification_context.create({"t01": "a" * 64, "t02": "b" * 64})
+    measured = {"identity": {"harness_sha": "same"},
+                "sampling": {"trials": 1, "task_ids": ["t01", "t02"]},
+                "verification_context": context, "measured_by_platform": True,
+                "per_task": {"t01": 1},
+                "invalid": {"t02": {"stage": "scorer"}}}
+    rejected = copy.deepcopy(measured)
+    rejected[refusal] = {"reason": "candidate was refused"} if refusal == "unmeasured" else False
+    assert not _matching_verification_context(rejected, context)
+    assert _identical_prior([rejected], "same", 1, verification_context=context) is None
+    # A genuine partial measurement is still usable; task-level invalidity does
+    # not turn its measured scores into a rejected candidate.
+    assert _matching_verification_context(measured, context)
+    assert _identical_prior([measured], "same", 1, verification_context=context) is measured
+
+
+def test_measured_result_missing_context_is_not_repaired_from_the_plan(session, monkeypatch, capsys):
+    from harnessgrad.loops import mode_a
+    measure = mode_a.evaluate
+    def omit_measurement_context(*args, **kwargs):
+        result = measure(*args, **kwargs)
+        result.pop("verification_context")
+        return result
+    monkeypatch.setattr(mode_a, "evaluate", omit_measurement_context)
+    assert session.run("study", 1) == 0
+    directory = session.root / "study"
+    points = curve(directory)
+    assert points[1]["measured_by_platform"] and points[1]["per_task"]
+    assert "verification_context" not in points[1]
+    metadata, curve_path = directory / "run_meta.json", directory / "curve.jsonl"
+    before = metadata.read_bytes(), curve_path.read_bytes()
+    measurements, preparations = session.measurement.call_count, session.prepare.call_count
+    assert session.run("study", 2, "--resume") == 2
+    assert "verification context is missing" in capsys.readouterr().err
+    assert (metadata.read_bytes(), curve_path.read_bytes()) == before
+    assert (session.measurement.call_count, session.prepare.call_count) == (measurements, preparations)

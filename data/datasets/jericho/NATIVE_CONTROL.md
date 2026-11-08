@@ -52,6 +52,23 @@ Its libfrotz SHA-256 is
 `1ade244682f43e1695489b22288e894a1d8b497c9785a7190991d7626e3996e0`,
 identical to the unchanged native manifest's libfrotz entry. Native game execution,
 relay/client interaction and task-bound shipped scorer replay passed with score
-2/2 in two actions. The sealed package was not selected in this local run; its
-whole-userland admission remains separate. Released-suite and general supported
-ROM behavior remain unmeasured.
+2/2 in two actions. A later independent control also selected the complete
+original sealed package: all 1039 unique blobs and 1047 file mappings verified,
+and sealed scoring passed with the same authored reward. Its import probe used
+original CPython 3.12.16, Jericho 3.3.1 and NumPy 1.26.4 without loading a ROM.
+See the [recovery receipt](../../../.github/assets/native-original-recovery-20261107.json).
+Released-suite and general supported ROM behavior remain unmeasured.
+
+Fresh installations need the reviewed original native archive and accompanying
+checksum/provenance/license sidecars. No public complete-archive URL is registered
+yet. Import it into an external store and check host capabilities:
+
+```sh
+python -B -m tools.prepare_native_runtime import --dataset jericho \
+  --root /external/native-runtime-store --archive /download/jericho-native-66980eb3.tar.gz
+python -B -m tools.prepare_native_runtime verify --dataset jericho \
+  --root /external/native-runtime-store --probe
+```
+
+The original SDK includes upstream game reference metadata. Keep the complete
+native package in the trusted scorer boundary; it is not an actor runtime.

@@ -61,7 +61,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 # Namespace discovery alone only includes Python modules, not these resources.
 [tool.setuptools.package-data]
 "console" = [
-    "LICENSE-DSH", "static/app.css", "static/author.html", "static/author.js",
+    "LICENSE-DSH", "DEVELOPMENT.md", "WORKBENCH.md", "static/app.css", "static/author.html", "static/author.js",
     "static/console.js", "static/detail-i18n.js", "static/evidence.css",
     "static/evidence.html", "static/evidence.js", "static/harness.html",
     "static/harness.js", "static/i18n.js", "static/index.html",
@@ -152,7 +152,8 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "rsi-terminal-bench2-eval.json", "rsi-terminal-bench2.json",
 ]
 "data.scaffolds.command_oracle_harness" = ["harness.json"]
-"data.scaffolds.native_harbor_runtime" = ["PROVENANCE.json"]
+"data.scaffolds.native_harbor_runtime" = ["PROVENANCE.json", "README.md"]
+"data.datasets.native_harbor" = ["execution-runtime.json", "requirements.lock", "README.md"]
 "data.scaffolds.native_qa" = ["PROVENANCE.json", "LICENSE.upstream"]
 "data.scaffolds.native_research" = ["PROVENANCE.json", "LICENSE.upstream", "SWE_EVALUATOR_SOURCE.json", "HARVEY_NATIVE_SOURCE.json"]
 "data.scaffolds.native_research.vendor.flashrsi.benchmarks.harvey_lab" = ["upstream.json"]
@@ -203,7 +204,8 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "data.datasets.kumo" = ["source-files.json", "vendor/LICENSE", "vendor/PROVENANCE.json", "README.md"]
 "data.datasets.cooperbench" = ["recipes.json", "hf_mirror/python", "vendor/LICENSE"]
 "data.datasets.deepswe" = ["SOURCE.json"]
-"data.datasets.jobbench" = ["SOURCE.json"]
+"data.datasets.jobbench" = ["SOURCE.json", "RENDERER_SOURCE.json", "README.md"]
+"data.datasets.jobbench_renderer" = ["execution-runtime.json", "requirements.lock", "README.md"]
 "data.datasets.swe_bench_pro" = ["SOURCE.json"]
 "data.datasets.harvey_lab" = ["LICENSE.upstream", "README.md", "execution-runtime.json",
     "execution-requirements.in", "execution-requirements.lock", "execution-recipe.md"]

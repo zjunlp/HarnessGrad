@@ -1,0 +1,110 @@
+{
+  "schema": "harnessgrad.original-native-recovery.v1",
+  "original_pins_changed": false,
+  "runtime_versions_changed": false,
+  "validation_source_commit": "90bf8c8beee5e5f1923f726ef4fc942f1df24a2c",
+  "chess_fixture_commit": "fc3ecebb1cb5426fae1bca6a259966c740ebcbf0",
+  "packages": {
+    "chessbench_puzzles": {
+      "dataset": "chessbench_puzzles",
+      "sha256": "1dd47b9a27c0598c89c55c08579e7f85655b821166bc8a8150645e9379479599",
+      "files": 724,
+      "verified": true,
+      "unique_blobs": 718
+    },
+    "jericho": {
+      "dataset": "jericho",
+      "sha256": "66980eb3446bddfa1f27dec7664ce18d0e1161d572a0fb6c1c70b24aa9e93e4f",
+      "files": 1047,
+      "verified": true,
+      "unique_blobs": 1039
+    }
+  },
+  "python_recovery": {
+    "required": 163,
+    "matched": 163,
+    "original_python_closure_blobs": 688,
+    "matched_python_closure_blobs": 688,
+    "direct_archive_blobs": 687,
+    "verified_official_uv_relocation_blobs": 1
+  },
+  "public_sources": [
+    {
+      "component": "CPython 3.12.16",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16%2B20261026-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+      "sha256": "ce4f6d0a6cfdb3bed6e44c2f9affd85943c76a42e25ad3a259002f31d6fb8a20",
+      "bytes": 34505639
+    },
+    {
+      "component": "NumPy 1.26.4",
+      "url": "https://files.pythonhosted.org/packages/0f/50/de23fde84e45f5c4fda2488c759b69990fd4512387a8632860f3ac9cd225/numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "675d61ffbfa78604709862923189bad94014bef562cc35cf61d3a07bba02a7ed",
+      "bytes": 17950613
+    },
+    {
+      "component": "Jericho 3.3.1 source distribution",
+      "url": "https://files.pythonhosted.org/packages/f5/07/9e5bceec4ca0635fb18fce32bd9daf408d0deb5e07b165fe8c2aac875a3f/jericho-3.3.1.tar.gz",
+      "sha256": "032dde60a155dd9984d6db05b2c6ac22897446fb13a6a248cff8086001185571",
+      "matches": "8 of 9 package files; its libfrotz.so does not match the original pin and was rejected"
+    }
+  ],
+  "relocation": {
+    "uv_source_commit": "5ce34500b8a3d16d24bc7576bd8ac64879091cea",
+    "scope": "One sysconfig file reconstructed with the official installer transformation and accepted only after exact original size/SHA equality. The captured prefix is reconstruction data, not an installation prerequisite."
+  },
+  "exports": [
+    {
+      "name": "chessbench-native-1dd47b9a.tar.gz",
+      "bytes": 19901748,
+      "sha256": "6129fd8c22ac98d170205e57fc75b3e8bcff0eda00423a0d1b3bf76023045baa",
+      "published_url": null
+    },
+    {
+      "name": "jericho-native-66980eb3.tar.gz",
+      "bytes": 36407692,
+      "sha256": "ca7719ade04ba7151e78fdfff54d646b64ece97e093316f18dd17603659a7b9e",
+      "published_url": null
+    }
+  ],
+  "namespace_probes": {
+    "chessbench_puzzles": "passed",
+    "jericho": "passed"
+  },
+  "chess": {
+    "scores": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "gold_payload_redacted": true,
+    "private_reference_absent_from_result": true,
+    "public_puzzle_id_retained": true,
+    "full_corrected_test_file": "12 passed, 0 skipped",
+    "initial_frozen_test_file": "8 passed, 4 failed: missing required selected task_id",
+    "intermediate_fixture_gap": "private marker had been incorrectly placed in intentionally public official.puzzle_id"
+  },
+  "jericho": {
+    "complete_native_test": "1 passed, 0 skipped",
+    "story_sha256": "df1ffa54fb98f8bbe90792866aca3a23c015db37cb635175bfa9b793abdbb9da",
+    "score": 2,
+    "maximum": 2,
+    "reward": 1,
+    "sealed_native_scorer_verified": true,
+    "relay_stopped_cleanly": true,
+    "relay_errors": 0,
+    "relay_refused": 0,
+    "numpy": "1.26.4",
+    "jericho_version": "3.3.1",
+    "engine_sha256": "1ade244682f43e1695489b22288e894a1d8b497c9785a7190991d7626e3996e0",
+    "import_probe_loaded_rom": false
+  },
+  "privacy_limits": "Chess checks private gold payload in returned trusted verdict; raw scorer intentionally retains public ID. Jericho uses public CC0 authored story and checks input binding, not a private-gold omission marker. No actor/method/public-export privacy sweep is claimed here.",
+  "measurement_limits": "No released puzzle/game, model, benchmark run or external ROM. Only original pinned native packages, author inputs and the actual engine/relay/scorer.",
+  "distribution_boundary": "Complete original archives and license/source sidecars were prepared locally, not uploaded. Exact retained libfrotz and operating-system/loader/bwrap bytes remain required; this is not a claim of a wholly public reproducible build. The Jericho SDK contains upstream game reference metadata and belongs only in the trusted scorer runtime.",
+  "raw_receipt_sha256": {
+    "recovery": "c3bd370a52271a48bf402eb408588f3e5607b35759ebd609fc39ced0703a033f",
+    "independent_controls": "6034e645550db0dee22466ba294f62d23a527a751283d33674191e738f31a5b0"
+  },
+  "goal_complete": false
+}

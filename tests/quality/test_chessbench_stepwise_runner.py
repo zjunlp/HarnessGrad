@@ -14,6 +14,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from types import SimpleNamespace
@@ -383,6 +384,21 @@ def test_interactive_cache_uses_controller_without_offline_native_runtime(
     monkeypatch.setattr(runner, "run_one", run)
     cache = {}
 
+    original_native = verifier['native_runtime']
+    unused_manifest = repo.parent / 'unavailable-offline-runtime.json'
+    unused_manifest.write_text('this declaration is never an executed native runtime')
+    # Static checkout files may be read by the platform integrity snapshot.
+    # This external poison file isolates dereferencing the unused declaration.
+    original_open = Path.open
+    def no_unused_manifest_read(path, *args, **kwargs):
+        if path.absolute() == unused_manifest:
+            pytest.fail('stepwise scoring opened the unused native manifest')
+        return original_open(path, *args, **kwargs)
+    monkeypatch.setattr(Path, 'open', no_unused_manifest_read)
+    def no_unused_native_route(*args, **kwargs):
+        pytest.fail('stepwise scoring selected the offline native execution route')
+    monkeypatch.setattr(native_runtime, 'validate_route', no_unused_native_route)
+
     def measure():
         return runner.evaluate(repo, [task], {}, cache=cache, sandbox=True, trials=trials,
                                verifiers={TASK_ID: verifier}, harness_sha="same")
@@ -393,17 +409,48 @@ def test_interactive_cache_uses_controller_without_offline_native_runtime(
     assert first["scorer_isolation_class"] == "in-process"
     assert first["verdicts"][TASK_ID]["protocol"] == chess_stepwise.STEPWISE
     assert "native_runtime" not in first["verdicts"][TASK_ID]
-    # Changing the unused offline declaration must not invalidate a controller score.
-    verifier["native_runtime"] = {"dataset": "chessbench_puzzles",
-                                  "manifest": str(repo / "unavailable-offline-runtime.json"),
-                                  "sha256": "0" * 64}
+    # INTERFACE's (harness, task, trials) tuple is necessary, not a promise to
+    # ignore changed measurement declarations. verification_context commits the
+    # complete verifier, while native admission identities describe execution.
+    original_keys = set(cache)
+    original_context = first['verification_context']
     reused = measure()
-    assert reused["cached_tasks"] == [TASK_ID] and reused["per_task"] == {TASK_ID: 1.0}
-    assert len(executions) == trials and admissions == [] and len(cache) == 1
-    if trials > 1:
-        assert len(reused["trial_verdicts"][TASK_ID]) == trials
-        assert all(v["protocol"] == chess_stepwise.STEPWISE
-                   and "native_runtime" not in v for v in reused["trial_verdicts"][TASK_ID])
+    assert reused['cached_tasks'] == [TASK_ID] and reused['per_task'] == {TASK_ID: 1.0}
+    assert len(executions) == trials and admissions == [] and set(cache) == original_keys
+    assert reused['verification_context'] == original_context
+
+    verifier['native_runtime'] = {'dataset': 'chessbench_puzzles',
+                                 'manifest': str(unused_manifest), 'sha256': '0' * 64}
+    remeasured = measure()
+    assert not remeasured['cached_tasks'] and remeasured['per_task'] == {TASK_ID: 1.0}
+    assert not remeasured['invalid']
+    assert remeasured['verification_context'] != original_context
+    assert len(executions) == 2 * trials and admissions == [] and len(cache) == 2
+    assert original_keys < set(cache)  # A declaration change does not overwrite old evidence.
+    assert remeasured['scorer_isolation_class'] == 'in-process'
+
+    changed_reused = measure()
+    assert changed_reused['cached_tasks'] == [TASK_ID]
+    assert changed_reused['verification_context'] == remeasured['verification_context']
+    assert len(executions) == 2 * trials and admissions == []
+
+    verifier['native_runtime'] = original_native
+    restored = measure()
+    assert restored['cached_tasks'] == [TASK_ID]
+    assert restored['verification_context'] == original_context
+    assert len(executions) == 2 * trials and admissions == [] and len(cache) == 2
+
+    # Neither stricter cache invalidation nor a cache hit can manufacture an
+    # executed-native identity for the in-process controller (including trials).
+    for result in (first, reused, remeasured, changed_reused, restored):
+        verdicts = result.get('trial_verdicts', {}).get(TASK_ID) or [result['verdicts'][TASK_ID]]
+        assert result['verdicts'][TASK_ID]['protocol'] == chess_stepwise.STEPWISE
+        assert 'native_runtime' not in result['verdicts'][TASK_ID]
+        assert all(v['protocol'] == chess_stepwise.STEPWISE and 'native_runtime' not in v
+                   for v in verdicts)
+        if trials > 1:
+            assert len(verdicts) == trials
+    assert all(':native:' not in key for key in cache)
 
 
 @pytest.mark.parametrize("failure", ["sandbox", "backend", "gold"])
@@ -549,8 +596,15 @@ def test_mixed_protocol_aggregate_refused_before_execution(case):
         runner.evaluate(repo, [task, offline], {})
 
 
-def test_reconnect_cannot_reset_session_allowance(tmp_path):
-    relay = StepwiseRelay(tmp_path, dataset.StepwisePuzzle({
+@pytest.fixture
+def short_relay_root():
+    # Keep Unix IPC independent of the potentially deep per-file pytest root.
+    with tempfile.TemporaryDirectory(prefix="hg-stepwise-", dir="/tmp") as directory:
+        yield Path(directory)
+
+
+def test_reconnect_cannot_reset_session_allowance(short_relay_root):
+    relay = StepwiseRelay(short_relay_root, dataset.StepwisePuzzle({
         "fen": chess.STARTING_FEN, "moves": ["e2e4", "e7e5"]}),
         contract=dataset.STEPWISE_CONTRACT, public_fields=chess_stepwise.PUBLIC_FIELDS,
         timeout_s=1).start()
@@ -596,8 +650,8 @@ assert f.readline() == b''
     assert [event["kind"] for event in transport["events"]] == ["observation"]
 
 
-def test_trickled_partial_frame_cannot_extend_absolute_socket_deadline(tmp_path):
-    relay = StepwiseRelay(tmp_path, dataset.StepwisePuzzle({
+def test_trickled_partial_frame_cannot_extend_absolute_socket_deadline(short_relay_root):
+    relay = StepwiseRelay(short_relay_root, dataset.StepwisePuzzle({
         "fen": chess.STARTING_FEN, "moves": ["e2e4", "e7e5"]}),
         contract=dataset.STEPWISE_CONTRACT, public_fields=chess_stepwise.PUBLIC_FIELDS,
         timeout_s=0.2).start()

@@ -27,14 +27,30 @@ must produce an actual reward and `official_evaluation_performed` receipt.
 2. Import the exact actor/replay/verifier images with their native tests and
    dependencies. Separate verifier images must already contain their private
    `/tests`; private tests must **not** appear in the actor image.
-3. Select runtime resources and images with:
+3. Explicitly prepare the shared dependency component (this is not a dataset):
+
+```sh
+python -m data.scaffolds.native_harbor_runtime.prepare_python prepare --runtime-root /external/component-store
+python -m data.scaffolds.native_harbor_runtime.prepare_python check --runtime-root /external/component-store
+python -m data.scaffolds.native_harbor_runtime.prepare_python probe --runtime-root /external/component-store
+export HG_DATASET_RUNTIME_ROOT=/external/component-store
+```
+
+The complete exact lock preserves Harbor 0.23.0 and its transitive dependencies.
+Preparation rebuilds at its final managed path; it never copies/adopts a host
+venv. Check is read-only. Probe admits the exact binding, imports original Harbor
+Trial/config classes under that Python, and re-admits without creating a trial,
+contacting a judge/model or using Docker. Missing dependencies do not auto-install
+on load or evaluation.
+
+4. Select runtime resources and images with:
 
 ```sh
 python3 data/scaffolds/native_harbor_runtime/prepare_runtime.py \
   --dataset deepswe --data-root /path/to/native \
   --task-id deepswe/TASK \
   --actor-image sha256:... --replay-actor-image sha256:... \
-  --verifier-image sha256:... --harbor-python /path/to/harbor/bin/python \
+  --verifier-image sha256:... \
   --manifest /path/to/native/native-runtime.json --workdir /app \
   --workspace-bytes 1073741824 --workspace-inodes 262144 --memory-mb 8192 \
   --build-actor-derivative
@@ -89,3 +105,51 @@ both the correct committed patch and the unchanged baseline.
 Native tool-command timeout aborts the world as unmeasured. In particular, the
 original Pro timeout/partial-patch capture path still needs safe actor quiescence
 and bounded capture support in this transport; it is not claimed by these controls.
+
+
+## Harbor dependency identity and migration
+
+Each task entry now requires `harbor_runtime`, an exact canonical verifier-role
+binding, and the matching `harbor_python` executable. Old path/version-only entries
+are refused with explicit re-preparation instructions; readiness never fabricates
+an identity for an existing venv. The optional `--harbor-python` argument may only
+name the selected managed artifact, never a different interpreter or host fallback.
+
+The verifier declaration exposes that binding through the existing
+`python_runtime`/`runtime_paths` contract. Generic measurement/cache/resume admission
+therefore revalidates the artifact instead of trusting a static case digest.
+The private inline case carries the same complete binding. Native verification
+checks it before artifact handling, immediately before starting the selected child,
+inside the child before Harbor imports, and after child completion. Every child
+receipt must return the same dependency identity. Harbor source/module bytes,
+transitive package files, venv configuration and base executable are inventoried
+by the canonical manager; paths and a version string alone are insufficient.
+
+This binding belongs only to the trusted verifier. Actor environment bindings,
+public/no-network choices, immutable image selection, private test projection,
+collect/replay and judge responsibilities are unchanged. Base stdlib/system
+libraries remain compatibility inputs as documented by the canonical manager;
+this is not a sealed OS image or benchmark-lifecycle acceptance.
+
+
+DeepSWE, JobBench and SWE-bench Pro declare the same literal
+`MANAGED_EXECUTION_RUNTIME = 'native_harbor'`. Standard execution preparation and
+H0 discovery therefore select this component before actor/model work; for example,
+`python tools/prepare_dataset.py --dataset deepswe --runtime execution --check`.
+The canonical native-dispatch validator still requires the fixed trusted entry,
+isolated startup, exact binding and matching runtime paths. It does not permit an
+arbitrary host command or an actor-side verifier environment. Old direct specs
+without that binding are refused before cache/resume as well as fresh execution.
+
+## JobBench local judge gateway
+
+The native verifier uses the existing `ModelGateway` contract (`split`,
+`ModelGateway(...).start()`, `port` and `path`), not a compatibility `publish` or
+`url_for` shim. Its listener binds only the IPv4 gateway returned by the selected
+Docker bridge metadata; it no longer binds `0.0.0.0` or falls back to unrelated
+host interfaces. The upstream remains explicit HTTP on a literal loopback IP.
+The original base path is preserved. URL userinfo/query/fragment are refused so
+credentials cannot be silently embedded in or dropped from routing metadata.
+The verifier's `finally` stops its owned gateway on success, refusal, timeout and
+child error. This repair does not add a model-attempt or zero-cost claim: gateway
+connections and bytes are transport diagnostics, not judge usage.

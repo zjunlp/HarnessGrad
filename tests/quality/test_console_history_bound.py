@@ -39,7 +39,7 @@ def test_helper_valid_sparse_and_exact_boundary(console):
 @pytest.mark.parametrize("since,upto", [(0, 1000), (1, 999999999), (3, 2), (-1, 2), (1, -1), (1.0, 2), (1, '2'), (True, 2), (1, 10**100)])
 def test_helper_rejects_before_lookup_or_filesystem(console, monkeypatch, since, upto):
     module, calls = console
-    monkeypatch.setattr(module, "read_json", lambda *args: pytest.fail("unexpected filesystem read"))
+    monkeypatch.setattr(module._run_queries.reader, "read_json", lambda *args: pytest.fail("unexpected filesystem read"))
     monkeypatch.setattr(Path, "is_file", lambda *args: pytest.fail("unexpected filesystem stat"))
     result = module.run_history("sample", upto, since)
     assert result["error"] == "bad-range"

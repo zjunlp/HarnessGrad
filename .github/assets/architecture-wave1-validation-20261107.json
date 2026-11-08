@@ -1,0 +1,232 @@
+{
+  "schema": "harnessgrad.architecture-validation.v1",
+  "production_commit": "f7f2df417bbf609d052d30fe538df5a7ac594bea",
+  "test_commit": "71c599df56e114e60f3a9cc93d3f3a7535add7e5",
+  "scope": "First architecture wave; the production snapshot is unchanged by the test-only Unix socket path repair. Counts are reconciled per file, not a new all-files invocation.",
+  "batches": {
+    "D1": "selected dataset planning",
+    "E1": "evaluation admission and cache decisions",
+    "C1": "Console run/query/comparison services and list cache"
+  },
+  "initial_gate": {
+    "result_sha256": "08a308e10f6e7cd7772bd0ba6ffc3c7fe6fb8cc6878bcd14e518ad74823e6168",
+    "returncode": 1,
+    "selected_files": [
+      "tests/quality/test_authored_dataset.py",
+      "tests/quality/test_boundaries.py",
+      "tests/quality/test_bun_worker_identity.py",
+      "tests/quality/test_chess_native_preparation.py",
+      "tests/quality/test_chessbench_stepwise_runner.py",
+      "tests/quality/test_ci_workflow.py",
+      "tests/quality/test_codex_adapter.py",
+      "tests/quality/test_codex_content_identity.py",
+      "tests/quality/test_codex_physical_binding.py",
+      "tests/quality/test_codex_runtime_paths.py",
+      "tests/quality/test_console_evidence_api.py",
+      "tests/quality/test_console_evidence_integration.py",
+      "tests/quality/test_console_history_bound.py",
+      "tests/quality/test_console_http_security.py",
+      "tests/quality/test_console_portable_paths.py",
+      "tests/quality/test_console_query_service.py",
+      "tests/quality/test_console_range_diff_boundary.py",
+      "tests/quality/test_console_record_reader.py",
+      "tests/quality/test_console_snapshot_rounds.py",
+      "tests/quality/test_costbench_authored_lifecycle.py",
+      "tests/quality/test_dataset_execution_runtime.py",
+      "tests/quality/test_dataset_runtime.py",
+      "tests/quality/test_dataset_runtime_cache.py",
+      "tests/quality/test_dataset_runtime_identity.py",
+      "tests/quality/test_dataset_runtime_lifecycle.py",
+      "tests/quality/test_dataset_runtime_private_environment.py",
+      "tests/quality/test_datasets_doc.py",
+      "tests/quality/test_diagnostic_policy.py",
+      "tests/quality/test_download_index.py",
+      "tests/quality/test_ds1000_actor_runtime.py",
+      "tests/quality/test_ds1000_execution_runtime.py",
+      "tests/quality/test_ds1000_runtime_prepare.py",
+      "tests/quality/test_dsh_runtime_paths.py",
+      "tests/quality/test_eval_coverage.py",
+      "tests/quality/test_eval_package_compat.py",
+      "tests/quality/test_evaluation_admission_plan.py",
+      "tests/quality/test_evidence_export.py",
+      "tests/quality/test_evidence_export_privacy.py",
+      "tests/quality/test_evidence_runtime_integration.py",
+      "tests/quality/test_evidence_verification_context.py",
+      "tests/quality/test_experiment_presets.py",
+      "tests/quality/test_external_actor_evidence.py",
+      "tests/quality/test_external_actor_runtime_cache.py",
+      "tests/quality/test_external_loader_environment.py",
+      "tests/quality/test_h0_reuse_identity.py",
+      "tests/quality/test_harness_path.py",
+      "tests/quality/test_import_direction.py",
+      "tests/quality/test_improver_cost.py",
+      "tests/quality/test_jericho_supported_native.py",
+      "tests/quality/test_kumo_dataset.py",
+      "tests/quality/test_math_native_failure_boundaries.py",
+      "tests/quality/test_memoryagentbench_prepare.py",
+      "tests/quality/test_memoryagentbench_resources.py",
+      "tests/quality/test_native_runtime_cache.py",
+      "tests/quality/test_ordinary_resume_statistics.py",
+      "tests/quality/test_personamem_v2.py",
+      "tests/quality/test_prepare_h0.py",
+      "tests/quality/test_python_candidate_h0.py",
+      "tests/quality/test_python_candidate_smoke.py",
+      "tests/quality/test_quality_receipts.py",
+      "tests/quality/test_repeated_trial_resume.py",
+      "tests/quality/test_resume_eval.py",
+      "tests/quality/test_resume_train.py",
+      "tests/quality/test_resume_train_e2e.py",
+      "tests/quality/test_round_private_recovery.py",
+      "tests/quality/test_round_recovery_pinned.py",
+      "tests/quality/test_run_namespace.py",
+      "tests/quality/test_run_parser.py",
+      "tests/quality/test_run_summary.py",
+      "tests/quality/test_scenario.py",
+      "tests/quality/test_scoring_identity.py",
+      "tests/quality/test_selected_run_plan.py",
+      "tests/quality/test_services.py",
+      "tests/quality/test_shared_h0.py",
+      "tests/quality/test_shared_round_ledger.py",
+      "tests/quality/test_spreadsheet_official_differential.py",
+      "tests/quality/test_submission_smoke_state.py",
+      "tests/quality/test_tau_real_package_controls.py",
+      "tests/quality/test_trial_evidence_ordinary.py",
+      "tests/quality/test_unified_budget.py",
+      "tests/quality/test_unknown_harness_usage.py",
+      "tests/quality/test_verification_context.py",
+      "tests/quality/test_verification_context_workflows.py",
+      "tests/quality/test_web_gateway.py",
+      "tests/quality/test_wheel_adapter_resources.py",
+      "tests/quality/test_wheel_console.py"
+    ],
+    "test_counts": {
+      "passed": 1882,
+      "failed": 2,
+      "skipped": 8,
+      "warnings": 319
+    },
+    "failed_files": [
+      "tests/quality/test_chessbench_stepwise_runner.py"
+    ]
+  },
+  "repair": {
+    "file": "tests/quality/test_chessbench_stepwise_runner.py",
+    "cause": "Two fixture-created AF_UNIX endpoints exceeded the pathname limit under nested per-file temporary roots. Product-created endpoints were not changed.",
+    "log_sha256": "9598f0b4744058a3ac2bab0e87b886e30e06732eb4ddb3f1c4511472db55f5bb",
+    "passed": 26,
+    "failed": 0,
+    "production_files_changed": []
+  },
+  "reconciled_test_counts": {
+    "passed": 1884,
+    "failed": 0,
+    "skipped": 8,
+    "warnings": 319
+  },
+  "unresolved_failures": [],
+  "skipped_files": [
+    {
+      "file": "tests/quality/test_chess_native_preparation.py",
+      "counts": {
+        "passed": 8,
+        "skipped": 4
+      }
+    },
+    {
+      "file": "tests/quality/test_codex_runtime_paths.py",
+      "counts": {
+        "passed": 36,
+        "skipped": 1
+      }
+    },
+    {
+      "file": "tests/quality/test_dsh_runtime_paths.py",
+      "counts": {
+        "passed": 59,
+        "skipped": 1
+      }
+    },
+    {
+      "file": "tests/quality/test_eval_package_compat.py",
+      "counts": {
+        "passed": 39,
+        "skipped": 1
+      }
+    },
+    {
+      "file": "tests/quality/test_personamem_v2.py",
+      "counts": {
+        "passed": 95,
+        "skipped": 1
+      }
+    }
+  ],
+  "wheel": {
+    "source_commit": "f7f2df417bbf609d052d30fe538df5a7ac594bea",
+    "status": "passed",
+    "sha256": "ea7481b3e696739f66e07c146a7aa502cb28dd847411568b6ee15e27ba8a73f7",
+    "build_source_removed_before_use": true,
+    "steps": [
+      {
+        "name": "build",
+        "exit_code": 0
+      },
+      {
+        "name": "install",
+        "exit_code": 0
+      },
+      {
+        "name": "dependency-boundary",
+        "exit_code": 0
+      },
+      {
+        "name": "first-use",
+        "exit_code": 0
+      },
+      {
+        "name": "preset",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-readonly",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-smoke",
+        "exit_code": 0
+      },
+      {
+        "name": "chess-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "appworld-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "math-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "locomo-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "editor-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "readonly-all56",
+        "exit_code": 0
+      },
+      {
+        "name": "ds1000-runtime-readonly",
+        "exit_code": 0
+      }
+    ]
+  },
+  "compatibility": "Public driver/runner/HTTP entrypoints preserved; internal patches use canonical owners or explicit call-time ports.",
+  "separate_functional_fix": "Console range diff refuses escaping state symlinks and does not dereference nested links; real authored HTTP canary control passes.",
+  "goal_complete": false,
+  "remaining": "Source staging, deferred publication, per-task trial/reducer/session ownership and remaining Console services still need migration. Final release/PR review and consolidation are pending."
+}

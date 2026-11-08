@@ -26,6 +26,149 @@ EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/entrypoints/run_parser.py": {
         "__future__", "argparse", "collections.abc", "pathlib",
         "harnessgrad.entrypoints.experiment_config"},
+    "harnessgrad/orchestration/selected_dataset.py": {
+        "__future__", "dataclasses", "pathlib", "sys", "typing",
+        "data.scaffolds.custom_split", "eval.ckpt.git_state", "eval.policy.diagnostic_policy",
+        "eval.run.metrics", "harnessgrad.config", "harnessgrad.environments",
+        "harnessgrad.readiness", "harnessgrad.scoring_identity",
+        "harnessgrad.dataset_runtime_identity", "harnessgrad.verification_context"},
+    "harnessgrad/orchestration/source_lease.py": {
+        "__future__", "collections.abc", "contextlib", "dataclasses", "os", "pathlib",
+        "secrets", "shutil", "sys", "tempfile", "eval.ckpt.git_state",
+        "eval.ckpt.source_tree", "harnessgrad.loops.eval_side", "tools.validate_harness"},
+    "harnessgrad/orchestration/candidate_stage.py": {
+        "__future__", "collections.abc", "dataclasses", "json", "pathlib", "shutil",
+        "sys", "tempfile", "time", "eval.ckpt.git_state", "eval.ckpt.source_tree",
+        "eval.containers.external_runtime", "eval.observe.console", "harnessgrad.candidate_runtime",
+        "harnessgrad.loops.mode_a", "harnessgrad.orchestration.source_lease",
+        "harnessgrad.records", "tools.validate_harness"},
+    "harnessgrad/orchestration/historical_evidence.py": {
+        "__future__", "json", "pathlib", "harnessgrad.candidate_runtime",
+        "harnessgrad.dataset_runtime_identity", "harnessgrad.verification_context"},
+    "harnessgrad/orchestration/resume.py": {
+        "__future__", "collections.abc", "dataclasses", "datetime", "json", "pathlib",
+        "shutil", "subprocess", "tempfile", "data.scaffolds.registry", "eval.ckpt.git_state",
+        "eval.containers.external_runtime", "eval.observe.console", "harnessgrad.candidate_runtime",
+        "harnessgrad.dataset_runtime_identity", "harnessgrad.orchestration.candidate_stage",
+        "harnessgrad.orchestration.historical_evidence", "harnessgrad.scoring_identity"},
+    "harnessgrad/orchestration/h0.py": {
+        "__future__", "collections.abc", "dataclasses", "json", "pathlib", "shutil", "sys",
+        "eval.run.metrics", "eval.containers.external_runtime", "harnessgrad.config",
+        "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
+        "harnessgrad.scoring_identity", "harnessgrad.verification_context", "harnessgrad.h0_identity",
+        "harnessgrad.environments", "harnessgrad.identity", "harnessgrad.records",
+        "harnessgrad.orchestration.historical_evidence"},
+    "harnessgrad/orchestration/run_metadata.py": {
+        "__future__", "collections.abc", "dataclasses", "eval.policy.diagnostic_policy",
+        "harnessgrad.candidate_runtime", "harnessgrad.config.areas", "harnessgrad.dataset_runtime_identity",
+        "harnessgrad.scoring_identity", "harnessgrad.verification_context"},
+    "harnessgrad/orchestration/run_completion.py": {
+        "__future__", "dataclasses", "json", "pathlib", "sys", "typing", "tools.run_summary",
+        "harnessgrad.completion", "harnessgrad.records"},
+    "harnessgrad/native_judge_identity.py": {
+        "__future__", "hashlib", "ipaddress", "os", "urllib.parse"},
+    "harnessgrad/orchestration/boundary_readiness.py": {
+        "__future__", "dataclasses", "pathlib", "eval.containers.container",
+        "eval.containers.sandbox", "eval.run.integrity", "harnessgrad.environments"},
+    "harnessgrad/orchestration/improver_readiness.py": {
+        "__future__", "dataclasses", "os", "pathlib", "sys", "eval.run.integrity",
+        "harnessgrad.config", "tools.probe_tool_calls"},
+    "harnessgrad/orchestration/run_configuration.py": {"__future__", "harnessgrad.config"},
+    "harnessgrad/orchestration/scenario_config.py": {
+        "__future__", "dataclasses", "json", "pathlib", "eval.run.metrics"},
+    "eval/run/evaluation_plan.py": {
+        "__future__", "dataclasses", "eval.containers.external_runtime",
+        "eval.run.chess_stepwise", "eval.run.outcomes", "harnessgrad.candidate_runtime",
+        "harnessgrad.dataset_runtime_identity", "harnessgrad.task_python",
+        "harnessgrad.verification_context"},
+    "eval/run/measurement_cache.py": {
+        "__future__", "dataclasses", "hashlib", "json", "eval.containers.external_runtime",
+        "eval.run.chess_stepwise", "eval.verification.isolation", "eval.verification.pristine",
+        "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
+        "harnessgrad.verification_context"},
+    "eval/run/trial_worker.py": {
+        "__future__", "dataclasses", "os", "pathlib", "sys", "typing",
+        "eval.containers.external_runtime", "eval.observe.progress",
+        "eval.observe.task_verdicts", "eval.observe.tracing", "eval.run.chess_stepwise",
+        "eval.run.outcomes", "eval.run.repeated_trials", "eval.run.trial_evidence",
+        "eval.service.modelgate", "eval.verification.isolation", "eval.verification.pristine",
+        "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
+        "harnessgrad.task_python", "harnessgrad.verification_context"},
+    "eval/run/scheduling.py": {
+        "__future__", "concurrent.futures", "eval.run.outcomes", "harnessgrad.slots"},
+    "eval/run/aggregation.py": {
+        "__future__", "dataclasses", "eval.run.outcomes", "eval.run.repeated_trials",
+        "eval.run.trial_evidence", "eval.verification.isolation", "eval.verification.verifier"},
+    "eval/run/evaluation_usage.py": {"__future__", "dataclasses", "eval.observe.tracing"},
+    "eval/run/actor_environment.py": {
+        "__future__", "os", "pathlib", "shutil", "sys",
+        "harnessgrad.python_exec_runtime", "harnessgrad.task_python"},
+    "eval/run/actor_spec.py": {"__future__", "dataclasses"},
+    "eval/run/actor_execution.py": {"__future__", "eval.run.actor_spec"},
+    "eval/run/task_workspace.py": {"__future__", "json", "pathlib", "shutil", "tempfile"},
+    "eval/run/task_session.py": {
+        "__future__", "sys", "eval.containers.responses_overlay", "eval.run.tool_relay",
+        "eval.service.modelgate", "eval.service.services"},
+    "eval/run/task_output.py": {"__future__", "dataclasses", "eval.run.trial_evidence"},
+    "eval/run/task_verification.py": {"__future__", "dataclasses", "eval.containers.immutable_runtime"},
+    "console/run_query.py": {
+        "__future__", "json", "os", "pathlib", "re", "threading", "time", "subprocess",
+        "console.record_reader", "console.path_policy", "console.serialization",
+        "record_reader", "path_policy", "serialization"},
+    "console/comparison.py": {
+        "__future__", "pathlib", "re", "console.record_reader", "console.serialization",
+        "record_reader", "serialization"},
+    "console/path_policy.py": {"__future__", "pathlib"},
+    "console/serialization.py": {"__future__", "math"},
+    "console/snapshots.py": {"importlib.util", "pathlib"},
+    "console/settings.py": {
+        "__future__", "json", "urllib.parse", "urllib.request",
+        "console.record_reader", "record_reader"},
+    "console/catalogue.py": {
+        "__future__", "dataclasses", "re", "sys", "typing", "harnessgrad.config",
+        "data.scaffolds.registry", "console.record_reader", "record_reader"},
+    "console/launch.py": {
+        "__future__", "dataclasses", "json", "os", "pathlib", "re", "subprocess",
+        "sys", "time", "typing", "urllib.parse", "uuid", "harnessgrad.config",
+        "harnessgrad.slots", "console.record_reader", "console.settings",
+        "record_reader", "settings"},
+    "console/candidates.py": {
+        "__future__", "dataclasses", "hashlib", "importlib.util", "io", "json", "os",
+        "pathlib", "re", "secrets", "shlex", "shutil", "stat", "sys", "tarfile", "time",
+        "console.record_reader", "console.submissions", "record_reader"},
+    "console/candidate_trial.py": {
+        "__future__", "json", "os", "pathlib", "subprocess", "sys",
+        "console.candidates", "candidates"},
+    "console/workbench.py": {
+        "__future__", "contextlib", "dataclasses", "difflib", "fcntl", "json", "os", "pathlib",
+        "shlex", "shutil", "subprocess", "tempfile", "threading", "time", "console.assistant_drivers",
+        "console.candidates", "console.record_reader", "assistant_drivers", "candidates", "record_reader"},
+    "console/assistant_drivers.py": {
+        "__future__", "contextlib", "dataclasses", "hashlib", "importlib.util", "json", "os",
+        "pathlib", "re", "shlex", "shutil", "tempfile", "urllib.parse"},
+    "console/explanation.py": {
+        "__future__", "dataclasses", "hashlib", "http.client", "json", "os", "pathlib",
+        "threading", "time", "urllib.error", "urllib.request", "console.record_reader",
+        "console.run_query", "record_reader", "run_query"},
+    "console/submission_controller.py": {
+        "__future__", "dataclasses", "email", "email.parser", "ipaddress", "os", "pathlib",
+        "re", "sys", "threading", "urllib.parse"},
+    "console/artifact_catalogue.py": {
+        "__future__", "ast", "dataclasses", "hashlib", "json", "pathlib", "re",
+        "console.path_policy", "console.record_reader", "console.serialization",
+        "path_policy", "record_reader", "serialization"},
+    "console/author_bundles.py": {
+        "__future__", "importlib.util", "json", "os", "pathlib", "re", "shutil",
+        "subprocess", "sys", "tarfile", "tempfile", "time", "zipfile"},
+    "console/http_transport.py": {
+        "__future__", "http.server", "ipaddress", "json", "pathlib", "re", "urllib.parse",
+        "console.path_policy", "console.serialization", "path_policy", "serialization"},
+    "console/http_routes.py": {
+        "__future__", "dataclasses", "pathlib", "re", "tempfile", "typing", "urllib.parse"},
+    "console/submission_http.py": {
+        "__future__", "dataclasses", "os", "typing", "urllib.parse"},
+    "console/health.py": {"console.run_query", "run_query", "shutil"},
+    "console/snapshot_restore.py": {"__future__", "pathlib", "shutil"},
 }
 
 # Exact file/module edges, not permission for all of eval to depend on config.
@@ -82,8 +225,8 @@ EXCEPTIONS = {
         "Native actor worlds reuse the admitted container executor rather than opening a Docker socket to the actor.",
     ("data-eval", "data/scaffolds/native_harbor_runtime/public_runtime.py", "eval.containers.observed"):
         "Explicit native public-network profile reuses bounded Docker transport; it does not claim observed-offline admission.",
-    ("data-eval", "data/scaffolds/native_harbor_runtime/verify.py", "eval.service.modelgate"):
-        "Native independent rubric judges resolve only trusted host model declarations, never actor-selected endpoints.",
+    ("data-eval", "data/scaffolds/native_harbor_runtime/judge_gateway.py", "eval.service.modelgate"):
+        "The bound native judge gateway publishes only the prepared loopback endpoint through the canonical owned forwarder.",
     ("data-eval", "data/scaffolds/native_research/workbench_relay.py", "eval.service.tool_transport"):
         "Selected native workplace state uses the existing private relay; no actor scoring operation.",
     ("data-eval", "data/scaffolds/native_research/web_relay.py", "eval.service.tool_transport"):
@@ -361,7 +504,7 @@ class ImportDirectionTests(unittest.TestCase):
             if directory.is_dir():
                 self.assertIn(directory.name, infrastructure, f"unclassified data directory: {directory}")
         adapters = ROOT / "data/datasets"
-        preparation_profiles = {"native_qa"}
+        preparation_profiles = {"native_qa", "jobbench_renderer", "native_harbor"}
         for directory in adapters.iterdir():
             if not directory.is_dir() or directory.name == "__pycache__":
                 continue
@@ -470,12 +613,24 @@ class ImportDirectionTests(unittest.TestCase):
     def test_extracted_units_reject_reverse_imports_and_execution_capabilities(self):
         for file in EXTRACTED_UNIT_IMPORTS:
             for statement in ("import driver", "from console import server",
-                              "import eval.run.runner", "import subprocess",
+                              "import eval.run.runner",
                               "def nested():\n    import tools.improver"):
                 with self.subTest(file=file, statement=statement):
                     edges = _imports(file, statement, {"console.server"})
                     errors = _policy_errors(edges, {}, {})
                     self.assertTrue(any("extracted-unit-dependency" in e for e in errors))
+            # Query uses read-only diff; process owners use constants/exceptions
+            # for their explicit invocation ports.
+            # Other extracted units cannot acquire a subprocess dependency.
+            edges = _imports(file, "import subprocess", set())
+            errors = _policy_errors(edges, {}, {})
+            if file in {"console/run_query.py", "console/launch.py",
+                        "console/candidate_trial.py", "console/workbench.py",
+                        "console/author_bundles.py",
+                        "harnessgrad/orchestration/resume.py"}:
+                self.assertEqual(errors, [])
+            else:
+                self.assertTrue(any("extracted-unit-dependency" in e for e in errors))
         edges = _imports("harnessgrad/entrypoints/run_parser.py",
                          "from .experiment_config import config_help",
                          {"harnessgrad.entrypoints.experiment_config"})

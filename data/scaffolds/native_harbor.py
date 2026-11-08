@@ -187,9 +187,20 @@ def runtime(row: NativeTask) -> dict:
     entry = data['tasks'].get(row.task_id)
     if not isinstance(entry, dict) or entry.get('source_sha256') != row.source_sha256:
         raise NativeRuntimeUnavailable(f'{row.dataset}: native runtime does not bind task/source {row.task_id}')
+    if row.dataset == 'jobbench':
+        from harnessgrad.native_judge_identity import admit_selection
+        try:
+            admit_selection(entry)
+        except ValueError as exc:
+            raise NativeRuntimeUnavailable(str(exc)) from None
     for key in ('replay_actor_image', 'verifier_image'):
         if not isinstance(entry.get(key), str) or not re.fullmatch(r'sha256:[0-9a-f]{64}', entry[key]):
             raise ValueError('native replay/verifier images must be explicit local immutable image IDs')
+    from data.scaffolds.native_harbor_runtime.python_runtime import admit
+    try:
+        admit(entry)
+    except (OSError, ValueError, RuntimeError) as exc:
+        raise NativeRuntimeUnavailable('native Harbor dependency artifact unavailable: ' + str(exc)) from None
     actor = entry.get('actor')
     network = (row.declaration.get('agent') or {}).get('network_mode', 'public')
     if network == 'public':
@@ -201,31 +212,11 @@ def runtime(row: NativeTask) -> dict:
         validate_public_runtime(actor)
     else:
         validate_container_runtime(actor)
-    python = entry.get('harbor_python')
-    if not python or not Path(python).is_file():
-        raise NativeRuntimeUnavailable(f'{row.dataset}: selected harbor_python interpreter missing')
-    probe = subprocess.run([python, '-I', '-c',
-                            'import importlib.metadata;print(importlib.metadata.version("harbor"))'],
-                           capture_output=True, text=True, errors='replace', timeout=10)
-    if probe.returncode or probe.stdout.strip() != '0.23.0':
-        raise NativeRuntimeUnavailable('native replay requires prepared harbor==0.23.0 and Python>=3.12')
     for image in {actor['image'], entry['replay_actor_image'], entry['verifier_image']}:
         inspected = subprocess.run(['docker', 'image', 'inspect', image], capture_output=True,
                                     text=True, errors='replace', timeout=10)
         if inspected.returncode:
             raise NativeRuntimeUnavailable(f'{row.dataset}: immutable native image not imported locally: {image}')
-    if row.dataset == 'jobbench':
-        from urllib.parse import urlsplit
-        import ipaddress
-        base = os.environ.get('HG_JUDGE_HARBOR_BASE_URL', '')
-        model = os.environ.get('HG_JUDGE_HARBOR_MODEL', '')
-        try:
-            parsed = urlsplit(base)
-            valid = parsed.scheme == 'http' and ipaddress.ip_address(parsed.hostname or '').is_loopback and bool(model)
-        except ValueError:
-            valid = False
-        if not valid:
-            raise NativeRuntimeUnavailable('JobBench requires independent explicit local HG_JUDGE_HARBOR_BASE_URL / HG_JUDGE_HARBOR_MODEL; no paid provider fallback')
     if row.dataset == 'swe_bench_pro':
         known=json.loads((RUNTIME_ASSETS/'PROVENANCE.json').read_text())['pro_tooling_sha256']
         for key in ('pro_replay_source','pro_capture_source'):
@@ -278,7 +269,12 @@ def verifier(row):
     case = execution_case(row)
     content = json.dumps(case,sort_keys=True,separators=(',',':'))
     sha = hashlib.sha256(content.encode()).hexdigest()
-    return {'kind':'command','argv':['harnessgrad-native',row.dataset],
+    binding = case['runtime']['harbor_runtime']
+    return {**({'native_judge_identity':case['runtime']['judge_identity']} if row.dataset=='jobbench' else {}),
+            'kind':'command',
+            # Native dispatch appends owned request/response paths at launch.
+            'argv':[binding['python'],'-I','-B',str(RUNTIME_ASSETS/'harbor_entry.py')],
+            'python_runtime':binding, 'runtime_paths':list(binding['runtime_paths']),
             'inputs':[{'path':'native-case.json','content':content}],
             'scorer_input':{'task_id':row.task_id,'path':'native-case.json','sha256':sha},
             'native_benchmark':{'dataset':row.dataset,'case_sha256':sha,

@@ -17,7 +17,7 @@
       ],
       "loading_and_preparation": "Managed chess provider; catalog and board construction avoid platform chess.",
       "trusted_execution": "Independent pinned native scorer for offline replay; bound provider worker for interactive play.",
-      "verification_scope": "Authored provider and interactive controls remain distinct from the independent native scorer. Exact-pin recovery/check tooling matched 555 of 718 required blobs; 163 including the required interpreter remain unavailable, so four real-native scorer controls skip rather than substitute another runtime."
+      "verification_scope": "Original 718-blob native package recovered and verified without repinning. Four authored complete/wrong/partial/empty trajectories pass actual sealed scoring with rewards 1/0/0/0; the complete corrected test file has 12 passes. Private gold payload is redacted; public puzzle IDs remain in trusted raw verdicts. Provider/interactive controls stay separate. Fresh installs require a reviewed native archive; no released pool is certified."
     },
     {
       "datasets": [
@@ -73,8 +73,8 @@
         "jericho"
       ],
       "loading_and_preparation": "Declared managed provider; separate pinned CPython 3.12 Jericho execution artifact; ROMs remain external.",
-      "trusted_execution": "Bound single-game relay, stdlib actor client and unchanged native scorer manifest; upstream C/Frotz and OS dependencies remain external.",
-      "verification_scope": "Original CC0 TextWorld-ABI story ran on the original-pin Jericho/libfrotz engine with actual inventory, score and termination, real relay/client, bound-input shipped-scorer replay and process cleanup (2/2 in two actions). Fake-engine Loop controls remain separate. The complete independently pinned sealed-native scorer package is still unavailable; no released ROM or benchmark was run."
+      "trusted_execution": "Bound single-game relay and stdlib actor client; original sealed scorer with unchanged CPython 3.12.16, Jericho 3.3.1, NumPy 1.26.4 and Frotz/system-library pins, supplied by a separate native package.",
+      "verification_scope": "Original 1039-blob sealed package recovered and verified. A CC0 authored TextWorld-ABI story passed actual Frotz/relay/client, bound-input shipped replay and original sealed scoring with 2/2 reward in two actions and clean service/socket teardown. No released ROM or model was used. Fresh installs need a reviewed native archive; complete public archive hosting and fully public binary reconstruction remain separate."
     },
     {
       "datasets": [

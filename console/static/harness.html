@@ -99,12 +99,13 @@
           <select class="select" id="kind" style="width:auto">
             <option value="codex">codex</option>
             <option value="dsh">dsh</option>
-            <option value="opencode">opencode</option>
-            <option value="miniswe">miniswe</option>
-            <option value="miniagent">miniagent</option>
-            <option value="openclaw">openclaw</option>
+            <option value="opencode" disabled>opencode — unavailable as editor</option>
+            <option value="miniswe" disabled>miniswe — unavailable as editor</option>
+            <option value="miniagent" disabled>miniagent — unavailable as editor</option>
+            <option value="openclaw" disabled>openclaw — unavailable as editor</option>
           </select>
         </div>
+        <p class="sub" id="assistant-capability-status" role="status" style="margin:8px 16px">Checking editor configuration…</p>
         <div class="hg-chat__thread" id="thread">
           <div class="hg-chat__empty"><span data-i18n="说点什么：可以让它改代码，也可以只讨论。">说点什么：可以让它改代码，也可以只讨论。</span><br>
             <span data-i18n="选中行会跟着这一条消息一起发出去。">选中行会跟着这一条消息一起发出去。</span></div>

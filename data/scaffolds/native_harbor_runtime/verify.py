@@ -2,7 +2,6 @@
 from __future__ import annotations
 import base64
 import hashlib
-import ipaddress
 import json
 import os
 from pathlib import Path,PurePosixPath
@@ -11,7 +10,6 @@ import subprocess
 import sys
 import tempfile
 import signal
-from urllib.parse import urlsplit
 
 from data.scaffolds.native_harbor import _tree_identity
 
@@ -73,6 +71,36 @@ def export_artifacts(payload,root):
     return files
 
 
+def _execute_harbor(entry,request_path,response,env,timeout_s,*,entrypoint=None):
+    """Selected-process boundary; entrypoint injection is for authored controls only."""
+    from data.scaffolds.native_harbor_runtime.python_runtime import admit
+    from harnessgrad.native_judge_identity import admit_selection
+    if 'judge_identity' in entry:admit_selection(entry)
+    admit(entry)
+    process=subprocess.Popen([entry['harbor_python'],'-I','-B',
+        str(entrypoint or Path(__file__).with_name('harbor_entry.py')),str(request_path),str(response)],
+        env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,errors='replace',start_new_session=True)
+    try:
+        stdout,stderr=process.communicate(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        # Preserve the native supervisor cleanup grace before killing its group.
+        process.terminate()
+        try:process.communicate(timeout=35)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid,signal.SIGKILL);process.communicate()
+        raise TimeoutError('native Harbor verifier deadline reached')
+    if process.returncode or not response.is_file():
+        raise RuntimeError('native Harbor verifier process failed: '+stderr[-1000:])
+    if 'judge_identity' in entry:admit_selection(entry)
+    admit(entry)
+    result=json.loads(response.read_text())
+    if result.get('harbor_runtime')!=entry['harbor_runtime']:
+        raise ValueError('Harbor child returned a different dependency identity')
+    if 'judge_identity' in entry and result.get('judge_identity')!=entry['judge_identity']:
+        raise ValueError('Harbor child returned a different judge identity')
+    return result
+
+
 def run(spec,artifact_root,*,task_id,run_id,trial_id,timeout_s):
     root=Path(artifact_root);config=spec['native_benchmark'];gateway=None
     try:
@@ -82,6 +110,15 @@ def run(spec,artifact_root,*,task_id,run_id,trial_id,timeout_s):
         case=json.loads(raw)
         if case['task_id']!=task_id or case['dataset']!=config['dataset']:
             raise ValueError('selected native case identity differs')
+        from data.scaffolds.native_harbor_runtime.python_runtime import admit
+        admit(case['runtime'])
+        if spec.get('python_runtime') != case['runtime']['harbor_runtime']:
+            raise ValueError('native Harbor verifier binding differs from private selected case')
+        if case['dataset']=='jobbench':
+            from harnessgrad.native_judge_identity import admit_selection
+            admit_selection(case['runtime'])
+            if spec.get('native_judge_identity') != case['runtime']['judge_identity']:
+                raise ValueError('JobBench judge declaration differs from the selected private case')
         payload=sealed_artifacts(case,root,task_id=task_id,run_id=run_id,trial_id=trial_id)
         with tempfile.TemporaryDirectory(prefix='hg-native-harbor-verify-') as tmp:
             scratch=Path(tmp);exports=scratch/'exports';exports.mkdir()
@@ -113,16 +150,16 @@ def run(spec,artifact_root,*,task_id,run_id,trial_id,timeout_s):
             if case['dataset']=='jobbench':
                 # Only an explicitly configured loopback provider is accepted here.
                 # Never inherit an actor's endpoint/model/credentials.
-                base=os.environ['HG_JUDGE_HARBOR_BASE_URL'];parsed=urlsplit(base)
-                if parsed.scheme!='http' or not ipaddress.ip_address(parsed.hostname or '').is_loopback:
-                    raise ValueError('JobBench judge must use an explicit local HTTP endpoint')
-                from eval.service import modelgate
+                selected_judge=admit_selection(case['runtime'])
+                base=selected_judge['judge_base_url']
+                from data.scaffolds.native_harbor_runtime.judge_gateway import open_gateway
                 bridge=json.loads(subprocess.check_output(['docker','network','inspect','bridge'],text=True,
                                                                    errors='replace'))[0]['IPAM']['Config'][0]['Gateway']
-                gateway=modelgate.publish(base,bind_host='0.0.0.0')
-                verifier_env={'JUDGE_MODEL':os.environ['HG_JUDGE_HARBOR_MODEL'],
+                admit_selection(case['runtime'])
+                gateway=open_gateway(base,bridge)
+                verifier_env={'JUDGE_MODEL':selected_judge['judge_identity']['model'],
                               'JUDGE_API_KEY':os.environ.get('HG_JUDGE_HARBOR_API_KEY','local'),
-                              'JUDGE_API_BASE':gateway.url_for(bridge)}
+                              'JUDGE_API_BASE':gateway.base_url}
             request={'case':case,'artifact_root':str(exports),'task_projection':str(projection),
                      'source_job':str(source_job),'captured_patch':str(captured) if captured else None,
                      'trial_root':str(scratch/'trials'),'verifier_env':verifier_env}
@@ -132,27 +169,13 @@ def run(spec,artifact_root,*,task_id,run_id,trial_id,timeout_s):
                  and not any(token in k.upper() for token in ('API_KEY','SECRET','PASSWORD','ACCESS_TOKEN'))}
             env.update(PYTHONDONTWRITEBYTECODE='1',PYTHONPATH='',HOME=str(scratch/'home'))
             Path(env['HOME']).mkdir()
-            process=subprocess.Popen([case['runtime']['harbor_python'],'-I','-B',str(Path(__file__).with_name('harbor_entry.py')),
-                                      str(request_path),str(response)],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                                      text=True,errors='replace',start_new_session=True)
-            try:
-                stdout,stderr=process.communicate(timeout=timeout_s)
-            except subprocess.TimeoutExpired:
-                # Signal the supervisor itself first so its fixed cleanup handler
-                # can remove exact trial containers; kill its process group only
-                # after the bounded cleanup grace.
-                process.terminate()
-                try: process.communicate(timeout=35)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid,signal.SIGKILL);process.communicate()
-                raise TimeoutError('native Harbor verifier deadline reached')
-            process.stderr=stderr
-            if process.returncode or not response.is_file():
-                raise RuntimeError('native Harbor verifier process failed: '+process.stderr[-1000:])
-            result=json.loads(response.read_text());score=result['reward']
+            result=_execute_harbor(case['runtime'],request_path,response,env,timeout_s)
             if case['dataset']=='jobbench':
-                result.update(judge_model=verifier_env['JUDGE_MODEL'],judge_profile='custom-local',
-                              judge_endpoint_sha256=hashlib.sha256(os.environ['HG_JUDGE_HARBOR_BASE_URL'].encode()).hexdigest())
+                admit_selection(case['runtime'])
+                if result.get('judge_identity') != case['runtime']['judge_identity']:
+                    raise ValueError('JobBench child returned a different judge identity')
+                result.update(judge_model=verifier_env['JUDGE_MODEL'],judge_profile='custom-local')
+            score=result['reward']
             return {'kind':'command','passed':score==1,'score':score,'outcome':'measured',
                     'detail':'Fresh native Harbor verifier completed',
                     'scorer_isolation_class':'unknown','native_harbor':result,

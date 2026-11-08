@@ -26,6 +26,7 @@ from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
 from harnessgrad import verification_context as verification_context_mod
 from eval.containers import external_runtime
 from harnessgrad import candidate_runtime
+from harnessgrad.orchestration.historical_evidence import read_progress_results as _progress_results
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
 from harnessgrad.environments import _report_invalid
@@ -206,24 +207,6 @@ def _eval_from_record(runs_root: Path, run_id: str, round_no: int, *,
             "harness_sha": (point.get("identity") or {}).get("harness_sha"),
             "train_score": point.get("score") if point.get("side") != "eval" else None}
 
-def _progress_results(run_dir: Path) -> dict[str, dict]:
-    """Per-task results an interrupted eval run already wrote.
-
-    `evaluate()` records one JSON per finished task under `progress/round-0/`. Those files
-    are the only evidence that a task was measured, so a resume reads them rather than
-    trusting a receipt count.
-    """
-    out: dict[str, dict] = {}
-    # task_file preserves namespaced task IDs as nested paths.
-    for path in sorted((run_dir / "progress" / "round-0").rglob("*.json")):
-        try:
-            record = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError):
-            continue
-        task_id = record.get("task_id")
-        if task_id and record.get("complete"):
-            out[task_id] = record
-    return out
 
 
 def _eval_resume_seed(run_dir: Path, tasks, verifiers, trials, requested_seed) -> str | None:

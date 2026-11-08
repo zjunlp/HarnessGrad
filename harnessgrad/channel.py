@@ -15,6 +15,7 @@ that asked the question.
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 import json
 import os
 import shutil
@@ -82,7 +83,14 @@ def _method_runtimes(value):
                 **{key: value[key] for key in ('dataset', 'runtime_id', 'role') if key in value}}
     result = {}
     for key, item in value.items():
-        if key == 'verification_context':
+        if key in ('judge_identity', 'native_judge_identity'):
+            from harnessgrad.native_judge_identity import public_summary as judge_public_summary
+            try:
+                result[key] = judge_public_summary(item)
+            except (TypeError, ValueError):
+                result[key] = {'status': 'unavailable'}
+            continue
+        if key in ('verification_context', 'judge_endpoint_sha256'):
             continue
         if key == 'dataset_runtime_identity' and item is not None:
             from harnessgrad.dataset_runtime_identity import public_summary
@@ -135,6 +143,69 @@ def _for_method(point: dict) -> dict:
         result['split'] = {'train': list(split.get('train', []))}
     return result
 
+_NATIVE_CASE_UNAVAILABLE = "[native verifier contract unavailable]"
+
+
+def _native_case_path(spec):
+    native = spec.get("native_benchmark")
+    if not isinstance(native, dict) or native.get("dataset") not in {"deepswe", "jobbench", "swe_bench_pro"}:
+        return None
+    path = native.get("case_path")
+    if (not isinstance(path, str) or not path or "\x00" in path
+            or Path(path).is_absolute() or ".." in Path(path).parts):
+        return False
+    return str(Path(path))
+
+
+def _native_case_for_method(spec, text):
+    """Project the declared private case; never modify the actual scoring input."""
+    try:
+        native = spec["native_benchmark"]
+        scorer = spec["scorer_input"]
+        if (not isinstance(text, str) or len(text) > CONTEXT_FILE_LIMIT
+                or native["case_path"] != scorer["path"]
+                or native["case_sha256"] != scorer["sha256"]
+                or hashlib.sha256(text.encode("utf-8")).hexdigest() != scorer["sha256"]):
+            return _NATIVE_CASE_UNAVAILABLE
+        case = json.loads(text)
+        if (case["schema"] != "harnessgrad.native-harbor-case.v1"
+                or case["dataset"] != native["dataset"]
+                or case["task_id"] != scorer["task_id"]
+                or not isinstance(case["runtime"], dict)):
+            return _NATIVE_CASE_UNAVAILABLE
+        binding = case["runtime"].get("harbor_runtime")
+        if binding != spec.get("python_runtime") or not isinstance(binding, dict):
+            return _NATIVE_CASE_UNAVAILABLE
+        from harnessgrad.dataset_runtime import validate_binding
+        binding = validate_binding(binding, "verifier")
+        if binding["dataset"] != "native_harbor":
+            return _NATIVE_CASE_UNAVAILABLE
+        projected = {key: case[key] for key in (
+            "schema", "dataset", "task_id", "declaration", "collect", "artifact_paths",
+            "actor_timeout_s", "verify_timeout_s") if key in case}
+        actor = case["runtime"].get("actor")
+        if not isinstance(actor, dict):
+            return _NATIVE_CASE_UNAVAILABLE
+        projected["runtime"] = {
+            "actor": {key: actor[key] for key in (
+                "kind", "backend", "image", "python", "workdir", "image_workspace",
+                "network", "cpus", "memory_mb", "pids", "filesystems") if key in actor},
+            "harbor_runtime": _method_runtimes(binding)}
+        return json.dumps(projected, ensure_ascii=False, sort_keys=True)
+    except (KeyError, TypeError, ValueError, RecursionError):
+        return _NATIVE_CASE_UNAVAILABLE
+
+
+def _native_case_file_for_method(spec, path):
+    try:
+        if path.is_symlink() or not path.is_file():
+            return _NATIVE_CASE_UNAVAILABLE
+        with path.open(encoding="utf-8", newline="") as source:
+            return _native_case_for_method(spec, source.read(CONTEXT_FILE_LIMIT + 1))
+    except (OSError, UnicodeError):
+        return _NATIVE_CASE_UNAVAILABLE
+
+
 def _resolve_checks(spec: dict, budget: list[int]) -> dict:
     """A verifier's inputs, resolved to text so a method reads the *check* not a pointer.
 
@@ -152,21 +223,38 @@ def _resolve_checks(spec: dict, budget: list[int]) -> dict:
     where that boundary lives -- not here.
     """
     out: dict[str, str] = {}
+    native_case = _native_case_path(spec or {})
+    if native_case is False:
+        return {"native-case.json": _truncate(_NATIVE_CASE_UNAVAILABLE, budget)}
+    case_inputs = 0
     for entry in (spec or {}).get("inputs") or []:
         if ((spec.get('python_runtime') or {}).get('dataset') in ('spreadsheetbench', 'spreadsheetbench2')
                 and entry.get('path') in ('native-runtime.json', 'runtime-context.json')):
             continue  # Runtime deployment manifests are private even on the study side.
         src = entry.get("from")
+        name = entry.get("path") or entry.get("dst") or "input"
+        if native_case is not None and isinstance(name, str) and str(Path(name)) == native_case:
+            case_inputs += 1
+            text = (_native_case_file_for_method(spec, Path(src)) if src else
+                    _native_case_for_method(spec, entry.get("content")))
+            out[str(name)] = _truncate(text, budget)
+            continue
         if src:
             base = Path(src)
             files = sorted(p for p in base.rglob("*") if p.is_file()) \
                 if base.is_dir() else ([base] if base.is_file() else [])
             for path in files:
-                out[str(path.relative_to(base) if base.is_dir() else path.name)] = \
-                    _read_capped(path, budget)
+                relative = path.relative_to(base) if base.is_dir() else Path(path.name)
+                is_native_case = (native_case is not None and isinstance(name, str)
+                    and str(Path(name) / relative if base.is_dir() else Path(name)) == native_case)
+                case_inputs += int(is_native_case)
+                out[str(relative)] = (_truncate(_native_case_file_for_method(spec, path), budget)
+                    if is_native_case else
+                    _read_capped(path, budget))
         elif entry.get("content") is not None:
-            name = entry.get("path") or entry.get("dst") or "input"
             out[str(name)] = _truncate(str(entry["content"]), budget)
+    if native_case is not None and case_inputs != 1:
+        out[native_case] = _truncate(_NATIVE_CASE_UNAVAILABLE, budget)
     return out
 
 def _truncate(text: str, budget: list[int]) -> str:
@@ -242,7 +330,9 @@ def _stage_task_context(work: Path, tasks, setups, verifiers, result,
                 # `expected` is the gold for an `answer` verifier; `checks` is the gold
                 # for a `command` one. Both are given, for the reason in `_resolve_checks`.
                 "expected": spec.get("expected"),
-                "argv": (["<managed-verifier-python>", *spec["argv"][1:]]
+                "argv": (["<managed-verifier-python>", "-I", "-B", "<trusted-native-verifier>"]
+                         if _native_case_path(spec) is not None and spec.get("python_runtime") else
+                         ["<managed-verifier-python>", *spec["argv"][1:]]
                          if spec.get("python_runtime") and spec.get("argv") else spec.get("argv")),
                 "reward_file": spec.get("reward_file"),
                 "checks": _resolve_checks(spec, budget),

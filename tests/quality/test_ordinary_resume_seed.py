@@ -9,7 +9,7 @@ import pytest
 
 import driver
 from eval.run import repeated_trials
-from harnessgrad import config
+from harnessgrad import config, candidate_runtime, python_harness_runtime, verification_context
 
 
 @pytest.fixture
@@ -26,12 +26,13 @@ def interrupted_driver(tmp_path, monkeypatch, request):
                                    'trial_evidence': {'version': 1}} for t in tasks}
     module.ENV = {t['task_id']: {'kind': 'files', 'network': 'none'} for t in tasks}
     monkeypatch.setitem(sys.modules, 'data.demo', module)
-    source = tmp_path / 'runs/train/state_after_round0'
+    source = tmp_path / 'seed-source'
     source.mkdir(parents=True)
     (source / 'harness.json').write_text(json.dumps({
         'name': 'seed-control', 'version': '1', 'entrypoint': 'agent.py',
-        'runtime_paths': list(dict.fromkeys([sys.prefix, sys.base_prefix,
-            str(Path(sys._base_executable).parent.parent)]))}))
+        'runtime': {'kind': 'python', 'python': f'{sys.version_info.major}.{sys.version_info.minor}',
+                    'requirements': 'requirements.lock'}}))
+    (source / 'requirements.lock').write_text('# authored stdlib actor: no third-party dependencies\n')
     (source / 'agent.py').write_text(
         "import argparse,json,sys\nfrom pathlib import Path\n"
         "p=argparse.ArgumentParser();p.add_argument('--task');p.add_argument('--workdir');a=p.parse_args()\n"
@@ -42,7 +43,29 @@ def interrupted_driver(tmp_path, monkeypatch, request):
     monkeypatch.setenv('PATH', str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH'])
     monkeypatch.setattr(driver, 'load_env', lambda *_: {})
     monkeypatch.setattr(driver, '_probe_tool_calls', lambda *a, **k: pytest.fail('no model calls'))
-    state = SimpleNamespace(run=tmp_path / 'runs/eval', interrupt=True, started=[])
+    # A bare host runtime_paths declaration is deliberately noncacheable. Use
+    # an actual admitted offline Python artifact and the real train publication
+    # path, rather than inventing a checkpoint identity for resume.
+    store = tmp_path / 'runtime-store'
+    monkeypatch.setenv('HG_HARNESS_RUNTIME_ROOT', str(store))
+    monkeypatch.setenv('UV_CACHE_DIR', str(tmp_path / 'wheel-cache'))
+    monkeypatch.setenv('UV_OFFLINE', '1')
+    monkeypatch.setenv('UV_PYTHON_DOWNLOADS', 'never')
+    request.addfinalizer(lambda: python_harness_runtime.remove_instance(store) if store.exists() else None)
+    original_harness = driver._harness_by_name
+    monkeypatch.setattr(driver, '_harness_by_name', lambda name:
+                        source if name == 'seed-control' else original_harness(name))
+    monkeypatch.setattr(sys, 'argv', ['driver.py', '--harness', 'seed-control',
+        '--dataset', 'demo', '--sampling', 'all', '--rounds', '0', '--improver', 'none',
+        '--trials', '1', '--run-id', 'train', '--seed', 'authored-train-seed',
+        '--runs-root', str(tmp_path / 'runs'), '--work-root', str(tmp_path / 'work'),
+        '--gpu-budget-dir', str(tmp_path / 'slots')])
+    config.reset()
+    assert driver.main() == 0
+    train_meta = json.loads((tmp_path / 'runs/train/run_meta.json').read_text())
+    binding = train_meta['harness_runtime_identity']
+    assert candidate_runtime.admit(tmp_path / 'runs/train/state_after_round0', binding) == binding
+    state = SimpleNamespace(run=tmp_path / 'runs/eval', interrupt=True, started=[], binding=binding)
     start_task = repeated_trials.start_task
 
     def start(root, plan):
@@ -68,7 +91,13 @@ def interrupted_driver(tmp_path, monkeypatch, request):
         execute()
     state.interrupt = False
     state.metadata = (state.run / 'run_meta.json').read_bytes()
-    state.seed = json.loads(state.metadata)['config']['run']['seed']
+    current = json.loads(state.metadata)
+    state.seed = current['config']['run']['seed']
+    assert current['harness_runtime_identity'] == state.binding
+    progress = json.loads((state.run / 'progress/round-0' / (ids[0] + '.json')).read_text())
+    assert progress['harness_runtime_identity'] == state.binding
+    assert progress['verification_context'] == verification_context.project(
+        current['verification_context'], [ids[0]])
     state.saved = {p: p.read_bytes() for p in (state.run / 'trial-evidence').rglob('*.json')}
     assert state.started == [ids[0]]
     yield state

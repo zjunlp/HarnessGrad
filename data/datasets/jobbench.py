@@ -10,6 +10,7 @@ import os
 from data.scaffolds import native_harbor as native
 
 KIND = 'dataset'
+MANAGED_EXECUTION_RUNTIME = 'native_harbor'
 ORACLE_SOURCE = 'released'
 OFFICIAL_EVAL = None
 SPLIT = None

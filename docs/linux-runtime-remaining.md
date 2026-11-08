@@ -6,6 +6,8 @@ maintained matrix; regenerate `DATASETS.md` with
 `python3 tools/datasets_doc.py --write`. The shared `native_qa` profile is a
 preparation-only component and does not add a 57th dataset. Its use of the
 execution-profile storage mechanism does not make it a scoring runtime.
+`jobbench_renderer` is another non-adapter component profile, supplying the
+pinned author's data preparation dependencies without adding them to the platform.
 
 Evidence levels are deliberately separate: **declared** means a recipe or binding
 exists; **prepared** means an identified artifact was locally built/imported;
@@ -23,6 +25,15 @@ source, then verified use including managed contributor smoke and a network-disa
 reports the bundled authored example ready; it neither prepares those adapters
 nor establishes their workload acceptance. This receipt does not close the
 remaining boundaries below or establish full-suite coverage.
+
+The [extended integrated receipt](../.github/assets/linux-delivery-validation-20261107-extended.json)
+records source `2a9b657`: **1494 passed, no failures, 7 skipped** across 71 selected
+files, plus 14 successful wheel build/install/use steps. It includes actual
+scientific actor/scorer, original-package service, official spreadsheet,
+external-runtime reuse and unknown-cost controls. Four Chess native-package
+controls, two uncached-image controls and one full PersonaMem inventory check
+skipped; those remain missing evidence. This is the stable Linux baseline for
+the next architecture wave, not full-suite or full-Goal completion.
 
 The cold stdlib controls in `test_stdlib_adapter_acceptance.py` exercise selected
 loader and oracle/wrong/noop routes through the native sandbox using authored
@@ -46,28 +57,29 @@ redistribution of private task pools are separate, authorization-dependent work;
 their absence must not be presented as an unimplemented software boundary.
 External inputs still need explicit provenance and missing-input diagnostics.
 
-1. Integrate and verify the DS-1000 CPU execution profile, actor tool interpreter,
-   isolated official scorer and public exact-wheel preparation entry. Retain the
-   frozen cohort and source pins; a new CPU environment does not recreate the
-   historical sweep or authorize released-task execution.
-2. Verify the unified external-Harness identity through cache, whole-point reuse,
-   H0, checkpoint/progress recovery and public evidence summaries. Prepared
-   Codex/DSH must re-admit actual content and loader settings. Incomplete external
-   identities remain usable for fresh diagnostics, without authorizing reuse.
-3. Keep independent native-scorer custody separate from managed providers and
-   services. Chess's exact-pin inventory currently lacks 163 blobs, including its
-   required interpreter; Jericho's genuine Frotz/relay controls do not establish
-   availability of the full sealed scorer package. Preparation and check tools
-   must retain these missing states rather than replace pinned runtimes.
-4. Recheck source and wheel operation from a fixed integrated revision, including
-   the new preparation modules, private-state locations, license/guide resources,
-   first use, resume, result viewing and export. Update the generated support
-   matrix and the website's source guides from the same implementation.
-5. Continue the architecture migration after that Linux baseline is stable. The
-   initial parser, outcome and record-reader extractions are scoped progress;
-   the driver, execution and Console composition roots still need cohesive
-   responsibilities and behavior-equivalence checks.
-6. Complete final difference review, release notes and PR review, then consolidate
+1. Continue the architecture migration from the fixed integrated baseline.
+   Parser, outcome and record-reader ownership, selected-dataset planning,
+   evaluator admission/cache, source leases/staging, trial journals/scheduling,
+   result reduction, deferred resume, actor launch payloads, and Console
+   query/settings/launch/candidate/workbench/explanation/submission/HTTP
+   responsibilities and H0 planning have been separated. Task service lifetime and driver
+   readiness/metadata/finalization still require migration. Refresh the actual
+   ownership/call graph before each move and preserve cleanup, private inputs,
+   source selection, identity capture, admission and publication ordering.
+2. Retain the independent native-scorer input requirements. Both original Chess
+   and Jericho packages have now been recovered without changing their pins and
+   passed actual authored native controls; see the
+   [recovery receipt](../.github/assets/native-original-recovery-20261107.json).
+   Complete archives and provenance/license sidecars exist as local handoff
+   artifacts. A fresh installation still needs those reviewed packages: no public
+   download URL for the complete archives is registered, and the retained Frotz
+   and system-library bytes are not established as a fully public rebuild recipe.
+3. Keep final acceptance tied to the final source revision. After the architecture
+   migrations, repeat the affected controls and installed first-use, recovery,
+   viewing and export paths, then update the maintained documentation/website
+   source and validation receipts. A declared or prepared component alone is not
+   a completed end-to-end result.
+4. Complete final difference review, release notes and PR review, then consolidate
    local development commits into a few reviewable themes before pushing. A
    failed PR-status refresh is missing evidence, not an empty PR list.
 
@@ -97,20 +109,20 @@ no item here authorizes downloading protected data or contacting a model.
 | `bfcl_v3` | Released function-call corpus/AST metric acceptance beyond authored call and irrelevance controls. |
 | `bird_minidev` | Per-route loader/actor/service closure and portable provisioning remain under review; native pin presence is not execution proof. |
 | `browsecomp` | Judge configuration, scorer dependency closure and failure evidence require per-dataset acceptance. |
-| `chessbench_puzzles` | Exact-pin recovery/check entry is available; 163 of 718 required blobs remain missing. Provider/interactive controls do not certify the independent native package. |
+| `chessbench_puzzles` | Original 718-blob package recovered and verified; four authored trajectories pass through its sealed scorer with rewards 1/0/0/0. Provider/interactive controls remain distinct. A fresh installation needs the reviewed native archive; no released pool is certified. |
 | `cooperbench` | Source, package and image identity plus installed workflow acceptance remain pending. |
 | `costbench` | Actual original-package service, socket, trusted seal, native scorer and cleanup are verified on authored oracle/noop/invalid-tool cases; broader domains are outside this scope. |
 | `costbench_dynamic` | Actual authored cost_change lifecycle/scoring passes 1/0/0; the other dynamic modes and broader domains remain outside that control. |
 | `deepsearchqa` | Judge configuration, scorer dependency closure and failure evidence require per-dataset acceptance. |
 | `deepswe` | Source, package and image identity plus installed workflow acceptance remain pending. |
-| `ds1000` | Exact scientific execution environment, official evaluator custody and task runtime isolation. |
+| `ds1000` | A complete CPU scientific artifact, actor shell and independent bound official verifier pass authored native controls. The preserved historical cohort/sweep is not re-certified under the new CPU variant. |
 | `fever` | Released source/pool custody and complete metric-preserving coverage beyond selected cold stdlib authored controls; remote/Parquet preparation checked separately where used. |
 | `gaia` | Managed preparation closure, private attachment custody and task/scorer route acceptance. |
 | `gsm8k` | Authored provider and QA controls; released datasets and every task are not certified by these controls. |
 | `harvey_lab` | Real legal-task/judge/document-conversion lifecycle and native resources beyond prepared managed recipe, exact admission and two actual worker probes; no model/judge run. |
 | `hle` | Judge configuration, scorer dependency closure and failure evidence require per-dataset acceptance. |
 | `hotpotqa` | Authored provider and QA controls; released datasets and every task are not certified by these controls. |
-| `jericho` | Original Frotz runs a supported authored TextWorld-ABI story through actual relay/client and bound-input shipped-scorer replay. The full independently sealed scorer package is still missing; no released ROM is certified. |
+| `jericho` | Original 1039-blob sealed package recovered and verified. The CC0 authored TextWorld-ABI story passes actual engine/relay/client, shipped replay and sealed scoring with 2/2 reward and cleanup. Fresh installations need the reviewed archive; no released ROM is certified. |
 | `jobbench` | Source, package and image identity plus installed workflow acceptance remain pending. |
 | `kumo` | Prepared engine/protocol transitive dependencies, private state and lifecycle remain under review. |
 | `livecodebench` | Released executor/aggregator artifact custody and representative native sandbox behavior beyond authored controls. |

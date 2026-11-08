@@ -14,13 +14,28 @@ ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT))
 
 
+ADMITTED = False
+
+
 def stopped(_sig,_frame):
+    if not ADMITTED:
+        raise SystemExit(3)
     from data.scaffolds.native_harbor_runtime.harbor_environment import cleanup_instances
     cleanup_instances()
     raise SystemExit(3)
 
 
 async def run(request):
+    global ADMITTED
+    ADMITTED=False
+    from data.scaffolds.native_harbor_runtime.python_runtime import admit
+    admit(request['case']['runtime'],python=sys.executable)
+    if request['case']['dataset']=='jobbench':
+        from harnessgrad.native_judge_identity import validate_selection
+        chosen=validate_selection(request['case']['runtime'])
+        if request.get('verifier_env',{}).get('JUDGE_MODEL') != chosen['judge_identity']['model']:
+            raise ValueError('JobBench child model differs from prepared selection')
+    ADMITTED=True
     if importlib.metadata.version('harbor')!='0.23.0':
         raise RuntimeError('native replay requires harbor==0.23.0')
     from harbor.models.trial.config import AgentConfig,EnvironmentConfig,TaskConfig,TrialConfig,VerifierConfig
@@ -63,7 +78,9 @@ async def run(request):
     runtime_observations=[i.runtime_observation for i in NativeReplayDocker._instances]
     if not runtime_observations or any(not r.get('cleanup',{}).get('complete') for r in runtime_observations):
         raise RuntimeError('native Harbor runtime cleanup not confirmed')
-    return {'runtime_observations':runtime_observations,'reward':reward,'native_rewards':rewards,'harbor_version':'0.23.0',
+    admit(case['runtime'],python=sys.executable)
+    return {**({'judge_identity':case['runtime']['judge_identity']} if mode=='jobbench' else {}),
+            'harbor_runtime':case['runtime']['harbor_runtime'],'runtime_observations':runtime_observations,'reward':reward,'native_rewards':rewards,'harbor_version':'0.23.0',
             'native_trial_id':str(result.id),'official_evaluation_performed':True,
             'replay':{k:replay[k] for k in ('apply_rc','mode','files') if k in replay},
             'task_checksum':trial.task.checksum,
@@ -82,5 +99,6 @@ if __name__=='__main__':
         print('native Harbor verifier failed ('+type(exc).__name__+'): '+str(exc)[-1500:],file=sys.stderr)
         raise SystemExit(3)
     finally:
-        from data.scaffolds.native_harbor_runtime.harbor_environment import cleanup_instances
-        cleanup_instances()
+        if ADMITTED:
+            from data.scaffolds.native_harbor_runtime.harbor_environment import cleanup_instances
+            cleanup_instances()

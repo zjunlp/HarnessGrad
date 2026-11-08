@@ -11,7 +11,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const state = { files: [], file: null, dirty: false, source: "base", candidates: [], base: null,
-                  suggested: "" };
+                  suggested: "", assistantReady: false };
 
   function markDirty(on) { state.dirty = on; $("dirty").hidden = !on; }
 
@@ -298,9 +298,39 @@
     return instruction + "\n\n## 这个 harness 的历史（每轮一个补丁）\n" + lines.join("\n\n");
   }
 
+  async function loadAssistantCapabilities() {
+    const select = $("kind"), status = $("assistant-capability-status");
+    try {
+      const response = await fetch("/api/workbench/capabilities", { cache: "no-store" });
+      if (!response.ok) throw new Error("Editor configuration unavailable");
+      const payload = await response.json();
+      const rows = new Map((payload.assistants || []).map(row => [row.kind, row]));
+      for (const option of select.options) {
+        const row = rows.get(option.value);
+        option.disabled = !row || !row.supported || !row.configured;
+        option.textContent = option.value + (row && row.supported
+          ? (row.configured ? "" : " — not configured") : " — unavailable as editor");
+        option.title = row ? row.detail : "Unavailable as editor";
+      }
+      const available = [...select.options].filter(option => !option.disabled);
+      state.assistantReady = available.length > 0;
+      if (select.selectedOptions[0]?.disabled && available.length) select.value = available[0].value;
+      const show = () => { status.textContent = rows.get(select.value)?.detail || "No editor is configured."; };
+      select.addEventListener("change", show); show();
+    } catch (error) {
+      state.assistantReady = false;
+      for (const option of select.options) option.disabled = true;
+      status.textContent = "Editor configuration unavailable; reload after configuring an editor.";
+    }
+  }
+
   async function send() {
     const instruction = $("instruction").value.trim();
     if (!instruction) return;
+    if (!state.assistantReady || $("kind").selectedOptions[0]?.disabled) {
+      pushMessage("assistant", tr("The selected editor is unavailable or not configured."));
+      return;
+    }
     if (state.source === "base") {
       pushMessage("assistant", tr("先把当前文件「另存为候选」：基线是只读的，改它等于换掉所有曲线的起点。"));
       return;
@@ -325,6 +355,9 @@
                                instruction: withHistory(instruction), selection: sel }),
       });
       const payload = await response.json();
+      if (payload.assistant && payload.assistant.kind === $("kind").value && !payload.assistant.session_supported) {
+        $("assistant-capability-status").textContent = payload.assistant.notice || "This editor starts a fresh session for each edit; saved sessions are kept.";
+      }
       clearInterval(ticker);
       pending.remove();
       if (!response.ok) {
@@ -464,4 +497,5 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   else bind();
+  loadAssistantCapabilities();
 })();

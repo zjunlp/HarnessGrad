@@ -184,6 +184,17 @@ def _bindings(task_ids, setups, verifiers, envs=None):
         relay = ((setups or {}).get(tid) or {}).get("tool_relay") or {}
         verifier = (verifiers or {}).get(tid) or {}
         roles = {}
+        native = verifier.get("native_benchmark")
+        if isinstance(native, dict) and native.get("dataset") in {"deepswe", "jobbench", "swe_bench_pro"}:
+            declared = verifier.get("python_runtime")
+            if (not isinstance(declared, dict) or declared.get("dataset") != "native_harbor"
+                    or declared.get("profile") != "execution" or declared.get("role") != "verifier"):
+                raise ValueError("native_harbor execution verifier binding is required for built-in native tasks; "
+                                 "run python -m data.scaffolds.native_harbor_runtime.prepare_python prepare, "
+                                 "then reprepare the native task runtime manifest")
+        if isinstance(native, dict) and native.get("dataset") == "jobbench":
+            from harnessgrad.native_judge_identity import admit_identity
+            admit_identity(verifier.get("native_judge_identity"))
         environment = (envs or {}).get(tid) or {}
         if "task_python" in environment:
             from harnessgrad.task_python import validate

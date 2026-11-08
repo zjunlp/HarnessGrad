@@ -78,7 +78,8 @@ def test_actual_original_native_scorer_authored_trajectories(tmp_path, monkeypat
     from eval.verification.verifier import _verify
     gold = {'fen': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             'moves': ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1b5'],
-            'answer': 'e7e5 b8c6', 'puzzle_id': 'PRIVATE-AUTHORED-REFERENCE'}
+            'answer': 'e7e5 b8c6', 'puzzle_id': 'PUBLIC-AUTHORED-CHESS-CONTROL',
+            'private_reference': 'PRIVATE-AUTHORED-REFERENCE'}
     spec = dataset.verify_for({'task_id': 'chessbench_puzzles/test/0', 'gold': gold})
     assert spec['native_runtime'] == prepare.BINDING
     work = tmp_path / 'work'
@@ -86,9 +87,15 @@ def test_actual_original_native_scorer_authored_trajectories(tmp_path, monkeypat
     (work / 'answer.txt').write_text(prediction)
     monkeypatch.setenv('HG_DATA_NATIVE_RUNTIMES', root)
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))
-    result = _verify(work, spec, '', sandbox=True, timeout_s=30, env={'kind': 'files'})
+    result = _verify(work, spec, '', sandbox=True, timeout_s=30, env={'kind': 'files'},
+                     task_id='chessbench_puzzles/test/0')
     assert result.get('score') == expected, result
     assert result['evidence']['scorer_input']['verified'] is True
+    # The original scorer intentionally returns a public puzzle ID. Its raw
+    # receipt is not an ID-free public export; only the private gold payload
+    # below is expected to be redacted at this boundary.
+    assert result['evidence']['gold'] == {'redacted': True}
+    assert result['evidence']['official']['puzzle_id'] == 'PUBLIC-AUTHORED-CHESS-CONTROL'
     assert 'PRIVATE-AUTHORED-REFERENCE' not in json.dumps(result)
 
 

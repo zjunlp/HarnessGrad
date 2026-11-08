@@ -1,0 +1,214 @@
+{
+  "schema": "harnessgrad.linux-delivery-validation.v1",
+  "recorded_at": "2026-11-07T10:03:48.482838+00:00",
+  "source_commit": "2a9b65776ed8a29b572cf6aff49eb30f22709566",
+  "scope": "Selected integrated Linux delivery, dependency, identity, cost and authored native controls; not the full quality suite or a released benchmark.",
+  "goal_complete": false,
+  "environment": {
+    "commit": "2a9b65776ed8a29b572cf6aff49eb30f22709566",
+    "tracked_dirty": false,
+    "python": "3.12.4",
+    "platform": "Linux",
+    "machine": "x86_64",
+    "pytest_environment": {
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  },
+  "quality": {
+    "selected_files": [
+      "tests/quality/test_authored_dataset.py",
+      "tests/quality/test_boundaries.py",
+      "tests/quality/test_bun_worker_identity.py",
+      "tests/quality/test_chess_native_preparation.py",
+      "tests/quality/test_ci_workflow.py",
+      "tests/quality/test_codex_adapter.py",
+      "tests/quality/test_codex_content_identity.py",
+      "tests/quality/test_codex_physical_binding.py",
+      "tests/quality/test_codex_runtime_paths.py",
+      "tests/quality/test_console_evidence_api.py",
+      "tests/quality/test_console_evidence_integration.py",
+      "tests/quality/test_costbench_authored_lifecycle.py",
+      "tests/quality/test_dataset_execution_runtime.py",
+      "tests/quality/test_dataset_runtime.py",
+      "tests/quality/test_dataset_runtime_cache.py",
+      "tests/quality/test_dataset_runtime_identity.py",
+      "tests/quality/test_dataset_runtime_lifecycle.py",
+      "tests/quality/test_dataset_runtime_private_environment.py",
+      "tests/quality/test_datasets_doc.py",
+      "tests/quality/test_download_index.py",
+      "tests/quality/test_ds1000_actor_runtime.py",
+      "tests/quality/test_ds1000_execution_runtime.py",
+      "tests/quality/test_ds1000_runtime_prepare.py",
+      "tests/quality/test_dsh_runtime_paths.py",
+      "tests/quality/test_evidence_export.py",
+      "tests/quality/test_evidence_export_privacy.py",
+      "tests/quality/test_evidence_runtime_integration.py",
+      "tests/quality/test_evidence_verification_context.py",
+      "tests/quality/test_experiment_presets.py",
+      "tests/quality/test_external_actor_evidence.py",
+      "tests/quality/test_external_actor_runtime_cache.py",
+      "tests/quality/test_external_loader_environment.py",
+      "tests/quality/test_h0_reuse_identity.py",
+      "tests/quality/test_harness_path.py",
+      "tests/quality/test_import_direction.py",
+      "tests/quality/test_improver_cost.py",
+      "tests/quality/test_jericho_supported_native.py",
+      "tests/quality/test_kumo_dataset.py",
+      "tests/quality/test_math_native_failure_boundaries.py",
+      "tests/quality/test_memoryagentbench_prepare.py",
+      "tests/quality/test_memoryagentbench_resources.py",
+      "tests/quality/test_native_runtime_cache.py",
+      "tests/quality/test_ordinary_resume_statistics.py",
+      "tests/quality/test_personamem_v2.py",
+      "tests/quality/test_prepare_h0.py",
+      "tests/quality/test_python_candidate_h0.py",
+      "tests/quality/test_python_candidate_smoke.py",
+      "tests/quality/test_quality_receipts.py",
+      "tests/quality/test_repeated_trial_resume.py",
+      "tests/quality/test_resume_eval.py",
+      "tests/quality/test_resume_train.py",
+      "tests/quality/test_resume_train_e2e.py",
+      "tests/quality/test_round_private_recovery.py",
+      "tests/quality/test_round_recovery_pinned.py",
+      "tests/quality/test_run_namespace.py",
+      "tests/quality/test_run_parser.py",
+      "tests/quality/test_run_summary.py",
+      "tests/quality/test_scenario.py",
+      "tests/quality/test_scoring_identity.py",
+      "tests/quality/test_services.py",
+      "tests/quality/test_shared_h0.py",
+      "tests/quality/test_shared_round_ledger.py",
+      "tests/quality/test_spreadsheet_official_differential.py",
+      "tests/quality/test_submission_smoke_state.py",
+      "tests/quality/test_tau_real_package_controls.py",
+      "tests/quality/test_unified_budget.py",
+      "tests/quality/test_unknown_harness_usage.py",
+      "tests/quality/test_verification_context.py",
+      "tests/quality/test_verification_context_workflows.py",
+      "tests/quality/test_wheel_adapter_resources.py",
+      "tests/quality/test_wheel_console.py"
+    ],
+    "executed_files": 71,
+    "unexecuted_files": [],
+    "test_case_counts": {
+      "passed": 1494,
+      "failed": 0,
+      "skipped": 7,
+      "warnings": 319
+    },
+    "full_quality_suite": false,
+    "receipt_sha256": "e44e851ca9a229fef0c35f616e28c729dc372b5db9a36d1c06cd7e15fd1226eb"
+  },
+  "skips": [
+    {
+      "count": 4,
+      "component": "independent Chess native scorer",
+      "reason": "No explicitly selected complete original-pin native package; provider controls are separate."
+    },
+    {
+      "count": 2,
+      "component": "Codex/DSH cached-image container controls",
+      "reason": "Required cached python:3.12-slim image unavailable; tests never pull images."
+    },
+    {
+      "count": 1,
+      "component": "PersonaMem full released inventory audit",
+      "reason": "Pinned released corpus not selected in the cold data-root configuration."
+    }
+  ],
+  "wheel": {
+    "status": "passed",
+    "steps": [
+      {
+        "name": "build",
+        "exit_code": 0
+      },
+      {
+        "name": "install",
+        "exit_code": 0
+      },
+      {
+        "name": "dependency-boundary",
+        "exit_code": 0
+      },
+      {
+        "name": "first-use",
+        "exit_code": 0
+      },
+      {
+        "name": "preset",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-readonly",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-smoke",
+        "exit_code": 0
+      },
+      {
+        "name": "chess-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "appworld-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "math-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "locomo-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "editor-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "readonly-all56",
+        "exit_code": 0
+      },
+      {
+        "name": "ds1000-runtime-readonly",
+        "exit_code": 0
+      }
+    ],
+    "sha256": "ce0995626a5806f2daee990296fc675ce90684f54770c98a4dc7f7250d3ac249",
+    "build_source_removed_before_use": true,
+    "receipt_sha256": "27750a011c687be26d666df8d16c9b746ebb6464556da727e9506e7c284ade62"
+  },
+  "controls": {
+    "ds1000": "29 real CPU dependency wheels; cold stdlib Harness SDK, real read-only actor scientific shell and bound official executor; authored correct/wrong/private/tamper/transport cases. Historical cohort/executor pins unchanged.",
+    "costbench": "Original-package static/dynamic cost_change service/socket/seal/scorer cleanup; authored 1/0/0 arms, not released cases.",
+    "tau": "Original Tau2/Tau3 tools/UserSimulator/ALL scorer and legacy HTTP/DB/output/replay on authored arithmetic; only LLM HTTP replies scripted.",
+    "spreadsheet": "21 authored actual-native versus official-source differences checked on the selected LibreOffice/UNO; no full Excel or historical-runtime claim.",
+    "jericho": "Original Frotz genuine supported authored TextWorld ABI game, actual relay/client and bound shipped-scorer replay; independently sealed native scorer package remains unverified.",
+    "cost_and_external_identity": "Unknown usage stays null with reported lower bounds across trial/service/resume; external cache/H0/point/checkpoint admission and executed-worker provenance exercised.",
+    "docker": "Only task-owned synthetic containers/networks using existing images; daemon configuration untouched."
+  },
+  "migration_guides": [
+    "docs/cost-usage-coverage.md",
+    "base_harness/codex/README.md",
+    "base_harness/deepseek-harness/README.md",
+    "data/datasets/ds1000/README.md"
+  ],
+  "remaining_requirements": [
+    "Required architecture migrations beyond the initial parser/outcome/reader extractions.",
+    "Independent native package inputs and any unverified component scope remain explicitly recorded.",
+    "Final diff/release/PR review, development commit consolidation and publication."
+  ],
+  "website_source": {
+    "commit": "4ba380c91b43392d00ec77b1e72fd9ce3bc5411f",
+    "published": false,
+    "source_build_pages": 35,
+    "internal_link_check_urls": 938
+  },
+  "publication": {
+    "pushed": false,
+    "development_commits_consolidated_for_release": false
+  }
+}

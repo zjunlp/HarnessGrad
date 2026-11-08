@@ -61,14 +61,24 @@ implicit. General retained capture archives/legacy ledgers remain supported by
 
 ## Current evidence and remaining boundary
 
-A read-only local recovery inventory matched 555 of the 718 unique pinned blobs
-from explicitly selected retained Anaconda files, original QA fixture, provider
-chess sources and matching system libraries/launcher. 163 remained missing,
-including the mandatory interpreter above. The retained schema-1 capture instead
-reported Anaconda 3.12.4; the installed uv download catalog had no 3.12.16 candidate.
-These observations do not prove that a public or operator-held exact package does
-not exist; they do mean this local inventory cannot publish or execute the scorer.
-No substitute binary, recapture, recomputed expectation or score was accepted.
+The original package has now been recovered: all 718 unique blobs and 724 file
+mappings match the unchanged manifest. The earlier 163 missing Python blobs were
+recovered from the official CPython 3.12.16 build `20261026`, with one sysconfig
+file reconstructed using the official uv installation transform and checked
+against its original full-file SHA. No substitute interpreter or pin was accepted.
+The [recovery receipt](../../../.github/assets/native-original-recovery-20261107.json)
+retains the scope, hashes and original failure/fixture-repair evidence.
+
+For a new Linux installation, obtain the reviewed complete archive and its
+checksum/provenance/license sidecars from the maintainer, then import it into an
+external store. No public complete-archive URL is registered yet.
+
+```bash
+python -B -m tools.prepare_native_runtime import --dataset chessbench_puzzles \
+  --root /external/native-store --archive /download/chessbench-native-1dd47b9a.tar.gz
+python -B -m tools.prepare_native_runtime verify --dataset chessbench_puzzles \
+  --root /external/native-store --probe
+```
 
 The actual native execution controls are ready to run against an exact package:
 
@@ -82,6 +92,8 @@ They use only an authored legal opening and fixed complete, wrong, partial and
 empty solver trajectories through the ordinary verifier with the original native
 pin. A provider-only or absent store makes those four cases explicitly skip;
 an existing corrupt package fails. No local recapture or mock native scorer is
-used. Selected byte-recovery/read-only checks passed; the four scorer cases remain
-**missing execution evidence**, not acceptance. No released puzzle pool, neural
+used. The corrected complete test file passed 12 cases, including rewards 1/0/0/0
+for those four trajectories. Private gold payload is redacted; the original
+scorer intentionally retains its public puzzle ID in the trusted raw verdict.
+Public export filtering is a separate boundary. No released puzzle pool, neural
 engine, real model or benchmark run is involved.

@@ -11,6 +11,8 @@ import sys
 
 import pytest
 
+from harnessgrad.orchestration import source_lease
+
 from tools import validate_harness as validator
 from test_scenario import offline_loop_dependencies  # noqa: F401 - explicit fixture reuse
 
@@ -496,7 +498,7 @@ def test_reviewed_source_transient_change_during_snapshot_refuses_before_model(t
     import driver
     source = _harness(tmp_path)
     expected = _digest(source)['submission_sha256']
-    original = driver._external_source_snapshot
+    original = source_lease.external_source_snapshot
     original_bytes = (source/'agent.py').read_bytes()
     snapshots = []
     def change_and_restore(src, snapshot):
@@ -506,7 +508,7 @@ def test_reviewed_source_transient_change_during_snapshot_refuses_before_model(t
             original(src, snapshot)
         finally:
             (src/'agent.py').write_bytes(original_bytes)
-    monkeypatch.setattr(driver, '_external_source_snapshot', change_and_restore)
+    monkeypatch.setattr(source_lease, 'external_source_snapshot', change_and_restore)
     monkeypatch.setattr(driver, 'describe_model', lambda: pytest.fail('tampered snapshot reached model'))
     monkeypatch.setattr(sys, 'argv', _argv(tmp_path, '--harness-path', str(source),
                                         '--expected-harness-sha256', expected))

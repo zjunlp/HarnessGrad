@@ -429,7 +429,7 @@ def test_driver_writes_real_run_meta_before_task_launch(tmp_path, monkeypatch, p
     monkeypatch.setattr(driver.datasets, 'load_tasks', lambda *_args, **kwargs: ([task], {}, {}))
     monkeypatch.setattr(driver.datasets, 'load_envs', lambda *_args, **kwargs: env)
     monkeypatch.setattr(driver.datasets, 'oracle_source', lambda *_args: ('released', 'fixture'))
-    monkeypatch.setattr(driver, '_resolve_envs', lambda specs: (specs, None))
+    monkeypatch.setattr('harnessgrad.orchestration.selected_dataset._resolve_envs', lambda specs: (specs, None))
     monkeypatch.setattr(driver.container, 'available', lambda: 'fixture')
     monkeypatch.setattr(driver.container, 'self_check', lambda *_args: {'ok': True, 'detail': 'fixture'})
     monkeypatch.setattr(driver, '_warn_missing_overlay', lambda *_args: None)

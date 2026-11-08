@@ -36,7 +36,7 @@ def main():
     p.add_argument('--actor-image',required=True)
     p.add_argument('--replay-actor-image',required=True)
     p.add_argument('--verifier-image',required=True)
-    p.add_argument('--harbor-python',required=True,type=Path)
+    p.add_argument('--harbor-python',type=Path,help='if supplied, must equal the selected managed artifact Python')
     p.add_argument('--manifest',required=True,type=Path)
     p.add_argument('--workdir',default='/app')
     p.add_argument('--workspace-bytes',required=True,type=int)
@@ -51,6 +51,14 @@ def main():
     if row is None:raise ValueError('selected native task ID absent from inventory')
     if (args.workspace_bytes<=0 or args.workspace_bytes%4096 or args.workspace_inodes<=0 or args.memory_mb<=0):
         raise ValueError('positive page-aligned workspace resources required')
+    from data.scaffolds.native_harbor_runtime.python_runtime import resolve,admit
+    harbor_binding=resolve()
+    if args.harbor_python and str(args.harbor_python.absolute())!=harbor_binding['python']:
+        raise ValueError('--harbor-python must equal the selected managed artifact; no external venv fallback')
+    harbor_entry={'harbor_runtime':harbor_binding,'harbor_python':harbor_binding['python']}
+    admit(harbor_entry)
+    from harnessgrad.native_judge_identity import selection, admit_selection
+    judge_selection=selection() if args.dataset=='jobbench' else {}
     original=inspect(args.actor_image);actor_image=original['Id']
     if original['Config'].get('Volumes'):raise ValueError('native actor image may not declare volumes')
     if args.build_actor_derivative:
@@ -77,8 +85,9 @@ def main():
     entry={'source_sha256':row.source_sha256,'actor':actor,
            'replay_actor_image':inspect(args.replay_actor_image)['Id'],
            'verifier_image':inspect(args.verifier_image)['Id'],
-           'harbor_python':str(args.harbor_python.resolve()),
+           'harbor_python':harbor_binding['python'],'harbor_runtime':harbor_binding,
            'source_actor_image':original['Id'],'artifact_max_bytes':64<<20}
+    entry.update(judge_selection)
     if args.dataset=='swe_bench_pro':
         if not args.pro_tooling:raise ValueError('SWE Pro requires fixed --pro-tooling v2/tooling')
         for key,file in [('pro_replay_source','patch_replay.py'),('pro_capture_source','locked_claude_code.py')]:
@@ -89,7 +98,10 @@ def main():
     if manifest['schema']!='harnessgrad.native-harbor-runtime.v1':raise ValueError('runtime manifest schema differs')
     manifest['tasks'][row.task_id]=entry
     args.manifest.parent.mkdir(parents=True,exist_ok=True)
-    args.manifest.write_text(json.dumps(manifest,indent=2)+'\n')
+    admit(harbor_entry)
+    if args.dataset=='jobbench':admit_selection(entry)
+    from harnessgrad.python_artifacts import atomic_json
+    atomic_json(args.manifest,manifest)
     print(json.dumps({'runtime_prepared':True,'task_id':row.task_id,'manifest':str(args.manifest),
                       'actor_image':actor_image,'production_authorized':False}))
 

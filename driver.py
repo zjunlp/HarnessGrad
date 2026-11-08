@@ -73,6 +73,10 @@ from harnessgrad.entrypoints.experiment_config import (
     config_help as _config_help, expand_experiment_argv as _expand_experiment_argv,
 )
 from harnessgrad.entrypoints.run_parser import parse_run_args
+from harnessgrad.orchestration.selected_dataset import (
+    SelectionOptions, SelectedRunRefused, build_selected_run_plan,
+    check_scenario_runtime as _check_scenario_runtime,
+)
 from harnessgrad import run_namespace
 from harnessgrad import readiness
 from harnessgrad import slots
@@ -81,6 +85,31 @@ from harnessgrad import dataset_runtime_identity
 from harnessgrad import verification_context
 from eval.containers import external_runtime
 from harnessgrad import candidate_runtime
+from harnessgrad.orchestration import resume as resume_planning
+from harnessgrad.orchestration import h0 as h0_planning
+from harnessgrad.orchestration import boundary_readiness, improver_readiness
+from harnessgrad.orchestration import scenario_config, run_configuration
+from harnessgrad.orchestration import run_metadata
+from harnessgrad.orchestration import run_completion
+from harnessgrad.orchestration.run_completion import SummaryWriteNotices as _SummaryWriteNotices
+from harnessgrad.orchestration.resume import ResumeRefused, ResumeNothingToDo
+from harnessgrad.orchestration.historical_evidence import (
+    base_from_point as _base_from_point, read_trace_bodies as _read_trace_bodies,
+    require_verification_context as _require_verification_context,
+)
+from harnessgrad.orchestration.resume import tree_present as _tree_present
+from harnessgrad.orchestration import source_lease as source_leases
+from harnessgrad.orchestration.source_lease import (
+    SourceLease, SourceRequest, SourceRefused, select_source,
+    external_source_snapshot as _external_source_snapshot,
+    strip_reviewed_bytecode as _strip_reviewed_bytecode,
+)
+from harnessgrad.orchestration.candidate_stage import (
+    CandidateStageRefused, OwnedSource, PreparationOptions, PreparationJournal, WorkspaceOps,
+    stage_owned_source, prepare_committed_candidate, bind_external_candidate,
+    managed_python_intent as _managed_python_intent,
+    refuse_managed_source as _refuse_managed_source,
+)
 from harnessgrad.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
@@ -101,99 +130,17 @@ from harnessgrad.records import (
 
 # --------------------------------------------------- improver capability ---
 
+# Keep legacy callback entrypoints for callers that patch these probes.
 def _cli_provider(improver: dict) -> dict:
-    """What provider a CLI improver's *own* config names: `base_url` and `env_key`.
-
-    Derived rather than asked for, because the CLI reads its model and its endpoint from
-    its own config (`tools/improver.py:declared_model` already reads the model that way).
-    A `model_provider` whose definition has a `base_url` is a custom/local endpoint and can
-    be probed; a name with no definition (e.g. `OPENAI`) is the CLI's built-in and cannot.
-
-    **`env_key` comes back too, because probing with the wrong credential is how a valid
-    run gets refused at the door.** The probe below used the *agent's* key for the
-    *improver's* endpoint. Those are two budgets by design (`.env.example`), and when they
-    name different providers the probe authenticates with a credential the endpoint does
-    not accept, gets 401, and reports "this endpoint cannot emit tool calls" -- a refusal
-    about the wrong fact. Measured 2026-10-06: it passed only because this deployment
-    happens to set `HG_AGENT_API_KEY` and `DEEPSEEK_API_KEY` to the same value.
-
-    **`~/.codex/config.toml` is codex's file, so only a codex improver may be read for it.**
-    Any `kind == "cli"` improver used to come through here, and with the `dsh` entry resolved
-    this returned the custom provider out of the operator's codex config
-    (`https://naiccc.com/v1`) -- so the gate below would have probed *that* endpoint, one
-    belonging to someone else, and written its answer onto the curve as a fact about
-    `deepseek-flash`. An improver that declares its own `provider` (dsh declares
-    `deepseek-official`) uses that CLI's built-in endpoint, which is exactly the
-    "cannot be probed from here" case the caller already records as *unprobed*.
-    """
-    if improver.get("provider") or improver.get("argv_style", "codex") != "codex":
-        return {}
-    home = os.environ.get("CODEX_HOME") or str(Path.home() / ".codex")
-    cfg = Path(home) / "config.toml"
-    if not cfg.is_file():
-        return {}
-    try:
-        text = cfg.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return {}
-    provider = ""
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("model_provider") and "=" in stripped:
-            provider = stripped.partition("=")[2].strip().strip('"').strip("'")
-    if not provider:
-        return {}
-    section = f"[model_providers.{provider}]"
-    inside = False
-    found: dict = {}
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("["):
-            inside = stripped == section
-            continue
-        if not inside or "=" not in stripped:
-            continue
-        name, _, value = stripped.partition("=")
-        name = name.strip()
-        if name in ("base_url", "env_key"):
-            found[name] = value.strip().strip('"').strip("'")
-    return found
+    return improver_readiness.cli_provider(improver)
 
 
 def _cli_provider_base_url(improver: dict) -> str:
-    """The endpoint a CLI improver will call, or `""` when it uses a built-in provider."""
     return _cli_provider(improver).get("base_url", "")
 
 
-def _probe_tool_calls(base_url: str, model: str) -> tuple[bool, str]:
-    """Ask the endpoint whether it returns structured tool_calls. Never raises.
-
-    Reuses `tools/probe_tool_calls.py`'s request shapes so the door and the CLI agree on
-    what "supports tool calls" means. `responses` decides, because that is the wire a codex
-    improver uses; `chat` is reported in the detail for a reader who needs to know which
-    path failed.
-    """
-    try:
-        sys.path.insert(0, str(PLATFORM_ROOT))
-        import tools.probe_tool_calls as probe
-    except Exception as exc:                                             # noqa: BLE001
-        return False, f"the probe itself could not be imported: {exc}"
-    # The improver's own credential, falling back to the agent's only when the CLI's
-    # config names none -- a local endpoint does not check the key, and a hosted one that
-    # does will have said so in `env_key`. Not `HG_AGENT_API_KEY`: see `_cli_provider`.
-    key = ""
-    key_env = _cli_provider({}).get("env_key", "")
-    if key_env:
-        key = os.environ.get(key_env, "")
-    if not key:
-        key = platform_config.current().agent.api_key or "local"
-    try:
-        resp_ok, resp_why = probe._calls_responses(base_url, model, key, 120.0)
-        chat_ok, chat_why = probe._calls_chat(base_url, model, key, 120.0)
-    except Exception as exc:                                             # noqa: BLE001
-        return False, f"the probe raised: {type(exc).__name__}: {exc}"
-    detail = f"responses: {resp_why} | chat: {chat_why}"
-    return resp_ok, detail
+def _probe_tool_calls(base_url: str, model: str) -> tuple[bool | None, str]:
+    return improver_readiness.probe_tool_calls(base_url, model, provider=_cli_provider)
 
 
 # --------------------------------------------------------- model config ---
@@ -209,49 +156,8 @@ def load_env(path: Path) -> dict:
     Real environment variables win: an explicit `HG_AGENT_MODEL=... ./driver.py`
     must not be silently overridden by a file on disk.
     """
-    from harnessgrad.env_file import read_env_file, reviewed_environment_only
-    if reviewed_environment_only():
-        # The reviewed launcher has already constructed the complete child env.
-        # Reset even when skipping files: imported config may predate this mode.
-        platform_config.reset()
-        return {}
-    loaded = read_env_file(path)
-    for key, value in loaded.items():
-        os.environ.setdefault(key, value)
-    # **`.env` is now part of the process environment, so the configuration snapshot
-    # has to be taken after this.** `harnessgrad/config` may already have been imported
-    # -- `harnessgrad.channel` reads one variable at import -- and without the reset the
-    # run would use a snapshot taken before `.env` existed. `reset()` drops it; the next
-    # `current()` rebuilds from the environment this function just filled in.
-    platform_config.reset()
-    return loaded
-
-
-def _read_trace_bodies(directory: Path) -> tuple[dict, dict]:
-    """Read back the trace bodies this platform wrote for one round.
-
-    `_save_traces` writes `traces[task_id]` **verbatim** to `<task>.jsonl`, so the file is
-    the value and the read is lossless. Needed when a measurement is shared: the method's
-    trace channel is staged from the in-memory dict, not from the run directory, so a
-    shared H0 without its traces would hand the methods an empty channel -- the same
-    unfairness sharing exists to remove.
-    """
-    traces: dict = {}
-    trials: dict = {}
-    if not directory.is_dir():
-        return traces, trials
-    for path in sorted(directory.glob("*.jsonl")):
-        name = path.name[: -len(".jsonl")]
-        if ".trial" in name:
-            task, _, index = name.partition(".trial")
-            try:
-                trials.setdefault(task, []).append((int(index), path.read_text()))
-            except ValueError:
-                continue
-        else:
-            traces[name] = path.read_text()
-    return traces, {task: [body for _, body in sorted(parts)]
-                    for task, parts in trials.items()}
+    from harnessgrad.env_file import install_env_file
+    return install_env_file(path)
 
 
 def _platform_content_sha() -> str:
@@ -276,326 +182,45 @@ def _git_sha() -> str | None:
     return out.stdout.strip() or None
 
 
-def _record_platform_seam(run_dir: Path, before: str, after: str, reason: str,
-                          platform_before: dict) -> dict:
-    """Write the approval that lets this curve cross a platform change, beside the run.
-
-    The guard's answer is "no" by default; this is the record of a human saying "yes, and
-    here is what I checked". Two properties matter more than the wording:
-
-      * **it is a file next to the curve, not a field inside `run_meta`.** `run_meta` is
-        rewritten as the run continues (and `platform_content_sha` there tracks the tree the
-        run is on *now*), so a seam kept only there would be overwritten by the very resume it
-        authorised. `platform-seams/<utc>-approved.json` is written once and never touched.
-      * **both sides are named.** The sha the curve started on, the sha it continues on, both
-        git shas, and the sentence the operator wrote -- a reader can re-do the review instead
-        of trusting it.
-    """
-    import datetime as _dt
-    folder = run_dir / "platform-seams"
-    folder.mkdir(parents=True, exist_ok=True)
-    stamp = _dt.datetime.now(_dt.timezone.utc)
-    record = {
-        "kind": "platform seam approved for a resume",
-        "approved_utc": stamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "reason_reviewed": reason,
-        "platform_content_sha": {"before": before, "after": after},
-        "git_sha": {"before": platform_before.get("git_sha"), "after": _git_sha()},
-        "how_to_recheck": ("`git log <before>..<after>` tells you what changed; the review is "
-                           "the claim that none of it can move a measured round"),
-    }
-    path = folder / f"{stamp:%Y%m%dT%H%M%SZ}-approved.json"
-    path.write_text(json.dumps(record, indent=1) + "\n")
-    console.note(
-        f"resume across a platform change: {before[:12]} -> {after[:12]}; approved and recorded "
-        f"in {path.relative_to(run_dir)}", level="warn")
-    return record
-
-
-class ResumeRefused(RuntimeError):
-    """A resume this run cannot honour, with a sentence a reader can act on."""
-
-
-class ResumeNothingToDo(RuntimeError):
-    """The run already measured every round the budget asks for."""
-
-
-def _require_verification_context(recorded, current, task_ids=None):
-    if recorded is None or current is None:
-        raise ValueError("verification context is missing; old measurements cannot be reused")
-    if task_ids is not None:
-        if not task_ids:
-            raise ValueError("verification context has no selected task set")
-        recorded = verification_context.project(recorded, task_ids)
-        current = verification_context.project(current, task_ids)
-    errors = verification_context.problems(recorded, current)
-    if errors:
-        raise ValueError("; ".join(errors))
+def _resume_request(args):
+    return resume_planning.ResumeRequest(args.rounds, resume_planning.ResumeIdentities(
+        getattr(args, "scoring_identity", None), getattr(args, "dataset_runtime_identity", None),
+        getattr(args, "verification_context", None)), getattr(args, "resume_across_platforms", None),
+        getattr(args, "_resume_initial_source", None), getattr(args, "_resume_candidate_source", None))
 
 
 def _resume_train_state(args, run_dir: Path, split, work: Path, *, defer=False):
-    """What continuing this run needs: its points, its last state, and the base it began from.
-
-    A resume may not re-measure a state that is already on the curve -- two measurements of
-    one state are two numbers, and picking either is a choice the record cannot defend --
-    so everything the round-0 path would normally produce is rebuilt **from the record**:
-
-      * `base` from the round-0 point plus `round0_traces/` (`_base_from_point`),
-      * `h0_sha` from that point's content address,
-      * the workspace from `state_after_round<last>/`, re-staged and committed.
-
-    `commit_state` returns a content address, so re-staging the same tree reproduces the
-    same `harness_sha` the curve already carries. The caller asserts that, because a
-    different address would mean the saved state is not the state the score belongs to.
-    """
-    curve_path = run_dir / "curve.jsonl"
-    if not curve_path.is_file():
-        raise ResumeRefused(f"{run_dir.name} has no curve.jsonl; there is nothing to continue")
-    existing = [json.loads(line) for line in curve_path.read_text().splitlines() if line.strip()]
-    if not existing:
-        raise ResumeRefused(f"{run_dir.name}/curve.jsonl holds no measured point")
-
-    meta_path = run_dir / "run_meta.json"
-    meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
-    try:
-        runtime_identity = getattr(args, "dataset_runtime_identity", None)
-        dataset_runtime_identity.admit(runtime_identity)
-        dataset_runtime_identity.require_same(meta.get("dataset_runtime_identity"), runtime_identity)
-        scoring_identity.require_same(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
-        _require_verification_context(meta.get("verification_context"), getattr(args, "verification_context", None))
-        for point in existing:
-            _require_verification_context(point.get("verification_context"), getattr(args, "verification_context", None),
-                list((point.get("sampling") or {}).get("task_ids") or (point.get("per_task") or {})))
-            dataset_runtime_identity.require_same(point.get("dataset_runtime_identity"), runtime_identity)
-            scoring_identity.require_same(point.get("scoring_identity"), getattr(args, "scoring_identity", None))
-            candidate_runtime.checkpoint_binding(run_dir, point)
-            external_runtime.admit_checkpoint(run_dir, point, fallback=work)
-    except (OSError, TypeError, ValueError) as exc:
-        raise ResumeRefused(str(exc)) from exc
-    recorded_split = meta.get("split_sha")
-    now_split = datasets.split_sha(split) if split else None
-    if recorded_split and now_split and recorded_split != now_split:
-        raise ResumeRefused(
-            f"the run was measured on split_sha {recorded_split[:12]}, this invocation on "
-            f"{now_split[:12]}; the old points are not the same task set")
-    seam = None                     # set only when a reviewed cross-platform resume proceeds
-    recorded_platform = meta.get("platform_content_sha")
-    if recorded_platform:
-        now_platform = _platform_content_sha()
-        if recorded_platform != now_platform:
-            # **Refused by default, allowed after a review.** The guard exists because two code
-            # versions in one curve is the confound this platform is built to remove -- but
-            # "different sha" is not the same claim as "different measurement". A tree that
-            # moved only in a file the measured path never reads (a sibling method's `stop`
-            # field, a driver flag) leaves every round comparable, and only a human can tell
-            # those apart. So the default stays refuse, and the exception is a sentence the
-            # operator writes, recorded with both hashes next to the run it applies to.
-            reason = (getattr(args, "resume_across_platforms", None) or "").strip()
-            if not reason:
-                raise ResumeRefused(
-                    f"the platform content changed since this run started "
-                    f"({recorded_platform[:12]} -> {now_platform[:12]}); continuing would "
-                    f"stitch two code versions into one curve. If you reviewed the diff and "
-                    f"the change cannot move a measurement, pass "
-                    f"`--resume-across-platforms \"<what you checked>\"` and it will be "
-                    f"recorded under {run_dir.name}/platform-seams/")
-            # Deferred: a seam is written only if this resume really continues (the budget and
-            # the saved state are checked below), so a run directory cannot claim an approval
-            # for a resume that refused itself a moment later.
-            seam = (recorded_platform, now_platform, reason, meta.get("platform") or {})
-
-    last = max(int(point.get("round") or 0) for point in existing)
-    if last >= args.rounds:
-        raise ResumeNothingToDo(
-            f"round {last} of a {args.rounds}-round budget is already measured")
-    view = run_dir / f"state_after_round{last}"
-    if not view.is_dir() and getattr(args, "_resume_candidate_source", None) is not None:
-        view = Path(args._resume_candidate_source)
-    if not view.is_dir():
-        raise ResumeRefused(
-            f"{run_dir.name} has no state_after_round{last}/; the state round {last} scored "
-            f"was not kept, so there is nothing to continue from")
-
-    # Rebuild in a private sibling directory. A refusal must leave the existing
-    # workspace and run receipts untouched.
-    work.parent.mkdir(parents=True, exist_ok=True)
-    temporary = tempfile.TemporaryDirectory(prefix=".resume-", dir=work.parent)
-    staging = Path(temporary.name)
-    try:
-        result = _restore_train_workspace(args, run_dir, existing, last, view, staging / "workspace")
-        task_ids = list((existing[0].get("sampling") or {}).get("task_ids") or [])
-        if not task_ids:
-            raise ResumeRefused("the run's round 0 recorded no task set")
-        result["_publication"] = (temporary, work, run_dir, seam, meta, recorded_platform)
-        if not defer:
-            _publish_resume(result)
-        return result
-    except BaseException:
-        temporary.cleanup()
-        raise
-
-
-def _publish_resume(result):
-    """Publish a validated workspace after all preflight checks pass."""
-    temporary, work, run_dir, seam, meta, recorded_platform = result.pop("_publication")
-    staging = Path(temporary.name)
-    backup = staging / "previous-workspace"
-    if work.exists() or work.is_symlink():
-        work.rename(backup)
-    try:
-        (staging / "workspace").rename(work)
-    except BaseException:
-        if backup.exists():
-            backup.rename(work)
-        raise
-    temporary.cleanup()
-    if seam is not None:
-        _record_platform_seam(run_dir, *seam)
-        if not meta.get("platform_content_sha_started"):
-            meta["platform_content_sha_started"] = recorded_platform
-            (run_dir / "run_meta.json").write_text(json.dumps(meta, indent=1))
+    lease = resume_planning.prepare_resume_workspace_lease(_resume_request(args), run_dir, split, work,
+        ops=WorkspaceOps(stage_workspace, commit_state),
+        platform=resume_planning.PlatformEvidence(_platform_content_sha, _git_sha), reporter=console)
+    args.current_harness_runtime_identity = lease.current_binding
+    if defer:
+        lease.state["_publication"] = lease
+    else:
+        try:
+            lease.publish()
+        except BaseException:
+            lease.close()
+            raise
+    return lease.state
 
 
 def _restore_train_workspace(args, run_dir, existing, last, view, work):
-    # **The base tree has to be reachable in *this* repository, and after `--h0-from` it was
-    # not.** `mode_a` calls `reset_hard(work, h0_sha)` after every round and once more after
-    # the loop, and `reset_hard` starts with `git cat-file -t <sha>`. A resume stages only
-    # `state_after_round<last>/` into a fresh repo, so the object store holds that state and
-    # nothing else -- while `h0_sha` comes from the round-0 point, which on a shared-H0 run
-    # was measured in another repository. The result was `CalledProcessError` from
-    # `ckpt/git_state.py` twenty minutes into a paid run, on the *last* thing the run does
-    # (measured: both A-line runs, 2026-10-18 12:50Z and 12:52Z).
-    #
-    # The fix restages the base first: a tree hash is content-addressed, so committing the
-    # same files here reproduces the same `h0_sha`, and the object then exists for
-    # `reset_hard`. Restaging it is also a *check* the old path never made -- if the saved
-    # base does not hash to the address the curve already published, the two are not the
-    # same state and continuing would stitch a score to a tree it does not belong to.
-    h0_sha = (existing[0].get("identity") or {}).get("harness_sha")
-    base_state = run_dir / "state_after_round0"
-    if not base_state.is_dir() and getattr(args, "_resume_initial_source", None) is not None:
-        base_state = Path(args._resume_initial_source)
-    restored_base = None
-    if h0_sha and base_state.is_dir():
-        stage_workspace(base_state, work)
-        restored_base = commit_state(work, "resume: base")
-        if restored_base != h0_sha:
-            raise ResumeRefused(
-                f"{run_dir.name}/state_after_round0/ hashes to {restored_base[:12]} but the "
-                f"run's round-0 point scored {h0_sha[:12]}; the saved base is not the state "
-                f"the curve published, so continuing would attach new rounds to a different "
-                f"harness")
-        # Keep `.git` (that is where the base object now lives) and put the state we
-        # continue from on top of it, exactly as the round loop does after measuring.
-        for child in list(work.iterdir()):
-            if child.name == ".git":
-                continue
-            shutil.rmtree(child) if child.is_dir() else child.unlink()
-        shutil.copytree(view, work, dirs_exist_ok=True, symlinks=True)
-        # `stage_workspace` creates this when it initialises a repo, and the copy above can
-        # remove it on a state saved by an older platform. The sandbox mounts a writable
-        # tmpfs over it, and a mount target has to exist.
-        (work / STATE_DIRNAME).mkdir(exist_ok=True)
-        staged_sha = commit_state(work, f"resume: round {last}")
-    else:
-        stage_workspace(view, work)
-        staged_sha = commit_state(work, f"resume: round {last}")
-        if h0_sha and not _tree_present(work, h0_sha):
-            raise ResumeRefused(
-                f"{run_dir.name} keeps no state_after_round0/, and the tree its round-0 point "
-                f"scored ({h0_sha[:12]}) is not in this repository's object store; the run "
-                f"cannot be restored to the state that score belongs to")
-
-    base = _base_from_point(existing[0])
-    traces_dir = run_dir / "round0_traces"
-    base["traces"], base["trial_traces"] = _read_trace_bodies(traces_dir)
-    recorded_sha = (next(point for point in existing if int(point.get("round") or 0) == last).get("identity") or {}).get("harness_sha")
-    # **Restaging is only a resume if it reproduces the state the last score belongs to.**
-    # The docstring above promised this check and the code did not make it; a saved state
-    # that hashes differently would have continued the curve from a tree no published point
-    # describes -- two code versions in one curve, one level below the `platform_content_sha`
-    # check above.
-    if recorded_sha and staged_sha != recorded_sha:
-        raise ResumeRefused(
-            f"state_after_round{last}/ hashes to {staged_sha[:12]} but round {last} was "
-            f"measured on {recorded_sha[:12]}; the saved state is not the state that score "
-            f"belongs to")
-    last_point = max(existing, key=lambda point: int(point.get("round") or 0))
-    current_binding = candidate_runtime.checkpoint_binding(run_dir, last_point)
-    if not last_point.get("unmeasured"):
-        candidate_runtime.admit(work, current_binding)
-    args.current_harness_runtime_identity = current_binding
-    h0_sha = h0_sha or staged_sha
-    return {"existing": existing, "last": last, "base": base, "h0_sha": h0_sha,
-            "recorded_sha": recorded_sha,
-            "staged_sha": staged_sha, "restored_base": restored_base}
+    request = resume_planning.ResumeRequest(0, resume_planning.ResumeIdentities(None, None, None),
+        initial_source=getattr(args, "_resume_initial_source", None))
+    state, binding = resume_planning.restore_train_workspace(request, run_dir, existing, last, view, work,
+        WorkspaceOps(stage_workspace, commit_state))
+    args.current_harness_runtime_identity = binding
+    return state
 
 
-def _tree_present(repo: Path, sha: str) -> bool:
-    """Is this tree object in `repo`'s object store? (`cat-file -e` exits 1, never raises.)"""
-    return subprocess.run(["git", "-C", str(repo), "cat-file", "-e", f"{sha}^{{tree}}"],
-                          capture_output=True).returncode == 0
+def _publish_resume(result):
+    result.pop("_publication").publish()
 
 
-def _base_from_point(point: dict) -> dict:
-    """Rebuild the measurement dictionary from a curve point.
-
-    A curve point keeps everything the rest of the round-0 path reads: the per-task
-    scores, the invalid and harness-failed records, the runtime and protocol records,
-    and the trial spread. It does not keep the trace maps -- those live in the run's
-    `round0_traces/`, which `--h0-from` copies. This exists so a run measured **before**
-    `h0.json` was written can still be shared instead of being measured again: the
-    number is the same number.
-    """
-    identity = point.get("identity") or {}
-    base = {
-        **dataset_runtime_identity.fields(point.get("dataset_runtime_identity")),
-        **verification_context.fields(point.get("verification_context")),
-        **candidate_runtime.fields(point.get("harness_runtime_identity")),
-        "per_task": point.get("per_task") or {},
-        "invalid": point.get("invalid"),
-        "harness_failed": point.get("harness_failed"),
-        "model_gateway": point.get("model_gateway"),
-        "harness_runtime": (point.get("env") or {}).get("harness_runtime", point.get("harness_runtime")),
-        "evaluation_protocols": point.get("evaluation_protocols"),
-        "identity_declared": identity.get("harness_identity"),
-        "trials": point.get("n_trials"),
-        "score_std": point.get("score_std"),
-        "per_task_std": point.get("per_task_std"),
-        "per_task_trials": point.get("per_task_trials"),
-        "cached_tasks": point.get("cached_tasks"),
-    }
-    return base
-
-
-def _managed_python_intent(source: Path) -> bool:
-    """Recognize malformed Python declarations without treating them as legacy."""
-    try:
-        declaration = json.loads((Path(source) / "harness.json").read_text())
-    except (OSError, TypeError, ValueError):
-        return False
-    runtime = declaration.get("runtime") if isinstance(declaration, dict) else None
-    return isinstance(runtime, dict) and runtime.get("kind") == "python"
-
-
-def _refuse_managed_source(run_dir: Path, source: Path, error) -> int:
-    """Keep invalid source and a refusal, without launching or installing anything."""
-    receipt = {"status": "invalid", "stage": "source declaration", "error": str(error),
-               "seconds": 0.0}
-    saved = candidate_runtime.record_preparation(run_dir, 0, receipt)
-    if not (run_dir / "state_after_round0").exists():
-        _save_round_state(run_dir, 0, source, rejected_candidate=True)
-    elif saved is not None:
-        try:
-            copy_rejected_harness(source, Path(saved).with_suffix(".source"),
-                                  ignore=shutil.ignore_patterns(".git"))
-        except OSError as exc:
-            console.note(f"could not retain refused source: {type(exc).__name__}", level="warn")
-    if not (run_dir / "curve.jsonl").exists():
-        _write_run_meta(run_dir, harness_preparation=receipt,
-                        runtime_refusal={"stage": "harness source declaration", "detail": str(error)})
-    console.note(f"refusing managed Python source: {error}", level="error")
-    return 2
+def _record_platform_seam(run_dir, before, after, reason, platform_before):
+    return resume_planning.record_platform_seam(run_dir, before, after, reason, platform_before,
+        platform=resume_planning.PlatformEvidence(_platform_content_sha, _git_sha), reporter=console)
 
 
 def describe_model() -> dict:
@@ -604,16 +229,7 @@ def describe_model() -> dict:
     Reported at the top of a run because the alternative is discovering three
     rounds later that every score came from the mock stand-in.
     """
-    agent = platform_config.current().agent
-    backend = agent.backend
-    model = agent.model
-    has_key = bool(agent.api_key)
-    return {
-        "backend": backend,
-        "model": model,
-        "credentials": has_key,
-        "live": backend != "mock" and bool(model) and has_key,
-    }
+    return run_configuration.describe_agent(platform_config.current().agent)
 
 
 # The curve table is rendered by `eval/observe/console.py`, next to the header and the
@@ -632,172 +248,39 @@ _SCENARIO_ARG_DEFAULTS = {'dataset': 'demo', 'split': None, 'side': 'train',
 
 
 def _apply_scenario(args: argparse.Namespace, spec: dict, explicit: set[str]) -> None:
-    """Bind reviewed values before policy selection; never silently override an explicit flag."""
-    values = {key: spec[key] for key in ('dataset', 'split', 'side', 'sampling', 'rounds', 'trials')}
-    values.update(pool=spec.get('pool'), jobs=spec['budget']['jobs'])
-    split = values['split']
-    if split not in ('declared', 'default', 'official'):
-        path = (PLATFORM_ROOT / split).resolve(strict=True)
-        if not path.is_relative_to(PLATFORM_ROOT.resolve()) or not path.is_file():
-            raise ValueError('scenario split must be a readable file inside the platform')
-        values['split'] = str(path)
-    try:
-        select_task_set({}, values['sampling'])
-    except (ValueError, TypeError) as exc:
-        raise ValueError(f"scenario sampling is not supported: {exc}") from exc
-    if values['side'] == 'eval' and values['sampling'] != 'all':
-        raise ValueError('scenario eval sampling must be all; other policies need separate admission')
-    for field, value in values.items():
-        actual = getattr(args, field)
-        if field == 'split' and field in explicit and actual not in ('declared', 'default', 'official'):
-            actual = str(Path(actual).resolve(strict=True))
-        if field in explicit and actual != value:
-            raise ValueError(f'scenario {field} conflicts with explicit --{field}')
+    """Apply reviewed values to a complete parser-shaped namespace.
+
+    All ScenarioOptions fields must be present, including parser-defaulted fields.
+    Partial private namespaces are outside this adapter's input contract.
+    """
+    current = scenario_config.ScenarioOptions(args.dataset, args.split, args.side,
+        args.sampling, args.rounds, args.trials, args.pool, args.jobs)
+    for field, value in scenario_config.scenario_option_updates(
+            current, spec, explicit, platform_root=PLATFORM_ROOT, select_sampling=select_task_set):
         setattr(args, field, value)
 
 
 def _scenario_pool_env(dataset: str, pool: str | None) -> dict[str, str]:
-    """Reuse existing adapter pool selectors, before an adapter can be imported."""
-    if pool is None:
-        return {}
-    key = {'appworld': 'HG_APPWORLD_POOL', 'alfworld': 'HG_ALFWORLD_POOL'}.get(dataset)
-    if key:
-        return {key: pool}
-    if pool in ('train', 'eval'):
-        return {}  # This is already the side selected by the driver.
-    raise ValueError(f'pool {pool!r} has no existing selector for dataset {dataset!r}')
+    return scenario_config.pool_environment(dataset, pool)
 
 
 def _check_scenario_dataset(spec: dict) -> None:
-    """Published datasets, plus the senior-approved local mock/train smoke fixture."""
-    name = spec['dataset']
-    if (name == 'demo' and spec['name'] == 'demo-smoke' and spec['side'] == 'train'
-            and spec['model']['backend'] == 'mock'):
-        return
-    if name in datasets.published():
-        return
-    if name.isidentifier() and (PLATFORM_ROOT / 'data/datasets' / f'{name}.py').is_file():
-        try:
-            datasets.kind_of(name)
-        except (ImportError, OSError, ValueError) as exc:
-            raise ValueError(f'dataset {name!r} is not provisioned: {exc}') from exc
-        raise ValueError(f'dataset {name!r} is not currently published')
-    raise ValueError(f'unknown dataset {name!r} in scenario (not a published dataset)')
-
-
-def _check_scenario_runtime(spec: dict, model: dict, man: dict, envs: dict) -> None:
-    """Check actual capabilities; a configured field is not proof of enforcement."""
-    wanted = spec['model']['backend']
-    if wanted == 'mock' and model['backend'] != 'mock':
-        raise ValueError('scenario model.backend=mock conflicts with the actual agent backend')
-    if wanted == 'live' and (not model.get('live') or not platform_config.current().agent.base_url):
-        raise ValueError('scenario model.backend=live requires a configured model endpoint and credentials')
-    problem = _check_env_kinds(man, set(spec['env_kinds']) | _required_env_kinds(envs))
-    if problem:
-        raise ValueError(f'scenario environment requirements: {problem}')
-    if spec.get('limits'):
-        fields = ', '.join(sorted(spec['limits']))
-        raise ValueError(f'scenario limits ({fields}) cannot yet be enforced by this CLI')
+    return scenario_config.check_scenario_dataset(spec, platform_root=PLATFORM_ROOT,
+                                                  datasets=datasets)
 
 
 def _check_scenario_resume(args, receipt: dict | None) -> None:
-    """Refuse changed scenario identity before the existing resume path writes metadata."""
     if not args.resume:
         return
-    if not args.run_id:
-        if receipt is not None:
-            raise ValueError('scenario resume requires an explicit --run-id')
-        return
-    path = Path(args.runs_root) / args.run_id / 'run_meta.json'
-    try:
-        saved = json.loads(path.read_text(encoding='utf-8'))
-    except (OSError, ValueError) as exc:
-        if receipt is not None:
-            raise ValueError(f'scenario resume needs readable original metadata: {exc}') from exc
-        return  # Preserve the legacy resume path's own refusals.
-    prior = saved.get('scenario') if isinstance(saved, dict) else None
-    if receipt is None and prior is None:
-        return
-    if (not isinstance(prior, dict) or receipt is None or not prior.get('sha256')
-            or any(prior.get(k) != receipt.get(k) for k in ('name', 'sha256'))):
-        raise ValueError('scenario identity is missing or changed; use the original scenario or a fresh run ID')
-
-
-def _external_source_snapshot(source: Path, target: Path) -> None:
-    """Own the source before Git runs; never adopt an external Git config/hooks.
-
-    Rebase owned links onto this copy so absolute links cannot keep reaching the
-    submitted directory after staging. The input directory itself is untouched.
-    """
-    copy_harness(source, target, symlinks=True, ignore=shutil.ignore_patterns('.git'))
-    for path in target.rglob('*'):
-        if path.is_symlink():
-            origin = source / path.relative_to(target)
-            owned = origin.resolve(strict=True)
-            if not owned.is_relative_to(source):
-                raise ValueError(f'unsafe source link {origin}: target is outside the harness')
-            path.unlink()
-            path.symlink_to(os.path.relpath(target / owned.relative_to(source), path.parent),
-                            target_is_directory=owned.is_dir())
-
-
-def _strip_reviewed_bytecode(root: Path) -> None:
-    """Exclude executable caches omitted by the reviewed submission identity.
-
-    -B only prevents cache writes; Python still reads existing bytecode. Validate
-    all links before deletion, never follow a cache alias while removing it, and
-    let the subsequent full source hash refuse any broken reviewed source alias.
-    """
-    if root.is_symlink():
-        raise ValueError('reviewed snapshot root must not be a symlink')
-    owned_root = root.resolve(strict=True)
-    paths = list(root.rglob('*'))
-    for path in paths:
-        if path.is_symlink() and not path.resolve(strict=True).is_relative_to(owned_root):
-            raise ValueError('unsafe reviewed snapshot link: target is outside the harness')
-    for path in sorted(paths, key=lambda value: len(value.parts), reverse=True):
-        if path.name == '__pycache__':
-            if path.is_symlink() or not path.is_dir():
-                path.unlink()
-            else:
-                shutil.rmtree(path)
-        elif path.name.endswith('.pyc') and not path.is_dir():
-            path.unlink()
+    return scenario_config.check_scenario_resume(args.resume, args.run_id, args.runs_root, receipt)
 
 
 def _harness_roots() -> list[Path]:
-    """The directories a `--harness <name>` is looked up in, in order.
-
-    Two roots, and the order is the point. `base_harness/` is the shipped set: the
-    starting point a method improves and the adapters for external harnesses. The second
-    root holds the platform's *test instruments* -- harnesses that exist to make one
-    behaviour checkable and that nobody should measure:
-
-      * `loop_plain` is the floor. Under the mock backend its model never answers, so
-        every trial ends at the step cap with an empty answer and every task scores 0,
-        deterministically and with no server. Fifteen test files use it as the harness
-        whose behaviour the platform's own plumbing is asserted against.
-      * `cli_agent` is the generic CLI wrapper: it executes one program and sees one exit
-        code, so its trace cannot satisfy the adapter contract by construction. It is the
-        subject of the tests that check the sandbox can drive a foreign CLI at all.
-
-    They were in `base_harness/` until 2026-11-01, which made the shipped set contain two
-    things that are not harnesses a study may start from -- and the manifest of one of them
-    said `role: control` while the other looked exactly like a baseline. Moving the files
-    is what removes that claim; keeping the *names* resolvable is what lets the tests go on
-    asserting the platform rather than the fixtures.
-    """
-    root = Path(__file__).parent
-    return [root / "base_harness", root / "tests" / "fixtures" / "base_harness"]
+    return source_leases.harness_roots(Path(__file__).parent)
 
 
 def _harness_by_name(name: str) -> Path | None:
-    """The first root that has a directory called `name`, or None."""
-    for base in _harness_roots():
-        candidate = base / name
-        if candidate.is_dir():
-            return candidate
-    return None
+    return source_leases.harness_by_name(name, _harness_roots())
 
 
 def _readiness(args) -> int:
@@ -889,14 +372,13 @@ def _readiness(args) -> int:
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
         + (f"-{secrets.token_hex(8)}" if staged else ""))
     run_dir = Path(args.runs_root) / run_id
-    prepared_split = {}
+    prepared_split = None
     if args.split not in (None, 'declared'):
         from data.scaffolds.custom_split import resolve as resolve_split
         try:
             tasks, _, declared = datasets.load_split(args.dataset)
             division, source, protocol = resolve_split(args.dataset, tasks, declared, args.split, side=args.side)
-            prepared_split = {'split': division, 'split_source': source,
-                'split_sha': datasets.split_sha(division), 'split_protocol': protocol}
+            prepared_split = run_metadata.SplitRecord(division, source, datasets.split_sha(division), protocol)
         except (OSError, ValueError, ImportError) as exc:
             print(f'refusing --prepare-only: split: {exc}', file=sys.stderr)
             return 2
@@ -908,100 +390,23 @@ def _readiness(args) -> int:
     # `platform_config.dump()` is the same redaction a real run's first write uses: every
     # secret field is `{"present": bool}` and never a value, because `run_meta.json` is
     # written to disk and read by people.
-    _write_run_meta(
-        run_dir, fresh=True,
-        run_id=run_id, harness=args.harness, dataset=args.dataset, side=args.side,
-        sampling_policy=args.sampling, rounds=args.rounds, trials=args.trials,
-        jobs=args.jobs,
-        sandbox={"requested": bool(args.sandbox), "active": False},
-        runs_root=str(args.runs_root), work_root=str(args.work_root),
-        method_entrypoint=args.method_entrypoint,
-        config=platform_config.dump(
-            run=platform_config.run_config(
-                args, run_id, seed=os.environ.get("HARNESSGRAD_SEED"), mode=mode)),
-        framework_version=FRAMEWORK_VERSION,
-        prepared_by="--prepare-only",
-        launched=False,
-        **prepared_split,
-    )
+    prepared_config = platform_config.run_config(
+        args, run_id, seed=os.environ.get("HARNESSGRAD_SEED"), mode=mode)
+    prepared_fields = run_metadata.prepared_run_fields(
+        prepared_config, platform_config.dump(run=prepared_config), FRAMEWORK_VERSION, prepared_split)
+    _write_run_meta(run_dir, fresh=True, **prepared_fields)
     run_namespace.finish_preparation(run_dir, args._namespace_config)
     print(run_dir)
     return 0
 
 
-
-
-class _SummaryWriteNotices:
-    """Where `run_summary.write_summary`'s own notices go when the driver writes the page.
-
-    A finished run announces the page with `console.artifact`, beside `curve`, `workspace`
-    and `events`, so a fresh write's "wrote <path>" line would print the same fact twice.
-    Everything else is forwarded to stderr: `tools/run_summary.py` promises that replacing
-    a *different* earlier summary is never silent, and finishing an earlier run with
-    `--resume` is exactly the path that can hit it.
-    """
-
-    def __init__(self) -> None:
-        self._pending = ""
-
-    def write(self, text: str) -> int:
-        self._pending += text
-        while "\n" in self._pending:
-            line, self._pending = self._pending.split("\n", 1)
-            if not line.startswith("wrote "):
-                print(line, file=sys.stderr)
-        return len(text)
-
-    def flush(self) -> None:
-        if self._pending:
-            line, self._pending = self._pending, ""
-            if not line.startswith("wrote "):
-                print(line, file=sys.stderr)
+def _summary_options(args):
+    return run_completion.SummaryOptions(getattr(args, "no_summary", False), getattr(args, "summary_dir", None),
+        getattr(args, "check_only", False), getattr(args, "prepare_only", False))
 
 
 def _write_end_summary(args, run_dir: Path, curve_path: Path) -> Path | None:
-    """Leave `end-summary.md`/`.json` beside a finished run's curve; never change its result.
-
-    **Why the platform writes it.** `tools/run_summary.py` turns a run directory into one
-    page -- the r0 baseline, every round, the invalid/unmeasured counts and the caveats
-    this run cannot answer -- but only for a reader who knew the command. A finished run
-    now leaves that page behind itself the same way it leaves `curve.jsonl`. The tool is
-    imported rather than reimplemented, so there is still one renderer and one rule about
-    what a missing field means.
-
-    **The one call site is where the record is final.** It runs after the last
-    `_write_curve`, so the page describes exactly the curve on disk, and before the console
-    prints the table it describes. It is deliberately not in `main()`'s `finally`: a
-    refusal, an exception, a `--check-only`/`--prepare-only` invocation and any run that
-    could not write a curve have no measured record to summarise, and a page left behind by
-    one would describe a run that did not happen.
-
-    **The exit code never depends on it.** The page is derived data and `curve.jsonl` is
-    the record, so a failure here is one line on stderr and the run continues and returns
-    as it would have, with the curve exactly as `_write_curve` left it. Returns the page's
-    path when one was written, so the caller can announce it with the other artifacts.
-    """
-    if getattr(args, "no_summary", False):
-        return None
-    # Stated here as well as enforced by `_readiness` returning before the call site: the
-    # two flags measure nothing, and the guard should travel with the writer rather than
-    # depend on one particular early return staying where it is.
-    if getattr(args, "check_only", False) or getattr(args, "prepare_only", False):
-        return None
-    if not curve_path.is_file():
-        return None
-    target = Path(args.summary_dir) if getattr(args, "summary_dir", None) else run_dir
-    try:
-        summary = run_summary.summarise(run_dir)
-        run_summary.write_summary(summary, target, dry_run=False,
-                                  stream=_SummaryWriteNotices())
-    except Exception as exc:                                    # noqa: BLE001
-        # One line, and never a `return` that differs from the run's own: the page is a
-        # rendering of the record, not a second gate on whether the record may be returned.
-        print(f"warning: end-summary not written to {target}: "
-              f"{type(exc).__name__}: {exc}", file=sys.stderr)
-        return None
-    return target / run_summary.SUMMARY_MD
+    return run_completion.write_end_summary(_summary_options(args), run_dir, curve_path)
 
 
 def _main(attempt: dict) -> int:
@@ -1124,94 +529,20 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         args.improver = "none"
 
     runs_root = Path(args.runs_root)
-    eval_from = None
-    harness_source = None
-    reviewed_original = None
-    if args.harness_path is not None:
-        harness_src = Path(args.harness_path)
-        if not harness_src.is_absolute():
-            print('--harness-path must be an absolute directory', file=sys.stderr)
-            return 2
-        problems = check_harness(harness_src)
-        if problems:
-            for problem in problems:
-                print(f"refusing --harness-path: {problem['detail']}", file=sys.stderr)
-            return 2
-        try:
-            canonical_source = harness_src.resolve(strict=True)
-            if args.expected_harness_filesystem_sha256 is not None and harness_src != canonical_source:
-                raise ValueError("reviewed filesystem source must use its canonical non-symlink path")
-            harness_src = canonical_source
-            source_receipt = source_identity(harness_src)
-            if args.expected_harness_sha256 is not None:
-                if source_receipt['submission_sha256'] != args.expected_harness_sha256:
-                    raise ValueError('harness source differs from expected reviewed SHA256')
-            # Two identities, named apart and never interchangeable: `submission_sha256` is
-            # the digest of the directory that was handed in, `harness_sha` is the Git tree
-            # hash of the staged copy that ran -- the same name and function the curve point
-            # carries, and it is added after staging.
-            harness_source = {'path': str(harness_src),
-                              'submission_sha256': source_receipt['submission_sha256'],
-                              'entries': source_receipt['entries']}
-            args.harness = manifest(harness_src)['name']
-        except (OSError, ValueError) as exc:
-            print(f'refusing --harness-path: {exc}', file=sys.stderr)
-            return 2
-        # A display name is not a directory name. Keep external default IDs fresh
-        # and independent of manifest strings that can contain path separators.
-        if not args.run_id:
-            args.run_id = (f"external-{harness_source['submission_sha256'][:12]}-"
-                           f"{secrets.token_hex(4)}")
-        # Existing workspace cleanup must never remove or write into the input.
-        for output_root in (args.work_root, args.runs_root):
-            output = (Path(output_root) / args.run_id).resolve()
-            if output.is_relative_to(harness_src) or harness_src.is_relative_to(output):
-                print('refusing --harness-path: input and run/work output directories overlap',
-                      file=sys.stderr)
-                return 2
-        if args.expected_harness_sha256 is not None:
-            try:
-                reviewed_original = harness_src
-                if (args.expected_harness_filesystem_sha256 is not None
-                        and filesystem_identity(harness_src)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('harness filesystem differs from expected reviewed SHA256')
-                snapshot_root = Path(sources.enter_context(tempfile.TemporaryDirectory(prefix='hg-reviewed-source-')))
-                snapshot = snapshot_root / 'source'
-                _external_source_snapshot(harness_src, snapshot)
-                _strip_reviewed_bytecode(snapshot)
-                if (args.expected_harness_filesystem_sha256 is not None
-                        and filesystem_identity(snapshot)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('owned harness filesystem differs from expected reviewed SHA256')
-                if source_identity(snapshot)['submission_sha256'] != args.expected_harness_sha256:
-                    raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
-                if source_identity(harness_src) != source_receipt:
-                    raise ValueError('harness source changed while taking reviewed snapshot')
-                if (args.expected_harness_filesystem_sha256 is not None
-                        and filesystem_identity(harness_src)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('harness filesystem changed while taking reviewed snapshot')
-                harness_src = snapshot
-                args.harness = manifest(harness_src)['name']
-            except (OSError, ValueError, RuntimeError) as exc:
-                print(f'refusing --harness-path: {exc}', file=sys.stderr)
-                return 2
-    elif args.side == "eval":
-        # Checkpoint eval retains its original source and provenance helpers.
-        try:
-            harness_src, _round = _eval_source(args, runs_root)
-            eval_from = _eval_from_record(runs_root, args.from_run, _round, source=harness_src)
-        except SystemExit as exc:
-            print(exc, file=sys.stderr)
-            return 2
-        except (OSError, TypeError, ValueError) as exc:
-            print(f"refusing --from-run: {exc}", file=sys.stderr)
-            return 2
-    else:
-        harness_src = _harness_by_name(args.harness)
-        if harness_src is None:
-            print("no such harness: " + args.harness
-                  + " (searched " + ", ".join(str(path) for path in _harness_roots()) + ")",
-                  file=sys.stderr)
-            return 2
+    source_lease = sources.enter_context(SourceLease())
+    try:
+        source = select_source(SourceRequest(
+            args.harness, args.harness_path, args.side, args.run_id, args.runs_root, args.work_root,
+            args.from_run, args.from_round, args.expected_harness_sha256,
+            args.expected_harness_filesystem_sha256), source_lease,
+            roots=_harness_roots, named_source=_harness_by_name)
+    except SourceRefused as exc:
+        exc.report()
+        return 2
+    harness_src, eval_from = source.path, source.eval_from
+    harness_source, source_receipt = source.provenance, source.receipt
+    reviewed_original = source.reviewed_original
+    args.harness, args.run_id = source.harness, source.run_id
 
     env_file = Path(__file__).parent / ".env"
     load_env(env_file)
@@ -1258,152 +589,30 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # The project's model rule, enforced at the door next to the credential check: the
     # harness's model is a run-level choice and the same rule covers it. `improvers.json`
     # holds the list and the reason (`tools/improver.py:forbidden_reason`).
-    banned = forbidden_reason(load_improvers(), model.get("model") or "")
-    if banned:
-        print(f"refusing to run: {banned}", file=sys.stderr)
-        return 2
-    if model["backend"] != "mock" and not model["live"]:
-        missing = [n for n, ok in (("HG_AGENT_MODEL", model["model"]),
-                                   ("HG_AGENT_API_KEY", model["credentials"]))
-                   if not ok]
-        print(f"backend is {model['backend']!r} but {', '.join(missing)} "
-              f"{'is' if len(missing) == 1 else 'are'} unset; every score would "
-              f"come from a harness that cannot reach a model. See .env.example.",
-              file=sys.stderr)
+    model_problem = run_configuration.agent_refusal(
+        model, load_improvers=load_improvers, forbidden_reason=forbidden_reason)
+    if model_problem:
+        print(model_problem, file=sys.stderr)
         return 2
 
+    options = SelectionOptions(args.dataset, args.split, args.side, args.tasks, args.sampling,
+                               args.run_id, args.from_run, args.sandbox, args.check_net)
     try:
-        tasks_all, scorable, split = datasets.load_split(args.dataset)
-        oracle_source, oracle_coverage = datasets.oracle_source(args.dataset)
-    except (OSError, ValueError, ImportError) as exc:
-        if scenario_spec is None:
-            raise  # Keep legacy callers' error handling unchanged.
-        print(f'refusing --scenario: dataset {args.dataset!r} could not be loaded: {exc}',
-              file=sys.stderr)
+        selected = build_selected_run_plan(
+            options, datasets, runs_root=runs_root, scenario=scenario_spec, model=model,
+            harness_source=harness_src, policy_evidence=policy_evidence, reporter=console)
+    except SelectedRunRefused as exc:
+        exc.report(console)
         return 2
-    # Experiment partitions override adapter defaults explicitly, with a frozen
-    # manifest and origin receipt. The adapter's official declaration stays intact.
-    from data.scaffolds.custom_split import resolve as resolve_split
-    try:
-        split, split_source, split_protocol = resolve_split(
-            args.dataset, tasks_all, split, args.split, side=args.side)
-    except (OSError, ValueError, ImportError) as exc:
-        console.note(f"--split {args.split}: {exc}", level="error")
-        return 2
-    if split_protocol is not None:
-        reused = split_protocol['official_eval_reused_for_train']
-        origin = 'unknown' if reused is None else str(reused)
-        console.note(f"custom held-out partition: {len(split['train'])} train / "
-                     f"{len(split['eval'])} eval; official evaluation tasks used for study: "
-                     f"{origin}. This is not an official benchmark split/leaderboard score.",
-                     level="info")
-    # A custom study partition cannot subsequently be evaluated as the whole
-    # official exam. Bind a paired eval to the frozen training partition.
-    if args.side == 'eval' and args.from_run:
-        from data.scaffolds.custom_split import check_eval_pair
-        try:
-            check_eval_pair(runs_root / args.from_run, args.dataset, split, split_protocol)
-        except (OSError, ValueError) as exc:
-            console.note(f'refusing custom split evaluation: {exc}', level='error')
-            return 2
-    # **A run is about one side, and the narrowing happens here**, before round 0 and
-    # before the workspace is staged. That placement is the design: the other side is
-    # never loaded, never evaluated, and its traces are never written, so "the method
-    # cannot see the exam" stops being a field this platform withholds and becomes a
-    # side that is not in the run at all. The same upgrade as hiding the platform by not
-    # mounting it, rather than by checking what was read.
-    side_ids = list(split[args.side]) if split else [t["task_id"] for t in tasks_all]
-
-    # An explicit subset, applied *after* the side so a request can never pull a task
-    # from the other side by naming it -- the side is the run's identity, not a filter
-    # the caller can override.
-    if args.tasks:
-        asked = [t.strip() for t in args.tasks.split(",") if t.strip()]
-        unknown = sorted(set(asked) - set(side_ids))
-        if unknown:
-            print(f"--tasks names {unknown}, which are not on the {args.side} side of "
-                  f"{args.dataset!r}. That side has {sorted(side_ids)}",
-                  file=sys.stderr)
-            return 2
-        side_ids = [t for t in side_ids if t in set(asked)]
-
-    # Early staged selection happens before setup, image admission and H0 execution.
-    eligible_ids = list(side_ids)
-    if args.sampling == "diagnostic":
-        side_ids = metrics.diagnostic_task_set(side_ids)
-    if args.sampling == "pilot_10pct":
-        try:
-            diagnostic_policy.require_review(policy_evidence,
-                                             context=policy_evidence["context"],
-                                             eligible=eligible_ids, run_id=args.run_id)
-        except ValueError as exc:
-            print(f"refusing staged policy: {exc}", file=sys.stderr)
-            return 2
-        side_ids = metrics.pilot_task_set(side_ids)
-    if args.sampling.startswith("random_"):
-        # Not score-based: it draws N ids from the side with the recorded seed, so it narrows
-        # *before* H0 instead of paying for a whole-side sweep whose scores it never reads.
-        # Until 2026-11-02 it narrowed only after round 0, so `random_5` on gsm8k measured
-        # 7473 tasks to look at 5 -- a name that promised the opposite of its cost, and the
-        # reason `experiments/quickstart.json` could not be run as checked in.
-        side_ids = select_task_set({}, args.sampling, within=side_ids)
-
-    tasks_all = [t for t in tasks_all if t["task_id"] in set(side_ids)]
-    if not tasks_all:
-        print(f"dataset {args.dataset!r} has no tasks on side {args.side!r}",
-              file=sys.stderr)
-        return 2
-
-    # Resolve only the selected task declarations. Lazy adapters may require private
-    # inputs, runtimes or model configuration when a value is read; an unselected
-    # task must not block this run before the subsequent runtime preflight.
-    try:
-        _, setups, verifiers = datasets.load_tasks(args.dataset, task_ids=side_ids)
-        envs = datasets.load_envs(args.dataset, task_ids=side_ids)
-    except (OSError, ValueError, ImportError) as exc:
-        if scenario_spec is None:
-            raise
-        print(f'refusing --scenario: dataset {args.dataset!r} declarations could not be loaded: {exc}',
-              file=sys.stderr)
-        return 2
-    setups, verifiers, envs = _narrow_to_run(setups, verifiers, envs, side_ids)
-    model_checks = readiness.selected_model_checks(args, verifiers=verifiers, setups=setups)
-    if any(check.required and not check.ok for check in model_checks):
-        print(readiness.render(model_checks))
-        print('refusing to run: selected judge/environment configuration failed before H0', file=sys.stderr)
-        return 2
-    if scenario_spec is not None:
-        try:
-            _check_scenario_runtime(scenario_spec, model, manifest(harness_src), envs)
-        except ValueError as exc:
-            print(f'refusing --scenario: {exc}', file=sys.stderr)
-            return 2
-    try:
-        args.scoring_identity = scoring_identity.resolve(args.dataset)
-    except (OSError, TypeError, ValueError) as exc:
-        console.note(f"invalid scoring profile: {exc}", level="error")
-        return 2
-    try:
-        args.dataset_runtime_identity = dataset_runtime_identity.capture(
-            args.dataset, side_ids, setups, verifiers, envs)
-    except (OSError, TypeError, ValueError) as exc:
-        console.note(f"invalid dataset runtime identity: {exc}", level="error")
-        return 2
-    # Resolve environment identities before binding verification inputs. Keep the
-    # capability gate ahead of image lookup, including for resume preflight.
-    try:
-        problem = _check_env_kinds(manifest(harness_src), _required_env_kinds(envs))
-        if problem:
-            console.note(f"refusing to run: {problem}", level="error")
-            return 2
-        envs, env_problem = _resolve_envs(envs)
-        if env_problem:
-            console.note(f"refusing to run: {env_problem}", level="error")
-            return 2
-        args.verification_context = verification_context.capture(tasks_all, scorable, setups, verifiers, envs, sandbox=args.sandbox)
-    except (OSError, TypeError, ValueError) as exc:
-        console.note(f"invalid verification context: {exc}", level="error")
-        return 2
+    tasks_all, side_ids = selected.selection.tasks, selected.selection.ids
+    eligible_ids, scorable = selected.selection.eligible_ids, selected.partition.scorable
+    split, split_source = selected.partition.split, selected.partition.source
+    split_protocol = selected.partition.protocol
+    oracle_source, oracle_coverage = selected.partition.oracle_source, selected.partition.oracle_coverage
+    setups, verifiers, envs = selected.setups, selected.verifiers, selected.envs
+    args.scoring_identity = selected.scoring_identity
+    args.dataset_runtime_identity = selected.dataset_runtime_identity
+    args.verification_context = selected.verification_context
     args.harness_runtime_identity = None
     args.current_harness_runtime_identity = None
     args.harness_preparation = None
@@ -1431,64 +640,25 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # A rejected explicit override must not rewrite the interrupted run's config.
     resumed_seed = None
     if args.resume:
-        meta_path = run_dir / "run_meta.json"
-        saved_meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
-        saved_protocol = saved_meta.get('split_protocol')
-        if saved_protocol is not None or split_protocol is not None:
-            if (saved_protocol is None or split_protocol is None
-                    or saved_protocol['file_sha256'] != split_protocol['file_sha256']
-                    or saved_protocol.get('task_content_sha256') != split_protocol.get('task_content_sha256')):
-                console.note('refusing --resume: frozen split manifest changed; use the original manifest', level='error')
-                return 2
+        saved_meta = resume_planning.read_metadata(run_dir)
+        if resume_planning.frozen_split_changed(saved_meta, split_protocol):
+            console.note('refusing --resume: frozen split manifest changed; use the original manifest', level='error')
+            return 2
         try:
-            scoring_identity.require_same(saved_meta.get("scoring_identity"), args.scoring_identity)
-            _require_verification_context(saved_meta.get("verification_context"), args.verification_context)
-            dataset_runtime_identity.require_same(
-                saved_meta.get("dataset_runtime_identity"), args.dataset_runtime_identity)
-            curve_path = run_dir / "curve.jsonl"
-            existing_points = []
-            if curve_path.is_file():
-                for line in curve_path.read_text().splitlines():
-                    if line.strip():
-                        point = json.loads(line)
-                        existing_points.append(point)
-                        _require_verification_context(point.get("verification_context"), args.verification_context,
-                            list((point.get("sampling") or {}).get("task_ids") or (point.get("per_task") or {})))
-                        dataset_runtime_identity.require_same(
-                            point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
-            restored_runtime = candidate_runtime.validate_resume(
-                run_dir, saved_meta, existing_points, harness_src,
-                envs=envs, setups=setups, sandbox=args.sandbox)
-            if restored_runtime is not None:
-                args.harness_runtime_identity = restored_runtime["initial"]
-                args.current_harness_runtime_identity = restored_runtime["current"]
-                managed_history = (args.harness_runtime_identity is not None
-                                   or args.current_harness_runtime_identity is not None
-                                   or any(point.get("harness_runtime_identity") is not None for point in existing_points))
-                if args.side == "train" and existing_points and managed_history:
-                    harness_src = sources.enter_context(candidate_runtime.checkpoint_source(
-                        run_dir, existing_points[0]))
-                    args._resume_initial_source = harness_src
-                    last_point = max(existing_points, key=lambda point: int(point.get("round") or 0))
-                    args._resume_candidate_source = sources.enter_context(candidate_runtime.checkpoint_source(
-                        run_dir, last_point))
-                    harness_source = saved_meta.get("harness_source")
-            for saved_point in existing_points:
-                external_runtime.admit_checkpoint(run_dir, saved_point, fallback=harness_src)
+            admission = resume_planning.admit_resume_bindings(resume_planning.AdmissionRequest(
+                args.side, side_ids, resume_planning.ResumeIdentities(
+                    args.scoring_identity, args.dataset_runtime_identity, args.verification_context),
+                setups, envs, args.sandbox), run_dir, harness_src, metadata=saved_meta, hold=sources.enter_context)
+            saved_meta = admission.metadata
+            if admission.restored is not None:
+                args.harness_runtime_identity = admission.restored["initial"]
+                args.current_harness_runtime_identity = admission.restored["current"]
+            if admission.initial_source is not None:
+                harness_src = admission.initial_source
+                args._resume_initial_source = admission.initial_source
+                args._resume_candidate_source = admission.candidate_source
+                harness_source = saved_meta.get("harness_source")
             args.harness_preparation = saved_meta.get("harness_preparation")
-            if args.side == "eval":
-                prior = _progress_results(run_dir)
-                expected = dataset_runtime_identity.project_many(args.dataset_runtime_identity, prior)
-                for tid, record in prior.items():
-                    _require_verification_context(record.get("verification_context"), args.verification_context, [tid])
-                    if (args.dataset_runtime_identity is not None
-                            or record.get("dataset_runtime_identity") is not None) and tid not in side_ids:
-                        raise ValueError("dataset_runtime_identity progress names an unselected task")
-                    dataset_runtime_identity.require_same(
-                        record.get("dataset_runtime_identity"), expected[tid])
-                    candidate_runtime.require_same(
-                        record.get("harness_runtime_identity"), args.current_harness_runtime_identity)
-                    external_runtime.admit_reuse(harness_src, record, services=True)
         except (OSError, TypeError, ValueError) as exc:
             console.note(f"refusing --resume: {exc}", level="error")
             return 2
@@ -1568,26 +738,21 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # of 40.
     slots.configure(args.gpu_budget, args.gpu_budget_dir)
 
-    resume_state = None
+    resume_state = resume_lease = None
     if args.resume and args.side == 'train':
         work = (Path(args.work_root) / run_id / "workspace").resolve()
         if not workspace_is_outside_platform(work, PLATFORM_ROOT):
             print(f"refusing to run: workspace {work} is inside the platform", file=sys.stderr)
             return 2
-        for field in ("harness", "dataset", "sampling_policy", "trials"):
-            requested = getattr(args, "sampling" if field == "sampling_policy" else field)
-            if saved_meta.get(field) is not None and saved_meta[field] != requested:
-                print(f"refusing --resume: {field} differs from the original run", file=sys.stderr)
-                return 2
-        saved_seed = ((saved_meta.get("config") or {}).get("run") or {}).get("seed")
-        if saved_seed:
-            if args.seed is not None and args.seed != saved_seed:
-                print("refusing --resume: requested seed differs from the original seed", file=sys.stderr)
-                return 2
-            resumed_seed = saved_seed
         try:
-            resume_state = _resume_train_state(args, run_dir, split, work, defer=True)
-            sources.callback(resume_state["_publication"][0].cleanup)
+            resumed_seed = resume_planning.admit_train_options(resume_planning.TrainOptions(
+                args.harness, args.dataset, args.sampling, args.trials, args.seed), saved_meta)
+            resume_lease = resume_planning.prepare_resume_workspace_lease(_resume_request(args), run_dir, split, work,
+                ops=WorkspaceOps(stage_workspace, commit_state),
+                platform=resume_planning.PlatformEvidence(_platform_content_sha, _git_sha), reporter=console)
+            resume_state = resume_lease.state
+            args.current_harness_runtime_identity = resume_lease.current_binding
+            sources.callback(resume_lease.close)
         except ResumeNothingToDo as exc:
             print(f"--resume: {exc}")
             return 0
@@ -1617,102 +782,23 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # global here that `_identity` read from the other side of the call stack: a curve
     # point's improver field then depended on a mutable global, and "what does this point
     # claim" could not be answered without running the program that produced it.
-    improver: dict = {}
-    # **`--improver none` is a statement, not a failure to resolve.** A method may carry
-    # its own improver -- `methods/noop` carries nothing at all, and the control harness
-    # is the measurement. Without this the control recorded the *default* improver on
-    # every point: a run in which deepseek was never called still said
-    # `identity.improver: deepseek`, which is exactly the "the record names a party that
-    # did no work" defect the improver field exists to prevent. Distinct from the
-    # unresolvable case below, which is reported as a warning because it is unexpected.
-    carries_its_own = (args.improver or "").strip().lower() in ("none", "noop", "null")
-    # **These stay `os.environ` writes on purpose: they are an output of the driver,
-    # not a read of configuration.** The CLI flag has to reach the *method's own
-    # subprocess*, which is a different process that reads `HG_IMPROVER*` from its
-    # inherited environment (via `harnessgrad.methods._method_env`). `harnessgrad.config`
-    # is a frozen snapshot of this process's configuration and cannot be the transport.
-    if carries_its_own:
-        os.environ.pop("HG_IMPROVER_NAME", None)
-    # The request travels through the environment, because that is how the improver
-    # itself is configured (`HG_IMPROVER*` are what the CLI improver reads) -- resolving
-    # and executing must not disagree about which one was chosen.
-    elif args.improver:
-        os.environ["HG_IMPROVER_NAME"] = args.improver
-    if args.improver_model:
-        os.environ["HG_IMPROVER_MODEL"] = args.improver_model
-    if args.improver_effort:
-        os.environ["HG_IMPROVER_EFFORT"] = args.improver_effort
-    if carries_its_own:
-        console.note("improver none  ← the method carries its own; nothing recorded")
-    else:
-        try:
-            improver = resolve_improver(load_improvers(), version="",
-                                        requested=args.improver,
-                                        model_override=args.improver_model)
-        except Exception as exc:                                # noqa: BLE001
-            improver = {"ok": False,
-                        "reason": f"could not read the improver config: {exc}"}
-    if improver and improver.get("ok"):
-        console.note(
-            f"improver {improver['name']} {improver['version']}"
-            + (f" · model {improver['model']}" if improver.get("model") else "")
-            + f" · sha {improver['sha256'][:12]}"
-            + ("  ← declared MODIFIED" if improver.get("modified") else ""))
-    elif improver:
-        console.note(
-            f"no improver resolved ({improver.get('reason')}); a method that carries its "
-            f"own improver still runs, but this run carries no improver identity",
-            level="warn")
-        improver = {}
-
-    # **A CLI improver needs a model that emits standard tool_calls, and that is a gate --
-    # not a convention.** Measured (2026-10-04): codex pointed at the local 9B connected,
-    # spent 8,699 tokens and did nothing, because the endpoint returned the model's call as
-    # `<tool_call><function=...>` **text** and codex needs structured calls on
-    # `wire_api = "responses"`. The requirement had been raised before and was written down
-    # nowhere (`grep -rn tool_call docs/ INTERFACE.md` was empty), so it kept being
-    # rediscovered instead of enforced. `tools/probe_tool_calls.py` is the check.
-    #
-    # What it can and cannot decide: a **custom** provider in the CLI's own config names a
-    # `base_url`, so that endpoint can be probed and refused. A hosted provider's endpoint
-    # is the CLI's built-in and cannot be reached from here -- then the result is recorded
-    # as *unprobed*, which is a fact rather than a silent pass.
-    # `HG_IMPROVER_SKIP_TOOL_GATE=1` overrides, for an operator who knows an endpoint's
-    # tool support better than a one-shot probe does.
-    improver_tool_calls: bool | None = None
-    improver_tool_calls_detail = ""
-    if improver.get("ok") and improver.get("kind") == "cli":
-        base_url = _cli_provider_base_url(improver)
-        if base_url:
-            if platform_config.current().improver.skip_tool_gate == "1":
-                improver_tool_calls_detail = "gate skipped by HG_IMPROVER_SKIP_TOOL_GATE"
-                console.note("improver tool-call gate skipped by request", level="warn")
-            else:
-                improver_tool_calls, improver_tool_calls_detail = _probe_tool_calls(
-                    base_url, improver.get("model") or "")
-                if not improver_tool_calls:
-                    console.note(
-                        "refusing to run: the improver "
-                        f"{improver.get('name')!r} would use model "
-                        f"{improver.get('model')!r} at {base_url}, and that endpoint does "
-                        f"not return structured tool_calls "
-                        f"({improver_tool_calls_detail}).\n"
-                        "  A CLI improver edits files by calling tools; a model whose calls "
-                        "come back as text cannot drive it, and the run would spend its "
-                        "budget producing nothing.\n"
-                        "  Fix the endpoint (server-side parsing: `--enable-auto-tool-choice "
-                        "--tool-call-parser <name>`), or set HG_IMPROVER_SKIP_TOOL_GATE=1 "
-                        "to run anyway.",
-                        level="error")
-                    return 2
+    improver_request = improver_readiness.ImproverRequest(
+        args.improver, args.improver_model, args.improver_effort)
+    # Outputs inherited by method subprocesses intentionally persist after this run.
+    for key, value in improver_request.environment_patch().items():
+        if value is None:
+            os.environ.pop(key, None)
         else:
-            improver_tool_calls_detail = ("the CLI's provider is built in, so its endpoint "
-                                          "cannot be probed from here")
-        console.note(
-            "improver tool calls: "
-            + ("yes" if improver_tool_calls else
-               ("no" if improver_tool_calls is False else "unprobed"))
-            + f" ({improver_tool_calls_detail[:90]})")
+            os.environ[key] = value
+    improver_ready = improver_readiness.resolve_readiness(
+        improver_request, reporter=console, load_config=load_improvers,
+        resolve_config=resolve_improver, provider_url=_cli_provider_base_url,
+        probe=_probe_tool_calls)
+    if improver_ready.refused:
+        return 2
+    improver = improver_ready.declaration
+    improver_tool_calls = improver_ready.tool_calls
+    improver_tool_calls_detail = improver_ready.detail
 
     # **The capability check goes first, and the order is the whole point.**
     #
@@ -1762,27 +848,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # The container boundary is built once, at the door, for the same reason the bwrap
     # one is: a boundary that cannot be built must stop the run before it is paid for,
     # and must never degrade into running on the host.
-    if "exec" in _required_env_kinds(envs):
-        version = container.available()
-        if version is None:
-            console.note(
-                "refusing to run: this dataset needs an `exec` environment but no "
-                "docker daemon is reachable. Starting the run anyway would either "
-                "score zero on every task or fall back to the host, and both look "
-                "like a weak harness.", level="error")
-            return 2
-        for image in sorted({spec["image"] for spec in envs.values()
-                             if spec.get("kind") == "exec"}):
-            # `PLATFORM_ROOT`, not `PLATFORM`: the latter is the tuple of names that
-            # makes up the platform, and passing it here crashed every `exec` run with
-            # a `tuple / str` TypeError before a single container started.
-            check = container.self_check(PLATFORM_ROOT, image)
-            if not check["ok"]:
-                console.note(f"refusing to run: container boundary for {image!r} "
-                             f"does not hold: {check['detail']}", level="error")
-                return 2
-            console.note(f"container boundary holds (docker {version}): "
-                         f"{check['detail']}", level="info")
+    if not boundary_readiness.check_container_boundaries(envs, reporter=console):
+        return 2
 
     if split is None:
         console.note(
@@ -1834,69 +901,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # The sandbox is verified before the first paid call, not once per task. A
     # namespace that cannot be built stops the run at the door; the alternative is
     # a run that quietly measured something other than what its metadata claims.
-    sandbox_state = {"requested": args.sandbox, "active": False,
-                     "plan_version": sandbox.PLAN_VERSION}
-    if args.sandbox:
-        report = sandbox.self_check(PLATFORM_ROOT, work.parent.parent)
-        if not report["ok"]:
-            console.note(f"refusing to run: {report['detail']}", level="error")
-            return 2
-        sandbox_state["active"] = True
-        sandbox_state["detail"] = report["detail"]
-        # The cap, on the run itself rather than only on a task: a reader asking "could a
-        # runaway harness have taken the machine" is asking about the run, and `applied`
-        # is the answer -- false means the scope could not be created and nothing bounded
-        # the subject.
-        envelope = sandbox.envelope()
-        sandbox_state["envelope"] = envelope
-        sandbox_line = "bwrap active — the harness cannot see this directory"
-        if envelope["applied"]:
-            sandbox_line += (f" · capped at {envelope['limits']['memory']}, "
-                             f"{envelope['limits']['cpus']:g} cpus, "
-                             f"{envelope['limits']['pids']} tasks")
-        else:
-            console.note(f"the sandbox has no resource envelope: {envelope['reason']}. "
-                         f"Nothing bounds a runaway harness on this run.",
-                         level="warn")
-    else:
-        sandbox_line = ("OFF — the harness can read the driver and .env; only the "
-                        "hash check stands between it and the scorer")
-        console.note(
-            "running with --no-sandbox: the harness can read the platform and "
-            ".env, and only the hash check stands between it and the scorer",
-            level="warn")
-
-    # A run whose tasks are in containers must not describe itself as a bwrap run.
-    # The two are different boundaries with different properties, and the header is
-    # the one line a reader takes the run's conditions from -- this exact class of
-    # misdescription is what `agent_model` already cost once.
-    env_kinds = _required_env_kinds(envs)
-    if "exec" in env_kinds:
-        images = sorted({str(spec.get("image_digest") or spec.get("image"))
-                         for spec in envs.values() if spec.get("kind") == "exec"})
-        where = f"exec — {len(images)} image digest(s)" if len(images) > 1 \
-            else f"exec — {images[0][:26] if images else 'unresolved'}"
-        svc_names = sorted({svc["name"] for spec in envs.values()
-                            for svc in (spec.get("services") or [])})
-        if svc_names:
-            # Named, not counted: "a mock API was reachable" and "a database was
-            # reachable" are different tasks, and the header is where a reader takes
-            # the run's conditions from (§2.5.4).
-            where += f" + services[{', '.join(svc_names)}]"
-        # `args.sandbox`, **not** `sandbox`: the bare name in this module is
-        # `import eval.containers.sandbox as sandbox`, so a truthiness test on it tests a *module
-        # object* and is always true. Measured: this condition silently never fired, so
-        # the header named the container boundary and left out that the host-side one
-        # was off. It is the same shadowing that produced `'bool' object has no
-        # attribute 'SandboxUnavailable'` in Step 3, which is why it is spelled out
-        # here instead of left to look obvious.
-        if not args.sandbox:
-            # `--no-sandbox` does not disable the container: the container *is* the
-            # task's environment (INTERFACE.md §2.5.5), so removing it would not make
-            # the task run unisolated, it would make the task not run at all. Saying
-            # so beats a line that reads as "no boundary anywhere".
-            where += " (host-side bwrap OFF for the method)"
-        sandbox_line = where
+    boundary = boundary_readiness.check_sandbox_boundary(
+        args.sandbox, work.parent.parent, envs, reporter=console)
+    if boundary is None:
+        return 2
+    sandbox_state, sandbox_line = boundary.state, boundary.line
 
     # `run_one` needs the work root to know which tree to leave visible. Exported
     # rather than passed through every layer: it is a property of this run, and the
@@ -1955,7 +964,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             print(f"refusing run: verification context changed: {exc}", file=sys.stderr)
             return 2
     if resume_state is not None:
-        _publish_resume(resume_state)
+        resume_lease.publish()
     if args.resume or args.side == 'eval':
         console.attach(run_dir / "events.jsonl", append=bool(args.resume))
 
@@ -1971,204 +980,50 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                       "web_fetch_provider": web_fetch,
                       "web_searxng_url": web_endpoint}
 
-    _write_run_meta(
-        run_dir, run_id=run_id, mode=mode, harness=args.harness,
-        harness_source=harness_source,
-        scenario=scenario_receipt,
-        **scoring_identity.fields(args.scoring_identity),
-        **dataset_runtime_identity.fields(args.dataset_runtime_identity),
-        **verification_context.fields(args.verification_context),
-        **candidate_runtime.fields(args.harness_runtime_identity),
-        dataset=args.dataset, sampling_policy=args.sampling,
-        enforcement=enforcement,
-        diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
-                            "eligible_tasks": len(set(eligible_ids)),
-                            "eligible_task_ids_sha256": diagnostic_policy.eligible_digest(eligible_ids),
-                            "selected_tasks": len(side_ids),
-                            "selected_task_ids": list(side_ids),
-                            "expected_trials": len(side_ids), "trials": 1, "jobs": 1,
-                            "evidence_sha256": diagnostic_policy.receipt_digest(policy_evidence),
-                            "context": policy_evidence["context"]} if staged else None),
-        workspace=str(work), work_root=str(work.parent.parent),
-        platform_root=str(PLATFORM_ROOT),
-        sandbox=sandbox_state,
-        # **The effective configuration of this run, recorded in one block.** The
-        # environment half is the declared snapshot (`harnessgrad/config`); the argv
-        # half enters as `run=`, so "what was in force?" is answered from the run
-        # directory alone. Credentials are recorded as present/absent and never by
-        # value -- `dump()` redacts every secret field.
-        config=platform_config.dump(
-            run=platform_config.run_config(
-                args, run_id, seed=os.environ.get("HARNESSGRAD_SEED"), mode=mode)),
-        budget=budget_binding.metadata() if budget_binding is not None else None,
-        # The run-level view of §2.5.4, beside the per-point one. With no task ids this
-        # falls back to every distinct environment the dataset declares, which is the
-        # right granularity for a run: a reader should be able to tell what kind of
-        # world this run measured in without reading the curve.
-        env=_env_record(envs, []),
-        # The resolved split, not the selected tasks: a reader of the run record
-        # needs to know what the two sides were, before any sampling policy narrowed
-        # it -- and, now that a run may supply its own division, *which* division this
-        # was. `split_sha` is the part a comparison actually needs: two points belong
-        # on one axis only when it matches.
-        split=split,
-        split_declared=split is not None,
-        split_source=split_source,
-        split_protocol=split_protocol,
-        split_sha=datasets.split_sha(split) if split else None,
-        # **What this run is a measurement of, and of which platform.** `evaluated_from`
-        # is what an interrupted eval run needs to verify a `--resume` target: today the
-        # join lives only on the finished point, so a run killed at 147/200 recorded
-        # nowhere which state it was measuring. `platform_content_sha` is the same idea
-        # one level up: continuing a run after the platform changed would stitch two
-        # code versions into one curve, and this is the field that lets a resume refuse.
-        evaluated_from=({"run_id": args.from_run, "round": args.from_round}
-                        if getattr(args, "from_run", None) else None),
-        platform_content_sha=_platform_content_sha(),
-        # **Where the oracle's reference artifact came from.** Gate 1 is the oracle
-        # control, and "the benchmark's own reference scores 1 here" and "a reference the
-        # platform wrote scores 1 here" are different claims about the check -- so the run
-        # records which, together with how much of the pool an authored reference covers.
-        # `None` is a refused dataset (no oracle at all); the lint refuses silence from a
-        # runnable one (`data/dataset.schema.json:module.oracle_about`).
-        oracle_source=oracle_source,
-        oracle_coverage=oracle_coverage,
-        **web_record,
-        agent_model=model["model"] or None,
-        agent_backend=model["backend"],
-        framework_version=FRAMEWORK_VERSION,
-        method_entrypoint=args.method_entrypoint,
-        # **The improver the run resolved, not the one a reader assumes from the
-        # method's name.** A curve point already carries it, and this is the run-level
-        # twin: without it, answering "which improver did this run use?" meant opening a
-        # curve point -- and when the field was absent entirely, the answer was
-        # `improver: null` for a run that had used one.
-        improver=improver or None,
-        # A run-level fact about the *improver's* endpoint, probed once and recorded
-        # beside the improver's identity. `None` is "not probed" (a hosted provider),
-        # never "false" -- the distinction the whole platform keeps making.
-        improver_tool_calls=improver_tool_calls,
-        improver_tool_calls_detail=(improver_tool_calls_detail[:300] or None),
-        # The two measurement parameters, on the run itself: `n_trials` rides on each
-        # curve point, but "how many tasks at once" is not a property of a point -- it is
-        # a property of the run that produced all of them, and a reader comparing two
-        # runs needs to know whether one was under four-way contention.
-        trials=args.trials, jobs=args.jobs,
-        # The run's first write: drop anything a previous run left under this id -- **except
-        # when this invocation is a `--resume`**. A resume continues *this* run, so its record
-        # is the input, not leftovers to clear: writing fresh here replaced
-        # `platform_content_sha` with the current tree before `_resume_train_state` could read
-        # it, which made the cross-platform guard compare a value with itself and never fire
-        # (measured 2026-10-20T12:10Z: a run directory whose recorded sha was `deadbeef`
-        # resumed silently). `_write_run_meta` keeps the first platform digest anyway; this is
-        # the other half of the same fix.
-        fresh=not getattr(args, "resume", False),
-    )
+    # Preserve the original keyword observation order before the pure projection.
+    metadata_identities = run_metadata.identity_fields(run_metadata.IdentityRecords(
+        args.scoring_identity, args.dataset_runtime_identity, args.verification_context, args.harness_runtime_identity))
+    metadata_diagnostic = run_metadata.diagnostic_fields(
+        run_metadata.DiagnosticRecord(eligible_ids, side_ids, policy_evidence) if staged else None)
+    metadata_workspace = run_metadata.WorkspaceRecord(
+        str(work), str(work.parent.parent), str(PLATFORM_ROOT), sandbox_state)
+    metadata_run = platform_config.run_config(args, run_id, seed=os.environ.get("HARNESSGRAD_SEED"), mode=mode)
+    metadata_config = platform_config.dump(run=metadata_run)
+    metadata_budget = budget_binding.metadata() if budget_binding is not None else None
+    metadata_env = _env_record(envs, [])
+    metadata_split = run_metadata.SplitRecord(split, split_source, datasets.split_sha(split) if split else None, split_protocol)
+    metadata_origin = ({"run_id": args.from_run, "round": args.from_round} if getattr(args, "from_run", None) else None)
+    metadata_platform = _platform_content_sha()
+    metadata_fields = run_metadata.planned_run_fields(metadata_run, identities=metadata_identities,
+        diagnostic=metadata_diagnostic, enforcement=enforcement, workspace=metadata_workspace,
+        config_record=metadata_config, budget_record=metadata_budget, env_record=metadata_env, split=metadata_split,
+        provenance=run_metadata.ProvenanceRecord(harness_source, scenario_receipt, metadata_origin,
+            metadata_platform, oracle_source, oracle_coverage),
+        attribution=run_metadata.AttributionRecord(model["model"], model["backend"], FRAMEWORK_VERSION,
+            improver, improver_tool_calls, improver_tool_calls_detail), web_record=web_record)
+    _write_run_meta(run_dir, fresh=not getattr(args, "resume", False), **metadata_fields)
 
-    if resume_state is not None:
-        pass
-    elif harness_source is not None:
-        try:
-            # A managed resume already admitted its retained checkpoint. Its
-            # source can include Git's generated ignore rules, while the original
-            # external input remains unchanged and keeps its separate receipt.
-            staged_receipt = (source_identity(harness_src)
-                              if getattr(args, '_resume_initial_source', None) is not None
-                              else source_receipt)
-            with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
-                snapshot = Path(staging) / 'source'
-                _external_source_snapshot(harness_src, snapshot)
-                if args.expected_harness_sha256 is not None:
-                    _strip_reviewed_bytecode(snapshot)
-                snapshot_identity = source_identity(snapshot)
-                if (args.expected_harness_sha256 is not None
-                        and snapshot_identity['submission_sha256'] != args.expected_harness_sha256):
-                    raise ValueError('owned harness snapshot differs from expected reviewed SHA256')
-                if (args.expected_harness_filesystem_sha256 is not None
-                        and filesystem_identity(snapshot)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('owned harness filesystem differs before staging')
-                generated_root = tuple(name for name in ('.git', '.gitignore', '.state')
-                                       if not (snapshot / name).exists() and not (snapshot / name).is_symlink())
-                stage_workspace(snapshot, work)
-                if (args.expected_harness_filesystem_sha256 is not None
-                        and filesystem_identity(work, generated_root=generated_root)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('staged harness filesystem differs from reviewed owned snapshot')
-                if (args.expected_harness_filesystem_sha256 is not None
-                        and filesystem_identity(snapshot)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('owned harness filesystem changed during staging')
-                if source_identity(snapshot) != snapshot_identity:
-                    raise ValueError('harness source snapshot changed during staging')
-            if (source_identity(harness_src) != staged_receipt
-                    or (reviewed_original is not None and source_identity(reviewed_original) != source_receipt)):
-                raise ValueError('harness source changed during staging; use a stable input directory')
-            if args.expected_harness_filesystem_sha256 is not None:
-                if (filesystem_identity(harness_src)['sha256'] != args.expected_harness_filesystem_sha256
-                        or filesystem_identity(reviewed_original)['sha256'] != args.expected_harness_filesystem_sha256):
-                    raise ValueError('harness filesystem changed during staging')
-                harness_source['filesystem'] = filesystem_identity(harness_src)
-            # What actually ran, in the name the curve point uses for the same function.
-            harness_source['harness_sha'] = content_sha(work)
-            _write_run_meta(run_dir, harness_source=harness_source)
-            problems = check_harness(work)
-            if problems:
-                raise ValueError('; '.join(p['detail'] for p in problems))
-        except (OSError, ValueError) as exc:
-            print(f'refusing --harness-path: {exc}', file=sys.stderr)
-            return 2
-    else:
-        try:
-            stage_workspace(harness_src, work)
-        except (OSError, TypeError, ValueError) as exc:
-            if not _managed_python_intent(harness_src):
-                raise
-            return _refuse_managed_source(run_dir, harness_src, exc)
-    man = manifest(work)
-    if not args.resume:
-        fixed_source_sha = commit_state(work, "fixed source before runtime preparation")
-        if has_python_runtime(work):
-            _save_round_state(run_dir, 0, work)
-            _snapshot_round(run_dir, 0, run_dir / "state_after_round0",
-                            run_id=run_id, harness_sha=fixed_source_sha)
-        preparation_started = time.monotonic()
-        try:
-            donor_binding = None
-            if args.harness_runtime_binding is not None:
-                donor_binding = candidate_runtime.validate(json.loads(args.harness_runtime_binding.read_text()))
-            elif args.side == "eval" and eval_from:
-                donor_binding = eval_from.get("harness_runtime_identity")
-            if args.h0_from:
-                donor_curve = Path(args.runs_root) / args.h0_from / "curve.jsonl"
-                if donor_curve.is_file():
-                    rows = [json.loads(line) for line in donor_curve.read_text().splitlines() if line.strip()]
-                    donor_binding = rows[0].get("harness_runtime_identity") if rows else None
-            preparation = candidate_runtime.prepare(
-                work, binding=donor_binding, envs=envs, setups=setups, sandbox=args.sandbox,
-                **({'extend_images': True} if args.side == 'eval' and args.from_run
-                   and (donor_binding or {}).get('kind') == 'python-placements' else {}))
-            selected_binding = None if preparation is None else preparation["identity"]
-            selected_binding = candidate_runtime.admit(
-                work, selected_binding, envs=envs, setups=setups, sandbox=args.sandbox)
-        except (OSError, TypeError, ValueError) as exc:
-            receipt = getattr(exc, "receipt", None) or {
-                "status": "failed", "error": str(exc),
-                "seconds": round(time.monotonic() - preparation_started, 6)}
-            candidate_runtime.record_preparation(run_dir, 0, receipt)
-            _write_run_meta(run_dir, harness_preparation=receipt,
-                            runtime_refusal={"stage": "harness runtime preparation", "detail": str(exc)})
-            console.note(f"refusing harness runtime preparation: {exc}", level="error")
-            return 2
-        if preparation is not None:
-            candidate_runtime.record_preparation(run_dir, 0, preparation)
-            args.harness_preparation = preparation
-        args.harness_runtime_identity = selected_binding
-        args.current_harness_runtime_identity = selected_binding
-        _write_run_meta(run_dir, **candidate_runtime.fields(selected_binding),
-                        harness_preparation=preparation)
+    workspace_ops = WorkspaceOps(stage=stage_workspace, commit=commit_state)
+    preparation_journal = PreparationJournal(run_dir, run_id, console)
     try:
-        current_external = external_runtime.identities(work)
-        _write_run_meta(run_dir, **external_runtime.fields(current_external))
-    except external_runtime.RuntimeUnavailable as exc:
-        console.note(f'refusing external actor runtime: {exc}', level='error')
+        man = stage_owned_source(OwnedSource(
+            harness_src, harness_source, source_receipt, reviewed_original,
+            args.expected_harness_sha256, args.expected_harness_filesystem_sha256,
+            getattr(args, '_resume_initial_source', None) is not None), work,
+            restored=resume_state is not None, ops=workspace_ops, journal=preparation_journal)
+        if not args.resume:
+            prepared = prepare_committed_candidate(work, PreparationOptions(
+                args.side, args.from_run, args.h0_from, Path(args.runs_root),
+                args.harness_runtime_binding, args.sandbox), envs=envs, setups=setups,
+                eval_from=eval_from, ops=workspace_ops, journal=preparation_journal)
+            if prepared.preparation is not None:
+                args.harness_preparation = prepared.preparation
+            args.harness_runtime_identity = prepared.binding
+            args.current_harness_runtime_identity = prepared.binding
+            preparation_journal.publish(prepared)
+        bind_external_candidate(work, preparation_journal)
+    except CandidateStageRefused as exc:
+        exc.report()
         return 2
     # `_check_env_kinds` already ran, against this same manifest read from the source --
     # see the note beside `envs, env_problem = _resolve_envs(envs)` for why it has to be
@@ -2188,22 +1043,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             improver=improver, after_evaluation=save_policy_receipt)
         if budget_binding is not None:
             _write_run_meta(run_dir, budget=budget_binding.metadata())
-        from harnessgrad.completion import describe as describe_completion
-        eval_curve = run_dir / 'curve.jsonl'
-        if result == 0 and eval_curve.is_file():
-            points = [json.loads(line) for line in eval_curve.read_text().splitlines() if line.strip()]
-            completion = describe_completion(points, requested_rounds=0)
-        else:
-            completion = {'status': 'incomplete', 'requested_rounds': 0, 'completed_rounds': 0,
-                'reason': 'held-out measurement did not complete', 'failed_rounds': [], 'coverage_complete': False}
-        _write_run_meta(run_dir, completion=completion, fail_on_incomplete=args.fail_on_incomplete)
-        console.note(f"{completion['status'].upper()}: held-out measurement; {completion['reason']}",
-                     level='warn' if completion['status'] == 'incomplete' else 'info')
-        if result == 0:
-            _write_end_summary(args, run_dir, eval_curve)
-        if args.fail_on_incomplete and completion['status'] == 'incomplete':
-            return 2
-        return result
+        return run_completion.finish_eval(run_completion.EvalFinishOptions(
+            args.fail_on_incomplete, _summary_options(args)), run_dir, result, console)
 
     cache: dict = {}
     # `env_generation_tokens` is its own axis rather than part of `generation_tokens`:
@@ -2237,153 +1078,31 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         baseline_state = run_dir / "state_after_round0"
         if baseline_state.is_dir():
             man = manifest(baseline_state)
+    h0_options = h0_planning.H0Options(args.dataset, args.sampling, args.side, args.trials,
+                                       args.jobs, args.gpu_budget, args.sandbox)
+    h0_identities = h0_planning.H0Identities(args.scoring_identity, args.dataset_runtime_identity,
+        args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity)
+    h0_attribution = h0_planning.RunAttribution(run_id, mode, improver)
     if resume_state is None:
-        h0_sha = commit_state(work, "H0")
+        h0_sha = h0_planning.commit_h0_source(work, commit_state)
         t0 = time.time()
-        # **The shared round 0.** This measurement is a method's first input, so if every run
-        # measures its own, batching non-determinism can hand one method a different number and
-        # a different trace set while the record still says they saw the same evidence.
-        # `--h0-from RUN` reuses one run's measurement for all of them.
         shared_point = None
-        if args.h0_from:
-            donor_dir = Path(args.runs_root) / args.h0_from
-            payload_path = donor_dir / "h0.json"
-            payload = None
-            if payload_path.is_file():
-                payload = json.loads(payload_path.read_text())
-                if payload.get("h0_sha") != h0_sha:
-                    print(f"refusing --h0-from {args.h0_from!r}: it measured base "
-                          f"{payload.get('h0_sha')!r}, this run's base is {h0_sha!r}",
-                          file=sys.stderr)
-                    return 2
-            donor_point = None
-            donor_curve = donor_dir / "curve.jsonl"
-            if donor_curve.is_file():
-                for line in donor_curve.read_text().splitlines():
-                    if line.strip():
-                        donor_point = json.loads(line)
-                        break
-            if donor_point is None:
-                print(f"refusing --h0-from {args.h0_from!r}: it has no curve point", file=sys.stderr)
-                return 2
-            agent = platform_config.current().agent
-            identity_problems = h0_identity.agent_problems(
-                donor_dir, donor_point, model=agent.model, backend=agent.backend,
-                endpoint=agent.base_url)
-            if identity_problems:
-                console.note(f"refusing --h0-from {args.h0_from!r}: " + "; ".join(identity_problems),
-                             level="error")
-                return 2
-            try:
-                dataset_runtime_identity.admit(args.dataset_runtime_identity)
-                donor_metadata = json.loads((donor_dir / "run_meta.json").read_text())
-                _require_verification_context(donor_metadata.get("verification_context"), args.verification_context)
-                _require_verification_context(donor_point.get("verification_context"), args.verification_context,
-                    list((donor_point.get("sampling") or {}).get("task_ids") or (donor_point.get("per_task") or {})))
-                dataset_runtime_identity.require_same(
-                    donor_metadata.get("dataset_runtime_identity"), args.dataset_runtime_identity)
-                dataset_runtime_identity.require_same(
-                    donor_point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
-                candidate_runtime.admit(work, args.harness_runtime_identity,
-                                        envs=envs, setups=setups, sandbox=args.sandbox)
-                external_runtime.admit_reuse(work, donor_point)
-                if payload is not None:
-                    external_runtime.admit_reuse(work, payload.get('base') or {})
-                candidate_runtime.require_same(
-                    donor_metadata.get("harness_runtime_identity"), args.harness_runtime_identity)
-                candidate_runtime.require_same(
-                    donor_point.get("harness_runtime_identity"), args.harness_runtime_identity)
-                scoring_identity.require_same(donor_point.get("scoring_identity"), args.scoring_identity)
-                if payload is not None:
-                    _require_verification_context(payload.get("verification_context"), args.verification_context)
-                    _require_verification_context((payload.get("base") or {}).get("verification_context"), args.verification_context)
-                    dataset_runtime_identity.require_same(
-                        payload.get("dataset_runtime_identity"), args.dataset_runtime_identity)
-                    dataset_runtime_identity.require_same(
-                        (payload.get("base") or {}).get("dataset_runtime_identity"),
-                        args.dataset_runtime_identity)
-                    candidate_runtime.require_same(
-                        payload.get("harness_runtime_identity"), args.harness_runtime_identity)
-                    candidate_runtime.require_same(
-                        (payload.get("base") or {}).get("harness_runtime_identity"),
-                        args.harness_runtime_identity)
-                    scoring_identity.require_same(payload.get("scoring_identity"), args.scoring_identity)
-            except (OSError, TypeError, ValueError) as exc:
-                console.note(f"refusing --h0-from {args.h0_from!r}: {exc}", level="error")
-                return 2
-            if payload is not None:
-                base = payload["base"]
+        try:
+            if args.h0_from:
+                donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
+                h0_planning.admit_h0_donor_records(donor, work, h0_identities, h0_options, setups=setups, envs=envs)
+                reused = h0_planning.materialize_shared_h0(
+                    donor, run_dir, h0_sha, man, h0_attribution, h0_options, console)
+                base, shared_point = reused.base, reused.point
             else:
-                # No raw payload: this run predates `h0.json`. Its own base sha is checked
-                # against `h0_sha` below -- through the point's identity -- and the number is
-                # the same number, so re-measuring it would only spend compute to produce a
-                # second value for one measurement.
-                if (donor_point.get("identity") or {}).get("harness_sha") != h0_sha:
-                    print(f"refusing --h0-from {args.h0_from!r}: its point measured base "
-                          f"{(donor_point.get('identity') or {}).get('harness_sha')!r}, this "
-                          f"run's base is {h0_sha!r}", file=sys.stderr)
-                    return 2
-                base = _base_from_point(donor_point)
-                console.note(f"{args.h0_from} has no h0.json; rebuilt the measurement from its "
-                             f"curve point (same base tree, same number)", level="info")
-            # The traces travel with the measurement: a method that reads a trace channel to
-            # decide what to edit must see the same traces as every other method.
-            donor_traces = donor_dir / "round0_traces"
-            if donor_traces.is_dir() and not (run_dir / "round0_traces").exists():
-                shutil.copytree(donor_traces, run_dir / "round0_traces")
-            # The method's trace channel is staged from the *dict*, not from the directory.
-            base["traces"], base["trial_traces"] = _read_trace_bodies(donor_traces)
-            # **The identity has two kinds of field, and they belong to different runs.** The
-            # measurement facts -- which tree, which agent model, which jobs and budget produced
-            # the number -- are the donor's, and copying them is the point. The *run* facts are
-            # not: `improver`, `skill_sha` and `method_model` describe who is proposing edges in
-            # **this** run, and the platform stages them into the method's `round.json`, which is
-            # how a method learns whether it has a CLI improver at all. Copying the donor's
-            # `improver: None` (the donor ran with `--improver none`) told all nine methods they
-            # had no CLI improver, so each fell back to the chat endpoint with a prompt sized for
-            # a CLI and died on the 16k window -- every method, every round 1, on 2026-10-17.
-            run_identity = _identity(man, h0_sha, mode, improver=improver,
-                                     jobs=args.jobs, trials=args.trials,
-                                     gpu_budget=args.gpu_budget)
-            merged_identity = dict(donor_point.get("identity") or {})
-            for key in ("improver", "skill_sha", "method_model"):
-                if key in run_identity:
-                    merged_identity[key] = run_identity[key]
-                else:
-                    merged_identity.pop(key, None)
-            shared_point = {**donor_point, "run_id": run_id, "identity": merged_identity,
-                            "shared_from": {"run_id": args.h0_from, "path": str(donor_dir),
-                                            "h0_sha": h0_sha,
-                                            # The donor's own measurement conditions, kept so a
-                                            # reader can tell "measured at jobs=13" from "this
-                                            # run's jobs".
-                                            "measured_with": {
-                                                "jobs": (donor_point.get("identity") or {}).get("jobs"),
-                                                "gpu_budget": (donor_point.get("identity") or {}).get("gpu_budget")}}}
-            console.note(f"round 0 reused from {args.h0_from} — one first score for every method",
-                         level="info")
-        else:
-            base = evaluate(work, tasks_all, scorable, cache, harness_sha=h0_sha,
-                            trials=args.trials, jobs=args.jobs, progress_dir=run_dir,
-                            sandbox=args.sandbox, setups=setups, verifiers=verifiers,
-                            **dataset_runtime_identity.fields(args.dataset_runtime_identity),
-                            **candidate_runtime.fields(args.current_harness_runtime_identity),
-                            verification_context=args.verification_context,
-                            envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
-                            recordings_root=run_dir / "recordings",
-                            **({"diagnostic_authorization": diagnostic_authorization}
-                               if diagnostic_authorization is not None else {}))
-            # Kept so a later run can share *this* measurement instead of repeating it.
-            try:
-                (run_dir / "h0.json").write_text(
-                    json.dumps({"base": base, "h0_sha": h0_sha, "run_id": run_id,
-                                **scoring_identity.fields(args.scoring_identity),
-                                **dataset_runtime_identity.fields(args.dataset_runtime_identity),
-                                **verification_context.fields(args.verification_context),
-                                **candidate_runtime.fields(args.harness_runtime_identity)}, default=str))
-            except (TypeError, OSError) as exc:
-                console.note(f"could not write h0.json ({exc}); this run cannot be a --h0-from "
-                             f"donor", level="warn")
+                base = h0_planning.measure_h0(evaluate, work, tasks_all, scorable, cache, h0_sha,
+                    h0_options, h0_identities, run_dir=run_dir, attribution=h0_attribution,
+                    run_seed=os.environ["HARNESSGRAD_SEED"], setups=setups, verifiers=verifiers, envs=envs,
+                    diagnostic_authorization=diagnostic_authorization)
+                h0_planning.write_raw_h0(run_dir, run_id, h0_sha, base, h0_identities, console)
+        except h0_planning.H0Refused as exc:
+            exc.report(console)
+            return 2
         if enforcement is not None:
             # Preserve raw execution/scorer facts with their comparison prohibition.
             # No aggregate score is published and the curve path below cannot run.
@@ -2409,63 +1128,25 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 f"{args.dataset!r} produced a scoreable result. The curve would have to "
                 f"report a score for a task set that was never measured.", level="error")
             return 2
-        cumulative["evaluation_trials"] += len(tasks_all)
-        cumulative["env_generation_tokens"] += (base.get("env_usage") or {}).get(
-            "input", 0) + (base.get("env_usage") or {}).get("output", 0)
+        # Donor cost belongs to the referenced measurement, not this invocation.
+        # No H0 evaluation means known zero new model/environment spend, even
+        # when the donor's historical usage is unknown.
+        if shared_point is None:
+            cumulative["evaluation_trials"] += len(tasks_all)
+            environment_tokens = _cost_of(base, len(tasks_all), 0)["env_generation_tokens"]
+            previous_environment_tokens = cumulative.get("env_generation_tokens")
+            cumulative["env_generation_tokens"] = (
+                previous_environment_tokens + environment_tokens
+                if previous_environment_tokens is not None and environment_tokens is not None else None)
         cumulative["wall_clock_s"] += time.time() - t0
 
-        # The sampling policy chooses what the run is *scored* on, within the run's own side.
-        # What it cost to learn those scores depends on the policy, and only one kind of policy
-        # needs the whole side:
-        #
-        # * `below_X` / `above_X` measure the whole eligible side at round 0, because the score
-        #   is the selection criterion. §2.1 fixes the selection at H0, so the whole side is paid
-        #   for exactly once, at round 0.
-        # * `diagnostic`, `pilot_10pct` and `random_N` need no scores at all, so they are already
-        #   narrowed before H0 (see the early block above) and round 0 costs what they cost.
-        # * from round 1 the method is shown only the selected subset (`train_ids` below). To
-        #   fix a subset for the *whole* run -- including round 0, which is what a study of "how
-        #   many study tasks does a capability need" wants -- pass `--tasks` or a `--split` file.
-        #
-        # The comment here used to claim the policy "does not reach into the train side" and that
-        # the cost was "all of train, every round". That described the eval-side-only version of
-        # this call; both sentences had been false since `within` became the run's own side, and
-        # the second one sent a reader looking for a cost that is not paid.
-        #
-        # `tasks_all` was narrowed to the side before round 0, so the policy selects within it and
-        # `within` can never reach across -- the cross-side leak this guards against is not a rule
-        # here, it is an absence of the other side.
-        if args.sampling in ("diagnostic", "pilot_10pct"):
-            task_ids = list(side_ids)
-        else:
-            task_ids = select_task_set(base["per_task"], args.sampling,
-                                       within=(side_ids or None))
-        if not task_ids:
-            console.note(f"sampling policy {args.sampling!r} selected no tasks on H0",
-                         level="error")
+        try:
+            h0_selection = h0_planning.select_after_h0(base, tasks_all, side_ids, split, h0_options, console)
+        except h0_planning.H0Refused as exc:
+            exc.report(console)
             return 2
-        # A train run's scored set **is** its diagnostics set: the method is shown the tasks
-        # it is scored on, which is what training means and is exactly why the exam has to be
-        # a different run. An eval run has no method at all (see the `--side eval` path), so
-        # this is only ever populated for `train`.
-        train_ids = list(task_ids) if args.side == "train" else []
-        tasks = [t for t in tasks_all if t["task_id"] in set(task_ids + train_ids)]
-        sampling = {"dataset": args.dataset, "policy": args.sampling, "task_ids": task_ids,
-                    "selection_basis_round": 0,
-                    "selected_within": args.side if split else "all"}
-        if split and len(task_ids) < 8:
-            # Not a warning about the platform, a warning about the number the reader is
-            # about to see. `task_ids` is what *this run* scores -- on a train run that is
-            # the train side, on an eval run the exam -- so the wording has to stay
-            # side-neutral. It used to say "eval side is N tasks" while printing the run's
-            # own task count: a one-task train run announced "eval side is 1 tasks" about a
-            # 37-task exam, which reads as a measurement of the wrong thing.
-            #
-            # A 2-task run moves in steps of 0.5, and a 0.5 step read as a result is the
-            # most expensive mistake this console can help someone avoid.
-            console.note(
-                f"this run scores {len(task_ids)} tasks — the score moves in steps of "
-                f"{1.0 / len(task_ids):.3f}", level="warn")
+        task_ids, train_ids = h0_selection.task_ids, h0_selection.train_ids
+        tasks, sampling = h0_selection.tasks, h0_selection.sampling
     else:
         base = resume_state["base"]
         h0_sha = resume_state["h0_sha"]
@@ -2499,39 +1180,18 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         # The donor's point verbatim except for the id: its `identity` describes *how that
         # number was produced* (jobs, budget, model), which is the honest record, and
         # `shared_from` says which run produced it.
+        shared_point["current_run_cost"] = {
+            "version": 1, "source": "shared_h0_no_execution", "evaluation_trials": 0,
+            "harness_tokens": 0, "harness_model_calls": 0, "env_generation_tokens": 0,
+            "wall_clock_s": cumulative["wall_clock_s"]}
         curve = [shared_point]
     else:
-        curve = [_curve_point(
-            run_id=run_id, round_index=0,
-            identity=_identity(man, h0_sha, mode, improver=improver,
-                                declared=base.get("identity_declared"),
-                                jobs=args.jobs, trials=args.trials,
-                                gpu_budget=args.gpu_budget),
-            sampling=sampling,
-            scoring_identity=args.scoring_identity,
-            dataset_runtime_identity=args.dataset_runtime_identity,
-            harness_runtime_identity=args.harness_runtime_identity,
-            verification_context=verification_context.project(base.get("verification_context"), task_ids),
-            scores=[base["per_task"][t] for t in _scored(base, task_ids)],
-            task_ids=_scored(base, task_ids),
-            train_scores=[base["per_task"][t] for t in _scored(base, train_ids)],
-            train_ids=_scored(base, train_ids), split=split,
-            invalid=base.get("invalid"),
-            harness_failed=base.get("harness_failed"),
-            model_gateway=base.get("model_gateway"),
-            harness_runtime=base.get("harness_runtime"),
-            evaluation_protocols=base.get("evaluation_protocols"),
-            env_record=_env_record(envs, task_ids),
-            cost=_cost_of(base, len(tasks_all), cumulative["wall_clock_s"]),
-            cumulative=cumulative, label="H0 (base harness)",
-            n_trials=base.get("trials"), score_std=base.get("score_std"),
-            per_task_std=base.get("per_task_std"),
-            per_task_trials=base.get("per_task_trials"),
-            cached_tasks=base.get("cached_tasks"),
-            **test_rate_fields(base))]
+        curve = [h0_planning.build_h0_point(base, h0_sha, man, h0_attribution, h0_options,
+            h0_identities, h0_selection, split, envs, cumulative, len(tasks_all))]
     if resume_state is None and args.harness_preparation is not None:
         curve[0]["harness_preparation"] = args.harness_preparation
-        curve[0]["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
+        current_cost = curve[0]["current_run_cost"] if shared_point is not None else curve[0]["cost"]
+        current_cost["harness_preparation_wall_clock_s"] = preparation_seconds
     # The base harness is always evaluated by the platform, so its point is a
     # platform measurement like any other. Leaving the field unset made the
     # exported record claim the score was the method's -- the opposite of true.
@@ -2597,23 +1257,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # the console prints the table it describes. This is the only call site -- a refusal,
     # an exception or a run that measured no curve never reaches it -- and a failure inside
     # it is one line on stderr that never reaches the exit code (`_write_end_summary`).
-    from harnessgrad.completion import describe as describe_completion
-    final_meta = json.loads((run_dir / 'run_meta.json').read_text())
-    completion = describe_completion(curve, requested_rounds=args.rounds,
-        failed_steps=final_meta.get('failed_steps') or [], method_stopped=final_meta.get('method_stopped', False))
-    _write_run_meta(run_dir, completion=completion, fail_on_incomplete=args.fail_on_incomplete)
-    label = completion['status'].upper()
-    console.note(f"{label}: {completion['completed_rounds']}/{completion['requested_rounds']} "
-                 f"improvement rounds; {completion['reason']}",
-                 level='warn' if completion['status'] == 'incomplete' else 'info')
-    summary_path = _write_end_summary(args, run_dir, curve_path)
-    console.results(curve, split=split)
-    console.artifact("curve", curve_path)
-    if summary_path is not None:
-        console.artifact("summary", summary_path)
-    console.artifact("workspace", work)
-    console.artifact("events", run_dir / "events.jsonl")
-    return 2 if args.fail_on_incomplete and completion['status'] == 'incomplete' else 0
+    return run_completion.finish_train(run_completion.TrainFinishOptions(
+        args.rounds, args.fail_on_incomplete, _summary_options(args)), run_dir, curve_path, curve, split, work, console)
 
 
 def main() -> int:

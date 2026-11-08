@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from loop_runtime_fixtures import prepared_loop_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -236,7 +237,7 @@ def test_an_unchanged_tree_is_measured_once_and_says_so(tmp_path):
     assert sorted(r1["cached_tasks"]) == sorted(r0["per_task"]), r1["cached_tasks"]
 
 
-def test_a_changed_tree_is_not_a_cache_hit(tmp_path):
+def test_a_changed_tree_is_not_a_cache_hit(tmp_path, prepared_loop_runtime):
     """反向的一半:树真的变了就必须重新测,`n_cached` 不能把它吃掉。
 
     否则这条修法会把"方法改好了"也一起缓存掉 —— 那比白花钱严重得多。

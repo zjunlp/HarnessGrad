@@ -140,8 +140,8 @@ module from the same file.
 ## Extracted helper boundaries
 
 The current graph also scans `console/`. The historical counts above describe
-those revisions and are not current inventories. Four small extracted modules
-have exact dependency sets in `EXTRACTED_UNIT_IMPORTS` in the guard:
+those revisions and are not current inventories. Extracted modules have exact
+dependency sets in `EXTRACTED_UNIT_IMPORTS` in the guard. The initial leaves are:
 
 | Module | Repository imports | Other imports |
 | --- | --- | --- |
@@ -150,9 +150,39 @@ have exact dependency sets in `EXTRACTED_UNIT_IMPORTS` in the guard:
 | `harnessgrad.entrypoints.experiment_config` | `harnessgrad.config`, `harnessgrad.experiments` | `__future__`, `pathlib` |
 | `harnessgrad.entrypoints.run_parser` | `harnessgrad.entrypoints.experiment_config` | `__future__`, `argparse`, `collections.abc`, `pathlib` |
 
-The guard rejects other imports, including nested/conditional imports, rather
-than granting these helpers access to their composition roots or subprocess
-execution. A new dependency needs review of the helper's responsibility and a
+The same guard now covers selected-dataset planning, owned source leases,
+committed-candidate preparation, historical readers, deferred resume and H0 planning,
+evaluator admission/cache decisions, per-task trial journals, scheduling, result
+reduction, usage and actor environment/spec/execution, and Console
+query/comparison/path/serialization/snapshot modules,
+plus settings, catalogues, launch composition, candidate custody/trials,
+workbench edits, explanation/cache, submission control, authored bundles and
+HTTP adapters.
+These consumers retain only their reviewed canonical contracts and reader ports;
+they cannot import driver, server or the runner composition root. Direct-file
+Console import spellings are allowed only beside their package spellings.
+`console.run_query` retains `subprocess` for its bounded, read-only GNU diff
+operation. `console.launch` uses its constants for a single detached spawn through
+an explicit caller-supplied port. `console.settings` owns the separately requested
+HTTP endpoint probe; launch validation and preview never invoke it. These exact
+capabilities do not authorize process or transport imports in the other helpers.
+Candidate trials and workbench edits retain blocking invocation ports and use
+`subprocess` for timeout handling. Authored bundles retain their explicit process
+port and subprocess exception handling. Candidate storage imports the canonical
+submission archive policy and loads configured platform recovery helpers;
+it never imports candidate code or the server.
+The resume owner uses `subprocess.CalledProcessError` for the existing workspace
+operation refusal boundary. Its historical reader dependency is a leaf and does
+not import resume, loops or driver.
+Explanation owns the reviewed HTTP client; transport owns the HTTP handler base.
+Submission control receives its backend factory explicitly. None imports server,
+starts a listener at import time or replaces the canonical submission worker.
+Actor payload builders allocate no resources. The environment owner receives a
+credential-name callback; it cannot import the improver CLI or runner. Backend
+execution uses explicit call-time ports and does not take over task cleanup.
+
+The guard rejects other imports, including nested/conditional imports. A new
+dependency needs review of the helper's responsibility and a
 focused change to this mapping. The guard is static: it does not prove absence
 of dynamic import, filesystem side effects or execution through a called function.
 Compatibility aliases and canonical monkeypatch ownership are described in the

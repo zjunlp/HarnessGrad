@@ -98,6 +98,10 @@ def _no_loadable_change(changed: list[str], unreachable: list[str]) -> dict | No
 
 def _matching_verification_context(point, current):
     """Compare only the current task set; absent or malformed evidence is not reusable."""
+    # A rejected attempt may retain its planned input identity, but has no
+    # measurement to reuse even if a record also claims a score.
+    if point.get("unmeasured") or point.get("measured_by_platform") is False:
+        return False
     if current is None or point.get("verification_context") is None:
         return False
     try:
@@ -898,8 +902,12 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 if getattr(args, 'dataset_runtime_identity', None) is not None
                 else (res or {}).get('dataset_runtime_identity')),
             harness_runtime_identity=actor_binding,
-            verification_context=(verification_context_mod.project(res.get("verification_context"), task_ids)
-                                  if res and res.get("verification_context") is not None else None),
+            # Pre-execution refusals still belong to this run's planned input
+            # identity. This does not supply evidence for a missing measurement:
+            # any actual result must provide its own verified context.
+            verification_context=verification_context_mod.project(
+                res.get("verification_context") if res is not None
+                else getattr(args, "verification_context", None), task_ids),
             scores=[res["per_task"][t] for t in _scored(res, task_ids)],
             task_ids=_scored(res, task_ids),
             train_scores=[res["per_task"][t] for t in _scored(res, train_ids)],

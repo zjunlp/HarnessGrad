@@ -135,8 +135,10 @@ remain, for a fast local loop.
 
 Read [architecture](architecture.md#small-unit-extraction-stage-and-remaining-responsibilities)
 and [import direction](import-direction.md) before moving code from `driver.py`,
-`console/server.py` or `eval/run/runner.py`. The current stage extracts argument
-configuration, record projection and outcome interpretation only. Linux acceptance
+`console/server.py` or `eval/run/runner.py`. Current extracted responsibilities include
+argument configuration, selected-dataset planning, evaluation admission/cache,
+source leases and committed-candidate preparation, trial journals/scheduling,
+record projection and Console query/settings/launch services. Linux acceptance
 remains tracked separately in [remaining work](linux-runtime-remaining.md).
 
 Start with the canonical unit's interface, callers and tests. Keep dependencies
@@ -153,6 +155,10 @@ python -m pytest -q --basetemp=/tmp/hg-extracted-units \
   tests/quality/test_import_direction.py tests/quality/test_boundaries.py \
   tests/quality/test_eval_package_compat.py tests/quality/test_outcomes.py \
   tests/quality/test_console_record_reader.py tests/quality/test_run_parser.py \
+  tests/quality/test_selected_run_plan.py tests/quality/test_evaluation_admission_plan.py \
+  tests/quality/test_console_query_service.py tests/quality/test_console_range_diff_boundary.py \
+  tests/quality/test_console_launch_service.py tests/quality/test_trial_worker_contract.py \
+  tests/quality/test_source_candidate_stage.py tests/quality/test_post_execution_usage_retention.py \
   tests/quality/test_cli_entry.py tests/quality/test_experiments.py
 ```
 
@@ -163,10 +169,17 @@ Report exact commands, pass/skip counts and scope. These checks establish local
 syntax, dependency and fixture contracts; they do not establish real model,
 Docker, benchmark or Linux isolation/lifecycle acceptance.
 
+The [Loop SDK fixture guide](../tests/quality/loop_runtime_fixtures.md) explains
+explicit offline cache or wheelhouse preparation for the genuine locked SDK.
+Native controls run the platform in a separate pip-free venv and check that its
+private packages stay hidden from the actor. Container controls additionally
+require their exact local images; a native pass does not cover those placements.
+
 Before any later migration, name the complete responsibility being moved and
 its dependency ports, inspect callers and monkeypatch targets, and retain the
-selection -> identity capture -> admission -> workspace/commit -> measurement
-ordering documented in architecture. Preserve historical record shapes, measured
+partial ordering documented in architecture: selected dataset identity before
+durable claim; actor-runtime binding after fixed-source staging/commit; score
+publication after measurement. Preserve historical record shapes, measured
 versus invalid outcomes, unknown costs, actor/verifier privacy and cleanup on
 partial startup. Require the applicable Linux gate receipts before splitting
 those execution closures. Do not combine a large move with a scoring/schema or

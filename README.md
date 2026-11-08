@@ -178,6 +178,8 @@ python console/server.py --port 4460
 
 Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from the repository root after an experiment has created `runs/`, or point `HG_CONSOLE_RUNS` to another existing run-record directory. The Console binds to localhost by default.
 
+See the [editor setup and session guide](console/WORKBENCH.md) for Codex and DSH configuration.
+
 <details>
 <summary>🖥️ See the Console</summary>
 <br>

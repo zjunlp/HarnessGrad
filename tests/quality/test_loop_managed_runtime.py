@@ -16,11 +16,12 @@ import venv
 
 import pytest
 
+from loop_runtime_fixtures import prepared_loop_runtime
+
 from eval.containers import container
 from eval.run import runner
 from eval.service import container_observation
 from harnessgrad import candidate_runtime, config, python_exec_runtime as runtime
-from harnessgrad import python_harness_runtime as native
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT/'base_harness/loop'
@@ -33,37 +34,37 @@ SHELL_CONTROL = (
 
 
 @pytest.fixture(scope='module')
-def loop_store():
-    if not shutil.which('uv') or not shutil.which('bwrap'):
-        pytest.skip('Loop controls require uv, bubblewrap and cached locked wheels')
-    root = Path(tempfile.mkdtemp(prefix='hg-loop-test-', dir=Path.home()/'.cache'))
-    try:
-        with pytest.MonkeyPatch.context() as patch:
-            patch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
-            patch.setenv('UV_OFFLINE', '1')
-            patch.setenv('UV_PYTHON_DOWNLOADS', 'never')
-            config.reset()
-            runtime.prepare(HARNESS, build=True, root=root/'store')
-        yield root
-    finally:
-        config.reset()
-        native.remove_instance(root)
-
+def loop_store(prepared_loop_runtime):
+    return prepared_loop_runtime
 
 @pytest.fixture
 def managed_loop(loop_store, tmp_path, monkeypatch):
     for key in list(os.environ):
-        if key.startswith(('HG_AGENT_', 'HG_METHOD_', 'HG_HARNESS_')):
+        if key.startswith(('HG_AGENT_', 'HG_METHOD_', 'HG_HARNESS_')) and key != 'HG_HARNESS_WHEELHOUSE':
             monkeypatch.delenv(key)
+    # Synthetic loopback controls must not consume the operator's proxy setup.
+    for key in ('HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY',
+                'http_proxy','https_proxy','all_proxy','no_proxy'):
+        monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
-    monkeypatch.setenv('HG_HARNESS_RUNTIME_ROOT', str(loop_store/'store'))
+    monkeypatch.setenv('HG_HARNESS_RUNTIME_ROOT', str(loop_store.store))
     monkeypatch.setenv('UV_OFFLINE', '1')
     monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
     monkeypatch.setenv('HG_AGENT_MAX_STEPS', '3')
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(tmp_path))
+    platform = loop_store.root / ('platform-' + uuid.uuid4().hex)
+    venv.EnvBuilder(with_pip=False).create(platform)
+    site = next(platform.glob('lib/python*/site-packages'))
+    (site/'hg_loop_platform_canary.py').write_text("VALUE='private-platform-canary'\n")
+    (platform/'private-platform-canary.txt').write_text('private-platform-canary')
+    check = subprocess.run([str(platform/'bin/python'), '-I', '-B', '-c',
+        "import sys,hg_loop_platform_canary;assert sys.prefix!=sys.base_prefix;"
+        "assert hg_loop_platform_canary.VALUE=='private-platform-canary'"], capture_output=True, text=True)
+    assert check.returncode == 0, check.stderr
+    monkeypatch.setenv('HG_LOOP_TEST_PLATFORM', str(platform))
     config.reset()
     try:
-        yield SimpleNamespace(root=loop_store)
+        yield SimpleNamespace(root=loop_store.root)
     finally:
         config.reset()
 
@@ -78,7 +79,7 @@ def loop_images(loop_store):
     except container.ContainerUnavailable as exc:
         pytest.skip('import the authored-control base images first: '+str(exc))
     with pytest.MonkeyPatch.context() as patch:
-        patch.setenv('HG_HARNESS_RUNTIME_ROOT', str(loop_store/'store'))
+        patch.setenv('HG_HARNESS_RUNTIME_ROOT', str(loop_store.store))
         patch.setenv('UV_OFFLINE', '1')
         patch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
         config.reset()
@@ -139,11 +140,39 @@ except OSError:
  'task_dependency_visible':_u.find_spec('hg_loop_image_dependency') is not None,
  'task_path_dependency_visible':_u.find_spec('hg_loop_path_dependency') is not None,
  'platform_visible':_P(PLATFORM_PREFIX).exists(),
+ 'platform_package_visible':_u.find_spec('hg_loop_platform_canary') is not None,
+ 'platform_canary_visible':(_P(PLATFORM_PREFIX)/'private-platform-canary.txt').exists(),
+ 'base_prefix':_s.base_prefix,'stdlib_json':_j.__file__,
  'private_visible':(_work/'verifier-private.txt').exists(),
  'entrypoint':_o.environ.get('HG_AUTHORED_IMAGE_ENTRYPOINT'),
  'startup_ready':(_work/'entrypoint-ready').is_file(),
  'python_env':{k:v for k,v in _o.environ.items() if k in ('PYTHONPATH','PYTHONHOME','PYTHONUSERBASE')}}))
-'''.replace('PLATFORM_PREFIX',repr(sys.prefix))
+'''
+
+
+def _cold_run_one(repo, task, **kwargs):
+    platform = Path(os.environ['HG_LOOP_TEST_PLATFORM'])
+    with tempfile.TemporaryDirectory(prefix='hg-loop-driver-') as directory:
+        directory = Path(directory)
+        request, output = directory/'request.json', directory/'result.json'
+        request.write_text(json.dumps({'repo': str(repo), 'task': task, 'kwargs': kwargs}))
+        code = """
+import json,sys
+from pathlib import Path
+import hg_loop_platform_canary
+assert sys.prefix!=sys.base_prefix
+assert hg_loop_platform_canary.VALUE=='private-platform-canary'
+sys.path.insert(0,sys.argv[1])
+from eval.run.runner import run_one
+r=json.loads(Path(sys.argv[2]).read_text())
+result=run_one(Path(r['repo']),r['task'],**r['kwargs'])
+Path(sys.argv[3]).write_text(json.dumps(result))
+"""
+        completed = subprocess.run([str(platform/'bin/python'), '-I', '-B', '-c', code,
+            str(ROOT), str(request), str(output)], capture_output=True, text=True, timeout=180)
+        assert completed.returncode == 0, completed.stdout+completed.stderr
+        assert (platform/'private-platform-canary.txt').read_text() == 'private-platform-canary'
+        return json.loads(output.read_text())
 
 
 def source_with_probe(tmp_path, *, sdk_mock=False, command=SHELL_CONTROL):
@@ -151,7 +180,8 @@ def source_with_probe(tmp_path, *, sdk_mock=False, command=SHELL_CONTROL):
     shutil.copytree(HARNESS,source)
     entry=source/'agent.py'
     entry.write_text(entry.read_text().replace('from __future__ import annotations\n',
-                    'from __future__ import annotations\n'+PROBE,1))
+                    'from __future__ import annotations\n'+PROBE.replace(
+                        'PLATFORM_PREFIX',repr(os.environ['HG_LOOP_TEST_PLATFORM'])),1))
     entry.write_text(entry.read_text().replace('    run(task, Path(args.workdir))',
         '''    run(task, Path(args.workdir))
     _row=_j.loads((_work/'runtime-probe.json').read_text())
@@ -209,11 +239,12 @@ print(json.dumps(value))
 
 
 @pytest.mark.parametrize('placement',['files','image-mount','fallback-mount','image-container','fallback-container'])
-def test_real_loop_sdk_shell_and_private_scorer(managed_loop,loop_images,tmp_path,monkeypatch,placement):
+def test_real_loop_sdk_shell_and_private_scorer(managed_loop,tmp_path,monkeypatch,placement,request):
     source=source_with_probe(tmp_path,sdk_mock=placement!='files')
     if placement=='files':
         env={'kind':'files','network':'none'}
     else:
+        loop_images=request.getfixturevalue('loop_images')
         image=loop_images['absent' if placement.startswith('fallback') else 'python']
         env={'kind':'exec','image':image,'workdir':'/work','network':'none'}
         if placement.endswith('container'):
@@ -238,7 +269,7 @@ assert Path('answer.txt').read_text().strip()=='LOOP_CONTROL'
 assert Path('tool-control.txt').read_text()=='LOOP_CONTROL'
 assert row['isolated'] and row['readonly'] and row['write_denied']
 assert row['previous']==[False,False] and row['python_env']=={}
-assert not any(row[k] for k in ('pytest_visible','platform_visible','private_visible'))
+assert not any(row[k] for k in ('pytest_visible','platform_visible','platform_package_visible','platform_canary_visible','private_visible'))
 assert importlib.util.find_spec('openai') is None
 assert not Path(ACTOR_PYTHON).exists()
 print('SDK, actual shell, readonly artifact and private scorer verified')
@@ -259,7 +290,7 @@ print('SDK, actual shell, readonly artifact and private scorer verified')
         monkeypatch.setenv('HG_AGENT_BASE_URL',base)
         monkeypatch.setenv('HG_AGENT_API_KEY','authored-loop-key')
         monkeypatch.setenv('HG_AGENT_MODEL','authored-loop-model')
-        result=runner.run_one(source,{'task_id':'t','goal':'Write a short final answer.'},env=env,
+        result=_cold_run_one(source,{'task_id':'t','goal':'Write a short final answer.'},env=env,
             verifier=verifier,timeout_s=60,verify_timeout_s=30,run_id='authored-loop-control',
             observation=observation,harness_runtime_identity=binding)
     (tmp_path/'result.json').write_text(json.dumps(result,indent=2))
@@ -283,9 +314,14 @@ print('SDK, actual shell, readonly artifact and private scorer verified')
         # The fallback supplies the actor, not a new task Python installation.
         assert row['child_python']=='PYTHON_ABSENT'
     assert row['prefix']==artifact['path'] and row['isolated']
+    assert row['base_prefix'] != row['prefix']
+    manifest=json.loads(Path(artifact['manifest_path']).read_text())
+    base=manifest['base'] if selected['base'] else manifest['base_python']
+    assert row['base_prefix']==base['base_prefix']
+    assert Path(row['stdlib_json']).is_relative_to(row['base_prefix'])
     assert row['readonly'] and row['write_denied'] and row['previous']==[False,False]
     assert row['python_env']=={} and not any(row[key] for key in
-           ('pytest_visible','platform_visible','private_visible'))
+           ('pytest_visible','platform_visible','platform_package_visible','platform_canary_visible','private_visible'))
     if placement!='files':
         assert row['sdk_calls']==2
     if selected['base']:
@@ -335,8 +371,9 @@ def test_shipped_loop_h0_and_snapshot_resume(managed_loop,tmp_path,request):
 
 @pytest.mark.parametrize('kind',['files','exec'])
 def test_tasks_reuse_readonly_dependencies_and_start_with_private_state(
-        managed_loop,loop_images,tmp_path,monkeypatch,kind):
+        managed_loop,tmp_path,monkeypatch,kind,request):
     source=source_with_probe(tmp_path,sdk_mock=True)
+    loop_images=request.getfixturevalue('loop_images') if kind=='exec' else None
     env=({'kind':'files','network':'none'} if kind=='files' else
          {'kind':'exec','image':loop_images['python'],'workdir':'/work','network':'none'})
     binding=candidate_runtime.prepare(source,envs={'t':env})['identity']
@@ -347,7 +384,7 @@ def test_tasks_reuse_readonly_dependencies_and_start_with_private_state(
                  if kind=='exec' else None)
     rows=[]
     for index in range(2):
-        result=runner.run_one(source,{'task_id':f'private-{index}','goal':'Write an answer.'},env=env,
+        result=_cold_run_one(source,{'task_id':f'private-{index}','goal':'Write an answer.'},env=env,
             verifier={'kind':'answer','expected':'LOOP_CONTROL'},observation=observation,
             harness_runtime_identity=binding,timeout_s=60,run_id='authored-loop-state')
         assert not result.get('invalid') and result['exit_code']==0,result
@@ -527,7 +564,7 @@ print(json.dumps({'python':sys.executable,'prefix':sys.prefix,'path':os.environ[
                     "r=json.loads(Path('task-environment.json').read_text()); "
                     "assert r['dependency']=='IMAGE_DEPENDENCY_OK' and r['extra']=='IMAGE_PATH_OK'; "
                     "assert importlib.util.find_spec('openai') is None")]}
-    result=runner.run_one(source,{'task_id':'task-environment','goal':'Write an answer.'},
+    result=_cold_run_one(source,{'task_id':'task-environment','goal':'Write an answer.'},
         env=env,verifier=verifier,observation=observation,harness_runtime_identity=binding,
         timeout_s=60,run_id='authored-task-env-'+state)
     (tmp_path/'result.json').write_text(json.dumps(result,indent=2))
@@ -539,7 +576,7 @@ print(json.dumps({'python':sys.executable,'prefix':sys.prefix,'path':os.environ[
     assert row['python']==artifact['python'] and row['prefix']==artifact['path']
     assert row['isolated'] and row['readonly'] and row['write_denied'] and row['sdk_calls']==2
     assert not row['task_dependency_visible'] and not row['task_path_dependency_visible']
-    assert not row['platform_visible'] and not row['pytest_visible']
+    assert not any(row[k] for k in ('platform_visible','platform_package_visible','platform_canary_visible','pytest_visible'))
     task=row['task_environment']
     assert task['python']==row['child_python']!=artifact['python']
     assert task['prefix']==task_python_image['prefix']
@@ -573,7 +610,7 @@ def test_managed_actor_preserves_the_image_entrypoint(managed_loop,loop_images,t
         monkeypatch.setenv('HG_AGENT_MODEL','authored-loop-model')
         monkeypatch.setenv('HG_AGENT_API_KEY','authored-key')
         observation=container_observation.observe_for(image,env,network='none',read_only=state!='container').receipt()
-        result=runner.run_one(source,{'task_id':'entrypoint','goal':'Write an answer.'},env=env,
+        result=_cold_run_one(source,{'task_id':'entrypoint','goal':'Write an answer.'},env=env,
             verifier={'kind':'command','argv':['sh','-c',
                 'test "$(cat answer.txt)" = LOOP_CONTROL && test -f entrypoint-ready']},observation=observation,
             harness_runtime_identity=binding,timeout_s=60,run_id=name)

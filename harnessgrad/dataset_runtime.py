@@ -19,6 +19,7 @@ import platform
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -290,6 +291,20 @@ def _admit(name, spec, folder):
     return _verify_manifest(name, spec, manifest_path, ready["runtime_id"])
 
 
+def _admit_base_executable(venv, base):
+    """Check physical interpreter custody and bytes before executing any probe.
+
+    The venv inventory records symlink text, not the external base's contents.
+    Keep the later live probe for version, prefix and exact package admission.
+    """
+    executable = Path(base["executable"])
+    if (not executable.is_absolute() or executable.resolve(strict=True) != executable
+            or (venv / "bin/python").resolve(strict=True) != executable
+            or not stat.S_ISREG(executable.stat().st_mode)
+            or _digest(executable) != base["sha256"]):
+        raise ValueError("runtime base interpreter changed")
+
+
 def _verify_manifest(name, spec, manifest_path, runtime_id):
     """Validate an exact artifact; the mutable discovery index is not consulted."""
     manifest_path = Path(manifest_path)
@@ -312,6 +327,7 @@ def _verify_manifest(name, spec, manifest_path, runtime_id):
     _store(venv)  # Exact bindings must not bypass the outside-platform rule.
     if _inventory(venv) != manifest["files"]:
         raise ValueError("runtime file inventory changed")
+    _admit_base_executable(venv, manifest["base_python"])
     probe = _probe(venv / "bin/python")
     base = _execution_base(probe) if execution else _base(probe)
     if base != manifest["base_python"]:

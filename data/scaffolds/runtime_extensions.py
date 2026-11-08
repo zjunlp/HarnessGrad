@@ -106,9 +106,19 @@ def validate_native_benchmark(spec):
             or not re.fullmatch('[a-f0-9]{64}', str(declaration.get('case_sha256', '')))):
         raise ValueError('native_benchmark requires a supported dataset and private case SHA256')
     name = declaration['dataset']
-    if (spec.get('kind') != 'command' or spec.get('argv') != ['harnessgrad-native', name]
-            or any(key in spec for key in ('judge', 'native_runtime', 'container_runtime', 'scorer_bundle', 'runtime_paths'))
+    if (spec.get('kind') != 'command'
+            or any(key in spec for key in ('judge', 'native_runtime', 'container_runtime', 'scorer_bundle'))
             or spec.get('result_contract') != {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}):
+        raise ValueError('native_benchmark requires its fixed command/result contract and no other runtime')
+    if name in {'deepswe', 'jobbench', 'swe_bench_pro'}:
+        from harnessgrad.dataset_runtime import validate_binding
+        selected = validate_binding(spec.get('python_runtime'), 'verifier')
+        entry = Path(__file__).resolve().with_name('native_harbor_runtime') / 'harbor_entry.py'
+        if (selected['dataset'] != 'native_harbor'
+                or spec.get('runtime_paths') != selected['runtime_paths']
+                or spec.get('argv') != [selected['python'], '-I', '-B', str(entry)]):
+            raise ValueError('native Harbor requires its bound verifier and fixed trusted entrypoint')
+    elif spec.get('argv') != ['harnessgrad-native', name] or 'runtime_paths' in spec:
         raise ValueError('native_benchmark requires its fixed command/result contract and no other runtime')
     binding = spec.get('scorer_input')
     if (not isinstance(binding, dict) or not binding.get('task_id')

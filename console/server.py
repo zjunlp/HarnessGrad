@@ -1,49 +1,17 @@
 #!/usr/bin/env python3
-"""实验台 · 观察 API 与受守卫保护的实验启动器。
+"""Console configuration, service composition and loopback HTTP startup.
 
-三个刻意的限制，都是为了**不干扰正在跑的实验**：
+Public functions retain compatibility delegates to their canonical service
+owners. Request-time ports carry configured roots, authorization, settings and
+process capabilities; query and explanation caches each have one app owner.
 
-1. **观察面只读，启动面受守卫保护**。实验、轨迹、版本都只读；`/launch.html`
-   只有在服务端预检查通过且用户二次确认后才允许启动一次 run。
-2. **只绑 127.0.0.1**。它是这台机器上的工具，不是服务。
-3. **不缓存到磁盘**。列表只在内存里缓存 2 秒，避免边跑边看时反复读 299 个目录。
-   唯一的例外是 `/api/explain` 的模型回复：它按
-   `(run, round, harness_sha, model, prompt_sha)` 落在 `.cache/explain/*.json`，
-   因为一次模型调用很贵；解释请求必须使用 JSON POST，HTTP 响应不缓存。
+Observation reads stored records without inventing missing scores or costs.
+Mutations use explicit launch, candidate, workbench, author and submission APIs.
+The listener is restricted to 127.0.0.1. Existing receipt roots are selected by
+HG_CONSOLE_RUNS and are never discovered, created or migrated implicitly.
 
-主界面有三屏（实验 / 轨迹 / 版本），另有一个独立对话/启动页。下面标了
-**not surfaced** 的接口是保留但没有任何界面在用的只读端点。
-
-读取接口（GET）：
-    /api/health                     平台 sha、在跑的 driver、磁盘余量、run 计数
-    /api/runs?kind=study|eval|unknown|""  列表（派生字段：轮数、最好、状态、进度）
-    /api/runs/<id>                  曲线 + identity + 每轮摘要
-    /api/runs/<id>/rounds/<n>       patch + 文件列表 + 轨迹/判定数
-    /api/runs/<id>/rounds/<n>/file?path=agent.py
-    /api/methods                    [not surfaced] 方法语料 + 校验状态 + 额外文件
-    /api/methods/<name>             [not surfaced] 一个方法的元数据 + 文件清单
-    /api/methods/<name>/file?path=  [not surfaced] 方法文件正文（带上限；只读）
-    /api/protocol                   [not surfaced] methods/protocol.py 的 docstring
-    /api/base                       base_harness/loop 的文件清单（起点）
-    /api/base/file?path=agent.py    base_harness/loop 的文件正文（只读）
-    /api/base-harnesses             [not surfaced] base_harness/*/ 的清单
-    /api/base-harness/file?name=&path=  [not surfaced] 某个基线的文件正文（只读，超限截断）
-    /api/adapters                   [not surfaced] data/datasets/*.py 的适配器清单（只读 KIND）
-    /api/compare?method=<name>&dataset=  同一轮：train 分 vs 三个 eval 池的分（按 method+round 拼）
-    /api/coverage                   round × pool 覆盖矩阵（8 个方法 × 每个已测轮次 × 3 个池）
-
-显式写接口（POST）：
-    /api/explain                    [not surfaced] JSON 请求 LLM 解释（服务端缓存）
-    /api/runs                       经启动守卫检查后启动一次实验
-
-数据形状里最重要的约定：**读不到就是 null，不是 0**。JSON 里的 null 到了前端
-会显示成 "—"；`traces: 0` 只在目录存在且确实为空时出现。
-
-    python3 console/server.py [--port 4460]
-
-Paths: HG_CONSOLE_PLATFORM defaults to this module's checkout. HG_CONSOLE_RUNS
-selects an existing receipt directory (default: ~/.local/share/harnessgrad/runs).
-No receipt directory is created, migrated, or discovered automatically.
+Supported entrypoints: python3 console/server.py and python3 -m console.server.
+Arbitrary-name importlib loading is retained for installed and test consumers.
 """
 
 from __future__ import annotations
@@ -55,7 +23,6 @@ import http.client
 import importlib.util
 import importlib.metadata
 import json
-import math
 import os
 import pathlib
 import subprocess
@@ -83,6 +50,250 @@ if __name__ == "__main__" and not __package__:
 else:
     from console.record_reader import (read_json, read_curve, as_int, as_num, calls_per_task,
                                        model_in_loop, dir_count, split_id, pretty, pool_of, run_row)
+
+# Composition binds configured roots/authorization at request time. Query state
+# has exactly one owner, inside this service, including its list cache and lock.
+if __name__ == "__main__" and not __package__:
+    import run_query, comparison, snapshots
+    from path_policy import within
+    from serialization import json_safe, human_bytes
+else:
+    from console import run_query, comparison, snapshots
+    from console.path_policy import within
+    from console.serialization import json_safe, human_bytes
+
+_run_queries = run_query.RunQueryService()
+boot_time = run_query.boot_time
+kind_counts = run_query.kind_counts
+method_of_run = run_query.method_of_run
+_task_of = run_query._task_of
+_valid_history_range = run_query._valid_history_range
+HISTORY_MAX_ROUNDS = run_query.HISTORY_MAX_ROUNDS
+HISTORY_MAX_ROUND_NUMBER = run_query.HISTORY_MAX_ROUND_NUMBER
+_round_snapshot_path = snapshots._round_snapshot_path
+COVERAGE_EXCLUDED = comparison.COVERAGE_EXCLUDED
+COVERAGE_METHODS = comparison.COVERAGE_METHODS
+COVERAGE_POOL_SIZES = comparison.COVERAGE_POOL_SIZES
+POOLS = comparison.POOLS
+_CKPT = comparison._CKPT
+_EVAL_EXAM = comparison._EVAL_EXAM
+_STAMP = comparison._STAMP
+_STUDY = comparison._STUDY
+_cell_valid = comparison._cell_valid
+_coverage_cell = comparison._coverage_cell
+_coverage_verdict = comparison._coverage_verdict
+_measure = comparison._measure
+_stamp_coverage = comparison._stamp_coverage
+pick_study = comparison.pick_study
+stamp_of = comparison.stamp_of
+study_candidates = comparison.study_candidates
+
+if __name__ == "__main__" and not __package__:
+    import catalogue, launch
+    import settings as console_settings
+else:
+    from console import catalogue, launch
+    from console import settings as console_settings
+
+display_base_url = console_settings.display_base_url
+SETTINGS_SIDES = console_settings.SETTINGS_SIDES
+SETTINGS_ALIASES = console_settings.SETTINGS_ALIASES
+
+
+def _settings_store():
+    return console_settings.SettingsStore(SETTINGS, LLM_CONFIG, os.environ)
+
+
+def _launch_catalogue():
+    return catalogue.LaunchCatalogue(adapters, base_harnesses, improvers, task_models, method_catalogue)
+
+
+def _launch_paths():
+    return launch.LaunchPaths(DRIVER, PLATFORM, PLATFORM_ROOT / 'methods', RUNS, STATE_ROOT,
+                             LAUNCH_DIR, LAUNCH_LOG, BUDGET_DIR, EXTERNAL_STATE, ROOT.parent)
+
+
+def _invocation_port():
+    return launch.InvocationPort(guard_launch, launch_argv, launch_env)
+
+if __name__ == "__main__" and not __package__:
+    import candidates, candidate_trial
+else:
+    from console import candidates, candidate_trial
+
+CANDIDATE_NAME = candidates.CANDIDATE_NAME
+CandidateReadError = candidates.CandidateReadError
+valid_workbench_candidate_name = candidates.valid_workbench_candidate_name
+_candidate_record_source = candidates._candidate_record_source
+
+
+def _candidate_store():
+    limits = candidates.CandidateLimits(CANDIDATE_FILE_MAX_BYTES, SELECTION_MAX_BYTES,
+        SELECTION_MAX_LINES, CANDIDATE_SAVE_MAX_SOURCE_BYTES, CANDIDATE_SAVE_MAX_OVERLAY_BYTES)
+    return candidates.CandidateStore(CANDIDATES, BASE_HARNESS, limits=limits,
+        ledger=_candidate_ledger_module, fingerprint=_candidate_tree_sha)
+
+if __name__ == "__main__" and not __package__:
+    import workbench, assistant_drivers
+else:
+    from console import workbench, assistant_drivers
+ASSISTANT_KINDS = workbench.ASSISTANT_KINDS
+
+if __name__ == "__main__" and not __package__:
+    import explanation
+else:
+    from console import explanation
+_explanation_cache = explanation.ExplainCache()
+EXPLAIN_ENV = explanation.EXPLAIN_ENV
+EXPLAIN_EVENT_TYPES = explanation.EXPLAIN_EVENT_TYPES
+EXPLAIN_LAST_EVENTS = explanation.EXPLAIN_LAST_EVENTS
+EXPLAIN_PATCH_BYTES = explanation.EXPLAIN_PATCH_BYTES
+EXPLAIN_RANGE_SYSTEM = explanation.EXPLAIN_RANGE_SYSTEM
+EXPLAIN_SYSTEM = explanation.EXPLAIN_SYSTEM
+EXPLAIN_TIMEOUT_S = explanation.EXPLAIN_TIMEOUT_S
+EXPLAIN_ZERO_TASKS = explanation.EXPLAIN_ZERO_TASKS
+ExplainNoPatch = explanation.ExplainNoPatch
+ExplainUpstream = explanation.ExplainUpstream
+_clip = explanation._clip
+_compact_event = explanation._compact_event
+_explain_cache_key = explanation._explain_cache_key
+_parse_explain_reply = explanation._parse_explain_reply
+_read_jsonl_tail = explanation._read_jsonl_tail
+_redact = explanation._redact
+_sha = explanation._sha
+explain_prompt = explanation.explain_prompt
+explain_range_prompt = explanation.explain_range_prompt
+
+
+def _explain_inputs():
+    limits = explanation.InputLimits(EXPLAIN_PATCH_BYTES, EXPLAIN_ZERO_TASKS,
+                                     EXPLAIN_LAST_EVENTS, frozenset(EXPLAIN_EVENT_TYPES))
+    return explanation.ExplainInputBuilder(read_curve=read_curve, read_json=read_json,
+                                           verdict=_verdict, limits=limits)
+
+
+def _explain_service():
+    return explanation.ExplainService(lookup=find_run, config=explain_config, chat=_chat_completion,
+                                      cache_get=_explain_cache_get, cache_put=_explain_cache_put)
+
+if __name__ == "__main__" and not __package__:
+    import submission_controller
+else:
+    from console import submission_controller
+_submission_controller = submission_controller.SubmissionController()
+
+if __name__ == "__main__" and not __package__:
+    import artifact_catalogue
+    import author_bundles as authored
+else:
+    from console import artifact_catalogue
+    from console import author_bundles as authored
+MANIFEST_KEYS = artifact_catalogue.MANIFEST_KEYS
+_KIND_RE = artifact_catalogue._KIND_RE
+_SPLIT_RE = artifact_catalogue._SPLIT_RE
+_deviation_items = artifact_catalogue._deviation_items
+_size_of = artifact_catalogue._size_of
+
+
+def _artifacts():
+    roots = artifact_catalogue.ArtifactRoots(PLATFORM, BASE_HARNESS, BASE_HARNESSES, DATASETS_DIR)
+    limits = artifact_catalogue.TextLimits(METHOD_FILE_BYTES, METHOD_FILE_LINES,
+                                          PANEL_FILE_BYTES, PANEL_FILE_LINES)
+    return artifact_catalogue.ArtifactCatalogue(roots, limits, skip_dirs=SKIP_DIRS)
+
+if __name__ == "__main__" and not __package__:
+    import http_routes, http_transport, submission_http
+else:
+    from console import http_routes, http_transport, submission_http
+
+
+def _submission_endpoints():
+    return submission_http.SubmissionEndpoints(
+        base_environment=os.environ,
+        _submission_backend=_submission_backend,
+        _submission_reject=_submission_reject,
+        load_settings=load_settings,
+        submission_env=submission_env,
+        submission_form=submission_form,
+        submission_length=submission_length,
+        submission_origin=submission_origin,
+        submission_query=submission_query,
+        submission_service=submission_service,
+    )
+
+
+def _evidence_export(manifest):
+    if str(ROOT.parent) not in sys.path:
+        sys.path.insert(0, str(ROOT.parent))
+    from console import evidence_service
+    return evidence_service.execute(RUNS, manifest, is_export=True)
+
+
+def _read_endpoints():
+    return (
+        (http_routes.workbench_capabilities_get,
+         http_routes.WorkbenchCapabilitiesEndpoints(capabilities=workbench_capabilities)),
+        (http_routes.query_collection_get,
+         http_routes.QueryCollectionGetEndpoints(all_rows=all_rows, api_compare=api_compare,
+                                                 api_coverage=api_coverage, api_health=api_health)),
+        (http_routes.candidate_get,
+         http_routes.CandidateGetEndpoints(CANDIDATE_NAME=CANDIDATE_NAME,
+                                           harness_candidate_archive=harness_candidate_archive,
+                                           harness_candidate_file=harness_candidate_file,
+                                           harness_candidates=harness_candidates)),
+        (http_routes.run_history_get,
+         http_routes.RunHistoryGetEndpoints(_valid_history_range=_valid_history_range, api_run=api_run,
+                                            run_compare=run_compare, run_history=run_history,
+                                            run_range_diff=run_range_diff, run_verdicts=run_verdicts)),
+        (http_routes.round_get,
+         http_routes.RoundGetEndpoints(api_file=api_file, api_round=api_round, api_trace=api_trace,
+                                       api_traces=api_traces, find_run=find_run, round_exists=round_exists)),
+        (http_routes.configuration_get,
+         http_routes.ConfigurationGetEndpoints(launch_form=launch_form, settings_for_ui=settings_for_ui)),
+        (http_routes.artifact_get,
+         http_routes.ArtifactGetEndpoints(api_adapters=api_adapters, api_base=api_base,
+                                          api_base_file=api_base_file,
+                                          api_base_harness_file=api_base_harness_file,
+                                          api_base_harnesses=api_base_harnesses, api_method=api_method,
+                                          api_method_file=api_method_file, api_methods=api_methods,
+                                          api_protocol=api_protocol)),
+        (http_routes.author_get,
+         http_routes.AuthorGetEndpoints(author_bundles=author_bundles)),
+        (http_routes.method_refusals_get, None),
+    )
+
+
+def _write_endpoints():
+    return (
+        (http_routes.evidence_post,
+         http_routes.EvidencePostEndpoints(evidence_export=_evidence_export)),
+        (http_routes.launch_preview_post,
+         http_routes.LaunchPreviewPostEndpoints(launch_preview=launch_preview)),
+        (http_routes.explain_post,
+         http_routes.ExplainPostEndpoints(api_explain=api_explain, api_explain_range=api_explain_range)),
+        (http_routes.candidate_post,
+         http_routes.CandidatePostEndpoints(harness_candidate_from_round=harness_candidate_from_round,
+                                            harness_candidate_save=harness_candidate_save,
+                                            harness_candidate_trial=harness_candidate_trial)),
+        (http_routes.workbench_post,
+         http_routes.WorkbenchPostEndpoints(valid_workbench_candidate_name=valid_workbench_candidate_name,
+                                            read_selection=read_selection, workbench_edit=workbench_edit)),
+        (http_routes.author_post,
+         http_routes.AuthorPostEndpoints(IMPORT_MAX_BYTES=IMPORT_MAX_BYTES, author_draft=author_draft,
+                                         author_import=author_import)),
+        (http_routes.settings_post,
+         http_routes.SettingsPostEndpoints(SETTINGS_SIDES=SETTINGS_SIDES, load_settings=load_settings,
+                                           probe_endpoint=probe_endpoint, save_settings=save_settings,
+                                           settings_for_ui=settings_for_ui)),
+        (http_routes.launch_start_post,
+         http_routes.LaunchStartPostEndpoints(api_launch=api_launch)),
+    )
+
+
+if __name__ == "__main__" and not __package__:
+    import health, snapshot_restore
+else:
+    from console import health, snapshot_restore
 
 ROOT = pathlib.Path(__file__).resolve().parent
 STATIC = ROOT / "static"
@@ -118,12 +329,10 @@ RUNS = pathlib.Path(os.environ.get("HG_CONSOLE_RUNS", str(DEFAULT_RUNS)))
 PLATFORM = pathlib.Path(os.environ.get("HG_CONSOLE_PLATFORM", str(ROOT.parent)))
 SKIP_DIRS = {"__pycache__", ".git", ".state"}
 MAX_FILE_BYTES = 400_000
-#: 方法文件读进浏览器时的上限。方法 run.py 通常 20–30 KB；超过这个数的文件
-#: 在中间栏只显示前 N 行，并明确写出被截断，而不是让浏览器卡住。
+# Method-source display limits; capped reads explicitly report truncation.
 METHOD_FILE_BYTES = 120_000
 METHOD_FILE_LINES = 2_000
-#: 文件面板（对话里技能 A 的第 2 步）读一个文件的上限。短于 run 里的状态文件，
-#: 因为面板要在卡片里同时放树和代码：超过就明写“未完整展开”，不给半份行号。
+# File-panel display limits are independent of record and candidate read limits.
 PANEL_FILE_BYTES = 200_000
 PANEL_FILE_LINES = 1_200
 BASE_HARNESS = PLATFORM / "base_harness" / "loop"
@@ -131,109 +340,17 @@ BASE_HARNESSES = PLATFORM / "base_harness"
 DATASETS_DIR = PLATFORM / "data" / "datasets"
 LIST_TTL_S = 2.0
 
-_list_cache: dict = {"at": 0.0, "rows": []}
-_list_lock = threading.Lock()
 
-
-# ─────────────────────────────────────────────────────── 读工具
-
-
-def boot_time() -> float | None:
-    """开机时刻（epoch 秒）。/proc/stat 的 btime，读不到就退回 /proc/uptime。
-
-    `stat` 第 22 个字段是"自开机以来的 clock tick"，不减去开机时刻就会把
-    进程开始时间当成已运行时长（一个跑了 7 分钟的 driver 会显示成 80 天）。
-    """
-    try:
-        for line in pathlib.Path("/proc/stat").read_text().splitlines():
-            if line.startswith("btime "):
-                return float(line.split()[1])
-    except (OSError, ValueError, IndexError):
-        pass
-    try:
-        uptime = float(pathlib.Path("/proc/uptime").read_text().split()[0])
-    except (OSError, ValueError, IndexError):
-        return None
-    return time.time() - uptime
+# Read-query composition.
 
 
 def live_drivers() -> dict[str, dict]:
-    """pid -> {run_id, elapsed_s}，从 /proc 读，不 sudo、不 pkill。"""
-    found: dict[str, dict] = {}
-    try:
-        entries = list(pathlib.Path("/proc").iterdir())
-    except OSError:
-        return found
-    btime = boot_time()
-    hz = os.sysconf("SC_CLK_TCK")
-    now = time.time()
-    for entry in entries:
-        if not entry.name.isdigit():
-            continue
-        try:
-            argv = (entry / "cmdline").read_bytes().split(b"\0")
-        except OSError:
-            continue
-        args = [a.decode("utf-8", "replace") for a in argv if a]
-        if not any(a.endswith("driver.py") for a in args):
-            continue
-        run_id = ""
-        if "--run-id" in args:
-            i = args.index("--run-id")
-            run_id = args[i + 1] if i + 1 < len(args) else ""
-        start_ticks = None
-        try:
-            start_ticks = int((entry / "stat").read_text().split()[21])
-        except (OSError, ValueError, IndexError):
-            start_ticks = None
-        if start_ticks is None or btime is None:
-            etime = None
-        else:
-            etime = max(0, round(now - (btime + start_ticks / hz)))
-        if run_id:
-            found[run_id] = {"pid": int(entry.name), "elapsed_s": etime}
-    return found
+    return run_query.live_drivers()
 
 
 def all_rows(force: bool = False) -> list[dict]:
-    now = time.time()
-    with _list_lock:
-        if not force and now - _list_cache["at"] < LIST_TTL_S:
-            return _list_cache["rows"]
-        live = live_drivers()
-        rows: list[dict] = []
-        if RUNS.is_dir():
-            try:
-                dirs = sorted(RUNS.iterdir())
-            except OSError:
-                dirs = []
-            for d in dirs:
-                try:
-                    row = run_row(d, live)
-                except OSError:
-                    continue
-                if row:
-                    # **能不能重建某一版，是这一行的事实，不是点开才知道的意外。**
-                    # 状态目录、单文件快照与补丁都是"这一轮的 harness 被存下来了"的证据；
-                    # 三者都没有的 run，曲线上的轮次在磁盘上并不存在，编辑页只能拒绝它。
-                    try:
-                        row["rounds_stored"] = sum(1 for _ in d.glob("state_after_round*"))
-                        row["diffs_stored"] = sum(1 for _ in (d / "diffs").glob("round-*.patch")) \
-                            if (d / "diffs").is_dir() else 0
-                        snapshots = sorted({int(p.stem[len("round-"):])
-                                            for p in (d / "snapshots").glob("round-*.json")
-                                            if p.stem[len("round-"):].isdigit()}) \
-                            if (d / "snapshots").is_dir() else []
-                        row["snapshot_rounds"] = snapshots
-                        row["snapshots_stored"] = len(snapshots)
-                    except OSError:
-                        row["rounds_stored"] = row["diffs_stored"] = 0
-                        row["snapshot_rounds"] = []
-                        row["snapshots_stored"] = 0
-                    rows.append(row)
-        rows.sort(key=lambda r: r["mtime_s"] or 0, reverse=True)
-        _list_cache.update({"at": now, "rows": rows})
-        return rows
+    return _run_queries.all_rows(RUNS, live_drivers=live_drivers, force=force,
+                                 ttl=LIST_TTL_S, clock=time.time)
 
 
 def find_run(run_id: str) -> pathlib.Path | None:
@@ -248,35 +365,7 @@ def find_run(run_id: str) -> pathlib.Path | None:
     return path
 
 
-def within(base: pathlib.Path, target: pathlib.Path) -> bool:
-    """target 是否真的在 base 下面（resolve 过，符号链接逃逸也会被挡住）。"""
-    try:
-        target.resolve().relative_to(base.resolve())
-        return True
-    except (ValueError, OSError, RuntimeError):
-        return False
-
-
-def json_safe(value):
-    """JSON 里不允许 NaN/Infinity；它们是"没有数"，转成 null，别让整个响应 500。"""
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
-    if isinstance(value, dict):
-        return {str(k): json_safe(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [json_safe(v) for v in value]
-    return value
-
-
-def kind_counts(rows: list[dict]) -> dict[str, int]:
-    counts = {"study": 0, "eval": 0, "unknown": 0}
-    for row in rows:
-        counts[row["kind"]] = counts.get(row["kind"], 0) + 1
-    return counts
-
-
-# ─────────────────────────────────────────────────────── 各接口
-# ─────────────────────────────────────────────────────── 对话 / 跑实验
+# Launch configuration and compatibility delegates.
 #: The launcher generates a unique run ID and appends a launch record. Shared
 #: resource coordination uses the deployment's explicit slot directory/capacity.
 LAUNCH_DIR = STATE_ROOT / ".launch"
@@ -291,79 +380,23 @@ DRIVER = PLATFORM / "driver.py"
 
 
 def budget_capacity() -> int:
-    if not re.fullmatch(r'[1-9][0-9]{0,3}', str(BUDGET_CAPACITY)):
-        raise ValueError('Set HG_CONSOLE_BUDGET_CAPACITY to a positive integer (1..9999).')
-    return int(BUDGET_CAPACITY)
+    return launch.parse_capacity(BUDGET_CAPACITY)
 
 
 def python_supported() -> bool:
-    return sys.version_info >= (3, 12)
+    return launch.python_supported()
 
 
 def adapters() -> list[dict]:
-    """可选数据集 = 平台自己发布的清单，不自己扫目录。
-
-    这里原来按 `data/datasets/*.py` 前 4 KB 里找 `KIND = "dataset"`，结果漏了 9 个
-    （`alfworld`、`agentdojo`、`gaia`、`terminal_bench`… —— 它们的 KIND 写在文件更后面）。
-    `data/scaffolds/registry.py::published()` 被文档指定为"哪些数据集存在"的唯一答案，
-    所以直接问它；只有它导不进来时才退回扫目录。
-    """
-    try:
-        sys.path.insert(0, str(PLATFORM))
-        from data.scaffolds.registry import published  # noqa: PLC0415
-        return [{"name": name, "path": f"data/datasets/{name}.py"} for name in published()]
-    except Exception:  # noqa: BLE001 - 平台不可导入时仍然给一个能用的列表
-        out = []
-        for f in sorted((PLATFORM / "data" / "datasets").glob("*.py")):
-            if f.name.startswith("_"):
-                continue
-            text = f.read_text(encoding="utf-8", errors="replace")
-            if re.search(r'^KIND\s*=\s*"dataset"', text, re.M):
-                out.append({"name": f.stem, "path": f"data/datasets/{f.name}"})
-        return out
+    return catalogue.adapters(PLATFORM)
 
 
 def base_harnesses() -> list[str]:
-    """The task harnesses this console may launch.
-
-    `base_harness/` also holds the platform's own controls and the improver-side agents
-    (`codex`, `opencode`, `oracle`, …): they are harnesses, but they are not
-    task harnesses, and offering them in the launcher invited a run whose baseline was an
-    improver. The launchable set is declared in `base_harness/launchable.json`; when that file is
-    missing the console falls back to every directory, which keeps an older checkout usable.
-    """
-    root = PLATFORM / "base_harness"
-    if not root.is_dir():
-        return []
-    declared = read_json(root / "launchable.json").get("harnesses")
-    if isinstance(declared, list) and declared:
-        return [str(name) for name in declared
-                if (root / str(name) / "harness.json").is_file()]
-    return sorted(p.name for p in root.iterdir()
-                  if p.is_dir() and (p / "harness.json").is_file())
+    return catalogue.base_harnesses(PLATFORM)
 
 
 def task_models() -> list[str]:
-    """The task-agent models the launcher offers.
-
-    The driver takes the task model as `HG_AGENT_MODEL` on the process, not as a flag, so the
-    console has to know the value it will pass. `mock` is listed because the demo's whole point is
-    that it needs no endpoint; the rest comes from the platform's own configuration, so the two
-    cannot drift.
-    """
-    names = ["mock"]
-    settings = load_settings()
-    if settings["task"].get("model"):
-        names.append(settings["task"]["model"])
-    try:
-        sys.path.insert(0, str(PLATFORM))
-        from harnessgrad.config import current
-        configured = current().agent.model
-        if configured:
-            names.append(str(configured))
-    except Exception:  # noqa: BLE001 - a console without the package still lists `mock`
-        pass
-    return list(dict.fromkeys(names))
+    return catalogue.task_models(PLATFORM, load_settings=load_settings)
 
 
 def meta_harnesses() -> list[dict]:
@@ -372,2673 +405,360 @@ def meta_harnesses() -> list[dict]:
 
 
 def improvers() -> list[dict]:
-    """The meta side: which improver harness may drive an edit, and which models it can use.
-
-    `improvers.json` is the platform's full registry -- it also holds improvers this console is not
-    meant to launch (a bare OpenAI-compatible endpoint, a local stub). What the launcher offers is
-    declared in `improvers/launchable.json`: one entry per usable *harness*, with the name the
-    operator sees. The record still stores the registry id (`dsh`), because `--improver` and every
-    curve point use it -- only the label changes.
-    """
-    data = read_json(PLATFORM / "harnessgrad" / "improvers" / "improvers.json")
-    wanted = data.get("improvers") if isinstance(data.get("improvers"), dict) else {}
-    declared = read_json(PLATFORM / "harnessgrad" / "improvers" / "launchable.json").get("improvers")
-    out = []
-    if isinstance(declared, list) and declared:
-        for row in declared:
-            name = str(row.get("name") or "") if isinstance(row, dict) else str(row or "")
-            spec = wanted.get(name) if isinstance(wanted.get(name), dict) else {}
-            if not name or not spec:
-                continue
-            out.append({"name": name,
-                        "label": str((row or {}).get("label") or name) if isinstance(row, dict) else name,
-                        "model": spec.get("model") or "", "kind": spec.get("kind") or ""})
-        return out
-    for name, spec in sorted(wanted.items()):
-        if not isinstance(spec, dict):
-            continue
-        out.append({"name": name, "label": name, "model": spec.get("model") or "",
-                    "kind": spec.get("kind") or ""})
-    return out
+    return catalogue.improvers(PLATFORM)
 
 
 def procfs_readable() -> bool:
-    """能不能读 /proc —— 与"读到几个 driver"是两个问题。
-
-    `live_drivers_by_run()` 在 /proc 不可读时返回空字典(读接口应该降级而不是 500),但**启动守卫
-    不能把"看不见"当成"没有"**:那正好是这份守卫存在的理由。所以这里单独问一次,守卫拿它 fail
-    closed。
-    """
-    try:
-        next(iter(pathlib.Path("/proc").iterdir()))
-    except (OSError, StopIteration):
-        return False
-    return True
+    return launch.procfs_readable()
 
 
 def live_drivers_by_run() -> dict[str, dict]:
-    """在跑的 driver：读 /proc，不 grep ps（`ps` 会截断 cmdline）。"""
-    found: dict[str, dict] = {}
-    try:
-        entries = list(pathlib.Path("/proc").iterdir())
-    except OSError:
-        return found
-    for entry in entries:
-        if not entry.name.isdigit():
-            continue
-        try:
-            argv = [a.decode("utf-8", "replace") for a in (entry / "cmdline").read_bytes().split(b"\0") if a]
-        except OSError:
-            continue
-        # **A driver, not a process that mentions one.** `bwrap` re-executes the driver's argv
-        # inside the namespace with `/proc/self/fd/N` as its argv[0], and those children were
-        # being reported as extra drivers -- measured: one 4-cell sweep produced 80 "live drivers"
-        # and a preflight that read like a wall of run ids.
-        if not any(a.endswith("driver.py") for a in argv):
-            continue
-        if not any(a in ("--dataset", "--run-id", "--from-run") for a in argv):
-            continue
-        run_id = ""
-        if "--run-id" in argv:
-            i = argv.index("--run-id")
-            run_id = argv[i + 1] if i + 1 < len(argv) else ""
-        found[run_id or f"pid-{entry.name}"] = {"pid": int(entry.name), "argv": argv[:6]}
-    return found
+    return launch.live_drivers_by_run()
 
 
-# ─────────────────────────────────────────────────────── 对话（模型，服务端代理）
-#: key 只在服务端：浏览器拿到的是回复，不是凭证。缺这个文件时接口返回 503，
-#: 界面显示"未配置"，而不是假装能聊。
+# Legacy endpoint configuration path; settings.py owns loading and redaction.
 LLM_CONFIG = STATE_ROOT / ".local" / "llm.json"
-#: 启动器自己的配置：*task agent* 调的那个端点，以及 *meta*（解释/助手）调的那个端点。
-#: 放在仓库外（`.local/` 已 gitignore），因为两个都带 key。
+# Solver, editor and assistant endpoint roles remain separate.
 SETTINGS = STATE_ROOT / ".local" / "settings.json"
 
-#: Two sides, two endpoints, and they are not the same thing: the task agent is the model the
-#: study's harness 调的那个模型（这台机器上是本地 VLLM），meta 侧是回答操作者的那个模型
-#: （托管 API）。把两者合成一个，正是"启动测量到的模型和表单上写的不是同一个"的来源。
-SETTINGS_SIDES = ("task", "meta", "assistant")
-
-#: `chat` 是 2026-11-02 之前的名字：那一类其实是"Meta-Agent / 对话用的端点"。
-#: 读的时候仍然接受它，写的时候只写新名字，这样旧文件不用手改。
-SETTINGS_ALIASES = {"chat": "meta"}
+# Endpoint aliases and persistence rules belong to settings.py.
 
 
 def load_settings() -> dict:
-    """`{task: {...}, chat: {...}}`, file first, then the environment, then nothing.
-
-    Never returns a secret to a caller that is going to serialize it without thinking: the API
-    layer redacts `api_key` before a response (`settings_for_ui`).
-    """
-    data = read_json(SETTINGS)
-    chat_fallback = read_json(LLM_CONFIG)
-    out = {}
-    for side in SETTINGS_SIDES:
-        block = dict(data.get(side) or {})
-        for alias, canonical in SETTINGS_ALIASES.items():
-            if canonical == side and not block.get("base_url"):
-                block = {**block, **(data.get(alias) or {})}
-        if side == "meta" and not block.get("base_url"):
-            block = {**chat_fallback, **{k: v for k, v in block.items() if v}}
-        out[side] = {
-            "base_url": str(block.get("base_url") or "").strip(),
-            "api_key": str(block.get("api_key") or "").strip(),
-            "model": str(block.get("model") or "").strip(),
-        }
-    out["task"]["base_url"] = out["task"]["base_url"] or os.environ.get(
-        "HG_CONSOLE_TASK_BASE_URL", "").strip()
-    out["task"]["api_key"] = out["task"]["api_key"] or os.environ.get(
-        "HG_CONSOLE_TASK_API_KEY", "").strip()
-    return out
+    return _settings_store().read()
 
 
 def save_settings(payload: dict) -> dict:
-    """Write what the form sent, keeping a value the form left blank.
-
-    A blank field means "do not change it" -- a UI that echoed the redacted key back would
-    otherwise erase the key every time the operator changed only the model name.
-    """
-    current = load_settings()
-    merged = {}
-    for side in SETTINGS_SIDES:
-        # 旧名字也要落到新分节上。`SETTINGS_ALIASES` 的注释说"写的时候只写新名字"，但
-        # 直接忽略 `chat` 块不是改名，是**丢掉**它：一个还在用旧名字的调用方保存成功、
-        # 页面却还是空的。`load_settings` 读文件时接受旧名字，写也应当接受。
-        incoming = {key: value for alias, canonical in SETTINGS_ALIASES.items()
-                    if canonical == side
-                    for key, value in (payload.get(alias) or {}).items()}
-        incoming.update(payload.get(side) or {})
-        new_url = str(incoming.get('base_url') or '').strip()
-        if (new_url and new_url != current[side]['base_url'] and current[side]['api_key']
-                and not str(incoming.get('api_key') or '').strip()):
-            raise ValueError(f'{side}: changing base_url requires an explicit API key')
-        block = dict(current[side])
-        for key in ("base_url", "api_key", "model"):
-            value = str(incoming.get(key) or "").strip()
-            if value:
-                block[key] = value
-        merged[side] = block
-    SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-    SETTINGS.write_text(json.dumps(merged, indent=1) + "\n", encoding="utf-8")
-    try:
-        SETTINGS.chmod(0o600)
-    except OSError:
-        pass
-    return merged
-
-
-def display_base_url(value: str) -> str:
-    """Only display conventional endpoints; arbitrary paths can themselves be secrets."""
-    try:
-        if any(ord(c) < 32 or ord(c) == 127 for c in value):
-            return ""
-        parsed = urlparse(value)
-        if (parsed.scheme not in ("http", "https") or not parsed.hostname or
-                parsed.username is not None or parsed.password is not None or
-                parsed.query or parsed.fragment or "?" in value or "#" in value or
-                parsed.path not in ("", "/", "/v1", "/v1/")):
-            return ""
-        return value
-    except ValueError:
-        return ""
+    return _settings_store().write(payload, current=load_settings())
 
 
 def settings_for_ui() -> dict:
-    """Never serialize credentials or potentially secret endpoint components."""
-    data = load_settings()
-    return {side: {"base_url": display_base_url(data[side]["base_url"]),
-                   "base_url_set": bool(data[side]["base_url"]),
-                   "base_url_redacted": bool(data[side]["base_url"] and not display_base_url(data[side]["base_url"])),
-                   "model": data[side]["model"], "api_key_set": bool(data[side]["api_key"])}
-            for side in SETTINGS_SIDES}
+    return console_settings.redacted(load_settings())
 
 
 def probe_endpoint(base_url: str, api_key: str) -> dict:
-    """`GET {base_url}/models` -- the cheapest question that distinguishes "wrong URL" from "no key"."""
-    if not base_url:
-        return {"ok": False, "detail": "base_url 为空"}
-    url = base_url.rstrip("/") + "/models"
-    class NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, req, fp, code, msg, headers, newurl):
-            return None
-
-    try:
-        request = urllib.request.Request(url, headers={
-            "Authorization": f"Bearer {api_key or 'none'}",
-            "User-Agent": "codex_cli_rs/0.1 (harnessgrad-console)"})
-        with urllib.request.build_opener(NoRedirect()).open(request, timeout=12) as response:
-            body = json.loads(response.read().decode("utf-8", "replace"))
-    except Exception:  # Transport exceptions may contain URLs, headers, or credentials.
-        return {"ok": False, "detail": "Endpoint probe failed; check the URL and server configuration."}
-    names = [row.get("id") for row in (body.get("data") or []) if isinstance(row, dict)]
-    # Provider-controlled IDs can echo credentials; the UI only needs the count.
-    return {"ok": True, "models": [], "count": len(names)}
+    return console_settings.probe_endpoint(base_url, api_key)
 
 def method_catalogue() -> list[dict]:
-    """`methods/*/method.json` 的清单。没有 method.json 的目录不算一个可选方法。"""
-    rows = []
-    for path in sorted((PLATFORM_ROOT / "methods").glob("*/method.json")):
-        entry = read_json(path)
-        if not isinstance(entry, dict):
-            continue
-        name = path.parent.name
-        if name.startswith(("_", ".")):
-            continue
-        rows.append({"name": name, "title": str(entry.get("title") or name),
-                     "kind": str(entry.get("kind") or "method")})
-    return rows
+    return catalogue.method_catalogue(PLATFORM_ROOT)
 
 
 def launch_form() -> dict:
-    """选择器的取值全部来自平台自己，不写死。"""
-    names = adapters()
-    improver_rows = improvers()
-    settings = load_settings()
-    task = settings["task"]
-    meta = settings["meta"]
-    try:
-        from harnessgrad.config import current
-        agent = current().agent
-        task_model = task.get("model") or agent.model or ""
-        task_url = task.get("base_url") or agent.base_url or ""
-        # Only advertise keys launch_env can actually use; do not claim an
-        # ambient driver key is saved while the launcher intentionally clears it.
-        task_key_set = bool(task.get("api_key"))
-        backend = agent.backend if agent.backend in ("mock", "openai") else "mock"
-    except Exception:  # noqa: BLE001 - no configured platform model is not a default
-        task_model, task_url, task_key_set, backend = task.get("model", ""), task.get("base_url", ""), bool(task.get("api_key")), "mock"
-    if task.get("model") and task.get("model") != "mock":
-        backend = "openai"
-    return {"datasets": names, "harnesses": base_harnesses(),
-            "task_models": task_models(),
-            # The improver used to be one dropdown that packed "harness + model" into one value.
-            # They are two decisions -- which improver harness runs, and which model it drives --
-            # so the form asks for them separately and `launch_argv` maps them back onto the
-            # driver's `--improver` / `--improver-model`.
-            "improvers": improver_rows,
-            "meta_models": sorted({row["model"] for row in improver_rows if row["model"]}),
-            # `methods/` 是**怎么改**（决策规则），`improvers` 是**谁去改**（外部 CLI）。
-            # 之前表单只暴露后者，于是"有很多 RSI 方法"这件事在界面上完全看不见。
-            "methods": method_catalogue(),
-            "pools": list(POOLS),
-            "defaults": {"dataset": "alfworld", "harness": "loop",
-                         "task_backend": backend, "task_model": task_model if backend == "openai" else "mock",
-                         "task_base_url": display_base_url(task_url), "task_base_url_set": bool(task_url),
-                         "task_base_url_redacted": bool(task_url and not display_base_url(task_url)),
-                         "task_base_url_reenter": bool(task_url and not display_base_url(task_url) and not task.get("base_url")),
-                         "task_api_key_set": task_key_set,
-                         # Legacy meta settings are retained on disk, not silently applied
-                         # to a CLI improver that owns its own provider configuration.
-                         "meta_base_url": "", "improver_model": "",
-                         "meta_api_key_set": bool(meta.get("api_key")),
-                         "rounds": 10, "jobs": 12, "trials": 1, "sampling": "all"}}
+    return launch.describe(_launch_catalogue(), load_settings=load_settings, pools=POOLS)
 
 
 def launch_argv(form: dict, run_id: str) -> list[str]:
-    """预览与真正起跑**共用这一个函数** —— 否则"预览的命令"和"实际跑的命令"迟早分叉。"""
-    jobs = int(form["jobs"])
-    return [sys.executable, str(DRIVER),
-            "--harness", str(form["harness"]),
-            "--dataset", str(form["dataset"]),
-            "--split", "declared",
-            "--side", "train",
-            "--sampling", str(form.get("sampling") or "all"),
-            "--rounds", str(int(form["rounds"])),
-            "--trials", str(int(form["trials"])),
-            "--jobs", str(jobs),
-            *(["--method-entrypoint",
-               str(PLATFORM_ROOT / "methods" / str(form["method"]) / "run.py")]
-              if str(form.get("method") or "").strip() not in ("", "none") else []),
-            "--improver", str(form["improver"]),
-            "--improver-model", str(form["improver_model"]),
-            "--run-id", run_id,
-            "--runs-root", str(RUNS),
-            *(["--work-root", str(STATE_ROOT / "work")] if EXTERNAL_STATE else []),
-            "--gpu-budget", str(budget_capacity()),
-            "--gpu-budget-dir", str(BUDGET_DIR)]
+    return launch.build_argv(form, run_id, paths=_launch_paths(), budget_capacity=budget_capacity)
 
 
 def launch_env(form: dict) -> dict:
-    """Environment the driver needs that has no CLI flag.
-
-    `--harness` names the task harness; the *model* that harness calls is `HG_AGENT_MODEL`, read by
-    `harnessgrad.identity`. The console used to inherit whatever the server had, which is how a
-    launch could quietly measure a different model than the form showed.
-    """
-    settings = load_settings()
-    task, meta = settings["task"], settings["meta"]
-    backend = str(form.get("task_backend") or ("mock" if form.get("task_model") == "mock" else "openai"))
-    env = {"HG_AGENT_BACKEND": backend,
-           "HG_AGENT_MODEL": str(form.get("task_model") or ""),
-           "HG_AGENT_BASE_URL": "", "HG_AGENT_API_KEY": ""}
-    if backend == "openai":
-        env["HG_AGENT_BASE_URL"] = str(form.get("task_base_url") or task.get("base_url") or "")
-        env["HG_AGENT_API_KEY"] = str(form.get("task_api_key") or
-            (task.get("api_key") if env["HG_AGENT_BASE_URL"] == str(task.get("base_url") or "") else "") or "")
-    # Method-owned editor clients consume HG_METHOD_*. Endpoint-backed improvers use
-    # a per-launch registry override; CLI improvers retain their own transport.
-    if form.get('meta_base_url'):
-        env['HG_METHOD_BASE_URL'] = str(form['meta_base_url'])
-        env['HG_METHOD_MODEL'] = str(form.get('improver_model') or '')
-        env['HG_METHOD_API_KEY'] = str(form.get('meta_api_key') or
-            (meta.get('api_key') if env['HG_METHOD_BASE_URL'] == str(meta.get('base_url') or '') else '') or '')
-    return env
+    return launch.build_environment(form, load_settings=load_settings)
 
 
 def new_run_id(form: dict) -> str:
-    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    tag = re.sub(r"[^A-Za-z0-9]+", "_", str(form["dataset"])) or "run"
-    import uuid
-    return f"console-{stamp}-{tag}-{form['improver']}-{uuid.uuid4().hex[:8]}"
+    return launch.new_run_id(form)
 
 
 def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_key_pending: bool = False) -> tuple[int, dict]:
-    """返回 (状态码, 错误体)；200 表示可以起跑。判断顺序是有意的：先安全，再合法性。"""
-    for field in ('dataset', 'harness', 'sampling', 'improver', 'improver_model', 'method',
-                  'task_backend', 'task_model', 'task_base_url', 'meta_base_url',
-                  'task_api_key', 'meta_api_key'):
-        if field in form and not isinstance(form[field], str):
-            return 400, {"error": "bad-value", "detail": "Invalid launch field type"}
-    # Parallel drivers are coordinated through the shared lease; they are not
-    # globally rejected merely because another deployment is running.
-    if not python_supported():
-        return 400, {"error": "unsupported-python",
-                     "detail": (f"当前 Python 是 {sys.version_info.major}.{sys.version_info.minor}，"
-                                "HarnessGrad 需要 Python 3.12+")}
-    if not DRIVER.is_file():
-        return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{DRIVER}"}
-    method = str(form.get("method") or "").strip()
-    if method not in ("", "none"):
-        entry = PLATFORM_ROOT / "methods" / method / "run.py"
-        if not entry.is_file():
-            return 400, {"error": "unknown-method",
-                         "detail": f"methods/{method}/run.py 不存在；可选："
-                                   + ", ".join(row["name"] for row in method_catalogue())}
-    if not RUNS.is_dir() or not os.access(RUNS, os.W_OK):
-        return 400, {"error": "runs-root-not-writable",
-                     "detail": f"runs 根目录不存在或不可写：{RUNS}"}
-    if BUDGET_DIR is None:
-        return 400, {"error": "no-budget-dir",
-                     "detail": "Set HG_CONSOLE_BUDGET_DIR to a shared writable directory outside the platform before starting the console."}
-    if not BUDGET_DIR.is_absolute() or not BUDGET_DIR.is_dir() or not os.access(BUDGET_DIR, os.W_OK):
-        return 400, {"error": "no-budget-dir",
-                     "detail": "HG_CONSOLE_BUDGET_DIR must be an existing absolute writable directory."}
-    if BUDGET_DIR.resolve().is_relative_to(PLATFORM.resolve()):
-        return 400, {"error": "no-budget-dir", "detail": "HG_CONSOLE_BUDGET_DIR must be outside the platform checkout."}
-    try:
-        capacity = budget_capacity()
-    except ValueError as exc:
-        return 400, {"error": "budget-capacity", "detail": str(exc)}
-    # Requested jobs is per-run parallelism; capacity is a shared deployment fact.
-    if str(ROOT.parent) not in sys.path:
-        sys.path.insert(0, str(ROOT.parent))
-    from harnessgrad.slots import inspect_capacity, SlotBudgetError
-    try:
-        inspect_capacity(BUDGET_DIR, capacity)
-    except SlotBudgetError as exc:
-        return 400, {"error": "budget-capacity", "detail": str(exc)}
-    known = {a["name"] for a in adapters()}
-    if form.get("dataset") not in known:
-        return 400, {"error": "unknown-dataset",
-                     "detail": f"{form.get('dataset')!r} 不是 KIND=dataset 的适配器"}
-    if form.get("harness") not in set(base_harnesses()):
-        return 400, {"error": "unknown-harness",
-                     "detail": f"task-harness {form.get('harness')!r} 不在可启动清单里"}
-    backend = str(form.get("task_backend") or ("mock" if form.get("task_model") == "mock" else "openai"))
-    if backend not in ("mock", "openai"):
-        return 400, {"error": "bad-task-backend", "detail": "task backend 只能是 mock 或 openai"}
-    model = str(form.get("task_model") or "").strip()
-    if backend == "openai" and (not model or model == "mock"):
-        return 400, {"error": "no-task-model", "detail": "实时 task 模型需要填写实际模型名（不能是 mock）"}
-    if backend == "mock" and model not in ("", "mock"):
-        return 400, {"error": "task-backend-mismatch", "detail": "mock backend 只能使用 mock 模型"}
-    env = launch_env(form)
-    if backend == "openai" and not env["HG_AGENT_BASE_URL"]:
-        return 400, {"error": "no-task-url", "detail": "实时 task 模型需要填写 endpoint URL"}
-    for field in ("task_base_url", "meta_base_url"):
-        value = str((env["HG_AGENT_BASE_URL"] if field == "task_base_url" and backend == "openai" else form.get(field)) or "")
-        if value:
-            try:
-                if any(ord(c) < 32 or ord(c) == 127 for c in value):
-                    raise ValueError('unsafe endpoint')
-                parsed = urlparse(value)
-                if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-                    raise ValueError('unsafe endpoint')
-            except ValueError:
-                return 400, {"error": "bad-endpoint", "detail": f"{field} 必须是无凭据、无查询参数的 HTTP(S) endpoint URL"}
-    if any(ord(c) < 32 or ord(c) == 127 for c in model):
-        return 400, {"error": "bad-task-model", "detail": "task-model 不能包含控制字符"}
-    if backend == "openai" and not env["HG_AGENT_API_KEY"] and not preview_key_pending:
-        return 400, {"error": "no-task-key", "detail": "实时 task 模型需要 API key；本地服务也请填写其要求的占位 key"}
-    if not form.get("improver"):
-        return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
-    selected = next((row for row in improvers() if row['name'] == form.get('improver')), None)
-    if not selected:
-        return 400, {"error": "unknown-improver", "detail": "请选择可用的 meta-harness"}
-    if (form.get('meta_api_key') or preview_meta_key_pending) and not form.get('meta_base_url'):
-        return 400, {"error": "no-meta-url", "detail": "填写 meta API key 时也必须填写 endpoint URL"}
-    if form.get('meta_base_url'):
-        if not env.get('HG_METHOD_MODEL'):
-            return 400, {"error": "incomplete-meta-endpoint", "detail": "覆盖 meta endpoint 时必须填写模型名"}
-        if not env.get('HG_METHOD_API_KEY') and not preview_meta_key_pending:
-            return 400, {"error": "no-meta-key", "detail": "覆盖 meta endpoint 时必须填写 API key"}
-    # Model names are supplied by the operator; the registry is a suggestion, not an
-    # exhaustive list. Endpoint credentials are checked again on POST, never in a URL.
-    if any(ord(c) < 32 or ord(c) == 127 for c in str(form.get("improver_model") or "")):
-        return 400, {"error": "bad-meta-model", "detail": "meta-model 不能包含控制字符"}
-    for key, lo, hi in (("rounds", 0, 20), ("jobs", 1, 64), ("trials", 1, 3)):
-        raw = form.get(key)
-        if type(raw) is not int and not (isinstance(raw, str) and re.fullmatch(r'[0-9]{1,9}', raw)):
-            return 400, {"error": "bad-value", "detail": f"{key} 必须是整数"}
-        value = int(raw)
-        if not lo <= value <= hi:
-            return 400, {"error": "bad-value", "detail": f"{key} 必须在 {lo}..{hi}"}
-    return 200, {}
+    return launch.validate_launch_request(form, paths=_launch_paths(), catalogue=_launch_catalogue(),
+        python_supported=python_supported, budget_capacity=budget_capacity, launch_env=launch_env,
+        preview_key_pending=preview_key_pending, preview_meta_key_pending=preview_meta_key_pending)
 
 
 def api_launch(form: dict) -> tuple[int, dict]:
-    code, err = guard_launch(form)
-    if code != 200:
-        return code, err
-    run_id = new_run_id(form)
-    argv = launch_argv(form, run_id)
-    environment = {**os.environ, **launch_env(form)}
-    selected = next((row for row in improvers() if row['name'] == form.get('improver')), None)
-    if selected and selected.get('kind') != 'cli' and form.get('meta_base_url'):
-        # Preserve registry identity while making the selected endpoint authoritative.
-        # No key enters this file; the selected entry points to the child's environment.
-        registry = read_json(PLATFORM / 'harnessgrad/improvers/improvers.json')
-        spec = registry['improvers'][selected['name']]
-        spec.update(base_url=environment['HG_METHOD_BASE_URL'], model=environment['HG_METHOD_MODEL'],
-                    api_key_env='HG_METHOD_API_KEY')
-        LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
-        registry_path = LAUNCH_DIR / f'{run_id}.improvers.json'
-        with registry_path.open('x', encoding='utf-8') as stream:
-            json.dump(registry, stream, ensure_ascii=False)
-        registry_path.chmod(0o600)
-        environment['HG_IMPROVER_CONFIG'] = str(registry_path.resolve())
-    LAUNCH_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = LAUNCH_DIR / f"{run_id}.log"
-    with log_path.open("ab") as handle:
-        subprocess.Popen(argv, stdout=handle, stderr=subprocess.STDOUT,
-                         start_new_session=True, cwd=str(PLATFORM), env=environment)
-    with LAUNCH_LOG.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                                 "run_id": run_id, "argv": argv, "by": "console /launch.html"},
-                                ensure_ascii=False) + "\n")
-    return 202, {"run_id": run_id, "argv": argv, "log": str(log_path.relative_to(STATE_ROOT))}
+    return launch.start(form, paths=_launch_paths(), catalogue=_launch_catalogue(), plan=_invocation_port(),
+                        make_run_id=new_run_id, spawn=subprocess.Popen, base_environment=os.environ)
 
 
 def launch_scope_preview(form: dict, effective_env: dict) -> dict:
-    """Describe requested scope without loading datasets or contacting model endpoints."""
-    selected = next((row for row in improvers() if row.get('name') == form.get('improver')), {})
-    kind = selected.get('kind') or None
-    model = (effective_env.get('HG_METHOD_MODEL') or form.get('improver_model')
-             or selected.get('model') or None)
-    return {
-        "dataset": form.get("dataset"), "side": "train", "split": "declared",
-        "sampling": form.get("sampling") or "all", "task_count": None,
-        "rounds": form.get("rounds"), "trials_per_task": form.get("trials"),
-        "jobs": form.get("jobs"),
-        "solver": {"backend": effective_env.get("HG_AGENT_BACKEND"),
-                   "model": effective_env.get("HG_AGENT_MODEL") or None},
-        "editor": {"method": form.get("method") or "none", "improver": form.get("improver"),
-                   "model": model, "kind": kind,
-                   "active": False if str(form.get("rounds")) == "0" else None},
-        # Dataset-specific model use and CLI improver connections are resolved at runtime.
-        "environment": None, "judge": None,
-    }
+    return launch.scope_preview(form, effective_env, catalogue=_launch_catalogue())
 
 
 def launch_preview(form: dict) -> dict:
-    """Preview without receiving credentials in the URL; POST revalidates actual keys."""
-    form = {k: v for k, v in form.items() if k not in ("task_api_key", "meta_api_key")}
-    code, err = guard_launch(form,
-        preview_key_pending=form.get("task_key_present") in (True, "true", "1"),
-        preview_meta_key_pending=form.get("meta_key_present") in (True, "true", "1"))
-    try:
-        argv = launch_argv(form, "rsi10-<UTC>-<dataset>-<improver>-train")
-    except (KeyError, TypeError, ValueError, OverflowError):
-        argv = []
-        if code == 200:
-            code = 400
-            err = {"error": "bad-value", "detail": "运行参数不完整或格式不正确"}
-    effective_env = launch_env(form)
-    shown_env = {key: ("***" if "KEY" in key else display_base_url(value) if key.endswith("BASE_URL") else value)
-                 for key, value in effective_env.items()}
-    form = dict(form)
-    for field in ("task_base_url", "meta_base_url"):
-        if field in form:
-            value = str(form[field] or "")
-            form[field] = display_base_url(value)
-            form[field + "_set"] = bool(value)
-            form[field + "_redacted"] = bool(value and not form[field])
-    return {
-        "argv": argv,
-        "env": shown_env,
-        "form": form,
-        "preflight": {"ok": code == 200, "status": code, **err},
-        "scope": launch_scope_preview(form, effective_env),
-    }
+    return launch.preview(form, plan=_invocation_port(), catalogue=_launch_catalogue())
 
 
 def api_health() -> dict:
-    live = live_drivers()
-    rows = all_rows()
-    _base, _model, _key, explain_missing = explain_config()
-    sha = ""
-    for row in rows[:16]:
-        meta = read_json(RUNS / row["id"] / "run_meta.json")
-        platform = meta.get("platform")
-        sha = (platform.get("content_sha") if isinstance(platform, dict) else "") or ""
-        if sha:
-            break
-    try:
-        usage = shutil.disk_usage("/")
-        disk_free = round(usage.free / 2**30, 1)
-    except OSError:
-        disk_free = None
-    # 只报告落在本 console 的 runs 根目录下的 driver；别的 work-root 不属于这一屏。
-    running = [{"run_id": k, **v} for k, v in sorted(live.items()) if find_run(k)]
-    return {
-        "platform_content_sha": sha or None,
-        "running": running,
-        "disk_free_gb": disk_free,
-        "runs_root": str(RUNS),
-        "runs_count": len(rows),
-        "kinds": kind_counts(rows),
-        # 只报告“是否配置”，不报告 base_url / model / key。前端据此在未配置时
-        # 直接显示 setup note，而不是先发一个注定 503 的请求（浏览器会把它记成
-        # console error，而只读台的控制台必须是干净的）。
-        "explain_configured": not explain_missing,
-        "explain_missing_env": explain_missing,
-    }
+    live, rows = live_drivers(), all_rows()
+    _base, _model, _key, missing = explain_config()
+    return health.describe(live, rows, runs=RUNS, explain_missing=missing,
+                           lookup=find_run, read_json=read_json)
 
 
 def api_run(run_id: str) -> dict | None:
-    path = find_run(run_id)
-    if not path:
-        return None
-    points, curve_state, curve_errors = read_curve(path)
-    row = run_row(path, live_drivers(), points, curve_state, curve_errors)
-    if not row:
-        return None
-    rounds = []
-    bad_points = 0
-    for p in points:
-        n = as_int(p.get("round"))
-        if n is None or n < 0:
-            bad_points += 1
-            continue
-        cost = p.get("cost") if isinstance(p.get("cost"), dict) else {}
-        calls = as_int(cost.get("harness_model_calls"))
-        patch = path / "diffs" / f"round-{n}.patch"
-        state = path / f"state_after_round{n}"
-        traces = path / f"round{n}_traces"
-        ident = p.get("identity") if isinstance(p.get("identity"), dict) else {}
-        rounds.append({
-            "round": n,
-            "score": as_num(p.get("score")),
-            "n_scored": as_int(p.get("n_scored")),
-            "n_invalid": as_int(p.get("n_invalid")),
-            "n_harness_failed": as_int(p.get("n_harness_failed")),
-            "harness_sha": (str(ident.get("harness_sha") or "")[:8] or None),
-            "tokens": as_int(cost.get("harness_tokens")),
-            "calls": calls,
-            "calls_per_task": calls_per_task(calls, as_int(p.get("n_scored"))),
-            "model_in_loop": model_in_loop(calls),
-            "wall_s": as_num(cost.get("wall_clock_s")),
-            "has_diff": patch.is_file(),
-            "has_state": state.is_dir(),
-            "has_traces": traces.is_dir(),
-            "traces": dir_count(traces, "*.jsonl"),
-            "patch_size": patch.stat().st_size if patch.is_file() else None,
-        })
-    meta = read_json(path / "run_meta.json")
-    return {
-        "row": row,
-        "rounds": rounds,
-        "bad_points": bad_points,
-        "curve_state": curve_state,
-        "curve_errors": curve_errors,
-        #: 这个方法名只用于“回实验室”和 eval 池：先看 run_meta 里记录的入口，
-        #: 再看 run id 的形状；都没有就是 null（界面显示 —，不猜）。
-        "method": method_of_run(run_id, meta),
-        "meta": {k: meta.get(k) for k in ("dataset", "harness", "jobs", "trials",
-                                          "sampling_policy", "platform", "config")},
-    }
-
-
-#: `rsi10-<stamp>-<method>-train` / `...-ckpt-r<N>-<pool>`。和 api_compare 的
-#: _STUDY / _CKPT 是同一段 id 形状，但这里只需要 method 那一段。
-_RUN_METHOD = re.compile(
-    r"^[^-]+-[0-9]{8}T[0-9]{4,6}Z-(?P<method>[A-Za-z0-9_]+)"
-    r"-(?:train|ckpt-r\d+-valid_(?:unseen|seen|train))$")
-
-
-def method_of_run(run_id: str, meta: dict | None = None) -> str | None:
-    """run 是哪个方法跑出来的：先读 `run_meta.json` 的入口，再看 run id。"""
-    entry = (((meta or {}).get("config") or {}).get("run") or {}).get("method_entrypoint")
-    if isinstance(entry, str):
-        match = re.search(r"/methods/([^/]+)/run\.py$", entry)
-        if match:
-            return match.group(1)
-    match = _RUN_METHOD.match(run_id or "")
-    return match.group("method") if match else None
+    return _run_queries.api_run(run_id, lookup=find_run, live_drivers=live_drivers)
 
 
 def api_round(run_id: str, n: int) -> dict | None:
-    path = find_run(run_id)
-    if not path:
-        return None
-    patch_path = path / "diffs" / f"round-{n}.patch"
-    stat = read_json(path / "diffs" / f"round-{n}.json")
-    state = path / f"state_after_round{n}"
-    files: list[dict] = []
-    if state.is_dir():
-        try:
-            for f in sorted(state.rglob("*")):
-                rel = f.relative_to(state)
-                if f.is_dir() or any(part in SKIP_DIRS for part in rel.parts):
-                    continue
-                try:
-                    size = f.stat().st_size
-                except OSError:
-                    size = None
-                files.append({"path": str(rel), "size": size})
-        except OSError:
-            files = []
-    traces = path / f"round{n}_traces"
-    verdicts = path / "verdicts" / f"round-{n}"
-    has_patch = patch_path.is_file()
-    return {
-        "round": n,
-        "patch": patch_path.read_text(encoding="utf-8", errors="replace") if has_patch else "",
-        "has_patch": has_patch,
-        "patch_size": patch_path.stat().st_size if has_patch else None,
-        "stat": stat,
-        "files": files,
-        "has_state": state.is_dir(),
-        "traces": dir_count(traces, "*.jsonl"),
-        "has_traces": traces.is_dir(),
-        "verdicts": dir_count(verdicts, "*.json"),
-        "has_verdicts": verdicts.is_dir(),
-    }
+    return _run_queries.api_round(run_id, n, lookup=find_run, skip_dirs=SKIP_DIRS)
 
 
 def api_file(run_id: str, n: int, rel: str) -> dict | None:
-    path = find_run(run_id)
-    if not path:
-        return None
-    base = path / f"state_after_round{n}"
-    if not base.is_dir() or not within(base, base / rel):
-        return None
-    target = (base / rel).resolve()
-    if not target.is_file():
-        return None
-    try:
-        size = target.stat().st_size
-    except OSError:
-        return None
-    if size > MAX_FILE_BYTES:
-        return {
-            "path": rel,
-            "size": size,
-            "text": "",
-            "truncated": True,
-            "note": f"文件 {human_bytes(size)}，超过 400 KB（400,000 字节）读取上限，未在浏览器展开。",
-        }
-    try:
-        text = target.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
-    return {"path": rel, "size": size, "text": text, "truncated": False, "note": ""}
-
-
-def human_bytes(n: int | None) -> str:
-    if n is None:
-        return "—"
-    if n >= 2**20:
-        return f"{n / 2**20:.1f} MB"
-    if n >= 2**10:
-        return f"{n / 2**10:.1f} KB"
-    return f"{n} B"
+    return _run_queries.api_file(run_id, n, rel, lookup=find_run, max_file_bytes=MAX_FILE_BYTES)
 
 
 def _verdict(path: pathlib.Path, task_id: str, n: int) -> dict:
-    return read_json(path / "verdicts" / f"round-{n}" / f"{task_id}.json")
+    return _run_queries._verdict(path, task_id, n)
 
 
 def _trace_files(path: pathlib.Path, n: int) -> list[pathlib.Path]:
-    d = path / f"round{n}_traces"
-    return sorted(d.glob("*.jsonl")) if d.is_dir() else []
-
-
-def _task_of(stem: str) -> tuple[str, int]:
-    """`<task-id>` 或 `<task-id>.trial<k>` → (task_id, trial)。"""
-    if ".trial" in stem:
-        head, _, tail = stem.rpartition(".trial")
-        try:
-            return head, int(tail)
-        except ValueError:
-            return stem, 1
-    return stem, 1
+    return _run_queries._trace_files(path, n)
 
 
 def round_exists(path: pathlib.Path, n: int) -> bool:
-    """这一轮在这个 run 的曲线里存在吗。
-
-    三种情况要分开，因为界面对它们的反应不同：
-      · 轮次不存在       → 400：你问了一个不存在的轮次
-      · 存在但没留轨迹   → 200 + 空列表：这一轮确实没保留轨迹
-      · 存在且有轨迹     → 200 + 列表
-    否则 `rounds/999` 会回一个空壳，界面把它读成"这一轮没有编辑/没有轨迹"。
-    """
-    return any(point.get("round") == n for point in read_curve(path)[0])
+    return _run_queries.round_exists(path, n)
 
 
 def api_traces(run_id: str, n: int) -> dict | None:
-    """这一轮的轨迹清单。分数来自该轮的判定文件；没有判定就显示 None，不是 0。"""
-    path = find_run(run_id)
-    if not path:
-        return None
-    per_task: dict = {}
-    for point in read_curve(path)[0]:
-        if point.get("round") == n:
-            raw = point.get("per_task")
-            per_task = raw if isinstance(raw, dict) else {}
-            break
-    tasks = []
-    for f in _trace_files(path, n):
-        task_id, trial = _task_of(f.stem)
-        verdict = _verdict(path, task_id, n)
-        score = verdict.get("score")
-        if score is None:
-            score = per_task.get(task_id)
-        steps = 0
-        solved = None
-        for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                ev = json.loads(line)
-            except ValueError:
-                continue
-            if not isinstance(ev, dict):
-                continue
-            step = as_int(ev.get("step"))
-            if step is not None:
-                steps = max(steps, step + 1)
-            if ev.get("environment_solved") is not None:
-                solved = bool(ev.get("environment_solved"))
-        tasks.append({"task_id": task_id, "trial": trial, "name": f.name,
-                      "steps": steps, "bytes": f.stat().st_size,
-                      "score": score, "solved": solved,
-                      "detail": (verdict.get("detail") or "")[:300]})
-    tasks.sort(key=lambda t: (t["score"] is None, t["score"] if t["score"] is not None else 0,
-                              t["task_id"]))
-    return {"run": run_id, "round": n, "tasks": tasks, "count": len(tasks)}
+    return _run_queries.api_traces(run_id, n, lookup=find_run)
 
 
 def api_trace(run_id: str, n: int, name: str) -> dict | None:
-    """一条轨迹，按步渲染。长输出裁剪并标注，不静默截断。"""
-    path = find_run(run_id)
-    base = path / f"round{n}_traces" if path else None
-    if not path or not base.is_dir() or "/" in name or "\\" in name:
-        return None
-    if not within(base, base / name):
-        return None
-    target = (base / name).resolve()
-    if not target.is_file():
-        return None
-    task_id, trial = _task_of(target.stem)
-    verdict = _verdict(path, task_id, n)
-    events: list[dict] = []
-    for line_no, line in enumerate(target.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-        if not line.strip():
-            continue
-        try:
-            ev = json.loads(line)
-        except ValueError:
-            ev = None
-            parsed = False
-        else:
-            parsed = True
-        if not parsed:
-            events.append({"kind": "raw", "line": line_no, "text": line})
-        elif not isinstance(ev, dict):
-            events.append({"kind": "structured", "line": line_no, "value": ev})
-        elif "harness_identity" in ev:
-            events.append({"kind": "identity", "config": ev["harness_identity"]})
-        elif "reply" in ev:
-            reply = ev.get("reply")
-            text = reply if isinstance(reply, str) else json.dumps(reply, ensure_ascii=False)
-            events.append({"kind": "reply", "step": ev.get("step"), "model_ms": ev.get("model_ms"),
-                           "text": text[:8000], "truncated": len(text) > 8000,
-                           "note": f"显示前 8000 字符（原文 {len(text)} 字符）" if len(text) > 8000 else ""})
-        elif "command" in ev:
-            out = str(ev.get("output") or "")
-            events.append({"kind": "command", "step": ev.get("step"), "command": ev.get("command"),
-                           "exit": ev.get("exit"), "command_ms": ev.get("command_ms"),
-                           "output": out[:6000], "output_chars": len(out),
-                           "truncated": len(out) > 6000})
-        elif "env_step" in ev:
-            events.append({"kind": "env", "step": ev.get("step"),
-                           "env_step": ev.get("env_step"),
-                           "solved": ev.get("environment_solved")})
-        elif "wall_clock_s" in ev:
-            events.append({"kind": "meta", "label": "wall clock", "value": f"{ev['wall_clock_s']} s"})
-        elif "usage" in ev:
-            events.append({"kind": "meta", "label": "tokens", "value": json.dumps(ev["usage"])})
-        elif "context_trims" in ev:
-            events.append({"kind": "meta", "label": "context trims",
-                           "value": f"{ev.get('context_trims')} 次（保留 {ev.get('history_kept')} 条）"})
-        else:
-            # Preserve newer harness schemas instead of silently dropping their events.
-            events.append({"kind": "structured", "line": line_no, "value": ev})
-        if len(events) >= 1200:
-            events.append({"kind": "meta", "label": "截断", "value": "事件超过 1200 条，只显示前 1200 条"})
-            break
-    return {"run": run_id, "round": n, "name": name, "task_id": task_id, "trial": trial,
-            "events": events, "score": verdict.get("score"),
-            "detail": verdict.get("detail") or "", "verdict_kind": verdict.get("kind")}
+    return _run_queries.api_trace(run_id, n, name, lookup=find_run)
 
 
 def _method_dir(name: str) -> pathlib.Path | None:
-    """`methods/<name>/`，名字只允许安全字符，且解析后必须仍在 methods/ 下面。"""
-    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name or "") or name in (".", ".."):
-        return None
-    root = PLATFORM / "methods"
-    d = root / name
-    try:
-        if not d.is_dir() or not within(root, d):
-            return None
-    except OSError:
-        return None
-    return d
-
-
-def _deviation_items(spec: dict) -> list[dict] | None:
-    """`method.json.deviations` -> 稳定的条目列表；没有 method.json 时是 null，不是 []。
-
-    两种写法都见过：dict 条目（what/why/direction/id）和纯字符串。缺字段的条目
-    不编造，保留已有键；`what` 是界面上“可以借什么”的正文。
-    """
-    if not spec:
-        return None
-    raw = spec.get("deviations")
-    if raw is None:
-        return []
-    if not isinstance(raw, list):
-        return []
-    out: list[dict] = []
-    for item in raw:
-        if isinstance(item, dict):
-            row = {}
-            for key in ("id", "what", "why", "direction"):
-                value = item.get(key)
-                if value is None or isinstance(value, (str, int, float, bool)):
-                    row[key] = value
-                else:
-                    row[key] = json.dumps(value, ensure_ascii=False)[:2000]
-            if not any(row.get(k) for k in ("id", "what", "why")):
-                row["what"] = json.dumps(item, ensure_ascii=False)[:2000]
-            out.append(row)
-        elif isinstance(item, str):
-            out.append({"what": item})
-        else:
-            out.append({"what": str(item)})
-    return out
+    return _artifacts()._method_dir(name)
 
 
 def _method_files(d: pathlib.Path) -> list[dict]:
-    """方法目录里可读的文件。run.py / method.json 先列，其余按路径排。"""
-    out: list[dict] = []
-    run_path = d / "run.py"
-    spec_path = d / "method.json"
-    if run_path.is_file():
-        out.append({"path": "run.py", "size": _size_of(run_path), "role": "runner"})
-    if spec_path.is_file():
-        out.append({"path": "method.json", "size": _size_of(spec_path), "role": "spec"})
-    try:
-        entries = sorted(d.rglob("*"))
-    except OSError:
-        return out
-    for f in entries:
-        try:
-            rel = f.relative_to(d)
-        except ValueError:
-            continue
-        if any(part in SKIP_DIRS or part.startswith(".") for part in rel.parts):
-            continue
-        if not f.is_file() or str(rel) in ("run.py", "method.json"):
-            continue
-        out.append({"path": str(rel), "size": _size_of(f), "role": "extra"})
-    return out
-
-
-def _size_of(path: pathlib.Path) -> int | None:
-    try:
-        return path.stat().st_size
-    except OSError:
-        return None
+    return _artifacts()._method_files(d)
 
 
 def _method_row(d: pathlib.Path) -> dict | None:
-    spec_path = d / "method.json"
-    run_path = d / "run.py"
-    if not spec_path.is_file() and not run_path.is_file():
-        return None
-    spec = read_json(spec_path)
-    has_spec = bool(spec)
-    has_run_py = run_path.is_file()
-    deviations = _deviation_items(spec)
-    note = (spec.get("note") or spec.get("what") or spec.get("summary") or "")
-    if not isinstance(note, str):
-        note = str(note)
-    rule_test = PLATFORM / "tests" / "quality" / f"test_{d.name}_rule.py"
-    has_test = rule_test.is_file()
-    title = spec.get("title") or ""
-    kind = spec.get("kind") or None
-    fields = {key: bool(spec.get(key)) for key in ("kind", "title", "note")}
-    blockers: list[str] = []
-    if not has_run_py:
-        blockers.append("没有 run.py：方法没有入口")
-    if not has_test:
-        blockers.append(f"没有规则测试：tests/quality/test_{d.name}_rule.py 不存在")
-    if not has_spec:
-        blockers.append("没有可解析的 method.json：kind / title / note 都读不到")
-    else:
-        missing = [key for key, ok in fields.items() if not ok]
-        if missing:
-            blockers.append(f"method.json 缺字段：{'、'.join(missing)}")
-    return {
-        "name": d.name,
-        "dir": f"methods/{d.name}",
-        "entrypoint": f"python3 {run_path}" if has_run_py else None,
-        "title": title,
-        "kind": kind,
-        "has_spec": has_spec,
-        "has_run_py": has_run_py,
-        "deviations": deviations,
-        "deviation_count": None if deviations is None else len(deviations),
-        "extra_files": [f for f in _method_files(d)
-                        if f["role"] == "extra"],
-        "has_test": has_test,
-        "test_path": f"tests/quality/test_{d.name}_rule.py" if has_test else None,
-        #: “能否作为起点”= 有入口、有规则测试、有可解析的 spec。只检查存在，
-        #: 本台不执行测试 —— 执行已经是起跑，M4 之前不做。
-        "can_start": has_run_py and has_test and has_spec and all(fields.values()),
-        "start_blockers": blockers,
-        "validation": {
-            "has_run_py": has_run_py,
-            "has_test": has_test,
-            "has_spec": has_spec,
-            "fields": fields,
-            "ok": has_run_py and has_test and has_spec and all(fields.values()),
-        },
-        "summary": note[:300],
-        "note": note,
-    }
+    return _artifacts()._method_row(d)
 
 
 def api_methods() -> list[dict]:
-    out: list[dict] = []
-    root = PLATFORM / "methods"
-    if not root.is_dir():
-        return out
-    try:
-        dirs = sorted(p for p in root.iterdir() if p.is_dir())
-    except OSError:
-        return out
-    for d in dirs:
-        if d.name.startswith(".") or d.name in SKIP_DIRS:
-            continue
-        row = _method_row(d)
-        if row:
-            out.append(row)
-    return out
+    return _artifacts().api_methods()
 
 
 def api_method(name: str) -> dict | None:
-    """一个方法的元数据 + 文件清单（不含文件正文）。"""
-    d = _method_dir(name)
-    if not d:
-        return None
-    row = _method_row(d)
-    if not row:
-        return None
-    row["path"] = f"methods/{d.name}"
-    row["files"] = _method_files(d)
-    return row
+    return _artifacts().api_method(name)
 
 
 def _read_text_capped(target: pathlib.Path, rel: str,
                       max_bytes: int = METHOD_FILE_BYTES,
                       max_lines: int = METHOD_FILE_LINES) -> dict | None:
-    """读一个只读文件，带上限和一句人话解释。超过上限时不读正文。"""
-    try:
-        size = target.stat().st_size
-    except OSError:
-        return None
-    if size > max_bytes:
-        return {
-            "path": rel, "size": size, "text": "", "truncated": True,
-            "lines": None, "shown_lines": 0,
-            "note": f"文件 {human_bytes(size)}，超过 {human_bytes(max_bytes)} 读取上限，未在浏览器展开。",
-        }
-    try:
-        text = target.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
-    all_lines = text.splitlines()
-    total = len(all_lines)
-    if total > max_lines:
-        return {
-            "path": rel, "size": size,
-            "text": "\n".join(all_lines[:max_lines]), "truncated": True,
-            "lines": total, "shown_lines": max_lines,
-            "note": f"只显示前 {max_lines} 行（共 {total} 行）。",
-        }
-    return {
-        "path": rel, "size": size, "text": text, "truncated": False,
-        "lines": total, "shown_lines": total, "note": "",
-    }
+    return _artifacts()._read_text_capped(target, rel, max_bytes=max_bytes, max_lines=max_lines)
 
 
 def api_method_file(name: str, rel: str) -> dict | None:
-    d = _method_dir(name)
-    if not d or not rel:
-        return None
-    target = (d / rel).resolve()
-    if not within(d, target) or not target.is_file():
-        return None
-    return _read_text_capped(target, rel)
+    return _artifacts().api_method_file(name, rel)
 
 
 def api_protocol() -> dict:
-    """`methods/protocol.py` 的模块 docstring —— 服务端读，前端只引用，不转述。"""
-    path = PLATFORM / "methods" / "protocol.py"
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return {"path": "methods/protocol.py", "doc": None, "sha": None,
-                "lines": None, "error": "读不到 methods/protocol.py"}
-    doc = None
-    error = ""
-    try:
-        doc = ast.get_docstring(ast.parse(text), clean=False)
-    except (SyntaxError, ValueError) as exc:
-        error = f"protocol.py 解析失败：{exc}"
-    if not doc:
-        error = error or "protocol.py 没有模块 docstring"
-    return {
-        "path": "methods/protocol.py",
-        "doc": doc,
-        "sha": hashlib.sha256(text.encode("utf-8")).hexdigest()[:12],
-        "lines": len(text.splitlines()),
-        "error": error or None,
-    }
+    return _artifacts().api_protocol()
 
 
 def api_base() -> dict:
-    """基线起点 `base_harness/loop` 的清单。
-
-    `harness_sha` 是 null：run 里记的 sha 是 staging 之后（会补 `.gitignore` /
-    `.state/`）的 git tree hash，本台不重算，也不拿别的 sha 冒充它。
-    """
-    base = BASE_HARNESS
-    if not base.is_dir():
-        return {"path": "base_harness/loop", "exists": False, "manifest": {},
-                "files": [], "harness_sha": None,
-                "sha_note": "base_harness/loop 不存在"}
-    files: list[dict] = []
-    try:
-        entries = sorted(base.rglob("*"))
-    except OSError:
-        entries = []
-    for f in entries:
-        try:
-            rel = f.relative_to(base)
-        except ValueError:
-            continue
-        if any(part in SKIP_DIRS or part.startswith(".") for part in rel.parts):
-            continue
-        if not f.is_file():
-            continue
-        files.append({"path": str(rel), "size": _size_of(f)})
-    manifest = read_json(base / "harness.json")
-    return {
-        "path": "base_harness/loop",
-        "exists": True,
-        "manifest": {key: manifest.get(key) for key in
-                     ("name", "version", "entrypoint", "backend", "install")},
-        "files": files,
-        "harness_sha": None,
-        "sha_note": "基线没有 run 记录；run 里的 harness_sha 是 staging 后的 git tree hash，本台不重算。",
-    }
+    return _artifacts().api_base()
 
 
 def api_base_file(rel: str) -> dict | None:
-    base = BASE_HARNESS
-    if not base.is_dir() or not rel:
-        return None
-    target = (base / rel).resolve()
-    if not within(base, target) or not target.is_file():
-        return None
-    return _read_text_capped(target, rel)
+    return _artifacts().api_base_file(rel)
 
 
 #: `harness.json` 里跟"这是什么起点"有关的字段。其余的（install/backend 的细节）
 #: 不是这一步要回答的问题，不搬上屏。
-MANIFEST_KEYS = ("name", "version", "entrypoint", "backend", "install")
 
 
 def _base_harnesses_root() -> pathlib.Path:
-    return BASE_HARNESSES
+    return _artifacts()._base_harnesses_root()
 
 
 def _base_harness_dirs() -> list[pathlib.Path]:
-    root = _base_harnesses_root()
-    if not root.is_dir():
-        return []
-    try:
-        entries = sorted(root.iterdir())
-    except OSError:
-        return []
-    return [p for p in entries
-            if p.is_dir() and p.name not in SKIP_DIRS and not p.name.startswith(".")]
+    return _artifacts()._base_harness_dirs()
 
 
 def _safe_rel_files(root: pathlib.Path) -> list[dict]:
-    """root 下的可读文件（跳过 __pycache__/.state/隐藏目录），按路径排序。"""
-    out: list[dict] = []
-    try:
-        entries = sorted(root.rglob("*"))
-    except OSError:
-        return out
-    for f in entries:
-        try:
-            rel = f.relative_to(root)
-        except ValueError:
-            continue
-        if any(part in SKIP_DIRS or part.startswith(".") for part in rel.parts):
-            continue
-        if not f.is_file():
-            continue
-        out.append({"path": str(rel), "size": _size_of(f)})
-    return out
+    return _artifacts()._safe_rel_files(root)
 
 
 def api_base_harnesses() -> dict:
-    """`base_harness/*/` 的清单 —— 技能 A 第 1 步的候选起点。
-
-    只读目录和 `harness.json`；不 import、不执行、不复制。sha 是 null：
-    基线没有 run 记录，run 里的 harness_sha 是 staging 之后的 git tree hash。
-    """
-    rows: list[dict] = []
-    for d in _base_harness_dirs():
-        manifest = read_json(d / "harness.json")
-        files = _safe_rel_files(d)
-        rows.append({
-            "name": d.name,
-            "path": f"base_harness/{d.name}",
-            "manifest": {key: manifest.get(key) for key in MANIFEST_KEYS},
-            "files": files,
-            "file_count": len(files),
-            "bytes": sum(f["size"] for f in files if isinstance(f["size"], int)),
-            "harness_sha": None,
-        })
-    return {
-        "root": "base_harness",
-        "rows": rows,
-        "count": len(rows),
-        "sha_note": ("基线没有 run 记录；run 里的 harness_sha 是 staging（补 .gitignore/.state）"
-                     "之后的 git tree hash，本台不重算，也不拿别的 sha 冒充它。"),
-        "note": ("`base_harness/*/` 是已存在的起点；这一屏只读它们，不复制、不执行、不修改。"
-                 "没有列出来的目录（__pycache__ 等）不是起点。"),
-    }
+    return _artifacts().api_base_harnesses()
 
 
 def _base_harness_dir(name: str) -> pathlib.Path | None:
-    if (not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name or "")
-            or name in (".", "..") or name in SKIP_DIRS or name.startswith(".")):
-        return None
-    root = _base_harnesses_root()
-    d = root / name
-    try:
-        if not d.is_dir() or not within(root, d):
-            return None
-    except OSError:
-        return None
-    return d
+    return _artifacts()._base_harness_dir(name)
 
 
 def api_base_harness_file(name: str, rel: str) -> dict | None:
-    """`base_harness/<name>/<rel>` 的正文（只读，超限截断并说明）。"""
-    d = _base_harness_dir(name)
-    if not d or not rel:
-        return None
-    try:
-        target = (d / rel).resolve()
-    except OSError:
-        return None
-    if not within(d, target) or not target.is_file():
-        return None
-    return _read_text_capped(target, rel, max_bytes=PANEL_FILE_BYTES,
-                             max_lines=PANEL_FILE_LINES)
-
-
-_KIND_RE = re.compile(r"^KIND\s*=\s*[\"']([A-Za-z_]+)[\"']\s*$", re.M)
-_SPLIT_RE = re.compile(r"^SPLIT\s*=", re.M)
+    return _artifacts().api_base_harness_file(name, rel)
 
 
 def api_adapters() -> dict:
-    """`data/datasets/*.py` 的适配器清单（技能 A 第 1 步的数据集）。
-
-    不 import 适配器：导入会执行模块、可能下载数据，而这一屏只负责"列出能选的"。
-    这里读的是每个模块自己声明的 `KIND` —— `data/scaffolds/registry.py` 也用同一
-    条规矩（`KIND == "dataset"` 才是可选的基准，其余是平台自己的 fixture）。
-    导入失败 / 缺依赖只会在真起跑时暴露，本台不替它下结论。
-    """
-    rows: list[dict] = []
-    if DATASETS_DIR.is_dir():
-        try:
-            entries = sorted(DATASETS_DIR.glob("*.py"))
-        except OSError:
-            entries = []
-        for path in entries:
-            if path.stem in ("__init__", "registry"):
-                continue
-            try:
-                text = path.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-            m = _KIND_RE.search(text)
-            kind = m.group(1) if m else None
-            rows.append({
-                "name": path.stem,
-                "kind": kind,
-                "published": kind == "dataset",
-                "module": f"data.datasets.{path.stem}",
-                "path": f"data/datasets/{path.name}",
-                "has_split": bool(_SPLIT_RE.search(text)),
-            })
-    return {
-        "root": "data/datasets",
-        "rows": rows,
-        "count": len(rows),
-        "published": [r["name"] for r in rows if r["published"]],
-        "note": ("KIND == \"dataset\" 的才是可选数据集；其余是平台自己的 fixture。"
-                 "本台不 import 适配器，也不下载数据。"),
-    }
+    return _artifacts().api_adapters()
 
 
-# ─────────────────────────────────────────────────────── 对比：train 分 vs eval 池
-#: 这一屏要回答的问题只有一个：train 列是 improver **见过**的 100 个任务上的分，
-#: eval 三列是别的池上的分。两个数字在数据集里本来就是分开的 run，所以这里按
-#: method + round 把它们拼起来 —— 但不能拼错。
-POOLS = ("valid_unseen", "valid_seen", "valid_train")
-
-#: 评测侧的单点 run：`rsi10-<stamp>-<method>-ckpt-r<N>-<pool>`，一个 run 一个分。
-#: 只认这一段：`-repair-…` / `-fix` 之类的尾巴不是同一批测量，宁可不进这一屏。
-_CKPT = re.compile(
-    r"^rsi10-(?P<stamp>[0-9]{8}T[0-9]{4,6}Z)-(?P<method>[A-Za-z0-9_]+)"
-    r"-ckpt-r(?P<round>\d{1,3})-(?P<pool>valid_unseen|valid_seen|valid_train)$")
-
-#: 训练侧的多轮 run：`rsi10-<stamp>-<method>-train`。
-_STUDY = re.compile(r"^(?P<method>[A-Za-z0-9_]+)-train$")
-_STAMP = re.compile(r"^[a-z0-9]+-(?P<stamp>[0-9]{8}T[0-9]{4,6}Z)-")
-
-
-def stamp_of(run_id: str) -> str:
-    """`rsi10-20261018T062351Z-…` 里的 `20261018T062351Z`。
-
-    注意 `run_row()["stamp"]` 是 `rsi10`（脚本名），不是这一批实验的时间戳；
-    两批训练（`20261017T123952Z` / `20261018T062351Z`）的 ckpt 可以同名，
-    所以拼的时候必须看这个时间戳。
-    """
-    m = _STAMP.match(run_id or "")
-    return m.group("stamp") if m else ""
-
-
+# Comparison and coverage compatibility delegates.
 def eval_index(rows: list[dict], dataset: str) -> dict:
-    """method -> round -> pool -> [测量]，一次遍历。
-
-    只有真的读出分数的 run 才算一次测量；`curve.jsonl` 为空的 run
-    （跑过但没测出分）不是 0 分，这里直接不收录，界面显示 "—"。
-    """
-    index: dict = {}
-    for row in rows:
-        if dataset and (row.get("dataset") or "") != dataset:
-            continue
-        score = as_num(row.get("last"))
-        if score is None:
-            continue
-        m = _CKPT.match(row["id"])
-        exam = _EVAL_EXAM.match(row["id"])
-        if not m and not exam:
-            continue
-        n_scored = n_invalid = n_failed = None
-        if m:
-            method, pool, round_no = m.group("method"), m.group("pool"), int(m.group("round"))
-            stamp = m.group("stamp")
-        else:
-            # exam 名字里没有轮次：轮次只写在曲线的 `evaluated_from.round` 里。
-            # 少读这一行，这个状态就会被当成"另一批的 round N"，而这正是
-            # dream_rsi r6 曾经在对比里显示 0.000 的原因。
-            points = read_curve(RUNS / row["id"])[0]
-            point = points[-1] if points else {}
-            round_no = (point.get("evaluated_from") or {}).get("round")
-            if round_no is None:
-                continue
-            n_scored = as_int(point.get("n_scored"))
-            n_invalid = as_int(point.get("n_invalid"))
-            n_failed = as_int(point.get("n_harness_failed"))
-            method, pool = exam.group("method"), exam.group("pool")
-            stamp = exam.group("stamp")
-        record = {
-            "run_id": row["id"],
-            "stamp": stamp,
-            "form": "ckpt" if m else "exam",
-            "score": score,
-            "n_scored": n_scored,
-            "n_invalid": n_invalid,
-            "n_harness_failed": n_failed,
-            "harness_sha": row.get("harness_sha"),
-            "mtime_s": row.get("mtime_s") or 0.0,
-        }
-        (index.setdefault(method, {})
-                   .setdefault(int(round_no), {})
-                   .setdefault(pool, [])
-                   .append(record))
-    return index
-
-
-def study_candidates(rows: list[dict], dataset: str) -> dict:
-    """method -> [训练 run]。一个方法可能被训练过好几次，选哪一次见 pick_study。"""
-    out: dict = {}
-    for row in rows:
-        if row.get("kind") != "study" or not row.get("has_curve"):
-            continue
-        m = _STUDY.match(row.get("tail") or "")
-        if not m:
-            continue
-        if dataset and (row.get("dataset") or "") != dataset:
-            continue
-        out.setdefault(m.group("method"), []).append(row)
-    return out
-
-
-def _stamp_coverage(stamp: str, by_round: dict) -> int:
-    """这个 stamp 下有几个 (round, pool) 真的测出了分。"""
-    if not stamp:
-        return 0
-    return sum(1 for pools in by_round.values() for records in pools.values()
-               if any(rec["stamp"] == stamp for rec in records))
-
-
-def pick_study(candidates: list[dict], by_round: dict) -> dict | None:
-    """同一个方法可能有好几批训练。选**和自己那批 ckpt 评测对得上**的那一批。
-
-    dream_rsi / meta_harness 各有两批：`20261017T123952Z` 和 `20261018T062351Z`。
-    两批的 `round N` 不是同一个 state，混着拼会得到一个不存在的分数。
-    所以排序是：① 本 stamp 的 ckpt 覆盖数（越多说明这一批才是被认真测过的那次）
-    ② 轮数 ③ 时间戳。只有 r0 的 run（没开始训练）没有 ckpt 可对，直接排除。
-    """
-    ranked = []
-    for row in candidates:
-        if as_int(row.get("rounds")) is None or int(row["rounds"]) < 2:
-            continue
-        stamp = stamp_of(row["id"])
-        ranked.append((_stamp_coverage(stamp, by_round), int(row["rounds"]), stamp, row))
-    if not ranked:
-        return None
-    # 只按 tuple[:3] 比，不把 dict 塞进比较里。
-    return max(ranked, key=lambda item: item[:3])[3]
-
-
-def _cell_valid(rec: dict, pool: str) -> bool:
-    """这一格是不是"把整个池测满且没有无效题"。ckpt 形式没有逐题计数时为 None（未知）。"""
-    size = COVERAGE_POOL_SIZES.get(pool)
-    if rec.get("n_scored") is None:
-        return True          # ckpt 形式：没有计数可查，沿用原行为
-    return (rec["n_scored"] == size and not (rec.get("n_invalid") or 0)
-            and not (rec.get("n_harness_failed") or 0))
-
-
-def _measure(records: list[dict], study_stamp: str, pool: str = "") -> dict | None:
-    """同一个 (round, pool) 在多批里都有时：先要 study run 自己那批，再退回最新的。
-
-    退回去的那次一定带着 `stamp` 一起返回，界面上会挂一个 stamp chip —— 拼的是
-    两次测量，不能让它看起来像一次。
-    """
-    if not records:
-        return None
-    # 有效性优先于批次：宁可显示 `—`，也不拿一次缺题/带无效题的测量去填一个格。
-    valid = [rec for rec in records if _cell_valid(rec, pool)]
-    picked = valid or records
-    same = [rec for rec in picked if rec["stamp"] == study_stamp]
-    chosen = same or picked
-    return max(chosen, key=lambda rec: (rec["stamp"] == study_stamp, rec["stamp"],
-                                        rec["mtime_s"]))
+    return comparison.eval_index(rows, dataset, runs=RUNS)
 
 
 def api_compare(method: str, dataset: str = "") -> dict:
-    rows = all_rows()
-    evals = eval_index(rows, dataset)
-    studies = study_candidates(rows, dataset)
-
-    #: 只有两侧都在的方法才进选择器；只训练没评测（或反过来）的方法不在这里出现。
-    picked: dict[str, dict] = {}
-    for name in sorted(set(evals) | set(studies)):
-        by_round = evals.get(name) or {}
-        row = pick_study(studies.get(name) or [], by_round)
-        if row is None or not by_round:
-            continue
-        picked[name] = row
-
-    out: dict = {
-        "dataset": dataset or None,
-        "pools": list(POOLS),
-        "methods": [],
-        "method_rows": [],
-        "study": None,
-        "series": [],
-        "gap": [],
-        "note": "",
-    }
-
-    def summary(name: str, row: dict) -> dict:
-        by_round = evals.get(name) or {}
-        measured = sum(1 for pools in by_round.values()
-                       if any(rec["stamp"] == stamp_of(row["id"])
-                              for records in pools.values() for rec in records))
-        return {
-            "name": name,
-            "study_run_id": row["id"],
-            "stamp": stamp_of(row["id"]) or None,
-            "dataset": row.get("dataset"),
-            "rounds": as_int(row.get("rounds")),
-            "measured_rounds": measured,
-            "best": row.get("best"),
-            "last": row.get("last"),
-        }
-
-    #: 测量最全的排前面：默认打开的一屏应该是有东西看的那一屏。
-    order = sorted(picked, key=lambda n: (-(summary(n, picked[n])["measured_rounds"]),
-                                          -(as_int(picked[n].get("rounds")) or 0), n))
-    out["methods"] = order
-    out["method_rows"] = [summary(n, picked[n]) for n in order]
-
-    #: 不传 method 时打开第一项（测量最全的那个），这样直接打 /api/compare 也是一屏数据，
-    #: 而不是要前端先拿列表再问第二次。选了哪个方法一定写在 `method` 里。
-    if not method and order:
-        method = order[0]
-    out["method"] = method or None
-
-    row = picked.get(method)
-    if row is None:
-        if dataset and not picked:
-            out["note"] = f"dataset={dataset} 下没有两侧都齐的方法（训练 run 与 ckpt 评测缺一侧）。"
-        elif not method:
-            out["note"] = "没有可以对比的方法：两侧都齐的方法一个也没有。"
-        elif method in studies and not evals.get(method):
-            out["note"] = "这个方法有训练 run，但没有可按轮配对的 ckpt 评测。"
-        elif method in evals and method not in picked:
-            out["note"] = "这个方法有 ckpt 评测，但没有多轮训练 run。"
-        else:
-            out["note"] = "没有这个方法，或者它两侧的数据都不全。"
-        return json_safe(out)
-
-    study_stamp = stamp_of(row["id"])
-    points, _, _ = read_curve(RUNS / row["id"])
-    study_rounds: list[dict] = []
-    #: round -> 这一轮 train 测量的调用信息。series/gap 是"这一轮的 harness"，
-    #: 所以两者用同一份数字，不在 eval 池上另算一个比值。
-    calls_of_round: dict[int, dict] = {}
-    bad = 0
-    for point in points:
-        n = as_int(point.get("round"))
-        if n is None or n < 0:
-            bad += 1
-            continue
-        ident = point.get("identity") if isinstance(point.get("identity"), dict) else {}
-        cost = point.get("cost") if isinstance(point.get("cost"), dict) else {}
-        calls = as_int(cost.get("harness_model_calls"))
-        per_task = calls_per_task(calls, as_int(point.get("n_scored")))
-        in_loop = model_in_loop(calls)
-        calls_of_round[n] = {"calls_per_task": per_task, "model_in_loop": in_loop}
-        study_rounds.append({
-            "round": n,
-            "train": as_num(point.get("score")),
-            "n_scored": as_int(point.get("n_scored")),
-            "n_invalid": as_int(point.get("n_invalid")),
-            "harness_sha": (str(ident.get("harness_sha") or "")[:8] or None),
-            "calls": calls,
-            "calls_per_task": per_task,
-            "model_in_loop": in_loop,
-        })
-    study_rounds.sort(key=lambda item: item["round"])
-
-    scored = [item for item in study_rounds if item["train"] is not None]
-    best_point = max(scored, key=lambda item: item["train"], default=None)
-    last_point = study_rounds[-1] if study_rounds else None
-    out["study"] = {
-        "run_id": row["id"],
-        "stamp": study_stamp or None,
-        "dataset": row.get("dataset"),
-        "rounds": study_rounds,
-        "bad_points": bad,
-        "best": best_point["train"] if best_point else None,
-        "best_round": best_point["round"] if best_point else None,
-        "last": last_point["train"] if last_point else None,
-        "last_round": last_point["round"] if last_point else None,
-    }
-
-    by_round = evals.get(method) or {}
-    train_of = {item["round"]: item["train"] for item in study_rounds}
-    #: 只按训练 run 自己的轮次走。评测侧多出来的轮次（同一个方法、另一批训练的
-    #: ckpt）不是同一个 state，放进来就等于把两批训练缝成一条曲线。
-    for item in study_rounds:
-        n = item["round"]
-        pools = by_round.get(n) or {}
-        calls_here = calls_of_round.get(n) or {}
-        series: dict = {
-            "round": n,
-            "calls_per_task": calls_here.get("calls_per_task"),
-            "model_in_loop": calls_here.get("model_in_loop"),
-            "stamps": {}, "sources": {}, "shas": {},
-        }
-        for pool in POOLS:
-            rec = _measure(pools.get(pool) or [], study_stamp, pool)
-            series[pool] = rec["score"] if rec else None
-            series["stamps"][pool] = rec["stamp"] if rec else None
-            series["sources"][pool] = rec["run_id"] if rec else None
-            series["shas"][pool] = rec["harness_sha"] if rec else None
-        out["series"].append(series)
-
-        measured = [(pool, series[pool]) for pool in POOLS if series[pool] is not None]
-        best_pool, best_eval = max(measured, key=lambda pair: pair[1]) if measured else (None, None)
-        train = train_of.get(n)
-        out["gap"].append({
-            "round": n,
-            "train": train,
-            "best_eval": best_eval,
-            "best_pool": best_pool,
-            "delta": (best_eval - train) if (best_eval is not None and train is not None) else None,
-            "calls_per_task": calls_here.get("calls_per_task"),
-            "model_in_loop": calls_here.get("model_in_loop"),
-        })
-    return json_safe(out)
-
-
-# ─────────────────────────────────────────────────────── 覆盖矩阵（round × pool）
-#: 语料里最强的一句结论是"round × pool 网格是完整的"。这一屏把它变成一个能数
-#: 出来的东西：8 个方法 × 每个方法**测过的每一个训练轮次** × 3 个评测池。
-#:
-#: 方法 -> stamp 的对应关系是**实验批次**的事实，写死而不是从目录名里猜：
-#: `dream_rsi` / `meta_harness` 在 20261017T123952Z 下也有一批 ckpt 目录，但那是
-#: 另一次训练，round N 不是同一个 state（同 pick_study 的理由）。按 stamp 收，
-#: 那些目录就不会冒充成格子。
-COVERAGE_METHODS: tuple[tuple[str, str], ...] = (
-    ("sica_ci", "20261017T123952Z"),
-    ("ahe", "20261017T123952Z"),
-    ("dgm", "20261017T123952Z"),
-    ("harnessx", "20261017T123952Z"),
-    ("hyperagents", "20261017T123952Z"),
-    ("tthe", "20261017T123952Z"),
-    ("dream_rsi", "20261018T062351Z"),
-    ("meta_harness", "20261018T062351Z"),
-)
-
-#: 不进矩阵的方法，但必须在界面上说出来 —— 否则读的人会以为这一屏漏了它。
-COVERAGE_EXCLUDED: tuple[tuple[str, str, str], ...] = (
-    ("rrsi", "20261017T123952Z", "已废弃（deprecated），评测不进矩阵"),
-)
-
-#: 池的题数。一个格子只有把整个池测满才算有效：少一题就不是同一个测量，
-#: 也就不能拿来支撑"171 格全齐"这句话。
-COVERAGE_POOL_SIZES = {"valid_unseen": 134, "valid_seen": 140, "valid_train": 200}
-
-#: exam 形式的评测：`<stamp>-<method>-exam-<pool>`。名字里没有轮次，轮次只写在
-#: 曲线测点的 `evaluated_from.round` 里 —— 漏了这条就会把 10 个真格子报成空缺。
-_EVAL_EXAM = re.compile(
-    r"^rsi10-(?P<stamp>[0-9]{8}T[0-9]{4,6}Z)-(?P<method>[A-Za-z0-9_]+)"
-    r"-exam-(?P<pool>valid_unseen|valid_seen|valid_train)$")
+    return comparison.api_compare(method, dataset, rows=all_rows(), runs=RUNS)
 
 
 def _coverage_eval_index() -> dict:
-    """(stamp, method, pool) -> {"ckpt": {round: dir}, "exam": dir}。
-
-    只收**完整命名**的 run。`-repair-…` / `-control-…` / `-fix` 这些尾巴是另一次
-    测量，不是这一格 —— 和 eval_index 用同一条规矩。
-    """
-    index: dict = {}
-    try:
-        entries = sorted(RUNS.iterdir())
-    except OSError:
-        return index
-    for entry in entries:
-        if not entry.is_dir():
-            continue
-        m = _CKPT.match(entry.name)
-        if m:
-            slot = index.setdefault(
-                (m.group("stamp"), m.group("method"), m.group("pool")),
-                {"ckpt": {}, "exam": None})
-            slot["ckpt"][int(m.group("round"))] = entry
-            continue
-        m = _EVAL_EXAM.match(entry.name)
-        if m:
-            slot = index.setdefault(
-                (m.group("stamp"), m.group("method"), m.group("pool")),
-                {"ckpt": {}, "exam": None})
-            slot["exam"] = entry
-    return index
+    return comparison._coverage_eval_index(runs=RUNS)
 
 
 def _coverage_rounds(stamp: str, method: str) -> tuple[list[int], str | None, str]:
-    """这个方法在**自己那批**训练里测过的轮次（不含 r0），以及曲线的读取状态。
-
-    r0 是共享基线（`h0-*`），不是这个方法的一次训练，所以不进矩阵；
-    r8 只有 harness 快照、从没打分的那种轮次也不会出现在这里 —— 曲线里没有它。
-    """
-    run_id = f"rsi10-{stamp}-{method}-train"
-    run_dir = RUNS / run_id
-    if not run_dir.is_dir():
-        return [], None, "missing"
-    points, state, _ = read_curve(run_dir)
-    rounds: set[int] = set()
-    for point in points:
-        n = as_int(point.get("round"))
-        if n is not None and n >= 1:
-            rounds.add(n)
-    return sorted(rounds), run_id, state
-
-
-def _coverage_verdict(last: dict, size: int | None) -> tuple[list[str], dict]:
-    """一个测点算不算有效格：返回 (不满足的判据, 三个计数 + 分数)。
-
-    未知（读不到 / 没写）一律 None 并写进 why；不补 0。
-    """
-    n = as_int(last.get("n_scored")) if last else None
-    invalid = as_int(last.get("n_invalid")) if last else None
-    failed = as_int(last.get("n_harness_failed")) if last else None
-    score = as_num(last.get("score")) if last else None
-    why: list[str] = []
-    if not last:
-        why.append("曲线没有测点")
-    else:
-        if n is None:
-            why.append("n_scored 未知")
-        elif size is not None and n != size:
-            why.append(f"n_scored {n} ≠ 池大小 {size}")
-        if invalid is None:
-            why.append("n_invalid 未知")
-        elif invalid != 0:
-            why.append(f"n_invalid {invalid} ≠ 0")
-        if failed is None:
-            why.append("n_harness_failed 未知")
-        elif failed != 0:
-            why.append(f"n_harness_failed {failed} ≠ 0")
-        if score is None:
-            why.append("没有分数")
-    return why, {"score": score, "n_scored": n, "n_invalid": invalid,
-                 "n_harness_failed": failed}
-
-
-def _coverage_cell(slot: dict | None, round_n: int, pool: str,
-                   size: int | None) -> dict:
-    """一格的解析：先 ckpt（轮次在目录名里），再 exam（轮次在曲线里）。
-
-    返回的 `run_id` 为 None 表示**这一格根本没有 run**（空格）；有 run 但没过
-    判据是"无效"，两者在界面上必须分得开。
-    """
-    base = {"round": round_n, "pool": pool, "ok": False, "score": None,
-            "run_id": None, "n_scored": None, "n_invalid": None,
-            "n_harness_failed": None, "why_if_not": None, "form": None}
-    candidates: list[tuple[str, pathlib.Path, dict]] = []
-    exam_round = None
-    if slot:
-        ckpt_dir = (slot.get("ckpt") or {}).get(round_n)
-        if ckpt_dir is not None:
-            points, _, _ = read_curve(ckpt_dir)
-            candidates.append(("ckpt", ckpt_dir, points[-1] if points else {}))
-        exam_dir = slot.get("exam")
-        if exam_dir is not None:
-            points, _, _ = read_curve(exam_dir)
-            last = points[-1] if points else {}
-            source = last.get("evaluated_from")
-            if isinstance(source, dict):
-                exam_round = as_int(source.get("round"))
-            if exam_round == round_n:
-                candidates.append(("exam", exam_dir, last))
-
-    if not candidates:
-        if slot is None:
-            why = f"没有这一格的 run（ckpt-r{round_n} 与 exam 两种命名都没有）"
-        elif exam_round is None:
-            why = "exam run 没有可用测点，轮次未知，无法归到某一轮"
-        else:
-            why = f"exam run 覆盖的是第 {exam_round} 轮，不是第 {round_n} 轮"
-        return {**base, "why_if_not": why}
-
-    chosen = None
-    for kind, path, last in candidates:
-        why, info = _coverage_verdict(last, size)
-        if not why:
-            chosen = (kind, path, why, info)
-            break
-    if chosen is None:
-        kind, path, last = candidates[0]
-        why, info = _coverage_verdict(last, size)
-        chosen = (kind, path, why, info)
-
-    kind, path, why, info = chosen
-    return {
-        **base,
-        "ok": not why,
-        "score": info["score"],
-        "run_id": path.name,
-        "n_scored": info["n_scored"],
-        "n_invalid": info["n_invalid"],
-        "n_harness_failed": info["n_harness_failed"],
-        "why_if_not": "；".join(why) if why else None,
-        "form": kind,
-    }
+    return comparison._coverage_rounds(stamp, method, runs=RUNS)
 
 
 def api_coverage() -> dict:
-    """`GET /api/coverage`：8 个方法 × 轮次 × 3 池的格子，一格一次测量。
-
-    171 这个数不是写在这里的常量：它是 `rounds × pools` 数出来的；某一格没有
-    run、或者 run 没测满，`valid` 就掉下来，`statement` 跟着改口。
-    """
-    index = _coverage_eval_index()
-    pools = list(POOLS)
-    out_methods: list[dict] = []
-    expected = valid = absent = invalid = rounds_total = 0
-
-    for method, stamp in COVERAGE_METHODS:
-        rounds, train_run, curve_state = _coverage_rounds(stamp, method)
-        rounds_total += len(rounds)
-        cells: list[dict] = []
-        for round_n in rounds:
-            for pool in pools:
-                cell = _coverage_cell(
-                    index.get((stamp, method, pool)), round_n, pool,
-                    COVERAGE_POOL_SIZES.get(pool))
-                cells.append(cell)
-                expected += 1
-                if cell["ok"]:
-                    valid += 1
-                elif cell["run_id"] is None:
-                    absent += 1
-                else:
-                    invalid += 1
-        method_valid = sum(1 for cell in cells if cell["ok"])
-        note = None
-        if train_run is None:
-            note = f"找不到训练 run `rsi10-{stamp}-{method}-train`：轮次未知，格子无法计数。"
-        elif not rounds:
-            note = (f"训练 run `{train_run}` 的曲线状态是 `{curve_state}`："
-                    "没有 r1 以后的测点，这一批还没有可数的轮次。")
-        out_methods.append({
-            "name": method,
-            "stamp": stamp,
-            "train_run_id": train_run,
-            "rounds": rounds,
-            "pools": pools,
-            "cells": cells,
-            "valid": method_valid,
-            "expected": len(cells),
-            "note": note,
-        })
-
-    missing = expected - valid
-    if missing:
-        statement = (
-            f"{len(COVERAGE_METHODS)} 个方法 · {rounds_total} 个训练轮次 · "
-            f"{len(pools)} 个评测池 = {expected} 格，{valid} 格有效，{missing} 格缺。")
-    else:
-        statement = (
-            f"{len(COVERAGE_METHODS)} 个方法 · {rounds_total} 个训练轮次 · "
-            f"{len(pools)} 个评测池 = {expected} 格，{valid} 格有效：round × pool 网格完整。")
-
-    return json_safe({
-        "pools": pools,
-        "pool_sizes": dict(COVERAGE_POOL_SIZES),
-        "methods": out_methods,
-        "totals": {
-            "expected": expected,
-            "valid": valid,
-            "missing": missing,
-            "absent": absent,
-            "invalid": invalid,
-            "rounds": rounds_total,
-            "methods": len(COVERAGE_METHODS),
-            "pools": len(pools),
-        },
-        "excluded": [{"name": name, "stamp": stamp, "reason": why}
-                     for name, stamp, why in COVERAGE_EXCLUDED],
-        "statement": statement,
-    })
+    return comparison.api_coverage(runs=RUNS)
 
 
-# ─────────────────────────────────────────────────────── M3 解释（LLM，只读）
-#: 一次解释的输入上限。patch 只取前 40 KB；0 分任务只看最后几个事件。
-#: 这些数字是**给模型看的**上限，不是磁盘读取上限。
-EXPLAIN_PATCH_BYTES = 40 * 1024
-EXPLAIN_ZERO_TASKS = 3
-EXPLAIN_LAST_EVENTS = 3
-EXPLAIN_EVENT_TYPES = {"harness_identity", "usage", "wall_clock_s", "context_trims"}
-EXPLAIN_TIMEOUT_S = 60.0
+# Explanation limits/prompts/cache mechanics belong to explanation.py.
 EXPLAIN_CACHE_DIR = STATE_ROOT / ".cache" / "explain"
-EXPLAIN_ENV = ("HG_CONSOLE_EXPLAIN_BASE_URL", "HG_CONSOLE_EXPLAIN_MODEL",
-               "HG_CONSOLE_EXPLAIN_API_KEY")
-
-EXPLAIN_SYSTEM = """你是 HarnessGrad 实验台的只读解释器。用户会给你某一轮 harness 改动的 patch、\
-这一轮的分数与文件行数统计，以及最多三个得 0 分的任务轨迹的最后几个事件。
-
-你的任务：解释这次改动在**机械层面**做了什么，以及它可能带来什么风险。
-规则：
-1. 只使用用户提供的内容。不要猜测没有给出的文件、分数、日志或外部事实。
-2. 只输出一个 JSON 对象。不要 markdown 代码块，不要前后说明，不要多余文字。
-3. JSON 必须且只能有这四个键：
-   - "claim": 一句中文，说明这次改动机械上改变了什么（不是“提升了性能”这类空话）。
-   - "evidence": 2 到 4 条中文短句；每条都必须引用 patch 里的具体改动或失败任务里的具体事件。
-   - "risk": 一句中文，说明这次改动可能破坏什么。
-   - "next": 一句中文，建议**一次**值得跑的对照（说明对照什么、看哪个指标）。
-4. 所有字符串用中文。不要编造数字；没有数字就说没有。
-"""
 
 
-class ExplainNoPatch(Exception):
-    """这一轮没有 patch：没有可解释的改动。"""
-
-
-class ExplainUpstream(Exception):
-    """模型端点返回了错误 / 非 JSON。"""
-
-
-_explain_mem: dict[str, dict] = {}
-_explain_mem_order: list[str] = []
-_explain_lock = threading.Lock()
-
-
-def _sha(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
-
-
-def _clip(value, n: int) -> str:
-    text = str(value if value is not None else "")
-    return text if len(text) <= n else text[:n] + "…"
-
-
-def _redact(text: str, secret: str) -> str:
-    return text.replace(secret, "***") if secret else text
-
-
-# ── 场景工坊：构造环境的那一半 ─────────────────────────────────────────────
-#
-# 两个模式是独立的（见 docs/scenario-workspace.md）：构造环境产出 bundle，优化 Harness
-# 消费它。这里只做"落盘 + 读回"，因为工作区是单人本地工具：没有账号、没有队列。
-# 持久化的就是 `data/authored/<slug>/` 目录，服务重启后照样列出来，不需要重新 import。
-
+# Author-bundle and builder configuration.
 PLATFORM_ROOT = ROOT.parent
 AUTHORED_ROOT = pathlib.Path(os.environ.get("HG_CONSOLE_AUTHORED",
                                             (STATE_ROOT / "authored" if EXTERNAL_STATE else PLATFORM_ROOT / "data" / "authored")))
 SCENARIO_BUILDER = pathlib.Path(os.environ.get(
     "HG_CONSOLE_SCENARIO_BUILDER", PLATFORM_ROOT / "tools" / "scenario_builder.py"))
-IMPORT_MAX_BYTES = 32 * 1024 * 1024        # 比场景归档小得多：这里只有文本和脚本
+IMPORT_MAX_BYTES = 32 * 1024 * 1024        # Authored archive request limit.
 
 
-# ── 自己改 harness：没有 RSI，人就是方法 ──────────────────────────────────
-#
-# 优化 Harness 不只是"交上来打分"，还有最常见的一种工作方式：拿一个起点，自己改几行，
-# 跑一题看看。所以这里提供的是**复制一份再改**，而不是就地编辑 `base_harness/` ——
-# 基线是所有曲线共同的起点，改它等于把历史测量的起点换掉。
+# Candidate storage never edits a measured baseline in place.
 CANDIDATES = pathlib.Path(os.environ.get("HG_CONSOLE_CANDIDATES",
                                          (STATE_ROOT / "candidates" if EXTERNAL_STATE else PLATFORM_ROOT / "data" / "candidates")))
-CANDIDATE_NAME = re.compile(r"[A-Za-z0-9._-]{1,48}")
-# 候选的来源账本：`data/candidates/.sources.json`。打开同一轮**不应该**每点一次就多出一份
-# 副本（383 KB 的 agent.py × N），但也不能覆盖用户已经改过的副本。所以记下创建时的指纹：
-# 打开时指纹没变就复用，变了（人改过）就再造一份带序号的新副本。
+# Provenance ledger. Round recovery publishes a new candidate without replacing existing edits.
 CANDIDATE_INDEX = CANDIDATES / ".sources.json"
 
 
 def _candidate_tree_sha(root: pathlib.Path) -> dict[str, str]:
-    """目录里每个文件的 sha256。跳过缓存与 VCS，迁移不算改动。"""
-    out: dict[str, str] = {}
-    if not root.is_dir():
-        return out
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
-        if "__pycache__" in path.parts or path.suffix in (".pyc", ".pyo"):
-            continue
-        try:
-            out[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
-        except OSError:
-            continue
-    return out
+    return candidates._candidate_tree_sha(root)
 
 
 def _candidate_ledger_module():
-    # The console also runs directly as a script, outside a package import.
-    spec = importlib.util.spec_from_file_location("hg_round_ledger", ROOT / "round_ledger.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return candidates.load_ledger(ROOT)
 
 
 def _candidate_sources() -> dict:
-    if not CANDIDATES.exists():
-        return {}
-    with _candidate_ledger_module().locked(CANDIDATES) as ledger:
-        return ledger.read()
+    return _candidate_store().sources()
 
 
 def _remember_candidate(name: str, run_id: str, round_no: int, via: str,
                         target: pathlib.Path, *, source: str | None = None,
                         from_path: pathlib.Path | None = None) -> bool:
-    record = {"run": run_id, "round": int(round_no), "via": via,
-              "created": int(time.time()), "files": _candidate_tree_sha(target)}
-    # `source` 是这一版**从哪里读出来的**（state / snapshot / replay），编辑屏用它说明
-    # 手里这份候选是怎么来的；`from` 是那一处的路径。旧账本没有这两个字段，读取时有回退。
-    if source:
-        record["source"] = source
-    if from_path is not None:
-        record["from"] = str(from_path)
-    CANDIDATES.mkdir(parents=True, exist_ok=True)
-    with _candidate_ledger_module().locked(CANDIDATES) as ledger:
-        index = ledger.read()
-        # An adoption must never overwrite provenance installed concurrently.
-        if name in index:
-            return False
-        index[name] = record
-        ledger.write(index)
-        return True
-
-
-def _candidate_record_source(record: dict) -> str:
-    """账本里这一版是哪个来源：`state` / `snapshot` / `replay`。
-
-    新账本直接写 `source`。旧账本的 `via` 只有 `replay` 与非 replay 两种，而非 replay 的
-    副本都来自 `state_after_roundN/`（那时还没有快照这一路），所以按 `state` 读。
-    """
-    source = record.get("source")
-    if source in ("state", "snapshot", "replay"):
-        return str(source)
-    return "replay" if record.get("via") == "replay" else "state"
+    return _candidate_store().remember(name, run_id, round_no, via, target, source=source, from_path=from_path)
 
 
 def _candidate_reusable(name: str, run_id: str, round_no: int) -> bool:
-    """这份同名候选是不是**上一次从同一轮原样复制出来的、之后没人动过**。
-
-    账本里没有记录的同名目录（这个特性上线前复制出来的）也接管：它本来就是那一轮的副本
-    （实测五个 `…-r20*` 与 `state_after_round20` 除 `harness.json` 的名字外逐字节相同），
-    接管后记下当前指纹，下次就能正常判定了。接管不会覆盖任何东西 —— 拿到手的就是那个
-    目录本身；人一旦改它，指纹变，下次就会新开一份。
-    """
-    target = CANDIDATES / name
-    if not target.is_dir() or not (target / "harness.json").is_file():
-        return False
-    record = _candidate_sources().get(name)
-    if isinstance(record, dict):
-        if record.get("run") != run_id or int(record.get("round", -1)) != int(round_no):
-            return False
-        return record.get("files") == _candidate_tree_sha(target)
-    if _remember_candidate(name, run_id, round_no, "adopted", target):
-        return True
-    # A concurrent publisher installed provenance; evaluate it rather than adopting.
-    record = _candidate_sources().get(name)
-    return (isinstance(record, dict) and record.get("run") == run_id
-            and record.get("round") == int(round_no)
-            and record.get("files") == _candidate_tree_sha(target))
+    return _candidate_store().reusable(name, run_id, round_no)
 
 
-# ── 右侧助手：不自己造 agent，借一个现成的 harness ─────────────────────────
-#
-# 结论先说：**不写新的 coding agent**。平台已经有六个 CLI adapter，它们已经会在这个沙箱里
-# 读写文件、调工具、产出 trace；"帮人改 harness"和"做题"在机械上是同一件事 —— 给一个目录、
-# 一段指示、让它动手。所以这里把 codex（可换）当助手用：`codex exec` 在候选目录里跑，
-# 平台只负责把"选中的行"原样塞进提示、把改动收集回来、把结果落成一个新候选。
-#
-# 这和 methods/ 里的 improver 是同一个角色，只是触发方式不同：那边由方法规则每轮调用一次，
-# 这边由人点一下按钮。所以它用**第三类端点**（assistant），不占 task/meta 的配置。
-ASSISTANT_KINDS = ("codex", "dsh", "opencode", "miniswe", "miniagent", "openclaw")
-
-
+# Assistant sessions use their own settings role and explicit per-request thread choice.
 ASSISTANT_THREADS = pathlib.Path(os.environ.get(
     "HG_CONSOLE_ASSISTANT_THREADS", (STATE_ROOT / ".local" / "assistant-threads.json" if EXTERNAL_STATE else PLATFORM_ROOT / ".local" / "assistant-threads.json")))
 
 
 def force_new_thread() -> bool:
-    """本次请求要不要开新会话。用模块级变量而不是全局配置：它是一次调用的性质。"""
-    return bool(_FORCE_NEW_THREAD.get("value"))
-
-
-_FORCE_NEW_THREAD = {"value": False}
+    """Legacy default; request session choice is now an explicit argument."""
+    return False
 
 def _threads() -> dict:
-    data = read_json(ASSISTANT_THREADS)
-    return data if isinstance(data, dict) else {}
+    return workbench.ThreadStore(ASSISTANT_THREADS).read()
 
 
 def _remember_thread(candidate: str, thread: str) -> None:
-    data = _threads()
-    data[candidate] = thread
-    ASSISTANT_THREADS.parent.mkdir(parents=True, exist_ok=True)
-    ASSISTANT_THREADS.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n",
-                                 encoding="utf-8")
+    workbench.ThreadStore(ASSISTANT_THREADS).remember(candidate, thread)
 
 
 def _assistant_argv(env: dict, thread: str | None = None) -> list[str]:
-    """助手进程的命令行。**有会话就 resume**，否则新开一个并记住 thread id。
-
-    为什么必须这样：每条消息都新开一个 `codex exec` 时，模型看到的是一句孤立的话，
-    于是它回"我会先对照当前代码和各轮补丁…"——一段计划——然后进程结束，面板看起来像
-    停住了。成熟的做法（Copilot/Cursor 的 agent 模式）是一条**持续的会话**：模型→工具→
-    模型直到它自己停下。codex 的 `exec resume <thread>` 就是那个会话。
-    """
-    configured = shlex.split(env.get("HG_CONSOLE_ASSISTANT_CMD", ""))
-    if configured:
-        return configured
-    codex = env.get("HG_ASSISTANT_CODEX") or shutil.which("codex")
-    if not codex:
-        raise ValueError("没有可用的助手 CLI：设置 HG_CONSOLE_ASSISTANT_CMD，或把 codex 装上")
-    common = ["--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"]
-    if thread:
-        return [codex, "exec", "resume", thread, *common]
-    # 不再用 `--ephemeral`：它意味着"不落会话"，于是下一条消息又回到孤立提问。
-    return [codex, "exec", *common]
+    return workbench.assistant_argv(env, thread)
 
 
 def _snapshot(root: pathlib.Path) -> dict[str, str]:
-    """每个文件的当前内容，用来算"这一句到底改了什么"。"""
-    out = {}
-    for path in sorted(root.rglob("*")):
-        if path.is_file() and path.suffix in (".py", ".json", ".md", ".txt", ".sh", ".yaml", ".yml"):
-            try:
-                out[str(path.relative_to(root))] = path.read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                continue
-    return out
+    return workbench.snapshot(root)
 
 
-def workbench_edit(name: str, instruction: str, selection: str = "", kind: str = "codex") -> tuple[int, dict]:
-    """在候选的**副本**上让助手改代码，返回新候选名与逐文件 diff。"""
-    import difflib
-    if kind not in ASSISTANT_KINDS:
-        return 400, {"error": "unknown-assistant", "detail": f"可用的助手：{list(ASSISTANT_KINDS)}"}
-    if not isinstance(instruction, str) or not instruction.strip():
-        return 400, {"error": "no-instruction"}
-    source = CANDIDATES / str(name)
-    if (not valid_workbench_candidate_name(name) or source.is_symlink()
-            or not (source / "harness.json").is_file()):
-        return 404, {"error": "candidate-not-found", "detail": str(name)}
-    stamp = time.strftime("%Y%m%d-%H%M%S")
-    target = CANDIDATES / f"{name}-edit-{stamp}"
-    if target.exists():
-        return 409, {"error": "duplicate-candidate", "detail": str(target)}
-    shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".git"))
-    before = _snapshot(target)
-    env = dict(os.environ)
-    settings = load_settings()["assistant"]
-    if settings.get("base_url"):
-        env["HG_AGENT_BASE_URL"] = settings["base_url"]
-    if settings.get("model"):
-        env["HG_AGENT_MODEL"] = settings["model"]
-    if settings.get("api_key"):
-        env["HG_AGENT_API_KEY"] = settings["api_key"]
-    thread = _threads().get(str(name)) if not force_new_thread() else None
-    try:
-        argv = _assistant_argv(env, thread)
-    except ValueError as exc:
-        shutil.rmtree(target, ignore_errors=True)
-        return 503, {"error": "assistant-not-configured", "detail": str(exc)}
-    prompt = instruction.strip()
-    if selection.strip():
-        prompt += ("\n\n下面是这次要看的范围（行号是文件里的真实行号，不要改动范围之外的内容）：\n"
-                   + selection.strip())
+def _resolve_assistant_registry(kind, model):
+    # The canonical declaration reader performs no CLI/model probes or builds.
+    from tools import improver
+    return improver.declared_editor_binding(kind, model_override=model, environment=os.environ)
 
-    def run_turn(text: str):
-        """一轮 = 一次 CLI 调用；返回 (完成对象, 助手说的话, thread id)。"""
-        try:
-            done = subprocess.run(argv + ["-C", str(target), "-"], input=text, cwd=str(target),
-                                  capture_output=True, text=True, timeout=1800, env=env)
-        except subprocess.TimeoutExpired:
-            return None, "", ""
-        said, tid = "", ""
-        for line in (done.stdout or "").splitlines():
-            try:
-                event = json.loads(line)
-            except ValueError:
-                continue
-            if not isinstance(event, dict):
-                continue
-            if event.get("type") == "thread.started":
-                tid = str(event.get("thread_id") or tid)
-            item = event.get("item")
-            if isinstance(item, dict) and item.get("type") == "agent_message" and item.get("text"):
-                said = str(item["text"])
-        return done, said, tid
 
-    done, said, tid = run_turn(prompt)
-    if done is None:
-        return 504, {"error": "assistant-timeout", "candidate": target.name}
-    if tid:
-        _remember_thread(str(name), tid)
-    continued = False
-    # **只说计划、没动文件**：同一个会话里催一次，而不是把"停住"当成回答。
-    touched_before_continue = _snapshot(target) != before
-    if not touched_before_continue and done.returncode == 0:
-        argv = _assistant_argv(env, _threads().get(str(name)))
-        done2, said2, tid2 = run_turn(
-            "继续执行：不要再复述计划，直接在仓库里改文件，改完用一句话说明改了什么。")
-        if done2 is not None and done2.returncode == 0:
-            continued = True
-            if said2:
-                said = said2
-            if tid2:
-                _remember_thread(str(name), tid2)
-    after = _snapshot(target)
-    diff, changed = [], []
-    for path in sorted(set(before) | set(after)):
-        if before.get(path) == after.get(path):
-            continue
-        changed.append(path)
-        diff.extend(difflib.unified_diff((before.get(path) or "").splitlines(True),
-                                         (after.get(path) or "").splitlines(True),
-                                         fromfile=f"a/{path}", tofile=f"b/{path}", n=2))
-    if not changed:
-        shutil.rmtree(target, ignore_errors=True)
-        return 200, {"candidate": None, "changed": [], "diff": "",
-                     "message": said or "助手没有改动任何文件",
-                     "stderr_tail": (done.stderr or "")[-600:]}
-    # **只报，不拦。** 助手第一版把注释插到了 shebang 上面 —— 文件仍然是合法 Python，
-    # 但 `#!/usr/bin/env python3` 不再生效。这类事人一眼能看出来，平台不该替他决定要不要，
-    # 但必须说出来：所以对每个改过的 .py 做一次编译检查，把结果放进响应。
-    syntax = {}
-    for path in changed:
-        if path.endswith(".py"):
-            try:
-                compile((target / path).read_text(encoding="utf-8", errors="replace"), path, "exec")
-                syntax[path] = "ok"
-            except SyntaxError as exc:
-                syntax[path] = f"{exc.msg} (line {exc.lineno})"
-    return 200, {"candidate": target.name, "changed": changed,
-                 "diff": "".join(diff)[:20000], "exit": done.returncode,
-                 "message": said, "syntax": syntax,
-                 "session": _threads().get(str(name)), "continued": continued,
-                 "stderr_tail": (done.stderr or "")[-600:]}
+def _assistant_binding(kind, environment, assistant):
+    return assistant_drivers.resolve(kind, environment, assistant, registry_resolver=_resolve_assistant_registry)
+
+
+def workbench_capabilities():
+    return assistant_drivers.capabilities(os.environ, load_settings()['assistant'], binding_resolver=_assistant_binding)
+
+
+def workbench_edit(name: str, instruction: str, selection: str = "", kind: str = "codex", *, new_thread: bool = False) -> tuple[int, dict]:
+    request = workbench.WorkbenchRequest(name, instruction, selection, kind, new_thread)
+    service = workbench.WorkbenchService(CANDIDATES, threads=workbench.ThreadStore(ASSISTANT_THREADS),
+        load_settings=load_settings, binding_resolver=_assistant_binding, run_process=subprocess.run, snapshot=_snapshot)
+    return service.edit(request, environment=os.environ)
 
 
 SELECTION_MAX_BYTES = 1024 * 1024
 SELECTION_MAX_LINES = 10000
 
 
-def valid_workbench_candidate_name(name: str) -> bool:
-    return isinstance(name, str) and name not in (".", "..") and bool(CANDIDATE_NAME.fullmatch(name))
-
-
-class CandidateReadError(ValueError):
-    """A sanitized, typed failure from the descriptor-relative candidate reader."""
-
-    def __init__(self, code: str, message: str):
-        super().__init__(message)
-        self.code = code
-
-
 def _read_candidate_bytes(name: str, path: str, limit: int, *, require_manifest=False):
-    """Read beneath CANDIDATES on Linux without following any opened symlink.
-
-    The configured root's ancestors, hard links, and concurrent same-UID mutation
-    are trusted; this is not a sandbox against a hostile filesystem owner.
-    """
-    if not valid_workbench_candidate_name(name):
-        raise CandidateReadError("invalid-candidate", "invalid candidate")
-    if not isinstance(path, str) or not path or "\x00" in path:
-        raise CandidateReadError("unsafe-path", "unsafe path")
-    rel = pathlib.PurePosixPath(path)
-    if rel.is_absolute() or not rel.parts or ".." in rel.parts:
-        raise CandidateReadError("unsafe-path", "unsafe path")
-    if (sys.platform != "linux" or not hasattr(os, "O_NOFOLLOW")
-            or not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NONBLOCK")
-            or os.open not in os.supports_dir_fd):
-        raise CandidateReadError("unsupported", "secure candidate reads unsupported")
-    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    fds = []
-    try:
-        fds.append(os.open(CANDIDATES, directory_flags))
-        fds.append(os.open(name, directory_flags, dir_fd=fds[-1]))
-        parent = fds[-1]
-        if require_manifest:
-            manifest = os.open("harness.json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
-                               dir_fd=parent)
-            fds.append(manifest)
-            if not stat.S_ISREG(os.fstat(manifest).st_mode):
-                raise CandidateReadError("invalid-candidate", "invalid candidate")
-        for component in rel.parts[:-1]:
-            parent = os.open(component, directory_flags, dir_fd=parent)
-            fds.append(parent)
-        fd = os.open(rel.parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
-                     dir_fd=parent)
-        fds.append(fd)
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            raise CandidateReadError("not-regular-file", "not a regular file")
-        with os.fdopen(os.dup(fd), "rb") as stream:
-            data = stream.read(limit + 1)
-        if len(data) > limit:
-            raise CandidateReadError("file-too-large", "file exceeds size limit")
-        return rel, data
-    except OSError as exc:
-        raise CandidateReadError("file-not-found", "file unavailable or unsafe") from exc
-    finally:
-        for fd in reversed(fds):
-            os.close(fd)
+    return _candidate_store().read_bytes(name, path, limit, require_manifest=require_manifest)
 
 
 def read_selection(name: str, path: str, first: int, last: int) -> str:
-    """Read a bounded selection beneath the named candidate without following symlinks."""
-    first, last = max(1, int(first)), int(last)
-    if first > last or last - first + 1 > SELECTION_MAX_LINES:
-        raise ValueError("invalid selection range")
-    rel, data = _read_candidate_bytes(name, path, SELECTION_MAX_BYTES, require_manifest=True)
-    lines = data.decode("utf-8", errors="replace").splitlines()
-    last = min(len(lines), last)
-    if first > last:
-        raise ValueError("选中的范围为空")
-    body = "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(first, last + 1))
-    return f"{rel}:{first}-{last}\n{body}"
+    return _candidate_store().selection(name, path, first, last)
 
 
 def harness_candidate_archive(name: str) -> tuple[int, bytes | None]:
-    """Build a bounded submission archive without following candidate links.
-
-    Hard-linked files are rejected: their contents may originate outside the candidate.
-    Concurrent writes to an already open regular file cannot be made into a snapshot.
-    """
-    import io
-    import tarfile
-    from console import submissions
-
-    class InvalidArchive(Exception):
-        pass
-
-    class ArchiveLimit(Exception):
-        pass
-
-    class CappedBuffer(io.BytesIO):
-        def write(self, data):
-            if self.tell() + len(data) > submissions.MAX_PAYLOAD:
-                raise ArchiveLimit()
-            return super().write(data)
-
-    if not valid_workbench_candidate_name(name):
-        return 404, None
-    if (sys.platform != "linux" or not hasattr(os, "O_NOFOLLOW")
-            or not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NONBLOCK")
-            or os.open not in os.supports_dir_fd):
-        return 400, None
-    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    file_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
-    stack = []
-    root_fd = candidate_fd = None
-    try:
-        try:
-            root_fd = os.open(CANDIDATES, directory_flags)
-            candidate_fd = os.open(name, directory_flags, dir_fd=root_fd)
-        except FileNotFoundError:
-            return 404, None
-        try:
-            manifest = os.open("harness.json", file_flags, dir_fd=candidate_fd)
-        except FileNotFoundError:
-            return 404, None
-        try:
-            info = os.fstat(manifest)
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                raise InvalidArchive()
-        finally:
-            os.close(manifest)
-        buffer = CappedBuffer()
-        entries = expanded = metadata = path_budget = 0
-        aliases = {}
-        manifest_written = False
-        # Each frame holds an open directory and a lazy iterator, never a tree listing.
-        stack.append((candidate_fd, os.scandir(candidate_fd), ""))
-        candidate_fd = None
-        with tarfile.open(fileobj=buffer, mode="w|gz", format=tarfile.PAX_FORMAT) as tar:
-            while stack:
-                parent, iterator, prefix = stack[-1]
-                try:
-                    entry = next(iterator)
-                except StopIteration:
-                    iterator.close()
-                    os.close(parent)
-                    stack.pop()
-                    continue
-                entries += 1
-                if entries > submissions.MAX_ENTRIES:
-                    raise ArchiveLimit()
-                if entry.name in SKIP_DIRS or entry.name.endswith(".pyc"):
-                    continue
-                path = prefix + entry.name
-                path_budget += len(path.encode("utf-8"))
-                if path_budget > submissions._METADATA:
-                    raise ArchiveLimit()
-                try:
-                    if submissions._member_path(path) != path:
-                        raise InvalidArchive()
-                except submissions.SubmissionRejected as exc:
-                    raise InvalidArchive() from exc
-                alias = path.casefold()
-                if alias in aliases and aliases[alias] != path:
-                    raise InvalidArchive()
-                aliases[alias] = path
-                before = entry.stat(follow_symlinks=False)
-                if stat.S_ISDIR(before.st_mode):
-                    fd = os.open(entry.name, directory_flags, dir_fd=parent)
-                    try:
-                        after = os.fstat(fd)
-                        if (before.st_dev, before.st_ino) != (after.st_dev, after.st_ino):
-                            raise InvalidArchive()
-                        iterator = os.scandir(fd)
-                    except BaseException:
-                        os.close(fd)
-                        raise
-                    stack.append((fd, iterator, path + "/"))
-                elif stat.S_ISREG(before.st_mode):
-                    fd = os.open(entry.name, file_flags, dir_fd=parent)
-                    try:
-                        info = os.fstat(fd)
-                        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
-                                or (before.st_dev, before.st_ino) != (info.st_dev, info.st_ino)):
-                            raise InvalidArchive()
-                        expanded += info.st_size
-                        if expanded > submissions.MAX_EXPANDED:
-                            raise ArchiveLimit()
-                        member = tarfile.TarInfo(path)
-                        member.size = info.st_size
-                        member.mode = info.st_mode & 0o777
-                        # Admission bounds PAX extension payloads and their cumulative size.
-                        header = member.tobuf(format=tarfile.PAX_FORMAT)
-                        if len(header) > 512:
-                            metadata += len(header) - 1024
-                            if len(header) - 1024 > submissions._CHUNK or metadata > submissions._METADATA:
-                                raise ArchiveLimit()
-                        with os.fdopen(fd, "rb") as source:
-                            fd = None
-                            tar.addfile(member, source)
-                            if path == "harness.json":
-                                if manifest_written:
-                                    raise InvalidArchive()
-                                manifest_written = True
-                    finally:
-                        if fd is not None:
-                            os.close(fd)
-                else:
-                    raise InvalidArchive()
-            if not manifest_written:
-                raise InvalidArchive()
-        return 200, buffer.getvalue()
-    except ArchiveLimit:
-        return 413, None
-    except (OSError, InvalidArchive, ValueError, UnicodeError, tarfile.TarError):
-        return 400, None
-    finally:
-        for fd, iterator, _ in reversed(stack):
-            iterator.close()
-            os.close(fd)
-        if candidate_fd is not None:
-            os.close(candidate_fd)
-        if root_fd is not None:
-            os.close(root_fd)
+    return _candidate_store().archive(name, skip_dirs=SKIP_DIRS)
 
 
 def run_verdicts(run_id: str, round_no: int) -> dict:
-    """一轮里每道题的判定。**只读**：这里不跑任何东西，只把已存在的证据摆出来。"""
-    run_path = find_run(run_id)
-    if not run_path:
-        return {"error": "run-not-found", "detail": run_id}
-    folder = run_path / "verdicts" / f"round-{int(round_no)}"
-    if not folder.is_dir():
-        return {"error": "no-verdicts", "detail": f"verdicts/round-{round_no} 不存在"}
-    tasks = {}
-    for path in sorted(folder.glob("*.json")):
-        data = read_json(path)
-        if isinstance(data, dict):
-            tasks[str(data.get("task_id") or path.stem)] = as_num(data.get("score"))
-    return {"run": run_id, "round": int(round_no), "tasks": tasks, "n": len(tasks)}
+    return _run_queries.run_verdicts(run_id, round_no, lookup=find_run)
 
 
 def run_compare(run_a: str, run_b: str, round_a: int = 0, round_b: int = 0) -> dict:
-    """两个 run 的逐题对照：`1→0` 与 `0→1` 各是哪些题。
-
-    这是 S3：它**只报数字**。要不要接受一次合并、掉几分换多少结构，不由平台决定
-    （作者的决定，写在 docs/scenario-workspace.md）。
-    """
-    a = run_verdicts(run_a, round_a)
-    b = run_verdicts(run_b, round_b)
-    if "error" in a:
-        return a
-    if "error" in b:
-        return b
-    ids = sorted(set(a["tasks"]) | set(b["tasks"]))
-    rows = []
-    for task_id in ids:
-        left, right = a["tasks"].get(task_id), b["tasks"].get(task_id)
-        if left == right:
-            continue
-        rows.append({"task": task_id, "a": left, "b": right,
-                     "direction": f"{int(left or 0)}→{int(right or 0)}"})
-    lost = [r for r in rows if (r["b"] or 0) < (r["a"] or 0)]
-    gained = [r for r in rows if (r["b"] or 0) > (r["a"] or 0)]
-    return {"a": {"run": run_a, "round": round_a, "n": a["n"]},
-            "b": {"run": run_b, "round": round_b, "n": b["n"]},
-            "lost": lost, "gained": gained, "changed": len(rows),
-            "only_in_a": sorted(set(a["tasks"]) - set(b["tasks"])),
-            "only_in_b": sorted(set(b["tasks"]) - set(a["tasks"]))}
+    return _run_queries.run_compare(run_a, run_b, round_a, round_b, lookup=find_run)
 
 
 def run_range_diff(run_id: str, first: int, last: int) -> dict:
-    """两轮之间的**净改动**：`diff -ruN state_after_roundA state_after_roundB`。
-
-    git 里最常用的一屏不是"每个提交"，而是"这两点之间到底变了什么"。而分散的每轮补丁
-    回答不了"r1 到 r16 一共加了哪些功能" —— 中间有几轮互相覆盖，逐个读补丁要自己在
-    脑子里合并。这里直接给出净结果，和 `git diff A B` 一个意思。
-    """
-    import subprocess
-    run_path = find_run(run_id)
-    if not run_path:
-        return {"error": "run-not-found", "detail": run_id}
-    first, last = int(first), int(last)
-    if first >= last:
-        return {"error": "bad-range", "detail": "from 必须小于 to"}
-    a = run_path / f"state_after_round{first}"
-    b = run_path / f"state_after_round{last}"
-    if not (a.is_dir() and b.is_dir()):
-        missing = [f"r{n}" for n, path in ((first, a), (last, b)) if not path.is_dir()]
-        return {"error": "missing-state", "detail": f"缺 {', '.join(missing)} 的快照",
-                "hint": "先用 /api/harness/from-round 把这轮重放成候选，再比两个候选"}
-    done = subprocess.run(["diff", "-ruN", "-x", "__pycache__", "-x", "*.pyc",
-                           a.name, b.name], cwd=str(run_path),
-                          capture_output=True, text=True, errors="replace")
-    text = (done.stdout or "")
-    stat = subprocess.run(["diff", "-ruN", "--brief", "-x", "__pycache__", "-x", "*.pyc",
-                           a.name, b.name], cwd=str(run_path),
-                          capture_output=True, text=True, errors="replace")
-    changed = [line.split(" and ")[0].split("/", 1)[-1]
-               for line in (stat.stdout or "").splitlines() if line.strip()]
-    added = sum(1 for line in text.splitlines() if line.startswith("+") and not line.startswith("+++"))
-    removed = sum(1 for line in text.splitlines() if line.startswith("-") and not line.startswith("---"))
-    return {"run": run_id, "from": first, "to": last, "files": changed,
-            "added": added, "removed": removed, "diff": text[:60000]}
-
-
-HISTORY_MAX_ROUNDS = 1000
-HISTORY_MAX_ROUND_NUMBER = 999_999_999
-
-
-def _valid_history_range(since: int, upto: int) -> bool:
-    return (type(since) is int and type(upto) is int
-            and 0 <= since <= upto <= HISTORY_MAX_ROUND_NUMBER
-            and upto - since + 1 <= HISTORY_MAX_ROUNDS)
+    return _run_queries.run_range_diff(run_id, first, last, lookup=find_run)
 
 
 def run_history(run_id: str, upto: int, since: int = 1) -> dict:
-    """一个 run 到第 `upto` 轮为止的**历史**：每轮的改动与补丁。
-
-    这些补丁就是 git 的历史。`harnessgrad/loops/mode_a.py` 每轮 `commit_state(work, ...)`
-    提交一次，`_save_round_diff` 写下的 `diffs/round-N.patch` 就是相邻两个提交之间的
-    `git diff`，而曲线点上的 `harness_sha` 是那个提交的 tree hash。run 目录里没有留下
-    `.git`（提交用的是 staging 工作树），所以历史以"每轮状态 + 补丁"的形式在这里，
-    可读、可重放（见 `harness_candidate_from_round`）。
-
-    给助手做合并时要的正是这一串：只看最新版，看不出哪些功能是同一轮加的、哪些是补丁
-    摞出来的。
-    """
-    if not _valid_history_range(since, upto):
-        return {"error": "bad-range", "detail": "from/to must be ordered non-negative integers spanning at most 1000 rounds"}
-    run_path = find_run(run_id)
-    if not run_path:
-        return {"error": "run-not-found", "detail": run_id}
-    since = max(1, since)
-    rows = []
-    for n in range(since, upto + 1):
-        patch_path = run_path / "diffs" / f"round-{n}.patch"
-        stat = read_json(run_path / "diffs" / f"round-{n}.json")
-        files = [str(item.get("path") or "") for item in (stat.get("files") or [])
-                 if isinstance(item, dict)]
-        added = sum(as_int(item.get("added")) or 0 for item in (stat.get("files") or [])
-                    if isinstance(item, dict))
-        removed = sum(as_int(item.get("removed")) or 0 for item in (stat.get("files") or [])
-                      if isinstance(item, dict))
-        patch = ""
-        if patch_path.is_file():
-            patch = patch_path.read_text(encoding="utf-8", errors="replace")[:12000]
-        rows.append({"round": n, "files": files, "added": added, "removed": removed,
-                     "patch": patch, "stored": patch_path.is_file()})
-    return {"run": run_id, "from": since, "to": upto, "rounds": rows}
+    return _run_queries.run_history(run_id, upto, since, lookup=find_run)
 
 
 def _snapshot_api():
-    """`harnessgrad/snapshot.py`，从控制台指向的那棵平台树里按文件加载。
-
-    控制台可以独立启动（`python3 console/server.py`），所以不把平台根塞进 `sys.path`；
-    直接按路径加载。平台树里没有这个模块时为 None —— 快照这一路当作不可用，另外两路照旧。
-    """
-    source = PLATFORM / "harnessgrad" / "snapshot.py"
-    if not source.is_file():
-        return None
-    spec = importlib.util.spec_from_file_location("hg_console_snapshot", source)
-    if spec is None or spec.loader is None:
-        return None
-    module = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(module)
-    except (OSError, ImportError, SyntaxError):
-        return None
-    return module
-
-
-def _round_snapshot_path(run_path, round_no: int) -> pathlib.Path:
-    return run_path / "snapshots" / f"round-{round_no}.json"
+    return snapshots.load(PLATFORM)
 
 
 def _check_out_snapshot(snapshot_file, target) -> str | None:
-    """把快照签出成候选目录；成功返回 None，失败返回一句能放进错误详情的理由。"""
-    api = _snapshot_api()
-    if api is None:
-        return "控制台找不到 harnessgrad/snapshot.py"
-    try:
-        api.check_out(snapshot_file, target)
-    except (api.SnapshotError, OSError) as exc:
-        shutil.rmtree(target, ignore_errors=True)
-        return str(exc)
-    if not (target / "harness.json").is_file():
-        shutil.rmtree(target, ignore_errors=True)
-        return f"{pathlib.Path(snapshot_file).name} 里没有 harness.json"
-    return None
+    return snapshot_restore.check_out(snapshot_file, target, api=_snapshot_api())
 
 
 def _round_module(name):
-    spec = importlib.util.spec_from_file_location("hg_console_" + name, ROOT / (name + ".py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return candidates.load_module(ROOT, name)
 
 
 def harness_candidate_from_round(run_id: str, round_no: int,
                                  replay: bool = False) -> tuple[int, dict]:
-    """Recover stored state or snapshot privately; external patch replay is disabled.
-
-    Candidate root and ancestors must be trusted and all ledger writers cooperative.
-    Snapshot digest establishes content identity, not authenticity of the run.
-    """
-    if replay:
-        return 409, {"error": "replay-disabled", "detail": "Patch replay is disabled until a sandbox is available."}
-    run_path = find_run(run_id)
-    if not run_path:
-        return 404, {"error": "run-not-found", "detail": run_id}
-    try:
-        round_no = int(round_no)
-    except (TypeError, ValueError, OverflowError):
-        return 400, {"error": "bad-round"}
-    if round_no < 0:
-        return 400, {"error": "bad-round", "detail": round_no}
-    base = re.sub(r"[^A-Za-z0-9._-]", "-", f"{str(run_id)[:40]}-r{round_no}")[:40].lstrip(".") or "round"
-    recovery, publication = _round_module("round_recovery"), _round_module("round_publish")
-    state_name = f"state_after_round{round_no}"
-    snapshot_name = f"round-{round_no}.json"
-    try:
-        CANDIDATES.mkdir(parents=True, exist_ok=True)
-        with recovery.open_run_dir(run_path) as run_fd, publication.Publisher(CANDIDATES) as publisher:
-            with publisher.stage() as stage:
-                stage_path = pathlib.Path(f"/proc/self/fd/{stage.fd}")
-                try:
-                    recovery.copy_state_into(run_path, state_name, stage.fd, run_fd=run_fd)
-                    source, from_path = "state", run_path / state_name
-                except FileNotFoundError:
-                    try:
-                        if str(ROOT.parent) not in sys.path:
-                            sys.path.insert(0, str(ROOT.parent))
-                        snapshot_materializer = _round_module("round_snapshot")
-                        with recovery.open_snapshot_fd(run_path, snapshot_name, run_fd=run_fd) as snapshot_fd:
-                            snapshot_materializer.materialize(snapshot_fd, stage.fd, run_id=str(run_id), round_no=round_no)
-                        source, from_path = "snapshot", run_path / "snapshots" / snapshot_name
-                    except FileNotFoundError:
-                        return 409, {"error": "round-not-stored", "detail": f"No state_after_round{round_no} or snapshots/{snapshot_name}; diffs/round-*.patch replay disabled until sandboxed."}
-                    except snapshot_materializer.snapshot.SnapshotInvalid as exc:
-                        return 409, {"error": "unsafe-recovery", "detail": f"snapshots/{snapshot_name} invalid: {exc}"}
-                manifest_path = stage_path / "harness.json"
-                manifest = read_json(manifest_path)
-                if (not isinstance(manifest, dict) or
-                        any(not isinstance(manifest.get(key), str) or not manifest[key].strip()
-                            for key in ("name", "version", "entrypoint"))):
-                    return 409, {"error": "no-manifest", "detail": "Missing or invalid harness.json"}
-                subpath = manifest.get("path", ".")
-                def safe_relative(value):
-                    if not isinstance(value, str) or not value or "\\" in value:
-                        return False
-                    path = pathlib.PurePosixPath(value)
-                    return not path.is_absolute() and ".." not in path.parts
-                if (not safe_relative(subpath) or not safe_relative(manifest["entrypoint"]) or
-                        not (stage_path / subpath).is_dir() or
-                        not (stage_path / subpath / manifest["entrypoint"]).is_file()):
-                    return 409, {"error": "no-manifest", "detail": "Invalid path or missing entrypoint"}
-                def finalize(name):
-                    manifest["name"] = name
-                    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-                    return {"run": str(run_id), "round": round_no, "via": source,
-                            "source": source, "from": str(from_path),
-                            "created": int(time.time()), "files": _candidate_tree_sha(stage_path)}
-                name = publisher.publish(stage, base, {}, finalize=finalize)
-                return 201, {"candidate": name, "from": str(from_path), "round": round_no,
-                             "source": source, "reconstructed": False, "reused": False,
-                             "applied": [], "files": sorted(p.name for p in stage_path.iterdir() if p.is_file())}
-    except (OSError, ValueError, publication.PublishError, recovery.RecoveryArtifactError) as exc:
-        return 409, {"error": "unsafe-recovery", "detail": str(exc)}
+    return candidates.materialize_round(run_id, round_no, replay, root=CANDIDATES,
+        lookup=find_run, module_loader=_round_module, fingerprint=_candidate_tree_sha, console_root=ROOT)
 
 
 CANDIDATE_FILE_MAX_BYTES = 2 * 1024 * 1024
 
 
 def harness_candidate_file(name: str, rel: str) -> dict:
-    """Return a bounded UTF-8 candidate file; unsafe reads fail without path details."""
-    try:
-        path, data = _read_candidate_bytes(name, rel, CANDIDATE_FILE_MAX_BYTES)
-    except CandidateReadError as exc:
-        return {"error": exc.code, "detail": str(exc)}
-    # pathlib.read_text previously used universal newline translation.
-    text = data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
-    return {"candidate": name, "path": str(path), "text": text,
-            "lines": len(text.splitlines()), "size": len(data)}
+    return _candidate_store().file(name, rel)
 
 
 def harness_candidates() -> dict:
-    """候选清单。`source` / `from` 来自来源账本，编辑屏据此说明这一版是怎么来的。"""
-    rows = []
-    index = _candidate_sources()
-    if CANDIDATES.is_dir():
-        for path in sorted(CANDIDATES.iterdir()):
-            if path.name.startswith("."):
-                continue
-            manifest = read_json(path / "harness.json")
-            if not isinstance(manifest, dict) or not manifest.get("name"):
-                continue
-            files = sorted(p.name for p in path.iterdir() if p.is_file())
-            record = index.get(path.name) if isinstance(index.get(path.name), dict) else {}
-            rows.append({"dir": path.name, "name": manifest.get("name"),
-                         "files": files,
-                         "mtime": int(path.stat().st_mtime),
-                         # 没有账本记录的老副本：source 为 None，界面不替它猜来源。
-                         "source": _candidate_record_source(record) if record else None,
-                         "from": record.get("from") if record else None})
-    return {"root": str(CANDIDATES), "rows": rows}
+    return _candidate_store().list()
 
 
 CANDIDATE_SAVE_MAX_SOURCE_BYTES = 200 * 1024 * 1024
@@ -3047,335 +767,12 @@ CANDIDATE_SAVE_MAX_OVERLAY_BYTES = 2 * 1024 * 1024
 
 def harness_candidate_save(name: str, files: dict, from_base: bool = True,
                            source: str = "") -> tuple[int, dict]:
-    """把编辑器里的内容写成一个新候选：`data/candidates/<name>/`。
-
-    `source` 是编辑器里**打开的那一版**的目录名，新候选以它为底。这一条不是锦上添花：
-    编辑屏每次只发送被改的那一个文件（`harness.js` 的 `save()`），所以种子决定了一份
-    新版本里其余文件是什么。实测 2026-11-02：打开一个提交出来的候选、改 agent.py、
-    另存为，得到的候选带着 `base_harness/loop/` 的 `harness.json` 和 `requirements.txt`，
-    提交里的其余文件全没了，而响应是 201 —— 读回去是另一个 harness。
-
-    `source` 为空时才退回"从 `base_harness/loop` 复制"：那是"从基线另存一份"的意思。
-    """
-    if not valid_workbench_candidate_name(name):
-        return 400, {"error": "bad-name", "detail": "候选名只允许字母数字与 . _ -（≤48）"}
-    if not isinstance(files, dict) or not files:
-        return 400, {"error": "no-files"}
-    if source and not valid_workbench_candidate_name(source):
-        return 400, {"error": "bad-source"}
-    if (sys.platform != "linux" or not all(hasattr(os, x) for x in
-            ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK")) or
-            os.open not in os.supports_dir_fd or os.scandir not in os.supports_fd):
-        return 503, {"error": "unsupported"}
-
-    # Bounded work: 16 levels, 4096 entries, 200 MiB/file and total
-    # including overlays, with a 2 MiB limit per overlay and manifest.
-    # The configured root ancestors and destination root
-    # are trusted/cooperative; same-UID rename/mutation there is out of scope.
-    # Source bytes can change during copying; this is not an atomic snapshot.
-    max_depth, max_entries = 16, 4096
-    max_file = max_total = CANDIDATE_SAVE_MAX_SOURCE_BYTES
-    max_overlay = CANDIDATE_SAVE_MAX_OVERLAY_BYTES
-    overlays, total = [], 0
-    try:
-        for rel, body in files.items():
-            if not isinstance(rel, str) or not isinstance(body, str):
-                raise ValueError("bad-file")
-            parts = rel.split("/")
-            if (not rel or any(p in ("", ".", "..") or "\x00" in p for p in parts)
-                    or len(parts) > max_depth or any(len(os.fsencode(p)) > 255 for p in parts)):
-                raise ValueError("unsafe-path")
-            data = body.encode("utf-8")
-            total += len(data)
-            if len(data) > max_overlay or total > max_total or len(overlays) >= max_entries:
-                raise ValueError("resource-limit")
-            overlays.append((parts, data))
-    except (ValueError, UnicodeError) as exc:
-        return 400, {"error": str(exc) if isinstance(exc, ValueError) else "bad-file"}
-
-    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_NONBLOCK
-    read_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
-    fds = []
-    target = CANDIDATES / name
-    written = ["/".join(parts) for parts, _ in overlays]
-    count = len(overlays)
-    manifest_data = None
-    dest = None
-    published = False
-    try:
-        CANDIDATES.mkdir(parents=True, exist_ok=True)
-        root = os.open(CANDIDATES, directory_flags)
-        fds.append(root)
-        seed = None
-        if source:
-            seed = os.open(source, directory_flags, dir_fd=root)
-        elif from_base:
-            try:
-                seed = os.open(BASE_HARNESS, directory_flags)
-            except FileNotFoundError:
-                pass
-        if seed is not None:
-            fds.append(seed)
-            # A named source must have a regular, non-linked manifest.
-            if source:
-                mfd = os.open("harness.json", read_flags, dir_fd=seed)
-                try:
-                    st = os.fstat(mfd)
-                    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
-                        raise ValueError("bad-source")
-                finally:
-                    os.close(mfd)
-        try:
-            os.mkdir(name, 0o700, dir_fd=root)
-        except FileExistsError:
-            return 409, {"error": "duplicate-candidate", "detail": f"{target} 已存在"}
-        dest = os.open(name, directory_flags, dir_fd=root)
-        fds.append(dest)
-        os.fchmod(dest, 0o700)
-
-        def copy_dir(src, dst, depth):
-            nonlocal count, total, manifest_data
-            with os.scandir(src) as entries:
-                for entry in entries:
-                    item = entry.name
-                    count += 1
-                    if count > max_entries or depth > max_depth:
-                        raise ValueError("resource-limit")
-                    if item in ("__pycache__", ".state", ".git") or item.endswith(".pyc"):
-                        continue
-                    fd = os.open(item, read_flags, dir_fd=src)
-                    try:
-                        st = os.fstat(fd)
-                        if stat.S_ISDIR(st.st_mode):
-                            if depth >= max_depth:
-                                raise ValueError("resource-limit")
-                            os.mkdir(item, 0o700, dir_fd=dst)
-                            sub = os.open(item, directory_flags, dir_fd=dst)
-                            try:
-                                os.fchmod(sub, 0o700)
-                                copy_dir(fd, sub, depth + 1)
-                            finally:
-                                os.close(sub)
-                        elif stat.S_ISREG(st.st_mode) and st.st_nlink == 1:
-                            is_manifest = depth == 1 and item == "harness.json"
-                            chunks, size = [], 0
-                            out = None
-                            try:
-                                if not is_manifest:
-                                    raw = os.open(item, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, st.st_mode & 0o777, dir_fd=dst)
-                                    out = os.fdopen(raw, "wb")
-                                    os.fchmod(out.fileno(), st.st_mode & 0o777)
-                                limit = max_overlay if is_manifest else max_file
-                                while True:
-                                    chunk = os.read(fd, min(65536, limit + 1 - size))
-                                    if not chunk:
-                                        break
-                                    size += len(chunk)
-                                    total += len(chunk)
-                                    if size > limit or total > max_total:
-                                        raise ValueError("resource-limit")
-                                    if is_manifest:
-                                        chunks.append(chunk)
-                                    else:
-                                        out.write(chunk)
-                                if is_manifest:
-                                    manifest_data = b"".join(chunks)
-                            finally:
-                                if out is not None:
-                                    out.close()
-                        else:
-                            raise ValueError("unsafe-source")
-                    finally:
-                        os.close(fd)
-
-        if seed is not None:
-            copy_dir(seed, dest, 1)
-        for parts, data in overlays:
-            if parts == ["harness.json"]:
-                manifest_data = data
-                continue
-            parent = os.dup(dest)
-            try:
-                for component in parts[:-1]:
-                    created = False
-                    try:
-                        os.mkdir(component, 0o700, dir_fd=parent)
-                        created = True
-                    except FileExistsError:
-                        pass
-                    child = os.open(component, directory_flags, dir_fd=parent)
-                    if created:
-                        os.fchmod(child, 0o700)
-                    os.close(parent)
-                    parent = child
-                out = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o644, dir_fd=parent)
-                try:
-                    st = os.fstat(out)
-                    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
-                        raise ValueError("unsafe-target")
-                    os.ftruncate(out, 0)
-                    with os.fdopen(os.dup(out), "wb") as stream:
-                        stream.write(data)
-                finally:
-                    os.close(out)
-            finally:
-                os.close(parent)
-        try:
-            manifest = json.loads(manifest_data) if manifest_data is not None else None
-        except (ValueError, UnicodeError, RecursionError):
-            manifest = None
-        if (not isinstance(manifest, dict) or not isinstance(manifest.get("entrypoint"), str)
-                or not manifest["entrypoint"].strip()):
-            raise ValueError("manifest-missing")
-        manifest["name"] = name
-        data = (json.dumps(manifest, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
-        if len(data) > max_overlay or total + len(data) > max_total:
-            raise ValueError("resource-limit")
-        # Publish the complete manifest atomically as the last visible step.
-        import secrets
-        temporary_manifest = ".harness-save-" + secrets.token_hex(16)
-        out = os.open(temporary_manifest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=dest)
-        with os.fdopen(out, "wb") as stream:
-            stream.write(data)
-        os.link(temporary_manifest, "harness.json", src_dir_fd=dest, dst_dir_fd=dest, follow_symlinks=False)
-        published = True
-        # Publication succeeded; cleanup failure must not turn success into failure.
-        try:
-            os.unlink(temporary_manifest, dir_fd=dest)
-        except OSError:
-            pass
-    except (OSError, ValueError, UnicodeError, RecursionError) as exc:
-        return 400, {"error": str(exc) if isinstance(exc, ValueError) else "unsafe-or-unavailable"}
-    finally:
-        if dest is not None and not published:
-            # Only remove the directory we opened after our successful mkdir.
-            # As above, same-UID mutation/rename of the trusted root is excluded.
-            # Any failed identity check or cleanup leaves the incomplete tree.
-            try:
-                owned = os.fstat(dest)
-                current = os.stat(name, dir_fd=root, follow_symlinks=False)
-                if (owned.st_dev, owned.st_ino) == (current.st_dev, current.st_ino):
-                    def clear_owned(fd):
-                        with os.scandir(fd) as entries:
-                            for entry in entries:
-                                st = entry.stat(follow_symlinks=False)
-                                if stat.S_ISDIR(st.st_mode):
-                                    child = os.open(entry.name, directory_flags, dir_fd=fd)
-                                    try:
-                                        actual = os.fstat(child)
-                                        if (actual.st_dev, actual.st_ino) != (st.st_dev, st.st_ino):
-                                            raise OSError("directory changed during cleanup")
-                                        clear_owned(child)
-                                        current_child = os.stat(entry.name, dir_fd=fd, follow_symlinks=False)
-                                        if (actual.st_dev, actual.st_ino) != (current_child.st_dev, current_child.st_ino):
-                                            raise OSError("directory changed during cleanup")
-                                        os.rmdir(entry.name, dir_fd=fd)
-                                    finally:
-                                        os.close(child)
-                                else:
-                                    os.unlink(entry.name, dir_fd=fd)
-                    clear_owned(dest)
-                    current = os.stat(name, dir_fd=root, follow_symlinks=False)
-                    if (owned.st_dev, owned.st_ino) == (current.st_dev, current.st_ino):
-                        os.rmdir(name, dir_fd=root)
-            except OSError:
-                pass
-        for fd in reversed(fds):
-            os.close(fd)
-    return 201, {"candidate": name, "path": str(target), "written": written,
-                 "trial": (f"python3 driver.py --harness-path {shlex.quote(str(target))} --dataset "
-                           "authored_example_fix_bug --sampling all --rounds 0 "
-                           f"--run-id manual-{name}-01")}
+    return _candidate_store().save(name, files, from_base, source)
 
 
 def harness_candidate_trial(name: str, dataset: str, run_id: str = "") -> tuple[int, dict]:
-    """Run round zero over the selected training side; task count is dataset-dependent."""
-    if (not isinstance(name, str) or name in (".", "..")
-            or not CANDIDATE_NAME.fullmatch(name)):
-        return 404, {"error": "candidate-not-found", "detail": str(name)}
-    target = CANDIDATES / name
-    if not (target / "harness.json").is_file():
-        return 404, {"error": "candidate-not-found", "detail": name}
-    run_id = run_id or f"manual-{name[:24]}-{os.urandom(8).hex()}"
-    if (not isinstance(run_id, str) or run_id in (".", "..", "work")
-            or not CANDIDATE_NAME.fullmatch(run_id)):
-        return 400, {"error": "bad-run-id"}
-    configured = os.environ.get("HG_CONSOLE_TRIAL_RUNS")
-    if not configured or not pathlib.Path(configured).is_absolute():
-        return 503, {"error": "trial-root-not-configured"}
-    runs = pathlib.Path(configured)
-    if ".." in runs.parts:
-        return 503, {"error": "unsafe-trial-root"}
-    platform = PLATFORM_ROOT.resolve()
-    if runs == platform or runs in platform.parents or platform in runs.parents:
-        return 503, {"error": "unsafe-trial-root"}
-
-    # Walk from / with no symlink following. The administrator must own and
-    # protect this existing root and its ancestors from untrusted writers.
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    root_fd = work_fd = None
-    reserved = False
-    identity = None
-    try:
-        root_fd = os.open("/", flags)
-        for part in runs.parts[1:]:
-            next_fd = os.open(part, flags, dir_fd=root_fd)
-            os.close(root_fd)
-            root_fd = next_fd
-        try:
-            os.mkdir("work", 0o700, dir_fd=root_fd)
-        except FileExistsError:
-            pass
-        work_fd = os.open("work", flags, dir_fd=root_fd)
-        os.mkdir(run_id, 0o700, dir_fd=root_fd)
-        reserved = True
-        identity = os.stat(run_id, dir_fd=root_fd, follow_symlinks=False)
-        os.mkdir(run_id, 0o700, dir_fd=work_fd)
-    except FileExistsError:
-        # Only remove our still-empty run reservation before handoff; never
-        # remove a work reservation or anything created by the driver.
-        if reserved:
-            try:
-                current = os.stat(run_id, dir_fd=root_fd, follow_symlinks=False)
-                if identity and (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
-                    os.rmdir(run_id, dir_fd=root_fd)
-            except OSError:
-                pass
-        return 409, {"error": "trial-run-exists", "run_id": run_id}
-    except OSError:
-        if reserved:
-            try:
-                current = os.stat(run_id, dir_fd=root_fd, follow_symlinks=False)
-                if identity and (current.st_dev, current.st_ino) == (identity.st_dev, identity.st_ino):
-                    os.rmdir(run_id, dir_fd=root_fd)
-            except OSError:
-                pass
-        return 503, {"error": "unsafe-trial-root"}
-    finally:
-        if work_fd is not None:
-            os.close(work_fd)
-        if root_fd is not None:
-            os.close(root_fd)
-    argv = [sys.executable, str(PLATFORM_ROOT / "driver.py"), "--harness-path", str(target),
-            "--dataset", str(dataset), "--sampling", "all", "--rounds", "0",
-            "--run-id", run_id, "--runs-root", str(runs), "--work-root", str(runs / "work")]
-    try:
-        done = subprocess.run(argv, cwd=str(PLATFORM_ROOT), capture_output=True, text=True,
-                              timeout=1800, env=dict(os.environ))
-    except subprocess.TimeoutExpired:
-        return 504, {"error": "trial-timeout", "run_id": run_id}
-    except OSError:
-        # Preserve both identities even if launching the driver fails.
-        return 503, {"error": "trial-launch-failed", "run_id": run_id}
-    curve = runs / run_id / "curve.jsonl"
-    score = None
-    if curve.is_file():
-        first = curve.read_text(encoding="utf-8").splitlines()
-        if first:
-            score = read_json_str(first[0]).get("score")
-    return (200 if done.returncode == 0 else 422), {
-        "run_id": run_id, "exit": done.returncode, "score": score,
-        "stdout_tail": (done.stdout or "")[-1200:], "stderr_tail": (done.stderr or "")[-1200:]}
+    return candidate_trial.trial(name, dataset, run_id, candidates_root=CANDIDATES,
+        platform_root=PLATFORM_ROOT, environment=os.environ, run_driver=subprocess.run, parse_json=read_json_str)
 
 
 def read_json_str(text: str) -> dict:
@@ -3386,692 +783,74 @@ def read_json_str(text: str) -> dict:
     return value if isinstance(value, dict) else {}
 
 def author_bundles() -> dict:
-    """每个 authored bundle 的结构校验 + 三道门，都从磁盘现算，没有缓存。"""
-    rows = []
-    if not AUTHORED_ROOT.is_dir():
-        return {"root": str(AUTHORED_ROOT), "rows": rows}
-    spec = importlib.util.spec_from_file_location("_scenario_builder", SCENARIO_BUILDER)
-    builder = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(builder)
-    for path in sorted(AUTHORED_ROOT.iterdir()):
-        if not path.is_dir() or not (path / "bundle.json").is_file():
-            continue
-        row = {"slug": path.name, "path": str(path)}
-        try:
-            data = json.loads((path / "bundle.json").read_text(encoding="utf-8"))
-            row.update(title=data.get("title"), env_kind=(data.get("env") or {}).get("kind"),
-                       tasks=len(data.get("tasks") or []),
-                       eval_visible_to_authors=data.get("eval_visible_to_authors"))
-            problems = builder.check_bundle(path)
-            row["valid"] = not problems
-            row["problems"] = problems
-            if row["valid"]:
-                gates = builder.gates(path)
-                row["gates_ok"] = bool(gates.get("ok"))
-                row["gates"] = [{"task_id": t["task_id"],
-                                 "oracle": t["oracle_passes"],
-                                 "empty": t["empty_fails"],
-                                 "deterministic": t["deterministic"],
-                                 "detail": t.get("detail", {})} for t in gates.get("tasks") or []]
-            else:
-                row["gates_ok"] = False
-        except (OSError, ValueError) as exc:
-            row["valid"] = False
-            row["problems"] = [str(exc)]
-            row["gates_ok"] = False
-        rows.append(row)
-    return {"root": str(AUTHORED_ROOT), "rows": rows}
+    return authored.list_bundles(AUTHORED_ROOT, SCENARIO_BUILDER)
 
 
 def _safe_extract(archive: pathlib.Path, target: pathlib.Path) -> None:
-    """tar/zip -> target, but only regular files and directories, and only inside target."""
-    import tarfile
-    import zipfile
-    target.mkdir(parents=True, exist_ok=True)
-    if zipfile.is_zipfile(archive):
-        with zipfile.ZipFile(archive) as zf:
-            for member in zf.infolist():
-                name = member.filename
-                if member.is_dir():
-                    continue
-                if name.startswith("/") or ".." in pathlib.PurePosixPath(name).parts:
-                    raise ValueError(f"归档里有越界路径：{name}")
-                if (member.external_attr >> 16) & 0o170000 not in (0, 0o100000):
-                    raise ValueError(f"归档里有不允许的条目类型：{name}")
-                out = target / name
-                out.parent.mkdir(parents=True, exist_ok=True)
-                out.write_bytes(zf.read(member))
-        return
-    with tarfile.open(archive) as tf:
-        for member in tf.getmembers():
-            if member.isdir():
-                continue
-            if not member.isfile():
-                raise ValueError(f"归档里有不允许的条目类型：{member.name}")
-            if member.name.startswith("/") or ".." in pathlib.PurePosixPath(member.name).parts:
-                raise ValueError(f"归档里有越界路径：{member.name}")
-            out = target / member.name
-            out.parent.mkdir(parents=True, exist_ok=True)
-            with tf.extractfile(member) as src, out.open("wb") as dst:
-                shutil.copyfileobj(src, dst)
+    return authored.safe_extract(archive, target)
 
 
 def author_import(archive_path: pathlib.Path, wanted_slug: str = "") -> tuple[int, dict]:
-    """Import one bundle archive into `data/authored/<slug>/`, then validate and gate it."""
-    import tempfile
-    if not archive_path.is_file():
-        return 400, {"error": "no-archive"}
-    if archive_path.stat().st_size > IMPORT_MAX_BYTES:
-        return 413, {"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}
-    with tempfile.TemporaryDirectory(prefix="hg-import-") as tmp:
-        staging = pathlib.Path(tmp) / "x"
-        try:
-            _safe_extract(archive_path, staging)
-        except (tarfile.TarError, zipfile.BadZipFile, OSError, ValueError) as exc:
-            return 400, {"error": "bad-archive", "detail": str(exc)}
-        roots = [p for p in staging.iterdir()]
-        root = staging
-        if len(roots) == 1 and roots[0].is_dir():
-            root = roots[0]          # 允许"多套一层目录"的打包习惯
-        bundle = root / "bundle.json"
-        if not bundle.is_file():
-            return 400, {"error": "manifest-missing",
-                         "detail": "归档根（或唯一顶层目录）里没有 bundle.json"}
-        try:
-            data = json.loads(bundle.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            return 400, {"error": "manifest-invalid", "detail": str(exc)}
-        slug = wanted_slug or str(data.get("slug") or "").strip() or root.name
-        if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", slug):
-            return 400, {"error": "bad-slug", "detail": f"不接受的 slug: {slug!r}"}
-        data["slug"] = slug
-        bundle.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        target = AUTHORED_ROOT / slug
-        if target.exists():
-            return 409, {"error": "duplicate-bundle", "detail": f"{target} 已存在；先删掉或换个 slug"}
-        AUTHORED_ROOT.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(root, target)
-    listed = author_bundles()
-    row = next((r for r in listed["rows"] if r["slug"] == slug), None)
-    if row is None or not row.get("valid"):
-        return 400, {"error": "bundle-invalid", "detail": row.get("problems") if row else "未找到",
-                     "row": row}
-    return 201, {"row": row, "imported": str(target)}
+    return authored.import_bundle(archive_path, wanted_slug, authored_root=AUTHORED_ROOT,
+        max_bytes=IMPORT_MAX_BYTES, extract=_safe_extract, list_bundles=author_bundles)
 
 
 def author_draft(note: str, materials: str = "") -> tuple[int, dict]:
-    """起草：把这段自然语言交给 scenario_builder，它自己会校验、跑门、重试。"""
-    if not isinstance(note, str) or not note.strip():
-        return 400, {"error": "bad-note"}
-    import subprocess
-    import tempfile
-    slug = "draft-" + time.strftime("%Y%m%d-%H%M%S")
-    out = AUTHORED_ROOT / slug
-    out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [sys.executable, str(SCENARIO_BUILDER), "--draft", "-", "--out", str(out), "--json"]
-    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as fh:
-        fh.write(note)
-        note_path = fh.name
-    cmd[cmd.index("-")] = note_path
-    if materials:
-        cmd += ["--materials", materials]
-    try:
-        done = subprocess.run(cmd, cwd=str(PLATFORM_ROOT), capture_output=True, text=True,
-                              timeout=900, env=dict(os.environ))
-    finally:
-        os.unlink(note_path)
-    if done.returncode != 0:
-        return 422, {"error": "draft-refused", "detail": (done.stderr or done.stdout)[-1500:]}
-    listed = author_bundles()
-    row = next((r for r in listed["rows"] if r["slug"] == slug), None)
-    return 200, {"row": row, "output": (done.stdout or "")[-1500:]}
+    return authored.draft(note, materials, authored_root=AUTHORED_ROOT, builder_path=SCENARIO_BUILDER,
+        platform=PLATFORM_ROOT, list_bundles=author_bundles, run_process=subprocess.run, environment=os.environ)
 
 def explain_config() -> tuple[str, str, str, list[str]]:
-    """(base_url, model, api_key, missing_names)。只读 env，绝不把值写进日志或响应。"""
-    values = [os.environ.get(name, "").strip() for name in EXPLAIN_ENV]
-    missing = [name for name, value in zip(EXPLAIN_ENV, values) if not value]
-    return values[0], values[1], values[2], missing
-
-
-def _read_jsonl_tail(path: pathlib.Path, max_bytes: int = 128 * 1024) -> list[dict]:
-    """读一个 jsonl 的尾部（不超过 max_bytes）。坏行跳过，不从半行开始解析。"""
-    try:
-        size = path.stat().st_size
-        with path.open("rb") as fh:
-            start = max(0, size - max_bytes)
-            fh.seek(start)
-            raw = fh.read()
-    except OSError:
-        return []
-    lines = raw.decode("utf-8", errors="replace").splitlines()
-    if start > 0 and lines:
-        lines = lines[1:]
-    events: list[dict] = []
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            ev = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(ev, dict):
-            events.append(ev)
-    return events
+    return explanation.explain_config(os.environ)
 
 
 def _last_events(path: pathlib.Path, n: int) -> list[dict]:
-    """最后 n 个**有内容**的事件。
-
-    轨迹末尾常常是 usage / wall_clock 这种记账事件；它们不是失败模式。跳过它们，
-    否则模型看到的“最后 3 个事件”全是 tokens 数。仍然最多只发 n 个。
-    """
-    events = _read_jsonl_tail(path)
-    picked: list[dict] = []
-    for ev in reversed(events):
-        if any(key in ev for key in EXPLAIN_EVENT_TYPES):
-            continue
-        picked.append(ev)
-        if len(picked) >= n:
-            break
-    picked.reverse()
-    return picked
-
-
-def _compact_event(ev: dict) -> dict:
-    """把一条轨迹事件压成模型需要的字段；长输出裁剪并标注。"""
-    out: dict = {}
-    for key in ("step", "command", "exit", "command_ms", "env_step",
-                "environment_solved", "submitted", "auto_submit", "missing"):
-        if key in ev:
-            out[key] = ev[key]
-    if "reply" in ev:
-        out["reply"] = _clip(ev.get("reply"), 700)
-    if "output" in ev:
-        text = str(ev.get("output") or "")
-        out["output"] = _clip(text, 1200)
-        if len(text) > 1200:
-            out["output_chars"] = len(text)
-            out["output_truncated"] = True
-    if not out:
-        out["keys"] = sorted(str(k) for k in ev.keys())[:12]
-    return out
+    return _explain_inputs()._last_events(path, n)
 
 
 def _zero_tasks(path: pathlib.Path, n: int, point: dict) -> list[dict]:
-    """这一轮得 0 分的任务里，最多取 3 个有轨迹的；每个只带最后 3 个事件。"""
-    ids: list[str] = []
-    per_task = point.get("per_task")
-    if isinstance(per_task, dict):
-        ids = sorted(str(task) for task, score in per_task.items() if as_num(score) == 0)
-    if not ids:
-        # 没有 per_task 时退回该轮 verdicts；仍然是“读文件”，不是推断。
-        vdir = path / "verdicts" / f"round-{n}"
-        if vdir.is_dir():
-            for f in sorted(vdir.glob("*.json")):
-                if as_num(read_json(f).get("score")) == 0:
-                    ids.append(_task_of(f.stem)[0])
-    ids = sorted(set(ids))
-
-    traces: dict[str, pathlib.Path] = {}
-    tdir = path / f"round{n}_traces"
-    if tdir.is_dir():
-        for f in sorted(tdir.glob("*.jsonl")):
-            task_id, _trial = _task_of(f.stem)
-            traces.setdefault(task_id, f)
-
-    out: list[dict] = []
-    for task_id in ids:
-        trace = traces.get(task_id)
-        if trace is None:
-            continue
-        verdict = _verdict(path, task_id, n)
-        events = [_compact_event(ev) for ev in _last_events(trace, EXPLAIN_LAST_EVENTS)]
-        out.append({
-            "task_id": task_id,
-            "score": 0.0,
-            "kind": str(verdict.get("kind") or ""),
-            "detail": _clip(verdict.get("detail") or "", 500),
-            "note": "最后几个事件（已裁剪）；不是完整轨迹" if events else "没有可读事件",
-            "events": events,
-        })
-        if len(out) >= EXPLAIN_ZERO_TASKS:
-            break
-    return out
+    return _explain_inputs()._zero_tasks(path, n, point)
 
 
 def build_explain_inputs(path: pathlib.Path, run_id: str, n: int) -> dict:
-    """把一次解释需要的全部输入读齐。只读 run 目录，不读平台、不读浏览器。"""
-    points, _state, _bad = read_curve(path)
-    point = next((p for p in points if as_int(p.get("round")) == n), None)
-    if point is None:
-        raise ValueError(f"round {n} is not in this run")
-    patch_path = path / "diffs" / f"round-{n}.patch"
-    if not patch_path.is_file():
-        raise ExplainNoPatch(f"diffs/round-{n}.patch 不存在")
-    try:
-        patch_size = patch_path.stat().st_size
-        if patch_size == 0:
-            raise ExplainNoPatch(f"diffs/round-{n}.patch 是 0 字节：这一轮没有改动")
-        with patch_path.open("rb") as fh:
-            raw = fh.read(EXPLAIN_PATCH_BYTES + 1)
-    except OSError as exc:
-        raise ExplainNoPatch(f"读不了 diffs/round-{n}.patch：{exc}") from None
-    truncated = len(raw) > EXPLAIN_PATCH_BYTES
-    patch_text = raw[:EXPLAIN_PATCH_BYTES].decode("utf-8", errors="replace")
-    if truncated:
-        cut = patch_text.rfind("\n")
-        if cut > EXPLAIN_PATCH_BYTES // 2:
-            patch_text = patch_text[:cut]
-        patch_text += f"\n…（patch 已截断：只发送前 40 KB，共 {patch_size} 字节）"
-
-    ident = point.get("identity") if isinstance(point.get("identity"), dict) else {}
-    raw_stat = read_json(path / "diffs" / f"round-{n}.json")
-    stat_files = []
-    if isinstance(raw_stat.get("files"), list):
-        for item in raw_stat["files"]:
-            if isinstance(item, dict):
-                stat_files.append({
-                    "path": str(item.get("path") or ""),
-                    "added": as_int(item.get("added")),
-                    "removed": as_int(item.get("removed")),
-                })
-    return {
-        "run_id": run_id,
-        "round": n,
-        "label": _clip(point.get("label") or "", 300),
-        "harness_sha": str(ident.get("harness_sha") or ""),
-        "score": as_num(point.get("score")),
-        "n_scored": as_int(point.get("n_scored")),
-        "n_invalid": as_int(point.get("n_invalid")),
-        "patch": patch_text,
-        "patch_truncated": truncated,
-        "patch_bytes": patch_size,
-        "stat": {
-            "files": stat_files,
-            "added": as_int(raw_stat.get("added")),
-            "removed": as_int(raw_stat.get("removed")),
-            "from": _clip(raw_stat.get("from") or "", 40),
-            "to": _clip(raw_stat.get("to") or "", 40),
-        },
-        "zero_tasks": _zero_tasks(path, n, point),
-    }
+    return _explain_inputs().build_explain_inputs(path, run_id, n)
 
 
-def explain_prompt(inputs: dict) -> tuple[str, str]:
-    """(system, user)。user 里只有输入，没有指令；system 里只有规则。"""
-    stat = inputs["stat"]
-    file_lines = []
-    for f in stat["files"]:
-        file_lines.append(
-            f"- {f['path']}: +{f['added'] if f['added'] is not None else '?'}"
-            f" / -{f['removed'] if f['removed'] is not None else '?'}")
-    files_text = "\n".join(file_lines) if file_lines else "（stat 里没有文件列表）"
-    parts = [
-        "## 这一轮的事实（来自 run 目录里的文件）",
-        f"run: {inputs['run_id']}",
-        f"round: {inputs['round']}",
-        f"label: {inputs['label'] or '—'}",
-        f"harness_sha: {inputs['harness_sha'] or '—'}",
-        f"score: {inputs['score'] if inputs['score'] is not None else '—'}",
-        f"n_scored: {inputs['n_scored'] if inputs['n_scored'] is not None else '—'}",
-        f"n_invalid: {inputs['n_invalid'] if inputs['n_invalid'] is not None else '—'}",
-        "",
-        "## 改动文件与行数（diffs/round-%d.json）" % inputs["round"],
-        files_text,
-        f"合计: +{stat['added'] if stat['added'] is not None else '?'}"
-        f" / -{stat['removed'] if stat['removed'] is not None else '?'}",
-        "",
-        "## patch（diff，服务端已截断到 40 KB）",
-        "```diff",
-        inputs["patch"],
-        "```",
-    ]
-    zeros = inputs["zero_tasks"]
-    if zeros:
-        parts.append("")
-        parts.append("## 这一轮得 0 分的任务（最多 3 个；每个只给最后几个事件）")
-        for task in zeros:
-            parts.append("")
-            parts.append(f"### {task['task_id']}（score 0）")
-            if task["kind"] or task["detail"]:
-                parts.append(f"判定: {task['kind'] or '未记录'} · {task['detail'] or '—'}")
-            parts.append(task["note"])
-            if task["events"]:
-                parts.append("```json")
-                parts.append(json.dumps(task["events"], ensure_ascii=False, indent=1))
-                parts.append("```")
-    else:
-        parts.extend(["", "## 这一轮得 0 分的任务",
-                      "没有可用的 0 分任务轨迹（可能这一轮没有 0 分，或没有保留轨迹）。"])
-    return EXPLAIN_SYSTEM, "\n".join(parts)
-
-
-def _chat_completion(base_url: str, model: str, api_key: str,
-                     system: str, user: str) -> str:
-    """一次 OpenAI 兼容的 /chat/completions 调用。key 只在 header 里，不写日志。"""
-    url = base_url.rstrip("/") + "/chat/completions"
-    # **JSON 模式,而不是希望模型自己吐 JSON。** 实测(2026-11-02,本地 qwen3.5-9b):
-    # 不加这个字段时,整段解释被解析成空四块并标 degraded;vLLM 的 json_object 模式在
-    # `tools/check_local_model.py` 里是验过的,所以这里显式要。端点拒绝时不移除字段重试。
-    body = json.dumps({
-        "model": model,
-        "messages": [{"role": "system", "content": system},
-                     {"role": "user", "content": user}],
-        "temperature": 0,
-        "stream": False,
-        "response_format": {"type": "json_object"},
-    }, ensure_ascii=False).encode("utf-8")
-    try:
-        req = urllib.request.Request(url, data=body, method="POST", headers={
-            "Content-Type": "application/json; charset=utf-8",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        })
-        with urllib.request.urlopen(req, timeout=EXPLAIN_TIMEOUT_S) as resp:
-            raw = resp.read(2_000_000)
-    except urllib.error.HTTPError as exc:
-        # Only a valid numeric HTTP status is safe to expose; neither the response
-        # body nor exception text is trusted to omit URL credentials or tokens.
-        code = exc.code
-        if type(code) is int and 100 <= code <= 599:
-            raise ExplainUpstream(f"模型端点 HTTP {code}") from None
-        raise ExplainUpstream("模型端点 HTTP 错误") from None
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError, http.client.HTTPException):
-        raise ExplainUpstream("模型端点请求失败") from None
-    try:
-        reply = json.loads(raw.decode("utf-8", errors="replace"))
-    except ValueError:
-        raise ExplainUpstream("模型端点返回的不是 JSON") from None
-    choices = reply.get("choices") if isinstance(reply, dict) else None
-    if not isinstance(choices, list) or not choices:
-        raise ExplainUpstream("模型端点没有返回 choices")
-    message = choices[0].get("message") if isinstance(choices[0], dict) else None
-    content = message.get("content") if isinstance(message, dict) else None
-    if not isinstance(content, str) or not content.strip():
-        raise ExplainUpstream("模型端点返回了空 content")
-    return content
-
-
-def _parse_explain_reply(text: str) -> tuple[dict | None, str]:
-    """严格解析四个键。允许正好包一层 ``` 代码块，但那之后仍必须是合法 JSON。"""
-    raw = text.strip()
-    if raw.startswith("```"):
-        lines = raw.splitlines()
-        if lines and lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        raw = "\n".join(lines).strip()
-    try:
-        obj = json.loads(raw)
-    except ValueError as exc:
-        return None, f"不是合法 JSON：{exc}"
-    if not isinstance(obj, dict):
-        return None, "顶层不是 JSON object"
-    required = ("claim", "evidence", "risk", "next")
-    missing = [key for key in required if key not in obj]
-    extra = [key for key in obj if key not in required]
-    if missing:
-        return None, f"缺少键：{', '.join(missing)}"
-    if extra:
-        return None, f"多出键：{', '.join(sorted(extra))}"
-    for key in ("claim", "risk", "next"):
-        if not isinstance(obj.get(key), str) or not obj[key].strip():
-            return None, f"{key} 不是非空字符串"
-    evidence = obj.get("evidence")
-    if not isinstance(evidence, list) or not 2 <= len(evidence) <= 4:
-        return None, "evidence 必须是 2–4 条的数组"
-    if not all(isinstance(item, str) and item.strip() for item in evidence):
-        return None, "evidence 里有非字符串或空项"
-    return {
-        "claim": obj["claim"].strip(),
-        "evidence": [item.strip() for item in evidence],
-        "risk": obj["risk"].strip(),
-        "next": obj["next"].strip(),
-    }, ""
-
-
-def _explain_cache_key(run_id: str, n: int, harness_sha: str, model: str,
-                       prompt_sha: str) -> str:
-    return json.dumps([run_id, n, harness_sha, model, prompt_sha],
-                      ensure_ascii=False, separators=(",", ":"))
+def _chat_completion(base_url: str, model: str, api_key: str, system: str, user: str) -> str:
+    return explanation._chat_completion(base_url, model, api_key, system, user, timeout_s=EXPLAIN_TIMEOUT_S)
 
 
 def _explain_cache_path(key: str) -> pathlib.Path:
-    return EXPLAIN_CACHE_DIR / (_sha(key)[:40] + ".json")
+    return _explanation_cache.path(key, directory=EXPLAIN_CACHE_DIR)
 
 
 def _explain_remember(key: str, payload: dict) -> None:
-    with _explain_lock:
-        _explain_mem[key] = payload
-        try:
-            _explain_mem_order.remove(key)
-        except ValueError:
-            pass
-        _explain_mem_order.append(key)
-        while len(_explain_mem_order) > 128:
-            old = _explain_mem_order.pop(0)
-            _explain_mem.pop(old, None)
+    _explanation_cache.remember(key, payload)
 
 
 def _explain_cache_get(key: str) -> dict | None:
-    with _explain_lock:
-        hit = _explain_mem.get(key)
-        if hit is not None:
-            return json.loads(json.dumps(hit, ensure_ascii=False))
-    path = _explain_cache_path(key)
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(data, dict) or data.get("key") != key:
-        return None
-    payload = data.get("response")
-    if not isinstance(payload, dict):
-        return None
-    _explain_remember(key, payload)
-    return json.loads(json.dumps(payload, ensure_ascii=False))
+    return _explanation_cache.get(key, directory=EXPLAIN_CACHE_DIR)
 
 
 def _explain_cache_put(key: str, payload: dict) -> None:
-    _explain_remember(key, payload)
-    try:
-        EXPLAIN_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        path = _explain_cache_path(key)
-        tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-        tmp.write_text(json.dumps({"key": key, "response": payload},
-                                  ensure_ascii=False, indent=1), encoding="utf-8")
-        os.replace(tmp, path)
-    except OSError:
-        # 磁盘缓存失败不该让解释失败；内存缓存还在。
-        pass
+    _explanation_cache.put(key, payload, directory=EXPLAIN_CACHE_DIR)
 
 
 #: 区间解释的系统提示。和单轮那条的区别只有一件事：单轮问"这一改动了什么"，
 #: 区间问"这段时间的改动在往哪个方向走"，并允许它说"证据不足"。
-EXPLAIN_RANGE_SYSTEM = """你是 HarnessGrad 实验台的只读解释器。用户会给你一次实验里连续几轮\
-分数、每轮的改动摘要（文件名与增删行数），以及首尾两轮的 patch 片段。
-
-你的任务：判断这段时间的改动方向——在收敛（每轮更小、更具体）、在震荡（来回改同一处）、
-还是在退化（越改越散、或分数下降）。
-规则：
-1. 只使用用户提供的内容。没有给出的分数或日志不要猜；证据不足就直接说证据不足。
-2. 只输出一个 JSON 对象。不要 markdown 代码块，不要前后说明。
-3. JSON 必须且只能有这四个键：
-   - "claim": 一句中文，说明这段时间的走向（收敛 / 震荡 / 退化 / 证据不足）。
-   - "evidence": 2 到 4 条中文短句，每条引用具体的轮次、分数或改动。
-   - "risk": 一句中文，说明这个走向继续下去最可能坏在哪。
-   - "next": 一句中文，建议一次值得跑的对照或一次该停下来的检查。
-4. 所有字符串用中文。不要编造数字。
-"""
 
 
 def build_explain_range_inputs(path: pathlib.Path, run_id: str, first: int, last: int) -> dict:
-    """首尾轮之间的事实：每轮的分数与改动规模，以及首尾两轮的 patch 片段。"""
-    points, _state, _bad = read_curve(path)
-    by_round = {as_int(p.get("round")): p for p in points}
-    missing = [n for n in (first, last) if n not in by_round]
-    if missing:
-        raise ValueError(f"round {missing} 不在这个 run 的曲线里")
-    if first >= last:
-        raise ValueError("from 必须小于 to")
-    rows = []
-    for n in range(first, last + 1):
-        point = by_round.get(n)
-        if point is None:
-            continue
-        stat = read_json(path / "diffs" / f"round-{n}.json")
-        files = [str(item.get("path") or "") for item in (stat.get("files") or [])
-                 if isinstance(item, dict)]
-        added = sum(as_int(item.get("added")) or 0 for item in (stat.get("files") or [])
-                    if isinstance(item, dict))
-        removed = sum(as_int(item.get("removed")) or 0 for item in (stat.get("files") or [])
-                      if isinstance(item, dict))
-        rows.append({"round": n, "score": as_num(point.get("score")),
-                     "files": files, "added": added, "removed": removed})
-    if len(rows) < 2:
-        raise ValueError("这个区间里少于两轮有记录，无法判断走向")
-    patches = {}
-    for n in (first, last):
-        patch = path / "diffs" / f"round-{n}.patch"
-        if patch.is_file():
-            patches[n] = patch.read_text(encoding="utf-8", errors="replace")[:EXPLAIN_PATCH_BYTES // 2]
-    return {"run_id": run_id, "from": first, "to": last, "rows": rows, "patches": patches}
-
-
-def explain_range_prompt(inputs: dict) -> tuple[str, str]:
-    lines = [f"- r{row['round']}: score={row['score']} · +{row['added']}/-{row['removed']} · "
-             f"{', '.join(row['files'][:6]) or '（没有文件改动）'}" for row in inputs["rows"]]
-    parts = ["## 这段时间的事实（来自 run 目录）",
-             f"run: {inputs['run_id']}", f"区间: r{inputs['from']} → r{inputs['to']}",
-             "每轮：", *lines, ""]
-    for n, text in inputs["patches"].items():
-        parts += [f"## r{n} 的 patch 片段（前 {len(text)} 字符）", text, ""]
-    return EXPLAIN_RANGE_SYSTEM, "\n".join(parts)
+    return _explain_inputs().build_explain_range_inputs(path, run_id, first, last)
 
 
 def api_explain_range(run_id: str, first: int, last: int, force: bool = False) -> tuple[int, dict]:
-    """一次区间解释：POST /api/explain 的 from/to 字段。缓存键含区间两端。"""
-    started = time.perf_counter()
-    run_path = find_run(run_id)
-    if not run_path:
-        return 404, {"error": "run not found", "detail": f"没有这个 run：{run_id}"}
-    base_url, model, api_key, missing = explain_config()
-    if missing:
-        return 503, {"error": "explain-not-configured",
-                     "detail": "解释功能没有配置：" + "、".join(missing)}
-    try:
-        inputs = build_explain_range_inputs(run_path, run_id, first, last)
-    except ValueError as exc:
-        return 400, {"error": "explain-range", "detail": str(exc)}
-    system, user = explain_range_prompt(inputs)
-    prompt_sha = _sha(system + "\n\n" + user)
-    key = _explain_cache_key(f"{run_id}#range{first}-{last}", 0, "", model, prompt_sha)
-    if not force:
-        cached = _explain_cache_get(key)
-        if cached is not None:
-            cached["cache_hit"] = True
-            cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
-            return 200, cached
-    raw, parsed, why = "", None, ""
-    for attempt in range(2):
-        asked = system if attempt == 0 else (
-            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
-        try:
-            raw = _chat_completion(base_url, model, api_key, asked, user)
-        except ExplainUpstream as exc:
-            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
-        parsed, why = _parse_explain_reply(raw)
-        if parsed is not None:
-            break
-    elapsed = int(round((time.perf_counter() - started) * 1000))
-    if parsed is None:
-        return 200, {"claim": "", "evidence": [], "risk": "", "next": "", "model": model,
-                     "prompt_sha": prompt_sha, "cache_hit": False, "elapsed_ms": elapsed,
-                     "degraded": True, "parse_error": why, "raw": _clip(raw, 8000),
-                     "range": {"from": first, "to": last}}
-    payload = {**parsed, "model": model, "prompt_sha": prompt_sha, "cache_hit": False,
-               "elapsed_ms": elapsed, "range": {"from": first, "to": last}}
-    _explain_cache_put(key, {k: v for k, v in payload.items()
-                             if k not in ("cache_hit", "elapsed_ms")})
-    return 200, payload
+    return _explain_service().range(run_id, first, last, force,
+        build_explain_range_inputs=build_explain_range_inputs, explain_range_prompt=explain_range_prompt)
 
 
 def api_explain(run_id: str, n: int, force: bool = False) -> tuple[int, dict]:
-    """(HTTP status, payload)。服务端缓存命中时不再调用模型。"""
-    started = time.perf_counter()
-    run_path = find_run(run_id)
-    if not run_path:
-        return 404, {"error": "run not found", "detail": f"没有这个 run：{run_id}"}
-    points, _state, _bad = read_curve(run_path)
-    if not any(as_int(p.get("round")) == n for p in points):
-        return 400, {"error": "round not in run",
-                     "detail": f"round {n} 不在这个 run 的曲线里"}
-
-    base_url, model, api_key, missing = explain_config()
-    if missing:
-        return 503, {
-            "error": "explain-not-configured",
-            "detail": ("解释功能没有配置：缺少环境变量 "
-                       + "、".join(missing)
-                       + "。设置一个 OpenAI 兼容端点和 key 后重启 console。"),
-        }
-
-    try:
-        inputs = build_explain_inputs(run_path, run_id, n)
-    except ExplainNoPatch as exc:
-        return 400, {"error": "explain-no-patch", "detail": str(exc)}
-    except (OSError, ValueError) as exc:
-        return 500, {"error": "explain-inputs", "detail": _clip(exc, 400)}
-
-    system, user = explain_prompt(inputs)
-    prompt_sha = _sha(system + "\n\n" + user)
-    input_sha = _sha(json.dumps(inputs, ensure_ascii=False, sort_keys=True))
-    key = _explain_cache_key(run_id, n, inputs["harness_sha"], model, prompt_sha)
-
-    if not force:
-        cached = _explain_cache_get(key)
-        if cached is not None:
-            cached["cache_hit"] = True
-            cached["elapsed_ms"] = int(round((time.perf_counter() - started) * 1000))
-            return 200, cached
-
-    # **被拒绝的回复再问一次,而不是把它标成"解释为空"。** 实测(2026-11-02,本地
-    # qwen3.5-9b):JSON 模式打开后模型确实回了 JSON,但 evidence 只有 1 条,而契约要
-    # 2-4 条;前端于是显示一个空解释,读的人会以为这一轮没有改动。这里把拒绝原因回传
-    # 给模型重问一次 —— 同一条提示词不会让 9B 改变输出,但"上一次错在哪"会。
-    raw = ""
-    parsed = None
-    why = ""
-    for attempt in range(2):
-        prompt_system = system if attempt == 0 else (
-            system + "\n\n上一次的回复被拒绝：" + why + "\n请按契约重新输出，只输出 JSON。")
-        try:
-            raw = _chat_completion(base_url, model, api_key, prompt_system, user)
-        except ExplainUpstream as exc:
-            return 502, {"error": "explain-upstream", "detail": _clip(exc, 800)}
-        parsed, why = _parse_explain_reply(raw)
-        if parsed is not None:
-            break
-    elapsed = int(round((time.perf_counter() - started) * 1000))
-    if parsed is None:
-        # 不猜、不把半截 JSON 塞进四个块；原样交给前端，前端明确标成 degraded。
-        return 200, {
-            "claim": "", "evidence": [], "risk": "", "next": "",
-            "model": model, "prompt_sha": prompt_sha, "input_sha": input_sha,
-            "cache_hit": False, "elapsed_ms": elapsed,
-            "degraded": True, "parse_error": why, "raw": _clip(raw, 8000),
-        }
-
-    payload = {
-        **parsed,
-        "model": model, "prompt_sha": prompt_sha, "input_sha": input_sha,
-        "cache_hit": False, "elapsed_ms": elapsed,
-    }
-    _explain_cache_put(key, {k: v for k, v in payload.items()
-                             if k not in ("cache_hit", "elapsed_ms")})
-    return 200, payload
+    return _explain_service().round(run_id, n, force, read_curve=read_curve,
+        build_explain_inputs=build_explain_inputs, explain_prompt=explain_prompt)
 
 
 def _submission_backend():
@@ -4087,348 +866,64 @@ def _submission_reject(code, detail, field=None):
 
 
 def submission_origin(headers, *, port: int) -> None:
-    hosts = headers.get_all('Host', [])
-    try:
-        if len(hosts) != 1 or any(c in hosts[0] for c in '/@?#\\\r\n '):
-            raise ValueError('one numeric loopback Host is required')
-        url = urlparse('//' + hosts[0])
-        if not ipaddress.ip_address(url.hostname).is_loopback or url.port != port:
-            raise ValueError('Host must use a loopback address and this server port')
-    except (ValueError, TypeError) as exc:
-        _submission_reject('bad-host', str(exc), 'Host')
-    origins = headers.get_all('Origin', [])
-    if origins and origins != [f'http://127.0.0.1:{port}']:
-        _submission_reject('origin-forbidden', 'Origin must match this loopback service', 'Origin')
+    return submission_controller.origin(headers, port=port, reject=_submission_reject)
 
 
 def submission_length(headers) -> int:
-    values = headers.get_all('Content-Length', [])
-    if headers.get_all('Transfer-Encoding') or len(values) != 1 or not re.fullmatch(r'[0-9]+', values[0]):
-        _submission_reject('bad-multipart', 'one Content-Length and no Transfer-Encoding are required')
-    # Bound integer parsing as well as allocation.
-    if len(values[0]) > 10:
-        _submission_reject('payload-too-large', 'multipart envelope exceeds 20 MiB + 64 KiB')
-    length = int(values[0])
-    if length > 20*1024*1024 + 65536:
-        _submission_reject('payload-too-large', 'multipart envelope exceeds 20 MiB + 64 KiB')
-    return length
+    return submission_controller.length(headers, reject=_submission_reject)
 
 
 def submission_form(headers, body: bytes) -> tuple[bytes, dict]:
-    if len(body) != submission_length(headers):
-        _submission_reject('bad-multipart', 'multipart body is incomplete')
-    types = headers.get_all('Content-Type', [])
-    if len(types) != 1 or len(types[0]) > 1024 or '\r' in types[0] or '\n' in types[0]:
-        _submission_reject('bad-multipart', 'one bounded Content-Type is required')
-    prefix = b'Content-Type: ' + types[0].encode('ascii', errors='replace') + b'\r\nMIME-Version: 1.0\r\n\r\n'
-    header = BytesParser(policy=email_policy.default).parsebytes(prefix, headersonly=True)
-    boundary = header.get_boundary()
-    if not boundary or not boundary.isascii() or not 1 <= len(boundary) <= 70:
-        _submission_reject('bad-multipart', 'a bounded ASCII boundary is required')
-    delimiter = re.compile(rb'(?:^|\r\n)--' + re.escape(boundary.encode()) + rb'(?:--)?[ \t]*(?:\r\n|$)')
-    if sum(1 for _ in delimiter.finditer(body)) > 5:
-        _submission_reject('bad-multipart', 'multipart accepts at most four parts')
-    try:
-        message = BytesParser(policy=email_policy.default).parsebytes(prefix + body)
-    except (RecursionError, ValueError) as exc:
-        _submission_reject('bad-multipart', f'multipart nesting or encoding is invalid: {exc}')
-    if message.get_content_type() != 'multipart/form-data' or not message.is_multipart() or message.defects:
-        _submission_reject('bad-multipart', 'valid multipart/form-data with a closing boundary is required')
-    fields = {}
-    archive = None
-    for part in message.iter_parts():
-        if part.is_multipart() or part.defects or part.get_content_disposition() != 'form-data':
-            _submission_reject('bad-multipart', 'nested or malformed multipart part')
-        if (len(part.get_all('Content-Disposition', [])) != 1
-                or sum(len(k)+len(str(v)) for k, v in part.raw_items()) > 8192
-                or part.get('Content-Transfer-Encoding', 'binary').lower() not in ('binary', '8bit')):
-            _submission_reject('bad-multipart', 'invalid multipart part headers or encoding')
-        names = [v for k, v in part.get_params(header='content-disposition', failobj=[]) if k == 'name']
-        name = names[0] if len(names) == 1 else None
-        if name not in ('archive', 'scenario', 'label', 'contact'):
-            _submission_reject('bad-multipart', 'unknown or missing multipart field', name or 'part')
-        if name in fields or (name == 'archive' and archive is not None):
-            _submission_reject('bad-multipart', f'duplicate {name} part', name)
-        raw = part.get_payload(decode=True)
-        if raw is None:
-            _submission_reject('bad-multipart', 'part must contain bytes', name)
-        if name == 'archive':
-            if len(raw) > 20*1024*1024:
-                _submission_reject('payload-too-large', 'archive exceeds 20 MiB', 'archive')
-            archive = raw
-        else:
-            if len(raw) > 4096:
-                _submission_reject('bad-multipart', f'{name} is too long', name)
-            try:
-                fields[name] = raw.decode('utf-8')
-            except UnicodeError:
-                _submission_reject('bad-multipart', f'{name} must be UTF-8', name)
-    if archive is None:
-        _submission_reject('bad-multipart', 'archive part is required', 'archive')
-    if not fields.get('scenario'):
-        _submission_reject('bad-multipart', 'scenario part is required', 'scenario')
-    label, contact = fields.get('label', ''), fields.get('contact', '')
-    if label and not re.fullmatch(r'[A-Za-z0-9._-]{1,64}', label):
-        _submission_reject('bad-multipart', 'label must match [A-Za-z0-9._-] and be <=64 characters', 'label')
-    if len(contact) > 200:
-        _submission_reject('bad-multipart', 'contact must be <=200 characters', 'contact')
-    return archive, fields
+    return submission_controller.form(headers, body, reject=_submission_reject, length=submission_length)
 
 
 def submission_query(query: dict, *, for_log: bool = False) -> dict:
-    allowed = {'tail'} if for_log else {'limit', 'cursor'}
-    for key, values in query.items():
-        if key not in allowed or len(values) != 1:
-            _submission_reject('bad-query', 'unknown or repeated query field', key)
-    key, default, maximum = ('tail', 20000, 200000) if for_log else ('limit', 50, 200)
-    value = query.get(key, [str(default)])[0]
-    if not re.fullmatch(r'[0-9]{1,6}', value) or not 1 <= int(value) <= maximum:
-        _submission_reject('bad-query', f'{key} must be an integer in 1..{maximum}', key)
-    result = {key: int(value)}
-    if not for_log:
-        cursor = query.get('cursor', [None])[0]
-        if cursor is not None and not re.fullmatch(r'sub-\d{8}T\d{6}Z-[0-9a-f]{8}', cursor):
-            _submission_reject('bad-query', 'cursor must be a submission ID', 'cursor')
-        result['cursor'] = cursor
-    return result
-
-
-_submission_init_lock = threading.Lock()
+    return submission_controller.query(query, for_log=for_log, reject=_submission_reject)
 
 
 def submission_service(httpd):
-    root = os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT')
-    if not root:
-        _submission_reject('service-not-ready', 'configure HG_CONSOLE_SUBMISSIONS_ROOT outside the platform')
-    if httpd.server_address[0] != '127.0.0.1':
-        _submission_reject('service-not-ready', 'submission service requires a 127.0.0.1 listener')
-    if BUDGET_DIR is None or not BUDGET_DIR.is_absolute():
-        _submission_reject('service-not-ready', 'configure HG_CONSOLE_BUDGET_DIR as an absolute shared directory outside the platform')
-    try:
-        capacity = budget_capacity()
-    except ValueError as exc:
-        _submission_reject('service-not-ready', str(exc))
-    with _submission_init_lock:
-        if not hasattr(httpd, '_submission_service'):
-            try:
-                config = {
-                    'max_queue':int(os.environ.get('HG_CONSOLE_SUBMISSIONS_MAX_QUEUE','16')),
-                    'quota_bytes':int(os.environ.get('HG_CONSOLE_SUBMISSIONS_QUOTA_BYTES',str(5*1024**3))),
-                    'retention_seconds':float(os.environ.get('HG_CONSOLE_SUBMISSIONS_RETENTION_SECONDS',str(30*86400))),
-                    'sweep_seconds':float(os.environ.get('HG_CONSOLE_SUBMISSIONS_SWEEP_SECONDS','1'))}
-            except (ValueError,OverflowError):
-                _submission_reject('service-not-ready','invalid submission queue/quota/retention configuration')
-            httpd._submission_service = _submission_backend().SubmissionService(
-                platform_root=PLATFORM, submissions_root=pathlib.Path(root), runs_root=RUNS,
-                work_root=pathlib.Path(os.environ.get('HG_CONSOLE_SUBMISSIONS_WORK','/tmp/hg-submissions-work')),
-                budget_dir=BUDGET_DIR, budget_capacity=capacity,
-                liveness=lambda:(procfs_readable(), live_drivers_by_run()),
-                env_resolver=submission_env,**config)
-        return httpd._submission_service
+    paths = submission_controller.SubmissionPaths(PLATFORM, RUNS, BUDGET_DIR)
+    return _submission_controller.service(httpd, backend=_submission_backend(), environment=os.environ,
+        paths=paths, budget_capacity=budget_capacity,
+        liveness=lambda: (procfs_readable(), live_drivers_by_run()), env_resolver=submission_env)
 
 
 def submission_env(scenario_name, *, settings=None, base_env=None):
-    backend = _submission_backend()
-    spec, _ = backend._scenario(scenario_name, PLATFORM)
-    env = dict(os.environ if base_env is None else base_env)
-    # Native files tasks launch "python". Starting this server by absolute venv
-    # interpreter must work just as activating that venv before starting it.
-    env['PATH'] = str(pathlib.Path(sys.executable).parent) + os.pathsep + env.get('PATH','/usr/bin:/bin')
-    if spec['model']['backend'] == 'mock':
-        env['HG_AGENT_BACKEND'] = 'mock'
-        for name in ('HG_AGENT_MODEL','HG_AGENT_BASE_URL','HG_AGENT_API_KEY'):
-            env[name] = ''  # Keep driver.load_env's setdefault from repopulating them.
-    else:
-        task = (load_settings() if settings is None else settings)['task']
-        env['HG_AGENT_BACKEND'] = env.get('HG_AGENT_BACKEND') or 'openai'
-        if env['HG_AGENT_BACKEND'] == 'mock':
-            env['HG_AGENT_BACKEND'] = 'openai'
-        for key, variable in (('model','HG_AGENT_MODEL'),('base_url','HG_AGENT_BASE_URL'),('api_key','HG_AGENT_API_KEY')):
-            if task.get(key):
-                env[variable] = task[key]
-    return backend.scenario_environment(spec, env)
+    return submission_controller.resolve_environment(scenario_name, platform=PLATFORM,
+        backend=_submission_backend(), load_settings=load_settings, environment=os.environ,
+        settings=settings, base_env=base_env)
 
 
-# ─────────────────────────────────────────────────────── HTTP
-class Handler(BaseHTTPRequestHandler):
-    server_version = "hg-console/0.2"
-
-    def log_message(self, fmt: str, *args) -> None:  # 安静一点，别刷屏
-        pass
-
-    def _send(self, payload, status: int = 200,
-              ctype: str = "application/json; charset=utf-8",
-              cache_control: str | None = None, disposition: str | None = None) -> None:
-        body = payload if isinstance(payload, bytes) else json.dumps(
-            json_safe(payload), ensure_ascii=False, allow_nan=False,
-            default=str).encode("utf-8")
-        try:
-            self.send_response(status)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", cache_control or "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
-            if disposition:
-                self.send_header("Content-Disposition", disposition)
-            self.end_headers()
-            self.wfile.write(body)
-        except (BrokenPipeError, ConnectionResetError):
-            pass
-
-    def _error(self, message: str, status: int = 400) -> None:
-        self._send({"error": message}, status)
-
-    def _guard_error(self, code: str, status: int) -> None:
-        parts = [unquote(p) for p in urlparse(self.path).path.strip('/').split('/') if p]
-        if parts[:2] == ['api', 'submissions'] or parts == ['api', 'scenarios']:
-            self._send({'api_version': '1', 'error': {'code': code, 'detail': code}}, status)
-        else:
-            self._error(code, status)
-
-    def _api_guard(self) -> bool:
-        """Reject browser cross-site requests and DNS-rebinding Host values."""
-        hosts = self.headers.get_all('Host', [])
-        address, port = self.server.server_address[:2]
-        try:
-            # Compare the literal authority, not a DNS resolution or URL parser's
-            # normalized hostname. This also rejects userinfo and ambiguous ports.
-            ip = ipaddress.ip_address(address)
-            if not ip.is_loopback:
-                raise ValueError('listener is not loopback')
-            numeric = f'[{ip}]' if ip.version == 6 else str(ip)
-            allowed = {f'{numeric}:{port}', f'localhost:{port}'}
-            if len(hosts) != 1 or hosts[0] not in allowed:
-                raise ValueError('Host must name this loopback listener and port')
-        except ValueError:
-            self.close_connection = True
-            self._guard_error('bad-host', 400)
-            return False
-        origins = self.headers.get_all('Origin', [])
-        sites = self.headers.get_all('Sec-Fetch-Site', [])
-        if (len(origins) > 1 or (origins and origins[0] != f'http://{hosts[0]}')
-                or len(sites) > 1 or (sites and sites[0] not in ('same-origin', 'none'))):
-            self.close_connection = True
-            self._guard_error('origin-forbidden', 403)
-            return False
-        return True
-
+# Thin HTTP composition.
+class Handler(http_transport.HttpTransport):
     def _post_framing(self, *, archive: bool = False) -> bool:
-        lengths = self.headers.get_all('Content-Length', [])
-        types = self.headers.get_all('Content-Type', [])
-        if (self.headers.get_all('Transfer-Encoding') or len(lengths) != 1
-                or not re.fullmatch(r'[0-9]{1,10}', lengths[0])):
-            self.close_connection = True
-            self._error('bad-length', 400)
-            return False
-        limit = IMPORT_MAX_BYTES if archive else 1024 * 1024
-        if int(lengths[0]) > limit:
-            self.close_connection = True
-            self._error('payload-too-large', 413)
-            return False
-        if not archive and (len(types) != 1 or
-                not re.fullmatch(r'application/json(?:\s*;\s*charset\s*=\s*utf-8)?',
-                                 types[0], re.IGNORECASE)):
-            self.close_connection = True
-            self._error('unsupported-content-type', 415)
-            return False
-        return True
+        return http_transport.post_framing(self, archive=archive, archive_limit=IMPORT_MAX_BYTES)
+
+    def _static(self, path: str) -> None:
+        return http_transport.static(self, path, root=STATIC)
 
     def _submission_error(self, exc) -> None:
-        if isinstance(exc, _submission_backend().SubmissionRejected):
-            source = exc.problems[0]
-        else:
-            source = {'code':'internal-error','detail':f'submission operation failed: {exc}'}
-        problem = {k:source[k] for k in ('code','detail','field','existing_submission_id') if k in source}
-        code = problem['code']
-        status = {'bad-host':400, 'origin-forbidden':403, 'submission-not-found':404,
-                  'bad-query':400, 'payload-too-large':413, 'archive-too-large':413,
-                  'service-not-ready':503, 'internal-error':500}.get(code,
-                  409 if code in ('scenario-not-available','duplicate-submission','queue-full','running','not-started') else 400)
-        self._send({'api_version':'1','error':problem}, status)
+        return submission_http.error(self, exc, ports=_submission_endpoints())
 
     def _submission_get(self, parts, query) -> None:
-        try:
-            service = submission_service(self.server)
-            if parts == ['api','scenarios']:
-                if query:
-                    _submission_reject('bad-query','scenarios does not accept query fields',next(iter(query)))
-                settings, base_env = load_settings(), dict(os.environ)
-                payload = service.scenarios(driver_env=base_env, env_for_scenario=lambda name:
-                    submission_env(name, settings=settings, base_env=base_env))
-                return self._send(payload)
-            if parts == ['api','submissions']:
-                return self._send(service.list(**submission_query(query)))
-            if len(parts) == 4 and parts[3] == 'log':
-                raw = service.log(parts[2], **submission_query(query,for_log=True))
-                return self._send(raw, ctype='text/plain; charset=utf-8')
-            if len(parts) == 3:
-                if query:
-                    _submission_reject('bad-query','detail does not accept query fields',next(iter(query)))
-                return self._send(service.get(parts[2]))
-            _submission_reject('submission-not-found','submission route was not found')
-        except (ValueError,OSError,TypeError) as exc:
-            self._submission_error(exc)
+        return submission_http.get(self, parts, query, ports=_submission_endpoints())
 
     def _submission_post(self) -> None:
-        token = None
-        service = None
-        try:
-            submission_origin(self.headers,port=self.server.server_port)
-            service = submission_service(self.server)
-            service._guard()  # Reject resource/config failures before reading an upload.
-            length = submission_length(self.headers)
-            token = service.reserve_upload(length)
-            self.connection.settimeout(30)
-            raw, fields = submission_form(self.headers,self.rfile.read(length))
-            service._quota_reserve(token,4096+len(raw)-length)
-            path = token['directory']/'archive.bin'
-            path.write_bytes(raw)  # Client filename is never used.
-            code, payload = service.submit(path,fields['scenario'],label=fields.get('label',''),
-                                           contact=fields.get('contact',''),upload_token=token,
-                                           driver_env=submission_env(fields['scenario']))
-            return self._send(payload,code)
-        except TimeoutError:
-            self.close_connection = True
-            self._submission_error(_submission_backend().SubmissionRejected([
-                {'code':'bad-multipart','detail':'upload read timed out'}]))
-        except (ValueError,OSError,TypeError) as exc:
-            self.close_connection = True
-            self._submission_error(exc)
-        finally:
-            if service is not None:
-                service.release_upload(token)
+        return submission_http.post(self, ports=_submission_endpoints())
 
-    def do_DELETE(self) -> None:  # noqa: N802
+    def do_DELETE(self) -> None:
+        return submission_http.delete(self, ports=_submission_endpoints())
+
+    def do_GET(self) -> None:
         url = urlparse(self.path)
         parts = [unquote(p) for p in url.path.strip('/').split('/') if p]
-        if not self._api_guard():
-            return
-        try:
-            submission_origin(self.headers,port=self.server.server_port)
-            if parts[:2] != ['api','submissions'] or len(parts) != 3:
-                _submission_reject('submission-not-found','submission route was not found')
-            if url.query:
-                _submission_reject('bad-query','DELETE does not accept query fields')
-            service = submission_service(self.server)
-            service.start()
-            code,payload = service.delete(parts[2])
-            return self._send(payload,code)
-        except (ValueError,OSError,TypeError) as exc:
-            self._submission_error(exc)
-
-    def do_GET(self) -> None:  # noqa: N802
-        url = urlparse(self.path)
-        parts = [unquote(p) for p in url.path.strip("/").split("/") if p]
         query = parse_qs(url.query)
-
         if not self._api_guard():
             return
-        if parts[:2] == ['api','submissions'] or parts == ['api','scenarios']:
-            return self._submission_get(parts,parse_qs(url.query,keep_blank_values=True))
-
-        if not parts or parts[0] != "api":
+        if parts[:2] == ['api', 'submissions'] or parts == ['api', 'scenarios']:
+            return self._submission_get(parts, parse_qs(url.query, keep_blank_values=True))
+        if not parts or parts[0] != 'api':
             return self._static(url.path)
-
         if parts == ['api', 'evidence', 'catalog']:
             if url.query:
                 return self._error('bad-query', 400)
@@ -4437,192 +932,14 @@ class Handler(BaseHTTPRequestHandler):
             from console import evidence_service
             status, payload = evidence_service.execute(RUNS)
             return self._send(payload, status)
-
         try:
-            if parts[1:] == ["health"]:
-                return self._send(api_health())
-            if parts[1:] == ["author", "bundles"]:
-                return self._send(author_bundles())
-            if parts[1:] == ["harness", "candidates"]:
-                return self._send(harness_candidates())
-            if parts[1:] == ["harness", "archive"]:
-                code, blob = harness_candidate_archive((query.get("candidate") or [""])[0])
-                if blob is None:
-                    message = {404: "candidate not found", 400: "invalid or unsafe candidate archive (links, special files, or unsafe paths are not allowed)", 413: "candidate archive exceeds entry, expanded, or compressed size limits"}.get(code, "candidate archive unavailable")
-                    return self._error(message, code)
-                self.send_response(200)
-                self.send_header("Content-Type", "application/gzip")
-                self.send_header("Content-Length", str(len(blob)))
-                self.send_header("Content-Disposition",
-                                 f'attachment; filename="{query["candidate"][0]}.tar.gz"')
-                self.end_headers()
-                return self.wfile.write(blob)
-            if parts[1:] == ["harness", "file"]:
-                name = (query.get("candidate") or [""])[0]
-                rel = (query.get("path") or [""])[0]
-                if not CANDIDATE_NAME.fullmatch(name) or not rel:
-                    return self._error("candidate and path are required", 400)
-                return self._send(harness_candidate_file(name, rel))
-            if parts[1:] == ["runs"]:
-                kind = (query.get("kind") or [""])[0]
-                if kind not in ("", "study", "eval", "unknown"):
-                    return self._error("kind must be study, eval, unknown or empty", 400)
-                rows = all_rows()
-                if kind:
-                    rows = [r for r in rows if r["kind"] == kind]
-                return self._send({"rows": rows, "count": len(rows)})
-            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "verdicts":
-                raw = (query.get("round") or ["0"])[0]
-                if not re.fullmatch(r"\d{1,9}", raw):
-                    return self._error("round must be a non-negative integer", 400)
-                return self._send(run_verdicts(parts[2], int(raw)))
-            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "compare":
-                other = (query.get("with") or [""])[0]
-                if not other:
-                    return self._error("with parameter is required", 400)
-                try:
-                    ra = int((query.get("round") or ["0"])[0])
-                    rb = int((query.get("round_b") or ["0"])[0])
-                except ValueError:
-                    return self._error("round must be integers", 400)
-                return self._send(run_compare(parts[2], other, ra, rb))
-            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "range-diff":
-                first = (query.get("from") or [""])[0]
-                last = (query.get("to") or [""])[0]
-                if not (re.fullmatch(r"\d{1,9}", first) and re.fullmatch(r"\d{1,9}", last)):
-                    return self._error("from/to must be non-negative integers", 400)
-                return self._send(run_range_diff(parts[2], int(first), int(last)))
-            if len(parts) == 4 and parts[1] == "runs" and parts[3] == "history":
-                history_query = parse_qs(url.query, keep_blank_values=True)
-                to = (history_query.get("to") or ["0"])[0]
-                since = (history_query.get("from") or ["1"])[0]
-                if not (re.fullmatch(r"[0-9]{1,9}", to) and re.fullmatch(r"[0-9]{1,9}", since)):
-                    return self._error("from/to must be non-negative integers of at most 9 digits", 400)
-                if not _valid_history_range(int(since), int(to)):
-                    return self._error("from/to must be ordered and span at most 1000 rounds", 400)
-                return self._send(run_history(parts[2], int(to), int(since)))
-            if len(parts) == 3 and parts[1] == "runs":
-                data = api_run(parts[2])
-                return self._send(data) if data else self._error("run not found", 404)
-            if len(parts) == 5 and parts[1] == "runs" and parts[3] == "rounds":
-                if not re.fullmatch(r"\d{1,9}", parts[4]):
-                    return self._error("round must be a non-negative integer", 400)
-                run_path = find_run(parts[2])
-                if run_path and not round_exists(run_path, int(parts[4])):
-                    return self._error(f"round {parts[4]} is not in this run", 400)
-                data = api_round(parts[2], int(parts[4]))
-                return self._send(data) if data else self._error("run not found", 404)
-            if (len(parts) == 6 and parts[1] == "runs" and parts[3] == "rounds"
-                    and parts[5] == "file"):
-                if not re.fullmatch(r"\d{1,9}", parts[4]):
-                    return self._error("round must be a non-negative integer", 400)
-                rel = (query.get("path") or [""])[0]
-                if not rel:
-                    return self._error("path query parameter is required", 400)
-                data = api_file(parts[2], int(parts[4]), rel)
-                return self._send(data) if data else self._error("file not found", 404)
-            if len(parts) == 6 and parts[1] == "runs" and parts[3] == "rounds" and parts[5] == "traces":
-                if not re.fullmatch(r"\d{1,9}", parts[4]):
-                    return self._error("round must be a non-negative integer", 400)
-                run_path = find_run(parts[2])
-                if run_path and not round_exists(run_path, int(parts[4])):
-                    return self._error(f"round {parts[4]} is not in this run", 400)
-                data = api_traces(parts[2], int(parts[4]))
-                return self._send(data) if data else self._send({"error": "not found"}, 404)
-            if len(parts) == 6 and parts[1] == "runs" and parts[3] == "rounds" and parts[5] == "trace":
-                if not re.fullmatch(r"\d{1,9}", parts[4]):
-                    return self._error("round must be a non-negative integer", 400)
-                name = (query.get("name") or [""])[0]
-                if not name:
-                    return self._error("name query parameter is required", 400)
-                data = api_trace(parts[2], int(parts[4]), name)
-                return self._send(data) if data else self._send({"error": "not found"}, 404)
-            if parts[1:] == ["launch", "form"]:
-                return self._send(launch_form())
-            if parts[1:] == ["settings"]:
-                return self._send(settings_for_ui())
-            if parts[1:] == ["settings", "test"]:
-                return self._error("method-not-allowed", 405)
-            if parts[1:] == ["launch", "preview"]:
-                return self._error("method-not-allowed", 405)
-            if parts[1:] == ["methods"]:
-                return self._send({"rows": api_methods()})
-            if len(parts) == 3 and parts[1] == "methods":
-                data = api_method(parts[2])
-                return self._send(data) if data else self._error("method not found", 404)
-            if len(parts) == 4 and parts[1] == "methods" and parts[3] == "file":
-                rel = (query.get("path") or [""])[0]
-                if not rel:
-                    return self._error("path query parameter is required", 400)
-                data = api_method_file(parts[2], rel)
-                return self._send(data) if data else self._error("file not found", 404)
-            if parts[1:] == ["protocol"]:
-                return self._send(api_protocol())
-            if parts[1:] == ["base"]:
-                return self._send(api_base())
-            if parts[1:] == ["base", "file"]:
-                rel = (query.get("path") or [""])[0]
-                if not rel:
-                    return self._error("path query parameter is required", 400)
-                data = api_base_file(rel)
-                return self._send(data) if data else self._error("file not found", 404)
-            if parts[1:] == ["base-harnesses"]:
-                return self._send(api_base_harnesses())
-            if parts[1:] == ["base-harness", "file"]:
-                name = (query.get("name") or [""])[0].strip()
-                rel = (query.get("path") or [""])[0]
-                if not name:
-                    return self._error("name query parameter is required", 400)
-                if not rel:
-                    return self._error("path query parameter is required", 400)
-                if not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name):
-                    return self._error("name must match [A-Za-z0-9_.-]{1,64}", 400)
-                data = api_base_harness_file(name, rel)
-                return self._send(data) if data else self._error("file not found", 404)
-            if parts[1:] == ["adapters"]:
-                return self._send(api_adapters())
-            if parts[1:] == ["compare"]:
-                method = (query.get("method") or [""])[0].strip()
-                dataset = (query.get("dataset") or [""])[0].strip()
-                if method and not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", method):
-                    return self._error("method must match [A-Za-z0-9_.-]{1,64}", 400)
-                if dataset and not re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", dataset):
-                    return self._error("dataset must match [A-Za-z0-9_.-]{1,64}", 400)
-                return self._send(api_compare(method, dataset))
-            if parts[1:] == ["coverage"]:
-                return self._send(api_coverage())
-            if parts[1:] == ["explain"]:
-                return self._error("method-not-allowed", 405)
+            return http_routes.dispatch_get(self, parts, query, url.query, _read_endpoints())
         except (ValueError, OSError) as exc:
-            return self._send({"error": str(exc)}, 500)
-        return self._error("unknown endpoint", 404)
+            return self._send({'error': str(exc)}, 500)
 
-    def _json_body(self, *, strict: bool = False) -> dict | None:
-        """The request body as an object, or None when it is not one."""
-        try:
-            length = int(self.headers.get("Content-Length") or 0)
-            raw = self.rfile.read(length) if length else b"{}"
-            if length and len(raw) != length:
-                return None
-            if strict:
-                def unique(pairs):
-                    result = {}
-                    for key, value in pairs:
-                        if key in result:
-                            raise ValueError('duplicate_json_key')
-                        result[key] = value
-                    return result
-                body = json.loads(raw.decode("utf-8") or "{}", object_pairs_hook=unique)
-            else:
-                body = json.loads(raw.decode("utf-8") or "{}")
-        except (ValueError, UnicodeDecodeError, RecursionError):
-            return None
-        return body if isinstance(body, dict) else None
-
-    def do_POST(self) -> None:  # noqa: N802
-        """The console's write surface: one launch, one chat, and the endpoint settings."""
+    def do_POST(self) -> None:
         url = urlparse(self.path)
-        route = url.path.strip("/")
+        route = url.path.strip('/')
         parts = [unquote(p) for p in url.path.strip('/').split('/') if p]
         if parts and parts[0] == 'api' and not self._api_guard():
             return
@@ -4630,212 +947,30 @@ class Handler(BaseHTTPRequestHandler):
             if url.query:
                 self.close_connection = True
                 return self._submission_error(_submission_backend().SubmissionRejected([
-                    {'code':'bad-query','detail':'upload does not accept query fields'}]))
+                    {'code': 'bad-query', 'detail': 'upload does not accept query fields'}]))
             return self._submission_post()
         if not self._post_framing(archive=(route == 'api/author/import')):
             return
-        if route == 'api/evidence/export':
-            if url.query:
-                self.close_connection = True
-                return self._error('bad-query', 400)
-            body = self._json_body(strict=True)
-            if body is None or set(body) != {'manifest'} or not isinstance(body['manifest'], dict):
-                return self._error('invalid-manifest', 400)
-            if str(ROOT.parent) not in sys.path:
-                sys.path.insert(0, str(ROOT.parent))
-            from console import evidence_service
-            status, payload = evidence_service.execute(RUNS, body['manifest'], is_export=True)
-            return self._send(payload, status, disposition='attachment; filename="evidence-export.json"' if status == 200 else None)
-        if route == 'api/launch/preview':
-            if url.query:
-                self.close_connection = True
-                return self._error('bad-query', 400)
-            body = self._json_body()
-            if not isinstance(body, dict):
-                return self._error('bad-json', 400)
-            fields = ('dataset', 'harness', 'rounds', 'jobs', 'trials', 'sampling',
-                      'improver', 'improver_model', 'method', 'task_backend', 'task_model',
-                      'task_base_url', 'meta_base_url', 'task_key_present', 'meta_key_present')
-            form = {key: body[key] for key in fields if key in body}
-            for key, value in form.items():
-                if key in ('task_key_present', 'meta_key_present'):
-                    valid = isinstance(value, bool) or (isinstance(value, str) and value in ('true', 'false', '1', '0', ''))
-                elif key in ('rounds', 'jobs', 'trials'):
-                    valid = isinstance(value, str) or type(value) is int
-                else:
-                    valid = isinstance(value, str)
-                if not valid:
-                    return self._error('bad-preview-fields', 400)
-            return self._send(launch_preview(form))
-        if route == 'api/explain':
-            body = self._json_body()
-            if body is None:
-                return self._error('bad-json', 400)
-            run_id = str(body.get('run') or '').strip()
-            raw_round = str(body.get('round', '')).strip()
-            raw_from = str(body.get('from', '')).strip()
-            raw_to = str(body.get('to', '')).strip()
-            if not run_id:
-                return self._error('run is required', 400)
-            force = str(body.get('force', '0')).strip().lower() not in ('', '0', 'false', 'no')
-            try:
-                if raw_from or raw_to:
-                    if not (re.fullmatch(r'\d{1,9}', raw_from) and re.fullmatch(r'\d{1,9}', raw_to)):
-                        return self._error('from and to must be non-negative integers', 400)
-                    status, payload = api_explain_range(run_id, int(raw_from), int(raw_to), force=force)
-                else:
-                    if not re.fullmatch(r'\d{1,9}', raw_round):
-                        return self._error('round must be a non-negative integer', 400)
-                    status, payload = api_explain(run_id, int(raw_round), force)
-                return self._send(payload, status)
-            except (ValueError, OSError) as exc:
-                return self._send({'error': str(exc)}, 500)
-        if route == "api/harness/save":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            code, payload = harness_candidate_save(str(body.get("name") or ""),
-                                                   body.get("files") or {},
-                                                   source=str(body.get("from") or ""))
-            return self._send(payload, code)
-        if route == "api/harness/from-round":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            try:
-                round_no = int(body.get("round"))
-            except (TypeError, ValueError):
-                return self._send({"error": "bad-round"}, 400)
-            code, payload = harness_candidate_from_round(
-                str(body.get("run") or ""), round_no, replay=bool(body.get("replay")))
-            return self._send(payload, code)
-        if route == "api/workbench/edit":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            name = str(body.get("name") or "")
-            if not valid_workbench_candidate_name(name):
-                return self._send({"error": "candidate-not-found"}, 404)
-            selection = ""
-            sel = body.get("selection") or {}
-            if sel:
-                if not isinstance(sel, dict):
-                    return self._send({"error": "bad-selection", "detail": "invalid selection"}, 400)
-                try:
-                    selection = read_selection(name, str(sel.get("path") or ""),
-                                               int(sel.get("from") or 1),
-                                               int(sel.get("to") or 1))
-                except (TypeError, ValueError, OSError) as exc:
-                    return self._send({"error": "bad-selection", "detail": str(exc)}, 400)
-            _FORCE_NEW_THREAD["value"] = bool(body.get("new_thread"))
-            code, payload = workbench_edit(str(body.get("name") or ""),
-                                           str(body.get("instruction") or ""), selection,
-                                           str(body.get("kind") or "codex"))
-            _FORCE_NEW_THREAD["value"] = False
-            return self._send(payload, code)
-        if route == "api/harness/trial":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            code, payload = harness_candidate_trial(str(body.get("name") or ""),
-                                                    str(body.get("dataset") or
-                                                        "authored_example_fix_bug"))
-            return self._send(payload, code)
-        if route == "api/author/draft":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            code, payload = author_draft(str(body.get("note") or ""),
-                                         str(body.get("materials") or ""))
-            return self._send(payload, code)
-        if route == "api/author/import":
-            slug = (parse_qs(url.query).get("slug") or [""])[0]
-            try:
-                length = int(self.headers.get("Content-Length") or 0)
-            except ValueError:
-                return self._send({"error": "bad-length"}, 400)
-            if length <= 0 or length > IMPORT_MAX_BYTES:
-                return self._send({"error": "archive-too-large", "limit": IMPORT_MAX_BYTES}, 413)
-            import tempfile
-            raw = self.rfile.read(length)
-            if len(raw) != length:
-                return self._error('bad-length', 400)
-            with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as fh:
-                fh.write(raw)
-                archive = pathlib.Path(fh.name)
-            try:
-                code, payload = author_import(archive, slug)
-            finally:
-                archive.unlink(missing_ok=True)
-            return self._send(payload, code)
-        if route == "api/settings":
-            body = self._json_body()
-            if body is None:
-                return self._send({"error": "bad-json"}, 400)
-            try:
-                save_settings(body)
-            except ValueError as exc:
-                return self._send({'error': 'settings-key-required', 'detail': str(exc)}, 400)
-            return self._send(settings_for_ui())
-        if route == "api/settings/test":
-            body = self._json_body()
-            if body is None:
-                return self._error('bad-json', 400)
-            side = str(body.get("side") or "task")
-            if side not in SETTINGS_SIDES:
-                return self._send({"error": "unknown-side"}, 400)
-            current = load_settings().get(side, {})
-            base_url = str(body.get("base_url") or current.get("base_url") or "")
-            api_key = str(body.get("api_key") or "")
-            if not api_key:
-                if base_url != str(current.get("base_url") or ""):
-                    return self._error("api-key-required-for-different-base-url", 400)
-                api_key = str(current.get("api_key") or "")
-            return self._send(probe_endpoint(base_url, api_key))
-        if route != "api/runs":
-            return self._send({"error": "unknown endpoint"}, 404)
-        form = self._json_body()
-        if form is None:
-            return self._send({"error": "bad-json"}, 400)
-        try:
-            code, payload = api_launch(form)
-        except OSError as exc:
-            return self._send({"error": "launch-failed", "detail": str(exc)}, 500)
-        return self._send(payload, code)
-
-    def _static(self, path: str) -> None:
-        rel = unquote(path.lstrip("/")) or "index.html"
-        if rel.endswith("/"):
-            rel += "index.html"
-        target = (STATIC / rel).resolve()
-        if not within(STATIC, target) or not target.is_file():
-            return self._error("not found", 404)
-        ctype = {
-            ".html": "text/html; charset=utf-8",
-            ".css": "text/css; charset=utf-8",
-            ".js": "text/javascript; charset=utf-8",
-            ".json": "application/json; charset=utf-8",
-            ".png": "image/png",
-            ".svg": "image/svg+xml",
-            ".ico": "image/x-icon",
-            ".woff2": "font/woff2",
-        }.get(target.suffix, "application/octet-stream")
-        try:
-            body = target.read_bytes()
-        except OSError:
-            return self._error("not found", 404)
-        return self._send(body, ctype=ctype)
+        return http_routes.dispatch_post(self, route, url, _write_endpoints())
 
 
 class ConsoleServer(ThreadingHTTPServer):
     daemon_threads = True
 
+    def __init__(self, *args, **kwargs):
+        self._console_close_lock = threading.Lock()
+        self._console_closed = False
+        super().__init__(*args, **kwargs)
+
     def server_close(self):
-        try:
-            if hasattr(self,'_submission_service'):
-                self._submission_service.close()
-        finally:
-            super().server_close()
+        with self._console_close_lock:
+            if self._console_closed:
+                return
+            self._console_closed = True
+            try:
+                _submission_controller.close(self)
+            finally:
+                super().server_close()
 
 
 def main() -> int:
@@ -4853,8 +988,8 @@ def main() -> int:
             "receipt directory; the default is not created automatically)"
         )
     httpd = ConsoleServer((args.host, args.port), Handler)
-    print(f"hg-console on http://{args.host}:{args.port}  (runs={RUNS})", flush=True)
     try:
+        print(f"hg-console on http://{args.host}:{args.port}  (runs={RUNS})", flush=True)
         if os.environ.get('HG_CONSOLE_SUBMISSIONS_ROOT'):
             submission_service(httpd).start()
         httpd.serve_forever()

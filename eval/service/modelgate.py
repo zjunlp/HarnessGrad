@@ -264,21 +264,47 @@ class ModelGateway:
         self.port = port
         self._server: _Server | None = None
         self._thread: threading.Thread | None = None
+        self._serve_started: threading.Event | None = None
+        self._lifecycle_lock = threading.Lock()
         #: Counted for the record, not for the data path: nothing in `_pump` consults it.
         self.stats = GatewayStats()
 
+    def _serve(self, server, started):
+        # A failed/interrupted Thread.start can leave a late bootstrap. It must
+        # not enter serve_forever after stop has detached and closed its server.
+        with self._lifecycle_lock:
+            if self._server is not server:
+                return
+            started.set()
+        server.serve_forever()
+
     def start(self) -> "ModelGateway":
+        server = thread = started = None
         try:
-            # Port 0: the platform picks, because a fixed port would collide between
-            # concurrent runs and would have to be recorded to be meaningful anyway.
-            self._server = _Server((self.bind_host, self.port), _Handler, self.target,
-                                   self.stats)
-        except OSError as exc:
-            raise GatewayUnavailable(
-                f"could not bind a model gateway on {self.bind_host}: {exc}") from exc
-        self.port = self._server.server_address[1]
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
-        self._thread.start()
+            with self._lifecycle_lock:
+                if self._server is not None:
+                    raise GatewayUnavailable("model gateway is already started")
+                try:
+                    server = _Server((self.bind_host, self.port), _Handler, self.target,
+                                     self.stats)
+                except OSError as exc:
+                    raise GatewayUnavailable(
+                        f"could not bind a model gateway on {self.bind_host}: {exc}") from exc
+                self._server = server
+                self.port = server.server_address[1]
+                started = threading.Event()
+                self._serve_started = started
+                thread = threading.Thread(target=self._serve, args=(server, started), daemon=True)
+                self._thread = thread
+                thread.start()
+        except BaseException:
+            if server is not None:
+                try:
+                    self._stop_owned(server, thread, started)
+                except BaseException:
+                    # Cleanup must not replace the original startup/cancel object.
+                    pass
+            raise
         return self
 
     @property
@@ -296,18 +322,38 @@ class ModelGateway:
         holding the record only ever sees this dict."""
         return self.stats.as_dict()
 
-    def stop(self) -> None:
-        """Never raises: it runs in a `finally` and must not replace the real failure."""
-        if self._server is not None:
+    def _stop_owned(self, server, thread, started):
+        with self._lifecycle_lock:
+            if self._server is not server:
+                return
+            self._server = self._thread = self._serve_started = None
+        # Never hold the state lock while waiting for the serving thread. A
+        # worker that has not entered the gate above will instead exit quietly.
+        try:
+            if started is not None and started.is_set() and thread is not None and thread.is_alive():
+                server.shutdown()
+        except OSError:
+            pass
+        finally:
             try:
-                self._server.shutdown()
-                self._server.server_close()
+                server.server_close()
             except OSError:
                 pass
-            self._server = None
-        if self._thread is not None:
-            self._thread.join(timeout=5)
-            self._thread = None
+            if thread is not None and thread is not threading.current_thread() and thread.ident is not None:
+                try:
+                    thread.join(timeout=5)
+                except RuntimeError:
+                    # A cancelled start can expose an ident before Thread.start
+                    # has finished publishing its started state. Its late target
+                    # will observe the detached server and exit without serving.
+                    pass
+
+    def stop(self) -> None:
+        """Close only this owned listener; repeated/unstarted stops are harmless."""
+        with self._lifecycle_lock:
+            server, thread, started = self._server, self._thread, self._serve_started
+        if server is not None:
+            self._stop_owned(server, thread, started)
 
 
 def is_host_local(url: str) -> bool:
@@ -323,7 +369,7 @@ def is_host_local(url: str) -> bool:
 
 def split(url: str) -> tuple[tuple[str, int], str]:
     """`(host, port)` and the path, from a base URL. Raises on anything unusable."""
-    parsed = urllib.parse.urlparse(url)
+    parsed = urllib.parse.urlsplit(url)
     if not parsed.hostname:
         raise GatewayUnavailable(f"cannot publish {url!r}: it has no host")
     port = parsed.port or (443 if parsed.scheme == "https" else 80)

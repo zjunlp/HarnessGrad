@@ -5,8 +5,10 @@ import os
 from pathlib import Path
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
+import venv
 from types import SimpleNamespace
 from unittest.mock import Mock
 import zipfile
@@ -21,7 +23,7 @@ from test_native_model_route import upstream
 
 
 _ACTOR = r'''
-import argparse, importlib.util, json, os, subprocess, sys
+import argparse, importlib.util, json, os, subprocess, sys, sysconfig
 from pathlib import Path
 from sibling import VALUE
 import actor_only_control
@@ -44,6 +46,11 @@ row={'prefix':sys.prefix,'python':sys.executable,'isolated':bool(sys.flags.isola
      'package':actor_only_control.__file__,'package_value':actor_only_control.VALUE,
      'sibling_value':VALUE,'platform_package':importlib.util.find_spec('pytest') is not None,
      'platform_venv':Path(PLATFORM_PREFIX).exists(),'child_python':child,
+     'platform_private_package':importlib.util.find_spec('platform_only_actor_probe') is not None,
+     'platform_private_file':Path(PLATFORM_CANARY).exists(),
+     'platform_private_package_file':Path(PLATFORM_PACKAGE_FILE).exists(),
+     'base_prefix':sys.base_prefix,'stdlib':sysconfig.get_path('stdlib'),
+     'base_stdlib_working':Path(json.__file__).is_file() and json.loads(json.dumps({'ok':True}))['ok'],
      'untracked_paths':{path:Path(path).exists() for path in HIDDEN_PATHS},
      'python_env':{k:v for k,v in os.environ.items() if k in ('PYTHONHOME','PYTHONPATH','PYTHONUSERBASE')},
      'state_before':previous,'home_before':previous_home,'home':str(home.parent)}
@@ -71,8 +78,36 @@ def artifact_storage():
         remove_instance(root)
 
 
+@pytest.fixture(scope='module')
+def cold_platform(artifact_storage):
+    prefix = artifact_storage / 'private-platform'
+    venv.EnvBuilder(with_pip=False, system_site_packages=False).create(prefix)
+    site = prefix / f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages'
+    package = site / 'platform_only_actor_probe.py'
+    package.write_text("VALUE = 'authored platform-only canary'\n")
+    canary = prefix / 'private-platform-canary.txt'
+    canary.write_text('authored canary; no credentials or task data')
+    code = ("import json,sys,platform_only_actor_probe; from pathlib import Path; "
+            "print(json.dumps({'prefix':sys.prefix,'base_prefix':sys.base_prefix,"
+            "'package_value':platform_only_actor_probe.VALUE,'canary':Path(sys.argv[1]).read_text()}))")
+    info = json.loads(subprocess.check_output([str(prefix / 'bin/python'), '-I', '-B', '-c', code,
+                                               str(canary)], text=True))
+    assert Path(info['prefix']) == prefix and info['prefix'] != info['base_prefix']
+    assert info['package_value'] == 'authored platform-only canary'
+    assert info['canary'] == 'authored canary; no credentials or task data'
+    return SimpleNamespace(prefix=prefix, python=prefix / 'bin/python', package=package,
+                           canary=canary, info=info)
+
+
+def actor_source(platform, hidden_paths=()):
+    return ('PLATFORM_PREFIX=' + repr(str(platform.prefix))
+            + '\nPLATFORM_CANARY=' + repr(str(platform.canary))
+            + '\nPLATFORM_PACKAGE_FILE=' + repr(str(platform.package))
+            + '\nHIDDEN_PATHS=' + repr(list(hidden_paths)) + '\n' + _ACTOR)
+
+
 @pytest.fixture
-def actor(tmp_path, monkeypatch, artifact_storage):
+def actor(tmp_path, monkeypatch, artifact_storage, cold_platform):
     monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY','1')
     monkeypatch.setenv('HG_AGENT_BACKEND','mock')
     monkeypatch.setenv('HG_HARNESS_RUNTIME_ROOT',str(artifact_storage/'store'))
@@ -88,14 +123,14 @@ def actor(tmp_path, monkeypatch, artifact_storage):
     (repo/'harness.json').write_text(json.dumps(manifest))
     (repo/'requirements.lock').write_text('hg-actor-control==1.0\n')
     (repo/'sibling.py').write_text('VALUE = 8\n')
-    (repo/'agent.py').write_text('PLATFORM_PREFIX='+repr(sys.prefix)+'\nHIDDEN_PATHS=[]\n'+_ACTOR)
+    (repo/'agent.py').write_text(actor_source(cold_platform))
 
     def prepare():
         return candidate_runtime.prepare(repo)
 
     receipt=prepare()
     state=SimpleNamespace(repo=repo,receipt=receipt,binding=receipt['identity'],prepare=prepare,
-                          tmp=tmp_path,store=artifact_storage)
+                          tmp=tmp_path,store=artifact_storage,platform=cold_platform)
     try:
         yield state
     finally:
@@ -106,6 +141,53 @@ def launch(actor, **kwargs):
     return runner.run_one(actor.repo,{'task_id':'control'},sandbox=True,
         verifier={'kind':'answer','expected':'ok'},env={'kind':'files','network':'none'},
         harness_runtime_identity=actor.binding,**kwargs)
+
+
+def launch_from_cold_platform(actor):
+    """Run the actual framework driver from the distinct private venv."""
+    code = r"""
+import contextlib,io,json,sys
+from pathlib import Path
+import platform_only_actor_probe
+root,repo,binding=sys.argv[1:]
+sys.path.insert(0,root)
+from eval.run import runner
+from harnessgrad import candidate_runtime
+def no_per_task_build(*args,**kwargs):
+    raise AssertionError('per-task build')
+candidate_runtime.prepare=no_per_task_build
+with contextlib.redirect_stdout(io.StringIO()):
+    result=runner.run_one(Path(repo),{'task_id':'control'},sandbox=True,
+        verifier={'kind':'answer','expected':'ok'},env={'kind':'files','network':'none'},
+        harness_runtime_identity=json.loads(binding))
+result['cold_platform_control']={'prefix':sys.prefix,'base_prefix':sys.base_prefix,
+    'package_value':platform_only_actor_probe.VALUE}
+print(json.dumps(result))
+"""
+    allowed = ('PATH','HOME','LANG','LC_ALL','LC_CTYPE','HG_REVIEWED_ENVIRONMENT_ONLY',
+               'HG_AGENT_BACKEND','HG_HARNESS_RUNTIME_ROOT','HG_HARNESS_WHEELHOUSE',
+               'UV_CACHE_DIR','UV_OFFLINE','HARNESSGRAD_WORK_ROOT',
+               'PYTHONPATH','PYTHONHOME','PYTHONUSERBASE')
+    env = {key: os.environ[key] for key in allowed if key in os.environ}
+    proc = subprocess.run([str(actor.platform.python), '-I', '-B', '-c', code,
+        str(Path(__file__).resolve().parents[2]), str(actor.repo), json.dumps(actor.binding)],
+        env=env, text=True, capture_output=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    result = json.loads(proc.stdout)
+    assert result['cold_platform_control']['prefix'] == str(actor.platform.prefix)
+    assert result['cold_platform_control']['prefix'] != result['cold_platform_control']['base_prefix']
+    assert result['cold_platform_control']['package_value'] == 'authored platform-only canary'
+    return result
+
+
+def assert_private_platform_hidden_and_base_usable(actor, row):
+    assert not row['platform_package'] and not row['platform_venv']
+    assert not row['platform_private_package'] and not row['platform_private_file']
+    assert not row['platform_private_package_file']
+    artifact = json.loads(Path(actor.binding['artifact']['manifest_path']).read_text())
+    assert row['base_prefix'] == artifact['base_python']['base_prefix']
+    assert row['stdlib'] == artifact['base_python']['stdlib'] and row['base_stdlib_working']
+    assert row['base_prefix'] != str(actor.platform.prefix)
 
 
 def observation(result):
@@ -122,7 +204,7 @@ def test_actor_uses_its_own_interpreter_packages_and_owned_sibling(actor, monkey
     monkeypatch.setenv('PYTHONHOME',str(poison))
     monkeypatch.setenv('PYTHONUSERBASE',str(poison))
     monkeypatch.setattr(candidate_runtime,'prepare',Mock(side_effect=AssertionError('per-task build')))
-    result=launch(actor)
+    result=launch_from_cold_platform(actor)
     row=observation(result)
     artifact=actor.binding['artifact']
     assert row['prefix']==artifact['path'] and row['python']==artifact['python']
@@ -130,7 +212,7 @@ def test_actor_uses_its_own_interpreter_packages_and_owned_sibling(actor, monkey
     assert row['isolated'] and row['readonly'] and row['write_denied']
     assert row['package_value']==17 and row['sibling_value']==8
     assert Path(row['package']).is_relative_to(artifact['path'])
-    assert not row['platform_package'] and not row['platform_venv']
+    assert_private_platform_hidden_and_base_usable(actor, row)
     assert row['python_env']=={} and not marker.exists()
     assert result['harness_runtime_identity']==actor.binding
     assert result['harness_runtime']['source']=='managed-python'
@@ -194,16 +276,15 @@ def test_runtime_under_private_tmp_restores_only_its_exact_readonly_paths(actor,
     try:
         marker=storage/'untracked-control.txt';marker.write_text('private store neighbor')
         monkeypatch.setenv('HG_HARNESS_RUNTIME_ROOT',str(storage/'store'))
-        (actor.repo/'agent.py').write_text('PLATFORM_PREFIX='+repr(sys.prefix)
-            +'\nHIDDEN_PATHS='+repr([str(marker)])+'\n'+_ACTOR)
+        (actor.repo/'agent.py').write_text(actor_source(actor.platform, [str(marker)]))
         actor.binding=actor.prepare()['identity']
         assert Path(actor.binding['artifact']['path']).is_relative_to(storage)
-        result=launch(actor)
+        result=launch_from_cold_platform(actor)
         row=observation(result)
         assert row['prefix']==actor.binding['artifact']['path']
         assert row['python']==row['child_python']==actor.binding['artifact']['python']
         assert row['readonly'] and row['write_denied'] and row['package_value']==17
-        assert not row['platform_package'] and not row['platform_venv']
+        assert_private_platform_hidden_and_base_usable(actor, row)
         assert row['untracked_paths']=={str(marker):False}
         assert result['verdict']['passed']
     finally:

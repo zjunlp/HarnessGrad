@@ -53,3 +53,43 @@ Observed/cooperative workers, external runtime paths and unsandboxed managed
 actors remain unsupported. Image/ABI coverage and synthetic controls do not
 establish benchmark scores, live-model connectivity or operating-system closure.
 Unopted historical Harness copies retain their legacy overlay behavior.
+
+## Offline native integration controls
+
+Prepare the **actual 73-distribution native lock**, including mini-SWE-agent
+2.4.6 and LiteLLM 1.75.9, in a dedicated external store. Use a matching MiniSWE
+cache; Loop's smaller SDK cache is not this closure. Preparation may fetch public
+locked wheels only when `--fetch` is explicit:
+
+```bash
+UV_CACHE_DIR=/absolute/miniswe-uv-cache \
+  python tools/configure_harness.py --harness base_harness/miniswe \
+  --runtime-root /absolute/miniswe-store --fetch
+```
+
+For an offline repeat, omit `--fetch`; append `--list --json` to check the prepared
+runtime without installation. A uv cache is not a wheelhouse: use
+`HG_HARNESS_WHEELHOUSE` only for a directory of original wheel files.
+
+The following authored controls use the real mini CLI and LiteLLM with the mock
+backend, not a package double, model endpoint or released task. Set
+`HG_TEST_MINISWE_RUNTIME_ROOT` to explicitly revalidate the prepared store; an
+invalid provided store fails instead of becoming a dependency skip. Keep pytest's
+temporary directory outside the checkout:
+
+```bash
+HG_TEST_MINISWE_RUNTIME_ROOT=/absolute/miniswe-store \
+UV_CACHE_DIR=/absolute/miniswe-uv-cache UV_OFFLINE=1 UV_PYTHON_DOWNLOADS=never \
+  python -m pytest -q \
+  'tests/quality/test_miniswe_managed_runtime.py::test_native_cli_uses_bound_runtime_and_keeps_task_python[files-mount]' \
+  tests/quality/test_miniswe_managed_runtime.py::test_empty_platform_can_check_prepared_miniswe_without_pip_or_sdks \
+  tests/quality/test_miniswe_managed_runtime.py::test_shipped_h0_cache_snapshot_eval_and_resume \
+  --basetemp=/tmp/harnessgrad-miniswe-native-tests
+```
+
+The actor/driver controls run the platform from a private venv with no pip,
+pytest or component SDKs. A canary package and file are visible to that platform
+but absent from the managed actor. The common base interpreter/standard library
+may remain mounted; its prefix is not a private-platform isolation probe.
+Synthetic loopback mock traffic discards ambient proxy settings. These native
+controls do not certify the separate container/image routes or benchmark quality.

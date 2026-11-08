@@ -8,6 +8,8 @@ import sys
 
 import pytest
 
+from harnessgrad.orchestration import source_lease
+
 import driver
 from tools import validate_harness as v
 
@@ -56,7 +58,7 @@ def test_metadata_changes_with_unchanged_submission_refuse_before_model(source, 
 @pytest.mark.parametrize('kind', ['mode','directory','link'])
 def test_transient_metadata_during_snapshot_refuses_before_model(source, tmp_path, monkeypatch, capsys, kind):
     content = v.source_identity(source)['submission_sha256']; filesystem = v.filesystem_identity(source)['sha256']
-    original = driver._external_source_snapshot
+    original = source_lease.external_source_snapshot
     def raced(src, snapshot):
         mode = (src/'agent.py').stat().st_mode; helper=(src/'helper.py').read_bytes()
         mutate(src,kind)
@@ -65,7 +67,7 @@ def test_transient_metadata_during_snapshot_refuses_before_model(source, tmp_pat
             if kind=='mode': (src/'agent.py').chmod(stat.S_IMODE(mode))
             elif kind=='directory': (src/'empty-feature').rmdir()
             else: (src/'helper.py').unlink(); (src/'helper.py').write_bytes(helper)
-    monkeypatch.setattr(driver,'_external_source_snapshot',raced)
+    monkeypatch.setattr(source_lease,'external_source_snapshot',raced)
     monkeypatch.setattr(driver,'describe_model',lambda:pytest.fail('raced snapshot reached model'))
     monkeypatch.setattr(sys,'argv',argv(tmp_path,source,content,filesystem))
     assert driver._main({}) == 2
@@ -113,7 +115,7 @@ def test_unsafe_filesystems_refuse(source,tmp_path,kind):
 @pytest.mark.parametrize('phase',['late-copy','staging','staged-work'])
 def test_late_owned_metadata_tamper_refuses_before_execution(source,tmp_path,monkeypatch,capsys,phase):
     content=v.source_identity(source)['submission_sha256'];filesystem=v.filesystem_identity(source)['sha256']
-    original=driver._external_source_snapshot;stage=driver.stage_workspace;copies=[]
+    original=source_lease.external_source_snapshot;stage=driver.stage_workspace;copies=[]
     def snapshot(src,target):
         original(src,target);copies.append(target)
         if phase=='late-copy' and len(copies)==2: (target/'agent.py').chmod(0o755)
@@ -121,7 +123,7 @@ def test_late_owned_metadata_tamper_refuses_before_execution(source,tmp_path,mon
         stage(src,work)
         if phase=='staging': (src/'agent.py').chmod(0o755)
         if phase=='staged-work': (work/'agent.py').chmod(0o755)
-    monkeypatch.setattr(driver,'_external_source_snapshot',snapshot)
+    monkeypatch.setattr(source_lease,'external_source_snapshot',snapshot)
     monkeypatch.setattr(driver,'stage_workspace',staging)
     monkeypatch.setattr(driver,'_run_mode_a',lambda *a,**k:pytest.fail('tampered metadata executed'))
     monkeypatch.setenv('HG_AGENT_BACKEND','mock')

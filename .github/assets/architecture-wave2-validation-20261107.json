@@ -1,0 +1,589 @@
+{
+  "schema": "harnessgrad.architecture-validation.v2",
+  "production_commit": "90bf8c8beee5e5f1923f726ef4fc942f1df24a2c",
+  "scope": "D2 source leases/staging, E2 task trials/scheduling, C2 settings/catalogue/launch, separate refusal fixes and test-fixture repairs. Later C3 and E3 commits are outside this snapshot.",
+  "status": "partial-skips",
+  "batches": {
+    "D2": "source leases and committed candidate preparation",
+    "E2": "task trial journals and scheduling",
+    "C2": "settings, catalogues and launch composition"
+  },
+  "test_counts": {
+    "passed": 565,
+    "failed": 0,
+    "skipped": 4,
+    "errors": 0
+  },
+  "selected_file_count": 29,
+  "files": [
+    {
+      "file": "tests/quality/test_console_launch_service.py",
+      "selected": [
+        "tests/quality/test_console_launch_service.py"
+      ],
+      "counts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "6bd7f6614336a813bdff784a0301c8da067a04bf4bba08181b7a3e2ec1364f6e"
+    },
+    {
+      "file": "tests/quality/test_trial_worker_contract.py",
+      "selected": [
+        "tests/quality/test_trial_worker_contract.py"
+      ],
+      "counts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "0e42975d660a0296064845fc808ffa2658d8dd95f27e3943d1ebc4a57e1afb73"
+    },
+    {
+      "file": "tests/quality/test_post_execution_usage_retention.py",
+      "selected": [
+        "tests/quality/test_post_execution_usage_retention.py"
+      ],
+      "counts": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "de81bd29536fd34fca8067d0ac708ece27cdcaddfb3f319ea1e7ded311e18a73"
+    },
+    {
+      "file": "tests/quality/test_python_candidate_actor.py",
+      "selected": [
+        "tests/quality/test_python_candidate_actor.py"
+      ],
+      "counts": {
+        "passed": 20,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "4a3b149bb241b40268a9fe0b9f9b7cf8cd24ada38d9a5e63c569e2c973c86dde"
+    },
+    {
+      "file": "tests/quality/test_python_candidate_lifecycle.py",
+      "selected": [
+        "tests/quality/test_python_candidate_lifecycle.py"
+      ],
+      "counts": {
+        "passed": 43,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "71172e0ec14d93f3c8fec9887947b9c2864af757abd2e6ad37f6005c7e12cd65"
+    },
+    {
+      "file": "tests/quality/test_loop_managed_runtime.py",
+      "selected": [
+        "tests/quality/test_loop_managed_runtime.py::test_empty_platform_can_prepare_and_check_loop_without_pip_or_sdk",
+        "tests/quality/test_loop_managed_runtime.py::test_real_loop_sdk_shell_and_private_scorer[files]",
+        "tests/quality/test_loop_managed_runtime.py::test_tasks_reuse_readonly_dependencies_and_start_with_private_state[files]",
+        "tests/quality/test_loop_managed_runtime.py::test_shipped_loop_h0_and_snapshot_resume"
+      ],
+      "counts": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "ce39014c8dd85f64779d1ccc7560c7caaa4ad9595b8175e05dd3a455934c147b"
+    },
+    {
+      "file": "tests/quality/test_resume_train.py",
+      "selected": [
+        "tests/quality/test_resume_train.py"
+      ],
+      "counts": {
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "6d3cfd220b75bad52c30a950267ab2724c5fc7d81101974e87def0182f135949"
+    },
+    {
+      "file": "tests/quality/test_verification_context_workflows.py",
+      "selected": [
+        "tests/quality/test_verification_context_workflows.py"
+      ],
+      "counts": {
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "54f805a6e0c033e1709f34d6dc8f28153dea04b2b4ff65fdfafe7c7e22497ac1"
+    },
+    {
+      "file": "tests/quality/test_dataset_runtime_cache.py",
+      "selected": [
+        "tests/quality/test_dataset_runtime_cache.py"
+      ],
+      "counts": {
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "e212ffd26018c03a83232461d5eb1a2674fba462105ed883c335f6ca1d4364eb"
+    },
+    {
+      "file": "tests/quality/test_import_direction.py",
+      "selected": [
+        "tests/quality/test_import_direction.py"
+      ],
+      "counts": {
+        "passed": 11,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "12049f957c4eb5a2edaee824cd00387ae6889b57ebb6718de16c4ca6c2e8533b"
+    },
+    {
+      "file": "tests/quality/test_eval_package_compat.py",
+      "selected": [
+        "tests/quality/test_eval_package_compat.py"
+      ],
+      "counts": {
+        "passed": 39,
+        "failed": 0,
+        "skipped": 1,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "74cecfb893dcbb05fbe1eecae8539d3da42ee71b07e87cf3167805995d4ed33b"
+    },
+    {
+      "file": "tests/quality/test_boundaries.py",
+      "selected": [
+        "tests/quality/test_boundaries.py"
+      ],
+      "counts": {
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "c1e7f0bb3eda7f9969b338f3a08591ac0be72ca1ca0deb9b3fd9062c15246686"
+    },
+    {
+      "file": "tests/quality/test_external_actor_runtime_cache.py",
+      "selected": [
+        "tests/quality/test_external_actor_runtime_cache.py"
+      ],
+      "counts": {
+        "passed": 23,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "c0eb2185751f714aaa3f81790303d43b387a3169c71ed5b1c12f36c9a22e0eea"
+    },
+    {
+      "file": "tests/quality/test_external_actor_evidence.py",
+      "selected": [
+        "tests/quality/test_external_actor_evidence.py"
+      ],
+      "counts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "a3cbadd6f76a41555bc94b4b7e17630dc49ec30dce7f386fe55ee69104c7ffd2"
+    },
+    {
+      "file": "tests/quality/test_evaluation_admission_plan.py",
+      "selected": [
+        "tests/quality/test_evaluation_admission_plan.py"
+      ],
+      "counts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "027968c667cf50b540d2656775da2ec3c06cd3b873d362231e1a9d22583d2405"
+    },
+    {
+      "file": "tests/quality/test_selected_run_plan.py",
+      "selected": [
+        "tests/quality/test_selected_run_plan.py"
+      ],
+      "counts": {
+        "passed": 34,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "e243a2b9bc148faa5a97ac85280337388b00a60b315fa480d80d79564858d3f5"
+    },
+    {
+      "file": "tests/quality/test_repeated_trial_resume.py",
+      "selected": [
+        "tests/quality/test_repeated_trial_resume.py"
+      ],
+      "counts": {
+        "passed": 27,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "e5aeeb18d7b4692365cdc3fd3803314c5440a19e096297d1a38090bee575c8a8"
+    },
+    {
+      "file": "tests/quality/test_trial_evidence_ordinary.py",
+      "selected": [
+        "tests/quality/test_trial_evidence_ordinary.py"
+      ],
+      "counts": {
+        "passed": 29,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "9e9ed4f2e2749b3b70b11e3b1b1e580fbe83c33f38eac929bfc43ee315e68b7c"
+    },
+    {
+      "file": "tests/quality/test_unknown_harness_usage.py",
+      "selected": [
+        "tests/quality/test_unknown_harness_usage.py"
+      ],
+      "counts": {
+        "passed": 24,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "b4b7600f46a7292694177698e1622befad5ba15fabe07346d6f6a83d7bc23fe0"
+    },
+    {
+      "file": "tests/quality/test_improver_cost.py",
+      "selected": [
+        "tests/quality/test_improver_cost.py"
+      ],
+      "counts": {
+        "passed": 26,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "7f55edee2f77e433b37150a2fa29fb69fabe5383bb99c1b33823984bf531fb15"
+    },
+    {
+      "file": "tests/quality/test_console_evidence_integration.py",
+      "selected": [
+        "tests/quality/test_console_evidence_integration.py"
+      ],
+      "counts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "3ceb5d46c430f4515665495ca95093fd835651ddd81f287f23593410ef50efb1"
+    },
+    {
+      "file": "tests/quality/test_wheel_adapter_resources.py",
+      "selected": [
+        "tests/quality/test_wheel_adapter_resources.py"
+      ],
+      "counts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "51ad714977e8e3374b52acf7627abce5425467cdcee7d193d74473c82cf0cff9"
+    },
+    {
+      "file": "tests/quality/test_wheel_console.py",
+      "selected": [
+        "tests/quality/test_wheel_console.py"
+      ],
+      "counts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "254101e927557521aa07e7fc18f05f4d02f78d161601ef8247dee2121ad1b203"
+    },
+    {
+      "file": "tests/quality/test_source_candidate_stage.py",
+      "selected": [
+        "tests/quality/test_source_candidate_stage.py"
+      ],
+      "counts": {
+        "passed": 23,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "1ec6905775ffe2025cc6f942eff42ff8fb2a7b1da11a746d419c36dbfa257ffd"
+    },
+    {
+      "file": "tests/quality/test_harness_path.py",
+      "selected": [
+        "tests/quality/test_harness_path.py"
+      ],
+      "counts": {
+        "passed": 80,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "9fcea6631147459179382274788fdbf7806e6ef9a9157abd9c72a365524fa149"
+    },
+    {
+      "file": "tests/quality/test_reviewed_filesystem_identity.py",
+      "selected": [
+        "tests/quality/test_reviewed_filesystem_identity.py"
+      ],
+      "counts": {
+        "passed": 47,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "30ef90778d45aa2b579e6708415cd2d7467c0bc0628112523507e2753992ce1a"
+    },
+    {
+      "file": "tests/quality/test_miniswe_managed_runtime.py",
+      "selected": [
+        "tests/quality/test_miniswe_managed_runtime.py::test_native_cli_uses_bound_runtime_and_keeps_task_python[files-mount]",
+        "tests/quality/test_miniswe_managed_runtime.py::test_empty_platform_can_check_prepared_miniswe_without_pip_or_sdks",
+        "tests/quality/test_miniswe_managed_runtime.py::test_shipped_h0_cache_snapshot_eval_and_resume"
+      ],
+      "counts": {
+        "passed": 0,
+        "failed": 0,
+        "skipped": 3,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "3e99ccd17c41fda8b4589591ac01db5d95beb0011005137e36d52efb33c39c22"
+    },
+    {
+      "file": "tests/quality/test_external_loader_environment.py",
+      "selected": [
+        "tests/quality/test_external_loader_environment.py"
+      ],
+      "counts": {
+        "passed": 22,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "c9ce0ca9afc8347925c81b8961adc63d020a28eed3fe6a66525ca2cbccc0cdb1"
+    },
+    {
+      "file": "tests/quality/test_trials_and_unmeasured.py",
+      "selected": [
+        "tests/quality/test_trials_and_unmeasured.py"
+      ],
+      "counts": {
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0
+      },
+      "returncode": 0,
+      "timeout": false,
+      "log_sha256": "144a2d3ab426a5415808e5cec2bd7573e76fd63c8281798a3531331c9035f4d3"
+    }
+  ],
+  "tracked_source_drift": [],
+  "skips": [
+    {
+      "test": "tests.quality.test_eval_package_compat::test_legacy_critic_recognizes_both_scorer_path_locations",
+      "reason": "historical adapter is not in this checkout: <snapshot>/legacy/adapters/harnessgrad_domain/adapter.py"
+    },
+    {
+      "test": "tests.quality.test_miniswe_managed_runtime::test_native_cli_uses_bound_runtime_and_keeps_task_python[files-mount]",
+      "reason": "prepare MiniSWE locked wheels first: Managed Python preparation unavailable: Python runtime command failed (1):   \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because aiohappyeyeballs was not found in the cache and you require\n      aiohappyeyeballs==2.7.1, we can conclude that your requirements are\n      unsatisfiable.\n\n      hint: Packages were unavailable because the network was disabled. When\n      the network is disabled, registry packages may only be read from the\n      cache."
+    },
+    {
+      "test": "tests.quality.test_miniswe_managed_runtime::test_empty_platform_can_check_prepared_miniswe_without_pip_or_sdks",
+      "reason": "prepare MiniSWE locked wheels first: Managed Python preparation unavailable: Python runtime command failed (1):   \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because aiohappyeyeballs was not found in the cache and you require\n      aiohappyeyeballs==2.7.1, we can conclude that your requirements are\n      unsatisfiable.\n\n      hint: Packages were unavailable because the network was disabled. When\n      the network is disabled, registry packages may only be read from the\n      cache."
+    },
+    {
+      "test": "tests.quality.test_miniswe_managed_runtime::test_shipped_h0_cache_snapshot_eval_and_resume",
+      "reason": "prepare MiniSWE locked wheels first: Managed Python preparation unavailable: Python runtime command failed (1):   \u00d7 No solution found when resolving dependencies:\n  \u2570\u2500\u25b6 Because aiohappyeyeballs was not found in the cache and you require\n      aiohappyeyeballs==2.7.1, we can conclude that your requirements are\n      unsatisfiable.\n\n      hint: Packages were unavailable because the network was disabled. When\n      the network is disabled, registry packages may only be read from the\n      cache."
+    }
+  ],
+  "raw_result_sha256": "6744fb483e648b0f779172ec15ad4011570f958dc346b47921c741a44efa2030",
+  "invocation": "python -B -m pytest -q -ra -p no:cacheprovider <selected nodeids per file> --basetemp=<external per-file directory> --junitxml=<external per-file report>",
+  "environment": {
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "UV_OFFLINE": "1",
+    "UV_PYTHON_DOWNLOADS": "never",
+    "PIP_NO_INDEX": "1",
+    "HG_AGENT_BACKEND": "mock",
+    "HG_REVIEWED_ENVIRONMENT_ONLY": "1"
+  },
+  "wheel": {
+    "source_commit": "90bf8c8beee5e5f1923f726ef4fc942f1df24a2c",
+    "status": "passed",
+    "sha256": "4836860cdfc877c8a53aa22eff0c7bab27fc375b4dd9ee7fc30c313069523da4",
+    "build_source_removed_before_use": true,
+    "architecture_modules": [
+      "console/settings.py",
+      "console/catalogue.py",
+      "console/launch.py",
+      "eval/run/scheduling.py",
+      "eval/run/trial_worker.py",
+      "harnessgrad/orchestration/source_lease.py",
+      "harnessgrad/orchestration/candidate_stage.py"
+    ],
+    "steps": [
+      {
+        "name": "build",
+        "exit_code": 0
+      },
+      {
+        "name": "install",
+        "exit_code": 0
+      },
+      {
+        "name": "dependency-boundary",
+        "exit_code": 0
+      },
+      {
+        "name": "architecture-modules-source-free",
+        "exit_code": 0
+      },
+      {
+        "name": "first-use",
+        "exit_code": 0
+      },
+      {
+        "name": "preset",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-readonly",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-smoke",
+        "exit_code": 0
+      },
+      {
+        "name": "chess-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "appworld-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "math-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "locomo-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "editor-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "readonly-all56",
+        "exit_code": 0
+      },
+      {
+        "name": "ds1000-runtime-readonly",
+        "exit_code": 0
+      }
+    ],
+    "raw_result_sha256": "0afa90083d8c7cb88562bca9116a3a58ad493fed35bd325c226e1f48e42a7141"
+  },
+  "separate_functional_fixes": [
+    "Final context refusal retains observed spend and filtered diagnostics without admitting scores or cache entries.",
+    "New pre-execution rejected candidate rounds retain planned context for repair-resume and remain ineligible for measurement reuse."
+  ],
+  "remaining": "The original 29-file result retains its four skips. The three MiniSWE controls passed separately on the later source recorded below; the absent untracked historical adapter remains missing evidence. No latest-source combined gate or full Goal completion is claimed.",
+  "goal_complete": false,
+  "followup_miniswe": {
+    "source_commit": "67217963540ca5f75a12105096491c757b61b13a",
+    "base_commit": "5abbfbb",
+    "scope": "Separate later-source native MiniSWE validation after genuine 73-package preparation and cold-platform fixture repair; not a rerun of the 29-file snapshot.",
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "runtime_id": "c6536414ef33c5b7d88e9669016da41109439cc891e7eaa2d7bcbd3206ec1512",
+    "pins_changed": false,
+    "controls": [
+      "real Mini CLI/LiteLLM and private platform boundary",
+      "empty platform preparation/check",
+      "H0, cache, training, snapshot, resume and evaluation"
+    ]
+  }
+}

@@ -26,7 +26,7 @@ with an automated guard in `tests/quality/test_import_direction.py`.
 
 | Area | Purpose and entry points | Role | Allowed dependency direction |
 | --- | --- | --- | --- |
-| [Root entry points](../driver.py) | `driver.py` parses arguments and composes dataset loading, scheduling, measurement and recording. [install.sh](../install.sh) provisions/checks prerequisites. | Consumers/composition roots. | `driver -> harnessgrad` orchestration/loops, `eval`, dataset registry, `ckpt` and operational helpers. Lower layers must not depend on the driver to implement ordinary execution. |
+| [Root entry points](../driver.py) | `driver.py` delegates argument parsing and selected-dataset planning, then composes scheduling, measurement and recording. [install.sh](../install.sh) provisions/checks prerequisites. | Consumers/composition roots. | `driver -> harnessgrad` orchestration/loops, `eval`, dataset registry, `ckpt` and operational helpers. Lower layers must not depend on the driver to implement ordinary execution. |
 | [harnessgrad/runtime/](../harnessgrad/runtime/) | Eight-stage event types, recording, schema/semantic validation and the legacy-method compatibility wrapper; start at [events.py](../harnessgrad/runtime/events.py) and [validator.py](../harnessgrad/runtime/validator.py). | Leaf/contracts, despite the word “runtime.” | Consumers -> these contracts; their modules may use sibling definitions and external libraries, never `eval`, driver, tools or method implementations. The parent initializer resolves its execution facade lazily. |
 | [harnessgrad/entrypoints/](../harnessgrad/entrypoints/) | Run argument declarations/syntax in [run_parser.py](../harnessgrad/entrypoints/run_parser.py); experiment expansion and configuration help in [experiment_config.py](../harnessgrad/entrypoints/experiment_config.py). | CLI configuration consumers, without execution orchestration. | Driver -> parser -> experiment configuration -> config/experiments; no imports of driver, datasets, runtime or console. |
 | [harnessgrad/config/](../harnessgrad/config/) | Typed configuration declarations in [areas.py](../harnessgrad/config/areas.py), loading/snapshots in [loader.py](../harnessgrad/config/loader.py). | Leaf/contracts. | Runtime and orchestration -> config; config -> its own declarations and standard library. No imports back into runtime consumers. |
@@ -235,9 +235,10 @@ not establish every architectural direction in this map.
 
 ## Small-unit extraction stage and remaining responsibilities
 
-The first extraction stage moves cohesive helpers while retaining the three
-composition roots. It does **not** certify Linux acceptance or establish an
-acyclic architecture. See [Linux remaining work](linux-runtime-remaining.md) for
+The helper stage is followed by selected-dataset planning, evaluator admission
+and cache decisions, and Console query services. These have canonical owners
+while the three composition roots retain execution and publication. This does
+not establish a fully acyclic architecture. See [Linux remaining work](linux-runtime-remaining.md) for
 acceptance scope and [the development verification guide](test-suite.md#working-on-the-composition-roots)
 for focused checks.
 
@@ -246,7 +247,30 @@ for focused checks.
 | `harnessgrad.entrypoints.run_parser` | `build_parser` declares flags; `parse_run_args` expands configuration, validates syntax/reviewed-source duplicate and abbreviation rules, fills caller-supplied scenario defaults, and returns parser, Namespace and explicit-field set. Depends on `experiment_config` and stdlib. | Driver retains CLI/main and calls this owner; syntax parsing does not perform scenario admission, select tasks, claim a run or stage a workspace. |
 | `harnessgrad.entrypoints.experiment_config` | `expand_experiment_argv` preserves explicit CLI precedence without changing `sys.argv`; `config_help` reads declared configuration descriptions. Depends on `harnessgrad.config`, `harnessgrad.experiments` and stdlib. | Driver's `_expand_experiment_argv` and `_config_help` names alias canonical functions. |
 | `eval.run.outcomes` | Provider-error, signal, invalid-result, timeout, spread and harness-failure interpretation; `_PROVIDER_FAILURES` belongs here. Its only repository dependency is `eval.observe.tracing`. | Runner re-exports the same functions; legacy `eval.runner` remains the same module object as `eval.run.runner`. |
-| `console.record_reader` | JSON/curve parsing, scalar/unknown projections, run-name parsing and `run_row`. Only stdlib imports; caller supplies run path, optional parsed curve and live-process observations. | Server re-exports the same helpers. Roots, path authorization, discovery, list cache and launch remain server-owned. |
+| `console.record_reader` | JSON/curve parsing, scalar/unknown projections, run-name parsing and `run_row`. Only stdlib imports; caller supplies run path, optional parsed curve and live-process observations. | Server re-exports the same helpers; query services consume them. |
+| `harnessgrad.orchestration.selected_dataset` | Catalogue/partition, side and sampling selection, selected lazy declarations, model/environment admission and identity capture. Registry and reporter are explicit ports. | Driver retains provider/ExitStack lifetime and handles the same refusal channels. The planner neither mutates CLI/environment state nor claims/stages a run. |
+| `harnessgrad.orchestration.source_lease` | Source selection, reviewed snapshots, link and bytecode handling, and explicit-root Harness lookup. | The driver's outer `ExitStack` owns the lease; source stays available until later acquired resources close. Operator source directories are never adopted as workspaces. |
+| `harnessgrad.orchestration.candidate_stage` | Owned staging, fixed-source commit, runtime preparation/admission and canonical preparation journals. | Only stage and commit are mutation ports. Commit precedes preparation; driver updates argument bindings before metadata publication. Resume publication and H0 remain outside this owner. |
+| `harnessgrad.orchestration.historical_evidence` and `resume` | Shared historical measurement/trace/progress decoding; resume evidence admission, owned temporary workspace and deferred publication. | Historical readers have no loop or resume dependency. Driver keeps readiness and the final current-context check before publication. Rename failure restores the original workspace; cancellation removes only owned temporary state. Raw metadata read/parse failures retain their original exception boundary. |
+| `harnessgrad.orchestration.h0` | Donor loading/admission, trace materialization, one fresh measurement, score-based selection and point assembly. | Resume bypasses fresh H0 and reselection. Driver retains publication/refusal gates, current-run counters and final writers. Donor measurement identity and historical cost remain intact; current-run cost is recorded separately. |
+| `harnessgrad.orchestration.run_metadata` and `run_completion` | Pure prepared/planned record projections and separate train/eval completion/reporting. | Root observes configuration, budget and paths at their original points. Canonical writers retain merge semantics; summary failures remain soft while cancellation propagates. |
+| `harnessgrad.orchestration.scenario_config`, `run_configuration`, `improver_readiness` and `boundary_readiness` | Scenario/pool/model policy, selected improver configuration, tool-support gates and boundary observations. | Root retains process writes and resource ownership. Probes use only the declared CLI credential; missing credentials remain unprobed. |
+| `eval.run.evaluation_plan` and `measurement_cache` | Current identity checks, per-task admission/refusal metadata, measurement keys and cache-hit decisions. | Runner retains native FD lifetime and composes task workers and result reduction. Public `run_one` and policy callbacks remain bound at call time. |
+| `eval.run.trial_worker` | Per-task trial admission, actor calls, result classification, evidence journals and completion checks through explicit task inputs and measurement/progress ports. | Public `run_one` remains bound at each call. Rejected results retain observed spend and runtime diagnostics while contributing no score or cache entry. Actors never receive private archives. |
+| `eval.run.scheduling` | Task ordering, shared slots, parallel dispatch and cancellation. | One-job execution stays ordered. On `BaseException`, queued work is cancelled, running cleanup finishes, then the exception propagates. |
+| `eval.run.aggregation` and `evaluation_usage` | Score/test-rate summaries, outcome coverage, ordered runtime/trial evidence, report assembly and usage projections. | Runner consumes outcomes in task order and owns cache writes and integrity timing. Only eligible measured results are published to cache. Usage arithmetic remains in the canonical tracing helpers. |
+| `eval.run.actor_environment`, `actor_spec` and `actor_execution` | Actor-role environment and interpreter selection, pure backend payload builders and invocation through existing backend ports. | Driver-side resource acquisition and cleanup remain in runner. The actor payload contains public launch inputs and private-path masks, not verifier data or credentials. Registry credential-name lookup stays in the composition root and is passed as a call-time capability. |
+| `eval.run.task_workspace`, `task_session`, `task_output` and `task_verification` | Owned temporary directories, acquired handles, safe output capture, trusted verification inputs and ordered cleanup. | Session contains acquired state rather than task configuration. Cleanup preserves receipt references, original exception boundaries and the explicit capture/tool/model/web/network/service/directory order. Borrowed networks, checkpoints and archives remain outside its ownership. |
+| `console.run_query` and `comparison` | Record/history/trace queries, study/coverage projections, and a single `ListCache` owner. | Server supplies authorized lookup, roots, live observations and clock. Existing query APIs delegate; package, direct-file and spec-loaded servers remain supported. |
+| `console.path_policy`, `serialization`, `snapshots` | Containment, finite JSON/display values and the configured platform's snapshot reader. | Shared primitives have one implementation; query modules do not import `server`. |
+| `console.settings` and `catalogue` | Settings persistence and UI redaction; declared dataset, Harness, editor and method choices. Paths, environment and lazy catalogue callbacks are explicit inputs. | Existing settings merge, legacy aliases, write/chmod order and separately requested endpoint probe remain unchanged. Reads do not create state roots. |
+| `console.launch` | Ordered preflight checks, argv/environment construction, scope preview and one detached launch. | Public server delegates bind invocation ports per request. Preview creates no run or lease; start does not retry spawning or cancel the detached child when the HTTP response fails. |
+| `console.candidates` and `candidate_trial` | Descriptor-relative candidate reads, bounded save/archive, provenance, private round recovery and trial namespace reservations. | Existing trusted-root assumptions and inode-aware cleanup remain. Reopening publishes a separate candidate without overwriting edits. Trials preserve blocking invocation and both reserved namespaces after launch failure or timeout. |
+| `console.workbench` and `assistant_drivers` | Request-local edits, declared editor protocol selection, private per-request DSH state and scoped session storage. | Codex and DSH use their actual protocols. Unsupported choices fail before copying. Sessions bind to driver/runtime/configuration, with locked atomic migration and the existing four positional arguments preserved; see the [migration guide](../console/WORKBENCH.md). |
+| `console.explanation` | Explanation input projection, configured chat transport and one memory/order/lock/disk cache owner. | Public delegates bind query, configuration and chat ports. Cache keys, limits, redaction and ordering remain compatible. |
+| `console.submission_controller` and `submission_http` | Submission admission, environment resolution, backend initialization and HTTP token/response cleanup. | The canonical `SubmissionService` still owns its queue and worker. Each listener has one backend; initialization and shutdown serialize, and backend errors cannot prevent socket closure. |
+| `console.artifact_catalogue` and `author_bundles` | Artifact inspection and bounded authored-bundle listing, validation, import and draft operations. | Trusted platform helpers and process ports remain explicit. Malformed archives return a typed failure without publishing a bundle. |
+| `console.http_transport`, `http_routes`, `health` and `snapshot_restore` | HTTP framing/origin/path enforcement, named endpoint adapters, health projection and legacy snapshot checkout. | Server retains listener lifetime and configuration. Existing paths, statuses, body/header behavior and public delegates remain supported. |
 
 Aliases preserve function identity and normal calls, not the old location of a
 function's globals. Patch `outcomes.process_outcome` for classifier behavior,
@@ -255,30 +279,43 @@ parser help. Patching `server.read_curve` still intercepts direct server calls;
 it does not replace the reader's own dependency. Tests should target the owner
 or an explicit dependency port. Do not synchronize globals or copy mutable state
 through compatibility facades. The static import guard pins the dependencies of
-these four files and scans `console/` too; dynamic imports and subprocess/file
+these modules and scans `console/` too; dynamic imports and subprocess/file
 boundaries still require review.
 
-The remaining closures are concrete and deliberately stay in place at this stage:
+The composition roots intentionally retain these responsibilities:
 
-- **`driver.py`:** dotenv/model resolution and probes; scenario/source review;
-  selected dataset declarations; environment capability/image admission;
-  scoring, dataset-runtime and verification identities; run namespace and
-  deferred resume publication; source staging/commit and candidate runtime
-  preparation; H0 donor/cache admission; curve/metadata recording, loop dispatch
-  and final summary. Existing loops/records helpers retain their current ownership.
-- **`console/server.py`:** state roots/settings and credential handling; process
-  discovery/list cache; launch admission/preview/subprocesses; trace/file APIs;
-  comparison/coverage; secure candidate storage/provenance/archives/recovery;
-  workbench assistant threads, explanation cache, authored imports and submission
-  protocol; HTTP request/body/path/origin enforcement and service lifecycle.
+- **`driver.py`:** CLI adaptation, explicit process-state/budget installation,
+  namespace and lease lifetime, phase sequencing, final context/publication gates,
+  canonical record writes and loop dispatch.
+- **`console/server.py`:** state roots and settings/launch composition;
+  authorized query, candidate and workbench composition;
+  explanation/submission/HTTP endpoint capabilities and listener lifecycle.
 - **`eval/run/runner.py`:** observation cache and runtime-policy admission;
-  single-task dispatch including cooperative/container state; task/model/tool/web
-  service ownership; actor/private verifier separation; output/evidence capture and
-  teardown; selected identity/context admission before cache reuse; trial scheduling,
-  progress/resume/evidence persistence; scoring aggregation, isolation receipts,
-  usage reporting and platform-integrity snapshots.
+  specialized cooperative/container dispatch; composition of admitted actor,
+  task session, output and trusted verifier operations;
+  progress serialization and resume; ordered result-fold composition, cache
+  publication, isolation receipts and platform-integrity snapshots.
 
-Later extraction must preserve the following order. Select diagnostic/pilot/random
+The extracted owners have focused interfaces and explicit dependency guards.
+Historical migration counts and test attempts remain in validation receipts;
+line counts alone do not establish correct ownership or behavior equivalence.
+Functional corrections were reviewed separately from structural moves.
+
+Shared H0 preserves donor cost/cumulative values and adds a strict
+`current_run_cost` projection for the new run's zero H0 execution. Summary readers
+retain historical references and leave malformed or missing projections unknown.
+
+The [first-wave validation receipt](../.github/assets/architecture-wave1-validation-20261107.json)
+records the fixed production snapshot and the later test-only IPC-path repair.
+The 86-file run passed 1882 cases and exposed two overlong fixture socket paths;
+after repair, that entire 26-case file passed at the same production source.
+The reconciled per-file result is 1884 passed and eight skipped, with 14 installed
+wheel steps passed after build-source removal. These are selected controls;
+the receipt retains the original failure and repair separately.
+
+Later extraction must preserve the following partial order. The early namespace
+availability check is read-only; durable claim follows selected identity/admission.
+Candidate-owned runtime identity requires staged, committed source. Select diagnostic/pilot/random
 IDs before reading lazy setup/verifier/environment declarations. Resolve scoring
 and capture dataset runtime identity, check environment capabilities, resolve the
 selected environments/images, then capture verification context. Resume must

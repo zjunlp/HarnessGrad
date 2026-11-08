@@ -57,13 +57,31 @@ def miniswe_store():
 @pytest.fixture
 def managed_miniswe(miniswe_store,monkeypatch,tmp_path):
     for key in list(os.environ):
-        if key.startswith(('HG_AGENT_','HG_METHOD_','HG_HARNESS_')):monkeypatch.delenv(key)
+        if key.startswith(('HG_AGENT_','HG_METHOD_','HG_HARNESS_')) and key!='HG_HARNESS_WHEELHOUSE':monkeypatch.delenv(key)
+    # Authored local mock traffic must not consume ambient operator proxies.
+    for key in ('HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY',
+                'http_proxy','https_proxy','all_proxy','no_proxy'):
+        monkeypatch.delenv(key,raising=False)
     for key,value in {'HG_REVIEWED_ENVIRONMENT_ONLY':'1','HG_HARNESS_RUNTIME_ROOT':str(miniswe_store.store),
         'HG_AGENT_BACKEND':'mock','HG_MINISWE_STEP_LIMIT':'4','UV_OFFLINE':'1',
         'HARNESSGRAD_WORK_ROOT':str(tmp_path)}.items():monkeypatch.setenv(key,value)
-    config.reset()
-    try:yield miniswe_store
-    finally:config.reset()
+    # A private platform prefix is distinct from the shared base interpreter.
+    # Execute the actual driver here; a canary alone in an unused venv proves nothing.
+    with tempfile.TemporaryDirectory(prefix='hg-miniswe-platform-',dir=Path.home()/'.cache') as directory:
+        platform=Path(directory)/'venv'
+        venv.EnvBuilder(with_pip=False).create(platform)
+        site=next(platform.glob('lib/python*/site-packages'))
+        (site/'hg_miniswe_platform_canary.py').write_text("VALUE='private-platform-canary'\n")
+        (platform/'private-platform-canary.txt').write_text('private-platform-canary')
+        probe=subprocess.run([str(platform/'bin/python'),'-I','-B','-c',
+            "import sys,hg_miniswe_platform_canary;assert sys.prefix!=sys.base_prefix;"
+            "assert hg_miniswe_platform_canary.VALUE=='private-platform-canary'"],
+            capture_output=True,text=True,timeout=30)
+        assert probe.returncode==0,probe.stdout+probe.stderr
+        monkeypatch.setenv('HG_MINISWE_TEST_PLATFORM',str(platform))
+        config.reset()
+        try:yield miniswe_store
+        finally:config.reset()
 
 
 @pytest.fixture(scope='module')
@@ -115,17 +133,21 @@ except OSError:_denied=True
  'python':_sys.executable,'prefix':_sys.prefix,'isolated':bool(_sys.flags.isolated),
  'mini_package':str(_mini),'lite_version':_meta.version('litellm'),
  'readonly':bool(_os.statvfs(_sys.prefix).f_flag & _os.ST_RDONLY),'write_denied':_denied,
- 'platform_visible':_Path(PLATFORM_PREFIX).exists(),'pytest_visible':_util.find_spec('pytest') is not None,
+ 'platform_visible':_Path(PLATFORM_PREFIX).exists(),
+ 'platform_package_visible':_util.find_spec('hg_miniswe_platform_canary') is not None,
+ 'platform_canary_visible':(_Path(PLATFORM_PREFIX)/'private-platform-canary.txt').exists(),
+ 'base_prefix':_sys.base_prefix,'pytest_visible':_util.find_spec('pytest') is not None,
  'private_visible':(_work/'private-token.txt').exists(),'previous':_old,
  'task_module_visible':_util.find_spec('hg_loop_image_dependency') is not None,
  'task_path_module_visible':_util.find_spec('hg_loop_path_dependency') is not None}))
-'''.replace('PLATFORM_PREFIX',repr(sys.prefix))
+'''
 
 
 def instrumented(tmp_path,*,task_dependencies=False):
     source=tmp_path/'source';shutil.copytree(HARNESS,source)
     entry=source/'agent.py'
-    text=entry.read_text().replace('from __future__ import annotations\n','from __future__ import annotations\n'+PROBE,1)
+    text=entry.read_text().replace('from __future__ import annotations\n','from __future__ import annotations\n'+PROBE.replace(
+        'PLATFORM_PREFIX',repr(os.environ['HG_MINISWE_TEST_PLATFORM'])),1)
     text=text.replace('    finally:\n        if server is not None:',
         '''    finally:
         _row=_json.loads((_work/'actor-probe.json').read_text())
@@ -168,6 +190,32 @@ POISON=[{'path':'minisweagent/__init__.py','content':'raise RuntimeError("task p
         {'path':'mini.yaml','content':'agent: {step_limit: "task config replaced native config"}\n'}]
 
 
+def _cold_run_one(repo,task,**kwargs):
+    platform=Path(os.environ['HG_MINISWE_TEST_PLATFORM'])
+    with tempfile.TemporaryDirectory(prefix='hg-miniswe-driver-') as directory:
+        directory=Path(directory)
+        request,output=directory/'request.json',directory/'result.json'
+        request.write_text(json.dumps({'repo':str(repo),'task':task,'kwargs':kwargs}))
+        code="""import importlib.util,json,sys
+from pathlib import Path
+import hg_miniswe_platform_canary
+assert sys.prefix!=sys.base_prefix
+assert hg_miniswe_platform_canary.VALUE=='private-platform-canary'
+for name in ('pip','pytest','minisweagent','litellm','openai','pyarrow'):
+    assert importlib.util.find_spec(name) is None,name
+sys.path.insert(0,sys.argv[1])
+from eval.run.runner import run_one
+request=json.loads(Path(sys.argv[2]).read_text())
+result=run_one(Path(request['repo']),request['task'],**request['kwargs'])
+Path(sys.argv[3]).write_text(json.dumps(result))
+"""
+        completed=subprocess.run([str(platform/'bin/python'),'-I','-B','-c',code,
+            str(ROOT),str(request),str(output)],capture_output=True,text=True,timeout=180)
+        assert completed.returncode==0,completed.stdout+completed.stderr
+        assert (platform/'private-platform-canary.txt').read_text()=='private-platform-canary'
+        return json.loads(output.read_text())
+
+
 def launch(source,env,*,task_id='controlled',setup=None):
     binding=candidate_runtime.prepare(source,envs={task_id:env})['identity']
     artifact=runtime.placement(binding,env)['artifact']
@@ -176,7 +224,7 @@ def launch(source,env,*,task_id='controlled',setup=None):
     verifier={'kind':'command','argv':['sh','-c',
         'test "$(cat answer.txt)" = MINISWE_MOCK && test "$(cat private-token.txt)" = PRIVATE_CONTROL && ! test -x '+shlex.quote(artifact['python'])],
         'inputs':[{'path':'private-token.txt','content':'PRIVATE_CONTROL'}]}
-    result=runner.run_one(source,{'task_id':task_id,'goal':'Write a short answer.txt.'},
+    result=_cold_run_one(source,{'task_id':task_id,'goal':'Write a short answer.txt.'},
         env=env,setup=setup or {'files':POISON},verifier=verifier,observation=observed,
         harness_runtime_identity=binding,timeout_s=90,run_id='miniswe-managed-'+task_id)
     assert not result.get('invalid') and result['exit_code']==0,result
@@ -185,7 +233,7 @@ def launch(source,env,*,task_id='controlled',setup=None):
     row=next(r['miniswe_runtime_control'] for r in rows if 'miniswe_runtime_control' in r)
     assert row['python']==artifact['python'] and row['prefix']==artifact['path']
     assert row['isolated'] and row['readonly'] and row['write_denied']
-    assert not any(row[k] for k in ('platform_visible','pytest_visible','private_visible','task_module_visible','task_path_module_visible'))
+    assert not any(row[k] for k in ('platform_visible','platform_package_visible','platform_canary_visible','pytest_visible','private_visible','task_module_visible','task_path_module_visible')),row
     assert row['previous']==[False,False] and row['task']['previous']==[False,False]
     assert Path(row['mini_package']).is_relative_to(artifact['path']) and row['lite_version']=='1.75.9'
     assert [r for r in rows if r.get('submitted')][-1]['mini_version']=='2.4.6'
@@ -299,9 +347,23 @@ def test_shipped_h0_cache_snapshot_eval_and_resume(managed_miniswe,tmp_path,requ
     ids=tmp_path/'ids.txt';ids.write_text('t01\n')
     runs,work=tmp_path/'runs',tmp_path/'work'
     env=dict(os.environ,HG_AGENT_MODEL='miniswe-mock',HG_AGENT_BASE_URL='')
+    platform=Path(os.environ['HG_MINISWE_TEST_PLATFORM'])
+    platform_python=platform/'bin/python'
     def call(argv,label):
-        result=subprocess.run([sys.executable,'-B',*map(str,argv)],cwd=ROOT,env=env,
+        code="""import importlib.util,runpy,sys
+import hg_miniswe_platform_canary
+assert sys.prefix!=sys.base_prefix
+assert hg_miniswe_platform_canary.VALUE=='private-platform-canary'
+for name in ('pip','pytest','minisweagent','litellm','openai','pyarrow'):
+    assert importlib.util.find_spec(name) is None,name
+sys.path.insert(0,sys.argv[1])
+script=sys.argv[2]
+sys.argv=sys.argv[2:]
+runpy.run_path(script,run_name='__main__')
+"""
+        result=subprocess.run([str(platform_python),'-I','-B','-c',code,str(ROOT),*map(str,argv)],cwd=ROOT,env=env,
             capture_output=True,text=True,timeout=240)
+        assert (platform/'private-platform-canary.txt').read_text()=='private-platform-canary'
         (tmp_path/(label+'.log')).write_text(result.stdout+result.stderr)
         assert result.returncode==0,result.stdout+result.stderr
         return result
@@ -316,7 +378,7 @@ def test_shipped_h0_cache_snapshot_eval_and_resume(managed_miniswe,tmp_path,requ
     common=[ROOT/'driver.py','--harness','miniswe','--dataset','demo','--sampling','all',
         '--jobs','1','--trials','1','--no-summary','--runs-root',runs,'--work-root',work]
     train=[*common,'--tasks','t01','--run-id','study','--rounds','1','--reuse-identical',
-        '--method-entrypoint',sys.executable+' '+str(ROOT/'methods/noop/run.py'),'--h0-from',donor.name]
+        '--method-entrypoint',str(platform_python)+' '+str(ROOT/'methods/noop/run.py'),'--h0-from',donor.name]
     call(train,'train');study=runs/'study'
     points=[json.loads(line) for line in (study/'curve.jsonl').read_text().splitlines()]
     binding=points[0]['harness_runtime_identity']

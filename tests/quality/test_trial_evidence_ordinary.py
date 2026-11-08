@@ -7,6 +7,8 @@ import pytest
 
 from data.scaffolds.registry import _check_verifier
 from eval.run import runner, trial_evidence
+from harnessgrad import verification_context
+from harnessgrad.loops import eval_side
 from ordinary_evidence_helpers import evaluation
 from test_repeated_trial_resume import session
 
@@ -28,9 +30,20 @@ def test_archive_keeps_ordinary_scores_seed_and_early_stop(evaluation, tmp_path,
                                     directory='plain', run_seed='ordinary-seed')
     index = result.pop('trial_evidence')
     assert 'repeated_trials' not in result
+    archived_context = result.pop('verification_context')
+    plain_context = plain.pop('verification_context')
+    for context, archived in ((archived_context, True), (plain_context, False)):
+        spec = {'kind': 'answer', 'expected': 'answer'}
+        if archived:
+            spec['trial_evidence'] = {'version': 1}
+        assert context == verification_context.capture(
+            [{'task_id': 'ordinary/task'}], {}, verifiers={'ordinary/task': spec}, sandbox=True)
+    assert verification_context.problems(archived_context, plain_context) == ['verification_context changed']
+    # Every measurement/usage/statistic remains equal; only archival metadata
+    # and the identity of the changed verifier declaration differ.
     assert result == plain
     assert len(calls) == len(plain_calls) == len(index['results'])
-    assert [call['run_seed'] for call in calls] == ['ordinary-seed'] * len(calls)
+    assert [call['run_seed'] for call in calls] == [call['run_seed'] for call in plain_calls] == ['ordinary-seed'] * len(calls)
     assert len(index['manifest']) == 3
     assert len(index['not_returned']) == 3 - len(calls)
     for i, row in enumerate(index['results']):
@@ -44,7 +57,10 @@ def test_archive_keeps_ordinary_scores_seed_and_early_stop(evaluation, tmp_path,
         assert row['status'] == 'returned'
     progress = json.loads((tmp_path / 'run/progress/round-2/ordinary/task.json').read_text())
     assert progress.pop('trial_evidence') == index['results']
-    assert progress == json.loads((tmp_path / 'plain/progress/round-2/ordinary/task.json').read_text())
+    plain_progress = json.loads((tmp_path / 'plain/progress/round-2/ordinary/task.json').read_text())
+    assert progress.pop('verification_context') == verification_context.project(archived_context, ['ordinary/task'])
+    assert plain_progress.pop('verification_context') == verification_context.project(plain_context, ['ordinary/task'])
+    assert progress == plain_progress
 
 
 def test_nonprotocol_declaration_is_accepted():
@@ -86,11 +102,16 @@ def ordinary_session(session, monkeypatch):
     for verifier in session.verifiers.values():
         verifier.pop('trial_protocol')
         verifier['trial_evidence'] = {'version': 1}
+    session.preflight()
     session.root = trial_evidence.ordinary_root(session.run, 0, session.sha)
     session.interrupt = 'b'
     with pytest.raises(KeyboardInterrupt):
         session.execute()
     assert [call[0] for call in session.calls] == ['a'] * 3
+    progress = eval_side._progress_results(session.run)
+    assert set(progress) == {'a'}
+    assert progress['a']['verification_context'] == verification_context.project(
+        session.args.verification_context, ['a'])
     session.interrupt = None
     session.args.resume = True
     return session
@@ -122,6 +143,8 @@ def test_ordinary_resume_reuses_completed_namespaced_tasks(session, monkeypatch,
     session.args.sandbox = True
     monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(session.run.parent / 'harness'))
+    session.preflight()
+    assert set(session.args.verification_context['tasks']) == set(ids)
     session.interrupt = ids[1]
     with pytest.raises(KeyboardInterrupt):
         session.execute()
@@ -140,7 +163,7 @@ def test_ordinary_resume_reuses_completed_namespaced_tasks(session, monkeypatch,
 @pytest.mark.parametrize('change', ['missing', 'content', 'binding', 'progress', 'index',
                                    'removed', 'trials', 'seed', 'declaration', 'selection', 'harness', 'symlink',
                                    'published-incomplete', 'published-corrupt'])
-def test_ordinary_resume_rejects_changed_evidence_before_execution(ordinary_session, change, monkeypatch):
+def test_ordinary_resume_rejects_changed_evidence_before_execution(ordinary_session, change, monkeypatch, capsys):
     state = ordinary_session
     index_path = next((state.root / 'tasks').glob('*.json'))
     index = json.loads(index_path.read_text())
@@ -183,9 +206,15 @@ def test_ordinary_resume_rejects_changed_evidence_before_execution(ordinary_sess
         if change == 'published-corrupt':
             report['results'] = []
         trial_evidence.persist_ordinary(state.run, report)
+    # Recapture the invocation's current declarations without rewriting the
+    # interrupted run's identity. Refuse at evidence/resume gates, not preflight.
+    state.preflight(persist=False)
+    saved = {path: path.read_bytes() for path in state.run.rglob('*.json') if path.is_file()}
     calls = list(state.calls)
     assert state.execute() == 2
     assert state.calls == calls
+    assert all(path.read_bytes() == body for path, body in saved.items())
+    assert 'changed after preflight' not in capsys.readouterr().err
 
 
 def test_ordinary_resume_with_only_nonarchiving_tasks_left_keeps_private_boundary(session, monkeypatch):
@@ -195,6 +224,7 @@ def test_ordinary_resume_with_only_nonarchiving_tasks_left_keeps_private_boundar
     for verifier in session.verifiers.values():
         verifier.pop('trial_protocol')
     session.verifiers['a']['trial_evidence'] = {'version': 1}
+    session.preflight()
     calls = []
     original = runner.run_one
     def actor(repo, task, **kwargs):
@@ -223,6 +253,7 @@ def test_published_ordinary_stop_cannot_resume_unreturned_tasks(session, monkeyp
     for verifier in session.verifiers.values():
         verifier.pop('trial_protocol')
         verifier['trial_evidence'] = {'version': 1}
+    session.preflight()
     # Control only scheduling: exercise the real runner/task/progress/index
     # publication with the same not_run outcome as a cancelled pending task.
     def stop_remaining(tasks, measure, jobs):

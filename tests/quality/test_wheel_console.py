@@ -145,6 +145,7 @@ assert not any(p.is_relative_to(server.PLATFORM) for p in
     # Serve a synthetic receipt on loopback in-process; never start a model or driver.
     code = '''
 import json, os, threading, urllib.request
+from unittest.mock import patch
 from pathlib import Path
 from console import server, record_reader
 from harnessgrad.evidence_export import check_export
@@ -160,6 +161,21 @@ try:
     for path in ("/", "/console.js", "/app.css"):
         with urllib.request.urlopen(base + path) as response:
             assert response.status == 200 and response.read()
+    before_candidates = sorted(str(path) for path in server.CANDIDATES.rglob('*'))
+    with patch.object(server.subprocess, 'run', side_effect=AssertionError('editor preflight must not execute a process')):
+        with urllib.request.urlopen(base + '/api/workbench/capabilities') as response:
+            editors = json.load(response)['assistants']
+        assert len(editors) == 6
+        assert [row['kind'] for row in editors if row['supported']] == ['codex', 'dsh']
+        rejected = urllib.request.Request(base + '/api/workbench/edit',
+            data=json.dumps({'name':'synthetic','kind':'opencode','instruction':'authored'}).encode(),
+            headers={'Content-Type':'application/json'}, method='POST')
+        try:
+            urllib.request.urlopen(rejected)
+            raise AssertionError('unsupported editor was accepted')
+        except urllib.error.HTTPError as error:
+            assert error.code == 503 and json.load(error)['error'] == 'assistant-not-configured'
+    assert sorted(str(path) for path in server.CANDIDATES.rglob('*')) == before_candidates
     with urllib.request.urlopen(base + "/api/runs") as response:
         rows = {row['id']: row for row in json.load(response)['rows']}
     assert rows['synthetic']['curve_state'] == 'missing'

@@ -319,7 +319,7 @@ def test_driver_selects_before_runtime_with_frozen_eligible_pool(monkeypatch, pr
         assert side_ids == policy.staged_task_set(ELIGIBLE, stage)
         assert loaded == ["tasks", "envs"]
         raise SelectionObserved
-    monkeypatch.setattr(driver, "_narrow_to_run", stop_at_narrow)
+    monkeypatch.setattr("harnessgrad.orchestration.selected_dataset._narrow_to_run", stop_at_narrow)
     with pytest.raises(SelectionObserved):
         driver.main()
 
