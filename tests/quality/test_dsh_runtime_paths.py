@@ -15,6 +15,7 @@ import venv
 
 import pytest
 
+from tools import configure_dsh_harness
 from tools.configure_dsh_harness import configure, _runtime_directory
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -100,6 +101,38 @@ def test_preparation_records_paths_used_by_the_sandbox_and_all_farm_links(agent,
         assert (farm / name).readlink() == target
         assert (farm / name).resolve().is_relative_to(root)
     assert agent._install_profile(home, root) == -2
+
+
+def test_npm_binding_needs_no_source_farm_and_checks_dependency_bytes(agent, monkeypatch, tmp_path, installation):
+    harness, legacy_root, _, node = installation(tmp_path)
+    (harness / "dsh_farm.tsv").unlink()
+    project = legacy_root.parent / "package"
+    cli = project / "node_modules/@deepseek-ai/dsh/lib/bin.js"
+    cli.parent.mkdir(parents=True)
+    cli.write_text("// npm CLI\n")
+    (cli.parent.parent / "package.json").write_text(json.dumps({
+        "name": "@deepseek-ai/dsh", "bin": {"dsh": "lib/bin.js"}, "version": "0.2.2-rc.1",
+    }))
+    lockfile = project / "package-lock.json"
+    lockfile.write_text("{}\n")
+    probes = []
+    monkeypatch.setattr(configure_dsh_harness, "_probe_npm", probes.append)
+    original = (harness / "harness.json").read_bytes()
+    with pytest.raises(ValueError, match="npm version mismatch"):
+        configure(harness, project, str(node), npm_version="0.2.2")
+    assert (harness / "harness.json").read_bytes() == original
+    assert not probes
+    record = configure(harness, project, str(node), npm_version="0.2.2-rc.1")["identity"]
+    assert probes == [record]
+    assert record["farm_targets"] == []
+    _use_copy(agent, monkeypatch, harness)
+    selected = agent.runtime({"PATH": ""})
+    assert selected["layout"] == "npm"
+    assert selected["argv"] == [str(node), str(cli)]
+    assert selected["version"] == "0.2.2-rc.1"
+    lockfile.write_text('{"changed": true}\n')
+    with pytest.raises(ValueError, match="dependency contents changed"):
+        agent.runtime({"PATH": ""})
 
 
 def test_prepared_installation_refuses_overrides_until_reprepared(agent, monkeypatch, tmp_path, installation):

@@ -19,6 +19,7 @@ from eval.containers import sandbox
 from harnessgrad.paths import main_checkout
 from harnessgrad.python_artifacts import atomic_json, digest, locked
 from tools import configure_codex_harness as codex
+from tools import configure_dsh_harness as dsh
 from tools import configure_opencode_harness as opencode
 from tools import configure_openclaw_harness as openclaw
 
@@ -44,7 +45,12 @@ OPENCODE_RELEASES = {
     "1.19.5": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
     "2.2.6": "sha512-g1NShGt+20y/7nzQvqAnO7bQshC8nZGaz8WC7J8vjgXIOZ1uzoxz5OiLnCbUWertf2CM3Dlh9tzrmZJf0ic9Aw==",
 }
-LABELS = {"openclaw": "OpenClaw", "codex": "Codex", "opencode": "OpenCode"}
+DSH_RELEASES = {
+    "0.2.2-rc.1": "sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==",
+}
+EXACT_SEMVER = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+LABELS = {"openclaw": "OpenClaw", "codex": "Codex", "opencode": "OpenCode",
+          "deepseek-harness": "DeepSeek Harness"}
 
 
 @dataclass(frozen=True)
@@ -58,7 +64,7 @@ class NpmRelease:
 
 def _recipe(name: str, version: str) -> NpmRelease:
     if name == "codex":
-        if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version):
+        if not re.fullmatch(EXACT_SEMVER, version):
             raise ValueError("Codex version must be an exact X.Y.Z release")
         wrapper, native = CODEX_RELEASES.get(version, (None, None))
         return NpmRelease(CODEX_PACKAGE, version, wrapper, native_integrity=native)
@@ -67,6 +73,10 @@ def _recipe(name: str, version: str) -> NpmRelease:
             raise ValueError("OpenCode version must be an exact v1 or v2 release")
         package = OPENCODE_PACKAGES[version.split(".", 1)[0]]
         return NpmRelease(package, version, OPENCODE_RELEASES.get(version))
+    if name == "deepseek-harness":
+        if not re.fullmatch(EXACT_SEMVER + r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?", version):
+            raise ValueError("DeepSeek Harness version must be an exact X.Y.Z release or prerelease")
+        return NpmRelease("@deepseek-ai/dsh", version, DSH_RELEASES.get(version))
     release = openclaw.RELEASES.get(version)
     return NpmRelease("openclaw", version, release.integrity if release else None,
                       rebuild=release is None or release.rebuild)
@@ -224,6 +234,13 @@ def _check_binding(record: dict, argv: list[str], expected_version: str) -> None
         raise ValueError(f"CLI binding differs from the selected launch command: {argv}")
 
 
+def _version_key(version: str) -> tuple:
+    base, _, prerelease = version.partition("-")
+    identifiers = tuple((0, int(part)) if part.isdigit() else (1, part)
+                        for part in prerelease.split(".")) if prerelease else ()
+    return tuple(map(int, base.split("."))), not prerelease, identifiers
+
+
 def install_harness(name: str, version: str, root: Path) -> Path:
     if name not in LABELS:
         raise ValueError(f"unknown base harness {name!r}")
@@ -236,6 +253,10 @@ def install_harness(name: str, version: str, root: Path) -> Path:
         template = ROOT / "base_harness/opencode"
         helper, source = opencode._helper, None
         entrypoint, expected_version = "bin/opencode", version
+    elif name == "deepseek-harness":
+        template = dsh.TEMPLATE
+        helper, source = dsh._helper, None
+        entrypoint, expected_version = "lib/bin.js", version
     else:
         template = openclaw.TEMPLATE
         helper, source = openclaw._helper, openclaw.source_identity(version)
@@ -284,6 +305,8 @@ def install_harness(name: str, version: str, root: Path) -> Path:
             env = {"PATH": os.defpath}
             if name == "opencode":
                 record = opencode.configure(harness, launcher, expected_version=version)
+            elif name == "deepseek-harness":
+                record = dsh.configure(harness, lockfile.parent, str(node), npm_version=version)["identity"]
             elif source is None:
                 record = codex.configure(harness, str(launcher), node=str(node), env=env,
                                          sandbox_only=recipe.integrity is None)
@@ -307,7 +330,8 @@ def main(argv: list[str] | None = None) -> int:
     actions = parser.add_subparsers(dest="action", required=True)
     actions.add_parser("list", help="list verified harness versions")
     install = actions.add_parser("install", help="install and bind a harness version")
-    catalogs = {"openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES, "opencode": OPENCODE_RELEASES}
+    catalogs = {"openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES, "opencode": OPENCODE_RELEASES,
+                "deepseek-harness": DSH_RELEASES}
     install.add_argument("harness", choices=catalogs)
     install.add_argument("--version", help="exact release version (default: latest verified version)")
     install.add_argument("--install-root", type=Path, default=default_root())
@@ -320,7 +344,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         version = args.version
         if version is None:
-            version = max(catalogs[args.harness], key=lambda release: tuple(map(int, release.split("."))))
+            version = max(catalogs[args.harness], key=_version_key)
             name = LABELS[args.harness]
             print(f"Using latest verified {name} version {version} (--version omitted).", file=sys.stderr)
         harness = install_harness(args.harness, version, args.install_root)

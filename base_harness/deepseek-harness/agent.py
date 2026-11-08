@@ -19,8 +19,9 @@ adapter writes a per-task patch that selects that route. With neither configured
 DSH keeps its shipped model default. The trace records the selected model and the
 patch identity. `--profile headless` selects the one-task profile in both cases.
 
-**DSH needs a profile, a container's `HOME` is empty, and the profile must not travel in this
-tree.** Measured 2026-10-06. DSH resolves its plugin tree out of
+**Profile loading.** The npm release resolves plugins from its bound package tree.
+The legacy source layout uses the profile farm described below.
+Measured 2026-10-06, the source build resolves its plugin tree out of
 `$HOME/.dsh/profiles/node_modules`: **277 absolute symlinks** into the DSH checkout, 90 KB, no
 files of its own. An empty `HOME` means DSH composes no tree, and the headless runner then
 returns *early and silently* -- exit 0, no output, no files
@@ -444,6 +445,8 @@ def facts(env: dict, home: Path, prompt: str, patch: "Path | None",
         out["runtime_command_sha"] = _sha(json.dumps(selected["argv"]))
         out["runtime_node"] = selected["node"]
         out["runtime_cli"] = selected["cli"]
+        if "version" in selected:
+            out["runtime_cli_version"] = selected["version"]
         _FACTS = dict(out)
         _FACTS_KEY = key
     out["prompt_sha"] = _sha(prompt)
@@ -545,7 +548,12 @@ def run(task: dict, workdir: Path) -> int:
     selected = runtime(env)
     for name in ('NODE_OPTIONS', 'NODE_PATH', 'LD_PRELOAD', 'LD_AUDIT', 'LD_LIBRARY_PATH'):
         env.pop(name, None)
-    farm_links = _install_profile(home, selected["root"]) if selected["root"] is not None else None
+    npm = selected.get("layout") == "npm"
+    farm_links = None
+    if npm:
+        env["DSH_TELEMETRY_DISABLED"] = "1"
+    elif selected["root"] is not None:
+        farm_links = _install_profile(home, selected["root"])
     # DSH's own name for the key the platform gives the agent. Never logged, never written.
     if env.get("HG_AGENT_API_KEY") and not env.get("DEEPSEEK_API_KEY"):
         env["DEEPSEEK_API_KEY"] = env["HG_AGENT_API_KEY"]
@@ -564,7 +572,7 @@ def run(task: dict, workdir: Path) -> int:
 
         measured = facts(env, home, prompt, patch, selected)
         record({"harness_identity": {"harness": "deepseek-harness",
-                                     "harness_version": "0.2.0",
+                                     "harness_version": "0.3.0",
                                      "agent_backend": "dsh-headless",
                                      "agent_model": model_ran,
                                      "agent_base_url": env.get("HG_AGENT_BASE_URL"),
@@ -583,7 +591,10 @@ def run(task: dict, workdir: Path) -> int:
                         "links_created": farm_links,
                         "probe_resolves": probe.exists()}
         profile_info["runtime_root"] = str(selected["root"]) if selected["root"] else None
-        profile_info.update(_loader_probe(home, env, selected))
+        if npm:
+            profile_info["layout"] = "npm"
+        else:
+            profile_info.update(_loader_probe(home, env, selected))
         record({"profile": profile_info})
         launched_at = time.time()
         proc = subprocess.Popen(command(prompt_path, patch, selected=selected), cwd=workdir, env=env,
@@ -598,7 +609,7 @@ def run(task: dict, workdir: Path) -> int:
             """
             log = find_session_log(home, launched_at)
             if log is not None:
-                events, how = read_session_log(log)
+                events, how = read_session_log(log, node=selected["node"] if npm else None)
                 summary = _record_session(events, record) if events else {}
                 if summary.get("turns") or summary.get("actions"):
                     _record_streams(out, err, record, turns=False)
@@ -723,10 +734,21 @@ def find_session_log(home: Path, since: float) -> Path | None:
     return max(candidates, key=lambda path: path.stat().st_mtime, default=None)
 
 
-def read_session_log(path: Path) -> tuple[list[dict], str]:
+def read_session_log(path: Path, *, node: str | None = None) -> tuple[list[dict], str]:
     """`(events, how)`. DSH writes JSONL, optionally zstd-compressed (`.jsonl.zstd`)."""
     data: bytes
-    if str(path).endswith(".zstd"):
+    if path.suffix != ".zstd":
+        data, how = path.read_bytes(), "plain"
+    elif node is not None:
+        script = ("import { createReadStream } from 'node:fs';"
+                  "import { createZstdDecompress } from 'node:zlib';"
+                  "import { pipeline } from 'node:stream/promises';"
+                  "await pipeline(createReadStream(process.argv[1]), createZstdDecompress(), process.stdout);")
+        proc = subprocess.run([node, "--input-type=module", "-e", script, str(path)], capture_output=True)
+        if proc.returncode != 0:
+            return [], "zstd-node-error"
+        data, how = proc.stdout, "zstd-node"
+    else:
         try:
             import zstandard                                    # noqa: PLC0415
             with open(path, "rb") as fh:
@@ -737,8 +759,6 @@ def read_session_log(path: Path) -> tuple[list[dict], str]:
             if proc.returncode != 0:
                 return [], "zstd-missing"
             data, how = proc.stdout, "zstd-cli"
-    else:
-        data, how = path.read_bytes(), "plain"
     events: list[dict] = []
     for line in data.decode("utf-8", "replace").splitlines():
         line = line.strip()
@@ -754,14 +774,14 @@ def _record_session(events: list[dict], record) -> dict:
     """Translate DSH's session events into the adapter contract's records.
 
     Returns what the translation saw, for the trace: a run whose log is present but whose
-    shape changed (the format is versioned, `session.v3`) must be *visible* as a translation
+    shape changed (the format is versioned) must be *visible* as a translation
     that found nothing, not as a silent success.
     """
     calls: dict[str, dict] = {}
     turns = actions = 0
     tokens = {"input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0}
     seen_usage = False
-    turn_end = None
+    turn_end = format_version = None
     for event in events:
         kind, data = event.get("type"), event.get("data") or {}
         if kind == "assistant/message":
@@ -808,12 +828,12 @@ def _record_session(events: list[dict], record) -> dict:
             turn_end = (data.get("reason") or {}).get("kind") if isinstance(
                 data.get("reason"), dict) else data.get("reason")
         elif kind == "session":
-            event_version = event.get("version")
+            format_version = event.get("version")
     if turns or seen_usage:
         usage = dict(tokens) if seen_usage else {}
         usage["calls"] = turns
         record({"usage": usage})
-    return {"events": len(events), "turns": turns, "actions": actions,
+    return {"events": len(events), "format_version": format_version, "turns": turns, "actions": actions,
             "unmatched_calls": len(calls), "turn_end": turn_end}
 
 

@@ -15,6 +15,8 @@ import tempfile
 RECORD = '_dsh_runtime'
 REMEDY = 'prepare this Harness with tools/configure_dsh_harness.py'
 SCOPE = 'declared-source-node-farm-content; host OS libraries and shell tools are platform capabilities'
+NPM_SCOPE = 'declared-npm-node-content; host OS libraries and shell tools are platform capabilities'
+NPM_CLI = Path('node_modules/@deepseek-ai/dsh/lib/bin.js')
 
 
 def _native_elf(path: Path) -> bool:
@@ -151,6 +153,19 @@ def _farm(harness: Path, root: Path) -> list[list[str]]:
     return result
 
 
+def npm_version(root: Path) -> str:
+    path = root / NPM_CLI.parent.parent / 'package.json'
+    if path.resolve(strict=True) != path or not path.is_file():
+        raise ValueError('DSH npm metadata must belong to the installed package')
+    package = json.loads(path.read_text(encoding='utf-8'))
+    version, bin_entries = package.get('version'), package.get('bin')
+    if (package.get('name') != '@deepseek-ai/dsh'
+            or not isinstance(bin_entries, dict) or bin_entries.get('dsh') != 'lib/bin.js'
+            or not isinstance(version, str) or not version):
+        raise ValueError('invalid DSH npm package identity')
+    return version
+
+
 def installation(harness: Path, selected: dict, bindings: list[str],
                  farm: list[tuple[str, Path]], *, forbidden: tuple[Path, ...] = ()) -> dict:
     paths = [Path(value) for value in bindings]
@@ -161,21 +176,25 @@ def installation(harness: Path, selected: dict, bindings: list[str],
         raise ValueError('DSH selected Node is not executable')
     if not all(_covered(path, paths) for path in (root, node, cli)):
         raise ValueError('DSH selected command is outside its runtime bindings')
-    if _farm(harness, root) != [[name, str(path.resolve())] for name, path in farm]:
+    npm = selected.get('layout') == 'npm'
+    if not npm and _farm(harness, root) != [[name, str(path.resolve())] for name, path in farm]:
         raise ValueError('DSH prepared farm differs from selected declarations')
-    return {'schema': 1, 'cacheable': _native_elf(node), 'scope': SCOPE,
+    record = {'schema': 1, 'cacheable': _native_elf(node), 'scope': NPM_SCOPE if npm else SCOPE,
             'root': str(root), 'node': str(node), 'cli': str(cli),
             'argv': [str(node), str(cli)], 'runtime_paths': bindings,
-            'farm_sha256': digest(harness / 'dsh_farm.tsv'),
-            'farm_targets': _farm(harness, root),
             'inventory': inventory(paths),
             'system': platform.system(), 'machine': platform.machine()}
+    if npm:
+        record.update(layout='npm', version=npm_version(root), farm_targets=[])
+    else:
+        record.update(farm_sha256=digest(harness / 'dsh_farm.tsv'), farm_targets=_farm(harness, root))
+    return record
 
 
 def check(record: dict) -> None:
     bindings = [Path(value) for value in record['runtime_paths']]
     if inventory(bindings) != record['inventory']:
-        raise ValueError(f'prepared DSH source, Node or dependency contents changed; {REMEDY}')
+        raise ValueError(f'prepared DSH installation, Node or dependency contents changed; {REMEDY}')
 
 
 def resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...] = ()) -> dict:
@@ -188,30 +207,37 @@ def resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...] = ()) -> di
     if not isinstance(record, dict) or record.get('schema') != 1:
         raise ValueError(f'DSH Harness is not prepared with an exact identity; {REMEDY}')
     paths = record.get('runtime_paths')
+    layout = record.get('layout', 'source')
+    npm = layout == 'npm'
     if (not isinstance(paths, list) or not paths or not all(isinstance(p, str) for p in paths)
             or manifest.get('runtime_paths') != paths or not isinstance(record.get('inventory'), dict)
             or not isinstance(record.get('farm_targets'), list)
-            or any(not isinstance(record.get(key), str) for key in ('root', 'node', 'cli', 'farm_sha256'))):
+            or layout not in ('source', 'npm')
+            or any(not isinstance(record.get(key), str) for key in ('root', 'node', 'cli'))):
         raise ValueError(f'invalid prepared DSH identity; {REMEDY}')
     root, node, cli = (Path(record[key]) for key in ('root', 'node', 'cli'))
     bindings = [Path(value) for value in paths]
     for path in bindings:
         validate_binding(path, forbidden=forbidden)
     if (record.get('argv') != [str(node), str(cli)]
-            or cli != root / 'apps/cli/lib/bin.js'
+            or cli != root / (NPM_CLI if npm else 'apps/cli/lib/bin.js')
             or any(not _covered(p, bindings) for p in (root, node, cli))
             or any(not p.is_absolute() or p.resolve(strict=True) != p for p in (root, node, cli))
-            or not node.is_file() or not os.access(node, os.X_OK)):
+            or not cli.is_file() or not node.is_file() or not os.access(node, os.X_OK)):
         raise ValueError(f'invalid prepared DSH command; {REMEDY}')
     if (('cacheable' in record and (not isinstance(record['cacheable'], bool)
                                   or record['cacheable'] != _native_elf(node)))
-            or record.get('scope', SCOPE) != SCOPE):
+            or record.get('scope', SCOPE) != (NPM_SCOPE if npm else SCOPE)):
         raise ValueError(f'invalid prepared DSH runtime scope; {REMEDY}')
     if record.get('system') != platform.system() or record.get('machine') != platform.machine():
         raise ValueError(f'prepared DSH platform changed; {REMEDY}')
-    farm = _farm(harness, root)
-    if digest(harness / 'dsh_farm.tsv') != record['farm_sha256'] or farm != record['farm_targets']:
-        raise ValueError(f'prepared DSH farm changed; {REMEDY}')
+    if npm:
+        if record.get('version') != npm_version(root) or record['farm_targets']:
+            raise ValueError(f'prepared DSH npm package identity changed; {REMEDY}')
+    else:
+        farm = _farm(harness, root)
+        if digest(harness / 'dsh_farm.tsv') != record.get('farm_sha256') or farm != record['farm_targets']:
+            raise ValueError(f'prepared DSH farm changed; {REMEDY}')
     for key, expected in [('HG_AGENT_DSH_ROOT', root), ('HG_AGENT_DSH', cli), ('HG_AGENT_NODE', node)]:
         value = env.get(key)
         if value and key == 'HG_AGENT_NODE':

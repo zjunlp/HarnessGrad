@@ -19,6 +19,7 @@ def test_invalid_version_never_creates_installation(tmp_path, capsys):
     assert "openclaw 2026.11.2" in supported
     assert "codex 0.166.0" in supported
     assert "codex 0.167.0" in supported
+    assert "deepseek-harness 0.2.2-rc.1" in supported
     root = tmp_path / "store"
     assert main(["harness", "install", "openclaw", "--version", "latest",
                  "--install-root", str(root)]) == 1
@@ -57,6 +58,24 @@ def test_install_selects_latest_verified_version_only_when_omitted(tmp_path, cap
         assert captured.err == f"Using latest verified {label} version {latest} (--version omitted).\n"
     else:
         assert captured.err == ""
+
+
+def test_deepseek_default_accepts_verified_prereleases(tmp_path, capsys, monkeypatch):
+    version = "0.2.2-rc.1"
+    release = install_harness._recipe("deepseek-harness", version)
+    assert release.package == "@deepseek-ai/dsh"
+    assert release.integrity == install_harness.DSH_RELEASES[version]
+    assert not release.rebuild
+    with pytest.raises(ValueError, match="exact"):
+        install_harness._recipe("deepseek-harness", "latest")
+    installed = []
+    monkeypatch.setattr(install_harness, "install_harness",
+                        lambda name, version, root: installed.append((name, version, root)) or root)
+    assert main(["harness", "install", "deepseek-harness", "--install-root", str(tmp_path)]) == 0
+    assert installed == [("deepseek-harness", version, tmp_path)]
+    assert f"Using latest verified DeepSeek Harness version {version}" in capsys.readouterr().err
+    assert sorted(["0.2.2-rc.10", "0.2.2", "0.2.1", "0.2.2-rc.2"],
+                  key=install_harness._version_key) == ["0.2.1", "0.2.2-rc.2", "0.2.2-rc.10", "0.2.2"]
 
 
 def test_npm_install_checks_registry_integrity_before_ci(tmp_path, monkeypatch):
