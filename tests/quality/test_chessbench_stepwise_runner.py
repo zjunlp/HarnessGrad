@@ -129,20 +129,19 @@ def local_chess_runtime(tmp_path_factory):
     manifest = json.loads(path.read_text())
     reviewed = json.loads((root / "data/runtimes/chessbench_puzzles-native.json").read_text())
     manifest["dataset"] = "chessbench_puzzles"
-    # The native scorer intentionally retains the reviewed pre-provider QA base.
-    # The current platform base has since changed; preserve the exact pinned
-    # bytes rather than pointing a pinned digest at the new source.
-    pinned_base = (root / 'tests/fixtures/chessbench_native_sources/qa_base.py').read_bytes()
-    expected_base = reviewed['files']['/scorer/data/scaffolds/qa/base.py']
-    assert hashlib.sha256(pinned_base).hexdigest() == expected_base['sha256']
-    assert len(pinned_base) == expected_base['size']
-    historical_base = work / 'pinned-qa-base.py'
-    historical_base.write_bytes(pinned_base)
+    # Keep the reviewed bytes for scorer sources that have since changed.
+    retained = root / "tests/fixtures/chessbench_native_sources"
+    scorer_sources = {
+        "/scorer/check.py": root / "data/scaffolds/qa/verify/check.py",
+        "/scorer/data/scaffolds/qa/base.py": retained / "qa_base.py",
+        "/scorer/harnessgrad/env_file.py": retained / "env_file.py",
+    }
     for target, entry in reviewed["files"].items():
         if target.startswith("/scorer/"):
-            source = (root / "data/scaffolds/qa/verify/check.py" if target == "/scorer/check.py"
-                      else historical_base if target == "/scorer/data/scaffolds/qa/base.py"
-                      else root / target.removeprefix("/scorer/"))
+            source = scorer_sources.get(target, root / target.removeprefix("/scorer/"))
+            raw = source.read_bytes()
+            assert len(raw) == entry["size"], target
+            assert hashlib.sha256(raw).hexdigest() == entry["sha256"], target
             manifest["files"][target] = {**entry, "source": str(source)}
     package = Path(chess.__file__).resolve().parent
     for source in sorted(package.rglob("*.py")):
