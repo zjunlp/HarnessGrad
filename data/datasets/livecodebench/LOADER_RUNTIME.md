@@ -1,6 +1,7 @@
 # LiveCodeBench runtime boundaries
 
-The metadata loader uses the Python standard library. The adapter's upstream
+The metadata loader uses the Python standard library and reads the pool only
+when tasks are requested. The adapter's upstream
 pass@k helper functions import NumPy only when called; task discovery and staging
 do not need it. The independent verifier still executes the pinned upstream
 `testing_util.py` and `pass_k_utils.py` using a separately prepared managed
@@ -28,5 +29,10 @@ captures the selected artifact, not all system libraries or the host OS.
 Selecting a verifier also checks the executor and aggregator against file hashes
 derived from that pinned archive. Their authenticated private copies and the
 selected test payload enter the scorer; they are absent from actor setup.
-Missing or altered scorer sources are refused. A failed scorer process is an
+The selected test payload must also match the digest in its pool row. Scoring
+evidence records the interpreter and the loaded NumPy origin when present, along
+with per-test verdicts. Executor diagnostics can contain private test content
+and are kept out of the evidence.
+
+Missing or altered scorer sources or test payloads are refused. A failed scorer process is an
 unmeasured attempt, while an ordinary wrong solution keeps the official zero.
