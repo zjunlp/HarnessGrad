@@ -42,11 +42,12 @@
     "groups": "Optional private SPLIT_GROUPS mapping from every task id to a lowercase SHA-256 group id. A group must stay on one side for declared, default, official and supplied JSON divisions. For --split default, the already-hashed group id's first byte modulo 3 selects eval when zero; no second hash is applied. Without this declaration, task-id hashing and validation are unchanged. This declaration does not create a split or add metadata to public tasks."
   },
   "download": {
-    "kinds": ["http", "hf-file", "hf-dataset", "pip", "authored"],
+    "kinds": ["http", "hf-file", "hf-dataset", "pip", "authored", "generated"],
     "common_required": ["kind", "name", "version", "size", "note"],
     "manifest": "Optional repository-relative path to an existing source file and checksum inventory; used for documentation links only.",
     "by_kind": {
       "authored": {"required": ["path", "sha256"]},
+      "generated": {"required": ["dst", "sha256", "prepare"]},
       "http": {"required": ["url", "dst"]},
       "hf-file": {"required": ["repo", "file", "dst"]},
       "hf-dataset": {"required": ["repo", "dst"]},

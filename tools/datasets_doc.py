@@ -457,10 +457,11 @@ def _provision(name: str, module, *, refused: bool) -> str:
     It comes from the adapter's own `downloads()`, the same declaration `DOWNLOADS.md` is
     rendered from, and it never reads the data root: a declaration says what *would* be
     fetched, not what is already there, so the cell is identical on a machine with every
-    byte and on one with none. Four spellings:
+    byte and on one with none.
 
     * `` `python3 tools/datasets.py --fetch --dataset <name>` `` -- the adapter declares
       `http` / `hf-dataset` / `hf-file` artifacts, so a fetch is the command;
+    * `generated` entries show the adapter's preparation command;
     * `` `—` `` -- there is nothing to fetch: the bytes ship with the repository
       (`authored`), or the adapter declares only a `pip` dependency, which an install
       (pinned in `DOWNLOADS.md`), not a fetch, provides;
@@ -488,6 +489,12 @@ def _provision(name: str, module, *, refused: bool) -> str:
         return command
     if "authored" in kinds:
         return f"{DASH} the bytes ship with the repository; nothing to fetch"
+    if "generated" in kinds:
+        entry = next(entry for entry in entries if entry.get("kind") == "generated")
+        execution = registry.execution_runtime_name(name)
+        prefix = (f"`python tools/prepare_dataset.py --dataset {execution} --runtime execution`; then "
+                  if execution else "")
+        return f"{prefix}`{entry['prepare']}`"
     if "pip" in kinds:
         return (f"{DASH} no bytes to fetch; `pip install` the package pinned in "
                 f"`DOWNLOADS.md`")

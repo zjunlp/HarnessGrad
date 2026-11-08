@@ -939,6 +939,16 @@ failed transfers remove partial files and newly created empty directories.
 
 > Prepare the separate execution runtime with tools/prepare_dataset.py --dataset reasoning_gym --runtime execution. Import an independently acquired pin-matching pool with python -m tools.prepare_reasoning_gym --import-pool PATH. The retained generation recipe is diagnostic because package version, seed and family sizes do not reproduce the historical bytes reliably. Scoring uses the library's score_answer; scoring extras are not selected.
 
+### Frozen Reasoning Gym pool
+
+- **Type:** `generated`
+- **Version (pinned):** `seed 20261008`
+- **Size:** 3315981 bytes
+- **Destination:** `<HG_DATA_ROOT>/reasoning_gym/pool.jsonl`
+- **SHA256:** `c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177`
+
+> Import an operator-supplied copy of the historical pool. Its digest fixes the original bytes and task order.
+
 ## `scienceworld`
 
 - **Data root:** `<HG_DATA_ROOT>/scienceworld`

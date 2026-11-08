@@ -174,6 +174,10 @@ def _downloads() -> list[dict]:
             "size": "~1 MB, with its own dependency tree",
             "note": "Prepare the separate execution runtime with tools/prepare_dataset.py --dataset reasoning_gym --runtime execution. Import an independently acquired pin-matching pool with python -m tools.prepare_reasoning_gym --import-pool PATH. The retained generation recipe is diagnostic because package version, seed and family sizes do not reproduce the historical bytes reliably. Scoring uses the library's score_answer; scoring extras are not selected.",
         },
+        {"kind": "generated", "name": "Frozen Reasoning Gym pool", "version": f"seed {SEED}",
+         "size": "3315981 bytes", "dst": POOL, "sha256": POOL_SHA256,
+         "prepare": "python -m tools.prepare_reasoning_gym --import-pool /path/to/frozen/pool.jsonl",
+         "note": "Import an operator-supplied copy of the historical pool. Its digest fixes the original bytes and task order."},
     ]
 
 

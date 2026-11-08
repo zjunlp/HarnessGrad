@@ -52,6 +52,23 @@ def test_lint_accepts_every_published_dataset(schema):
     assert "authored_example_fix_bug" in checked
 
 
+def test_lint_checks_reasoning_gym_generated_download(schema):
+    from data.datasets import reasoning_gym
+
+    entries = reasoning_gym.downloads()
+    result = dataset_lint.Result("reasoning_gym")
+    dataset_lint.lint_downloads(entries, schema, result)
+    assert result.ok, result.errors
+
+    generated, = (entry for entry in entries if entry["kind"] == "generated")
+    incomplete = dict(generated)
+    for key in ("dst", "sha256", "prepare"):
+        del incomplete[key]
+    result = dataset_lint.Result("reasoning_gym")
+    dataset_lint.lint_downloads([incomplete], schema, result)
+    assert any("is missing ['dst', 'sha256', 'prepare']" in error for error in result.errors)
+
+
 #: A module that breaks one rule per line, so a failure names its own cause. It is
 #: written into `data/` only for the duration of the test: `lint_dataset` imports
 #: `data.datasets.<name>`, and a copy that is not imported as a dataset is not a copy.
